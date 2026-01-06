@@ -33,12 +33,13 @@ func Load(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
+	operations storageReaderWriter,
 ) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
 		slog.Bool("remote", remote))
 
-	manager, err := newConfigManager(configFile, remote, nsValidator)
+	manager, err := newConfigManager(ctx, configFile, remote, nsValidator, operations)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
 	}
@@ -83,19 +84,24 @@ func writeConfig(writer io.Writer, config *model.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration: %w", err)
 	}
-	dataWithScheme := append([]byte(fmt.Sprintf(schemaHeader, backup.Version)), data...)
+	dataWithScheme := append(fmt.Appendf(nil, schemaHeader, backup.Version), data...)
 	_, err = writer.Write(dataWithScheme)
 	return err
 }
 
-func newConfigManager(configFile string, remote bool, nsValidator aerospike.NamespaceValidator) (Manager, error) {
+func newConfigManager(
+	ctx context.Context,
+	configFile string,
+	remote bool,
+	nsValidator aerospike.NamespaceValidator,
+	operations storageReaderWriter,
+) (Manager, error) {
 	if remote {
-		storage, err := readStorage(configFile)
+		s, err := readStorage(ctx, configFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read remote storage configuration: %w", err)
 		}
-
-		return newStorageManager(storage, nsValidator), nil
+		return newStorageManager(s, nsValidator, operations), nil
 	}
 
 	if isHTTPPath(configFile) {
@@ -105,8 +111,8 @@ func newConfigManager(configFile string, remote bool, nsValidator aerospike.Name
 	return newFileConfigurationManager(configFile, nsValidator), nil
 }
 
-func readStorage(configURI string) (model.Storage, error) {
-	content, err := loadFileContent(configURI)
+func readStorage(ctx context.Context, configURI string) (model.Storage, error) {
+	content, err := loadFileContent(ctx, configURI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load file content: %w", err)
 	}
@@ -123,9 +129,9 @@ func readStorage(configURI string) (model.Storage, error) {
 	return configStorage.ToModel(model.NewConfig())
 }
 
-func loadFileContent(configFile string) ([]byte, error) {
+func loadFileContent(ctx context.Context, configFile string) ([]byte, error) {
 	if isHTTPPath(configFile) {
-		return readFromHTTP(configFile)
+		return readFromHTTP(ctx, configFile)
 	}
 
 	content, err := os.ReadFile(configFile)
@@ -136,9 +142,13 @@ func loadFileContent(configFile string) ([]byte, error) {
 	return content, nil
 }
 
-func readFromHTTP(url string) ([]byte, error) {
+func readFromHTTP(ctx context.Context, url string) ([]byte, error) {
 	// #nosec G107
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request for %s: %w", url, err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed HTTP GET request to %s: %w", url, err)
 	}

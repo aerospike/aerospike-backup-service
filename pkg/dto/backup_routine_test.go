@@ -6,46 +6,47 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidSinglePartitionID(t *testing.T) {
 	err := validatePartitionList("0,100,4095")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestInvalidPartitionID_OutOfRange(t *testing.T) {
 	err := validatePartitionList("4096")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestValidPartitionRange(t *testing.T) {
 	err := validatePartitionList("0-1,100-50,4095-1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestInvalidPartitionRange_StartTooHigh(t *testing.T) {
 	err := validatePartitionList("4095-2")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestInvalidPartitionRange_CountZero(t *testing.T) {
 	err := validatePartitionList("100-0")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestInvalidPartitionRange_BadFormat(t *testing.T) {
 	err := validatePartitionList("100--200")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestEmptyString(t *testing.T) {
 	err := validatePartitionList("")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestEmptyEntry(t *testing.T) {
 	err := validatePartitionList("100,,200")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestBackupRoutine_ToModel(t *testing.T) {
@@ -81,7 +82,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 	}
 
 	m, err := routineDTO.ToModel(config, "r")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, config.BackupPolicies["policy1"], m.BackupPolicy)
 	assert.Equal(t, config.AerospikeClusters["cluster1"], m.SourceCluster)
@@ -116,7 +117,7 @@ func TestBackupRoutine_ToModel_PolicyNotFound(t *testing.T) {
 	}
 
 	_, err := routineDTO.ToModel(config, "r")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestBackupRoutine_ToModel_ClusterNotFound(t *testing.T) {
@@ -138,7 +139,7 @@ func TestBackupRoutine_ToModel_ClusterNotFound(t *testing.T) {
 	}
 
 	_, err := routineDTO.ToModel(config, "r")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestBackupRoutine_ToModel_StorageNotFound(t *testing.T) {
@@ -160,7 +161,7 @@ func TestBackupRoutine_ToModel_StorageNotFound(t *testing.T) {
 	}
 
 	_, err := routineDTO.ToModel(config, "r")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestBackupRoutine_ToModel_SecretAgentNotFound(t *testing.T) {
@@ -186,7 +187,7 @@ func TestBackupRoutine_ToModel_SecretAgentNotFound(t *testing.T) {
 	}
 
 	_, err := routineDTO.ToModel(config, "r")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestBackupRoutine_Validate_MutualExclusive_RackAndPartition(t *testing.T) {
@@ -198,7 +199,7 @@ func TestBackupRoutine_Validate_MutualExclusive_RackAndPartition(t *testing.T) {
 		RackList:      []int{1},
 		PartitionList: "0-1",
 	}
-	assert.Error(t, r.Validate())
+	require.Error(t, r.Validate())
 }
 
 func TestBackupRoutine_Validate_MutualExclusive_RackAndNode(t *testing.T) {
@@ -210,7 +211,7 @@ func TestBackupRoutine_Validate_MutualExclusive_RackAndNode(t *testing.T) {
 		RackList:      []int{1},
 		NodeList:      []string{"node1"},
 	}
-	assert.Error(t, r.Validate())
+	require.Error(t, r.Validate())
 }
 
 func TestBackupRoutine_Validate_MutualExclusive_PartitionAndNode(t *testing.T) {
@@ -222,7 +223,7 @@ func TestBackupRoutine_Validate_MutualExclusive_PartitionAndNode(t *testing.T) {
 		PartitionList: "0-1",
 		NodeList:      []string{"node1"},
 	}
-	assert.Error(t, r.Validate())
+	require.Error(t, r.Validate())
 }
 
 func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithPartitionList(t *testing.T) {
@@ -247,7 +248,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithPartitionList(t *testing
 	}
 
 	_, err := routineDTO.ToModel(config, "r")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithNodeList(t *testing.T) {
@@ -272,7 +273,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithNodeList(t *testing.T) {
 	}
 
 	_, err := routineDTO.ToModel(config, "r")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
@@ -297,5 +298,5 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
 	}
 
 	_, err := routineDTO.ToModel(config, "r")
-	assert.Error(t, err)
+	require.Error(t, err)
 }

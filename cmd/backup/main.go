@@ -23,6 +23,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	u "github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
@@ -72,7 +74,9 @@ func run() int {
 }
 
 func startService(configFile string, remote bool) error {
-	ctx := systemCtx()
+	ctx, stop := systemCtx()
+	defer stop()
+
 	config, scheduler, httpService, appLogger, err := initComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
@@ -94,10 +98,20 @@ func startService(configFile string, remote bool) error {
 func initComponents(ctx context.Context, configFile string, remote bool) (
 	*model.Config, quartz.Scheduler, *handlers.Service, *slog.Logger, error,
 ) {
-	clientManager := aerospike.NewClientManager(aerospike.NewClientFactory(), 10*time.Second)
+	resolver := secrets.NewResolver(ctx)
+	passwordResolver := secrets.NewPasswordResolver(resolver)
+	// Create all accessors with the shared resolver
+	// Create registry with all accessors
+	operations := storage.NewOperations(
+		storage.NewS3StorageAccessor(ctx, resolver),
+		storage.NewGcpStorageAccessor(ctx, resolver),
+		storage.NewAzureStorageAccessor(ctx, resolver),
+		storage.NewLocalStorageAccessor(),
+	)
+	clientManager := aerospike.NewClientManager(aerospike.NewClientFactory(passwordResolver), aerospike.DefaultCloseDelay)
 	nsValidator := aerospike.NewNamespaceValidator(clientManager)
 
-	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
+	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -120,14 +134,14 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	}
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
-	backendService := service.NewBackupBackendService(config, pathService)
+	backendService := service.NewBackupBackendService(config, pathService, operations)
 	history := service.NewHistoryManager(backendService)
 	registry := service.NewRunningBackupsRegistry(history, config)
 
 	var routineStorage u.LockMap
 	retentionManager := service.NewBackupRetentionManager(backendService, &routineStorage)
-	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService)
-	backupExecutor := backupexecutor.NewDefaultBackupExecutor()
+	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, operations)
+	backupExecutor := backupexecutor.NewDefaultBackupExecutor(operations)
 	backupComponents := service.NewBackupComponents(
 		clientManager, backupExecutor, registry, retentionManager,
 		backendService, clusterConfigWriter)
@@ -142,9 +156,9 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestore(), clientManager, restoreJobs, backendService, &routineStorage)
+		restoreexecutor.NewRestore(operations), clientManager, restoreJobs, backendService, &routineStorage)
 
-	configRetriever := service.NewConfigRetriever(backendService, pathService)
+	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
 	httpService := handlers.NewService(
 		ctx,
 		config,
@@ -169,30 +183,30 @@ func setDefaultLogger(loggerConfig *model.LoggerConfig) *slog.Logger {
 	return appLogger
 }
 
-func systemCtx() context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		sigch := make(chan os.Signal, 1)
-		signal.Notify(sigch, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
-		<-sigch
-		slog.Debug("Got system signal")
-		cancel()
-	}()
-
-	return ctx
+func systemCtx() (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 }
 
 func runHTTPServer(
 	ctx context.Context, serverConfig *model.HTTPServerConfig, service *handlers.Service, logger *slog.Logger,
 ) error {
 	httpServer := server.NewHTTPServer(serverConfig, service, logger)
+
+	// Channel to capture server startup errors
+	errCh := make(chan error, 1)
 	go func() {
-		httpServer.Start()
+		if err := httpServer.Start(); err != nil {
+			errCh <- err
+		}
 	}()
 
-	<-ctx.Done()
-	time.Sleep(time.Millisecond * 100) // wait for other goroutines to exit
-	// shutdown the HTTP server gracefully
+	// Wait for either context cancellation or server error
+	select {
+	case err := <-errCh:
+		return fmt.Errorf("HTTP server failed: %w", err)
+	case <-ctx.Done():
+	}
+
 	if err := httpServer.Shutdown(); err != nil {
 		slog.Error("HTTP server shutdown failed", attr.Error(err))
 		return err

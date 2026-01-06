@@ -1,11 +1,11 @@
 package service
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,8 +14,6 @@ const (
 	routineName   = "test-routine"
 	testNamespace = "test-ns"
 )
-
-var ctx = context.Background()
 
 func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	service, pathService, routine := setupLocalBackupBackendService(t)
@@ -37,19 +35,19 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 			Namespace: testNamespace,
 		}
 
-		err := service.WriteBackupMetadata(ctx, routine, backupPath, metadata)
+		err := service.WriteBackupMetadata(t.Context(), routine, backupPath, metadata)
 		require.NoError(t, err)
 	}
 
 	// Expect all backups are returned without filters
-	backups, err := service.GetBackups(ctx, NewFullBackupFilter(routine))
+	backups, err := service.GetBackups(t.Context(), NewFullBackupFilter(routine))
 	require.NoError(t, err)
 	require.Len(t, backups, 5)
 	assert.Equal(t, "test-routine/backup/1609459200000/data/test-ns", backups[0].Key)
 
 	// Test FromTime filter
 	fromFilter := NewFullBackupFilter(routine).WithFromTime(times[2]) // From Jan 3
-	fromBackups, err := service.GetBackups(ctx, fromFilter)
+	fromBackups, err := service.GetBackups(t.Context(), fromFilter)
 	require.NoError(t, err)
 	require.Len(t, fromBackups, 3) // Should return Jan 3, 4, 5
 	assert.Equal(t, times[2], fromBackups[0].Created)
@@ -58,7 +56,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 
 	// Test ToTime filter
 	toFilter := NewFullBackupFilter(routine).WithToTime(times[2]) // Up to Jan 3
-	toBackups, err := service.GetBackups(ctx, toFilter)
+	toBackups, err := service.GetBackups(t.Context(), toFilter)
 	require.NoError(t, err)
 	require.Len(t, toBackups, 3) // Should return Jan 1, 2, 3
 	assert.Equal(t, times[0], toBackups[0].Created)
@@ -69,7 +67,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	rangeFilter := NewFullBackupFilter(routine).
 		WithFromTime(times[1]). // From Jan 2
 		WithToTime(times[3])    // To Jan 4
-	rangeBackups, err := service.GetBackups(ctx, rangeFilter)
+	rangeBackups, err := service.GetBackups(t.Context(), rangeFilter)
 	require.NoError(t, err)
 	require.Len(t, rangeBackups, 3) // Should return Jan 2, 3, 4
 	assert.Equal(t, times[1], rangeBackups[0].Created)
@@ -82,7 +80,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 		ToTime:   &times[3], // To Jan 4
 	}
 	boundsFilter := NewFullBackupFilter(routine).WithTimeBounds(timeBounds)
-	boundsBackups, err := service.GetBackups(ctx, boundsFilter)
+	boundsBackups, err := service.GetBackups(t.Context(), boundsFilter)
 	require.NoError(t, err)
 	require.Len(t, boundsBackups, 3) // Should return Jan 2, 3, 4
 	assert.Equal(t, times[1], boundsBackups[0].Created)
@@ -94,7 +92,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 		WithFromTime(times[1]). // From Jan 2
 		WithToTime(times[3]).   // To Jan 4
 		Last()
-	lastRangeBackups, err := service.GetBackups(ctx, lastRangeFilter)
+	lastRangeBackups, err := service.GetBackups(t.Context(), lastRangeFilter)
 	require.NoError(t, err)
 	require.Len(t, lastRangeBackups, 1) // Should return only Jan 4
 	assert.Equal(t, times[3], lastRangeBackups[0].Created)
@@ -112,23 +110,23 @@ func TestLocalDeleteBackup(t *testing.T) {
 		Namespace: testNamespace,
 	}
 
-	err := service.WriteBackupMetadata(ctx, routine, backupPath, metadata)
+	err := service.WriteBackupMetadata(t.Context(), routine, backupPath, metadata)
 	require.NoError(t, err)
 
 	// Verify backup exists
 	filter := NewFullBackupFilter(routine)
-	backups, err := service.GetBackups(ctx, filter)
+	backups, err := service.GetBackups(t.Context(), filter)
 	require.NoError(t, err)
 	require.Len(t, backups, 1)
 
 	// Delete backup
-	err = service.Delete(ctx, routine, backupPath)
+	err = service.Delete(t.Context(), routine, backupPath)
 	require.NoError(t, err)
 
 	// Verify backup no longer exists
-	backups, err = service.GetBackups(ctx, filter)
+	backups, err = service.GetBackups(t.Context(), filter)
 	require.NoError(t, err)
-	assert.Len(t, backups, 0)
+	assert.Empty(t, backups)
 }
 
 func TestIncrementalBackup(t *testing.T) {
@@ -146,7 +144,7 @@ func TestIncrementalBackup(t *testing.T) {
 		FileCount:   5,
 	}
 
-	err := service.WriteBackupMetadata(ctx, routine, fullBackupPath, fullMetadata)
+	err := service.WriteBackupMetadata(t.Context(), routine, fullBackupPath, fullMetadata)
 	require.NoError(t, err)
 
 	// Now create an incremental backup
@@ -162,12 +160,12 @@ func TestIncrementalBackup(t *testing.T) {
 		FileCount:   2,
 	}
 
-	err = service.WriteBackupMetadata(ctx, routine, incrementalPath, incMetadata)
+	err = service.WriteBackupMetadata(t.Context(), routine, incrementalPath, incMetadata)
 	require.NoError(t, err)
 
 	// Test fetching only incremental backups
 	filter := NewIncrementalBackupFilter(routine)
-	backups, err := service.GetBackups(ctx, filter)
+	backups, err := service.GetBackups(t.Context(), filter)
 
 	// Verify
 	require.NoError(t, err)
@@ -179,14 +177,14 @@ func TestIncrementalBackup(t *testing.T) {
 
 	// Test with time filter for incremental
 	timeFilter := NewIncrementalBackupFilter(routine).WithFromTime(fullBackupTime)
-	timeBackups, err := service.GetBackups(ctx, timeFilter)
+	timeBackups, err := service.GetBackups(t.Context(), timeFilter)
 	require.NoError(t, err)
 	require.Len(t, timeBackups, 1)
 	assert.Equal(t, "test-routine/incremental/1609545600000/data/test-ns", timeBackups[0].Key)
 
 	// Verify independent from full backups
 	fullFilter := NewFullBackupFilter(routine)
-	fullBackups, err := service.GetBackups(ctx, fullFilter)
+	fullBackups, err := service.GetBackups(t.Context(), fullFilter)
 	require.NoError(t, err)
 	require.Len(t, fullBackups, 1)
 	assert.Equal(t, fullBackupTime, fullBackups[0].Created)
@@ -204,7 +202,7 @@ func TestReadPath(t *testing.T) {
 		Created: fullBackupTime,
 	}
 
-	err := service.WriteBackupMetadata(ctx, routine, fullBackupPath, fullMetadata)
+	err := service.WriteBackupMetadata(t.Context(), routine, fullBackupPath, fullMetadata)
 	require.NoError(t, err)
 
 	// Now create an incremental backup
@@ -215,26 +213,26 @@ func TestReadPath(t *testing.T) {
 		Created: incrementalTime,
 	}
 
-	err = service.WriteBackupMetadata(ctx, routine, incrementalPath, incMetadata)
+	err = service.WriteBackupMetadata(t.Context(), routine, incrementalPath, incMetadata)
 	require.NoError(t, err)
 
-	backups, err := service.GetBackups(ctx, NewPathFilter("test-routine", routine.Storage))
+	backups, err := service.GetBackups(t.Context(), NewPathFilter("test-routine", routine.Storage))
 	require.NoError(t, err)
 	require.Len(t, backups, 2)
 
-	backups, err = service.GetBackups(ctx, NewPathFilter("test-routine/backup", routine.Storage))
+	backups, err = service.GetBackups(t.Context(), NewPathFilter("test-routine/backup", routine.Storage))
 	require.NoError(t, err)
 	require.Len(t, backups, 1)
 
-	backups, err = service.GetBackups(ctx, NewPathFilter("test-routine/incremental", routine.Storage))
+	backups, err = service.GetBackups(t.Context(), NewPathFilter("test-routine/incremental", routine.Storage))
 	require.NoError(t, err)
 	require.Len(t, backups, 1)
 
-	backups, err = service.GetBackups(ctx, NewPathFilter("test-routine/wrong-path", routine.Storage))
+	backups, err = service.GetBackups(t.Context(), NewPathFilter("test-routine/wrong-path", routine.Storage))
 	require.NoError(t, err)
 	require.Empty(t, backups)
 
-	backups, err = service.GetBackups(ctx, NewPathFilter("wrong-path", routine.Storage))
+	backups, err = service.GetBackups(t.Context(), NewPathFilter("wrong-path", routine.Storage))
 	require.NoError(t, err)
 	require.Empty(t, backups)
 }
@@ -257,5 +255,6 @@ func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, Pa
 	require.NoError(t, err)
 
 	pathService := NewPathService(nil)
-	return NewBackupBackendService(config, pathService), pathService, routine
+	return NewBackupBackendService(config, pathService,
+		storage.NewOperations(storage.NewLocalStorageAccessor())), pathService, routine
 }

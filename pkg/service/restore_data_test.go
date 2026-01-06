@@ -47,7 +47,7 @@ func TestRestoreOK(t *testing.T) {
 		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(ctx, request)
+	jobID, err := env.restoreManager.Restore(t.Context(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -56,7 +56,7 @@ func TestRestoreOK(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusDone, jobStatus.Status)
 	assert.Equal(t, uint64(10), jobStatus.Counters.GetReadRecords(), "Read records count mismatch")
-	assert.Empty(t, jobStatus.Error, "Expected no error in final job status")
+	require.NoError(t, jobStatus.Error, "Expected no error in final job status")
 }
 
 func TestCancelRestoreOK(t *testing.T) {
@@ -89,7 +89,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	// Expect Run to start the process
 	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(mockRestoreHandler, nil)
 
-	jobID, err := env.restoreManager.Restore(ctx, request)
+	jobID, err := env.restoreManager.Restore(t.Context(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -132,7 +132,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 		Return(nil, clientErr)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(ctx, request)
+	jobID, err := env.restoreManager.Restore(t.Context(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -140,7 +140,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-	assert.ErrorIs(t, jobStatus.Error, clientErr)
+	require.ErrorIs(t, jobStatus.Error, clientErr)
 }
 
 func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
@@ -162,7 +162,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	env.infoGetter.EXPECT().GetNamespacesList(mock.Anything).Return([]string{"other NS"}, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(ctx, request)
+	jobID, err := env.restoreManager.Restore(t.Context(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -193,7 +193,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(backups, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(ctx, request)
+	jobID, err := env.restoreManager.Restore(t.Context(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -225,7 +225,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(ctx, request)
+	jobID, err := env.restoreManager.Restore(t.Context(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -270,7 +270,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 		})
 
 	// 1. Start the restore. This will run in a goroutine.
-	jobID, err := env.restoreManager.Restore(ctx, request)
+	jobID, err := env.restoreManager.Restore(t.Context(), request)
 	require.NoError(t, err)
 
 	// 2. Wait for the signal that the restore goroutine has called Run().
@@ -285,7 +285,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusCancelled, jobStatus.Status)
-	assert.ErrorIs(t, jobStatus.Error, context.Canceled)
+	require.ErrorIs(t, jobStatus.Error, context.Canceled)
 }
 
 func waitForRestore(
@@ -460,7 +460,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 					Return(mockRestoreHandler, nil).AnyTimes()
 			}
 
-			jobID, err := env.restoreManager.RestoreByTime(context.Background(), request)
+			jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
 			require.NoError(t, err)
 
 			jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -470,7 +470,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 				assert.Equal(t, model.JobStatusDone, jobStatus.Status)
 			} else {
 				assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-				assert.NotNil(t, jobStatus.Error)
+				require.Error(t, jobStatus.Error)
 			}
 		})
 	}

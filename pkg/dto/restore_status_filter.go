@@ -14,7 +14,7 @@ func NewStatusFilterFromString(statusParam string) (model.StatusFilter, error) {
 		statusParam = statusParam[1:]
 	}
 
-	for _, s := range strings.Split(statusParam, ",") {
+	for s := range strings.SplitSeq(statusParam, ",") {
 		s = strings.TrimSpace(s)
 		if s == "" {
 			continue

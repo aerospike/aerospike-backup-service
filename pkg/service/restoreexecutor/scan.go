@@ -7,7 +7,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
@@ -21,8 +20,9 @@ func runScanRestore(
 	ctx context.Context,
 	client aerospike.Restorer,
 	request *model.RestoreRequest,
+	operations storageReader,
 ) (RestoreHandler, error) {
-	reader, err := storage.CreateDirReader(ctx,
+	reader, err := operations.CreateDirReader(ctx,
 		request.SourceStorage, request.BackupDataPath, options.WithValidator(asb.NewValidator()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)

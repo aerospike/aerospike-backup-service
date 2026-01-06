@@ -8,6 +8,7 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
+	"strconv"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -103,7 +104,7 @@ func httpContent(w http.ResponseWriter, buf []byte, filename string) {
 
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(buf)))
+	w.Header().Set("Content-Length", strconv.Itoa(len(buf)))
 
 	w.WriteHeader(http.StatusOK)
 

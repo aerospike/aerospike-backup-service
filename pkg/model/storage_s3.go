@@ -35,27 +35,10 @@ type S3Authentication struct {
 	SecretAgent     *SecretAgent
 }
 
-func (a *S3Authentication) ReadSecrets() (keyID, accessKey string, err error) {
-	if a.SecretAgent == nil {
-		return a.KeyIDSecret, a.AccessKeySecret, nil
-	}
-
-	keyID, err = a.SecretAgent.Read(a.KeyIDSecret)
-	if err != nil {
-		return
-	}
-
-	accessKey, err = a.SecretAgent.Read(a.AccessKeySecret)
-	if err != nil {
-		return
-	}
-
-	return
-}
-
 func (s *S3Storage) GetPath() string {
 	return s.Path
 }
+
 func (s *S3Storage) String() string {
 	return fmt.Sprintf("S3Storage(Bucket: %s, Path: %s)", s.Bucket, s.Path)
 }

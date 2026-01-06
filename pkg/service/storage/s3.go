@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
@@ -21,13 +22,20 @@ import (
 )
 
 type S3StorageAccessor struct {
-	clientMap *collections.LoadingCache[*model.S3Storage, *awsS3.Client]
+	clientMap *collections.LoadingCacheContext[*model.S3Storage, *awsS3.Client]
+	resolver  secrets.Resolver
 }
 
-func NewS3StorageAccessor() *S3StorageAccessor {
-	return &S3StorageAccessor{
-		clientMap: collections.NewLoadingCache[*model.S3Storage, *awsS3.Client](context.Background(), getS3Client),
+func NewS3StorageAccessor(ctx context.Context, resolver secrets.Resolver) *S3StorageAccessor {
+	accessor := &S3StorageAccessor{
+		resolver: resolver,
 	}
+	accessor.clientMap = collections.NewLoadingCacheContext[*model.S3Storage, *awsS3.Client](
+		ctx,
+		accessor.getS3Client,
+		nil,
+	)
+	return accessor
 }
 
 func (a *S3StorageAccessor) supports(storage model.Storage) bool {
@@ -41,7 +49,7 @@ func (a *S3StorageAccessor) createReader(
 	opts ...options.Opt,
 ) (backup.StreamingReader, error) {
 	s3s := storage.(*model.S3Storage)
-	client, err := a.clientMap.GetWithContext(ctx, s3s)
+	client, err := a.clientMap.Get(ctx, s3s)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +62,7 @@ func (a *S3StorageAccessor) createWriter(
 	ctx context.Context, storage model.Storage, opts ...options.Opt,
 ) (backup.Writer, error) {
 	s3s := storage.(*model.S3Storage)
-	client, err := a.clientMap.GetWithContext(ctx, s3s)
+	client, err := a.clientMap.Get(ctx, s3s)
 	if err != nil {
 		return nil, err
 	}
@@ -66,12 +74,8 @@ func (a *S3StorageAccessor) createWriter(
 	return s3.NewWriter(ctx, client, s3s.Bucket, opts...)
 }
 
-func init() {
-	registerAccessor(NewS3StorageAccessor())
-}
-
-func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error) {
-	credentialsProvider, err := withCredentialsProvider(s.Auth)
+func (acc *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error) {
+	credentialsProvider, err := acc.withCredentialsProvider(s.Auth)
 	if err != nil {
 		return nil, err
 	}
@@ -137,16 +141,21 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 	return client, nil
 }
 
-func withCredentialsProvider(a *model.S3Authentication) (config.LoadOptionsFunc, error) {
+func (acc *S3StorageAccessor) withCredentialsProvider(a *model.S3Authentication) (config.LoadOptionsFunc, error) {
 	if a == nil {
 		return func(*config.LoadOptions) error {
 			return nil // No-op implementation
 		}, nil
 	}
 
-	keyID, accessKey, err := a.ReadSecrets()
+	keyID, err := acc.resolver.Resolve(a.SecretAgent, a.KeyIDSecret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to resolve key ID: %w", err)
+	}
+
+	accessKey, err := acc.resolver.Resolve(a.SecretAgent, a.AccessKeySecret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve access key: %w", err)
 	}
 
 	return config.WithCredentialsProvider(credentials.StaticCredentialsProvider{

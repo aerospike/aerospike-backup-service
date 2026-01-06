@@ -94,7 +94,7 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			require.Error(t, err)
 
 			errStr := err.Error()
-			assert.Equal(t, len(tt.errors), len(strings.Split(errStr, "\n")))
+			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
 				if !strings.Contains(errStr, substr) {
 					t.Errorf("error message %q should contain %q", errStr, substr)
@@ -166,7 +166,7 @@ func TestFileLoggerConfig_Compare(t *testing.T) {
 			require.Error(t, err)
 
 			errStr := err.Error()
-			assert.Equal(t, len(tt.errors), len(strings.Split(errStr, "\n")))
+			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
 				if !strings.Contains(errStr, substr) {
 					t.Errorf("error message %q should contain %q", errStr, substr)
@@ -228,7 +228,7 @@ func TestRateLimiterConfig_Compare(t *testing.T) {
 			require.Error(t, err)
 
 			errStr := err.Error()
-			assert.Equal(t, len(tt.errors), len(strings.Split(errStr, "\n")))
+			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
 				if !strings.Contains(errStr, substr) {
 					t.Errorf("error message %q should contain %q", errStr, substr)
@@ -295,7 +295,7 @@ func TestHTTPServerConfig_Compare(t *testing.T) {
 			require.Error(t, err)
 
 			errStr := err.Error()
-			assert.Equal(t, len(tt.errors), len(strings.Split(errStr, "\n")))
+			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
 				if !strings.Contains(errStr, substr) {
 					t.Errorf("error message %q should contain %q", errStr, substr)
@@ -381,7 +381,7 @@ func TestLoggerConfig_Compare(t *testing.T) {
 			require.Error(t, err)
 
 			errStr := err.Error()
-			assert.Equal(t, len(tt.errors), len(strings.Split(errStr, "\n")))
+			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
 				if !strings.Contains(errStr, substr) {
 					t.Errorf("error message %q should contain %q", errStr, substr)

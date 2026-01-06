@@ -80,7 +80,7 @@ func TestMissingElements(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := MissingElements(tt.subset, tt.superset)
-			assert.Equal(t, len(tt.expected), len(result))
+			assert.Len(t, result, len(tt.expected))
 			if len(tt.expected) > 0 {
 				assert.Equal(t, tt.expected, result)
 			}

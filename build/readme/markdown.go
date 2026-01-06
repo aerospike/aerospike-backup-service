@@ -137,7 +137,7 @@ func determineColumsWidth(rows []Row) (int, int, int, int) {
 		if len(r.Name) > maxName {
 			maxName = len(r.Name)
 		}
-		for _, line := range strings.Split(r.Help, "\n") {
+		for line := range strings.SplitSeq(r.Help, "\n") {
 			if len(line) > maxHelp {
 				maxHelp = len(line)
 			}

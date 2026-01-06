@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -73,6 +74,8 @@ type BackupRoutine struct {
 }
 
 // Validate validates the backup routine configuration.
+//
+//nolint:gocognit
 func (r *BackupRoutine) Validate() error {
 	if r.SourceCluster == "" {
 		return errValidationEmptyField("source-cluster")
@@ -142,11 +145,10 @@ func validatePartitionList(partitionList string) error {
 		return nil // empty list is valid
 	}
 
-	entries := strings.Split(partitionList, ",")
-	for _, entry := range entries {
+	for entry := range strings.SplitSeq(partitionList, ",") {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
-			return fmt.Errorf("empty entry in partition list")
+			return errors.New("empty entry in partition list")
 		}
 
 		if err := validatePartitionEntry(entry); err != nil {

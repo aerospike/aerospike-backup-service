@@ -14,7 +14,7 @@ import (
 //nolint:lll
 type Config struct {
 	// ServiceConfig contains general service settings.
-	ServiceConfig ServiceConfig `yaml:"service,omitempty" json:"service,omitempty"`
+	ServiceConfig ServiceConfig `yaml:"service,omitempty" json:"service,omitzero"`
 	// AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.
 	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
 	// Storage is a map of storages that can be used by backup routines.
@@ -78,6 +78,8 @@ func NewConfigFromReader(r io.Reader, format decoder.SerializationFormat) (*Conf
 }
 
 // Validate validates the configuration.
+//
+//nolint:gocognit
 func (c *Config) Validate(opts ...ValidationOption) error {
 	for name, routine := range c.BackupRoutines {
 		if name == "" {

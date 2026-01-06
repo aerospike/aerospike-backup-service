@@ -6,10 +6,14 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
 )
+
+type storageWriter interface {
+	// CreateDirWriter creates a writer for a folder in the specified storage.
+	CreateDirWriter(ctx context.Context, storage model.Storage, path string, opts ...options.Opt) (backup.Writer, error)
+}
 
 // Backup defines the interface for running backups.
 type Backup interface {
@@ -25,10 +29,14 @@ type Backup interface {
 }
 
 // DefaultBackupExecutor implements the actual backup logic.
-type DefaultBackupExecutor struct{}
+type DefaultBackupExecutor struct {
+	operations storageWriter
+}
 
-func NewDefaultBackupExecutor() *DefaultBackupExecutor {
-	return &DefaultBackupExecutor{}
+func NewDefaultBackupExecutor(operations storageWriter) *DefaultBackupExecutor {
+	return &DefaultBackupExecutor{
+		operations: operations,
+	}
 }
 
 // Run implements the backup logic.
@@ -45,7 +53,7 @@ func (r *DefaultBackupExecutor) Run(
 ) (BackupHandler, error) {
 	xdrEnabled := routine.BackupPolicy.XDRConfig != nil
 	withStorageClass := options.WithStorageClass(routine.Storage.GetStorageClass().DataClass)
-	writer, err := storage.CreateDirWriter(ctx, routine.Storage, path, withStorageClass)
+	writer, err := r.operations.CreateDirWriter(ctx, routine.Storage, path, withStorageClass)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer: %w", err)
 	}
