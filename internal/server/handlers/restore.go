@@ -218,7 +218,7 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf, err := s.configRetriever.RetrieveConfiguration(s.sysCtx, routine, time.UnixMilli(timestamp))
+	buf, err := s.configRetriever.RetrieveConfiguration(r.Context(), routine, time.UnixMilli(timestamp))
 	if err != nil {
 		httpError(w, err)
 		return
