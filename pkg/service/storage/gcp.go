@@ -7,6 +7,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/backup-go"
 	gcp "github.com/aerospike/backup-go/io/storage/gcp/storage"
@@ -16,13 +17,20 @@ import (
 )
 
 type GcpStorageAccessor struct {
-	clientMap *collections.LoadingCache[*model.GcpStorage, *storage.Client]
+	clientMap *collections.LoadingCacheContext[*model.GcpStorage, *storage.Client]
+	resolver  secrets.Resolver
 }
 
-func NewGcpStorageAccessor() *GcpStorageAccessor {
-	return &GcpStorageAccessor{
-		clientMap: collections.NewLoadingCache[*model.GcpStorage, *storage.Client](context.Background(), getGcpClient),
+func NewGcpStorageAccessor(ctx context.Context, resolver secrets.Resolver) *GcpStorageAccessor {
+	accessor := &GcpStorageAccessor{
+		resolver: resolver,
 	}
+	accessor.clientMap = collections.NewLoadingCacheContext[*model.GcpStorage, *storage.Client](
+		ctx,
+		accessor.getGcpClient,
+		nil,
+	)
+	return accessor
 }
 
 func (a *GcpStorageAccessor) supports(storage model.Storage) bool {
@@ -36,7 +44,7 @@ func (a *GcpStorageAccessor) createReader(
 	opts ...options.Opt,
 ) (backup.StreamingReader, error) {
 	gcps := storage.(*model.GcpStorage)
-	client, err := a.clientMap.GetWithContext(ctx, gcps)
+	client, err := a.clientMap.Get(ctx, gcps)
 	if err != nil {
 		return nil, fmt.Errorf("reader failed to create GCP client: %w", err)
 	}
@@ -48,7 +56,7 @@ func (a *GcpStorageAccessor) createWriter(
 	ctx context.Context, storage model.Storage, opts ...options.Opt,
 ) (backup.Writer, error) {
 	gcps := storage.(*model.GcpStorage)
-	client, err := a.clientMap.GetWithContext(ctx, gcps)
+	client, err := a.clientMap.Get(ctx, gcps)
 	if err != nil {
 		return nil, fmt.Errorf("writer failed to create GCP client: %w", err)
 	}
@@ -60,11 +68,7 @@ func (a *GcpStorageAccessor) createWriter(
 	return gcp.NewWriter(ctx, client, gcps.BucketName, opts...)
 }
 
-func init() {
-	registerAccessor(NewGcpStorageAccessor())
-}
-
-func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, error) {
+func (a *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, error) {
 	opts := make([]option.ClientOption, 0)
 
 	if g.KeyFile != "" {
@@ -72,7 +76,7 @@ func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, er
 	}
 
 	if g.KeyJSON != "" {
-		key, err := g.SecretAgent.Read(g.KeyJSON)
+		key, err := a.resolver.Resolve(g.SecretAgent, g.KeyJSON)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read key json from secret agent: %w", err)
 		}

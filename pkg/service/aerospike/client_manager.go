@@ -15,7 +15,7 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-// ClientManager is responsible for creating and closing backup clients.
+// ClientManager is responsible for creating, storing and closing backup clients.
 type ClientManager interface {
 	// GetClient returns a backup client by aerospike cluster name (new or cached).
 	GetClient(ctx context.Context, cluster *model.AerospikeCluster, logger *slog.Logger) (Client, error)
@@ -29,6 +29,10 @@ type Cluster interface {
 }
 
 // ClientManagerImpl implements [ClientManager].
+// It keeps track of clients:
+// on the first GetClient call it creates a client, and subsequent calls return the same instance.
+// Close only decrements the reference counter;
+// the client is actually closed when the counter reaches zero.
 type ClientManagerImpl struct {
 	// clients holds the state for each cluster.
 	clients       *collections.SafeMap[string, *clientInfo]
@@ -37,6 +41,8 @@ type ClientManagerImpl struct {
 }
 
 var _ ClientManager = (*ClientManagerImpl)(nil)
+
+const DefaultCloseDelay = 10 * time.Second
 
 type clientInfo struct {
 	// mu protects the fields below (count, closeTimer, aeroClient)
@@ -49,6 +55,7 @@ type clientInfo struct {
 }
 
 // NewClientManager creates a new ClientManagerImpl.
+// closeDelay specifies how long to wait before actually closing the client after the last user releases it.
 func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Duration) *ClientManagerImpl {
 	return &ClientManagerImpl{
 		clients:       collections.NewSafeMap[string, *clientInfo](),

@@ -33,12 +33,13 @@ func Load(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
+	operations storageReaderWriter,
 ) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
 		slog.Bool("remote", remote))
 
-	manager, err := newConfigManager(ctx, configFile, remote, nsValidator)
+	manager, err := newConfigManager(ctx, configFile, remote, nsValidator, operations)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
 	}
@@ -93,14 +94,14 @@ func newConfigManager(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
+	operations storageReaderWriter,
 ) (Manager, error) {
 	if remote {
-		storage, err := readStorage(ctx, configFile)
+		s, err := readStorage(ctx, configFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read remote storage configuration: %w", err)
 		}
-
-		return newStorageManager(storage, nsValidator), nil
+		return newStorageManager(s, nsValidator, operations), nil
 	}
 
 	if isHTTPPath(configFile) {

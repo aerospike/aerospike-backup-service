@@ -4,13 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"log/slog"
-	"os"
 	"sort"
-	"sync/atomic"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
@@ -18,7 +14,6 @@ const nilString = "<nil>"
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 type AerospikeCluster struct {
-	pwd atomic.Pointer[string]
 	// The cluster name.
 	ClusterLabel *string
 	// The seed nodes details.
@@ -45,24 +40,14 @@ func (c *AerospikeCluster) GetUser() *string {
 	return nil
 }
 
-// GetPassword tries to read and set the password once from the configured source.
-// Returns the password value. If it fails to read the password, it will return nil
-// and try to read again next time.
+// GetPassword returns the configured password.
+// Note: This returns the raw password configuration. If using Secret Agent or file path,
+// this needs to be resolved by the service layer.
 func (c *AerospikeCluster) GetPassword() *string {
-	if password := c.pwd.Load(); password != nil {
-		return password
-	}
-
 	if c.Credentials == nil {
 		return nil
 	}
-
-	password := c.Credentials.loadPassword()
-	if password != nil {
-		c.pwd.Store(password)
-	}
-
-	return password
+	return c.Credentials.Password
 }
 
 // Hash returns a unique string identifier for the AerospikeCluster.
@@ -89,45 +74,6 @@ func (c *AerospikeCluster) Hash() string {
 	_, _ = fmt.Fprintf(hasher, "%v", hashData)
 
 	return hex.EncodeToString(hasher.Sum(nil))
-}
-
-func (c *Credentials) loadPassword() *string {
-	if c.Password != nil {
-		password, err := c.SecretAgent.Read(*c.Password)
-		if err != nil {
-			slog.Warn("Failed to read password from secret agent", attr.Error(err))
-			return nil
-		}
-
-		return &password
-	}
-
-	if password := c.loadPasswordFromFile(); password != nil {
-		return password
-	}
-
-	slog.Warn("No valid authentication method configured")
-
-	return nil
-}
-
-func (c *Credentials) loadPasswordFromFile() *string {
-	if c.PasswordPath == nil {
-		return nil
-	}
-
-	data, err := os.ReadFile(*c.PasswordPath)
-	if err != nil {
-		slog.Error("Failed to read password",
-			slog.String("path", *c.PasswordPath),
-			attr.Error(err))
-		return nil
-	}
-
-	slog.Debug("Successfully read password", slog.String("path", *c.PasswordPath))
-	password := string(data)
-
-	return &password
 }
 
 // GetAuthMode safely returns the authentication mode.

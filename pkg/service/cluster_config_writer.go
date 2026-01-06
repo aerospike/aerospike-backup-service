@@ -11,8 +11,12 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike/cluster"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
+
+type storageDataWriter interface {
+	// WriteDataFile writes a data file to the specified storage.
+	WriteDataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
+}
 
 // ClusterConfigWriter handles writing cluster configuration to storage.
 type ClusterConfigWriter interface {
@@ -24,16 +28,19 @@ type ClusterConfigWriter interface {
 type DefaultClusterConfigWriter struct {
 	clientManager aerospike.ClientManager
 	pathService   PathService
+	operations    storageDataWriter
 }
 
 // NewClusterConfigWriter returns a new DefaultClusterConfigWriter instance.
 func NewClusterConfigWriter(
 	clientManager aerospike.ClientManager,
 	pathService PathService,
+	operations storageDataWriter,
 ) *DefaultClusterConfigWriter {
 	return &DefaultClusterConfigWriter{
 		clientManager: clientManager,
 		pathService:   pathService,
+		operations:    operations,
 	}
 }
 
@@ -58,7 +65,7 @@ func (w *DefaultClusterConfigWriter) Write(
 
 	for i, info := range infos {
 		confFilePath := w.pathService.GetConfigurationFilePath(routine.Name, timestamp, i)
-		err := storage.WriteDataFile(ctx, routine.Storage, confFilePath, []byte(info))
+		err := w.operations.WriteDataFile(ctx, routine.Storage, confFilePath, []byte(info))
 		if err != nil {
 			logger.Error("Failed to write cluster configuration backup",
 				attr.Error(err))

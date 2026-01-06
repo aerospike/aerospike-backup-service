@@ -1,11 +1,13 @@
 package aerospike
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
@@ -23,10 +25,13 @@ var _ ClientFactory = (*DefaultClientFactory)(nil)
 
 // DefaultClientFactory is the default implementation of ClientFactory.
 type DefaultClientFactory struct {
+	passwordResolver secrets.PasswordResolver
 }
 
-func NewClientFactory() *DefaultClientFactory {
-	return &DefaultClientFactory{}
+func NewClientFactory(passwordResolver secrets.PasswordResolver) *DefaultClientFactory {
+	return &DefaultClientFactory{
+		passwordResolver: passwordResolver,
+	}
 }
 
 func (f *DefaultClientFactory) NewBackupClient(client backup.AerospikeClient, opt ...backup.ClientOpt) (Client, error) {
@@ -37,7 +42,11 @@ func (f *DefaultClientFactory) NewBackupClient(client backup.AerospikeClient, op
 func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
 	cluster *model.AerospikeCluster,
 ) (backup.AerospikeClient, error) {
-	return as.NewClientWithPolicyAndHost(clientPolicy(cluster), clientHosts(cluster)...)
+	policy, err := f.clientPolicy(cluster)
+	if err != nil {
+		return nil, err
+	}
+	return as.NewClientWithPolicyAndHost(policy, clientHosts(cluster)...)
 }
 
 // clientHosts builds and returns a Host list from the AerospikeCluster configuration.
@@ -54,11 +63,15 @@ func clientHosts(c *model.AerospikeCluster) []*as.Host {
 }
 
 // clientPolicy builds and returns a new ClientPolicy from the AerospikeCluster configuration.
-func clientPolicy(c *model.AerospikeCluster) *as.ClientPolicy {
+func (f *DefaultClientFactory) clientPolicy(c *model.AerospikeCluster) (*as.ClientPolicy, error) {
 	policy := as.NewClientPolicy()
 	if c.Credentials != nil {
 		policy.User = ptr.ValueOrZero(c.GetUser())
-		policy.Password = ptr.ValueOrZero(c.GetPassword())
+		password, err := f.passwordResolver.Resolve(c.Credentials)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve password: %w", err)
+		}
+		policy.Password = ptr.ValueOrZero(password)
 		if c.Credentials.AuthMode != nil {
 			switch strings.ToUpper(*c.Credentials.AuthMode) {
 			case "INTERNAL":
@@ -87,7 +100,7 @@ func clientPolicy(c *model.AerospikeCluster) *as.ClientPolicy {
 		policy.RackIds = c.PreferRacks // prioritise these racks
 	}
 
-	return policy
+	return policy, nil
 }
 
 func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {

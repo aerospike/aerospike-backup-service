@@ -58,7 +58,7 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, err := s.restoreManager.Restore(s.ctx, restoreRequest)
+	jobID, err := s.restoreManager.Restore(s.sysCtx, restoreRequest)
 	if err != nil {
 		httpError(w, err)
 		return
@@ -96,7 +96,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, err := s.restoreManager.RestoreByTime(s.ctx, restoreRequest)
+	jobID, err := s.restoreManager.RestoreByTime(s.sysCtx, restoreRequest)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -218,7 +218,7 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf, err := s.configRetriever.RetrieveConfiguration(s.ctx, routine, time.UnixMilli(timestamp))
+	buf, err := s.configRetriever.RetrieveConfiguration(r.Context(), routine, time.UnixMilli(timestamp))
 	if err != nil {
 		httpError(w, err)
 		return

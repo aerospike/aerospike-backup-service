@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,7 +42,10 @@ func TestGetS3Client_Connectivity(t *testing.T) {
 		},
 	}
 
-	client, err := getS3Client(t.Context(), s3Config)
+	ctx := t.Context()
+	resolver := secrets.NewResolver(ctx)
+	accessor := NewS3StorageAccessor(ctx, resolver)
+	client, err := accessor.getS3Client(ctx, s3Config)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -61,7 +65,7 @@ func TestGetS3Client_Connectivity(t *testing.T) {
 		},
 	}
 
-	clientFail, err := getS3Client(t.Context(), s3ConfigFail)
+	clientFail, err := accessor.getS3Client(t.Context(), s3ConfigFail)
 	require.Error(t, err)
 	assert.Nil(t, clientFail)
 	assert.Contains(t, err.Error(), "s3 storage connectivity check failed")
@@ -86,7 +90,10 @@ func TestGetGcpClient_Connectivity(t *testing.T) {
 		Endpoint:   ts.URL,
 	}
 
-	client, err := getGcpClient(t.Context(), gcpConfig)
+	ctx := t.Context()
+	resolver := secrets.NewResolver(ctx)
+	accessor := NewGcpStorageAccessor(ctx, resolver)
+	client, err := accessor.getGcpClient(ctx, gcpConfig)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -101,7 +108,7 @@ func TestGetGcpClient_Connectivity(t *testing.T) {
 		Endpoint:   failServer.URL,
 	}
 
-	clientFail, err := getGcpClient(t.Context(), gcpConfigFail)
+	clientFail, err := accessor.getGcpClient(t.Context(), gcpConfigFail)
 	require.Error(t, err)
 	assert.Nil(t, clientFail)
 	assert.Contains(t, err.Error(), "gcp storage connectivity check failed")
@@ -138,7 +145,10 @@ func TestGetAzureClient_Connectivity(t *testing.T) {
 		},
 	}
 
-	client, err := getAzureClient(t.Context(), azureConfig)
+	ctx := t.Context()
+	resolver := secrets.NewResolver(ctx)
+	accessor := NewAzureStorageAccessor(ctx, resolver)
+	client, err := accessor.getAzureClient(ctx, azureConfig)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -155,7 +165,7 @@ func TestGetAzureClient_Connectivity(t *testing.T) {
 			AccountKey:  key,
 		},
 	}
-	client, err = getAzureClient(t.Context(), azureConfigFail)
+	client, err = accessor.getAzureClient(t.Context(), azureConfigFail)
 
 	require.Error(t, err)
 	assert.Nil(t, client)

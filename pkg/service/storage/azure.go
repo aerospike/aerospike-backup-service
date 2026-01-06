@@ -3,26 +3,36 @@ package storage
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 	azure "github.com/aerospike/backup-go/io/storage/azure/blob"
 	"github.com/aerospike/backup-go/io/storage/options"
 )
 
 type AzureStorageAccessor struct {
-	clientMap *collections.LoadingCache[*model.AzureStorage, *azblob.Client]
+	clientMap collections.CacheContext[*model.AzureStorage, *azblob.Client]
+	resolver  secrets.Resolver
 }
 
-func NewAzureStorageAccessor() *AzureStorageAccessor {
-	return &AzureStorageAccessor{
-		clientMap: collections.NewLoadingCache[*model.AzureStorage, *azblob.Client](context.Background(), getAzureClient),
+func NewAzureStorageAccessor(ctx context.Context, resolver secrets.Resolver) *AzureStorageAccessor {
+	accessor := &AzureStorageAccessor{
+		resolver: resolver,
 	}
+	accessor.clientMap = collections.NewLoadingCacheContext[*model.AzureStorage, *azblob.Client](
+		ctx,
+		accessor.getAzureClient,
+		ptr.Of(time.Hour),
+	)
+	return accessor
 }
 
 func (a *AzureStorageAccessor) supports(storage model.Storage) bool {
@@ -33,7 +43,7 @@ func (a *AzureStorageAccessor) supports(storage model.Storage) bool {
 func (a *AzureStorageAccessor) createReader(ctx context.Context, storage model.Storage, opts ...options.Opt,
 ) (backup.StreamingReader, error) {
 	azures := storage.(*model.AzureStorage)
-	client, err := a.clientMap.Get(azures)
+	client, err := a.clientMap.Get(ctx, azures)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +55,7 @@ func (a *AzureStorageAccessor) createWriter(
 	ctx context.Context, storage model.Storage, opts ...options.Opt,
 ) (backup.Writer, error) {
 	azures := storage.(*model.AzureStorage)
-	client, err := a.clientMap.Get(azures)
+	client, err := a.clientMap.Get(ctx, azures)
 	if err != nil {
 		return nil, err
 	}
@@ -57,39 +67,35 @@ func (a *AzureStorageAccessor) createWriter(
 	return azure.NewWriter(ctx, client, azures.ContainerName, opts...)
 }
 
-func init() {
-	registerAccessor(NewAzureStorageAccessor())
-}
-
-func getAzureClient(ctx context.Context, a *model.AzureStorage) (*azblob.Client, error) {
-	client, err := createAzureClient(a)
+func (a *AzureStorageAccessor) getAzureClient(ctx context.Context, s *model.AzureStorage) (*azblob.Client, error) {
+	client, err := a.createAzureClient(s)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob client: %w", err)
 	}
 
-	if err := checkAzureConnectivity(ctx, client, a.ContainerName); err != nil {
+	if err := checkAzureConnectivity(ctx, client, s.ContainerName); err != nil {
 		return nil, err
 	}
 
 	return client, nil
 }
 
-func createAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
-	switch auth := a.Auth.(type) {
+func (a *AzureStorageAccessor) createAzureClient(s *model.AzureStorage) (*azblob.Client, error) {
+	switch auth := s.Auth.(type) {
 	case *model.AzureSharedKeyAuth:
-		return clientFromSharedKey(a.Endpoint, auth, a.SecretAgent)
+		return a.clientFromSharedKey(s.Endpoint, auth, s.SecretAgent)
 	case *model.AzureADAuth:
-		return clientFromAD(a.Endpoint, auth, a.SecretAgent)
+		return a.clientFromAD(s.Endpoint, auth, s.SecretAgent)
 	default:
-		return clientWithDefaultCredential(a.Endpoint)
+		return clientWithDefaultCredential(s.Endpoint)
 	}
 }
 
-func clientFromSharedKey(
+func (a *AzureStorageAccessor) clientFromSharedKey(
 	endpoint string, auth *model.AzureSharedKeyAuth, sa *model.SecretAgent,
 ) (*azblob.Client, error) {
-	accountKey, err := sa.Read(auth.AccountKey)
+	accountKey, err := a.resolver.Resolve(sa, auth.AccountKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve account key from secret agent: %w", err)
 	}
@@ -106,16 +112,20 @@ func clientFromSharedKey(
 	return client, nil
 }
 
-func clientFromAD(endpoint string, auth *model.AzureADAuth, sa *model.SecretAgent) (*azblob.Client, error) {
-	clientSecret, err := sa.Read(auth.ClientSecret)
+func (a *AzureStorageAccessor) clientFromAD(
+	endpoint string,
+	auth *model.AzureADAuth,
+	sa *model.SecretAgent,
+) (*azblob.Client, error) {
+	clientSecret, err := a.resolver.Resolve(sa, auth.ClientSecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve client-secret from secret agent: %w", err)
 	}
-	tenantID, err := sa.Read(auth.TenantID)
+	tenantID, err := a.resolver.Resolve(sa, auth.TenantID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve tenant-id from secret agent: %w", err)
 	}
-	clientID, err := sa.Read(auth.ClientID)
+	clientID, err := a.resolver.Resolve(sa, auth.ClientID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve client-id from secret agent: %w", err)
 	}
