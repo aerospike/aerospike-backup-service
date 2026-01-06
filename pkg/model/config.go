@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"sync"
@@ -61,9 +62,9 @@ func NewConfig() *Config {
 }
 
 var (
-	ErrAlreadyExists = fmt.Errorf("item already exists")
-	ErrNotFound      = fmt.Errorf("item not found")
-	ErrInUse         = fmt.Errorf("item is in use")
+	ErrAlreadyExists = errors.New("item already exists")
+	ErrNotFound      = errors.New("item not found")
+	ErrInUse         = errors.New("item is in use")
 )
 
 func (c *Config) BackupConfigCopy() *BackupConfig {
@@ -209,7 +210,7 @@ func (c *Config) Routine(name string) (*BackupRoutine, bool) {
 
 func (c *Config) AddRoutine(r *BackupRoutine) error {
 	if r.Name == "" {
-		return fmt.Errorf("backup routine name is empty")
+		return errors.New("backup routine name is empty")
 	}
 
 	c.mu.Lock()

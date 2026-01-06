@@ -138,7 +138,7 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 func extractJobID(r *http.Request) (model.RestoreJobID, error) {
 	jobIDParam := r.PathValue("jobId")
 	if jobIDParam == "" {
-		return 0, fmt.Errorf("jobId required")
+		return 0, errors.New("jobId required")
 	}
 	jobID, err := strconv.ParseInt(jobIDParam, 10, 64)
 	if err != nil {

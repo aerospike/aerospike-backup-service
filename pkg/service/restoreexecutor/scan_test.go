@@ -58,17 +58,17 @@ func TestMakeRestoreConfig(t *testing.T) {
 	require.NotNil(t, config)
 	assert.Equal(t, []string{"bin1", "bin2"}, config.BinList)
 	assert.Equal(t, []string{"set1", "set2"}, config.SetList)
-	assert.Equal(t, false, config.NoRecords)
-	assert.Equal(t, false, config.NoIndexes)
-	assert.Equal(t, false, config.NoUDFs)
+	assert.False(t, config.NoRecords)
+	assert.False(t, config.NoIndexes)
+	assert.False(t, config.NoUDFs)
 	assert.Equal(t, 500, config.RecordsPerSecond)
 	assert.Equal(t, int64(1024*megabyte), config.Bandwidth)
 	assert.Equal(t, int64(3600), config.ExtraTTL)
 	assert.Equal(t, 8, config.Parallel)
 	assert.Equal(t, 128, config.BatchSize)
 	assert.Equal(t, 10, config.MaxAsyncBatches)
-	assert.Equal(t, true, config.DisableBatchWrites)
-	assert.Equal(t, config.MetricsEnabled, true)
+	assert.True(t, config.DisableBatchWrites)
+	assert.True(t, config.MetricsEnabled)
 
 	require.NotNil(t, config.Namespace)
 	assert.Equal(t, "ns_source", *config.Namespace.Source)
@@ -90,7 +90,7 @@ func TestMakeRestoreConfig(t *testing.T) {
 	assert.Equal(t, "tcp", *config.SecretAgentConfig.ConnectionType)
 	assert.Equal(t, 2000, *config.SecretAgentConfig.TimeoutMillisecond)
 	assert.Equal(t, "ca-cert", *config.SecretAgentConfig.CaFile)
-	assert.Equal(t, true, *config.SecretAgentConfig.IsBase64)
+	assert.True(t, *config.SecretAgentConfig.IsBase64)
 }
 
 func TestRecordExistsAction(t *testing.T) {

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -59,7 +60,7 @@ type BackupMetadata struct {
 // NewMetadataFromBytes creates a new Metadata object from a byte slice.
 func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 	if len(data) == 0 {
-		return nil, fmt.Errorf("empty metadata file")
+		return nil, errors.New("empty metadata file")
 	}
 	var metadata BackupMetadata
 	err := yaml.Unmarshal(data, &metadata)

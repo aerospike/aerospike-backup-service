@@ -162,10 +162,10 @@ func (f *FileLoggerConfig) Compare(other *FileLoggerConfig) error {
 		return nil
 	}
 	if f == nil {
-		return fmt.Errorf("FileLogger added")
+		return errors.New("FileLogger added")
 	}
 	if other == nil {
-		return fmt.Errorf("FileLogger removed")
+		return errors.New("FileLogger removed")
 	}
 
 	return errors.Join(

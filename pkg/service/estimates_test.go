@@ -6,6 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewRunningJob(t *testing.T) {
@@ -68,8 +69,8 @@ func TestDoneRestoreJobStatus(t *testing.T) {
 
 	status := job.buildStatus()
 
-	assert.Nil(t, status.Error)
+	require.NoError(t, status.Error)
 	assert.NotNil(t, status.CurrentRestore)
-	assert.Equal(t, status.CurrentRestore.PercentageDone, uint(100))
-	assert.Equal(t, status.Status, model.JobStatusDone)
+	assert.Equal(t, uint(100), status.CurrentRestore.PercentageDone)
+	assert.Equal(t, model.JobStatusDone, status.Status)
 }

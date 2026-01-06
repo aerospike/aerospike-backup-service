@@ -33,10 +33,10 @@ var jsonErrorRegex = regexp.MustCompile(`json: unknown field "([^"]+)"`)
 // Deserialize handles deserialization.
 func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 	if r == nil {
-		return fmt.Errorf("nil reader")
+		return errors.New("nil reader")
 	}
 	if v == nil {
-		return fmt.Errorf("nil target")
+		return errors.New("nil target")
 	}
 
 	switch format {

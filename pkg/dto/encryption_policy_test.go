@@ -81,7 +81,6 @@ func TestEncryptionPolicy_Validate_Invalid(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			err := tc.policy.Validate()
 			require.ErrorIs(t, err, tc.wantIsErr)

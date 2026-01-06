@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // testCertificates holds paths to test certificate files.
@@ -321,13 +321,13 @@ func TestTLS_Validate(t *testing.T) {
 			err := tt.tls.Validate()
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 
 				if tt.errType != nil && !errors.Is(err, tt.errType) {
 					t.Errorf("expected error type %v, got %v", tt.errType, err)
 				}
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -378,9 +378,9 @@ func TestTLS_validateCACertificates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.tls.validateCACertificates()
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

@@ -2,10 +2,11 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/middleware"
@@ -13,7 +14,8 @@ import (
 )
 
 const (
-	restAPIVersion = "v1"
+	restAPIVersion  = "v1"
+	shutdownTimeout = 30 * time.Second
 )
 
 // HTTPServer is the backup service HTTP server wrapper.
@@ -27,7 +29,7 @@ func NewHTTPServer(serverConfig *model.HTTPServerConfig, service *handlers.Servi
 
 	// Create router
 	mux := NewServeMux(
-		fmt.Sprintf("/%s", restAPIVersion),
+		"/"+restAPIVersion,
 		"/",
 		service,
 	)
@@ -46,17 +48,19 @@ func NewHTTPServer(serverConfig *model.HTTPServerConfig, service *handlers.Servi
 	}
 }
 
-// Start starts the HTTP server.
-func (s *HTTPServer) Start() {
+// Start starts the HTTP server. Returns an error if the server fails to start.
+func (s *HTTPServer) Start() error {
 	err := s.server.ListenAndServe()
-	if err != nil && strings.Contains(err.Error(), "Server closed") {
+	if errors.Is(err, http.ErrServerClosed) {
 		slog.Info(err.Error())
-	} else {
-		panic(err)
+		return nil
 	}
+	return err
 }
 
-// Shutdown shutdowns the HTTP server.
+// Shutdown shuts down the HTTP server gracefully with a timeout.
 func (s *HTTPServer) Shutdown() error {
-	return s.server.Shutdown(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	return s.server.Shutdown(ctx)
 }

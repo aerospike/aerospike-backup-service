@@ -79,7 +79,9 @@ func run() int {
 }
 
 func startService(configFile string, remote bool) error {
-	ctx := systemCtx()
+	ctx, stop := systemCtx()
+	defer stop()
+
 	config, scheduler, httpService, appLogger, err := initComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
@@ -186,30 +188,30 @@ func setDefaultLogger(loggerConfig *model.LoggerConfig) *slog.Logger {
 	return appLogger
 }
 
-func systemCtx() context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		sigch := make(chan os.Signal, 1)
-		signal.Notify(sigch, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
-		<-sigch
-		slog.Debug("Got system signal")
-		cancel()
-	}()
-
-	return ctx
+func systemCtx() (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 }
 
 func runHTTPServer(
 	ctx context.Context, serverConfig *model.HTTPServerConfig, service *handlers.Service, logger *slog.Logger,
 ) error {
 	httpServer := server.NewHTTPServer(serverConfig, service, logger)
+
+	// Channel to capture server startup errors
+	errCh := make(chan error, 1)
 	go func() {
-		httpServer.Start()
+		if err := httpServer.Start(); err != nil {
+			errCh <- err
+		}
 	}()
 
-	<-ctx.Done()
-	time.Sleep(time.Millisecond * 100) // wait for other goroutines to exit
-	// shutdown the HTTP server gracefully
+	// Wait for either context cancellation or server error
+	select {
+	case err := <-errCh:
+		return fmt.Errorf("HTTP server failed: %w", err)
+	case <-ctx.Done():
+	}
+
 	if err := httpServer.Shutdown(); err != nil {
 		slog.Error("HTTP server shutdown failed", attr.Error(err))
 		return err

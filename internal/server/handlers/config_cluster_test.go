@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
@@ -87,7 +88,7 @@ func TestReadAerospikeClusters(t *testing.T) {
 
 	var response map[string]dto.AerospikeCluster
 	err := json.NewDecoder(w.Body).Decode(&response)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, response, 2)
 	assert.Contains(t, response, "cluster1")
 	assert.Contains(t, response, "cluster2")
