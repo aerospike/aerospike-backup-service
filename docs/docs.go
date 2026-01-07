@@ -1644,9 +1644,9 @@ const docTemplate = `{
                 "operationId": "version",
                 "responses": {
                     "200": {
-                        "description": "version",
+                        "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/dto.VersionResponse"
                         }
                     }
                 }
@@ -3557,6 +3557,24 @@ const docTemplate = `{
                     "description": "Existing records take precedence. With this option, only records that do not exist in\nthe namespace are restored, regardless of generation numbers. If a record exists in\nthe namespace, the record from the backup is ignored.",
                     "type": "boolean",
                     "default": false
+                }
+            }
+        },
+        "dto.VersionResponse": {
+            "description": "VersionResponse represents the ABS version information.",
+            "type": "object",
+            "properties": {
+                "build-time": {
+                    "description": "BuildTime of the application in UTC.",
+                    "type": "string"
+                },
+                "commit": {
+                    "description": "Commit hash of the build.",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "Version of the application.",
+                    "type": "string"
                 }
             }
         }

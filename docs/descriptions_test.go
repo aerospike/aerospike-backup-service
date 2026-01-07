@@ -73,6 +73,7 @@ var skipValidation = map[string]bool{
 	"dto.Metrics":          true,
 	"dto.BackupDetails":    true,
 	"dto.RunningJob":       true,
+	"dto.VersionResponse":  true,
 }
 
 func assertAllPropertiesValid(t *testing.T, schema map[string]any, schemaName string) {
