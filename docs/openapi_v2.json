@@ -158,7 +158,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/dto.RoutineState"
+                  "$ref": "#/components/schemas/RoutineState"
                 }
               }
             }
@@ -233,7 +233,7 @@
                   "additionalProperties": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/components/schemas/dto.BackupDetails"
+                      "$ref": "#/components/schemas/BackupDetails"
                     }
                   }
                 }
@@ -307,7 +307,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/dto.BackupDetails"
+                    "$ref": "#/components/schemas/BackupDetails"
                   }
                 }
               }
@@ -373,7 +373,7 @@
                   "additionalProperties": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/components/schemas/dto.BackupDetails"
+                      "$ref": "#/components/schemas/BackupDetails"
                     }
                   }
                 }
@@ -447,7 +447,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/dto.BackupDetails"
+                    "$ref": "#/components/schemas/BackupDetails"
                   }
                 }
               }
@@ -552,7 +552,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/dto.Config"
+                  "$ref": "#/components/schemas/Config"
                 }
               }
             }
@@ -579,7 +579,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/dto.Config"
+                "$ref": "#/components/schemas/Config"
               }
             }
           },
@@ -642,7 +642,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": {
-                    "$ref": "#/components/schemas/dto.AerospikeCluster"
+                    "$ref": "#/components/schemas/AerospikeCluster"
                   }
                 }
               }
@@ -685,7 +685,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/dto.AerospikeCluster"
+                  "$ref": "#/components/schemas/AerospikeCluster"
                 }
               }
             }
@@ -740,7 +740,7 @@
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/dto.AerospikeCluster"
+          "$ref": "#/components/requestBodies/AerospikeCluster"
         },
         "responses": {
           "200": {
@@ -776,7 +776,7 @@
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/dto.AerospikeCluster"
+          "$ref": "#/components/requestBodies/AerospikeCluster"
         },
         "responses": {
           "201": {
@@ -853,7 +853,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": {
-                    "$ref": "#/components/schemas/dto.BackupPolicy"
+                    "$ref": "#/components/schemas/BackupPolicy"
                   }
                 }
               }
@@ -896,7 +896,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/dto.BackupPolicy"
+                  "$ref": "#/components/schemas/BackupPolicy"
                 }
               }
             }
@@ -951,7 +951,7 @@
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/dto.BackupPolicy"
+          "$ref": "#/components/requestBodies/BackupPolicy"
         },
         "responses": {
           "200": {
@@ -987,7 +987,7 @@
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/dto.BackupPolicy"
+          "$ref": "#/components/requestBodies/BackupPolicy"
         },
         "responses": {
           "201": {
@@ -1054,7 +1054,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": {
-                    "$ref": "#/components/schemas/dto.BackupRoutine"
+                    "$ref": "#/components/schemas/BackupRoutine"
                   }
                 }
               }
@@ -1097,7 +1097,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/dto.BackupRoutine"
+                  "$ref": "#/components/schemas/BackupRoutine"
                 }
               }
             }
@@ -1142,7 +1142,7 @@
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/dto.BackupRoutine"
+          "$ref": "#/components/requestBodies/BackupRoutine"
         },
         "responses": {
           "200": {
@@ -1178,7 +1178,7 @@
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/dto.BackupRoutine"
+          "$ref": "#/components/requestBodies/BackupRoutine"
         },
         "responses": {
           "201": {
@@ -1325,7 +1325,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": {
-                    "$ref": "#/components/schemas/dto.Storage"
+                    "$ref": "#/components/schemas/Storage"
                   }
                 }
               }
@@ -1368,7 +1368,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/dto.Storage"
+                  "$ref": "#/components/schemas/Storage"
                 }
               }
             }
@@ -1423,7 +1423,7 @@
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/dto.Storage"
+          "$ref": "#/components/requestBodies/Storage"
         },
         "responses": {
           "200": {
@@ -1459,7 +1459,7 @@
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/dto.Storage"
+          "$ref": "#/components/requestBodies/Storage"
         },
         "responses": {
           "201": {
@@ -1582,7 +1582,7 @@
         "summary": "Trigger an asynchronous full restore operation.",
         "operationId": "restoreFull",
         "requestBody": {
-          "$ref": "#/components/requestBodies/dto.RestoreRequest"
+          "$ref": "#/components/requestBodies/RestoreRequest"
         },
         "responses": {
           "202": {
@@ -1627,7 +1627,7 @@
         "summary": "Trigger an asynchronous incremental restore operation.",
         "operationId": "restoreIncremental",
         "requestBody": {
-          "$ref": "#/components/requestBodies/dto.RestoreRequest"
+          "$ref": "#/components/requestBodies/RestoreRequest"
         },
         "responses": {
           "202": {
@@ -1707,7 +1707,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": {
-                    "$ref": "#/components/schemas/dto.RestoreJobStatus"
+                    "$ref": "#/components/schemas/RestoreJobStatus"
                   }
                 }
               }
@@ -1761,7 +1761,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/dto.RestoreJobStatus"
+                  "$ref": "#/components/schemas/RestoreJobStatus"
                 }
               }
             }
@@ -1791,7 +1791,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/dto.RestoreTimestampRequest"
+                "$ref": "#/components/schemas/RestoreTimestampRequest"
               }
             }
           },
@@ -1909,7 +1909,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/dto.VersionResponse"
+                  "$ref": "#/components/schemas/VersionResponse"
                 }
               }
             }
@@ -1929,55 +1929,55 @@
   ],
   "components": {
     "requestBodies": {
-      "dto.Storage": {
+      "Storage": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/dto.Storage"
+              "$ref": "#/components/schemas/Storage"
             }
           }
         },
         "description": "Backup storage details",
         "required": true
       },
-      "dto.RestoreRequest": {
+      "RestoreRequest": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/dto.RestoreRequest"
+              "$ref": "#/components/schemas/RestoreRequest"
             }
           }
         },
         "description": "Restore request details",
         "required": true
       },
-      "dto.AerospikeCluster": {
+      "AerospikeCluster": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/dto.AerospikeCluster"
+              "$ref": "#/components/schemas/AerospikeCluster"
             }
           }
         },
         "description": "Aerospike cluster details",
         "required": true
       },
-      "dto.BackupPolicy": {
+      "BackupPolicy": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/dto.BackupPolicy"
+              "$ref": "#/components/schemas/BackupPolicy"
             }
           }
         },
         "description": "Backup policy details",
         "required": true
       },
-      "dto.BackupRoutine": {
+      "BackupRoutine": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/dto.BackupRoutine"
+              "$ref": "#/components/schemas/BackupRoutine"
             }
           }
         },
@@ -1986,7 +1986,7 @@
       }
     },
     "schemas": {
-      "dto.AerospikeCluster": {
+      "AerospikeCluster": {
         "description": "AerospikeCluster represents the configuration for an Aerospike cluster for backup.",
         "type": "object",
         "required": [
@@ -2003,7 +2003,7 @@
             "description": "The authentication details to the Aerospike cluster.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.Credentials"
+                "$ref": "#/components/schemas/Credentials"
               }
             ]
           },
@@ -2031,14 +2031,14 @@
             "description": "The seed nodes details.",
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/dto.SeedNode"
+              "$ref": "#/components/schemas/SeedNode"
             }
           },
           "tls": {
             "description": "The cluster TLS configuration.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.TLS"
+                "$ref": "#/components/schemas/TLS"
               }
             ]
           },
@@ -2049,7 +2049,7 @@
           }
         }
       },
-      "dto.AzureStorage": {
+      "AzureStorage": {
         "description": "AzureStorage represents the configuration for Azure Blob storage.",
         "type": "object",
         "required": [
@@ -2101,7 +2101,7 @@
             "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.SecretAgent"
+                "$ref": "#/components/schemas/SecretAgent"
               }
             ]
           },
@@ -2114,7 +2114,7 @@
             "description": "StorageClass defines the storage tier for data and metadata objects.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.AzureStorageClass"
+                "$ref": "#/components/schemas/AzureStorageClass"
               }
             ]
           },
@@ -2125,7 +2125,7 @@
           }
         }
       },
-      "dto.AzureStorageClass": {
+      "AzureStorageClass": {
         "description": "AzureStorageClass represents the configuration for Azure Blob Storage access tiers.",
         "type": "object",
         "properties": {
@@ -2152,7 +2152,7 @@
           }
         }
       },
-      "dto.BackupCommonConfig": {
+      "BackupCommonConfig": {
         "description": "BackupCommonConfig represents service-level backup settings.",
         "type": "object",
         "properties": {
@@ -2168,7 +2168,7 @@
           }
         }
       },
-      "dto.BackupDetails": {
+      "BackupDetails": {
         "description": "BackupDetails contains information about a finished backup.",
         "type": "object",
         "properties": {
@@ -2212,7 +2212,7 @@
             "example": "2023-03-19T14:50:00Z"
           },
           "key": {
-            "description": "Key is the path to the backup files within the configured storage location.\nThis value can be used as `backup-data-path` in dto.RestoreRequest.",
+            "description": "Key is the path to the backup files within the configured storage location.\nThis value can be used as `backup-data-path` in RestoreRequest.",
             "type": "string",
             "example": "daily/backup/1707915600000/source-ns1"
           },
@@ -2237,7 +2237,7 @@
             "description": "Storage specifies the details of the storage location where the backup is stored.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.Storage"
+                "$ref": "#/components/schemas/Storage"
               }
             ]
           },
@@ -2255,7 +2255,7 @@
           }
         }
       },
-      "dto.BackupPolicy": {
+      "BackupPolicy": {
         "description": "BackupPolicy represents a scheduled backup policy.",
         "type": "object",
         "properties": {
@@ -2269,7 +2269,7 @@
             "description": "Compression details (algorithm and mode). Default is no compression.\nEnabling compression reduces storage and network usage, but increases CPU usage during the backup.\nDepending on the system configuration, compression may improve or degrade overall performance.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.CompressionPolicy"
+                "$ref": "#/components/schemas/CompressionPolicy"
               }
             ]
           },
@@ -2282,7 +2282,7 @@
             "description": "Encryption details (algorithm and key). Default is no encryption.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.EncryptionPolicy"
+                "$ref": "#/components/schemas/EncryptionPolicy"
               }
             ]
           },
@@ -2335,7 +2335,7 @@
             "description": "Specifies how long to retain full and incremental backups.\nCleanup runs asynchronously after each successful full backup, never deleting backups preemptively.\nEnsure storage capacity for at least one extra full backup beyond the retention configuration.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RetentionPolicy"
+                "$ref": "#/components/schemas/RetentionPolicy"
               }
             ]
           },
@@ -2343,7 +2343,7 @@
             "description": "RetryPolicy defines the configuration for database scan retry attempts in case of failures.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RetryPolicy"
+                "$ref": "#/components/schemas/RetryPolicy"
               }
             ]
           },
@@ -2374,7 +2374,7 @@
           }
         }
       },
-      "dto.BackupRoutine": {
+      "BackupRoutine": {
         "description": "BackupRoutine represents a scheduled backup operation routine.",
         "type": "object",
         "required": [
@@ -2474,7 +2474,7 @@
           }
         }
       },
-      "dto.CompressionPolicy": {
+      "CompressionPolicy": {
         "description": "CompressionPolicy contains backup compression information.",
         "type": "object",
         "properties": {
@@ -2496,7 +2496,7 @@
           }
         }
       },
-      "dto.Config": {
+      "Config": {
         "description": "Config represents the service configuration file.",
         "type": "object",
         "properties": {
@@ -2504,35 +2504,35 @@
             "description": "AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.",
             "type": "object",
             "additionalProperties": {
-              "$ref": "#/components/schemas/dto.AerospikeCluster"
+              "$ref": "#/components/schemas/AerospikeCluster"
             }
           },
           "backup-policies": {
             "description": "BackupPolicies is a map of backup policies that can be used by backup routines.",
             "type": "object",
             "additionalProperties": {
-              "$ref": "#/components/schemas/dto.BackupPolicy"
+              "$ref": "#/components/schemas/BackupPolicy"
             }
           },
           "backup-routines": {
             "description": "BackupRoutines is a map of backup routines.",
             "type": "object",
             "additionalProperties": {
-              "$ref": "#/components/schemas/dto.BackupRoutine"
+              "$ref": "#/components/schemas/BackupRoutine"
             }
           },
           "secret-agents": {
             "description": "SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication).",
             "type": "object",
             "additionalProperties": {
-              "$ref": "#/components/schemas/dto.SecretAgent"
+              "$ref": "#/components/schemas/SecretAgent"
             }
           },
           "service": {
             "description": "ServiceConfig contains general service settings.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.ServiceConfig"
+                "$ref": "#/components/schemas/ServiceConfig"
               }
             ]
           },
@@ -2540,12 +2540,12 @@
             "description": "Storage is a map of storages that can be used by backup routines.",
             "type": "object",
             "additionalProperties": {
-              "$ref": "#/components/schemas/dto.Storage"
+              "$ref": "#/components/schemas/Storage"
             }
           }
         }
       },
-      "dto.Credentials": {
+      "Credentials": {
         "description": "Credentials represents authentication details to the Aerospike cluster.",
         "type": "object",
         "properties": {
@@ -2575,7 +2575,7 @@
             "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.SecretAgent"
+                "$ref": "#/components/schemas/SecretAgent"
               }
             ]
           },
@@ -2592,7 +2592,7 @@
           }
         }
       },
-      "dto.EncryptionPolicy": {
+      "EncryptionPolicy": {
         "description": "EncryptionPolicy contains backup encryption information.",
         "type": "object",
         "properties": {
@@ -2623,7 +2623,7 @@
           }
         }
       },
-      "dto.FileLoggerConfig": {
+      "FileLoggerConfig": {
         "description": "FileLoggerConfig represents the configuration for the file logger writer.",
         "type": "object",
         "required": [
@@ -2658,7 +2658,7 @@
           }
         }
       },
-      "dto.GcpStorage": {
+      "GcpStorage": {
         "description": "GcpStorage represents the configuration for GCP storage.",
         "type": "object",
         "required": [
@@ -2700,7 +2700,7 @@
             "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.SecretAgent"
+                "$ref": "#/components/schemas/SecretAgent"
               }
             ]
           },
@@ -2713,14 +2713,14 @@
             "description": "StorageClass defines the storage class for data and metadata objects.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.GcpStorageClass"
+                "$ref": "#/components/schemas/GcpStorageClass"
               }
             ],
             "nullable": true
           }
         }
       },
-      "dto.GcpStorageClass": {
+      "GcpStorageClass": {
         "description": "GcpStorageClass represents the configuration for GCP Storage Class.",
         "type": "object",
         "properties": {
@@ -2737,7 +2737,7 @@
           }
         }
       },
-      "dto.HTTPServerConfig": {
+      "HTTPServerConfig": {
         "description": "HTTPServerConfig represents the service's HTTP server configuration.",
         "type": "object",
         "properties": {
@@ -2762,7 +2762,7 @@
             "description": "HTTP rate limiter configuration.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RateLimiterConfig"
+                "$ref": "#/components/schemas/RateLimiterConfig"
               }
             ]
           },
@@ -2773,7 +2773,7 @@
           }
         }
       },
-      "dto.JobStatus": {
+      "JobStatus": {
         "description": "JobStatus represents possible states of restore jobs.",
         "type": "string",
         "enum": [
@@ -2789,7 +2789,7 @@
           "JobStatusCancelled"
         ]
       },
-      "dto.LocalStorage": {
+      "LocalStorage": {
         "description": "LocalStorage represents the configuration for local storage.",
         "type": "object",
         "required": [
@@ -2809,7 +2809,7 @@
           }
         }
       },
-      "dto.LoggerConfig": {
+      "LoggerConfig": {
         "description": "LoggerConfig represents the backup service logger configuration.",
         "type": "object",
         "properties": {
@@ -2817,7 +2817,7 @@
             "description": "File writer logging configuration.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.FileLoggerConfig"
+                "$ref": "#/components/schemas/FileLoggerConfig"
               }
             ]
           },
@@ -2850,7 +2850,7 @@
           }
         }
       },
-      "dto.Metrics": {
+      "Metrics": {
         "description": "Metrics represents the current job speed.",
         "type": "object",
         "properties": {
@@ -2868,7 +2868,7 @@
           }
         }
       },
-      "dto.RateLimiterConfig": {
+      "RateLimiterConfig": {
         "description": "RateLimiterConfig is the HTTP server rate limiter configuration.",
         "type": "object",
         "properties": {
@@ -2894,7 +2894,7 @@
           }
         }
       },
-      "dto.RestoreCompressionPolicy": {
+      "RestoreCompressionPolicy": {
         "description": "RestoreCompressionPolicy contains restore compression information.",
         "type": "object",
         "properties": {
@@ -2909,7 +2909,7 @@
           }
         }
       },
-      "dto.RestoreJobStatus": {
+      "RestoreJobStatus": {
         "description": "RestoreJobStatus represents restore job status.",
         "type": "object",
         "properties": {
@@ -2917,7 +2917,7 @@
             "description": "Speed related metrics of the restore process.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RunningJob"
+                "$ref": "#/components/schemas/RunningJob"
               }
             ]
           },
@@ -2983,7 +2983,7 @@
             "description": "Status of the restore job.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.JobStatus"
+                "$ref": "#/components/schemas/JobStatus"
               }
             ]
           },
@@ -3001,7 +3001,7 @@
           }
         }
       },
-      "dto.RestoreNamespace": {
+      "RestoreNamespace": {
         "description": "RestoreNamespace specifies an alternative namespace name for the restore operation.",
         "type": "object",
         "required": [
@@ -3021,7 +3021,7 @@
           }
         }
       },
-      "dto.RestorePolicy": {
+      "RestorePolicy": {
         "description": "RestorePolicy represents a policy for the restore operation.",
         "type": "object",
         "properties": {
@@ -3053,7 +3053,7 @@
             "description": "Compression details (algorithm). Default is no compression.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RestoreCompressionPolicy"
+                "$ref": "#/components/schemas/RestoreCompressionPolicy"
               }
             ]
           },
@@ -3066,7 +3066,7 @@
             "description": "Encryption details (algorithm and key). Default is no encryption.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.EncryptionPolicy"
+                "$ref": "#/components/schemas/EncryptionPolicy"
               }
             ]
           },
@@ -3086,7 +3086,7 @@
             "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RestoreNamespace"
+                "$ref": "#/components/schemas/RestoreNamespace"
               }
             ]
           },
@@ -3125,7 +3125,7 @@
             "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RetryPolicy"
+                "$ref": "#/components/schemas/RetryPolicy"
               }
             ]
           },
@@ -3166,7 +3166,7 @@
           }
         }
       },
-      "dto.RestoreRequest": {
+      "RestoreRequest": {
         "description": "RestoreRequest represents a restore operation request.",
         "type": "object",
         "required": [
@@ -3181,7 +3181,7 @@
             "description": "The details of the Aerospike destination cluster.\nMutually exclusive with 'destination-name'.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.AerospikeCluster"
+                "$ref": "#/components/schemas/AerospikeCluster"
               }
             ]
           },
@@ -3194,7 +3194,7 @@
             "description": "Restore policy to use in the operation.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RestorePolicy"
+                "$ref": "#/components/schemas/RestorePolicy"
               }
             ]
           },
@@ -3202,7 +3202,7 @@
             "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.SecretAgent"
+                "$ref": "#/components/schemas/SecretAgent"
               }
             ]
           },
@@ -3215,7 +3215,7 @@
             "description": "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.Storage"
+                "$ref": "#/components/schemas/Storage"
               }
             ]
           },
@@ -3226,7 +3226,7 @@
           }
         }
       },
-      "dto.RestoreTimestampRequest": {
+      "RestoreTimestampRequest": {
         "description": "RestoreTimestampRequest represents a restore by timestamp operation request.",
         "type": "object",
         "required": [
@@ -3238,7 +3238,7 @@
             "description": "The details of the Aerospike destination cluster.\nMutually exclusive with 'destination-name'.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.AerospikeCluster"
+                "$ref": "#/components/schemas/AerospikeCluster"
               }
             ]
           },
@@ -3256,7 +3256,7 @@
             "description": "Restore policy to use in the operation.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.TimestampRestorePolicy"
+                "$ref": "#/components/schemas/TimestampRestorePolicy"
               }
             ]
           },
@@ -3269,7 +3269,7 @@
             "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.SecretAgent"
+                "$ref": "#/components/schemas/SecretAgent"
               }
             ]
           },
@@ -3287,7 +3287,7 @@
           }
         }
       },
-      "dto.RetentionPolicy": {
+      "RetentionPolicy": {
         "description": "RetentionPolicy specifies how many full and incremental backups to keep.",
         "type": "object",
         "properties": {
@@ -3304,7 +3304,7 @@
           }
         }
       },
-      "dto.RetryPolicy": {
+      "RetryPolicy": {
         "description": "RetryPolicy defines the configuration for retry attempts in case of failures.",
         "type": "object",
         "properties": {
@@ -3325,7 +3325,7 @@
           }
         }
       },
-      "dto.RoutineState": {
+      "RoutineState": {
         "description": "RoutineState represent the current state of backups (full and incremental).",
         "type": "object",
         "properties": {
@@ -3333,7 +3333,7 @@
             "description": "Full represents the state of a full backup. Nil if no full backup is running.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RunningJob"
+                "$ref": "#/components/schemas/RunningJob"
               }
             ]
           },
@@ -3341,7 +3341,7 @@
             "description": "Incremental represents the state of an incremental backup. Nil if no incremental backup is running.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RunningJob"
+                "$ref": "#/components/schemas/RunningJob"
               }
             ]
           },
@@ -3363,7 +3363,7 @@
           }
         }
       },
-      "dto.RunningJob": {
+      "RunningJob": {
         "description": "RunningJob tracks progress of currently running job.",
         "type": "object",
         "properties": {
@@ -3390,7 +3390,7 @@
             "description": "Metrics provides real-time information about data flow performance.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.Metrics"
+                "$ref": "#/components/schemas/Metrics"
               }
             ]
           },
@@ -3411,7 +3411,7 @@
           }
         }
       },
-      "dto.S3Storage": {
+      "S3Storage": {
         "description": "S3Storage represents the configuration for S3 storage.",
         "type": "object",
         "required": [
@@ -3487,7 +3487,7 @@
             "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.SecretAgent"
+                "$ref": "#/components/schemas/SecretAgent"
               }
             ]
           },
@@ -3500,13 +3500,13 @@
             "description": "StorageClass defines the storage class for data and metadata objects.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.S3StorageClass"
+                "$ref": "#/components/schemas/S3StorageClass"
               }
             ]
           }
         }
       },
-      "dto.S3StorageClass": {
+      "S3StorageClass": {
         "description": "S3StorageClass represents the configuration for S3 Storage Class.",
         "type": "object",
         "properties": {
@@ -3542,7 +3542,7 @@
           }
         }
       },
-      "dto.SecretAgent": {
+      "SecretAgent": {
         "description": "SecretAgent represents the configuration of an Aerospike Secret Agent.",
         "type": "object",
         "required": [
@@ -3606,7 +3606,7 @@
           }
         }
       },
-      "dto.SeedNode": {
+      "SeedNode": {
         "description": "SeedNode represents details of a node in the Aerospike cluster.",
         "type": "object",
         "required": [
@@ -3634,7 +3634,7 @@
           }
         }
       },
-      "dto.ServiceConfig": {
+      "ServiceConfig": {
         "description": "ServiceConfig represents the backup service configuration properties.",
         "type": "object",
         "properties": {
@@ -3642,7 +3642,7 @@
             "description": "Backup contains service-level backup settings.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.BackupCommonConfig"
+                "$ref": "#/components/schemas/BackupCommonConfig"
               }
             ]
           },
@@ -3650,7 +3650,7 @@
             "description": "HTTPServer is the backup service HTTP server configuration.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.HTTPServerConfig"
+                "$ref": "#/components/schemas/HTTPServerConfig"
               }
             ]
           },
@@ -3658,13 +3658,13 @@
             "description": "Logger is the backup service logger configuration.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.LoggerConfig"
+                "$ref": "#/components/schemas/LoggerConfig"
               }
             ]
           }
         }
       },
-      "dto.Storage": {
+      "Storage": {
         "description": "Storage represents the configuration for a backup storage details.",
         "type": "object",
         "properties": {
@@ -3672,7 +3672,7 @@
             "description": "AzureStorage configuration, set if using Azure storage.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.AzureStorage"
+                "$ref": "#/components/schemas/AzureStorage"
               }
             ]
           },
@@ -3680,7 +3680,7 @@
             "description": "GcpStorage configuration, set if using GCP storage.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.GcpStorage"
+                "$ref": "#/components/schemas/GcpStorage"
               }
             ]
           },
@@ -3688,7 +3688,7 @@
             "description": "LocalStorage configuration, set if using local storage.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.LocalStorage"
+                "$ref": "#/components/schemas/LocalStorage"
               }
             ]
           },
@@ -3696,13 +3696,13 @@
             "description": "S3Storage configuration, set if using S3 storage.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.S3Storage"
+                "$ref": "#/components/schemas/S3Storage"
               }
             ]
           }
         }
       },
-      "dto.TLS": {
+      "TLS": {
         "description": "TLS represents the Aerospike cluster TLS configuration options.",
         "type": "object",
         "properties": {
@@ -3755,7 +3755,7 @@
           }
         }
       },
-      "dto.TimestampRestorePolicy": {
+      "TimestampRestorePolicy": {
         "description": "TimestampRestorePolicy represents a policy for the point-in-time restore operation.",
         "type": "object",
         "properties": {
@@ -3792,7 +3792,7 @@
             "description": "Encryption details (algorithm and key). Default is no encryption.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.EncryptionPolicy"
+                "$ref": "#/components/schemas/EncryptionPolicy"
               }
             ]
           },
@@ -3812,7 +3812,7 @@
             "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RestoreNamespace"
+                "$ref": "#/components/schemas/RestoreNamespace"
               }
             ]
           },
@@ -3851,7 +3851,7 @@
             "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
             "allOf": [
               {
-                "$ref": "#/components/schemas/dto.RetryPolicy"
+                "$ref": "#/components/schemas/RetryPolicy"
               }
             ]
           },
@@ -3892,7 +3892,7 @@
           }
         }
       },
-      "dto.VersionResponse": {
+      "VersionResponse": {
         "description": "VersionResponse represents the ABS version information.",
         "type": "object",
         "properties": {
