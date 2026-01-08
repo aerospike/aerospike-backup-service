@@ -81,12 +81,6 @@ paths:
             application/json:
               schema:
                 type: string
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                type: string
   "/backups/currentBackup/{name}":
     get:
       tags:
@@ -115,12 +109,6 @@ paths:
                 type: string
         '404':
           description: Not Found
-          content:
-            application/json:
-              schema:
-                type: string
-        '500':
-          description: Internal Server Error
           content:
             application/json:
               schema:
@@ -157,12 +145,6 @@ paths:
                     "$ref": "#/components/schemas/BackupDetails"
         '400':
           description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-        '500':
-          description: Internal Server Error
           content:
             application/json:
               schema:
@@ -207,12 +189,6 @@ paths:
             application/json:
               schema:
                 type: string
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                type: string
   "/backups/incremental":
     get:
       tags:
@@ -245,12 +221,6 @@ paths:
                     "$ref": "#/components/schemas/BackupDetails"
         '400':
           description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-        '500':
-          description: Internal Server Error
           content:
             application/json:
               schema:
@@ -295,12 +265,6 @@ paths:
             application/json:
               schema:
                 type: string
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                type: string
   "/backups/schedule/{name}":
     post:
       tags:
@@ -334,12 +298,6 @@ paths:
             application/json:
               schema:
                 type: string
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                type: string
   "/config":
     get:
       tags:
@@ -353,12 +311,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Config"
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                type: string
     put:
       tags:
         - Configuration
@@ -410,12 +362,6 @@ paths:
                 type: object
                 additionalProperties:
                   "$ref": "#/components/schemas/AerospikeCluster"
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                type: string
   "/config/clusters/{name}":
     get:
       tags:
@@ -501,12 +447,6 @@ paths:
             application/json:
               schema:
                 type: string
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                type: string
     delete:
       tags:
         - Configuration
@@ -543,12 +483,6 @@ paths:
                 type: object
                 additionalProperties:
                   "$ref": "#/components/schemas/BackupPolicy"
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                type: string
   "/config/policies/{name}":
     get:
       tags:
@@ -836,11 +770,21 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties:
-                  "$ref": "#/components/schemas/Storage"
-        '500':
-          description: Internal Server Error
+                type: array
+                items:
+                  $ref: "#/components/schemas/Storage"
+    post:
+      tags:
+        - Configuration
+      summary: Adds a storage to the config.
+      operationId: addStorage
+      requestBody:
+        "$ref": "#/components/requestBodies/Storage"
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request
           content:
             application/json:
               schema:
@@ -877,12 +821,6 @@ paths:
             application/json:
               schema:
                 type: string
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                type: string
     put:
       tags:
         - Configuration
@@ -900,29 +838,6 @@ paths:
       responses:
         '200':
           description: OK
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-    post:
-      tags:
-        - Configuration
-      summary: Adds a storage to the config.
-      operationId: addStorage
-      parameters:
-        - description: Backup storage name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        "$ref": "#/components/requestBodies/Storage"
-      responses:
-        '201':
-          description: Created
         '400':
           description: Bad Request
           content:
@@ -979,12 +894,6 @@ paths:
                 type: string
         '404':
           description: Job not found
-          content:
-            application/json:
-              schema:
-                type: string
-        '500':
-          description: Internal server error
           content:
             application/json:
               schema:
@@ -1081,12 +990,6 @@ paths:
                   "$ref": "#/components/schemas/RestoreJobStatus"
         '400':
           description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-        '500':
-          description: Internal Server Error
           content:
             application/json:
               schema:
