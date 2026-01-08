@@ -3,7 +3,7 @@ openapi: 3.0.4
 info:
   description: Aerospike Backup Service
   title: Backup Service REST API Specification
-  contact: {}
+  contact: { }
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -1254,7 +1254,11 @@ components:
       type: object
       required:
         - seed-nodes
+        - name
       properties:
+        name:
+          description: The name of the cluster.
+          type: string
         conn-timeout:
           description: The connection timeout in milliseconds.
           type: integer
@@ -1484,7 +1488,12 @@ components:
     BackupPolicy:
       description: BackupPolicy represents a scheduled backup policy.
       type: object
+      required:
+        - name
       properties:
+        name:
+          description: The name of the policy.
+          type: string
         bandwidth:
           description: |-
             Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.
@@ -1605,7 +1614,11 @@ components:
         - namespaces
         - source-cluster
         - storage
+        - name
       properties:
+        name:
+          description: The name of the routine.
+          type: string
         backup-policy:
           description: The name of the corresponding backup policy, one of defined
             in `config.backup-policies` (optional).
@@ -1730,28 +1743,28 @@ components:
       description: Config represents the service configuration file.
       type: object
       properties:
-        aerospike-clusters:
+        aerospikeClusters:
           description: AerospikeClusters is a map of Aerospike clusters that can be
             used by backup routines.
-          type: object
-          additionalProperties:
+          type: array
+          items:
             "$ref": "#/components/schemas/AerospikeCluster"
-        backup-policies:
+        backupPolicies:
           description: BackupPolicies is a map of backup policies that can be used
             by backup routines.
-          type: object
-          additionalProperties:
+          type: array
+          items:
             "$ref": "#/components/schemas/BackupPolicy"
         backup-routines:
           description: BackupRoutines is a map of backup routines.
-          type: object
-          additionalProperties:
+          type: array
+          items:
             "$ref": "#/components/schemas/BackupRoutine"
         secret-agents:
           description: SecretAgents is a map of secret agents used by backup routines
             (for encryption keys), clusters (for credentials), and storage (for authentication).
-          type: object
-          additionalProperties:
+          type: array
+          items:
             "$ref": "#/components/schemas/SecretAgent"
         service:
           description: ServiceConfig contains general service settings.
@@ -1759,8 +1772,8 @@ components:
             - "$ref": "#/components/schemas/ServiceConfig"
         storage:
           description: Storage is a map of storages that can be used by backup routines.
-          type: object
-          additionalProperties:
+          type: array
+          items:
             "$ref": "#/components/schemas/Storage"
     Credentials:
       description: Credentials represents authentication details to the Aerospike
@@ -2660,7 +2673,11 @@ components:
       required:
         - address
         - connection-type
+        - name
       properties:
+        name:
+          description: The name of the secret agent.
+          type: string
         address:
           description: Address of the Secret Agent.
           type: string
@@ -2692,7 +2709,7 @@ components:
           type: string
           example: "/path/to/key.pem"
           nullable: true
-        name:
+        tls-name:
           description: TLSName used for server certificate verification (ServerName
             for SNI).
           type: string
