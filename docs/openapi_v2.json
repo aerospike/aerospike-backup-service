@@ -3666,39 +3666,68 @@
       },
       "Storage": {
         "description": "Storage represents the configuration for a backup storage details.",
+        "allOf": [
+          {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "description": "The name of the storage.",
+                "type": "string"
+              }
+            }
+          },
+          {
+            "oneOf": [
+              { "$ref": "#/components/schemas/StorageVariantAzure" },
+              { "$ref": "#/components/schemas/StorageVariantGcp" },
+              { "$ref": "#/components/schemas/StorageVariantLocal" },
+              { "$ref": "#/components/schemas/StorageVariantS3" }
+            ]
+          }
+        ]
+      },
+      "StorageVariantAzure": {
         "type": "object",
+        "required": [
+          "azure-storage"
+        ],
         "properties": {
           "azure-storage": {
-            "description": "AzureStorage configuration, set if using Azure storage.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AzureStorage"
-              }
-            ]
-          },
+            "$ref": "#/components/schemas/AzureStorage"
+          }
+        }
+      },
+      "StorageVariantGcp": {
+        "type": "object",
+        "required": [
+          "gcp-storage"
+        ],
+        "properties": {
           "gcp-storage": {
-            "description": "GcpStorage configuration, set if using GCP storage.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/GcpStorage"
-              }
-            ]
-          },
+            "$ref": "#/components/schemas/GcpStorage"
+          }
+        }
+      },
+      "StorageVariantLocal": {
+        "type": "object",
+        "required": [
+          "local-storage"
+        ],
+        "properties": {
           "local-storage": {
-            "description": "LocalStorage configuration, set if using local storage.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/LocalStorage"
-              }
-            ]
-          },
+            "$ref": "#/components/schemas/LocalStorage"
+          }
+        }
+      },
+      "StorageVariantS3": {
+        "type": "object",
+        "required": [
+          "s3-storage"
+        ],
+        "properties": {
           "s3-storage": {
-            "description": "S3Storage configuration, set if using S3 storage.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/S3Storage"
-              }
-            ]
+            "$ref": "#/components/schemas/S3Storage"
           }
         }
       },
