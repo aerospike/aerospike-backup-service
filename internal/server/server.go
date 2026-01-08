@@ -10,6 +10,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/middleware"
+	ogen "github.com/aerospike/aerospike-backup-service/v3/internal/server/ogen"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -28,13 +29,25 @@ func NewHTTPServer(serverConfig *model.HTTPServerConfig, service *handlers.Servi
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
 	// Create router
-	mux := NewServeMux(
+	v1Mux := NewServeMux(
 		"/"+restAPIVersion,
 		"/",
 		service,
 	)
 
-	handler := middleware.Wrap(mux,
+	rootMux := http.NewServeMux()
+
+	ogenHandler := ogen.UnimplementedHandler{}
+	ogenServer, err := ogen.NewServer(ogenHandler)
+	if err != nil {
+		slog.Error("Failed to create ogen server", "err", err)
+		panic(err)
+	}
+
+	rootMux.Handle("/", v1Mux)
+	rootMux.Handle("/v2/", http.StripPrefix("/v2", ogenServer))
+
+	handler := middleware.Wrap(rootMux,
 		middleware.RateLimiter(serverConfig.GetRateOrDefault()),
 		middleware.RequestLogger(logger, []string{"health", "ready", "metrics"}),
 	)
