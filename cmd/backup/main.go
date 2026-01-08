@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//go:generate go run github.com/ogen-go/ogen/cmd/ogen@latest --target ../../internal/server/ogen --clean ../../docs/openapi_v2.json
+//go:generate go run github.com/ogen-go/ogen/cmd/ogen@latest --target ../../internal/server/ogen --clean ../../docs/openapi_v2.yaml
 
 // run parses the CLI parameters and executes backup.
 func run() int {
