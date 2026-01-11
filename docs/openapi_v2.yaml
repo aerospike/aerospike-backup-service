@@ -252,6 +252,10 @@ paths:
         '404':
           description: Backup not found.
 
+  # -------------------------------------------------------------------------
+  # CONFIGURATION
+  # -------------------------------------------------------------------------
+
   "/config":
     get:
       tags: [ Configuration ]
@@ -265,8 +269,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Config"
     put:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Updates the configuration for the service.
       operationId: updateConfig
       requestBody:
@@ -301,8 +304,7 @@ paths:
                 type: string
   "/config/clusters":
     get:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Reads all Aerospike clusters from the configuration.
       operationId: readAllClusters
       responses:
@@ -699,6 +701,13 @@ paths:
       tags: [ Configuration ]
       summary: Reads all storage from the configuration.
       operationId: readAllStorage
+      parameters:
+        - name: type
+          in: query
+          required: false
+          description: Filter storages by backend type.
+          schema:
+            $ref: "#/components/schemas/StorageType"
       responses:
         '200':
           description: OK
