@@ -2,12 +2,12 @@
 openapi: 3.0.4
 info:
   description: Aerospike Backup Service
-  title: Backup Service REST API Specification
+  title: Backup Service REST API Specification v2
   contact: { }
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  version: v3.4.0
+  version: v3.5.0
 paths:
   "/":
     get:
@@ -789,6 +789,23 @@ paths:
             application/json:
               schema:
                 type: string
+    put:
+      tags:
+        - Configuration
+      summary: Updates an existing storage in the configuration.
+      operationId: updateStorage
+      parameters:
+      requestBody:
+        "$ref": "#/components/requestBodies/Storage"
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: string
   "/config/storage/{name}":
     get:
       tags:
@@ -817,29 +834,6 @@ paths:
                 type: string
         '404':
           description: The specified storage could not be found
-          content:
-            application/json:
-              schema:
-                type: string
-    put:
-      tags:
-        - Configuration
-      summary: Updates an existing storage in the configuration.
-      operationId: updateStorage
-      parameters:
-        - description: Backup storage name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        "$ref": "#/components/requestBodies/Storage"
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad Request
           content:
             application/json:
               schema:
@@ -1112,7 +1106,7 @@ externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
 servers:
-  - url: "//localhost:8080"
+  - url: "localhost:8080"
 components:
   requestBodies:
     Storage:
