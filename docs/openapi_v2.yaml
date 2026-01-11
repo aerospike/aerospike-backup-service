@@ -8,21 +8,28 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   version: v3.5.0
+tags:
+  - name: System
+    description: System APIs
+  - name: Configuration
+    description: Configuration APIs
+  - name: Backup
+    description: Backup lifecycle APIs
+  - name: Restore
+    description: Restore APIs
 paths:
   "/":
     get:
-      tags:
-        - System
+      tags: [ System ]
       summary: Root endpoint.
       operationId: root
       responses:
         '200':
           description: OK
-  "/api-docs/":
+  "/api-docs":
     get:
       description: Serves the API documentation in Swagger UI format.
-      tags:
-        - System
+      tags: [ System ]
       summary: OpenAPI specification endpoint.
       operationId: api-docs
       responses:
@@ -34,8 +41,7 @@ paths:
                 type: string
   "/health":
     get:
-      tags:
-        - System
+      tags: [ System ]
       summary: Health endpoint.
       operationId: health
       responses:
@@ -43,8 +49,7 @@ paths:
           description: OK
   "/metrics":
     get:
-      tags:
-        - System
+      tags: [ System ]
       summary: Prometheus metrics endpoint.
       operationId: metrics
       responses:
@@ -52,17 +57,27 @@ paths:
           description: OK
   "/ready":
     get:
-      tags:
-        - System
+      tags: [ System ]
       summary: Readiness endpoint.
       operationId: ready
       responses:
         '200':
           description: OK
+  "/version":
+    get:
+      tags: [ System ]
+      summary: Returns application version.
+      operationId: version
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/VersionResponse"
   "/backups/cancel/{name}":
     post:
-      tags:
-        - Backup
+      tags: [ Backup ]
       summary: Cancel current backup.
       operationId: cancelCurrentBackup
       parameters:
@@ -83,8 +98,7 @@ paths:
                 type: string
   "/backups/currentBackup/{name}":
     get:
-      tags:
-        - Backup
+      tags: [ Backup ]
       summary: Get current backup statistics.
       operationId: getCurrentBackup
       parameters:
@@ -115,8 +129,7 @@ paths:
                 type: string
   "/backups/full":
     get:
-      tags:
-        - Backup
+      tags: [ Backup ]
       summary: Get available full backups.
       operationId: getFullBackups
       parameters:
@@ -151,8 +164,7 @@ paths:
                 type: string
   "/backups/full/{name}":
     get:
-      tags:
-        - Backup
+      tags: [ Backup ]
       summary: Get available full backups for routine.
       operationId: getFullBackupsForRoutine
       parameters:
@@ -191,8 +203,7 @@ paths:
                 type: string
   "/backups/incremental":
     get:
-      tags:
-        - Backup
+      tags: [ Backup ]
       summary: Get available incremental backups.
       operationId: getIncrementalBackups
       parameters:
@@ -227,8 +238,7 @@ paths:
                 type: string
   "/backups/incremental/{name}":
     get:
-      tags:
-        - Backup
+      tags: [ Backup ]
       summary: Get incremental backups for routine.
       operationId: getIncrementalBackupsForRoutine
       parameters:
@@ -267,8 +277,7 @@ paths:
                 type: string
   "/backups/schedule/{name}":
     post:
-      tags:
-        - Backup
+      tags: [ Backup ]
       summary: Schedule a full backup once per routine name.
       operationId: scheduleFullBackup
       parameters:
@@ -300,8 +309,7 @@ paths:
                 type: string
   "/config":
     get:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Returns the configuration for the service.
       operationId: readConfig
       responses:
@@ -334,8 +342,7 @@ paths:
                 type: string
   "/config/apply":
     post:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Reloads the configuration from the config file.
       operationId: applyConfig
       responses:
@@ -364,8 +371,7 @@ paths:
                   "$ref": "#/components/schemas/AerospikeCluster"
   "/config/clusters/{name}":
     get:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Reads a specific Aerospike cluster from the configuration given its
         name.
       operationId: readCluster
@@ -402,8 +408,7 @@ paths:
               schema:
                 type: string
     put:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Updates an existing Aerospike cluster in the configuration.
       operationId: updateCluster
       parameters:
@@ -425,8 +430,7 @@ paths:
               schema:
                 type: string
     post:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Adds an Aerospike cluster to the config.
       operationId: addCluster
       parameters:
@@ -448,8 +452,7 @@ paths:
               schema:
                 type: string
     delete:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Deletes a cluster from the configuration by name.
       operationId: deleteCluster
       parameters:
@@ -470,8 +473,7 @@ paths:
                 type: string
   "/config/policies":
     get:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Reads all policies from the configuration.
       operationId: readPolicies
       responses:
@@ -485,8 +487,7 @@ paths:
                   "$ref": "#/components/schemas/BackupPolicy"
   "/config/policies/{name}":
     get:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Reads a backup policy from the configuration given its name.
       operationId: readPolicy
       parameters:
@@ -522,8 +523,7 @@ paths:
               schema:
                 type: string
     put:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Updates an existing policy in the configuration.
       operationId: updatePolicy
       parameters:
@@ -545,8 +545,7 @@ paths:
               schema:
                 type: string
     post:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Adds a policy to the config.
       operationId: addPolicy
       parameters:
@@ -568,8 +567,7 @@ paths:
               schema:
                 type: string
     delete:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Deletes a policy from the configuration by name.
       operationId: deletePolicy
       parameters:
@@ -590,8 +588,7 @@ paths:
                 type: string
   "/config/routines":
     get:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Reads all routines from the configuration.
       operationId: readRoutines
       responses:
@@ -611,8 +608,7 @@ paths:
                 type: string
   "/config/routines/{name}":
     get:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Reads a specific routine from the configuration given its name.
       operationId: readRoutine
       parameters:
@@ -642,8 +638,7 @@ paths:
               schema:
                 type: string
     put:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Updates an existing routine in the configuration.
       operationId: updateRoutine
       parameters:
@@ -665,8 +660,7 @@ paths:
               schema:
                 type: string
     post:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Adds a backup routine to the config.
       operationId: addRoutine
       parameters:
@@ -688,8 +682,7 @@ paths:
               schema:
                 type: string
     delete:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Deletes a backup routine from the configuration by name.
       operationId: deleteRoutine
       parameters:
@@ -710,8 +703,7 @@ paths:
                 type: string
   "/config/routines/{name}/disable":
     put:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Disable a backup routine.
       operationId: disableRoutine
       parameters:
@@ -738,8 +730,7 @@ paths:
                 type: string
   "/config/routines/{name}/enable":
     put:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Enable a backup routine.
       operationId: enableRoutine
       parameters:
@@ -760,8 +751,7 @@ paths:
                 type: string
   "/config/storage":
     get:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Reads all storage from the configuration.
       operationId: readAllStorage
       responses:
@@ -774,8 +764,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Storage"
     post:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Adds a storage to the config.
       operationId: addStorage
       requestBody:
@@ -790,11 +779,9 @@ paths:
               schema:
                 type: string
     put:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Updates an existing storage in the configuration.
       operationId: updateStorage
-      parameters:
       requestBody:
         "$ref": "#/components/requestBodies/Storage"
       responses:
@@ -808,8 +795,7 @@ paths:
                 type: string
   "/config/storage/{name}":
     get:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Reads a specific storage from the configuration given its name.
       operationId: readStorage
       parameters:
@@ -839,8 +825,7 @@ paths:
               schema:
                 type: string
     delete:
-      tags:
-        - Configuration
+      tags: [ Configuration ]
       summary: Deletes a storage from the configuration by name.
       operationId: deleteStorage
       parameters:
@@ -861,8 +846,7 @@ paths:
                 type: string
   "/restore/cancel/{jobId}":
     post:
-      tags:
-        - Restore
+      tags: [ Restore ]
       summary: Cancel a running restore operation.
       operationId: cancelRestore
       parameters:
@@ -894,8 +878,7 @@ paths:
                 type: string
   "/restore/full":
     post:
-      tags:
-        - Restore
+      tags: [ Restore ]
       summary: Trigger an asynchronous full restore operation.
       operationId: restoreFull
       requestBody:
@@ -922,8 +905,7 @@ paths:
                 type: string
   "/restore/incremental":
     post:
-      tags:
-        - Restore
+      tags: [ Restore ]
       summary: Trigger an asynchronous incremental restore operation.
       operationId: restoreIncremental
       requestBody:
@@ -950,8 +932,7 @@ paths:
                 type: string
   "/restore/jobs":
     get:
-      tags:
-        - Restore
+      tags: [ Restore ]
       summary: Retrieve restore jobs.
       operationId: retrieveRestoreJobs
       parameters:
@@ -990,8 +971,7 @@ paths:
                 type: string
   "/restore/status/{jobId}":
     get:
-      tags:
-        - Restore
+      tags: [ Restore ]
       summary: Retrieve status for a restore job.
       operationId: restoreStatus
       parameters:
@@ -1018,8 +998,7 @@ paths:
   "/restore/timestamp":
     post:
       description: Restores backup from the given point in time.
-      tags:
-        - Restore
+      tags: [ Restore ]
       summary: Trigger an asynchronous restore operation to specific point in time.
       operationId: restoreTimestamp
       requestBody:
@@ -1051,8 +1030,7 @@ paths:
                 type: string
   "/retrieve/configuration/{name}/{timestamp}":
     get:
-      tags:
-        - Restore
+      tags: [ Restore ]
       summary: Retrieve Aerospike cluster configuration backup
       operationId: retrieveConfiguration
       parameters:
@@ -1089,19 +1067,6 @@ paths:
             application/zip:
               schema:
                 type: string
-  "/version":
-    get:
-      tags:
-        - System
-      summary: Returns application version.
-      operationId: version
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/VersionResponse"
 externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
@@ -2660,48 +2625,33 @@ components:
           allOf:
             - "$ref": "#/components/schemas/LoggerConfig"
     Storage:
-      description: Storage represents the configuration for a backup storage details.
-      allOf:
-        - type: object
-          required:
-            - name
-          properties:
-            name:
-              description: The name of the storage.
-              type: string
-        - oneOf:
-            - "$ref": "#/components/schemas/StorageVariantAzure"
-            - "$ref": "#/components/schemas/StorageVariantGcp"
-            - "$ref": "#/components/schemas/StorageVariantLocal"
-            - "$ref": "#/components/schemas/StorageVariantS3"
-    StorageVariantAzure:
+      description: Storage represents the configuration for a backup storage.
       type: object
-      required:
-        - azure-storage
+      required: [ name, type, config ]
       properties:
-        azure-storage:
-          "$ref": "#/components/schemas/AzureStorage"
-    StorageVariantGcp:
-      type: object
-      required:
-        - gcp-storage
-      properties:
-        gcp-storage:
-          "$ref": "#/components/schemas/GcpStorage"
-    StorageVariantLocal:
-      type: object
-      required:
-        - local-storage
-      properties:
-        local-storage:
-          "$ref": "#/components/schemas/LocalStorage"
-    StorageVariantS3:
-      type: object
-      required:
-        - s3-storage
-      properties:
-        s3-storage:
-          "$ref": "#/components/schemas/S3Storage"
+        name:
+          description: The name of the storage (immutable identifier).
+          type: string
+        type:
+          $ref: "#/components/schemas/StorageType"
+        config:
+          oneOf:
+            - $ref: "#/components/schemas/S3Storage"
+            - $ref: "#/components/schemas/GcpStorage"
+            - $ref: "#/components/schemas/AzureStorage"
+            - $ref: "#/components/schemas/LocalStorage"
+          discriminator:
+            propertyName: type
+            mapping:
+              s3: "#/components/schemas/S3Storage"
+              gcp: "#/components/schemas/GcpStorage"
+              azure: "#/components/schemas/AzureStorage"
+              local: "#/components/schemas/LocalStorage"
+
+    StorageType:
+      type: string
+      description: Storage backend type discriminator.
+      enum: [ azure, gcp, local, s3 ]
     TLS:
       description: TLS represents the Aerospike cluster TLS configuration options.
       type: object
