@@ -88,6 +88,7 @@ paths:
     get:
       tags: [ Backup ]
       summary: List active backup jobs
+      operationId: getOngoingBackups
       description: |
         Retrieve a list of currently running or queued backup tasks. 
         Completed jobs may remain visible here for a short period.
@@ -101,8 +102,7 @@ paths:
           in: query
           description: Filter by backup type.
           schema:
-            type: string
-            enum: [ full, incremental ]
+            $ref: "#/components/schemas/BackupType"
       responses:
         '200':
           description: A list of active job resources.
@@ -225,8 +225,8 @@ paths:
           in: query
           description: Filter history by backup type.
           schema:
-            type: string
-            enum: [ full, incremental ]
+            $ref: "#/components/schemas/BackupType"
+
       responses:
         '200':
           description: Paginated list of backup artifacts.
@@ -1040,12 +1040,17 @@ components:
         - cancelling
         - completed
         - failed
+    BackupType:
+      type: string
+      description: Backup type (full or incremental)
+      enum: [ "full", "incremental" ]
     BackupJob:
       type: object
       properties:
         id: { type: string }
         routine: { type: string }
-        type: { type: string, enum: [ full, incremental ] }
+        type:
+          $ref: "#/components/schemas/BackupType"
         status:
           $ref: "#/components/schemas/JobStatus"
         done-records:
@@ -1099,7 +1104,8 @@ components:
       required: [ routine ]
       properties:
         routine: { type: string }
-        type: { type: string, enum: [ full, incremental ], default: full }
+        type:
+          $ref: "#/components/schemas/BackupType"
     PaginatedBackupHistory:
       type: object
       required: [ backups, meta ]
@@ -2118,9 +2124,9 @@ components:
           description: Unique identifier for this job.
           type: string
         type:
-          description: The type of trigger used (timestamp vs artifact).
+          description: The type of trigger used (timestamp vs path).
           type: string
-          enum: [ timestamp, artifact ]
+          enum: [ timestamp, path ]
         status:
           $ref: "#/components/schemas/JobStatus"
 
