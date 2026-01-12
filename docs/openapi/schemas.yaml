@@ -3,13 +3,13 @@ AerospikeCluster:
     cluster for backup.
   type: object
   required:
-    - seed-nodes
+    - seedNodes
     - name
   properties:
     name:
       description: The name of the cluster.
       type: string
-    conn-timeout:
+    connectionTimeout:
       description: The connection timeout in milliseconds.
       type: integer
       default: 30000
@@ -23,7 +23,7 @@ AerospikeCluster:
       type: string
       example: testCluster
       nullable: true
-    max-parallel-scans:
+    maxParallelScans:
       description: |-
         Specifies the maximum number of parallel scans allowed across the cluster.
         This property helps reduce the load on the cluster and is shared among all backups using the cluster.
@@ -31,17 +31,17 @@ AerospikeCluster:
       type: integer
       example: 100
       nullable: true
-    prefer-racks:
+    preferRacks:
       description: |-
         The list of acceptable racks in order of preference.
-        Nodes in prefer-racks[0] are chosen first.
-        If a node is not found in prefer-racks[0], then nodes in prefer-racks[1] are searched, and so on.
-        Mutually exclusive with the routine's rack-list, node-list and partition-list properties.
+        Nodes in preferRacks[0] are chosen first.
+        If a node is not found in preferRacks[0], then nodes in preferRacks[1] are searched, and so on.
+        Mutually exclusive with the routine's rackList, nodeList and partitionList properties.
       type: array
       items:
         type: integer
       nullable: true
-    seed-nodes:
+    seedNodes:
       description: The seed nodes details.
       type: array
       items:
@@ -50,7 +50,7 @@ AerospikeCluster:
       description: The cluster TLS configuration.
       allOf:
         - "$ref": "#/TLS"
-    use-services-alternate:
+    useServicesAlternate:
       description: Whether should use "services-alternate" instead of "services"
         in info request during cluster tending.
       type: boolean
@@ -60,37 +60,37 @@ AzureStorage:
   description: AzureStorage represents the configuration for Azure Blob storage.
   type: object
   required:
-    - container-name
+    - containerName
     - endpoint
   properties:
-    account-key:
+    accountKey:
       description: |-
         AccountKey is the Azure storage account key for Shared Key authentication.
         This is sensitive information. Can be a path in secret agent or an actual value.
       type: string
       nullable: true
-    account-name:
+    accountName:
       description: AccountName is the Azure storage account name for Shared Key
         authentication.
       type: string
       nullable: true
-    client-id:
+    clientId:
       description: ClientID is the Azure Active Directory client ID for AAD authentication.
       type: string
       nullable: true
-    client-secret:
+    clientSecret:
       description: |-
         ClientSecret is the Azure Active Directory client secret for AAD authentication.
         This is sensitive information. Can be a path in secret agent or an actual value.
       type: string
       nullable: true
-    container-name:
+    containerName:
       description: ContainerName is the name of the Azure Blob container.
       type: string
     endpoint:
       description: Endpoint is the Azure Blob service endpoint URL.
       type: string
-    min-part-size:
+    minPartSize:
       description: The minimum size in bytes of individual Azure Blob chunks.
       type: integer
       default: 5242880
@@ -102,24 +102,24 @@ AzureStorage:
       type: string
       example: backups
       nullable: true
-    secret-agent:
+    secretAgent:
       description: |-
         Secret Agent configuration (optional).
-        Mutually exclusive with 'secret-agent-name'.
+        Mutually exclusive with 'secretAgentName'.
       allOf:
         - "$ref": "#/SecretAgent"
-    secret-agent-name:
+    secretAgentName:
       description: |-
         Secret Agent configuration (optional). Link to one of preconfigured agents.
-        Mutually exclusive with 'secret-agent'.
+        Mutually exclusive with 'secretAgent'.
       type: string
       nullable: true
-    storage-class:
+    storageClass:
       description: StorageClass defines the storage tier for data and metadata
         objects.
       allOf:
         - "$ref": "#/AzureStorageClass"
-    tenant-id:
+    tenantId:
       description: TenantID is the Azure Active Directory tenant ID for AAD authentication.
       type: string
       nullable: true
@@ -168,14 +168,14 @@ BackupJob:
       $ref: "#/BackupType"
     status:
       $ref: "#/JobStatus"
-    done-records:
+    doneRecords:
       description: The number of records that have been successfully done.
       type: integer
       example: 50
     duration:
       description: Duration represents the elapsed time taken by the job in seconds.
       type: integer
-    estimated-end-time:
+    estimatedEndTime:
       description: |-
         The estimated time when the backup operation will be completed.
         It is calculated based on the current percentage done and duration.
@@ -183,7 +183,7 @@ BackupJob:
         This value is not guaranteed to be accurate.
       type: string
       example: 2006-01-02T15:04:05Z07:00
-    finish-time:
+    finishTime:
       description: |-
         The time when the operation finished.
         A nil value indicates that the operation is still running.
@@ -193,17 +193,17 @@ BackupJob:
       description: Metrics provides real-time information about data flow performance.
       allOf:
         - "$ref": "#/Metrics"
-    percentage-done:
+    percentageDone:
       description: |-
         The progress of the backup operation as a percentage.
         This value is not guaranteed to be accurate.
       type: integer
       example: 50
-    start-time:
+    startTime:
       description: The time when the operation started.
       type: string
       example: 2006-01-02T15:04:05Z07:00
-    total-records:
+    totalRecords:
       description: The total number of records to be processed.
       type: integer
       example: 100
@@ -287,7 +287,7 @@ BackupDetails:
     key:
       description: |-
         Key is the path to the backup files within the configured storage location.
-        This value can be used as `backup-data-path` in RestoreRequest.
+        This value can be used as `backupDataPath` in RestoreRequest.
       type: string
       example: daily/backup/1707915600000/source-ns1
     namespace:
@@ -322,7 +322,7 @@ BackupCommonConfig:
   description: BackupCommonConfig represents service-level backup settings.
   type: object
   properties:
-    timestamp-format:
+    timestampFormat:
       description: |-
         Encoding for backup date in human-readable format in backup file paths (optional).
         Allowed values:
@@ -358,7 +358,7 @@ BackupPolicy:
         Depending on the system configuration, compression may improve or degrade overall performance.
       allOf:
         - "$ref": "#/CompressionPolicy"
-    concurrent-incremental:
+    concurrentIncremental:
       description: |-
         Allows incremental backups to run concurrently.
         When false (default), incremental backups are skipped if another backup for same routine is in progress.
@@ -368,27 +368,27 @@ BackupPolicy:
       description: Encryption details (algorithm and key). Default is no encryption.
       allOf:
         - "$ref": "#/EncryptionPolicy"
-    file-limit:
+    fileLimit:
       description: |-
         File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
         a new backup file will be created.
       type: integer
       default: 250
-    max-concurrent-nodes:
+    maxConcurrentNodes:
       description: |-
         Maximum number of concurrent requests to server nodes.
         Default is to issue requests to all server nodes in parallel.
       type: integer
       nullable: true
-    no-indexes:
+    noIndexes:
       description: Do not back up any secondary index definitions.
       type: boolean
       default: false
-    no-records:
+    noRecords:
       description: Do not back up any record data (metadata or bin data).
       type: boolean
       default: false
-    no-udfs:
+    noUdfs:
       description: Do not back up any UDF modules.
       type: boolean
       default: false
@@ -400,14 +400,14 @@ BackupPolicy:
       default: 8
       minimum: 1
       example: 1
-    parallel-write:
+    parallelWrite:
       description: Maximum number of threads to use for writing backup files.
         If not specified, same values as `parallel` is used.
       type: integer
       default: 8
       minimum: 1
       example: 1
-    records-per-second:
+    recordsPerSecond:
       description: |-
         Limits the number of records returned per second (RPS).
         Default is no limit.
@@ -421,7 +421,7 @@ BackupPolicy:
         Ensure storage capacity for at least one extra full backup beyond the retention configuration.
       allOf:
         - "$ref": "#/RetentionPolicy"
-    retry-policy:
+    retryPolicy:
       description: |-
         RetryPolicy defines the configuration for database scan retry attempts in case of failures.
         If nil, the default policy is used (5 retries with a one-minute delay between attempts).
@@ -435,24 +435,24 @@ BackupPolicy:
         This parameter does not affect XDR backups (which always includes all keys).
       type: boolean
       default: false
-    socket-timeout:
+    socketTimeout:
       description: |-
-        Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
+        Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to totalTimeout.
         If both are 0, there is no socket idle time limit.
       type: integer
       default: 60000
-    total-timeout:
+    totalTimeout:
       description: Total socket timeout in milliseconds. Default is 0, that is,
         no timeout.
       type: integer
       default: 0
-    use-scan-compression:
+    useScanCompression:
       description: |-
         Enables built-in compression during scan operation.
         Valid for Aerospike Server Enterprise Edition only.
       type: boolean
       nullable: true
-    with-cluster-configuration:
+    withClusterConfiguration:
       description: Back up Aerospike cluster configuration.
       type: boolean
       default: false
@@ -460,21 +460,21 @@ BackupRoutine:
   description: BackupRoutine represents a scheduled backup operation routine.
   type: object
   required:
-    - interval-cron
+    - intervalCron
     - namespaces
-    - source-cluster
+    - sourceCluster
     - storage
     - name
   properties:
     name:
       description: The name of the routine.
       type: string
-    backup-policy:
+    backupPolicy:
       description: The name of the corresponding backup policy, one of defined
-        in `config.backup-policies` (optional).
+        in `config.backupPolicies` (optional).
       type: string
       nullable: true
-    bin-list:
+    binList:
       description: The list of backup bin names (optional, an empty list implies
         backing up all bins) extensions:"x-nullable".
       type: array
@@ -488,13 +488,13 @@ BackupRoutine:
             false.'
       type: boolean
       default: false
-    incr-interval-cron:
+    incrIntervalCron:
       description: The interval for incremental backup as a cron expression string
         (optional).
       type: string
       example: "*/10 * * * * *"
       nullable: true
-    interval-cron:
+    intervalCron:
       description: |-
         The interval for full backup as a cron expression string.
         Cron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format
@@ -508,7 +508,7 @@ BackupRoutine:
         type: string
       example:
         - '["source-ns1"]'
-    node-list:
+    nodeList:
       description: |-
         NodeList specifies which Aerospike nodes to include in the backup.
         Only the listed nodes will be backed up.
@@ -518,14 +518,14 @@ BackupRoutine:
         - "<node ID>"
         To obtain node identifiers, run: `asinfo -v "service:"`.
         If using IP addresses or hostnames, ensure they match the values returned by the `asinfo` command.
-        Mutually exclusive with partition-list and rack-list in this routine,
-        and also mutually exclusive with the cluster's prefer-racks setting.
+        Mutually exclusive with partitionList and rackList in this routine,
+        and also mutually exclusive with the cluster's preferRacks setting.
         Parallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.
       type: array
       items:
         type: string
       nullable: true
-    partition-list:
+    partitionList:
       description: |-
         PartitionList defines the list of partitions to include in the backup.
         The format supports individual partitions or ranges.
@@ -533,27 +533,27 @@ BackupRoutine:
         - A single partition is specified as a number (e.g., "0").
         Multiple entries can be comma-separated: e.g., "0,100,200,300,400,500".
         By default, all partitions (0 to 4095) are backed up.
-        Mutually exclusive with node-list and rack-list in this routine,
-        and also mutually exclusive with the cluster's prefer-racks setting.
+        Mutually exclusive with nodeList and rackList in this routine,
+        and also mutually exclusive with the cluster's preferRacks setting.
       type: string
       nullable: true
-    rack-list:
+    rackList:
       description: |-
         RackList specifies the Aerospike Server rack IDs from which to read records
         during backup.
         If provided, only nodes belonging to these specified racks will be scanned.
         If the list is empty or omitted, no rack filtering is applied.
-        Mutually exclusive with partition-list and node-list in this routine,
-        and also mutually exclusive with the cluster's prefer-racks setting.
+        Mutually exclusive with partitionList and nodeList in this routine,
+        and also mutually exclusive with the cluster's preferRacks setting.
       type: array
       items:
         type: integer
       nullable: true
-    secret-agent:
+    secretAgent:
       description: The name of a Secret Agent to read secrets from (optional).
       type: string
       nullable: true
-    set-list:
+    setList:
       description: The list of backup set names (optional, an empty list implies
         backing up all sets).
       type: array
@@ -562,7 +562,7 @@ BackupRoutine:
       example:
         - set1
       nullable: true
-    source-cluster:
+    sourceCluster:
       description: The name of the corresponding source cluster.
       type: string
       example: testCluster
@@ -605,12 +605,12 @@ Config:
       type: array
       items:
         "$ref": "#/BackupPolicy"
-    backup-routines:
+    backupRoutines:
       description: BackupRoutines is a map of backup routines.
       type: array
       items:
         "$ref": "#/BackupRoutine"
-    secret-agents:
+    secretAgents:
       description: SecretAgents is a map of secret agents used by backup routines
         (for encryption keys), clusters (for credentials), and storage (for authentication).
       type: array
@@ -630,7 +630,7 @@ Credentials:
     cluster.
   type: object
   properties:
-    auth-mode:
+    authMode:
       description: The authentication mode string (INTERNAL, EXTERNAL, PKI).
       type: string
       default: INTERNAL
@@ -645,21 +645,21 @@ Credentials:
       type: string
       example: testPswd
       nullable: true
-    password-path:
+    passwordPath:
       description: The file path with the password string.
       type: string
       example: "/path/to/pass.txt"
       nullable: true
-    secret-agent:
+    secretAgent:
       description: |-
         Secret Agent configuration (optional).
-        Mutually exclusive with 'secret-agent-name'.
+        Mutually exclusive with 'secretAgentName'.
       allOf:
         - "$ref": "#/SecretAgent"
-    secret-agent-name:
+    secretAgentName:
       description: |-
         Secret Agent configuration (optional). Link to one of preconfigured agents.
-        Mutually exclusive with 'secret-agent'.
+        Mutually exclusive with 'secretAgent'.
       type: string
       nullable: true
     user:
@@ -671,16 +671,16 @@ EncryptionPolicy:
   description: EncryptionPolicy contains backup encryption information.
   type: object
   properties:
-    key-env:
+    keyEnv:
       description: The name of the environment variable containing the encryption
         key.
       type: string
       nullable: true
-    key-file:
+    keyFile:
       description: The path to the file containing the encryption key.
       type: string
       nullable: true
-    key-secret:
+    keySecret:
       description: The secret keyword in Aerospike Secret Agent containing the
         encryption key.
       type: string
@@ -733,9 +733,9 @@ GcpStorage:
   description: GcpStorage represents the configuration for GCP storage.
   type: object
   required:
-    - bucket-name
+    - bucketName
   properties:
-    bucket-name:
+    bucketName:
       description: GCP storage bucket name.
       type: string
     endpoint:
@@ -750,12 +750,12 @@ GcpStorage:
         This is sensitive information. Can be a path in secret agent or an actual value.
       type: string
       nullable: true
-    key-file-path:
+    keyFilePath:
       description: Path to the file containing the service account key in JSON
         format.
       type: string
       nullable: true
-    min-part-size:
+    minPartSize:
       description: The minimum size in bytes of individual GCP storage chunks.
       type: integer
       default: 5242880
@@ -766,19 +766,19 @@ GcpStorage:
       type: string
       example: backups
       nullable: true
-    secret-agent:
+    secretAgent:
       description: |-
         Secret Agent configuration (optional).
-        Mutually exclusive with 'secret-agent-name'.
+        Mutually exclusive with 'secretAgentName'.
       allOf:
         - "$ref": "#/SecretAgent"
-    secret-agent-name:
+    secretAgentName:
       description: |-
         Secret Agent configuration (optional). Link to one of preconfigured agents.
-        Mutually exclusive with 'secret-agent'.
+        Mutually exclusive with 'secretAgent'.
       type: string
       nullable: true
-    storage-class:
+    storageClass:
       description: StorageClass defines the storage class for data and metadata
         objects.
       allOf:
@@ -806,7 +806,7 @@ HTTPServerConfig:
       type: string
       default: 0.0.0.0
       example: 0.0.0.0
-    context-path:
+    contextPath:
       description: ContextPath customizes path for the API endpoints.
       type: string
       default: "/"
@@ -829,7 +829,7 @@ LocalStorage:
   required:
     - path
   properties:
-    min-part-size:
+    minPartSize:
       description: The minimum size in bytes of individual storage chunks.
       type: integer
       minimum: 1
@@ -842,7 +842,7 @@ LoggerConfig:
   description: LoggerConfig represents the backup service logger configuration.
   type: object
   properties:
-    file-writer:
+    fileWriter:
       description: File writer logging configuration.
       allOf:
         - "$ref": "#/FileLoggerConfig"
@@ -864,7 +864,7 @@ LoggerConfig:
         - WARN
         - WARNING
         - ERROR
-    stdout-writer:
+    stdoutWriter:
       description: Whether to enable logging to the standard output.
       type: boolean
       default: true
@@ -872,7 +872,7 @@ Metrics:
   description: Metrics represents the current job speed.
   type: object
   properties:
-    kilobytes-per-second:
+    kilobytesPerSecond:
       description: Current speed as the amount of data processed by storage per
         second, in kilobytes.
       type: integer
@@ -885,7 +885,7 @@ Metrics:
         - If Pipeline grows large, it indicates that the source is producing data faster
           than the destination can consume.
       type: integer
-    records-per-second:
+    recordsPerSecond:
       description: Current speed as the number of records processed by Aerospike
         per second.
       type: integer
@@ -903,7 +903,7 @@ RateLimiterConfig:
       type: integer
       default: 1024
       example: 1024
-    white-list:
+    whiteList:
       description: |-
         The list of ips to whitelist in rate limiting (optional).
         Default: allow all.
@@ -951,14 +951,14 @@ RestorePolicy:
       type: integer
       example: 50000
       nullable: true
-    batch-size:
+    batchSize:
       description: |-
         The max allowed number of records per an async batch write call.
         Only applicable when using batch writes.
       type: integer
       default: 128
       example: 32
-    bin-list:
+    binList:
       description: The bins to restore (optional, an empty list implies restoring
         all bins).
       type: array
@@ -972,7 +972,7 @@ RestorePolicy:
       description: Compression details (algorithm). Default is no compression.
       allOf:
         - "$ref": "#/RestoreCompressionPolicy"
-    disable-batch-writes:
+    disableBatchWrites:
       description: |-
         Disables the use of batch writes when restoring records to the Aerospike cluster.
         By default, the cluster is checked for batch write support.
@@ -982,14 +982,14 @@ RestorePolicy:
       description: Encryption details (algorithm and key). Default is no encryption.
       allOf:
         - "$ref": "#/EncryptionPolicy"
-    extra-ttl:
+    extraTtl:
       description: |-
         Amount of extra time-to-live to add to records that have expirable void-times.
         Must be set in seconds.
       type: integer
       default: 0
       example: 86400
-    max-async-batches:
+    maxAsyncBatches:
       description: The max number of outstanding async record batch write calls
         at a time.
       type: integer
@@ -1001,24 +1001,24 @@ RestorePolicy:
         By default, the data is restored to the namespace from which it was taken.
       allOf:
         - "$ref": "#/RestoreNamespace"
-    no-generation:
+    noGeneration:
       description: |-
         Records from backups take precedence. This option disables the generation check.
         With this option, records from the backup always overwrite records that already exist in
         the namespace, regardless of generation numbers.
       type: boolean
       default: false
-    no-indexes:
+    noIndexes:
       description: Do not restore any secondary index definitions.
       type: boolean
       default: false
-    no-records:
+    noRecords:
       description: |-
         Do not restore any record data (metadata or bin data).
         By default, record data, secondary index definitions, and UDF modules will be restored.
       type: boolean
       default: false
-    no-udfs:
+    noUdfs:
       description: Do not restore any UDF modules.
       type: boolean
       default: false
@@ -1038,13 +1038,13 @@ RestorePolicy:
         contained in the backup; all other bins of an existing record remain untouched.
       type: boolean
       default: false
-    retry-policy:
+    retryPolicy:
       description: |-
         Configuration of retries for each restore write operation.
         If nil, the default policy is used (5 retries with a one-minute delay between attempts).
       allOf:
         - "$ref": "#/RetryPolicy"
-    set-list:
+    setList:
       description: The sets to restore (optional, an empty list implies restoring
         all sets).
       type: array
@@ -1054,15 +1054,15 @@ RestorePolicy:
         - set1
         - set2
       nullable: true
-    socket-timeout:
+    socketTimeout:
       description: |-
         Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-        Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
+        Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to totalTimeout.
         If both are 0, there is no socket idle time limit.
       type: integer
       default: 60000
       example: 1000
-    total-timeout:
+    totalTimeout:
       description: Total socket timeout in milliseconds. Default is 0, that is,
         no timeout.
       type: integer
@@ -1086,9 +1086,9 @@ RestoreRequest:
   description: RestoreRequest represents a restore operation request.
   type: object
   required:
-    - backup-data-path
+    - backupDataPath
   properties:
-    backup-data-path:
+    backupDataPath:
       description: |-
         Path to the data from storage root.
         You can obtain this value by:
@@ -1098,10 +1098,10 @@ RestoreRequest:
     destination:
       description: |-
         The details of the Aerospike destination cluster.
-        Mutually exclusive with 'destination-name'.
+        Mutually exclusive with 'destinationName'.
       allOf:
         - "$ref": "#/AerospikeCluster"
-    destination-name:
+    destinationName:
       description: |-
         Link to one of preconfigured clusters.
         Mutually exclusive with 'destination'.
@@ -1111,25 +1111,25 @@ RestoreRequest:
       description: Restore policy to use in the operation.
       allOf:
         - "$ref": "#/RestorePolicy"
-    secret-agent:
+    secretAgent:
       description: |-
         Secret Agent configuration (optional).
-        Mutually exclusive with 'secret-agent-name'.
+        Mutually exclusive with 'secretAgentName'.
       allOf:
         - "$ref": "#/SecretAgent"
-    secret-agent-name:
+    secretAgentName:
       description: |-
         Secret Agent configuration (optional). Link to one of preconfigured agents.
-        Mutually exclusive with 'secret-agent'.
+        Mutually exclusive with 'secretAgent'.
       type: string
       nullable: true
     source:
       description: |-
         The details of the storage configuration.
-        Mutually exclusive with 'source-name'.
+        Mutually exclusive with 'sourceName'.
       allOf:
         - "$ref": "#/Storage"
-    source-name:
+    sourceName:
       description: |-
         Link to one of preconfigured storages.
         Mutually exclusive with 'source'.
@@ -1146,16 +1146,16 @@ RestoreTimestampRequest:
     destination:
       description: |-
         The details of the Aerospike destination cluster.
-        Mutually exclusive with 'destination-name'.
+        Mutually exclusive with 'destinationName'.
       allOf:
         - "$ref": "#/AerospikeCluster"
-    destination-name:
+    destinationName:
       description: |-
         Link to one of preconfigured clusters.
         Mutually exclusive with 'destination'.
       type: string
       nullable: true
-    disable-reordering:
+    disableReordering:
       description: Disable reverse order of incremental backups optimisation.
       type: boolean
       default: false
@@ -1167,16 +1167,16 @@ RestoreTimestampRequest:
       description: The backup routine name.
       type: string
       example: daily
-    secret-agent:
+    secretAgent:
       description: |-
         Secret Agent configuration (optional).
-        Mutually exclusive with 'secret-agent-name'.
+        Mutually exclusive with 'secretAgentName'.
       allOf:
         - "$ref": "#/SecretAgent"
-    secret-agent-name:
+    secretAgentName:
       description: |-
         Secret Agent configuration (optional). Link to one of preconfigured agents.
-        Mutually exclusive with 'secret-agent'.
+        Mutually exclusive with 'secretAgent'.
       type: string
       nullable: true
     time:
@@ -1214,12 +1214,12 @@ RetryPolicy:
     of failures.
   type: object
   properties:
-    base-timeout:
+    baseTimeout:
       description: BaseTimeout is the initial delay between retry attempts, in
         milliseconds.
       type: integer
       nullable: true
-    max-retries:
+    maxRetries:
       description: |-
         MaxRetries is the maximum number of retry attempts that will be made.
         If set to 0, no retries will be performed.
@@ -1344,9 +1344,9 @@ S3Storage:
   type: object
   required:
     - bucket
-    - s3-region
+    - s3Region
   properties:
-    access-key-id:
+    accessKeyId:
       description: |-
         Access Key ID for authentication with S3 StaticCredentialsProvider.
         This is sensitive information. Can be a path in secret agent or an actual value.
@@ -1355,12 +1355,12 @@ S3Storage:
     bucket:
       description: The S3 bucket name.
       type: string
-    max-async-connections:
+    maxAsyncConnections:
       description: The maximum number of simultaneous requests from S3.
       type: integer
       example: 16
       nullable: true
-    min-part-size:
+    minPartSize:
       description: The minimum size in bytes of individual S3 UploadParts.
       type: integer
       default: 5242880
@@ -1373,13 +1373,13 @@ S3Storage:
       type: string
       example: backups
       nullable: true
-    s3-endpoint-override:
+    s3EndpointOverride:
       description: An alternative endpoint for the S3 SDK to communicate (AWS
         S3 optional).
       type: string
       example: http://host.docker.internal:9000
       nullable: true
-    s3-log-level:
+    s3LogLevel:
       description: The log level of the AWS S3 SDK (AWS S3 optional).
       type: string
       default: FATAL
@@ -1391,34 +1391,34 @@ S3Storage:
         - INFO
         - DEBUG
         - TRACE
-    s3-profile:
+    s3Profile:
       description: The S3 profile name (AWS S3 optional).
       type: string
       example: default
       nullable: true
-    s3-region:
+    s3Region:
       description: The S3 region string.
       type: string
       example: eu-central-1
-    secret-access-key:
+    secretAccessKey:
       description: |-
         Secret Access Key for authentication with S3 StaticCredentialsProvider.
         This is sensitive information. Can be a path in secret agent or an actual value.
       type: string
       nullable: true
-    secret-agent:
+    secretAgent:
       description: |-
         Secret Agent configuration (optional).
-        Mutually exclusive with 'secret-agent-name'.
+        Mutually exclusive with 'secretAgentName'.
       allOf:
         - "$ref": "#/SecretAgent"
-    secret-agent-name:
+    secretAgentName:
       description: |-
         Secret Agent configuration (optional). Link to one of preconfigured agents.
-        Mutually exclusive with 'secret-agent'.
+        Mutually exclusive with 'secretAgent'.
       type: string
       nullable: true
-    storage-class:
+    storageClass:
       description: StorageClass defines the storage class for data and metadata
         objects.
       allOf:
@@ -1459,7 +1459,7 @@ SecretAgent:
   type: object
   required:
     - address
-    - connection-type
+    - connectionType
     - name
   properties:
     name:
@@ -1469,34 +1469,34 @@ SecretAgent:
       description: Address of the Secret Agent.
       type: string
       example: localhost
-    ca-file:
+    caFile:
       description: Path to a trusted CA certificate file in PEM format.
       type: string
       example: "/path/to/ca.pem"
       nullable: true
-    cert-file:
+    certFile:
       description: Path to a client certificate file for mutual TLS authentication.
       type: string
       example: "/path/to/cert.pem"
       nullable: true
-    connection-type:
+    connectionType:
       description: Connection type.
       type: string
       enum:
         - tcp
         - unix
       example: tcp
-    is-base64:
+    isBase64:
       description: Flag that shows if secret agent responses are encrypted with
         base64.
       type: boolean
       default: false
-    key-file:
+    keyFile:
       description: Path to a client private key file for mutual TLS authentication.
       type: string
       example: "/path/to/key.pem"
       nullable: true
-    tls-name:
+    tlsName:
       description: TLSName used for server certificate verification (ServerName
         for SNI).
       type: string
@@ -1515,10 +1515,10 @@ SeedNode:
   description: SeedNode represents details of a node in the Aerospike cluster.
   type: object
   required:
-    - host-name
+    - hostName
     - port
   properties:
-    host-name:
+    hostName:
       description: The host name of the node.
       type: string
       example: localhost
@@ -1528,7 +1528,7 @@ SeedNode:
       maximum: 65535
       minimum: 1
       example: 3000
-    tls-name:
+    tlsName:
       description: TLS certificate name used for secure connections (if enabled).
       type: string
       example: certName
@@ -1581,33 +1581,33 @@ TLS:
   description: TLS represents the Aerospike cluster TLS configuration options.
   type: object
   properties:
-    ca-file:
+    caFile:
       description: Path to a trusted CA certificate file in PEM format.
       type: string
       example: "/path/to/ca.pem"
       nullable: true
-    ca-path:
+    caPath:
       description: Path to a directory of trusted CA certificates.
       type: string
       example: "/path/to/ca"
       nullable: true
-    cert-file:
+    certFile:
       description: Path to a client certificate file for mutual TLS authentication.
       type: string
       example: "/path/to/cert.pem"
       nullable: true
-    cipher-suite:
+    cipherSuite:
       description: TLS cipher selection criteria. The format is the same as OpenSSL's
         Cipher List Format.
       type: string
       example: TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
       nullable: true
-    key-file:
+    keyFile:
       description: Path to a client private key file for mutual TLS authentication.
       type: string
       example: "/path/to/key.pem"
       nullable: true
-    key-file-password:
+    keyFilePassword:
       description: Password to load protected TLS-keyfile (env:VAR, file:PATH,
         PASSWORD).
       type: string
@@ -1636,14 +1636,14 @@ TimestampRestorePolicy:
       type: integer
       example: 50000
       nullable: true
-    batch-size:
+    batchSize:
       description: |-
         The max allowed number of records per an async batch write call.
         Only applicable when using batch writes.
       type: integer
       default: 128
       example: 32
-    bin-list:
+    binList:
       description: The bins to restore (optional, an empty list implies restoring
         all bins).
       type: array
@@ -1653,7 +1653,7 @@ TimestampRestorePolicy:
         - bin1
         - bin2
       nullable: true
-    disable-batch-writes:
+    disableBatchWrites:
       description: |-
         Disables the use of batch writes when restoring records to the Aerospike cluster.
         By default, the cluster is checked for batch write support.
@@ -1663,14 +1663,14 @@ TimestampRestorePolicy:
       description: Encryption details (algorithm and key). Default is no encryption.
       allOf:
         - "$ref": "#/EncryptionPolicy"
-    extra-ttl:
+    extraTtl:
       description: |-
         Amount of extra time-to-live to add to records that have expirable void-times.
         Must be set in seconds.
       type: integer
       default: 0
       example: 86400
-    max-async-batches:
+    maxAsyncBatches:
       description: The max number of outstanding async record batch write calls
         at a time.
       type: integer
@@ -1682,24 +1682,24 @@ TimestampRestorePolicy:
         By default, the data is restored to the namespace from which it was taken.
       allOf:
         - "$ref": "#/RestoreNamespace"
-    no-generation:
+    noGeneration:
       description: |-
         Records from backups take precedence. This option disables the generation check.
         With this option, records from the backup always overwrite records that already exist in
         the namespace, regardless of generation numbers.
       type: boolean
       default: false
-    no-indexes:
+    noIndexes:
       description: Do not restore any secondary index definitions.
       type: boolean
       default: false
-    no-records:
+    noRecords:
       description: |-
         Do not restore any record data (metadata or bin data).
         By default, record data, secondary index definitions, and UDF modules will be restored.
       type: boolean
       default: false
-    no-udfs:
+    noUdfs:
       description: Do not restore any UDF modules.
       type: boolean
       default: false
@@ -1719,13 +1719,13 @@ TimestampRestorePolicy:
         contained in the backup; all other bins of an existing record remain untouched.
       type: boolean
       default: false
-    retry-policy:
+    retryPolicy:
       description: |-
         Configuration of retries for each restore write operation.
         If nil, the default policy is used (5 retries with a one-minute delay between attempts).
       allOf:
         - "$ref": "#/RetryPolicy"
-    set-list:
+    setList:
       description: The sets to restore (optional, an empty list implies restoring
         all sets).
       type: array
@@ -1735,15 +1735,15 @@ TimestampRestorePolicy:
         - set1
         - set2
       nullable: true
-    socket-timeout:
+    socketTimeout:
       description: |-
         Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-        Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
+        Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to totalTimeout.
         If both are 0, there is no socket idle time limit.
       type: integer
       default: 60000
       example: 1000
-    total-timeout:
+    totalTimeout:
       description: Total socket timeout in milliseconds. Default is 0, that is,
         no timeout.
       type: integer
@@ -1767,7 +1767,7 @@ VersionResponse:
   description: VersionResponse represents the ABS version information.
   type: object
   properties:
-    build-time:
+    buildTime:
       description: BuildTime of the application in UTC.
       type: string
     commit:
