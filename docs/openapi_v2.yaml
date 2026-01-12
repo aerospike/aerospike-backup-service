@@ -17,6 +17,11 @@ tags:
     description: Backup lifecycle APIs
   - name: Restore
     description: Restore APIs
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+servers:
+  - url: "localhost:8080"
 paths:
   "/":
     get:
@@ -798,190 +803,11 @@ paths:
             application/json:
               schema:
                 type: string
-  "/restore/cancel/{jobId}":
-    post:
-      tags: [ Restore ]
-      summary: Cancel a running restore operation.
-      operationId: cancelRestore
-      parameters:
-        - description: Restore job ID
-          name: jobId
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '202':
-          description: Restore job canceled successfully
-          content:
-            application/json:
-              schema:
-                type: string
-        '400':
-          description: Invalid job ID
-          content:
-            application/json:
-              schema:
-                type: string
-        '404':
-          description: Job not found
-          content:
-            application/json:
-              schema:
-                type: string
-  "/restore/full":
-    post:
-      tags: [ Restore ]
-      summary: Trigger an asynchronous full restore operation.
-      operationId: restoreFull
-      requestBody:
-        "$ref": "#/components/requestBodies/RestoreRequest"
-      responses:
-        '202':
-          description: Restore operation job id
-          content:
-            application/json:
-              schema:
-                type: integer
-                format: int64
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-        '405':
-          description: Method Not Allowed
-          content:
-            application/json:
-              schema:
-                type: string
-  "/restore/incremental":
-    post:
-      tags: [ Restore ]
-      summary: Trigger an asynchronous incremental restore operation.
-      operationId: restoreIncremental
-      requestBody:
-        "$ref": "#/components/requestBodies/RestoreRequest"
-      responses:
-        '202':
-          description: Restore operation job id
-          content:
-            application/json:
-              schema:
-                type: integer
-                format: int64
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-        '405':
-          description: Method Not Allowed
-          content:
-            application/json:
-              schema:
-                type: string
-  "/restore/jobs":
-    get:
-      tags: [ Restore ]
-      summary: Retrieve restore jobs.
-      operationId: retrieveRestoreJobs
-      parameters:
-        - description: Lower bound timestamp filter
-          name: from
-          in: query
-          schema:
-            type: integer
-            format: int64
-        - description: Upper bound timestamp filter
-          name: to
-          in: query
-          schema:
-            type: integer
-            format: int64
-        - description: Comma-separated status filter (Running,Done,Failed,Cancelled).
-            Use ! prefix for exclude filter (e.g., !Failed,Cancelled)
-          name: status
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Restore jobs
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  "$ref": "#/components/schemas/RestoreJobStatus"
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-  "/restore/status/{jobId}":
-    get:
-      tags: [ Restore ]
-      summary: Retrieve status for a restore job.
-      operationId: restoreStatus
-      parameters:
-        - description: Job ID to retrieve the status
-          name: jobId
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: Restore job status details
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/RestoreJobStatus"
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-  "/restore/timestamp":
-    post:
-      description: Restores backup from the given point in time.
-      tags: [ Restore ]
-      summary: Trigger an asynchronous restore operation to specific point in time.
-      operationId: restoreTimestamp
-      requestBody:
-        content:
-          application/json:
-            schema:
-              "$ref": "#/components/schemas/RestoreTimestampRequest"
-        description: Restore request details
-        required: true
-      responses:
-        '202':
-          description: Restore operation job id
-          content:
-            application/json:
-              schema:
-                type: integer
-                format: int64
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-        '405':
-          description: Method Not Allowed
-          content:
-            application/json:
-              schema:
-                type: string
+
+  # -------------------------------------------------------------------------
+  # RESTORES
+  # -------------------------------------------------------------------------
+
   "/retrieve/configuration/{name}/{timestamp}":
     get:
       tags: [ Restore ]
@@ -1021,11 +847,6 @@ paths:
             application/zip:
               schema:
                 type: string
-externalDocs:
-  description: OpenAPI
-  url: https://swagger.io/resources/open-api/
-servers:
-  - url: "localhost:8080"
 components:
   requestBodies:
     Storage:
@@ -1210,6 +1031,15 @@ components:
             - Cool
             - Cold
           nullable: true
+    JobStatus:
+      type: string
+      description: Current lifecycle state of a backup job.
+      enum:
+        - queued
+        - running
+        - cancelling
+        - completed
+        - failed
     BackupJob:
       type: object
       properties:
@@ -1217,9 +1047,7 @@ components:
         routine: { type: string }
         type: { type: string, enum: [ full, incremental ] }
         status:
-          type: string
-          description: Current lifecycle state of the task.
-          enum: [ queued, running, cancelling, completed, failed ]
+          $ref: "#/components/schemas/JobStatus"
         done-records:
           description: The number of records that have been successfully done.
           type: integer
@@ -1874,19 +1702,6 @@ components:
           description: Timeout for http server operations in milliseconds.
           type: integer
           default: 5000
-    JobStatus:
-      description: JobStatus represents possible states of restore jobs.
-      type: string
-      enum:
-        - Running
-        - Done
-        - Failed
-        - Cancelled
-      x-enum-varnames:
-        - JobStatusRunning
-        - JobStatusDone
-        - JobStatusFailed
-        - JobStatusCancelled
     LocalStorage:
       description: LocalStorage represents the configuration for local storage.
       type: object
@@ -1986,90 +1801,6 @@ components:
           enum:
             - NONE
             - ZSTD
-    RestoreJobStatus:
-      description: RestoreJobStatus represents restore job status.
-      type: object
-      properties:
-        current-job:
-          description: Speed related metrics of the restore process.
-          allOf:
-            - "$ref": "#/components/schemas/RunningJob"
-        error:
-          description: Error message if any.
-          type: string
-        errors-in-doubt:
-          description: |-
-            The number of errors in doubt while restoring.
-            (IsInDoubt signifies that the write operation may have gone through on the server
-            but the client is not able to confirm that due an error.)
-            Non zero value indicates that there are might be unexpected side effects during restore, like
-            * Generation counter greater than expected for some records.
-            * Fresher records counter greater than expected.
-          type: integer
-          format: int64
-          example: 7
-        existed-records:
-          description: The number of records dropped because they already existed
-            in the database.
-          type: integer
-          format: int64
-          example: 15
-        expired-records:
-          description: The number of records dropped because they were expired.
-          type: integer
-          format: int64
-          example: 2
-        fresher-records:
-          description: The number of records dropped because the database already
-            contained the records with a higher generation count.
-          type: integer
-          format: int64
-          example: 5
-        ignored-records:
-          description: The number of records ignored because of a record-level permanent
-            error while restoring.
-          type: integer
-          format: int64
-          example: 12
-        index-count:
-          description: The number of successfully created secondary indexes.
-          type: integer
-          format: int64
-          example: 3
-        inserted-records:
-          description: The number of successfully restored records.
-          type: integer
-          format: int64
-          example: 8
-        read-records:
-          description: |-
-            Number of records read from backup.
-            When restore is finished, `read-records` =  `inserted-records` + `fresher-records` +
-            `existed-records` + `ignored-records` + `skipped-records` + `expired-records`
-          type: integer
-          format: int64
-          example: 10
-        skipped-records:
-          description: |-
-            The number of records dropped because they didn't contain any of the
-            selected bins or didn't belong to any of the selected sets.
-          type: integer
-          format: int64
-          example: 4
-        status:
-          description: Status of the restore job.
-          allOf:
-            - "$ref": "#/components/schemas/JobStatus"
-        total-bytes:
-          description: Total bytes read from backup.
-          type: integer
-          format: int64
-          example: 2000
-        udf-count:
-          description: The number of successfully stored UDF files.
-          type: integer
-          format: int64
-          example: 1
     RestoreNamespace:
       description: RestoreNamespace specifies an alternative namespace name for the
         restore operation.
@@ -2379,80 +2110,114 @@ components:
             The actual delay is calculated as: BaseTimeout * (Multiplier ^ attemptNumber)
           type: number
           nullable: true
-    RoutineState:
-      description: RoutineState represent the current state of backups (full and incremental).
+    RestoreJob:
+      description: Represents the full state and statistics of a restore operation.
       type: object
       properties:
-        full:
-          description: Full represents the state of a full backup. Nil if no full
-            backup is running.
-          allOf:
-            - "$ref": "#/components/schemas/RunningJob"
-        incremental:
-          description: Incremental represents the state of an incremental backup.
-            Nil if no incremental backup is running.
-          allOf:
-            - "$ref": "#/components/schemas/RunningJob"
-        last-full:
-          description: |-
-            LastFull: the time of the last successful full backup.
-            A nil value indicates that there has never been a full backup.
+        id:
+          description: Unique identifier for this job.
           type: string
-        last-incremental:
-          description: |-
-            LastIncremental: the time of the last successful incremental backup.
-            A nil value indicates that there has never been an incremental backup.
+        type:
+          description: The type of trigger used (timestamp vs artifact).
           type: string
-        next-full:
-          description: 'NextFull: the time of the next scheduled full backup.'
-          type: string
-        next-incremental:
-          description: 'NextIncremental: the time of the next scheduled incremental
-            backup.'
-          type: string
-    RunningJob:
-      description: RunningJob tracks progress of currently running job.
-      type: object
-      properties:
-        done-records:
-          description: The number of records that have been successfully done.
-          type: integer
-          example: 50
-        duration:
-          description: Duration represents the elapsed time taken by the job in seconds.
-          type: integer
-        estimated-end-time:
-          description: |-
-            The estimated time when the backup operation will be completed.
-            It is calculated based on the current percentage done and duration.
-            A nil value indicates that the estimation is not available yet.
-            This value is not guaranteed to be accurate.
-          type: string
-          example: 2006-01-02T15:04:05Z07:00
-        finish-time:
-          description: |-
-            The time when the operation finished.
-            A nil value indicates that the operation is still running.
-          type: string
-          example: 2006-01-02T15:04:05Z07:00
-        metrics:
-          description: Metrics provides real-time information about data flow performance.
-          allOf:
-            - "$ref": "#/components/schemas/Metrics"
-        percentage-done:
-          description: |-
-            The progress of the backup operation as a percentage.
-            This value is not guaranteed to be accurate.
-          type: integer
-          example: 50
-        start-time:
+          enum: [ timestamp, artifact ]
+        status:
+          $ref: "#/components/schemas/JobStatus"
+
+        startTime:
           description: The time when the operation started.
           type: string
-          example: 2006-01-02T15:04:05Z07:00
-        total-records:
-          description: The total number of records to be processed.
+          format: date-time
+        finishTime:
+          description: The time when the operation finished. Null if running.
+          type: string
+          format: date-time
+          nullable: true
+        estimatedEndTime:
+          description: Calculated estimate of completion. Not guaranteed to be accurate.
+          type: string
+          format: date-time
+          nullable: true
+        duration:
+          description: Elapsed time in seconds.
           type: integer
-          example: 100
+          format: int64
+
+        percentageDone:
+          description: Progress 0-100.
+          type: integer
+          minimum: 0
+          maximum: 100
+        totalRecords:
+          description: The total number of records expected to be processed (if known).
+          type: integer
+          format: int64
+        processedRecords:
+          description: Total records processed so far (synonym for readRecords).
+          type: integer
+          format: int64
+
+        # --- Detailed Statistics (From RestoreJobStatus) ---
+        totalBytes:
+          description: Total bytes read from backup source.
+          type: integer
+          format: int64
+
+        insertedRecords:
+          description: Successfully restored records.
+          type: integer
+          format: int64
+
+        fresherRecords:
+          description: Records dropped because the DB already had a newer version (generation count).
+          type: integer
+          format: int64
+
+        existedRecords:
+          description: Records dropped because they already existed (and overwrite was false).
+          type: integer
+          format: int64
+
+        expiredRecords:
+          description: Records dropped because their TTL indicates they are already expired.
+          type: integer
+          format: int64
+
+        skippedRecords:
+          description: Records dropped due to set/bin filtering rules.
+          type: integer
+          format: int64
+
+        ignoredRecords:
+          description: Records ignored due to permanent errors.
+          type: integer
+          format: int64
+
+        errorsInDoubt:
+          description: |
+            Count of operations where the server state is unknown (potential side effects).
+            Non-zero indicates possible data inconsistencies (e.g. generation counters drifted).
+          type: integer
+          format: int64
+
+        indexCount:
+          description: Number of secondary indexes successfully created.
+          type: integer
+          format: int64
+
+        udfCount:
+          description: Number of UDF files successfully restored.
+          type: integer
+          format: int64
+
+        # --- Errors ---
+        error:
+          description: Final error message if status is 'failed'.
+          type: object
+          nullable: true
+          properties:
+            code: { type: string }
+            message: { type: string }
     S3Storage:
       description: S3Storage represents the configuration for S3 storage.
       type: object
