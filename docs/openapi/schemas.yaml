@@ -1,4 +1,3 @@
-
 AerospikeCluster:
   description: AerospikeCluster represents the configuration for an Aerospike
     cluster for backup.
@@ -148,11 +147,12 @@ AzureStorageClass:
       nullable: true
 JobStatus:
   type: string
-  description: Current lifecycle state of a backup job.
+  description: Current lifecycle state of a long running job.
   enum:
     - queued
     - running
     - cancelling
+    - cancelled
     - completed
     - failed
 BackupType:

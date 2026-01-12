@@ -1,824 +1,891 @@
-  "/":
-    get:
-      tags: [ System ]
-      summary: Root endpoint.
-      operationId: root
-      responses:
-        '200':
-          description: OK
-  "/api-docs":
-    get:
-      description: Serves the API documentation in Swagger UI format.
-      tags: [ System ]
-      summary: OpenAPI specification endpoint.
-      operationId: api-docs
-      responses:
-        '200':
-          description: OK
-          content:
-            text/html:
-              schema:
-                type: string
-  "/health":
-    get:
-      tags: [ System ]
-      summary: Health endpoint.
-      operationId: health
-      responses:
-        '200':
-          description: OK
-  "/metrics":
-    get:
-      tags: [ System ]
-      summary: Prometheus metrics endpoint.
-      operationId: metrics
-      responses:
-        '200':
-          description: OK
-  "/ready":
-    get:
-      tags: [ System ]
-      summary: Readiness endpoint.
-      operationId: ready
-      responses:
-        '200':
-          description: OK
-  "/version":
-    get:
-      tags: [ System ]
-      summary: Returns application version.
-      operationId: version
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                "$ref": "./schemas.yaml#/VersionResponse"
-  
-  # -------------------------------------------------------------------------
-  # ACTIVE BACKUP JOBS
-  # -------------------------------------------------------------------------
-  /backup-jobs:
-    get:
-      tags: [ Backup ]
-      summary: List active backup jobs
-      operationId: getOngoingBackups
-      description: |
-        Retrieve a list of currently running or queued backup tasks. 
-        Completed jobs may remain visible here for a short period.
-      parameters:
-        - name: routine
-          in: query
-          description: Filter jobs by routine name.
-          schema:
-            type: string
-        - name: type
-          in: query
-          description: Filter by backup type.
-          schema:
-            $ref: "./schemas.yaml#/BackupType"
-      responses:
-        '200':
-          description: A list of active job resources.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "./schemas.yaml#/BackupJob"
-  
-    post:
-      tags: [ Backup Control ]
-      summary: Trigger a new backup job
-      description: |
-        Starts a new long-running backup task.
-      operationId: triggerBackupJob
-      requestBody:
-        description: Configuration for the new backup task.
-        required: true
+"/":
+  get:
+    tags: [ System ]
+    summary: Root endpoint.
+    operationId: root
+    responses:
+      '200':
+        description: OK
+"/api-docs":
+  get:
+    description: Serves the API documentation in Swagger UI format.
+    tags: [ System ]
+    summary: OpenAPI specification endpoint.
+    operationId: api-docs
+    responses:
+      '200':
+        description: OK
+        content:
+          text/html:
+            schema:
+              type: string
+"/health":
+  get:
+    tags: [ System ]
+    summary: Health endpoint.
+    operationId: health
+    responses:
+      '200':
+        description: OK
+"/metrics":
+  get:
+    tags: [ System ]
+    summary: Prometheus metrics endpoint.
+    operationId: metrics
+    responses:
+      '200':
+        description: OK
+"/ready":
+  get:
+    tags: [ System ]
+    summary: Readiness endpoint.
+    operationId: ready
+    responses:
+      '200':
+        description: OK
+"/version":
+  get:
+    tags: [ System ]
+    summary: Returns application version.
+    operationId: version
+    responses:
+      '200':
+        description: OK
         content:
           application/json:
             schema:
-              $ref: "./schemas.yaml#/BackupTrigger"
-      responses:
-        '202':
-          description: Job accepted and started.
-          headers:
-            Location:
-              description: URI of the newly created job resource.
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  jobId:
-                    type: string
-                    description: The ID of the newly created long-running resource.
-        '409':
-          headers:
-            Location:
-              description: URI of existing backup operation.
-              schema:
-                type: string
-          description: Conflict. A job for this routine is already running.
-  
-  /backup-jobs/{id}:
-    get:
-      tags: [ Backup ]
-      summary: Get job status
-      description: |
-        Fetch the current status of a specific long-running action.
-        Poll this endpoint to track progress.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: The unique ID of the backup job.
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Current state of the job.
-          content:
-            application/json:
-              schema:
+              "$ref": "./schemas.yaml#/VersionResponse"
+
+# -------------------------------------------------------------------------
+# ACTIVE BACKUP JOBS
+# -------------------------------------------------------------------------
+/backup-jobs:
+  get:
+    tags: [ Backup ]
+    summary: List active backup jobs
+    operationId: getOngoingBackups
+    description: |
+      Retrieve a list of currently running or queued backup tasks. 
+      Completed jobs may remain visible here for a short period.
+    parameters:
+      - name: routine
+        in: query
+        description: Filter jobs by routine name.
+        schema:
+          type: string
+      - name: type
+        in: query
+        description: Filter by backup type.
+        schema:
+          $ref: "./schemas.yaml#/BackupType"
+      - name: status
+        in: query
+        description: Filter by one or more job statuses.
+        schema:
+          type: array
+          items:
+            $ref: "./schemas.yaml#/JobStatus"
+        style: form
+        explode: true
+    responses:
+      '200':
+        description: A list of active job resources.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
                 $ref: "./schemas.yaml#/BackupJob"
-        '404':
-          description: Job ID not found.
-    delete:
-      tags: [ Backup ]
-      summary: Cancel job
-      description: |
-        Terminates the running backup. All the data already backed up to the storage will be deleted.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Cancellation request processed successfully. No content returned.
-        '404':
-          description: Job not found.
   
-  # -------------------------------------------------------------------------
-  # BACKUP HISTORY
-  # -------------------------------------------------------------------------
-  /backups:
-    get:
-      tags: [ Backup ]
-      summary: List backup history
-      description: |
-        Retrieve the historical list of successfully completed backups.
-        Supports strict pagination via `limit` and `offset`.
-      parameters:
-        - name: limit
-          in: query
-          description: Maximum number of records to return.
+  post:
+    tags: [ Backup Control ]
+    summary: Trigger a new backup job
+    description: |
+      Starts a new long-running backup task.
+    operationId: triggerBackupJob
+    requestBody:
+      description: Configuration for the new backup task.
+      required: true
+      content:
+        application/json:
           schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 100
-        - name: offset
-          in: query
-          description: Number of records to skip.
-          schema:
-            type: integer
-            default: 0
-            minimum: 0
-        - name: routine
-          in: query
-          description: Filter history by routine name.
-          schema:
-            type: string
-        - name: type
-          in: query
-          description: Filter history by backup type.
-          schema:
-            $ref: "./schemas.yaml#/BackupType"
-  
-      responses:
-        '200':
-          description: Paginated list of backup artifacts.
-          content:
-            application/json:
-              schema:
-                $ref: "./schemas.yaml#/PaginatedBackupHistory"
-  
-  /backups/{id}:
-    get:
-      tags: [ Backup ]
-      summary: Get backup details
-      description: Returns metadata for a single completed backup artifact.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: The ID of the finished artifact (e.g., `bck-2023-10-01`).
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Backup artifact details.
-          content:
-            application/json:
-              schema:
-                $ref: "./schemas.yaml#/BackupDetails"
-        '404':
-          description: Backup not found.
-  
-  # -------------------------------------------------------------------------
-  # CONFIGURATION
-  # -------------------------------------------------------------------------
-  
-  "/config":
-    get:
-      tags: [ Configuration ]
-      summary: Returns the configuration for the service.
-      operationId: readConfig
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                "$ref": "./schemas.yaml#/Config"
-    put:
-      tags: [ Configuration ]
-      summary: Updates the configuration for the service.
-      operationId: updateConfig
-      requestBody:
+            $ref: "./schemas.yaml#/BackupTrigger"
+    responses:
+      '202':
+        description: Job accepted and started.
+        headers:
+          Location:
+            description: URI of the newly created job resource.
+            schema:
+              type: string
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                jobId:
+                  type: string
+                  description: The ID of the newly created long-running resource.
+      '409':
+        headers:
+          Location:
+            description: URI of existing backup operation.
+            schema:
+              type: string
+        description: Conflict. A job for this routine is already running.
+
+/backup-jobs/{id}:
+  get:
+    tags: [ Backup ]
+    summary: Get job status
+    description: |
+      Fetch the current status of a specific long-running action.
+      Poll this endpoint to track progress.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique ID of the backup job.
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Current state of the job.
+        content:
+          application/json:
+            schema:
+              $ref: "./schemas.yaml#/BackupJob"
+      '404':
+        description: Job ID not found.
+  delete:
+    tags: [ Backup ]
+    summary: Cancel job
+    description: |
+      Terminates the running backup. All the data already backed up to the storage will be deleted.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '204':
+        description: Cancellation request processed successfully. No content returned.
+      '404':
+        description: Job not found.
+
+# -------------------------------------------------------------------------
+# BACKUP HISTORY
+# -------------------------------------------------------------------------
+/backups:
+  get:
+    tags: [ Backup ]
+    summary: List backup history
+    description: |
+      Retrieve the historical list of successfully completed backups.
+      Supports strict pagination via `limit` and `offset`.
+    parameters:
+      - name: limit
+        in: query
+        description: Maximum number of records to return.
+        schema:
+          type: integer
+          default: 20
+          minimum: 1
+          maximum: 100
+      - name: offset
+        in: query
+        description: Number of records to skip.
+        schema:
+          type: integer
+          default: 0
+          minimum: 0
+      - name: routine
+        in: query
+        description: Filter history by routine name.
+        schema:
+          type: string
+      - name: type
+        in: query
+        description: Filter history by backup type.
+        schema:
+          $ref: "./schemas.yaml#/BackupType"
+
+    responses:
+      '200':
+        description: Paginated list of backup artifacts.
+        content:
+          application/json:
+            schema:
+              $ref: "./schemas.yaml#/PaginatedBackupHistory"
+
+/backups/{id}:
+  get:
+    tags: [ Backup ]
+    summary: Get backup details
+    description: Returns metadata for a single completed backup artifact.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The ID of the finished artifact (e.g., `bck-2023-10-01`).
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Backup artifact details.
+        content:
+          application/json:
+            schema:
+              $ref: "./schemas.yaml#/BackupDetails"
+      '404':
+        description: Backup not found.
+
+# -------------------------------------------------------------------------
+# CONFIGURATION
+# -------------------------------------------------------------------------
+
+"/config":
+  get:
+    tags: [ Configuration ]
+    summary: Returns the configuration for the service.
+    operationId: readConfig
+    responses:
+      '200':
+        description: OK
         content:
           application/json:
             schema:
               "$ref": "./schemas.yaml#/Config"
-        description: Configuration details
-        required: true
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-  "/config/apply":
-    post:
-      tags: [ Configuration ]
-      summary: Reloads the configuration from the config file.
-      operationId: applyConfig
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-  "/config/clusters":
-    get:
-      tags: [ Configuration ]
-      summary: Reads all Aerospike clusters from the configuration.
-      operationId: readAllClusters
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  "$ref": "./schemas.yaml#/AerospikeCluster"
-  "/config/clusters/{name}":
-    get:
-      tags: [ Configuration ]
-      summary: Reads a specific Aerospike cluster from the configuration given its
-        name.
-      operationId: readCluster
-      parameters:
-        - description: Aerospike cluster name
-          name: name
-          in: path
-          required: true
+  put:
+    tags: [ Configuration ]
+    summary: Updates the configuration for the service.
+    operationId: updateConfig
+    requestBody:
+      content:
+        application/json:
           schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
+            "$ref": "./schemas.yaml#/Config"
+      description: Configuration details
+      required: true
+    responses:
+      '200':
+        description: OK
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+"/config/apply":
+  post:
+    tags: [ Configuration ]
+    summary: Reloads the configuration from the config file.
+    operationId: applyConfig
+    responses:
+      '200':
+        description: OK
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+"/config/clusters":
+  get:
+    tags: [ Configuration ]
+    summary: Reads all Aerospike clusters from the configuration.
+    operationId: readAllClusters
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
                 "$ref": "./schemas.yaml#/AerospikeCluster"
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-        '404':
-          description: The specified cluster could not be found
-          content:
-            application/json:
-              schema:
-                type: string
-        '500':
-          description: The specified cluster could not be found
-          content:
-            application/json:
-              schema:
-                type: string
-    put:
-      tags: [ Configuration ]
-      summary: Updates an existing Aerospike cluster in the configuration.
-      operationId: updateCluster
-      parameters:
-        - description: Aerospike cluster name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        "$ref": "./requiestBodies.yaml#/AerospikeCluster"
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-    post:
-      tags: [ Configuration ]
-      summary: Adds an Aerospike cluster to the config.
-      operationId: addCluster
-      parameters:
-        - description: Aerospike cluster name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        "$ref": "./requiestBodies.yaml#/AerospikeCluster"
-      responses:
-        '201':
-          description: Created
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-    delete:
-      tags: [ Configuration ]
-      summary: Deletes a cluster from the configuration by name.
-      operationId: deleteCluster
-      parameters:
-        - description: Aerospike cluster name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: No Content
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-  "/config/policies":
-    get:
-      tags: [ Configuration ]
-      summary: Reads all policies from the configuration.
-      operationId: readPolicies
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  "$ref": "./schemas.yaml#/BackupPolicy"
-  "/config/policies/{name}":
-    get:
-      tags: [ Configuration ]
-      summary: Reads a backup policy from the configuration given its name.
-      operationId: readPolicy
-      parameters:
-        - description: Backup policy name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
+"/config/clusters/{name}":
+  get:
+    tags: [ Configuration ]
+    summary: Reads a specific Aerospike cluster from the configuration given its
+      name.
+    operationId: readCluster
+    parameters:
+      - description: Aerospike cluster name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              "$ref": "./schemas.yaml#/AerospikeCluster"
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+      '404':
+        description: The specified cluster could not be found
+        content:
+          application/json:
+            schema:
+              type: string
+      '500':
+        description: The specified cluster could not be found
+        content:
+          application/json:
+            schema:
+              type: string
+  put:
+    tags: [ Configuration ]
+    summary: Updates an existing Aerospike cluster in the configuration.
+    operationId: updateCluster
+    parameters:
+      - description: Aerospike cluster name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      "$ref": "./requiestBodies.yaml#/AerospikeCluster"
+    responses:
+      '200':
+        description: OK
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+  post:
+    tags: [ Configuration ]
+    summary: Adds an Aerospike cluster to the config.
+    operationId: addCluster
+    parameters:
+      - description: Aerospike cluster name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      "$ref": "./requiestBodies.yaml#/AerospikeCluster"
+    responses:
+      '201':
+        description: Created
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+  delete:
+    tags: [ Configuration ]
+    summary: Deletes a cluster from the configuration by name.
+    operationId: deleteCluster
+    parameters:
+      - description: Aerospike cluster name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '204':
+        description: No Content
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+"/config/policies":
+  get:
+    tags: [ Configuration ]
+    summary: Reads all policies from the configuration.
+    operationId: readPolicies
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
                 "$ref": "./schemas.yaml#/BackupPolicy"
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-        '404':
-          description: The specified policy could not be found
-          content:
-            application/json:
-              schema:
-                type: string
-        '500':
-          description: The specified policy could not be found
-          content:
-            application/json:
-              schema:
-                type: string
-    put:
-      tags: [ Configuration ]
-      summary: Updates an existing policy in the configuration.
-      operationId: updatePolicy
-      parameters:
-        - description: Backup policy name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        "$ref": "./requiestBodies.yaml#/BackupPolicy"
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-    post:
-      tags: [ Configuration ]
-      summary: Adds a policy to the config.
-      operationId: addPolicy
-      parameters:
-        - description: Backup policy name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        "$ref": "./requiestBodies.yaml#/BackupPolicy"
-      responses:
-        '201':
-          description: Created
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-    delete:
-      tags: [ Configuration ]
-      summary: Deletes a policy from the configuration by name.
-      operationId: deletePolicy
-      parameters:
-        - description: Backup policy name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: No Content
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-  "/config/routines":
-    get:
-      tags: [ Configuration ]
-      summary: Reads all routines from the configuration.
-      operationId: readRoutines
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  "$ref": "./schemas.yaml#/BackupRoutine"
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-  "/config/routines/{name}":
-    get:
-      tags: [ Configuration ]
-      summary: Reads a specific routine from the configuration given its name.
-      operationId: readRoutine
-      parameters:
-        - description: Backup routine name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
+"/config/policies/{name}":
+  get:
+    tags: [ Configuration ]
+    summary: Reads a backup policy from the configuration given its name.
+    operationId: readPolicy
+    parameters:
+      - description: Backup policy name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              "$ref": "./schemas.yaml#/BackupPolicy"
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+      '404':
+        description: The specified policy could not be found
+        content:
+          application/json:
+            schema:
+              type: string
+      '500':
+        description: The specified policy could not be found
+        content:
+          application/json:
+            schema:
+              type: string
+  put:
+    tags: [ Configuration ]
+    summary: Updates an existing policy in the configuration.
+    operationId: updatePolicy
+    parameters:
+      - description: Backup policy name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      "$ref": "./requiestBodies.yaml#/BackupPolicy"
+    responses:
+      '200':
+        description: OK
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+  post:
+    tags: [ Configuration ]
+    summary: Adds a policy to the config.
+    operationId: addPolicy
+    parameters:
+      - description: Backup policy name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      "$ref": "./requiestBodies.yaml#/BackupPolicy"
+    responses:
+      '201':
+        description: Created
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+  delete:
+    tags: [ Configuration ]
+    summary: Deletes a policy from the configuration by name.
+    operationId: deletePolicy
+    parameters:
+      - description: Backup policy name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '204':
+        description: No Content
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+"/config/routines":
+  get:
+    tags: [ Configuration ]
+    summary: Reads all routines from the configuration.
+    operationId: readRoutines
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
                 "$ref": "./schemas.yaml#/BackupRoutine"
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-        '404':
-          description: The specified routine could not be found
-          content:
-            application/json:
-              schema:
-                type: string
-    put:
-      tags: [ Configuration ]
-      summary: Updates an existing routine in the configuration.
-      operationId: updateRoutine
-      parameters:
-        - description: Backup routine name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        "$ref": "./requiestBodies.yaml#/BackupRoutine"
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-    post:
-      tags: [ Configuration ]
-      summary: Adds a backup routine to the config.
-      operationId: addRoutine
-      parameters:
-        - description: Backup routine name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        "$ref": "./requiestBodies.yaml#/BackupRoutine"
-      responses:
-        '201':
-          description: Created
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-    delete:
-      tags: [ Configuration ]
-      summary: Deletes a backup routine from the configuration by name.
-      operationId: deleteRoutine
-      parameters:
-        - description: Backup routine name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: No Content
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-  "/config/routines/{name}/disable":
-    put:
-      tags: [ Configuration ]
-      summary: Disable a backup routine.
-      operationId: disableRoutine
-      parameters:
-        - description: The name of the backup routine.
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Routine successfully disabled.
-        '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                type: string
-        '500':
-          description: Unexpected error occurred.
-          content:
-            application/json:
-              schema:
-                type: string
-  "/config/routines/{name}/enable":
-    put:
-      tags: [ Configuration ]
-      summary: Enable a backup routine.
-      operationId: enableRoutine
-      parameters:
-        - description: Backup routine name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Routine successfully enabled.
-        '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                type: string
-  "/config/storage":
-    get:
-      tags: [ Configuration ]
-      summary: Reads all storage from the configuration.
-      operationId: readAllStorage
-      parameters:
-        - name: type
-          in: query
-          required: false
-          description: Filter storages by backend type.
-          schema:
-            $ref: "./schemas.yaml#/StorageType"
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "./schemas.yaml#/Storage"
-    post:
-      tags: [ Configuration ]
-      summary: Adds a storage to the config.
-      operationId: addStorage
-      requestBody:
-        "$ref": "./requiestBodies.yaml#/Storage"
-      responses:
-        '201':
-          description: Created
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-    put:
-      tags: [ Configuration ]
-      summary: Updates an existing storage in the configuration.
-      operationId: updateStorage
-      requestBody:
-        "$ref": "./requiestBodies.yaml#/Storage"
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-  "/config/storage/{name}":
-    get:
-      tags: [ Configuration ]
-      summary: Reads a specific storage from the configuration given its name.
-      operationId: readStorage
-      parameters:
-        - description: Backup storage name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                "$ref": "./schemas.yaml#/Storage"
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-        '404':
-          description: The specified storage could not be found
-          content:
-            application/json:
-              schema:
-                type: string
-    delete:
-      tags: [ Configuration ]
-      summary: Deletes a storage from the configuration by name.
-      operationId: deleteStorage
-      parameters:
-        - description: Backup storage name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: No Content
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: string
-  
-  # -------------------------------------------------------------------------
-  # RESTORES
-  # -------------------------------------------------------------------------
-  
-  "/retrieve/configuration/{name}/{timestamp}":
-    get:
-      tags: [ Restore ]
-      summary: Retrieve Aerospike cluster configuration backup
-      operationId: retrieveConfiguration
-      parameters:
-        - description: Backup routine name
-          name: name
-          in: path
-          required: true
-          schema:
-            type: string
-        - description: Backup timestamp
-          name: timestamp
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/zip:
-              schema:
-                type: string
-                format: binary
-        '400':
-          description: Bad Request
-          content:
-            application/zip:
-              schema:
-                type: string
-        '405':
-          description: Method Not Allowed
-          content:
-            application/zip:
-              schema:
-                type: string
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+"/config/routines/{name}":
+  get:
+    tags: [ Configuration ]
+    summary: Reads a specific routine from the configuration given its name.
+    operationId: readRoutine
+    parameters:
+      - description: Backup routine name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              "$ref": "./schemas.yaml#/BackupRoutine"
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+      '404':
+        description: The specified routine could not be found
+        content:
+          application/json:
+            schema:
+              type: string
+  put:
+    tags: [ Configuration ]
+    summary: Updates an existing routine in the configuration.
+    operationId: updateRoutine
+    parameters:
+      - description: Backup routine name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      "$ref": "./requiestBodies.yaml#/BackupRoutine"
+    responses:
+      '200':
+        description: OK
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+  post:
+    tags: [ Configuration ]
+    summary: Adds a backup routine to the config.
+    operationId: addRoutine
+    parameters:
+      - description: Backup routine name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      "$ref": "./requiestBodies.yaml#/BackupRoutine"
+    responses:
+      '201':
+        description: Created
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+  delete:
+    tags: [ Configuration ]
+    summary: Deletes a backup routine from the configuration by name.
+    operationId: deleteRoutine
+    parameters:
+      - description: Backup routine name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '204':
+        description: No Content
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+"/config/routines/{name}/disable":
+  put:
+    tags: [ Configuration ]
+    summary: Disable a backup routine.
+    operationId: disableRoutine
+    parameters:
+      - description: The name of the backup routine.
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '204':
+        description: Routine successfully disabled.
+      '404':
+        description: Not Found
+        content:
+          application/json:
+            schema:
+              type: string
+      '500':
+        description: Unexpected error occurred.
+        content:
+          application/json:
+            schema:
+              type: string
+"/config/routines/{name}/enable":
+  put:
+    tags: [ Configuration ]
+    summary: Enable a backup routine.
+    operationId: enableRoutine
+    parameters:
+      - description: Backup routine name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '204':
+        description: Routine successfully enabled.
+      '404':
+        description: Not Found
+        content:
+          application/json:
+            schema:
+              type: string
+"/config/storage":
+  get:
+    tags: [ Configuration ]
+    summary: Reads all storage from the configuration.
+    operationId: readAllStorage
+    parameters:
+      - name: type
+        in: query
+        required: false
+        description: Filter storages by backend type.
+        schema:
+          $ref: "./schemas.yaml#/StorageType"
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "./schemas.yaml#/Storage"
+  post:
+    tags: [ Configuration ]
+    summary: Adds a storage to the config.
+    operationId: addStorage
+    requestBody:
+      "$ref": "./requiestBodies.yaml#/Storage"
+    responses:
+      '201':
+        description: Created
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+  put:
+    tags: [ Configuration ]
+    summary: Updates an existing storage in the configuration.
+    operationId: updateStorage
+    requestBody:
+      "$ref": "./requiestBodies.yaml#/Storage"
+    responses:
+      '200':
+        description: OK
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+"/config/storage/{name}":
+  get:
+    tags: [ Configuration ]
+    summary: Reads a specific storage from the configuration given its name.
+    operationId: readStorage
+    parameters:
+      - description: Backup storage name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              "$ref": "./schemas.yaml#/Storage"
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+      '404':
+        description: The specified storage could not be found
+        content:
+          application/json:
+            schema:
+              type: string
+  delete:
+    tags: [ Configuration ]
+    summary: Deletes a storage from the configuration by name.
+    operationId: deleteStorage
+    parameters:
+      - description: Backup storage name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      '204':
+        description: No Content
+      '400':
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              type: string
+
+# -------------------------------------------------------------------------
+# RESTORES
+# -------------------------------------------------------------------------
+/restore-jobs:
+  get:
+    tags: [ Restore ]
+    summary: List active restore jobs.
+    description: Returns a list of currently running or recently finished restore operations.
+    parameters:
+      - name: status
+        in: query
+        description: Filter by one or more job statuses.
+        schema:
+          type: array
+          items:
+            $ref: "./schemas.yaml#/JobStatus"
+        style: form
+        explode: true
+    responses:
+      '200':
+        description: List of restore jobs
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "./schemas.yaml#/RestoreJob"
+
+/restore-jobs/{id}:
+  get:
+    tags: [ Restore ]
+    summary: Get restore job status.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      '200':
+        description: Job status
+        content:
+          application/json:
+            schema:
+              $ref: "./schemas.yaml#/RestoreJob"
+      '404':
+        description: Job not found
+
+  delete:
+    tags: [ Restore ]
+    summary: Cancel a running restore.
+    description: Stops the restoration process immediately. Replaces `/restore/cancel`.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      '204':
+        description: Cancellation accepted (No Content).
+      '404':
+        description: Job not found or already finished.
+
+/retrieve/configuration/{name}/{timestamp}:
+  get:
+    tags: [ Restore ]
+    summary: Retrieve Aerospike cluster configuration backup
+    operationId: retrieveConfiguration
+    parameters:
+      - description: Backup routine name
+        name: name
+        in: path
+        required: true
+        schema:
+          type: string
+      - description: Backup timestamp
+        name: timestamp
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    responses:
+      '200':
+        description: OK
+        content:
+          application/zip:
+            schema:
+              type: string
+              format: binary
+      '400':
+        description: Bad Request
+        content:
+          application/zip:
+            schema:
+              type: string
+      '405':
+        description: Method Not Allowed
+        content:
+          application/zip:
+            schema:
+              type: string
