@@ -26,6 +26,6 @@ paths:
   $ref: ./paths.yaml
 components:
   requestBodies:
-    $ref: ./requiestBodies.yaml
+    $ref: ./requestBodies.yaml
   schemas:
     $ref: ./schemas.yaml

@@ -123,12 +123,16 @@
             schema:
               $ref: "./schemas.yaml#/JobIdentifier"
       '409':
+        description: Conflict. A job for this routine is already running.
         headers:
           Location:
             description: URI of existing backup operation.
             schema:
               type: string
-        description: Conflict. A job for this routine is already running.
+        content:
+          application/json:
+            schema:
+              type: string
 
 /backup-jobs/{id}:
   get:
@@ -153,6 +157,10 @@
               $ref: "./schemas.yaml#/BackupJob"
       '404':
         description: Job ID not found.
+        content:
+          application/json:
+            schema:
+              type: string
   delete:
     tags: [ Backup ]
     summary: Cancel job
@@ -169,6 +177,10 @@
         description: Cancellation request processed successfully. No content returned.
       '404':
         description: Job not found.
+        content:
+          application/json:
+            schema:
+              type: string
 
 # -------------------------------------------------------------------------
 # BACKUP HISTORY
@@ -236,6 +248,10 @@
               $ref: "./schemas.yaml#/BackupDetails"
       '404':
         description: Backup not found.
+        content:
+          application/json:
+            schema:
+              type: string
 
 # -------------------------------------------------------------------------
 # CONFIGURATION
@@ -333,12 +349,6 @@
           application/json:
             schema:
               type: string
-      '500':
-        description: The specified cluster could not be found
-        content:
-          application/json:
-            schema:
-              type: string
   put:
     tags: [ Configuration ]
     summary: Updates an existing Aerospike cluster in the configuration.
@@ -351,7 +361,7 @@
         schema:
           type: string
     requestBody:
-      "$ref": "./requiestBodies.yaml#/AerospikeCluster"
+      "$ref": "./requestBodies.yaml#/AerospikeCluster"
     responses:
       '200':
         description: OK
@@ -373,7 +383,7 @@
         schema:
           type: string
     requestBody:
-      "$ref": "./requiestBodies.yaml#/AerospikeCluster"
+      "$ref": "./requestBodies.yaml#/AerospikeCluster"
     responses:
       '201':
         description: Created
@@ -448,12 +458,6 @@
           application/json:
             schema:
               type: string
-      '500':
-        description: The specified policy could not be found
-        content:
-          application/json:
-            schema:
-              type: string
   put:
     tags: [ Configuration ]
     summary: Updates an existing policy in the configuration.
@@ -466,7 +470,7 @@
         schema:
           type: string
     requestBody:
-      "$ref": "./requiestBodies.yaml#/BackupPolicy"
+      "$ref": "./requestBodies.yaml#/BackupPolicy"
     responses:
       '200':
         description: OK
@@ -488,7 +492,7 @@
         schema:
           type: string
     requestBody:
-      "$ref": "./requiestBodies.yaml#/BackupPolicy"
+      "$ref": "./requestBodies.yaml#/BackupPolicy"
     responses:
       '201':
         description: Created
@@ -581,7 +585,7 @@
         schema:
           type: string
     requestBody:
-      "$ref": "./requiestBodies.yaml#/BackupRoutine"
+      "$ref": "./requestBodies.yaml#/BackupRoutine"
     responses:
       '200':
         description: OK
@@ -603,7 +607,7 @@
         schema:
           type: string
     requestBody:
-      "$ref": "./requiestBodies.yaml#/BackupRoutine"
+      "$ref": "./requestBodies.yaml#/BackupRoutine"
     responses:
       '201':
         description: Created
@@ -650,12 +654,6 @@
         description: Routine successfully disabled.
       '404':
         description: Not Found
-        content:
-          application/json:
-            schema:
-              type: string
-      '500':
-        description: Unexpected error occurred.
         content:
           application/json:
             schema:
@@ -707,7 +705,7 @@
     summary: Adds a storage to the config.
     operationId: addStorage
     requestBody:
-      "$ref": "./requiestBodies.yaml#/Storage"
+      "$ref": "./requestBodies.yaml#/Storage"
     responses:
       '201':
         description: Created
@@ -722,7 +720,7 @@
     summary: Updates an existing storage in the configuration.
     operationId: updateStorage
     requestBody:
-      "$ref": "./requiestBodies.yaml#/Storage"
+      "$ref": "./requestBodies.yaml#/Storage"
     responses:
       '200':
         description: OK
@@ -816,6 +814,7 @@
   get:
     tags: [ Restore ]
     summary: Get restore job status.
+    operationId: getRestoreJob
     parameters:
       - name: id
         in: path
@@ -834,6 +833,7 @@
   delete:
     tags: [ Restore ]
     summary: Cancel a running restore.
+    operationId: cancelRestoreJob
     description: Stops the restoration process immediately. Replaces `/restore/cancel`.
     parameters:
       - name: id
@@ -845,6 +845,10 @@
         description: Cancellation accepted (No Content).
       '404':
         description: Job not found or already finished.
+        content:
+          application/json:
+            schema:
+              type: string
 
 # Method A: Restore by Timestamp
 /restore-jobs/point-in-time:
@@ -926,15 +930,9 @@
             schema:
               type: string
               format: binary
-      '400':
-        description: Bad Request
+      '404':
+        description: Configuration backup not found
         content:
-          application/zip:
-            schema:
-              type: string
-      '405':
-        description: Method Not Allowed
-        content:
-          application/zip:
+          application/json:
             schema:
               type: string
