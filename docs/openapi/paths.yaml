@@ -121,11 +121,7 @@
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                jobId:
-                  type: string
-                  description: The ID of the newly created long-running resource.
+              $ref: "./schemas.yaml#/JobIdentifier"
       '409':
         headers:
           Location:
@@ -849,6 +845,59 @@
         description: Cancellation accepted (No Content).
       '404':
         description: Job not found or already finished.
+
+# Method A: Restore by Timestamp
+/restore-jobs/point-in-time:
+  post:
+    tags: [ Restore Control ]
+    summary: Trigger restore by timestamp.
+    description: |
+      Starts a restore job calculated from a specific point in time.
+      Corresponds to the `RestoreTimestampRequest` schema.
+    operationId: triggerRestoreByTime
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "./schemas.yaml#/RestoreTimestampRequest"
+    responses:
+      '202':
+        description: Restore started.
+        headers:
+          Location:
+            description: URI of the new job (e.g., /restore-jobs/job-99)
+            schema: { type: string }
+        content:
+          application/json:
+            schema:
+              $ref: "./schemas.yaml#/JobIdentifier"
+
+# Method B: Restore by Artifact (Path/File)
+/restore-jobs/path:
+  post:
+    tags: [ Restore Control ]
+    summary: Trigger restore by backup path.
+    description: |
+      Starts a restore job using a specific path or backup key.
+      Replaces `/restore/full` and `/restore/incremental`.
+    operationId: triggerRestoreByPath
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "./schemas.yaml#/RestoreRequest"
+    responses:
+      '202':
+        description: Restore started.
+        headers:
+          Location:
+            schema: { type: string }
+        content:
+          application/json:
+            schema:
+              $ref: "./schemas.yaml#/JobIdentifier"
 
 /retrieve/configuration/{name}/{timestamp}:
   get:
