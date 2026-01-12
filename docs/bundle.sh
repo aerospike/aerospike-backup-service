@@ -1,0 +1,1 @@
+npx @redocly/cli bundle openapi/openapi_v2.yaml -o openapi_v2.bundle.yaml

@@ -1,0 +1,35 @@
+Storage:
+  content:
+    application/json:
+      schema:
+        "$ref": "./schemas.yaml#/Storage"
+  description: Backup storage details
+  required: true
+RestoreRequest:
+  content:
+    application/json:
+      schema:
+        "$ref": "./schemas.yaml#/RestoreRequest"
+  description: Restore request details
+  required: true
+AerospikeCluster:
+  content:
+    application/json:
+      schema:
+        "$ref": "./schemas.yaml#/AerospikeCluster"
+  description: Aerospike cluster details
+  required: true
+BackupPolicy:
+  content:
+    application/json:
+      schema:
+        "$ref": "./schemas.yaml#/BackupPolicy"
+  description: Backup policy details
+  required: true
+BackupRoutine:
+  content:
+    application/json:
+      schema:
+        "$ref": "./schemas.yaml#/BackupRoutine"
+  description: Backup routine details
+  required: true

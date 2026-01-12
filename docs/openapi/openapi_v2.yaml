@@ -1,0 +1,31 @@
+---
+openapi: 3.0.4
+info:
+  description: Aerospike Backup Service
+  title: Backup Service REST API Specification v2
+  contact: { }
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: v3.5.0
+tags:
+  - name: System
+    description: System APIs
+  - name: Configuration
+    description: Configuration APIs
+  - name: Backup
+    description: Backup lifecycle APIs
+  - name: Restore
+    description: Restore APIs
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+servers:
+  - url: "localhost:8080"
+paths:
+  $ref: ./paths.yaml
+components:
+  requestBodies:
+    $ref: ./requiestBodies.yaml
+  schemas:
+    $ref: ./schemas.yaml
