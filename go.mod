@@ -1,15 +1,15 @@
 module github.com/aerospike/aerospike-backup-service/v3
 
-go 1.24.0
+go 1.24.10
 
 require (
-	cloud.google.com/go/storage v1.58.0
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
+	cloud.google.com/go/storage v1.59.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.21.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.6.3
-	github.com/aerospike/aerospike-client-go/v8 v8.5.0
-	github.com/aerospike/aerospike-management-lib v1.8.0
-	github.com/aerospike/backup-go v0.8.1-0.20251209104025-56157828021b
+	github.com/aerospike/aerospike-client-go/v8 v8.5.1
+	github.com/aerospike/aerospike-management-lib v1.9.0
+	github.com/aerospike/backup-go v0.9.0
 	github.com/aws/aws-sdk-go-v2 v1.41.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.6
@@ -24,9 +24,9 @@ require (
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.6
 	go.uber.org/mock v0.3.0
-	golang.org/x/sync v0.18.0
+	golang.org/x/sync v0.19.0
 	golang.org/x/time v0.14.0
-	golang.org/x/tools v0.38.0
+	golang.org/x/tools v0.40.0
 	google.golang.org/api v0.257.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -112,17 +112,17 @@ require (
 	go.opentelemetry.io/otel/sdk v1.38.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/mod v0.29.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/mod v0.31.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/oauth2 v0.33.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	google.golang.org/genproto v0.0.0-20250922171735-9219d122eba9 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251111163417-95abcf5c77ba // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846 // indirect
 	google.golang.org/grpc v1.77.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	k8s.io/apimachinery v0.32.3 // indirect
+	k8s.io/apimachinery v0.33.0 // indirect
 )
