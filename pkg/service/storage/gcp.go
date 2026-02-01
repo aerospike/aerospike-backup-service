@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 
@@ -17,15 +18,26 @@ import (
 )
 
 type GcpStorageAccessor struct {
-	clientMap *collections.LoadingCacheContext[*model.GcpStorage, *storage.Client]
+	clientMap *collections.LoadingCacheContext[*model.GcpStorage, gcp.Client]
 	resolver  secrets.Resolver
 }
+
+// clientWrapper wraps *storage.Client to allow proper cleanup with runtime.AddCleanup.
+type clientWrapper struct {
+	client *storage.Client
+}
+
+func (w *clientWrapper) Bucket(name string) *storage.BucketHandle {
+	return w.client.Bucket(name)
+}
+
+var _ gcp.Client = (*clientWrapper)(nil)
 
 func NewGcpStorageAccessor(ctx context.Context, resolver secrets.Resolver) *GcpStorageAccessor {
 	accessor := &GcpStorageAccessor{
 		resolver: resolver,
 	}
-	accessor.clientMap = collections.NewLoadingCacheContext[*model.GcpStorage, *storage.Client](
+	accessor.clientMap = collections.NewLoadingCacheContext[*model.GcpStorage, gcp.Client](
 		ctx,
 		accessor.getGcpClient,
 		nil,
@@ -68,7 +80,7 @@ func (a *GcpStorageAccessor) createWriter(
 	return gcp.NewWriter(ctx, client, gcps.BucketName, opts...)
 }
 
-func (a *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, error) {
+func (a *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStorage) (gcp.Client, error) {
 	opts := make([]option.ClientOption, 0)
 
 	if g.KeyFile != "" {
@@ -103,18 +115,21 @@ func (a *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStora
 		}),
 	)
 
-	// Set finalizer for the client to release allocated resources.
-	// TODO: replace with runtime.AddCleanup when upgrading to go1.24
-	runtime.SetFinalizer(client, (*storage.Client).Close)
-
 	if err := checkGcpConnectivity(ctx, client, g.BucketName); err != nil {
-		return nil, err
+		return nil, errors.Join(err, client.Close())
 	}
 
-	return client, nil
+	wrapper := &clientWrapper{client: client}
+	// Set cleanup for the client to release allocated resources.
+	// We track the wrapper and clean up the underlying client.
+	runtime.AddCleanup(wrapper, func(c *storage.Client) {
+		_ = c.Close()
+	}, client)
+
+	return wrapper, nil
 }
 
-func checkGcpConnectivity(ctx context.Context, client *storage.Client, bucket string) error {
+func checkGcpConnectivity(ctx context.Context, client gcp.Client, bucket string) error {
 	ctx, cancel := context.WithTimeout(ctx, connectivityTimeout)
 	defer cancel()
 
