@@ -89,7 +89,7 @@ func setupCertificates(t *testing.T) {
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
 	}
-
+	//nolint:staticcheck // DEK-Info is deprecated but needed for testing password-protected keys
 	//noinspection GoDeprecation
 	encryptedBlock, err := x509.EncryptPEMBlock(
 		rand.Reader, pemBlock.Type, pemBlock.Bytes, []byte(encKeyPassword), x509.PEMCipherAES256)
@@ -130,7 +130,7 @@ func TestNewTLSConfig(t *testing.T) {
 		})
 		require.NoError(t, err)
 		//noinspection GoDeprecation
-		assert.NotEmpty(t, cfg.RootCAs.Subjects(), "RootCAs should be populated")
+		assert.NotEmpty(t, cfg.RootCAs.Subjects(), "RootCAs should be populated") //nolint:staticcheck
 	})
 
 	// This test reproduces the Kubernetes secret volume mount structure
@@ -173,6 +173,7 @@ func TestNewTLSConfig(t *testing.T) {
 		systemPool, err := x509.SystemCertPool()
 		require.NoError(t, err)
 
+		//nolint:staticcheck
 		//noinspection GoDeprecation
 		assert.Len(t, cfg.RootCAs.Subjects(), len(systemPool.Subjects())+1)
 	})
