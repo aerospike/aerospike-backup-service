@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
@@ -65,7 +66,7 @@ func startService(configFile string, remote bool) error {
 	ctx, stop := systemCtx()
 	defer stop()
 
-	config, scheduler, httpService, appLogger, err := initComponents(ctx, configFile, remote)
+	config, scheduler, httpService, appLogger, err := app.InitComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
 	}
@@ -80,14 +81,6 @@ func startService(configFile string, remote bool) error {
 	scheduler.Stop()
 
 	return err
-}
-
-func setDefaultLogger(loggerConfig *model.LoggerConfig) *slog.Logger {
-	appLogger := slog.New(
-		log.NewHandler(loggerConfig),
-	)
-	slog.SetDefault(appLogger)
-	return appLogger
 }
 
 func systemCtx() (context.Context, context.CancelFunc) {

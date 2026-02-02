@@ -22,6 +22,20 @@ import (
 
 var mockClient = &backup.Client{}
 
+// newTestBackupComponents builds BackupComponents with a real BackupCompletionHandler
+// backed by the given registry, retentionManager, and clusterConfigWriter (for tests).
+func newTestBackupComponents(
+	clientManager aerospike.ClientManager,
+	backupExecutor backupexecutor.Backup,
+	registry RunningBackupsRegistry,
+	retentionManager RetentionManager,
+	backendService BackupWriter,
+	clusterConfigWriter ClusterConfigWriter,
+) *BackupComponents {
+	completionHandler := NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
+	return NewBackupComponents(clientManager, backupExecutor, registry, completionHandler, backendService)
+}
+
 func testRoutine() *model.BackupRoutine {
 	return &model.BackupRoutine{
 		Name:          routineName,
@@ -101,7 +115,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2) // for ns1 and ns2
 
-	o := newOrchestrator(routine, NewBackupComponents(
+	o := newOrchestrator(routine, newTestBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
@@ -141,7 +155,7 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		},
 	})
 
-	o := newOrchestrator(routine, NewBackupComponents(
+	o := newOrchestrator(routine, newTestBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
@@ -190,7 +204,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	initialState := &model.RoutineState{}
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
 
-	o := newOrchestrator(routine, NewBackupComponents(
+	o := newOrchestrator(routine, newTestBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
@@ -276,10 +290,12 @@ func TestSkipIncrementalBackup(t *testing.T) {
 
 			mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 			mockRegistry.EXPECT().GetRoutineState(routine).Return(tt.routineState).AnyTimes()
+			mockRetention := NewMockRetentionManager(ctrl)
+			mockClusterConfig := NewMockClusterConfigWriter(ctrl)
 
-			orchestrator := newOrchestrator(routine, &BackupComponents{
-				registry: mockRegistry,
-			}, NewPathService(nil))
+			orchestrator := newOrchestrator(routine, newTestBackupComponents(
+				nil, nil, mockRegistry, mockRetention, nil, mockClusterConfig,
+			), NewPathService(nil))
 
 			assert.Equal(t, tt.expectedToSkip, orchestrator.skipIncrementalBackup(tt.now))
 		})
@@ -314,13 +330,15 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(routineState)
 
-	o := newOrchestrator(routine, NewBackupComponents(
+	mockRetention := NewMockRetentionManager(ctrl)
+	mockClusterConfig := NewMockClusterConfigWriter(ctrl)
+	o := newOrchestrator(routine, newTestBackupComponents(
 		nil,
 		nil,
 		mockRegistry,
+		mockRetention,
 		nil,
-		nil,
-		nil,
+		mockClusterConfig,
 	), NewPathService(nil))
 
 	backupCounters.Reset()
@@ -411,7 +429,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *mode
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2)
 
-	o := newOrchestrator(routine, NewBackupComponents(
+	o := newOrchestrator(routine, newTestBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,

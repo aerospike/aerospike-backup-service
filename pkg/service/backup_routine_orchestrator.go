@@ -25,13 +25,12 @@ var (
 // BackupRoutineOrchestrator orchestrates the execution of a single backup routine (both full and incremental).
 // It manages all necessary preparations, executes the backup process, handles post-processing, and updates metrics.
 type BackupRoutineOrchestrator struct {
-	logger              *slog.Logger
-	runner              *BackupNamespaceRunner
-	routine             *model.BackupRoutine
-	clusterConfigWriter ClusterConfigWriter
-	clientManager       aerospike.ClientManager
-	registry            RunningBackupsRegistry
-	retentionManager    RetentionManager
+	logger            *slog.Logger
+	runner            *BackupNamespaceRunner
+	routine           *model.BackupRoutine
+	clientManager     aerospike.ClientManager
+	registry          RunningBackupsRegistry
+	completionHandler BackupCompletionHandler
 
 	fullBackupLock sync.Mutex
 }
@@ -40,30 +39,26 @@ var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
 
 // BackupComponents holds all components required to execute a backup routine.
 type BackupComponents struct {
-	clientManager    aerospike.ClientManager // Retrieves the Aerospike client before starting the backup.
-	backupExecutor   backupexecutor.Backup   // Executes the backup using the backup-go library.
-	registry         RunningBackupsRegistry  // Stores the backup handler during execution.
-	retentionManager RetentionManager        // Deletes old backups after a successful backup.
-	backendService   BackupWriter            // Writes backup metadata after a successful backup and
-	// deletes created files if the backup fails.
-	clusterConfigWriter ClusterConfigWriter // Backs up cluster configuration.
+	clientManager     aerospike.ClientManager // Retrieves the Aerospike client before starting the backup.
+	backupExecutor    backupexecutor.Backup   // Executes the backup using the backup-go library.
+	registry          RunningBackupsRegistry  // Stores the backup handler during execution.
+	completionHandler BackupCompletionHandler // Runs post-success/failure actions (registry, retention, cluster config).
+	backendService    BackupWriter            // Writes backup metadata and deletes created files on failure.
 }
 
 func NewBackupComponents(
 	clientManager aerospike.ClientManager,
 	backupExecutor backupexecutor.Backup,
 	registry RunningBackupsRegistry,
-	retentionManager RetentionManager,
+	completionHandler BackupCompletionHandler,
 	backendService BackupWriter,
-	clusterConfigWriter ClusterConfigWriter,
 ) *BackupComponents {
 	return &BackupComponents{
-		clientManager:       clientManager,
-		backupExecutor:      backupExecutor,
-		registry:            registry,
-		retentionManager:    retentionManager,
-		backendService:      backendService,
-		clusterConfigWriter: clusterConfigWriter,
+		clientManager:     clientManager,
+		backupExecutor:    backupExecutor,
+		registry:          registry,
+		completionHandler: completionHandler,
+		backendService:    backendService,
 	}
 }
 
@@ -76,13 +71,12 @@ func newOrchestrator(
 	retry := newRetryExecutor(*routine.BackupPolicy.GetRetryPolicyOrDefault(), logger, nonRetryableErrors...)
 	runner := NewBackupNamespaceRunner(routine, h.backupExecutor, retry, h.backendService, logger, pathService)
 	return &BackupRoutineOrchestrator{
-		routine:             routine,
-		runner:              runner,
-		clusterConfigWriter: h.clusterConfigWriter,
-		clientManager:       h.clientManager,
-		registry:            h.registry,
-		retentionManager:    h.retentionManager,
-		logger:              logger,
+		routine:           routine,
+		runner:            runner,
+		clientManager:     h.clientManager,
+		registry:          h.registry,
+		completionHandler: h.completionHandler,
+		logger:            logger,
 	}
 }
 
@@ -126,28 +120,14 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	// The lock must be held until the backup is registered.
 	h.fullBackupLock.Unlock()
 
-	h.backupClusterConfiguration(ctx, now)
-
 	if err = backupHandler.Wait(ctx); err != nil {
-		h.registry.clearFailedBackup(h.routine.Name, jobTypeFull)
+		h.completionHandler.OnFailure(h.routine, jobTypeFull)
 		return fmt.Errorf("backup failed: %w", err)
 	}
 
-	go h.registry.recordSuccessfulBackup(h.routine.Name, jobTypeFull, now)
-	go h.deleteOldBackups(ctx, h.routine)
+	h.completionHandler.OnSuccess(ctx, h.routine, jobTypeFull, now, h.logger)
 
 	return nil
-}
-
-func (h *BackupRoutineOrchestrator) backupClusterConfiguration(ctx context.Context, now time.Time) {
-	// backup configuration only if WithClusterConfig is explicitly set to true.
-	if h.routine.BackupPolicy.WithClusterConfig == nil || !*h.routine.BackupPolicy.WithClusterConfig {
-		return
-	}
-
-	if err := h.clusterConfigWriter.Write(ctx, h.routine, now); err != nil {
-		h.logger.Warn("Failed to backup cluster configuration", attr.Error(err))
-	}
 }
 
 func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
@@ -158,13 +138,6 @@ func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
 	}
 
 	return false
-}
-
-func (h *BackupRoutineOrchestrator) deleteOldBackups(ctx context.Context, routine *model.BackupRoutine) {
-	err := h.retentionManager.deleteOldBackups(ctx, routine)
-	if err != nil {
-		h.logger.Error("failed to clean up old backups", attr.Error(err))
-	}
 }
 
 func (h *BackupRoutineOrchestrator) prepareCluster(ctx context.Context) (aerospike.Client, []string, error) {
@@ -275,11 +248,11 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 	h.registry.register(h.routine.Name, jobTypeIncremental, backupHandler)
 
 	if err := backupHandler.Wait(ctx); err != nil {
-		h.registry.clearFailedBackup(h.routine.Name, jobTypeIncremental)
+		h.completionHandler.OnFailure(h.routine, jobTypeIncremental)
 		return err
 	}
 
-	go h.registry.recordSuccessfulBackup(h.routine.Name, jobTypeIncremental, now)
+	h.completionHandler.OnSuccess(ctx, h.routine, jobTypeIncremental, now, h.logger)
 
 	return nil
 }
