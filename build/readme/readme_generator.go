@@ -477,17 +477,15 @@ func writeMetricsToFile(rows []MetricRow) {
 	}
 }
 
-//nolint:gocritic,staticcheck
 func metricsType(metric prometheus.Collector) string {
-	// Check Gauge before Counter: *gauge implements both interfaces, so order matters.
 	switch metric.(type) {
-	case *prometheus.GaugeVec, prometheus.Gauge:
-		return "Gauge"
-	case *prometheus.CounterVec, prometheus.Counter:
+	case *prometheus.CounterVec:
 		return "Counter"
-	case *prometheus.HistogramVec, prometheus.Histogram:
+	case *prometheus.GaugeVec:
+		return "Gauge"
+	case *prometheus.HistogramVec:
 		return "Histogram"
-	case *prometheus.SummaryVec, prometheus.Summary:
+	case *prometheus.SummaryVec:
 		return "Summary"
 	default:
 		return ""
