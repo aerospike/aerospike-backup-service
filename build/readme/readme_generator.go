@@ -477,6 +477,7 @@ func writeMetricsToFile(rows []MetricRow) {
 	}
 }
 
+//nolint:gocritic,staticcheck
 func metricsType(metric prometheus.Collector) string {
 	// Check Gauge before Counter: *gauge implements both interfaces, so order matters.
 	switch metric.(type) {
