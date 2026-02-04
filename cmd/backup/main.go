@@ -2,31 +2,19 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
-	u "github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
 
@@ -77,7 +65,7 @@ func startService(configFile string, remote bool) error {
 	ctx, stop := systemCtx()
 	defer stop()
 
-	config, scheduler, httpService, appLogger, err := initComponents(ctx, configFile, remote)
+	scheduler, httpService, err := app.InitComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
 	}
@@ -85,8 +73,7 @@ func startService(configFile string, remote bool) error {
 	// start the scheduler only after all the initialization is done
 	scheduler.Start(ctx)
 
-	// run HTTP server
-	err = runHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService, appLogger)
+	err = runHTTPServer(ctx, httpService)
 
 	// stop the scheduler
 	scheduler.Stop()
@@ -94,103 +81,12 @@ func startService(configFile string, remote bool) error {
 	return err
 }
 
-//nolint:funlen
-func initComponents(ctx context.Context, configFile string, remote bool) (
-	*model.Config, quartz.Scheduler, *handlers.Service, *slog.Logger, error,
-) {
-	resolver := secrets.NewResolver(ctx)
-	passwordResolver := secrets.NewPasswordResolver(resolver)
-	// Create all accessors with the shared resolver
-	// Create registry with all accessors
-	operations := storage.NewOperations(
-		storage.NewS3StorageAccessor(ctx, resolver),
-		storage.NewGcpStorageAccessor(ctx, resolver),
-		storage.NewAzureStorageAccessor(ctx, resolver),
-		storage.NewLocalStorageAccessor(),
-	)
-	clientManager := aerospike.NewClientManager(aerospike.NewClientFactory(passwordResolver), aerospike.DefaultCloseDelay)
-	nsValidator := aerospike.NewNamespaceValidator(clientManager)
-
-	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
-	}
-
-	appLogger := setDefaultLogger(config.ServiceConfig.GetLoggerOrDefault())
-
-	// Re-log build metadata now that the app-logger is active.
-	// Duplication with the bootstrap log is intentional.
-	configStr, _ := json.Marshal(dto.NewConfigFromModel(config))
-	slog.Info("Aerospike Backup Service",
-		slog.String("version", backup.Version),
-		slog.String("commit", backup.CommitHash),
-		slog.String("buildTime", backup.BuildTime),
-		slog.String("config", string(configStr)))
-
-	// schedule all configured backup routines
-	scheduler, err := service.NewScheduler(ctx, appLogger)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
-	}
-
-	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
-	backendService := service.NewBackupBackendService(config, pathService, operations)
-	history := service.NewHistoryManager(backendService)
-	registry := service.NewRunningBackupsRegistry(history, config)
-
-	var routineStorage u.LockMap
-	retentionManager := service.NewBackupRetentionManager(backendService, &routineStorage)
-	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, operations)
-	backupExecutor := backupexecutor.NewDefaultBackupExecutor(operations)
-	backupComponents := service.NewBackupComponents(
-		clientManager, backupExecutor, registry, retentionManager,
-		backendService, clusterConfigWriter)
-	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config, pathService)
-
-	err = configApplier.ApplyNewConfig(ctx)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
-	}
-
-	var restoreJobs = service.NewRestoreJobsHolder()
-	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
-
-	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestore(operations), clientManager, restoreJobs, backendService, &routineStorage)
-
-	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
-	httpService := handlers.NewService(
-		ctx,
-		config,
-		configApplier,
-		scheduler,
-		restoreMgr,
-		configRetriever,
-		backendService,
-		registry,
-		configurationManager,
-		nsValidator,
-	)
-
-	return config, scheduler, httpService, appLogger, nil
-}
-
-func setDefaultLogger(loggerConfig *model.LoggerConfig) *slog.Logger {
-	appLogger := slog.New(
-		log.NewHandler(loggerConfig),
-	)
-	slog.SetDefault(appLogger)
-	return appLogger
-}
-
 func systemCtx() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 }
 
-func runHTTPServer(
-	ctx context.Context, serverConfig *model.HTTPServerConfig, service *handlers.Service, logger *slog.Logger,
-) error {
-	httpServer := server.NewHTTPServer(serverConfig, service, logger)
+func runHTTPServer(ctx context.Context, service *handlers.Service) error {
+	httpServer := server.NewHTTPServer(service)
 
 	// Channel to capture server startup errors
 	errCh := make(chan error, 1)

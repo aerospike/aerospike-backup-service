@@ -10,7 +10,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/middleware"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 const (
@@ -24,7 +23,8 @@ type HTTPServer struct {
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(serverConfig *model.HTTPServerConfig, service *handlers.Service, logger *slog.Logger) *HTTPServer {
+func NewHTTPServer(service *handlers.Service) *HTTPServer {
+	serverConfig := service.HTTPServerConfig()
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
 	// Create router
@@ -36,7 +36,7 @@ func NewHTTPServer(serverConfig *model.HTTPServerConfig, service *handlers.Servi
 
 	handler := middleware.Wrap(mux,
 		middleware.RateLimiter(serverConfig.GetRateOrDefault()),
-		middleware.RequestLogger(logger, []string{"health", "ready", "metrics"}),
+		middleware.RequestLogger(slog.Default(), []string{"health", "ready", "metrics"}),
 	)
 
 	return &HTTPServer{

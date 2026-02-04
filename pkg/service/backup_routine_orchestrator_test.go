@@ -49,8 +49,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
 	mockBackupHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
-	mockRetentionManager := NewMockRetentionManager(ctrl)
-	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
+	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
 	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
 
 	stats := models.NewBackupStats()
@@ -90,13 +89,11 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockRegistry.EXPECT().register(routineName, jobTypeFull, gomock.Any()).Do(func(_, _, _ any) {
 		registryWG.Done()
 	})
-	mockRegistry.EXPECT().recordSuccessfulBackup(routineName, jobTypeFull, gomock.Any()).Do(func(_, _, _ any) {
+	now := time.Now()
+	mockCompletionHandler.EXPECT().
+		OnSuccess(gomock.Any(), routine, jobTypeFull, newTimeMatcher(now), gomock.Any()).Do(func(_, _, _, _, _ any) {
 		registryWG.Done()
 	})
-	mockRetentionManager.EXPECT().deleteOldBackups(gomock.Any(), gomock.Any()).Return(nil)
-
-	now := time.Now()
-	mockClusterConfigWriter.EXPECT().Write(gomock.Any(), routine, newTimeMatcher(now)).Return(nil)
 
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2) // for ns1 and ns2
@@ -105,9 +102,8 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
-		mockRetentionManager,
+		mockCompletionHandler,
 		mockBackupBackend,
-		mockClusterConfigWriter,
 	), NewPathService(nil))
 
 	backupCounters.Reset()
@@ -130,9 +126,8 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
-	mockRetentionManager := NewMockRetentionManager(ctrl)
+	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
 	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
-	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
 
 	// Simulate an ongoing full backup
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(&model.RoutineState{
@@ -145,9 +140,8 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
-		mockRetentionManager,
+		mockCompletionHandler,
 		mockBackupBackend,
-		mockClusterConfigWriter,
 	), NewPathService(nil))
 
 	backupCounters.Reset()
@@ -180,9 +174,8 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
-	mockRetentionManager := NewMockRetentionManager(ctrl)
+	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
 	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
-	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
 
 	connectionError := errors.New("connection failed")
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(1)
@@ -194,9 +187,8 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
-		mockRetentionManager,
+		mockCompletionHandler,
 		mockBackupBackend,
-		mockClusterConfigWriter,
 	), NewPathService(nil))
 
 	backupCounters.Reset()
@@ -276,10 +268,11 @@ func TestSkipIncrementalBackup(t *testing.T) {
 
 			mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 			mockRegistry.EXPECT().GetRoutineState(routine).Return(tt.routineState).AnyTimes()
+			mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
 
-			orchestrator := newOrchestrator(routine, &BackupComponents{
-				registry: mockRegistry,
-			}, NewPathService(nil))
+			orchestrator := newOrchestrator(routine, NewBackupComponents(
+				nil, nil, mockRegistry, mockCompletionHandler, nil,
+			), NewPathService(nil))
 
 			assert.Equal(t, tt.expectedToSkip, orchestrator.skipIncrementalBackup(tt.now))
 		})
@@ -314,12 +307,12 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(routineState)
 
+	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
 	o := newOrchestrator(routine, NewBackupComponents(
 		nil,
 		nil,
 		mockRegistry,
-		nil,
-		nil,
+		mockCompletionHandler,
 		nil,
 	), NewPathService(nil))
 
@@ -376,9 +369,8 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *mode
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
 	mockBackupHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
-	mockRetentionManager := NewMockRetentionManager(ctrl)
+	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
 	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
-	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
 
 	stats := models.NewBackupStats()
 	stats.Start()
@@ -406,7 +398,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *mode
 	mockBackupHandler.EXPECT().Wait(gomock.Any()).Return(nil).Times(2) // for ns1 and ns2
 
 	mockRegistry.EXPECT().register(routineName, jobTypeIncremental, gomock.Any())
-	mockRegistry.EXPECT().recordSuccessfulBackup(routineName, jobTypeIncremental, gomock.Any())
+	mockCompletionHandler.EXPECT().OnSuccess(gomock.Any(), routine, jobTypeIncremental, gomock.Any(), gomock.Any())
 
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2)
@@ -415,9 +407,8 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *mode
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
-		mockRetentionManager,
+		mockCompletionHandler,
 		mockBackupBackend,
-		mockClusterConfigWriter,
 	), NewPathService(nil))
 
 	o.runIncrementalBackup(t.Context(), time.Now())
