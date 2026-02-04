@@ -53,6 +53,11 @@ func NewService(
 	}
 }
 
+// HTTPServerConfig returns the HTTP server config.
+func (s *Service) HTTPServerConfig() *model.HTTPServerConfig {
+	return s.config.ServiceConfig.GetHTTPServerOrDefault()
+}
+
 // RunningBackupsRegistry defines the interface for managing running backups and their statuses.
 // this is public version of service.RunningBackupsRegistry.
 type RunningBackupsRegistry interface {

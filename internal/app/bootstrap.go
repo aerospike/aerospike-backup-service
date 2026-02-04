@@ -28,21 +28,21 @@ func InitComponents(
 	ctx context.Context,
 	configFile string,
 	remote bool,
-) (*model.Config, quartz.Scheduler, *handlers.Service, *slog.Logger, error) {
+) (quartz.Scheduler, *handlers.Service, error) {
 	resolver := secrets.NewResolver(ctx)
 	operations := newStorageOperations(ctx, resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
+		return nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	appLogger := initLogger(config)
 
 	scheduler, err := service.NewScheduler(ctx, appLogger)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
+		return nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
@@ -61,7 +61,7 @@ func InitComponents(
 
 	err = configApplier.ApplyNewConfig(ctx)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
+		return nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
 
 	restoreMgr, restoreJobs := newRestoreManager(operations, clientManager, backendService, &routineStorage)
@@ -81,7 +81,7 @@ func InitComponents(
 		nsValidator,
 	)
 
-	return config, scheduler, httpService, appLogger, nil
+	return scheduler, httpService, nil
 }
 
 func newStorageOperations(ctx context.Context, resolver secrets.Resolver) *storage.Operations {
