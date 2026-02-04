@@ -23,7 +23,6 @@ type HTTPServer struct {
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
-// It uses slog.Default() for request logging; set the default logger before calling.
 func NewHTTPServer(service *handlers.Service) *HTTPServer {
 	serverConfig := service.HTTPServerConfig()
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
