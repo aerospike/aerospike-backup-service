@@ -41,14 +41,14 @@
   },
   {
     "name": "aerospike_backup_service_restore_in_progress",
-    "type": "Counter",
+    "type": "Gauge",
     "description": "Number of restore processes running",
     "labels": null,
     "deprecated": false
   },
   {
     "name": "aerospike_backup_service_duration_millis",
-    "type": "Counter",
+    "type": "Gauge",
     "description": "Full backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)",
     "labels": null,
     "deprecated": true
@@ -62,7 +62,7 @@
   },
   {
     "name": "aerospike_backup_service_incremental_duration_millis",
-    "type": "Counter",
+    "type": "Gauge",
     "description": "Incremental backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)",
     "labels": null,
     "deprecated": true
