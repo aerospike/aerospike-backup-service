@@ -478,7 +478,6 @@ func writeMetricsToFile(rows []MetricRow) {
 }
 
 func metricsType(metric prometheus.Collector) string {
-	// Need to type check against all concrete types
 	switch metric.(type) {
 	case *prometheus.CounterVec:
 		return "Counter"
@@ -489,6 +488,7 @@ func metricsType(metric prometheus.Collector) string {
 	case *prometheus.SummaryVec:
 		return "Summary"
 	default:
+		// Readme generator only; panic is acceptable if an unknown metric type is registered.
 		panic(fmt.Sprintf("Unknown metric type %v", metric))
 	}
 }
