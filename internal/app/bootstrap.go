@@ -23,7 +23,7 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
-// InitComponents builds the full object graph and returns config, scheduler, HTTP service, and logger.
+// InitComponents builds the full object graph and returns scheduler and HTTP service.
 func InitComponents(
 	ctx context.Context,
 	configFile string,
