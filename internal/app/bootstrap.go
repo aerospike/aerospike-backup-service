@@ -14,7 +14,12 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
+	u "github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -33,33 +38,45 @@ func InitComponents(
 		return nil, nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	appLogger := setDefaultLogger(config.ServiceConfig.GetLoggerOrDefault())
-	logConfigOnce(config)
+	appLogger := initLogger(config)
 
 	scheduler, err := service.NewScheduler(ctx, appLogger)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
 
-	backupStack := newBackupStack(config, clientManager, operations, scheduler)
-	err = backupStack.ConfigApplier.ApplyNewConfig(ctx)
+	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
+	backendService := service.NewBackupBackendService(config, pathService, operations)
+	history := service.NewHistoryManager(backendService)
+	registry := service.NewRunningBackupsRegistry(history, config)
+	var routineStorage u.LockMap
+	retentionManager := service.NewBackupRetentionManager(backendService, &routineStorage)
+	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, operations)
+	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
+	backupExecutor := backupexecutor.NewDefaultBackupExecutor(operations)
+	backupComponents := service.NewBackupComponents(
+		clientManager, backupExecutor, registry, completionHandler, backendService,
+	)
+	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config, pathService)
+
+	err = configApplier.ApplyNewConfig(ctx)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
 
-	restoreStack := newRestoreStack(operations, clientManager, backupStack.BackendService, backupStack.RoutineStorage)
-	service.NewMetricsCollector(backupStack.Registry, restoreStack.RestoreJobsHolder).Start(ctx, 1*time.Second)
+	restoreMgr, restoreJobs := newRestoreManager(operations, clientManager, backendService, &routineStorage)
+	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
-	configRetriever := service.NewConfigRetriever(backupStack.BackendService, backupStack.PathService, operations)
+	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
 	httpService := handlers.NewService(
 		ctx,
 		config,
-		backupStack.ConfigApplier,
+		configApplier,
 		scheduler,
-		restoreStack.RestoreManager,
+		restoreMgr,
 		configRetriever,
-		backupStack.BackendService,
-		backupStack.Registry,
+		backendService,
+		registry,
 		configurationManager,
 		nsValidator,
 	)
@@ -67,19 +84,51 @@ func InitComponents(
 	return config, scheduler, httpService, appLogger, nil
 }
 
-func logConfigOnce(config *model.Config) {
+func newStorageOperations(ctx context.Context, resolver secrets.Resolver) *storage.Operations {
+	return storage.NewOperations(
+		storage.NewS3StorageAccessor(ctx, resolver),
+		storage.NewGcpStorageAccessor(ctx, resolver),
+		storage.NewAzureStorageAccessor(ctx, resolver),
+		storage.NewLocalStorageAccessor(),
+	)
+}
+
+func newAerospikeLayer(resolver secrets.Resolver) (aerospike.ClientManager, aerospike.NamespaceValidator) {
+	passwordResolver := secrets.NewPasswordResolver(resolver)
+	clientManager := aerospike.NewClientManager(
+		aerospike.NewClientFactory(passwordResolver),
+		aerospike.DefaultCloseDelay,
+	)
+	return clientManager, aerospike.NewNamespaceValidator(clientManager)
+}
+
+func initLogger(config *model.Config) *slog.Logger {
+	logger := slog.New(log.NewHandler(config.ServiceConfig.GetLoggerOrDefault()))
+	slog.SetDefault(logger)
 	configStr, _ := json.Marshal(dto.NewConfigFromModel(config))
 	slog.Info("Aerospike Backup Service",
 		slog.String("version", backup.Version),
 		slog.String("commit", backup.CommitHash),
 		slog.String("buildTime", backup.BuildTime),
 		slog.String("config", string(configStr)))
+
+	return logger
 }
 
-func setDefaultLogger(loggerConfig *model.LoggerConfig) *slog.Logger {
-	appLogger := slog.New(
-		log.NewHandler(loggerConfig),
+func newRestoreManager(
+	operations *storage.Operations,
+	clientManager aerospike.ClientManager,
+	backendService service.BackupReader,
+	routineStorage *u.LockMap,
+) (service.RestoreManager, *service.RestoreJobsHolder) {
+	restoreJobs := service.NewRestoreJobsHolder()
+	restoreMgr := service.NewRestoreManager(
+		restoreexecutor.NewRestore(operations),
+		clientManager,
+		restoreJobs,
+		backendService,
+		routineStorage,
 	)
-	slog.SetDefault(appLogger)
-	return appLogger
+
+	return restoreMgr, restoreJobs
 }
