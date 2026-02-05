@@ -25,19 +25,19 @@ type Resolver interface {
 }
 
 type resolverImpl struct {
-	cache collections.Cache[cacheKey, string]
+	cache collections.CacheContext[cacheKey, string]
 }
 
 const storageDuration = 24 * time.Hour // defines how long to store cached secrets before re-reading.
 
 func NewResolver(ctx context.Context) Resolver {
-	load := func(key cacheKey) (string, error) {
+	load := func(ctx context.Context, key cacheKey) (string, error) {
 		agentConfig := key.agent.ToSecretAgentConfig()
-		return backup.ParseSecret(agentConfig, key.value)
+		return backup.ParseSecret(ctx, agentConfig, key.value)
 	}
 
 	return &resolverImpl{
-		cache: collections.NewLoadingCache(ctx, load, ptr.Of(storageDuration)),
+		cache: collections.NewLoadingCacheContext(ctx, load, ptr.Of(storageDuration)),
 	}
 }
 
@@ -47,7 +47,7 @@ func (m *resolverImpl) Resolve(agent *model.SecretAgent, value string) (string, 
 		return value, nil
 	}
 
-	return m.cache.Get(cacheKey{
+	return m.cache.Get(context.Background(), cacheKey{
 		agent: agent,
 		value: value,
 	})
