@@ -21,33 +21,33 @@ type cacheKey struct {
 // to external secret backends.
 type Resolver interface {
 	// Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
-	Resolve(agent *model.SecretAgent, value string) (string, error)
+	Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error)
 }
 
 type resolverImpl struct {
-	cache collections.Cache[cacheKey, string]
+	cache collections.CacheContext[cacheKey, string]
 }
 
 const storageDuration = 24 * time.Hour // defines how long to store cached secrets before re-reading.
 
 func NewResolver(ctx context.Context) Resolver {
-	load := func(key cacheKey) (string, error) {
+	load := func(ctx context.Context, key cacheKey) (string, error) {
 		agentConfig := key.agent.ToSecretAgentConfig()
-		return backup.ParseSecret(agentConfig, key.value)
+		return backup.ParseSecret(ctx, agentConfig, key.value)
 	}
 
 	return &resolverImpl{
-		cache: collections.NewLoadingCache(ctx, load, ptr.Of(storageDuration)),
+		cache: collections.NewLoadingCacheContext(ctx, load, ptr.Of(storageDuration)),
 	}
 }
 
 // Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
-func (m *resolverImpl) Resolve(agent *model.SecretAgent, value string) (string, error) {
+func (m *resolverImpl) Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error) {
 	if agent == nil {
 		return value, nil
 	}
 
-	return m.cache.Get(cacheKey{
+	return m.cache.Get(ctx, cacheKey{
 		agent: agent,
 		value: value,
 	})

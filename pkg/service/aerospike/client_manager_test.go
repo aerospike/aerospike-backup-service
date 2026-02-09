@@ -1,6 +1,7 @@
 package aerospike
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"testing"
@@ -37,7 +38,7 @@ func Test_GetClient(t *testing.T) {
 	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil).Times(2)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter).Times(2)
 
-	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil).Times(2)
 
 	clientManager := NewClientManager(
@@ -70,8 +71,8 @@ func Test_GetClientParallel(t *testing.T) {
 	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil).Times(2)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter).Times(2)
 
-	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).
-		DoAndReturn(func(_ *model.AerospikeCluster) (backup.AerospikeClient, error) {
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *model.AerospikeCluster) (backup.AerospikeClient, error) {
 			time.Sleep(100 * time.Millisecond)
 			return mockAsClient, nil
 		})
@@ -109,7 +110,7 @@ func Test_GetTwoClients(t *testing.T) {
 	defer ctrl.Finish()
 	clientFactory := NewMockClientFactory(ctrl)
 	mockAsClient := mocks.NewMockAerospikeClient(t)
-	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil).Times(2)
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil).Times(2)
 
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ backup.AerospikeClient, _ ...backup.ClientOpt) (Client, error) {
@@ -144,7 +145,7 @@ func Test_GetClient_UnhealthyConnection(t *testing.T) {
 
 	mockBackupClient := NewMockClient(ctrl)
 
-	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
 
 	infoGetter := mocks.NewMockInfoGetter(t)
@@ -170,7 +171,7 @@ func Test_CreateClient_Errors(t *testing.T) {
 	clientFactory := NewMockClientFactory(ctrl)
 	aeroCluster := &model.AerospikeCluster{}
 
-	clientFactory.EXPECT().NewClientWithPolicyAndHost(aeroCluster).
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), aeroCluster).
 		Return(nil, errors.New("failed to connect to aerospike"))
 
 	clientManager := NewClientManager(
@@ -198,7 +199,7 @@ func Test_Close(t *testing.T) {
 	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
 
-	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
 
 	clientManager := NewClientManager(
@@ -233,7 +234,7 @@ func Test_Close_Multiple(t *testing.T) {
 	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil).Times(2)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter).Times(2)
 
-	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil).Times(2)
 
 	clientManager := NewClientManager(
@@ -266,7 +267,7 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 	mockBackupClient := NewMockClient(ctrl)
 	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient)
 
-	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil).Times(2)
 
 	infoGetter := mocks.NewMockInfoGetter(t)

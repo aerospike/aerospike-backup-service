@@ -1,6 +1,7 @@
 package aerospike
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -16,7 +17,7 @@ import (
 // ClientFactory defines an interface for creating and checking clients.
 type ClientFactory interface {
 	// NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
-	NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error)
+	NewClientWithPolicyAndHost(context.Context, *model.AerospikeCluster) (backup.AerospikeClient, error)
 	// NewBackupClient creates a new backup client using the given Aerospike client and options.
 	NewBackupClient(backup.AerospikeClient, ...backup.ClientOpt) (Client, error)
 }
@@ -40,9 +41,10 @@ func (f *DefaultClientFactory) NewBackupClient(client backup.AerospikeClient, op
 
 // NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
 func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
+	ctx context.Context,
 	cluster *model.AerospikeCluster,
 ) (backup.AerospikeClient, error) {
-	policy, err := f.clientPolicy(cluster)
+	policy, err := f.clientPolicy(ctx, cluster)
 	if err != nil {
 		return nil, err
 	}
@@ -63,11 +65,11 @@ func clientHosts(c *model.AerospikeCluster) []*as.Host {
 }
 
 // clientPolicy builds and returns a new ClientPolicy from the AerospikeCluster configuration.
-func (f *DefaultClientFactory) clientPolicy(c *model.AerospikeCluster) (*as.ClientPolicy, error) {
+func (f *DefaultClientFactory) clientPolicy(ctx context.Context, c *model.AerospikeCluster) (*as.ClientPolicy, error) {
 	policy := as.NewClientPolicy()
 	if c.Credentials != nil {
 		policy.User = ptr.ValueOrZero(c.GetUser())
-		password, err := f.passwordResolver.Resolve(c.Credentials)
+		password, err := f.passwordResolver.Resolve(ctx, c.Credentials)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve password: %w", err)
 		}

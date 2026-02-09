@@ -152,30 +152,3 @@ func (c *LoadingCacheContext[K, T]) Get(ctx context.Context, key K) (T, error) {
 		return c.loadFunc(ctx, key)
 	})
 }
-
-// --- Implementation 2: Simple Cache ---
-
-var _ Cache[string, any] = (*LoadingCache[string, any])(nil)
-
-type LoadingCache[K comparable, T any] struct {
-	base     *baseCache[K, T]
-	loadFunc LoadFunc[K, T]
-}
-
-func NewLoadingCache[K comparable, T any](
-	ctx context.Context, // Required for background cleanup goroutine
-	loadFunc LoadFunc[K, T],
-	ttl *time.Duration,
-) *LoadingCache[K, T] {
-	return &LoadingCache[K, T]{
-		base:     newBaseCache[K, T](ctx, ttl),
-		loadFunc: loadFunc,
-	}
-}
-
-// Get returns the value for the given key.
-func (c *LoadingCache[K, T]) Get(key K) (T, error) {
-	return c.base.fetch(key, func() (T, error) {
-		return c.loadFunc(key)
-	})
-}

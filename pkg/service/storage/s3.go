@@ -75,7 +75,7 @@ func (a *S3StorageAccessor) createWriter(
 }
 
 func (a *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error) {
-	credentialsProvider, err := a.withCredentialsProvider(s.Auth)
+	credentialsProvider, err := a.withCredentialsProvider(ctx, s.Auth)
 	if err != nil {
 		return nil, err
 	}
@@ -141,19 +141,22 @@ func (a *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage)
 	return client, nil
 }
 
-func (a *S3StorageAccessor) withCredentialsProvider(auth *model.S3Authentication) (config.LoadOptionsFunc, error) {
+func (a *S3StorageAccessor) withCredentialsProvider(
+	ctx context.Context,
+	auth *model.S3Authentication,
+) (config.LoadOptionsFunc, error) {
 	if auth == nil {
 		return func(*config.LoadOptions) error {
 			return nil // No-op implementation
 		}, nil
 	}
 
-	keyID, err := a.resolver.Resolve(auth.SecretAgent, auth.KeyIDSecret)
+	keyID, err := a.resolver.Resolve(ctx, auth.SecretAgent, auth.KeyIDSecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve key ID: %w", err)
 	}
 
-	accessKey, err := a.resolver.Resolve(auth.SecretAgent, auth.AccessKeySecret)
+	accessKey, err := a.resolver.Resolve(ctx, auth.SecretAgent, auth.AccessKeySecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve access key: %w", err)
 	}
