@@ -248,16 +248,16 @@ func (mr *MockClientFactoryMockRecorder) NewBackupClient(arg0 any, arg1 ...any) 
 }
 
 // NewClientWithPolicyAndHost mocks base method.
-func (m *MockClientFactory) NewClientWithPolicyAndHost(arg0 *model.AerospikeCluster) (backup.AerospikeClient, error) {
+func (m *MockClientFactory) NewClientWithPolicyAndHost(arg0 context.Context, arg1 *model.AerospikeCluster) (backup.AerospikeClient, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewClientWithPolicyAndHost", arg0)
+	ret := m.ctrl.Call(m, "NewClientWithPolicyAndHost", arg0, arg1)
 	ret0, _ := ret[0].(backup.AerospikeClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewClientWithPolicyAndHost indicates an expected call of NewClientWithPolicyAndHost.
-func (mr *MockClientFactoryMockRecorder) NewClientWithPolicyAndHost(arg0 any) *gomock.Call {
+func (mr *MockClientFactoryMockRecorder) NewClientWithPolicyAndHost(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClientWithPolicyAndHost", reflect.TypeOf((*MockClientFactory)(nil).NewClientWithPolicyAndHost), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClientWithPolicyAndHost", reflect.TypeOf((*MockClientFactory)(nil).NewClientWithPolicyAndHost), arg0, arg1)
 }

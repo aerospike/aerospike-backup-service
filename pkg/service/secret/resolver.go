@@ -21,7 +21,7 @@ type cacheKey struct {
 // to external secret backends.
 type Resolver interface {
 	// Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
-	Resolve(agent *model.SecretAgent, value string) (string, error)
+	Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error)
 }
 
 type resolverImpl struct {
@@ -42,12 +42,12 @@ func NewResolver(ctx context.Context) Resolver {
 }
 
 // Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
-func (m *resolverImpl) Resolve(agent *model.SecretAgent, value string) (string, error) {
+func (m *resolverImpl) Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error) {
 	if agent == nil {
 		return value, nil
 	}
 
-	return m.cache.Get(context.Background(), cacheKey{
+	return m.cache.Get(ctx, cacheKey{
 		agent: agent,
 		value: value,
 	})

@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"os"
@@ -13,7 +14,7 @@ import (
 // or via a Secret Agent.
 type PasswordResolver interface {
 	// Resolve resolves the password from the credentials.
-	Resolve(creds *model.Credentials) (*string, error)
+	Resolve(ctx context.Context, creds *model.Credentials) (*string, error)
 }
 
 type passwordResolverImpl struct {
@@ -29,7 +30,7 @@ func NewPasswordResolver(resolver Resolver) PasswordResolver {
 
 // Resolve resolves the password from the credentials.
 // It handles reading from file or using the Secret Agent.
-func (r passwordResolverImpl) Resolve(creds *model.Credentials) (*string, error) {
+func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credentials) (*string, error) {
 	if creds == nil {
 		return nil, nil
 	}
@@ -52,7 +53,7 @@ func (r passwordResolverImpl) Resolve(creds *model.Credentials) (*string, error)
 
 	// 2) Resolve (literal or secret-agent reference)
 	if creds.Password != nil {
-		password, err := r.resolver.Resolve(creds.SecretAgent, *creds.Password)
+		password, err := r.resolver.Resolve(ctx, creds.SecretAgent, *creds.Password)
 		if err != nil {
 			slog.Warn("Failed to read password from secret agent", attr.Error(err))
 			return nil, err

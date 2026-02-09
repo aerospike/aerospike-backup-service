@@ -88,7 +88,7 @@ func (a *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStora
 	}
 
 	if g.KeyJSON != "" {
-		key, err := a.resolver.Resolve(g.SecretAgent, g.KeyJSON)
+		key, err := a.resolver.Resolve(ctx, g.SecretAgent, g.KeyJSON)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read key json from secret agent: %w", err)
 		}

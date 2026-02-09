@@ -74,7 +74,7 @@ func TestResolve(t *testing.T) {
 				test.setupMock()
 			}
 
-			password, err := resolver.Resolve(test.credentials)
+			password, err := resolver.Resolve(t.Context(), test.credentials)
 			if test.expectedErr {
 				require.Error(t, err)
 			} else {

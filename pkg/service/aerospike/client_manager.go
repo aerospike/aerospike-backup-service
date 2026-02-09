@@ -88,7 +88,7 @@ func (cm *ClientManagerImpl) GetClient(
 
 	// 1. Initialize connection if needed
 	if info.aeroClient == nil {
-		aeroClient, err := cm.clientFactory.NewClientWithPolicyAndHost(cluster)
+		aeroClient, err := cm.clientFactory.NewClientWithPolicyAndHost(ctx, cluster)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to aerospike cluster: %w", err)
 		}

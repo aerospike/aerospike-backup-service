@@ -68,7 +68,7 @@ func (a *AzureStorageAccessor) createWriter(
 }
 
 func (a *AzureStorageAccessor) getAzureClient(ctx context.Context, s *model.AzureStorage) (*azblob.Client, error) {
-	client, err := a.createAzureClient(s)
+	client, err := a.createAzureClient(ctx, s)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob client: %w", err)
@@ -81,21 +81,24 @@ func (a *AzureStorageAccessor) getAzureClient(ctx context.Context, s *model.Azur
 	return client, nil
 }
 
-func (a *AzureStorageAccessor) createAzureClient(s *model.AzureStorage) (*azblob.Client, error) {
+func (a *AzureStorageAccessor) createAzureClient(ctx context.Context, s *model.AzureStorage) (*azblob.Client, error) {
 	switch auth := s.Auth.(type) {
 	case *model.AzureSharedKeyAuth:
-		return a.clientFromSharedKey(s.Endpoint, auth, s.SecretAgent)
+		return a.clientFromSharedKey(ctx, s.Endpoint, auth, s.SecretAgent)
 	case *model.AzureADAuth:
-		return a.clientFromAD(s.Endpoint, auth, s.SecretAgent)
+		return a.clientFromAD(ctx, s.Endpoint, auth, s.SecretAgent)
 	default:
 		return clientWithDefaultCredential(s.Endpoint)
 	}
 }
 
 func (a *AzureStorageAccessor) clientFromSharedKey(
-	endpoint string, auth *model.AzureSharedKeyAuth, sa *model.SecretAgent,
+	ctx context.Context,
+	endpoint string,
+	auth *model.AzureSharedKeyAuth,
+	sa *model.SecretAgent,
 ) (*azblob.Client, error) {
-	accountKey, err := a.resolver.Resolve(sa, auth.AccountKey)
+	accountKey, err := a.resolver.Resolve(ctx, sa, auth.AccountKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve account key from secret agent: %w", err)
 	}
@@ -113,19 +116,20 @@ func (a *AzureStorageAccessor) clientFromSharedKey(
 }
 
 func (a *AzureStorageAccessor) clientFromAD(
+	ctx context.Context,
 	endpoint string,
 	auth *model.AzureADAuth,
 	sa *model.SecretAgent,
 ) (*azblob.Client, error) {
-	clientSecret, err := a.resolver.Resolve(sa, auth.ClientSecret)
+	clientSecret, err := a.resolver.Resolve(ctx, sa, auth.ClientSecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve client-secret from secret agent: %w", err)
 	}
-	tenantID, err := a.resolver.Resolve(sa, auth.TenantID)
+	tenantID, err := a.resolver.Resolve(ctx, sa, auth.TenantID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve tenant-id from secret agent: %w", err)
 	}
-	clientID, err := a.resolver.Resolve(sa, auth.ClientID)
+	clientID, err := a.resolver.Resolve(ctx, sa, auth.ClientID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve client-id from secret agent: %w", err)
 	}
