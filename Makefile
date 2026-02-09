@@ -130,6 +130,73 @@ docker-buildx:
 test:
 	$(GOTEST) -v ./...
 
+# mocks-generate: runs mockgen over pkg/service* interfaces and writes mockgen.go next to each
+#   package. Used by tests; committed mocks must match this output (see mocks-check).
+.PHONY: mocks-generate
+mocks-generate:
+	$(WORKSPACE)/build/scripts/generate-mocks.sh
+
+# Ensure committed mock files match the output of mocks-generate (no hand-edits, no stale mocks).
+# The find runs inside the recipe (not at parse time) so it picks up newly created files.
+.PHONY: mocks-check
+mocks-check: mocks-generate
+	@UNTRACKED=$$(git ls-files --others --exclude-standard '*.mockgen.go' '**/mockgen.go'); \
+	if [ -n "$$UNTRACKED" ]; then \
+		echo "Untracked mock files found — these should be committed:"; \
+		echo "$$UNTRACKED"; \
+		exit 1; \
+	fi
+	@git diff --exit-code -- $$(find . -name 'mockgen.go' -not -path './.git/*') \
+		|| (echo "Mock files are out of date. Run 'make mocks-generate' and commit the changes." && exit 1)
+
+.PHONY: format
+format:
+	gci -w .
+	$(GO) fmt ./...
+
+.PHONY: lint
+lint:
+	golangci-lint run ./...
+
+.PHONY: lint-fix
+lint-fix:
+	golangci-lint run --fix ./...
+
+# openapi: runs swag over handlers/DTOs, then swagger2openapi, producing docs/openapi.json and
+#   docs/config.schema.json. Requires Docker and Node (npx). Used by readme and API docs; not run in CI.
+.PHONY: openapi
+openapi:
+	$(WORKSPACE)/build/scripts/generate-openapi.sh
+
+# readme: runs build/readme (Go). Reads docs/openapi.json, writes README.md sections, docs/examples/*,
+#   docs/readme/dto/*, and docs/metrics.json. Committed files must match (see readme-check).
+.PHONY: readme
+readme:
+	$(GO) run ./build/readme
+
+.PHONY: readme-check
+readme-check: readme
+	@git diff --exit-code -- README.md docs/examples/ docs/readme/dto/ docs/metrics.json \
+		|| (echo "README / examples / docs are out of date. Run 'make readme' and commit the changes." && exit 1)
+	@UNTRACKED=$$(git ls-files --others --exclude-standard 'docs/examples/' 'docs/readme/dto/' 'docs/metrics.json'); \
+	if [ -n "$$UNTRACKED" ]; then \
+		echo "Untracked generated doc files found — these should be committed:"; \
+		echo "$$UNTRACKED"; \
+		exit 1; \
+	fi
+
+.PHONY: tidy
+tidy:
+	$(GO) mod tidy
+
+# Verify generated artifacts are committed and up to date (for CI).
+.PHONY: generated-check
+generated-check: mocks-check readme-check
+
+# Full local PR checklist.
+.PHONY: pr
+pr: tidy mocks-check format lint-fix test openapi readme
+
 .PHONY: release
 release: service-release helm-chart-release
 
