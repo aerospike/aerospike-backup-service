@@ -13,7 +13,7 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
-// minAdHocBackupDelayMs is the minimum delay for ad-hoc backup triggers so the
+// minAdHocBackupDelay is the minimum delay for ad-hoc backup triggers so the
 // Quartz scheduler does not expire the trigger before the job runs.
 const minAdHocBackupDelay = 50 * time.Millisecond
 
