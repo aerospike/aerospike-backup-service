@@ -13,6 +13,10 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
+// minAdHocBackupDelay is the minimum delay for ad-hoc backup triggers so the
+// Quartz scheduler does not expire the trigger before the job runs.
+const minAdHocBackupDelay = 50 * time.Millisecond
+
 // GetAllFullBackups
 // @Summary  Get available full backups.
 // @ID 	     getFullBackups
@@ -221,7 +225,7 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trigger := quartz.NewRunOnceTrigger(time.Duration(delayMillis) * time.Millisecond)
+	trigger := quartz.NewRunOnceTrigger(min(time.Duration(delayMillis)*time.Millisecond, minAdHocBackupDelay))
 	// schedule using the quartz scheduler
 	if err := s.scheduler.ScheduleJob(fullBackupJobDetail, trigger); err != nil {
 		httpError(w, errors.New("failed to schedule job"))
