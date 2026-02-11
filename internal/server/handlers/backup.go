@@ -225,7 +225,7 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trigger := quartz.NewRunOnceTrigger(min(time.Duration(delayMillis)*time.Millisecond, minAdHocBackupDelay))
+	trigger := quartz.NewRunOnceTrigger(max(time.Duration(delayMillis)*time.Millisecond, minAdHocBackupDelay))
 	// schedule using the quartz scheduler
 	if err := s.scheduler.ScheduleJob(fullBackupJobDetail, trigger); err != nil {
 		httpError(w, errors.New("failed to schedule job"))
