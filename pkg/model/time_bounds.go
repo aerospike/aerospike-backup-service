@@ -15,12 +15,12 @@ type TimeBounds struct {
 // NewTimeBounds creates a new TimeBounds using provided fromTime and toTime values.
 func NewTimeBounds(fromTime, toTime *time.Time) (TimeBounds, error) {
 	if fromTime != nil && toTime != nil && fromTime.After(*toTime) {
-		return TimeBounds{}, errors.New("fromTime should be less than toTime")
+		return TimeBounds{}, errors.New("fromTime should be less than or equal to toTime")
 	}
 	return TimeBounds{FromTime: fromTime, ToTime: toTime}, nil
 }
 
-// Contains verifies if the given value lies within FromTime (inclusive) and ToTime (exclusive).
+// Contains verifies if the given value lies within FromTime (inclusive) and ToTime (inclusive).
 func (tb TimeBounds) Contains(value time.Time) bool {
 	if tb.FromTime != nil && value.Before(*tb.FromTime) {
 		return false
