@@ -32,6 +32,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 
 		metadata := model.BackupMetadata{
 			Created:   tm,
+			Finished:  tm,
 			Namespace: testNamespace,
 		}
 
@@ -138,6 +139,7 @@ func TestIncrementalBackup(t *testing.T) {
 
 	fullMetadata := model.BackupMetadata{
 		Created:     fullBackupTime,
+		Finished:    fullBackupTime,
 		Namespace:   testNamespace,
 		RecordCount: 1000,
 		ByteCount:   10240,
@@ -153,7 +155,8 @@ func TestIncrementalBackup(t *testing.T) {
 
 	incMetadata := model.BackupMetadata{
 		Created:     incrementalTime,
-		From:        fullBackupTime, // From points to the full backup time
+		Finished:    incrementalTime,
+		From:        fullBackupTime,
 		Namespace:   testNamespace,
 		RecordCount: 200,
 		ByteCount:   2048,
