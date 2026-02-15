@@ -6,7 +6,6 @@ import (
 	"path"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -126,14 +125,4 @@ func configFileName(index int) string {
 // output: "storage/test-routine/backup/1609632000000"
 func extractBackupDirFromKey(key string) string {
 	return path.Dir(path.Dir(path.Clean(key)))
-}
-
-func backupKey(fileName, storagePrefix string) string {
-	/* backup key is a substring between root path and metadata file name.
-	fileName example: "storage/test-routine/backup/1609632000000/data/test-ns/metadata.yaml"
-	                   |------|----------------------------------------------|------------|
-	                   Storage|                   Backup Key                 |    Filename
-	                   prefix |                                              |    (metadata.yaml)
-	*/
-	return strings.Trim(strings.TrimPrefix(path.Dir(fileName), storagePrefix), "/")
 }

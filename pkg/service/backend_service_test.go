@@ -99,6 +99,86 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	assert.Equal(t, times[3], lastRangeBackups[0].Created)
 }
 
+func TestWithToTime(t *testing.T) {
+	service, pathService, routine := setupLocalBackupBackendService(t)
+
+	created := time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
+	toTime := created
+
+	backupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, created)
+	metadata := model.BackupMetadata{
+		Created:   created,
+		Finished:  created.Add(1 * time.Hour), // finished after toTime
+		Namespace: testNamespace,
+	}
+	err := service.WriteBackupMetadata(t.Context(), routine, backupPath, metadata)
+	require.NoError(t, err)
+
+	// WithToTime: backup must be finished by toTime; this one finishes later, so excluded
+	backups, err := service.GetBackups(t.Context(), NewFullBackupFilter(routine).WithToTime(toTime.Add(10*time.Minute)))
+	require.NoError(t, err)
+	require.Empty(t, backups)
+
+	// Same backup with Finished <= toTime is included
+	metadata.Finished = created.Add(1 * time.Minute)
+	err = service.WriteBackupMetadata(t.Context(), routine, backupPath, metadata)
+	require.NoError(t, err)
+	backups, err = service.GetBackups(t.Context(), NewFullBackupFilter(routine).WithToTime(toTime.Add(10*time.Minute)))
+	require.NoError(t, err)
+	require.Len(t, backups, 1)
+	assert.Equal(t, created, backups[0].Created)
+	assert.Equal(t, metadata.Finished, backups[0].Finished)
+}
+
+func TestWithTimeBounds(t *testing.T) {
+	service, pathService, routine := setupLocalBackupBackendService(t)
+
+	jan2 := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
+	jan3 := time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
+	jan4 := time.Date(2021, 1, 4, 0, 0, 0, 0, time.UTC)
+
+	for _, tm := range []time.Time{jan2, jan3, jan4} {
+		path := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, tm)
+		err := service.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
+			Created:   tm,
+			Finished:  tm,
+			Namespace: testNamespace,
+		})
+		require.NoError(t, err)
+	}
+
+	// WithTimeBounds(FromTime=Jan2, ToTime=Jan4): Jan 2, 3, 4
+	bounds := model.TimeBounds{FromTime: &jan2, ToTime: &jan4}
+	backups, err := service.GetBackups(t.Context(), NewFullBackupFilter(routine).WithTimeBounds(bounds))
+	require.NoError(t, err)
+	require.Len(t, backups, 3)
+	assert.Equal(t, jan2, backups[0].Created)
+	assert.Equal(t, jan3, backups[1].Created)
+	assert.Equal(t, jan4, backups[2].Created)
+
+	// WithTimeBounds(FromTime=nil, ToTime=Jan3): Jan 2, 3
+	boundsToOnly := model.TimeBounds{ToTime: &jan3}
+	backups, err = service.GetBackups(t.Context(), NewFullBackupFilter(routine).WithTimeBounds(boundsToOnly))
+	require.NoError(t, err)
+	require.Len(t, backups, 2)
+	assert.Equal(t, jan2, backups[0].Created)
+	assert.Equal(t, jan3, backups[1].Created)
+
+	// WithTimeBounds(FromTime=Jan3, ToTime=nil): Jan 3, 4
+	boundsFromOnly := model.TimeBounds{FromTime: &jan3}
+	backups, err = service.GetBackups(t.Context(), NewFullBackupFilter(routine).WithTimeBounds(boundsFromOnly))
+	require.NoError(t, err)
+	require.Len(t, backups, 2)
+	assert.Equal(t, jan3, backups[0].Created)
+	assert.Equal(t, jan4, backups[1].Created)
+
+	// PathFilter with WithTimeBounds
+	pathFilter := NewPathFilter("test-routine/backup", routine.Storage).WithTimeBounds(bounds)
+	backups, err = service.GetBackups(t.Context(), pathFilter)
+	require.NoError(t, err)
+	require.Len(t, backups, 3)
+}
+
 func TestLocalDeleteBackup(t *testing.T) {
 	service, pathService, routine := setupLocalBackupBackendService(t)
 
