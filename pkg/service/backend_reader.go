@@ -106,6 +106,7 @@ func (r *backupReader) readBackupDetails(
 		details := model.NewBackupDetails(*metadata, key, storage)
 		backups = append(backups, details)
 	}
+
 	return backups, nil
 }
 
