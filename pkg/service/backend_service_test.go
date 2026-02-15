@@ -324,20 +324,14 @@ func TestReadPath(t *testing.T) {
 func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, PathService, *model.BackupRoutine) {
 	t.Helper()
 
-	tempDir := t.TempDir()
-
-	config := model.NewConfig()
 	routine := &model.BackupRoutine{
 		Name: "test-routine",
 		Storage: &model.LocalStorage{
-			Path: tempDir,
+			Path: t.TempDir(),
 		},
 	}
 
-	err := config.AddRoutine(routine)
-	require.NoError(t, err)
-
 	pathService := NewPathService(nil)
-	return NewBackupBackendService(config, pathService,
+	return NewBackupBackendService(pathService,
 		storage.NewOperations(storage.NewLocalStorageAccessor())), pathService, routine
 }

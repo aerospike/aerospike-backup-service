@@ -49,25 +49,22 @@ type BackupWriter interface {
 
 // BackupBackendServiceImpl default implementation of BackupReaderWriter.
 type BackupBackendServiceImpl struct {
-	config      *model.Config
+	*backupReader
 	locks       collections.LockMap // lock per routine
 	pathService PathService
 	operations  storageOperations
-	reader      *backupReader
 }
 
 var _ BackupReaderWriter = (*BackupBackendServiceImpl)(nil)
 
 func NewBackupBackendService(
-	config *model.Config,
 	pathService PathService,
 	operations storageOperations,
 ) *BackupBackendServiceImpl {
 	return &BackupBackendServiceImpl{
-		config:      config,
-		pathService: pathService,
-		operations:  operations,
-		reader:      newBackupReader(pathService, operations),
+		backupReader: newBackupReader(pathService, operations),
+		pathService:  pathService,
+		operations:   operations,
 	}
 }
 
@@ -77,9 +74,9 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 		lock := b.locks.Get(f.routine.Name)
 		lock.RLock()
 		defer lock.RUnlock()
-		return b.reader.getRoutineBackups(ctx, f)
+		return b.getRoutineBackups(ctx, f)
 	case *PathFilter:
-		return b.reader.getPathBackups(ctx, f)
+		return b.getPathBackups(ctx, f)
 	default:
 		return nil, fmt.Errorf("unsupported filter type: %T", f)
 	}
