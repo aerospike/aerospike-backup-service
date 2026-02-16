@@ -57,12 +57,6 @@ func (f *RoutineFilter) WithFromTime(fromTime time.Time) *RoutineFilter {
 	return f
 }
 
-// WithFromTime sets the lower bound for Created timestamp filtering.
-func (p *PathFilter) WithFromTime(fromTime time.Time) *PathFilter {
-	p.FromTime = &fromTime
-	return p
-}
-
 // WithToTime sets the upper bound for Created timestamp filtering.
 // Returned backups will be finished by given toTime.
 func (f *RoutineFilter) WithToTime(toTime time.Time) *RoutineFilter {
@@ -125,6 +119,12 @@ func (b *BaseFilter) timeBounds() model.TimeBounds {
 // Returned backups will be finished by given toTime.
 func (p *PathFilter) WithToTime(toTime time.Time) *PathFilter {
 	p.ToTime = &toTime
+	return p
+}
+
+// WithFromTime sets the lower bound for Created timestamp filtering.
+func (p *PathFilter) WithFromTime(fromTime time.Time) *PathFilter {
+	p.FromTime = &fromTime
 	return p
 }
 
