@@ -38,7 +38,7 @@ func (j *backupJob) Execute(ctx context.Context) error {
 		return errors.New("failed to retrieve job metadata from context. " +
 			"Use quartz.WithJobMetadata() option when initializing the scheduler")
 	}
-	now := time.Unix(0, jobMetadata.RunTime).Truncate(time.Millisecond) // ABS supports only millisecond accuracy.
+	now := time.Unix(0, jobMetadata.RunTime).Truncate(time.Millisecond)
 
 	if j.isRunning.CompareAndSwap(false, true) {
 		defer j.isRunning.Store(false)
