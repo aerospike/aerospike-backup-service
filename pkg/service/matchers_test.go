@@ -72,3 +72,15 @@ func (m incrementalFilterMatcher) Matches(x any) bool {
 func (m incrementalFilterMatcher) String() string {
 	return "incremental backup filter with FromTime and ToTime"
 }
+
+// restoreRequestPathMatcher matches *model.RestoreRequest by BackupDataPath.
+type restoreRequestPathMatcher struct{ expectedPath string }
+
+func (m restoreRequestPathMatcher) Matches(x any) bool {
+	req, ok := x.(*model.RestoreRequest)
+	return ok && req != nil && req.BackupDataPath == m.expectedPath
+}
+
+func (m restoreRequestPathMatcher) String() string {
+	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q", m.expectedPath)
+}

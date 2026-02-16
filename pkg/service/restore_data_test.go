@@ -432,10 +432,15 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	)
 
 	client := env.expectSuccessfulClientInteraction(t, request.DestinationCluster)
-	// Restore runs executor once per backup in chain (full + incremental = 2).
-	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, gomock.Any()).
-		Return(env.expectDefaultRestoreHandler(), nil).Times(2)
+	// Restore runs executor once per backup in chain (full then incremental).
+	gomock.InOrder(
+		env.mockRestore.EXPECT().
+			Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: fullBackup.Key}).
+			Return(env.expectDefaultRestoreHandler(), nil),
+		env.mockRestore.EXPECT().
+			Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: incrBackup.Key}).
+			Return(env.expectDefaultRestoreHandler(), nil),
+	)
 
 	jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
 	require.NoError(t, err)
