@@ -346,6 +346,17 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	}
 }
 
+// expectDefaultRestoreHandler creates a MockRestoreHandler with default EXPECTs:
+// Wait returns nil, GetStats returns empty stats, GetMetrics returns empty metrics.
+// Returns the handler for use in mockRestore.EXPECT().Run(..., handler, ...).
+func (env *testRestoreEnv) expectDefaultRestoreHandler() *restoreexecutor.MockRestoreHandler {
+	mockRestoreHandler := restoreexecutor.NewMockRestoreHandler(env.ctrl)
+	mockRestoreHandler.EXPECT().Wait(gomock.Any()).Return(nil).AnyTimes()
+	mockRestoreHandler.EXPECT().GetStats().Return(models.NewRestoreStats()).AnyTimes()
+	mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+	return mockRestoreHandler
+}
+
 // expectSuccessfulClientInteraction sets up the common GetClient/Close mock expectations.
 // It returns the mocked client instance for potential further use in the test.
 func (env *testRestoreEnv) expectSuccessfulClientInteraction(
@@ -367,6 +378,70 @@ func (env *testRestoreEnv) expectSuccessfulClientInteraction(
 		Times(1)
 
 	return client
+}
+
+// TestRestoreByTime_UsesLastFullBackupAsBase verifies that restore-by-time uses the last full
+// backup at or before request.Time as the base and fetches incrementals from that full's Created
+// time up to request.Time (i.e. restore chain is based on the correct "first" backup).
+// Mocks return data only when called with the expected filters.
+func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+	defer env.ctrl.Finish()
+
+	// All times in the past: full backup T1, request time T2, incremental created between T1 and T2.
+	now := time.Now()
+	fullCreated := now.Add(-2 * time.Hour)
+	requestTime := now.Add(-1 * time.Hour)
+	incrCreated := fullCreated.Add(30 * time.Minute)
+
+	routine := &model.BackupRoutine{Name: "test-routine"}
+	request := &model.RestoreTimestampRequest{
+		DestinationCluster: &model.AerospikeCluster{},
+		Policy:             &model.RestorePolicy{},
+		Routine:            routine,
+		Time:               requestTime,
+		DisableReordering:  true,
+	}
+
+	fullBackup := model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{
+			Created:   fullCreated,
+			Namespace: "ns1",
+			FileCount: 1,
+		},
+		Key:     "full/path",
+		Storage: &model.LocalStorage{},
+	}
+	incrBackup := model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{
+			Created:   incrCreated,
+			Namespace: "ns1",
+			FileCount: 1,
+		},
+		Key:     "incr/path",
+		Storage: &model.LocalStorage{},
+	}
+
+	gomock.InOrder(
+		env.mockBackupReader.EXPECT().
+			GetBackups(gomock.Any(), fullBackupFilterMatcher{toTime: requestTime}).
+			Return([]model.BackupDetails{fullBackup}, nil),
+		env.mockBackupReader.EXPECT().
+			GetBackups(gomock.Any(), incrementalFilterMatcher{fromTime: fullCreated, toTime: requestTime}).
+			Return([]model.BackupDetails{incrBackup}, nil),
+	)
+
+	client := env.expectSuccessfulClientInteraction(t, request.DestinationCluster)
+	// Restore runs executor once per backup in chain (full + incremental = 2).
+	env.mockRestore.EXPECT().
+		Run(gomock.Any(), client, gomock.Any()).
+		Return(env.expectDefaultRestoreHandler(), nil).Times(2)
+
+	jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
+	require.NoError(t, err)
+	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+	require.NoError(t, err)
+	assert.Equal(t, model.JobStatusDone, jobStatus.Status)
 }
 
 func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
@@ -450,14 +525,10 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 
 			if tt.shouldSucceed {
 				client := env.expectSuccessfulClientInteraction(t, request.DestinationCluster)
-				mockRestoreHandler := restoreexecutor.NewMockRestoreHandler(env.ctrl)
-				mockRestoreHandler.EXPECT().Wait(gomock.Any()).Return(nil).AnyTimes()
-				mockRestoreHandler.EXPECT().GetStats().Return(models.NewRestoreStats()).AnyTimes()
-				mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
-
+				// Restore runs executor once per backup in chain (full + incremental = 2).
 				env.mockRestore.EXPECT().
 					Run(gomock.Any(), client, gomock.Any()).
-					Return(mockRestoreHandler, nil).AnyTimes()
+					Return(env.expectDefaultRestoreHandler(), nil).Times(2)
 			}
 
 			jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
