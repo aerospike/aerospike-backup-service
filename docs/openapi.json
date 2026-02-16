@@ -476,6 +476,69 @@
                 }
             }
         },
+        "/v1/backups/schedule/incremental/{name}": {
+            "post": {
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Schedule an incremental backup once per routine name.",
+                "operationId": "scheduleIncrementalBackup",
+                "parameters": [
+                    {
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Delay interval in milliseconds",
+                        "name": "delay",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/backups/schedule/{name}": {
             "post": {
                 "tags": [
