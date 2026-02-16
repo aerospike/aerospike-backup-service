@@ -87,7 +87,7 @@ func NewBackupMetadata(
 	return BackupMetadata{
 		From:                from,
 		Created:             startTime,
-		Finished:            time.Now(),
+		Finished:            time.Now().Truncate(time.Millisecond), // ABS supports only millisecond accuracy
 		Namespace:           namespace,
 		RecordCount:         stats.GetReadRecords(),
 		FileCount:           stats.GetFileCount(),

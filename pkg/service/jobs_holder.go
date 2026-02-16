@@ -55,7 +55,7 @@ type restoreJob struct {
 func newRestoreJob(label string, cancel context.CancelFunc) *restoreJob {
 	return &restoreJob{
 		status:  model.JobStatusRunning,
-		started: time.Now(),
+		started: time.Now().Truncate(time.Millisecond),
 		label:   label,
 		cancel:  cancel,
 	}
@@ -82,7 +82,7 @@ func (j *restoreJob) finish(err error) {
 	j.Lock()
 	defer j.Unlock()
 
-	j.finished = ptr.Of(time.Now())
+	j.finished = ptr.Of(time.Now().Truncate(time.Millisecond))
 	j.err = err
 
 	switch {
