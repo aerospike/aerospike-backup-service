@@ -179,6 +179,38 @@ func TestWithTimeBounds(t *testing.T) {
 	require.Len(t, backups, 3)
 }
 
+func TestGetBackupsReturnsSortedByCreated(t *testing.T) {
+	service, pathService, routine := setupLocalBackupBackendService(t)
+
+	pathTimes := []time.Time{
+		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
+	}
+	createdTimes := []time.Time{
+		time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	for i, pathTime := range pathTimes {
+		path := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, pathTime)
+		err := service.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
+			Created:   createdTimes[i],
+			Finished:  createdTimes[i],
+			Namespace: testNamespace,
+		})
+		require.NoError(t, err)
+	}
+
+	backups, err := service.GetBackups(t.Context(), NewFullBackupFilter(routine))
+	require.NoError(t, err)
+	require.Len(t, backups, 3)
+	assert.Equal(t, createdTimes[1], backups[0].Created)
+	assert.Equal(t, createdTimes[2], backups[1].Created)
+	assert.Equal(t, createdTimes[0], backups[2].Created)
+}
+
 func TestLocalDeleteBackup(t *testing.T) {
 	service, pathService, routine := setupLocalBackupBackendService(t)
 

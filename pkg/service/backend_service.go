@@ -35,6 +35,7 @@ type BackupReaderWriter interface {
 // BackupReader defines operations for reading backups metadata.
 type BackupReader interface {
 	// GetBackups retrieves backup details based on the provided filter.
+	// Returned backups are sorted by Created time in ascending order.
 	GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error)
 }
 

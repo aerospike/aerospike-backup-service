@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -40,7 +41,7 @@ func (r *backupReader) getRoutineBackups(ctx context.Context, filter *RoutineFil
 		return nil, err
 	}
 
-	backups = r.filterBackups(backups, filter.timeBounds())
+	backups = r.filterAndSortBackups(backups, filter.timeBounds())
 	if filter.onlyLast {
 		backups = r.getLastBackupsByCreated(backups)
 	}
@@ -58,7 +59,7 @@ func (r *backupReader) getPathBackups(ctx context.Context, filter *PathFilter) (
 	if err != nil {
 		return nil, err
 	}
-	return r.filterBackups(backups, filter.timeBounds()), nil
+	return r.filterAndSortBackups(backups, filter.timeBounds()), nil
 }
 
 // pathsRelativeToStorage normalizes paths from ReadFileNames to be relative to storage root.
@@ -115,14 +116,26 @@ func keyFromStoragePath(storagePath string) string {
 	return filepath.Dir(storagePath)
 }
 
-// filterBackups returns backups whose Created and Finished times fall within bounds.
-func (r *backupReader) filterBackups(backups []model.BackupDetails, bounds model.TimeBounds) []model.BackupDetails {
+// filterAndSortBackups returns backups whose Created and Finished times fall within bounds sorted chronologically.
+func (r *backupReader) filterAndSortBackups(
+	backups []model.BackupDetails,
+	bounds model.TimeBounds,
+) []model.BackupDetails {
 	out := make([]model.BackupDetails, 0, len(backups))
 	for _, b := range backups {
 		if bounds.Contains(b.Created) && bounds.Contains(b.Finished) {
 			out = append(out, b)
 		}
 	}
+
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Created.Equal(out[j].Created) {
+			return out[i].Key < out[j].Key
+		}
+
+		return out[i].Created.Before(out[j].Created)
+	})
+
 	return out
 }
 
