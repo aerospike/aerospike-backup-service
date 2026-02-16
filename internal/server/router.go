@@ -76,6 +76,7 @@ func registerBackupRoutes(mux *http.ServeMux, apiPath string, service *handlers.
 	mux.HandleFunc("GET "+apiPath+"/backups/incremental", service.GetAllIncrementalBackups)
 	mux.HandleFunc("GET "+apiPath+"/backups/incremental/{name}", service.GetIncrementalBackupsForRoutine)
 	mux.HandleFunc("POST "+apiPath+"/backups/schedule/{name}", service.ScheduleFullBackup)
+	mux.HandleFunc("POST "+apiPath+"/backups/schedule/incremental/{name}", service.ScheduleIncrementalBackup)
 	mux.HandleFunc("GET "+apiPath+"/backups/currentBackup/{name}", service.GetCurrentBackupInfo)
 	mux.HandleFunc("POST "+apiPath+"/backups/cancel/{name}", service.CancelCurrentBackup)
 }

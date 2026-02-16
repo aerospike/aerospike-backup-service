@@ -235,6 +235,45 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
+// ScheduleIncrementalBackup
+// @Summary  Schedule an incremental backup once per routine name.
+// @ID       scheduleIncrementalBackup
+// @Tags     Backup
+// @Param    name path string true "Backup routine name"
+// @Param    delay query int false "Delay interval in milliseconds"
+// @Router   /v1/backups/schedule/incremental/{name} [post]
+// @Success  202
+// @Failure  400 {string} string
+// @Failure  404 {string} string
+// @Failure  500 {string} string
+func (s *Service) ScheduleIncrementalBackup(w http.ResponseWriter, r *http.Request) {
+	routineName := r.PathValue("name")
+	if routineName == "" {
+		http.Error(w, "routine name required", http.StatusBadRequest)
+		return
+	}
+
+	delayMillis, err := parseDelay(r.URL.Query().Get("delay"))
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+
+	incrementalBackupJobDetail := service.NewAdHocIncrementalBackupJobForRoutine(routineName)
+	if incrementalBackupJobDetail == nil {
+		httpError(w, errRoutineNotFound(routineName))
+		return
+	}
+
+	trigger := quartz.NewRunOnceTrigger(max(time.Duration(delayMillis)*time.Millisecond, minAdHocBackupDelay))
+	if err := s.scheduler.ScheduleJob(incrementalBackupJobDetail, trigger); err != nil {
+		httpError(w, errors.New("failed to schedule job"))
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+}
+
 func parseDelay(delayParameter string) (int, error) {
 	if delayParameter == "" {
 		return 0, nil
