@@ -215,7 +215,7 @@ func (p *RestorePolicy) ToModel() *model.RestorePolicy {
 
 func (p *TimestampRestorePolicy) ToModel() *model.RestorePolicy {
 	if p == nil {
-		return nil
+		return &model.RestorePolicy{}
 	}
 	return p.BaseRestorePolicy.ToModel()
 }

@@ -348,7 +348,7 @@ func (r *dataRestorer) restoreNamespace(
 
 	// Now restore all backups in order
 	if !request.DisableReordering {
-		counter, err := client.InfoClient().GetRecordCount(ctx, namespace, request.Policy.SetList)
+		counter, err := client.InfoClient().GetRecordCount(ctx, namespace, effectivePolicy.SetList)
 		if err != nil {
 			return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
 		}

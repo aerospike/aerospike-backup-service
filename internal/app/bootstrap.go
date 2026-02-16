@@ -46,7 +46,7 @@ func InitComponents(
 	}
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
-	backendService := service.NewBackupBackendService(config, pathService, operations)
+	backendService := service.NewBackupBackendService(pathService, operations)
 	history := service.NewHistoryManager(backendService)
 	registry := service.NewRunningBackupsRegistry(history, config)
 	var routineStorage u.LockMap
