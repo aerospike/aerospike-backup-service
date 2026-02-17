@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -28,13 +27,12 @@ const (
 	jobTypeIncremental jobType = "incremental"
 )
 
-func (j jobType) operationLabel() string {
-	value := string(j)
-	if value == "" {
-		return "Backup"
+func (j jobType) String() string {
+	if j == jobTypeFull {
+		return "Full backup"
 	}
 
-	return strings.ToUpper(value[:1]) + value[1:] + " backup"
+	return "Incremental backup"
 }
 
 type Scheduler interface {

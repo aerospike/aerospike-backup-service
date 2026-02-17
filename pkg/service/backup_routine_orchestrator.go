@@ -191,7 +191,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 }
 
 func (h *BackupRoutineOrchestrator) processBackupError(backupType jobType, duration time.Duration, err error) {
-	operation := backupType.operationLabel()
+	operation := backupType.String()
 
 	if err == nil {
 		h.logger.Debug(operation+" finished", slog.Duration("duration", duration))
@@ -215,7 +215,7 @@ func (h *BackupRoutineOrchestrator) processBackupError(backupType jobType, durat
 	if errors.As(err, &aerr) {
 		h.logger.Error(
 			operation+" failed due to Aerospike error",
-			slog.Int("ResultCode", int(aerr.ResultCode)),
+			slog.Int("resultCode", int(aerr.ResultCode)),
 			attr.Error(err),
 		)
 	} else {
