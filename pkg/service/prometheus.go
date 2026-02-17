@@ -220,6 +220,7 @@ const (
 	BackupOutcomeSkip      BackupOutcome = "skip"
 )
 
+// observeBackupEvent updates Prometheus backup counters/histograms.
 func observeBackupEvent(routineName string, backupType jobType, outcome BackupOutcome, duration time.Duration) {
 	backupCounters.With(prometheus.Labels{
 		"routine": routineName,
