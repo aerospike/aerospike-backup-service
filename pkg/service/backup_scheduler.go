@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -26,6 +27,15 @@ const (
 	jobTypeFull        jobType = "full"
 	jobTypeIncremental jobType = "incremental"
 )
+
+func (j jobType) operationLabel() string {
+	value := string(j)
+	if value == "" {
+		return "Backup"
+	}
+
+	return strings.ToUpper(value[:1]) + value[1:] + " backup"
+}
 
 type Scheduler interface {
 	// ScheduleJob schedules a backup job with the given trigger.

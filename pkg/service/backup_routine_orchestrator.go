@@ -13,6 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 )
@@ -85,18 +86,7 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 		return h.runFullBackupInternal(ctx, now)
 	})
 
-	if err != nil {
-		if errors.Is(err, errBackupSkipped) {
-			h.logger.Debug("Full backup skipped")
-			observeBackupEvent(h.routine.Name, jobTypeFull, BackupOutcomeSkip, 0)
-		} else {
-			h.logger.Error("Full backup failed", attr.Error(err))
-			observeBackupEvent(h.routine.Name, jobTypeFull, BackupOutcomeFailure, duration)
-		}
-	} else {
-		h.logger.Debug("Full backup finished")
-		observeBackupEvent(h.routine.Name, jobTypeFull, BackupOutcomeSuccess, duration)
-	}
+	h.processBackupError(jobTypeFull, duration, err)
 }
 
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
@@ -196,13 +186,43 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 	duration, err := timeutil.MeasureDuration(func() error {
 		return h.runIncrementalBackupInternal(ctx, now)
 	})
-	if err != nil {
-		observeBackupEvent(h.routine.Name, jobTypeIncremental, BackupOutcomeFailure, duration)
-		h.logger.Error("Incremental backup failed", attr.Error(err))
-	} else {
-		observeBackupEvent(h.routine.Name, jobTypeIncremental, BackupOutcomeSuccess, duration)
-		h.logger.Debug("Incremental backup finished")
+
+	h.processBackupError(jobTypeIncremental, duration, err)
+}
+
+func (h *BackupRoutineOrchestrator) processBackupError(backupType jobType, duration time.Duration, err error) {
+	operation := backupType.operationLabel()
+
+	if err == nil {
+		h.logger.Debug(operation+" finished", slog.Duration("duration", duration))
+		observeBackupEvent(h.routine.Name, backupType, BackupOutcomeSuccess, duration)
+		return
 	}
+
+	if errors.Is(err, errBackupSkipped) {
+		h.logger.Debug(operation + " skipped")
+		observeBackupEvent(h.routine.Name, backupType, BackupOutcomeSkip, 0)
+		return
+	}
+
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		h.logger.Info(operation+" cancelled by context (canceled/timeout)", attr.Error(err))
+		observeBackupEvent(h.routine.Name, backupType, BackupOutcomeCancelled, duration)
+		return
+	}
+
+	var aerr *as.AerospikeError
+	if errors.As(err, &aerr) {
+		h.logger.Error(
+			operation+" failed due to Aerospike error",
+			slog.Int("ResultCode", int(aerr.ResultCode)),
+			attr.Error(err),
+		)
+	} else {
+		h.logger.Error(operation+" failed", attr.Error(err))
+	}
+
+	observeBackupEvent(h.routine.Name, backupType, BackupOutcomeFailure, duration)
 }
 
 func (h *BackupRoutineOrchestrator) skipIncrementalBackup(now time.Time) bool {
