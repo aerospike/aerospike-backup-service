@@ -39,7 +39,7 @@ func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credenti
 	if creds.PasswordPath != nil {
 		data, err := os.ReadFile(*creds.PasswordPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read password from password-path %s: %v", *creds.PasswordPath, err)
+			return nil, fmt.Errorf("failed to read password from password-path %s: %w", *creds.PasswordPath, err)
 		}
 		slog.Debug("Successfully read password", slog.String("path", *creds.PasswordPath))
 
@@ -52,7 +52,7 @@ func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credenti
 	if creds.Password != nil {
 		password, err := r.resolver.Resolve(ctx, creds.SecretAgent, *creds.Password)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read password from secret agent: %v", err)
+			return nil, fmt.Errorf("failed to read password from secret agent: %w", err)
 		}
 
 		return &password, nil
