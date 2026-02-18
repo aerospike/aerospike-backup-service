@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -56,14 +57,23 @@ func (h *backupCompletionHandler) OnSuccess(
 
 	go func() {
 		if err := h.retentionManager.deleteOldBackups(ctx, routine); err != nil {
-			logger.With(attr.Routine(routine.Name)).Error("failed to clean up old backups", attr.Error(err))
+			if errors.Is(err, context.Canceled) {
+				logger.Info("Old backups clean up context cancelled")
+				return
+			}
+			logger.Error("Failed to clean up old backups", attr.Error(err))
 		}
 	}()
 
 	go func() {
 		if routine.BackupPolicy.WithClusterConfig != nil && *routine.BackupPolicy.WithClusterConfig {
 			if err := h.clusterConfigWriter.Write(ctx, routine, timestamp); err != nil {
-				logger.With(attr.Routine(routine.Name)).Warn("Failed to backup cluster configuration", attr.Error(err))
+				if errors.Is(err, context.Canceled) {
+					logger.Info("Cluster configuration backup context cancelled")
+					return
+				}
+
+				logger.Error("Failed to backup cluster configuration", attr.Error(err))
 			}
 		}
 	}()

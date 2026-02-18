@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -94,6 +95,11 @@ func (op *BackupNamespaceRunner) Run(
 func (op *BackupNamespaceRunner) deleteFolder(ctx context.Context, path string) {
 	err := op.backendService.Delete(ctx, op.routine, path)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			op.logger.Info("Delete folder context cancelled")
+			return
+		}
+
 		op.logger.Error("Could not delete folder", attr.Error(err))
 		return
 	}

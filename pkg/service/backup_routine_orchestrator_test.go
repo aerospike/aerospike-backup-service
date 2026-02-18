@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"log/slog"
 	"sync"
@@ -201,6 +202,39 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
 }
 
+func TestRunFullBackupInternal_ContextCancelled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	routine := testRoutine()
+
+	mockClientManager := aerospike.NewMockClientManager(ctrl)
+	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
+	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
+	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
+	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
+
+	initialState := &model.RoutineState{}
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, context.Canceled).Times(1)
+
+	o := newOrchestrator(routine, NewBackupComponents(
+		mockClientManager,
+		mockBackupExecutor,
+		mockRegistry,
+		mockCompletionHandler,
+		mockBackupBackend,
+	), NewPathService(nil))
+
+	backupCounters.Reset()
+	o.runFullBackup(t.Context(), time.Now())
+
+	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeCancelled))
+}
+
 func TestSkipIncrementalBackup(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -323,6 +357,42 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeSkip))
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeFailure))
+}
+
+func TestRunIncrementalBackup_ContextCancelled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	routine := testRoutine()
+	routineState := &model.RoutineState{
+		LastRunTime: model.NewFullBackupTime(time.Now().Add(-time.Hour)),
+	}
+
+	mockClientManager := aerospike.NewMockClientManager(ctrl)
+	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
+	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
+	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
+	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
+
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(routineState)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, context.DeadlineExceeded).Times(1)
+
+	o := newOrchestrator(routine, NewBackupComponents(
+		mockClientManager,
+		mockBackupExecutor,
+		mockRegistry,
+		mockCompletionHandler,
+		mockBackupBackend,
+	), NewPathService(nil))
+
+	backupCounters.Reset()
+	o.runIncrementalBackup(t.Context(), time.Now())
+
+	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeCancelled))
 }
 
 func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {

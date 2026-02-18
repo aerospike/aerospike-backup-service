@@ -12,7 +12,7 @@
   {
     "name": "aerospike_backup_service_backup_events_total",
     "type": "Counter",
-    "description": "Backup service job events by routine, type (full/incremental), and outcome (success, failure, retry, skip)",
+    "description": "Backup service job events by routine, type (full/incremental), and outcome (success, failure, cancelled, retry, skip)",
     "labels": [
       "routine",
       "type",

@@ -60,18 +60,20 @@ func (w *DefaultClusterConfigWriter) Write(
 
 	infos := cluster.ReadConfiguration(client.AerospikeClient(), logger)
 	if len(infos) == 0 {
-		return errors.New("could not read aerospike configuration")
+		return errors.New("could not read Aerospike configuration")
 	}
 
+	var errs error
 	for i, info := range infos {
 		confFilePath := w.pathService.GetConfigurationFilePath(routine.Name, timestamp, i)
 		err := w.operations.WriteDataFile(ctx, routine.Storage, confFilePath, []byte(info))
 		if err != nil {
-			logger.Error("Failed to write cluster configuration backup",
-				attr.Error(err))
+			errs = errors.Join(errs, fmt.Errorf("failed to write cluster configuration backup: %w", err))
+			continue
 		}
+
 		logger.Debug("Wrote cluster configuration backup", slog.String("path", confFilePath))
 	}
 
-	return nil
+	return errs
 }

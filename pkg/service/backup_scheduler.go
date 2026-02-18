@@ -27,6 +27,14 @@ const (
 	jobTypeIncremental jobType = "incremental"
 )
 
+func (j jobType) String() string {
+	if j == jobTypeFull {
+		return "Full backup"
+	}
+
+	return "Incremental backup"
+}
+
 type Scheduler interface {
 	// ScheduleJob schedules a backup job with the given trigger.
 	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error

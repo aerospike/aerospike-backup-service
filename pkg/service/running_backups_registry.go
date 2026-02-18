@@ -97,15 +97,21 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Contex
 		return r.scanRoutinesHistory(ctx, invalidatedRoutines)
 	})
 
-	if err != nil {
-		slog.Error("History synchronization failed", attr.Error(err))
-	} else {
+	if err == nil {
 		slog.Info("History synchronization completed",
 			slog.Any("routines", names),
 			slog.Int("len", len(invalidatedRoutines)),
 			slog.Duration("duration", duration),
 		)
+		return
 	}
+
+	if errors.Is(err, context.Canceled) {
+		slog.Info("History synchronization context cancelled")
+		return
+	}
+
+	slog.Error("History synchronization failed", attr.Error(err))
 }
 
 func (r *RunningBackupsRegistryImpl) scanRoutinesHistory(ctx context.Context, routines []*model.BackupRoutine) error {
