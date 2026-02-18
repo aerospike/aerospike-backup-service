@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -43,7 +44,8 @@ func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credenti
 		}
 		slog.Debug("Successfully read password", slog.String("path", *creds.PasswordPath))
 
-		password := string(data)
+		// Strip only line-ending characters to preserve meaningful spaces.
+		password := strings.TrimRight(string(data), "\r\n")
 
 		return &password, nil
 	}
