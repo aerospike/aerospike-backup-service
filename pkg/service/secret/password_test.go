@@ -27,7 +27,27 @@ func TestResolve(t *testing.T) {
 	}{
 		{
 			name:      "ValidPasswordPath",
-			setupMock: createValidFile,
+			setupMock: func() { createFile("password") },
+			credentials: &model.Credentials{
+				User:         nil,
+				PasswordPath: ptr.Of(passwordPath),
+			},
+			expectedPassword: ptr.Of("password"),
+			expectedErr:      false,
+		},
+		{
+			name:      "ValidPasswordPathWithLF",
+			setupMock: func() { createFile("password\n") },
+			credentials: &model.Credentials{
+				User:         nil,
+				PasswordPath: ptr.Of(passwordPath),
+			},
+			expectedPassword: ptr.Of("password"),
+			expectedErr:      false,
+		},
+		{
+			name:      "ValidPasswordPathWithCRLF",
+			setupMock: func() { createFile("password\r\n") },
 			credentials: &model.Credentials{
 				User:         nil,
 				PasswordPath: ptr.Of(passwordPath),
@@ -89,8 +109,8 @@ func TestResolve(t *testing.T) {
 // Note: Logic for checking file caching was removed because Resolver is stateless regarding files.
 // Logic for Secret Agent caching is tested in secret_agent_test.go (if we create it).
 
-func createValidFile() {
-	text := []byte("password")
+func createFile(content string) {
+	text := []byte(content)
 	_ = os.MkdirAll(testdataFolder, 0744)
 	f, _ := os.OpenFile(passwordPath, os.O_WRONLY|os.O_CREATE, 0644)
 	defer func(f *os.File) {
