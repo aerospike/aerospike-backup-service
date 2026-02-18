@@ -104,12 +104,32 @@ func TestService_ScheduleFullBackup(t *testing.T) {
 	)
 }
 
+func TestService_TriggerFullBackup(t *testing.T) {
+	testScheduleBackupValidation(
+		t,
+		"/v1/backups/full/",
+		func(svc *Service, w http.ResponseWriter, req *http.Request) {
+			svc.TriggerFullBackup(w, req)
+		},
+	)
+}
+
 func TestService_ScheduleIncrementalBackup(t *testing.T) {
 	testScheduleBackupValidation(
 		t,
 		"/v1/backups/schedule/incremental/",
 		func(svc *Service, w http.ResponseWriter, req *http.Request) {
 			svc.ScheduleIncrementalBackup(w, req)
+		},
+	)
+}
+
+func TestService_TriggerIncrementalBackup(t *testing.T) {
+	testScheduleBackupValidation(
+		t,
+		"/v1/backups/incremental/",
+		func(svc *Service, w http.ResponseWriter, req *http.Request) {
+			svc.TriggerIncrementalBackup(w, req)
 		},
 	)
 }

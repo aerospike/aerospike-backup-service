@@ -195,58 +195,75 @@ func (s *Service) readBackupsForRoutine(
 	return backupDetails, nil
 }
 
-// ScheduleFullBackup
-// @Summary  Schedule a full backup once per routine name.
-// @ID       scheduleFullBackup
+// TriggerFullBackup
+// @Summary  Trigger a full backup once per routine name.
+// @ID       triggerFullBackup
 // @Tags     Backup
 // @Param    name path string true "Backup routine name"
 // @Param    delay query int false "Delay interval in milliseconds"
-// @Router   /v1/backups/schedule/{name} [post]
+// @Router   /v1/backups/full/{name} [post]
 // @Success  202
 // @Failure  400 {string} string
 // @Failure  404 {string} string
 // @Failure  500 {string} string
+func (s *Service) TriggerFullBackup(w http.ResponseWriter, r *http.Request) {
+	s.scheduleBackup(w, r, service.NewAdHocFullBackupJobForRoutine)
+}
+
+// ScheduleFullBackup
+// @Summary     Schedule a full backup once per routine name.
+// @Description Deprecated: use POST /v1/backups/full/{name} instead.
+// @ID          scheduleFullBackup
+// @Tags        Backup
+// @Deprecated
+// @Param       name path string true "Backup routine name"
+// @Param       delay query int false "Delay interval in milliseconds"
+// @Router      /v1/backups/schedule/{name} [post]
+// @Success     202
+// @Failure     400 {string} string
+// @Failure     404 {string} string
+// @Failure     500 {string} string
 func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
-	routineName := r.PathValue("name")
-	if routineName == "" {
-		http.Error(w, "routine name required", http.StatusBadRequest)
-		return
-	}
+	s.scheduleBackup(w, r, service.NewAdHocFullBackupJobForRoutine)
+}
 
-	delayMillis, err := parseDelay(r.URL.Query().Get("delay"))
-	if err != nil {
-		httpError(w, err)
-		return
-	}
-
-	fullBackupJobDetail := service.NewAdHocFullBackupJobForRoutine(routineName)
-	if fullBackupJobDetail == nil {
-		httpError(w, errRoutineNotFound(routineName))
-		return
-	}
-
-	trigger := quartz.NewRunOnceTrigger(max(time.Duration(delayMillis)*time.Millisecond, minAdHocBackupDelay))
-	// schedule using the quartz scheduler
-	if err := s.scheduler.ScheduleJob(fullBackupJobDetail, trigger); err != nil {
-		httpError(w, errors.New("failed to schedule job"))
-		return
-	}
-
-	w.WriteHeader(http.StatusAccepted)
+// TriggerIncrementalBackup
+// @Summary  Trigger an incremental backup once per routine name.
+// @ID       triggerIncrementalBackup
+// @Tags     Backup
+// @Param    name path string true "Backup routine name"
+// @Param    delay query int false "Delay interval in milliseconds"
+// @Router   /v1/backups/incremental/{name} [post]
+// @Success  202
+// @Failure  400 {string} string
+// @Failure  404 {string} string
+// @Failure  500 {string} string
+func (s *Service) TriggerIncrementalBackup(w http.ResponseWriter, r *http.Request) {
+	s.scheduleBackup(w, r, service.NewAdHocIncrementalBackupJobForRoutine)
 }
 
 // ScheduleIncrementalBackup
-// @Summary  Schedule an incremental backup once per routine name.
-// @ID       scheduleIncrementalBackup
-// @Tags     Backup
-// @Param    name path string true "Backup routine name"
-// @Param    delay query int false "Delay interval in milliseconds"
-// @Router   /v1/backups/schedule/incremental/{name} [post]
-// @Success  202
-// @Failure  400 {string} string
-// @Failure  404 {string} string
-// @Failure  500 {string} string
+// @Summary     Schedule an incremental backup once per routine name.
+// @Description Deprecated: use POST /v1/backups/incremental/{name} instead.
+// @ID          scheduleIncrementalBackup
+// @Tags        Backup
+// @Deprecated
+// @Param       name path string true "Backup routine name"
+// @Param       delay query int false "Delay interval in milliseconds"
+// @Router      /v1/backups/schedule/incremental/{name} [post]
+// @Success     202
+// @Failure     400 {string} string
+// @Failure     404 {string} string
+// @Failure     500 {string} string
 func (s *Service) ScheduleIncrementalBackup(w http.ResponseWriter, r *http.Request) {
+	s.scheduleBackup(w, r, service.NewAdHocIncrementalBackupJobForRoutine)
+}
+
+func (s *Service) scheduleBackup(
+	w http.ResponseWriter,
+	r *http.Request,
+	newJobDetail func(routineName string) *quartz.JobDetail,
+) {
 	routineName := r.PathValue("name")
 	if routineName == "" {
 		http.Error(w, "routine name required", http.StatusBadRequest)
@@ -259,14 +276,15 @@ func (s *Service) ScheduleIncrementalBackup(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	incrementalBackupJobDetail := service.NewAdHocIncrementalBackupJobForRoutine(routineName)
-	if incrementalBackupJobDetail == nil {
+	jobDetail := newJobDetail(routineName)
+	if jobDetail == nil {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
 
 	trigger := quartz.NewRunOnceTrigger(max(time.Duration(delayMillis)*time.Millisecond, minAdHocBackupDelay))
-	if err := s.scheduler.ScheduleJob(incrementalBackupJobDetail, trigger); err != nil {
+
+	if err := s.scheduler.ScheduleJob(jobDetail, trigger); err != nil {
 		httpError(w, errors.New("failed to schedule job"))
 		return
 	}

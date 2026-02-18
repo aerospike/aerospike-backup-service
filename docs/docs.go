@@ -288,6 +288,51 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Trigger a full backup once per routine name.",
+                "operationId": "triggerFullBackup",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Delay interval in milliseconds",
+                        "name": "delay",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
             }
         },
         "/v1/backups/incremental": {
@@ -400,15 +445,62 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Trigger an incremental backup once per routine name.",
+                "operationId": "triggerIncrementalBackup",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Delay interval in milliseconds",
+                        "name": "delay",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
             }
         },
         "/v1/backups/schedule/incremental/{name}": {
             "post": {
+                "description": "Deprecated: use POST /v1/backups/incremental/{name} instead.",
                 "tags": [
                     "Backup"
                 ],
                 "summary": "Schedule an incremental backup once per routine name.",
                 "operationId": "scheduleIncrementalBackup",
+                "deprecated": true,
                 "parameters": [
                     {
                         "type": "string",
@@ -451,11 +543,13 @@ const docTemplate = `{
         },
         "/v1/backups/schedule/{name}": {
             "post": {
+                "description": "Deprecated: use POST /v1/backups/full/{name} instead.",
                 "tags": [
                     "Backup"
                 ],
                 "summary": "Schedule a full backup once per routine name.",
                 "operationId": "scheduleFullBackup",
+                "deprecated": true,
                 "parameters": [
                     {
                         "type": "string",
