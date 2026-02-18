@@ -218,10 +218,10 @@ func (h *BackupRoutineOrchestrator) processBackupError(backupType jobType, durat
 			slog.Int("resultCode", int(aerr.ResultCode)),
 			attr.Error(err),
 		)
-	} else {
-		h.logger.Error(operation+" failed", attr.Error(err))
+		return
 	}
 
+	h.logger.Error(operation+" failed", attr.Error(err))
 	observeBackupEvent(h.routine.Name, backupType, BackupOutcomeFailure, duration)
 }
 
