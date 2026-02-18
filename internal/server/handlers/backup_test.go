@@ -114,16 +114,6 @@ func TestService_TriggerFullBackup(t *testing.T) {
 	)
 }
 
-func TestService_ScheduleIncrementalBackup(t *testing.T) {
-	testScheduleBackupValidation(
-		t,
-		"/v1/backups/schedule/incremental/",
-		func(svc *Service, w http.ResponseWriter, req *http.Request) {
-			svc.ScheduleIncrementalBackup(w, req)
-		},
-	)
-}
-
 func TestService_TriggerIncrementalBackup(t *testing.T) {
 	testScheduleBackupValidation(
 		t,

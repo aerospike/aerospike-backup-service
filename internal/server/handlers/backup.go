@@ -242,23 +242,6 @@ func (s *Service) TriggerIncrementalBackup(w http.ResponseWriter, r *http.Reques
 	s.scheduleBackup(w, r, service.NewAdHocIncrementalBackupJobForRoutine)
 }
 
-// ScheduleIncrementalBackup
-// @Summary     Schedule an incremental backup once per routine name.
-// @Description Deprecated: use POST /v1/backups/incremental/{name} instead.
-// @ID          scheduleIncrementalBackup
-// @Tags        Backup
-// @Deprecated
-// @Param       name path string true "Backup routine name"
-// @Param       delay query int false "Delay interval in milliseconds"
-// @Router      /v1/backups/schedule/incremental/{name} [post]
-// @Success     202
-// @Failure     400 {string} string
-// @Failure     404 {string} string
-// @Failure     500 {string} string
-func (s *Service) ScheduleIncrementalBackup(w http.ResponseWriter, r *http.Request) {
-	s.scheduleBackup(w, r, service.NewAdHocIncrementalBackupJobForRoutine)
-}
-
 func (s *Service) scheduleBackup(
 	w http.ResponseWriter,
 	r *http.Request,
