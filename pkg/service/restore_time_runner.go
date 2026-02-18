@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"strings"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -14,25 +13,9 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/models"
 )
 
-type ErrJobNotFound struct {
-	JobID model.RestoreJobID
-}
-
-func (e *ErrJobNotFound) Error() string {
-	return fmt.Sprintf("restore job with ID %d not found", e.JobID)
-}
-
-func NewErrJobNotFound(id model.RestoreJobID) *ErrJobNotFound {
-	return &ErrJobNotFound{id}
-}
-
-// dataRestorer implements the RestoreManager interface.
-// Stores job information locally within a map.
-type dataRestorer struct {
+type timeRestoreRunner struct {
 	restoreJobs    *RestoreJobsHolder
 	restoreService restoreexecutor.Restore
 	backupReader   BackupReader
@@ -40,17 +23,14 @@ type dataRestorer struct {
 	routineStorage *collections.LockMap
 }
 
-var _ RestoreManager = (*dataRestorer)(nil)
-
-// NewRestoreManager returns a new dataRestorer instance.
-func NewRestoreManager(
-	restoreService restoreexecutor.Restore,
-	clientManager aerospike.ClientManager,
+func newTimeRestoreRunner(
 	restoreJobs *RestoreJobsHolder,
+	restoreService restoreexecutor.Restore,
 	backupReader BackupReader,
+	clientManager aerospike.ClientManager,
 	routineStorage *collections.LockMap,
-) RestoreManager {
-	return &dataRestorer{
+) *timeRestoreRunner {
+	return &timeRestoreRunner{
 		restoreJobs:    restoreJobs,
 		restoreService: restoreService,
 		backupReader:   backupReader,
@@ -59,135 +39,7 @@ func NewRestoreManager(
 	}
 }
 
-func (r *dataRestorer) Restore(ctx context.Context, request *model.RestoreRequest) (model.RestoreJobID, error) {
-	// Create a cancellable context for this specific job.
-	ctx, cancel := context.WithCancel(ctx)
-
-	jobID := r.restoreJobs.newJob(request.BackupDataPath, cancel)
-	logger := slog.With(slog.Any("jobId", jobID))
-	logger.Info("New restore job", slog.Any("request", *request))
-	go func() {
-		err := r.executeRestore(ctx, request, jobID, logger)
-		if err != nil { // if some of the restore sub-operations failed, we need to cancel the rest.
-			cancel()
-		}
-		r.restoreJobs.finishJob(jobID, err)
-	}()
-
-	return jobID, nil
-}
-
-func (r *dataRestorer) executeRestore(
-	ctx context.Context,
-	request *model.RestoreRequest,
-	jobID model.RestoreJobID,
-	logger *slog.Logger,
-) error {
-	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster, logger)
-	if err != nil {
-		return err
-	}
-	defer r.clientManager.Close(client)
-
-	if err := r.validateDestinationNamespace(ctx, request, client.InfoClient()); err != nil {
-		return err
-	}
-
-	// Lock the routine storage from retention manager for the duration of restore.
-	// Restore holds RLock to allow concurrent restores for the same routine.
-	routineName, _, _ := strings.Cut(request.BackupDataPath, "/") // when restore by path routine is first segment
-	if routineName == "" {
-		routineName = request.BackupDataPath // fallback to full path
-	}
-	routineStorageLock := r.routineStorage.Get(routineName)
-	routineStorageLock.RLock()
-	defer routineStorageLock.RUnlock()
-
-	backups, err := r.backupReader.GetBackups(ctx, NewPathFilter(request.BackupDataPath, request.SourceStorage))
-	if err != nil {
-		return fmt.Errorf("failed to read backups: %w", err)
-	}
-
-	if len(backups) > 0 && r.allBackupsEmpty(backups) {
-		// edge case: backups exist but are empty — nothing to restore.
-		// If no backups found, we still attempt restore, as CLI-created files may exist without metadata.
-		r.restoreJobs.finishJob(jobID, nil)
-		logger.Info("Empty backup found, nothing to restore")
-		return nil
-	}
-
-	if err := r.validateBackupsCreatedAtTheSameTime(backups); err != nil {
-		return err
-	}
-
-	handler, err := r.restoreService.Run(ctx, client, request)
-	if err != nil {
-		return fmt.Errorf("failed to start restore operation: %w", err)
-	}
-	logger.Info("Start restoring", slog.Any("backup", backups))
-
-	r.restoreJobs.addTotalRecords(jobID, r.recordsInBackup(backups))
-	r.restoreJobs.addHandler(jobID, handler)
-
-	if err = handler.Wait(ctx); err != nil {
-		return err
-	}
-
-	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
-
-	return nil
-}
-
-func (r *dataRestorer) validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
-	for _, b := range backups {
-		if b.Created != backups[0].Created {
-			return fmt.Errorf("backups from different times were found: %s and %s",
-				b.Created.String(), backups[0].Created.String())
-		}
-	}
-
-	return nil
-}
-
-func (r *dataRestorer) allBackupsEmpty(backups []model.BackupDetails) bool {
-	for _, b := range backups {
-		if b.FileCount > 0 {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (r *dataRestorer) recordsInBackup(backups []model.BackupDetails) uint64 {
-	var records uint64
-	for _, b := range backups {
-		records += b.RecordCount
-	}
-	return records
-}
-
-// validateDestinationNamespace checks if destination cluster contains namespace from restore request (if it is set).
-func (r *dataRestorer) validateDestinationNamespace(
-	ctx context.Context,
-	request *model.RestoreRequest,
-	infoGetter backup.InfoGetter,
-) error {
-	if request.Policy.Namespace != nil {
-		destinationNS := *request.Policy.Namespace.Destination
-		namespaces, err := infoGetter.GetNamespacesList(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get namespaces from destination cluster: %w", err)
-		}
-		if !slices.Contains(namespaces, destinationNS) {
-			return fmt.Errorf("destination cluster does not have required namespace: %s", destinationNS)
-		}
-	}
-
-	return nil
-}
-
-func (r *dataRestorer) RestoreByTime(
+func (r *timeRestoreRunner) RestoreByTime(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
 	ctx, cancel := context.WithCancel(ctx)
@@ -204,7 +56,7 @@ func (r *dataRestorer) RestoreByTime(
 }
 
 // findBackupsToRestore returns list of backups for each namespace, sorted by creation date. First is full backup.
-func (r *dataRestorer) findBackupsToRestore(
+func (r *timeRestoreRunner) findBackupsToRestore(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (map[string][]model.BackupDetails, error) {
 	backups, err := r.backupReader.GetBackups(ctx,
@@ -231,7 +83,7 @@ func (r *dataRestorer) findBackupsToRestore(
 		return nil, fmt.Errorf("could not find incremental backups: %w", err)
 	}
 
-	var backupsByNs = make(map[string][]model.BackupDetails)
+	backupsByNs := make(map[string][]model.BackupDetails)
 	for _, b := range backups {
 		backupsByNs[b.Namespace] = append(backupsByNs[b.Namespace], b)
 	}
@@ -243,7 +95,7 @@ func (r *dataRestorer) findBackupsToRestore(
 	return backupsByNs, nil
 }
 
-func (r *dataRestorer) restoreByTimeSync(
+func (r *timeRestoreRunner) restoreByTimeSync(
 	ctx context.Context,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
@@ -270,6 +122,9 @@ func (r *dataRestorer) restoreByTimeSync(
 			ptr.ValueOrZero(request.DestinationCluster.ClusterLabel), err)
 	}
 	defer r.clientManager.Close(client)
+	if err := validateDestinationNamespace(ctx, request.Policy, client.InfoClient()); err != nil {
+		return err
+	}
 
 	var (
 		wg         sync.WaitGroup
@@ -335,7 +190,7 @@ func validateEncryption(
 	return nil
 }
 
-func (r *dataRestorer) restoreNamespace(
+func (r *timeRestoreRunner) restoreNamespace(
 	ctx context.Context,
 	client aerospike.Restorer,
 	request *model.RestoreTimestampRequest,
@@ -344,9 +199,10 @@ func (r *dataRestorer) restoreNamespace(
 	backups []model.BackupDetails,
 	logger *slog.Logger,
 ) error {
-	effectivePolicy := *request.Policy // make a thread safe copy.
+	// Policy is guaranteed non-nil by request validation in the API layer.
+	effectivePolicy := *request.Policy // make a thread-safe copy.
 
-	// Now restore all backups in order
+	// Restore all backups in order.
 	if !request.DisableReordering {
 		counter, err := client.InfoClient().GetRecordCount(ctx, namespace, effectivePolicy.SetList)
 		if err != nil {
@@ -377,7 +233,7 @@ func (r *dataRestorer) restoreNamespace(
 			continue
 		}
 
-		// for restore by time we can extract compression from metadata
+		// For restore-by-time we can extract compression from metadata.
 		effectivePolicy.CompressionPolicy = &model.CompressionPolicy{
 			Mode: b.Compression,
 		}
@@ -397,24 +253,8 @@ func (r *dataRestorer) restoreNamespace(
 
 	return nil
 }
-func logAttrs(s *models.RestoreStats) []slog.Attr {
-	return []slog.Attr{
-		slog.Int64("RecordsInserted", int64(s.GetRecordsInserted())),
-		slog.Int64("RecordsExpired", int64(s.GetRecordsExpired())),
-		slog.Int64("RecordsSkipped", int64(s.GetRecordsSkipped())),
-		slog.Int64("RecordsIgnored", int64(s.GetRecordsIgnored())),
-		slog.Int64("RecordsFresher", int64(s.GetRecordsFresher())),
-		slog.Int64("RecordsExisted", int64(s.GetRecordsExisted())),
-		slog.Int64("TotalBytesRead", int64(s.TotalBytesRead.Load())),
-		slog.Int64("ErrorsInDoubt", int64(s.GetErrorsInDoubt())),
-		slog.Int64("ReadRecords", int64(s.ReadRecords.Load())),
-		slog.Int("SecondaryIndexes", int(s.GetSIndexes())),
-		slog.Int("UDFs", int(s.GetUDFs())),
-		slog.Int64("BytesWritten", int64(s.BytesWritten.Load())),
-		slog.Duration("Duration", s.GetDuration()),
-	}
-}
-func (r *dataRestorer) restoreFromPath(
+
+func (r *timeRestoreRunner) restoreFromPath(
 	ctx context.Context,
 	client aerospike.Restorer,
 	request *model.RestoreTimestampRequest,
@@ -435,54 +275,4 @@ func (r *dataRestorer) restoreFromPath(
 	}
 
 	return handler, nil
-}
-
-// JobStatus returns the status of the job with the given id.
-func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
-	job, err := r.restoreJobs.getJob(jobID)
-	if err != nil {
-		return nil, err
-	}
-
-	return job.buildStatus(), nil
-}
-
-// CancelRestore cancels an ongoing restore.
-func (r *dataRestorer) CancelRestore(jobID model.RestoreJobID) error {
-	job, err := r.restoreJobs.getJob(jobID)
-	if err != nil {
-		return err
-	}
-
-	job.cancel()
-
-	return nil
-}
-
-// GetFilteredJobs returns all jobs matching the given filters as a map of jobId -> RestoreJobStatus.
-func (r *dataRestorer) GetFilteredJobs(
-	timeBounds model.TimeBounds,
-	statusFilter model.StatusFilter,
-) map[model.RestoreJobID]*model.RestoreJobStatus {
-	results := make(map[model.RestoreJobID]*model.RestoreJobStatus)
-
-	r.restoreJobs.Iterate(func(id model.RestoreJobID, job *restoreJob) {
-		if !timeBounds.Contains(job.started) {
-			return
-		}
-
-		// Build the status first to get a consistent snapshot of the job.
-		// This prevents a race condition where the job's status changes
-		// between filtering and building the result.
-		status := job.buildStatus()
-
-		// Now, filter based on the consistent snapshot.
-		if !statusFilter.Matches(status.Status) {
-			return
-		}
-
-		results[id] = status
-	})
-
-	return results
 }
