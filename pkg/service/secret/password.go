@@ -3,10 +3,10 @@ package secrets
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -39,10 +39,7 @@ func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credenti
 	if creds.PasswordPath != nil {
 		data, err := os.ReadFile(*creds.PasswordPath)
 		if err != nil {
-			slog.Error("Failed to read password",
-				slog.String("path", *creds.PasswordPath),
-				attr.Error(err))
-			return nil, err
+			return nil, fmt.Errorf("failed to read password from password-path %s: %v", *creds.PasswordPath, err)
 		}
 		slog.Debug("Successfully read password", slog.String("path", *creds.PasswordPath))
 
@@ -55,8 +52,7 @@ func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credenti
 	if creds.Password != nil {
 		password, err := r.resolver.Resolve(ctx, creds.SecretAgent, *creds.Password)
 		if err != nil {
-			slog.Warn("Failed to read password from secret agent", attr.Error(err))
-			return nil, err
+			return nil, fmt.Errorf("failed to read password from secret agent: %v", err)
 		}
 
 		return &password, nil
