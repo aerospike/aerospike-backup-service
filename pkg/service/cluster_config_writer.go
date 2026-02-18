@@ -60,7 +60,7 @@ func (w *DefaultClusterConfigWriter) Write(
 
 	infos := cluster.ReadConfiguration(client.AerospikeClient(), logger)
 	if len(infos) == 0 {
-		return errors.New("could not read aerospike configuration")
+		return errors.New("could not read Aerospike configuration")
 	}
 
 	var errs error
