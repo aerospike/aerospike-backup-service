@@ -115,6 +115,10 @@ func (r *pathRestoreRunner) executeRestore(
 }
 
 func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
+	if len(backups) == 0 {
+		return nil
+	}
+
 	for _, b := range backups {
 		if b.Created != backups[0].Created {
 			return fmt.Errorf("backups from different times were found: %s and %s",
