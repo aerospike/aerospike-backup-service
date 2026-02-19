@@ -72,7 +72,7 @@ func makeBackupConfig(
 	config.FileLimit = uint64(backupPolicy.GetFileLimitOrDefault() * megabyte) // lib expects limit in bytes.
 	config.RecordsPerSecond = ptr.ValueOrZero(backupPolicy.RecordsPerSecond)
 	config.Bandwidth = ptr.ValueOrZero(backupPolicy.Bandwidth) * megabyte // lib expects file size in bytes.
-	config.ScanPolicy = scanPolicy(backupPolicy, backupRoutine, timeBounds)
+	config.ScanPolicy = scanPolicy(backupPolicy, backupRoutine)
 	config.RackList = backupRoutine.RackList // backup only these racks
 
 	config.ModBefore = timeBounds.ToTime
@@ -90,7 +90,6 @@ func makeBackupConfig(
 func scanPolicy(
 	backupPolicy *model.BackupPolicy,
 	backupRoutine *model.BackupRoutine,
-	timeBounds model.TimeBounds,
 ) *as.ScanPolicy {
 	scanPolicy := as.NewScanPolicy()
 	if backupPolicy.TotalTimeout != nil {
