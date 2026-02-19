@@ -16,11 +16,12 @@ import (
 )
 
 type timeRestoreRunner struct {
-	restoreJobs    *RestoreJobsHolder
-	restoreService restoreexecutor.Restore
-	backupReader   BackupReader
-	clientManager  aerospike.ClientManager
-	routineStorage *collections.LockMap
+	restoreJobs              *RestoreJobsHolder
+	restoreService           restoreexecutor.Restore
+	backupReader             BackupReader
+	clientManager            aerospike.ClientManager
+	routineStorage           *collections.LockMap
+	restorePermissionChecker RestorePermissionChecker
 }
 
 func newTimeRestoreRunner(
@@ -29,13 +30,15 @@ func newTimeRestoreRunner(
 	backupReader BackupReader,
 	clientManager aerospike.ClientManager,
 	routineStorage *collections.LockMap,
+	restorePermissionChecker RestorePermissionChecker,
 ) *timeRestoreRunner {
 	return &timeRestoreRunner{
-		restoreJobs:    restoreJobs,
-		restoreService: restoreService,
-		backupReader:   backupReader,
-		clientManager:  clientManager,
-		routineStorage: routineStorage,
+		restoreJobs:              restoreJobs,
+		restoreService:           restoreService,
+		backupReader:             backupReader,
+		clientManager:            clientManager,
+		routineStorage:           routineStorage,
+		restorePermissionChecker: restorePermissionChecker,
 	}
 }
 
@@ -116,6 +119,14 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 		return err
 	}
 
+	if err := r.restorePermissionChecker.EnsureAllowedForTimeRestore(
+		request.DestinationCluster,
+		request.Policy.Namespace,
+		backupsByNamespace,
+	); err != nil {
+		return err
+	}
+
 	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster, logger)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
@@ -126,6 +137,17 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 		return err
 	}
 
+	return r.restoreAllNamespaces(ctx, client, request, jobID, logger, backupsByNamespace)
+}
+
+func (r *timeRestoreRunner) restoreAllNamespaces(
+	ctx context.Context,
+	client aerospike.Client,
+	request *model.RestoreTimestampRequest,
+	jobID model.RestoreJobID,
+	logger *slog.Logger,
+	backupsByNamespace map[string][]model.BackupDetails,
+) error {
 	var (
 		wg         sync.WaitGroup
 		multiError error

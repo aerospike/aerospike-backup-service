@@ -13,11 +13,12 @@ import (
 )
 
 type pathRestoreRunner struct {
-	restoreJobs    *RestoreJobsHolder
-	restoreService restoreexecutor.Restore
-	backupReader   BackupReader
-	clientManager  aerospike.ClientManager
-	routineStorage *collections.LockMap
+	restoreJobs              *RestoreJobsHolder
+	restoreService           restoreexecutor.Restore
+	backupReader             BackupReader
+	clientManager            aerospike.ClientManager
+	routineStorage           *collections.LockMap
+	restorePermissionChecker RestorePermissionChecker
 }
 
 func newPathRestoreRunner(
@@ -26,13 +27,15 @@ func newPathRestoreRunner(
 	backupReader BackupReader,
 	clientManager aerospike.ClientManager,
 	routineStorage *collections.LockMap,
+	restorePermissionChecker RestorePermissionChecker,
 ) *pathRestoreRunner {
 	return &pathRestoreRunner{
-		restoreJobs:    restoreJobs,
-		restoreService: restoreService,
-		backupReader:   backupReader,
-		clientManager:  clientManager,
-		routineStorage: routineStorage,
+		restoreJobs:              restoreJobs,
+		restoreService:           restoreService,
+		backupReader:             backupReader,
+		clientManager:            clientManager,
+		routineStorage:           routineStorage,
+		restorePermissionChecker: restorePermissionChecker,
 	}
 }
 
@@ -93,6 +96,14 @@ func (r *pathRestoreRunner) executeRestore(
 	}
 
 	if err := validateBackupsCreatedAtTheSameTime(backups); err != nil {
+		return err
+	}
+
+	if err := r.restorePermissionChecker.EnsureAllowedForPathRestore(
+		request.DestinationCluster,
+		request.Policy.Namespace,
+		backups,
+	); err != nil {
 		return err
 	}
 

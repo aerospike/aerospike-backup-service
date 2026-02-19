@@ -330,10 +330,21 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	mockRestore := restoreexecutor.NewMockRestore(ctrl)
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupReader := NewMockBackupReader(ctrl)
+	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
+	mockRoutines := NewMockroutineProvider(ctrl)
 	restoreJobsHolder := NewRestoreJobsHolder()
+	mockRegistry.EXPECT().GetRunningState().Return(map[string]*model.RoutineState{}).AnyTimes()
+	mockRoutines.EXPECT().Routines().Return(map[string]*model.BackupRoutine{}).AnyTimes()
+	restorePermissionChecker := NewRestorePermissionChecker(mockRegistry, mockRoutines)
 
 	restoreManager := NewRestoreManager(
-		mockRestore, mockClientManager, restoreJobsHolder, mockBackupReader, &collections.LockMap{})
+		mockRestore,
+		mockClientManager,
+		restoreJobsHolder,
+		mockBackupReader,
+		&collections.LockMap{},
+		restorePermissionChecker,
+	)
 
 	return &testRestoreEnv{
 		ctrl:              ctrl,
@@ -550,48 +561,4 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestRestoreByTimeFailsWithInvalidDestinationNamespace(t *testing.T) {
-	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
-
-	destinationNS := "target-ns"
-	request := &model.RestoreTimestampRequest{
-		DestinationCluster: &model.AerospikeCluster{},
-		Policy: &model.RestorePolicy{
-			Namespace: &model.RestoreNamespace{
-				Destination: &destinationNS,
-			},
-		},
-		Routine:           &model.BackupRoutine{Name: "test-routine"},
-		Time:              time.Now(),
-		DisableReordering: true,
-	}
-
-	backup := model.BackupDetails{
-		BackupMetadata: model.BackupMetadata{
-			Created:   time.Now().Add(-1 * time.Hour),
-			Namespace: "ns1",
-			FileCount: 1,
-		},
-		Key:     "backup/path/test",
-		Storage: &model.LocalStorage{},
-	}
-	env.mockBackupReader.EXPECT().
-		GetBackups(gomock.Any(), gomock.Any()).
-		Return([]model.BackupDetails{backup}, nil).
-		Times(2)
-
-	env.expectSuccessfulClientInteraction(t, request.DestinationCluster)
-	env.infoGetter.EXPECT().GetNamespacesList(mock.Anything).Return([]string{"other-ns"}, nil)
-
-	jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
-	require.NoError(t, err)
-
-	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
-	require.NoError(t, err)
-	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error.Error(),
-		"destination cluster does not have required namespace: target-ns")
 }

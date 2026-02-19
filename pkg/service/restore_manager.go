@@ -65,6 +65,7 @@ func NewRestoreManager(
 	restoreJobs *RestoreJobsHolder,
 	backupReader BackupReader,
 	routineStorage *collections.LockMap,
+	restorePermissionChecker RestorePermissionChecker,
 ) RestoreManager {
 	return &RestoreManagerImpl{
 		restoreJobs: restoreJobs,
@@ -74,6 +75,7 @@ func NewRestoreManager(
 			backupReader,
 			clientManager,
 			routineStorage,
+			restorePermissionChecker,
 		),
 		timeRunner: newTimeRestoreRunner(
 			restoreJobs,
@@ -81,6 +83,7 @@ func NewRestoreManager(
 			backupReader,
 			clientManager,
 			routineStorage,
+			restorePermissionChecker,
 		),
 	}
 }
