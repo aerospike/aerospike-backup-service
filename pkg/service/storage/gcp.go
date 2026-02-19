@@ -84,7 +84,7 @@ func (a *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStora
 	opts := make([]option.ClientOption, 0)
 
 	if g.KeyFile != "" {
-		opts = append(opts, option.WithCredentialsFile(g.KeyFile))
+		opts = append(opts, option.WithAuthCredentialsFile(option.ServiceAccount, g.KeyFile))
 	}
 
 	if g.KeyJSON != "" {
@@ -93,7 +93,7 @@ func (a *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStora
 			return nil, fmt.Errorf("failed to read key json from secret agent: %w", err)
 		}
 
-		opts = append(opts, option.WithCredentialsJSON([]byte(key)))
+		opts = append(opts, option.WithAuthCredentialsJSON(option.ServiceAccount, []byte(key)))
 	}
 
 	if g.Endpoint != "" {
