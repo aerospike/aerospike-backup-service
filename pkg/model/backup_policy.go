@@ -137,7 +137,7 @@ func (p *BackupPolicy) GetFileLimitOrDefault() int {
 }
 
 func (p *BackupPolicy) GetSocketTimeoutOrDefault() time.Duration {
-	if p != nil && p.SocketTimeout != nil && *p.SocketTimeout > 0 {
+	if p != nil && p.SocketTimeout != nil {
 		return *p.SocketTimeout
 	}
 
