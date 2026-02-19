@@ -92,3 +92,11 @@ func (p *RestorePolicy) GetBatchSizeOrDefault() int {
 	}
 	return *defaultConfig.restorePolicy.MaxAsyncBatches
 }
+
+func (p *RestorePolicy) GetSocketTimeoutOrDefault() time.Duration {
+	if p != nil && p.SocketTimeout != nil {
+		return *p.SocketTimeout
+	}
+
+	return DefaultSocketTimeout
+}

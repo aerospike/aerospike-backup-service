@@ -125,7 +125,7 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 	if err := r.preflight.ValidateTimeRestore(
 		ctx,
 		request.DestinationCluster,
-		request.Policy,
+		request.Policy.Namespace,
 		client.InfoClient(),
 		backupsByNamespace,
 		request,
@@ -183,7 +183,7 @@ func (r *timeRestoreRunner) restoreNamespace(
 	logger *slog.Logger,
 ) error {
 	// Policy is guaranteed non-nil by request validation in the API layer.
-	effectivePolicy := *request.Policy // make a thread-safe copy.
+	effectivePolicy := request.Policy // make a thread-safe copy.
 
 	// Restore all backups in order.
 	if !request.DisableReordering {
@@ -221,7 +221,7 @@ func (r *timeRestoreRunner) restoreNamespace(
 			Mode: b.Compression,
 		}
 
-		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage, &effectivePolicy)
+		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage, effectivePolicy)
 		if err != nil {
 			return err
 		}
@@ -243,7 +243,7 @@ func (r *timeRestoreRunner) restoreFromPath(
 	request *model.RestoreTimestampRequest,
 	backupPath string,
 	storage model.Storage,
-	policy *model.RestorePolicy,
+	policy model.RestorePolicy,
 ) (restoreexecutor.RestoreHandler, error) {
 	restoreRequest := model.NewRestoreRequest(
 		request.DestinationCluster,

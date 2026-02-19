@@ -94,7 +94,7 @@ func (r *pathRestoreRunner) executeRestore(
 	if err := r.preflight.ValidatePathRestore(
 		ctx,
 		request.DestinationCluster,
-		request.Policy,
+		request.Policy.Namespace,
 		client.InfoClient(),
 		backups,
 	); err != nil {

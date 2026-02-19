@@ -34,7 +34,7 @@ func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	err := preflight.ValidatePathRestore(
 		context.Background(),
 		cluster,
-		&model.RestorePolicy{},
+		nil,
 		nil,
 		[]model.BackupDetails{
 			{BackupMetadata: model.BackupMetadata{Namespace: "ns1"}},
@@ -69,7 +69,7 @@ func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	err := preflight.ValidateTimeRestore(
 		context.Background(),
 		cluster,
-		&model.RestorePolicy{},
+		nil,
 		nil,
 		map[string][]model.BackupDetails{
 			"ns1": {{BackupMetadata: model.BackupMetadata{Namespace: "ns1"}}},

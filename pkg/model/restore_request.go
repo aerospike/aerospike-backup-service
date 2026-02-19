@@ -10,11 +10,16 @@ type RestoreJobID int64
 
 // RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
+	// The details of the Aerospike destination cluster.
 	DestinationCluster *AerospikeCluster
-	Policy             *RestorePolicy
-	SourceStorage      Storage
-	SecretAgent        *SecretAgent
-	BackupDataPath     string // path to the backup data
+	// Restore policy to use in the operation.
+	Policy RestorePolicy
+	// Source storage configuration where backup data is located.
+	SourceStorage Storage
+	// Secret Agent configuration (optional).
+	SecretAgent *SecretAgent
+	// Path to backup data in source storage.
+	BackupDataPath string
 }
 
 // RestoreTimestampRequest represents a restore by timestamp operation request.
@@ -22,7 +27,7 @@ type RestoreTimestampRequest struct {
 	// The details of the Aerospike destination cluster.
 	DestinationCluster *AerospikeCluster
 	// Restore policy to use in the operation.
-	Policy *RestorePolicy
+	Policy RestorePolicy
 	// Secret Agent configuration (optional).
 	SecretAgent *SecretAgent
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
@@ -54,7 +59,7 @@ func (r RestoreTimestampRequest) String() string {
 // NewRestoreRequest creates a new RestoreRequest.
 func NewRestoreRequest(
 	destinationCluster *AerospikeCluster,
-	policy *RestorePolicy,
+	policy RestorePolicy,
 	sourceStorage Storage,
 	secretAgent *SecretAgent,
 	backupDataPath string,

@@ -23,7 +23,7 @@ type RestorePreflight interface {
 	ValidatePathRestore(
 		ctx context.Context,
 		cluster *model.AerospikeCluster,
-		policy *model.RestorePolicy,
+		remapping *model.RestoreNamespace,
 		infoGetter backup.InfoGetter,
 		backups []model.BackupDetails,
 	) error
@@ -31,7 +31,7 @@ type RestorePreflight interface {
 	ValidateTimeRestore(
 		ctx context.Context,
 		cluster *model.AerospikeCluster,
-		policy *model.RestorePolicy,
+		remapping *model.RestoreNamespace,
 		infoGetter backup.InfoGetter,
 		backupsByNamespace map[string][]model.BackupDetails,
 		request *model.RestoreTimestampRequest,
@@ -58,18 +58,14 @@ func NewRestorePreflight(
 func (r *restorePreflight) ValidatePathRestore(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
-	policy *model.RestorePolicy,
+	remapping *model.RestoreNamespace,
 	infoGetter backup.InfoGetter,
 	backups []model.BackupDetails,
 ) error {
-	var remapping *model.RestoreNamespace
-	if policy != nil {
-		remapping = policy.Namespace
-	}
 	if err := validateBackupsCreatedAtTheSameTime(backups); err != nil {
 		return err
 	}
-	if err := validateDestinationNamespace(ctx, policy, infoGetter); err != nil {
+	if err := validateDestinationNamespace(ctx, remapping, infoGetter); err != nil {
 		return err
 	}
 
@@ -80,19 +76,15 @@ func (r *restorePreflight) ValidatePathRestore(
 func (r *restorePreflight) ValidateTimeRestore(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
-	policy *model.RestorePolicy,
+	remapping *model.RestoreNamespace,
 	infoGetter backup.InfoGetter,
 	backupsByNamespace map[string][]model.BackupDetails,
 	request *model.RestoreTimestampRequest,
 ) error {
-	var remapping *model.RestoreNamespace
-	if policy != nil {
-		remapping = policy.Namespace
-	}
 	if err := validateEncryption(backupsByNamespace, request); err != nil {
 		return err
 	}
-	if err := validateDestinationNamespace(ctx, policy, infoGetter); err != nil {
+	if err := validateDestinationNamespace(ctx, remapping, infoGetter); err != nil {
 		return err
 	}
 
@@ -162,17 +154,17 @@ func (r *restorePreflight) ensureAllowed(
 // validateDestinationNamespace checks destination namespace existence in destination cluster.
 func validateDestinationNamespace(
 	ctx context.Context,
-	policy *model.RestorePolicy,
+	remapping *model.RestoreNamespace,
 	infoGetter backup.InfoGetter,
 ) error {
-	if policy == nil {
+	if remapping == nil {
 		return nil
 	}
-	if policy.Namespace == nil {
+	if remapping.Destination == nil {
 		return nil
 	}
 
-	destinationNS := *policy.Namespace.Destination
+	destinationNS := *remapping.Destination
 	namespaces, err := infoGetter.GetNamespacesList(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get namespaces from destination cluster: %w", err)
@@ -210,7 +202,7 @@ func validateEncryption(
 			if backup.Encryption == "" || backup.Encryption == model.EncryptNone {
 				continue
 			}
-			if request.Policy == nil || request.Policy.EncryptionPolicy == nil {
+			if request.Policy.EncryptionPolicy == nil {
 				return fmt.Errorf("backup is encrypted with mode '%s', "+
 					"but no encryption policy was provided in the restore request", backup.Encryption)
 			}

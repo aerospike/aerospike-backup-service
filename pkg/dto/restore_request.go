@@ -129,7 +129,7 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 
 	return &model.RestoreTimestampRequest{
 		DestinationCluster: cluster,
-		Policy:             r.Policy.ToModel(),
+		Policy:             *r.Policy.ToModel(),
 		SecretAgent:        secretAgent,
 		Time:               time.UnixMilli(r.Time),
 		Routine:            routine.Copy(), // restore will work on it's own copy.
@@ -155,7 +155,7 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 
 	return &model.RestoreRequest{
 		DestinationCluster: cluster,
-		Policy:             r.Policy.ToModel(),
+		Policy:             *r.Policy.ToModel(),
 		SourceStorage:      storage,
 		SecretAgent:        secretAgent,
 		BackupDataPath:     r.BackupDataPath,

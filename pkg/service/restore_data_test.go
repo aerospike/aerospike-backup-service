@@ -25,7 +25,7 @@ func TestRestoreOK(t *testing.T) {
 	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
-	policy := &model.RestorePolicy{}
+	policy := model.RestorePolicy{}
 	storage := &model.LocalStorage{Path: "/backup/path"}
 	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
 
@@ -64,7 +64,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
-	policy := &model.RestorePolicy{}
+	policy := model.RestorePolicy{}
 	storage := &model.LocalStorage{}
 	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
 
@@ -124,7 +124,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 
 	cluster := &model.AerospikeCluster{}
 	storage := &model.LocalStorage{Path: "/backup/path"}
-	request := model.NewRestoreRequest(cluster, nil, storage, nil, "/backup/path/data")
+	request := model.NewRestoreRequest(cluster, model.RestorePolicy{}, storage, nil, "/backup/path/data")
 
 	clientErr := errors.New("connection error")
 	env.mockClientManager.EXPECT().
@@ -149,7 +149,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 
 	cluster := &model.AerospikeCluster{}
 	destinationNS := "test-ns"
-	policy := &model.RestorePolicy{
+	policy := model.RestorePolicy{
 		Namespace: &model.RestoreNamespace{
 			Destination: &destinationNS,
 		},
@@ -184,7 +184,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
-	policy := &model.RestorePolicy{}
+	policy := model.RestorePolicy{}
 	storage := &model.LocalStorage{Path: "/backup/path"}
 	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
 
@@ -214,7 +214,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
-	policy := &model.RestorePolicy{}
+	policy := model.RestorePolicy{}
 	storage := &model.LocalStorage{Path: "/backup/path"}
 	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
 
@@ -247,7 +247,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 
 	cluster := &model.AerospikeCluster{}
 	storage := &model.LocalStorage{}
-	policy := &model.RestorePolicy{}
+	policy := model.RestorePolicy{}
 	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
 
 	client := env.expectSuccessfulClientInteraction(t, cluster)
@@ -413,7 +413,7 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	routine := &model.BackupRoutine{Name: "test-routine"}
 	request := &model.RestoreTimestampRequest{
 		DestinationCluster: &model.AerospikeCluster{},
-		Policy:             &model.RestorePolicy{},
+		Policy:             model.RestorePolicy{},
 		Routine:            routine,
 		Time:               requestTime,
 		DisableReordering:  true,
@@ -468,26 +468,26 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 	tests := []struct {
 		name              string
-		policy            *model.RestorePolicy
+		policy            model.RestorePolicy
 		backupEncryption  string
 		backupCompression string
 		shouldSucceed     bool
 	}{
 		{
 			name:              "sets compression policy from backup",
-			policy:            &model.RestorePolicy{},
+			policy:            model.RestorePolicy{},
 			backupCompression: "ZSTD",
 			shouldSucceed:     true,
 		},
 		{
 			name:             "fails when encrypted backup has no policy",
-			policy:           nil,
+			policy:           model.RestorePolicy{},
 			backupEncryption: "AES128",
 			shouldSucceed:    false,
 		},
 		{
 			name: "fails when encryption mode mismatches",
-			policy: &model.RestorePolicy{
+			policy: model.RestorePolicy{
 				EncryptionPolicy: &model.EncryptionPolicy{Mode: "AES256"},
 			},
 			backupEncryption: "AES128",
@@ -495,7 +495,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 		},
 		{
 			name: "fails when encryption key is missing",
-			policy: &model.RestorePolicy{
+			policy: model.RestorePolicy{
 				EncryptionPolicy: &model.EncryptionPolicy{Mode: "AES128"},
 			},
 			backupEncryption: "AES128",
@@ -503,7 +503,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 		},
 		{
 			name: "succeeds with valid encryption policy",
-			policy: &model.RestorePolicy{
+			policy: model.RestorePolicy{
 				EncryptionPolicy: &model.EncryptionPolicy{
 					Mode:   "AES128",
 					KeyEnv: ptr.Of("AES_KEY"),
