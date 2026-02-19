@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/reugn/go-quartz/job"
+	"github.com/reugn/go-quartz/quartz"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -95,6 +98,69 @@ func TestService_GetAllFullBackups(t *testing.T) {
 }
 
 func TestService_ScheduleFullBackup(t *testing.T) {
+	testScheduleBackupValidation(
+		t,
+		"/v1/backups/schedule/",
+		func(svc *Service, w http.ResponseWriter, req *http.Request) {
+			svc.ScheduleFullBackup(w, req)
+		},
+	)
+}
+
+func TestService_TriggerFullBackup(t *testing.T) {
+	testScheduleBackupValidation(
+		t,
+		"/v1/backups/full/",
+		func(svc *Service, w http.ResponseWriter, req *http.Request) {
+			svc.TriggerFullBackup(w, req)
+		},
+	)
+}
+
+func TestService_TriggerIncrementalBackup(t *testing.T) {
+	testScheduleBackupValidation(
+		t,
+		"/v1/backups/incremental/",
+		func(svc *Service, w http.ResponseWriter, req *http.Request) {
+			svc.TriggerIncrementalBackup(w, req)
+		},
+	)
+}
+
+func TestService_ScheduleBackupHappyPath(t *testing.T) {
+	mockScheduler := &MockScheduler{}
+	mockScheduler.
+		On("ScheduleJob", mock.AnythingOfType("*quartz.JobDetail"), mock.Anything).
+		Return(nil).
+		Once()
+
+	svc := &Service{
+		scheduler: mockScheduler,
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/backups/incremental/test-routine?delay=1000", nil)
+	req.SetPathValue("name", "test-routine")
+	w := httptest.NewRecorder()
+
+	svc.scheduleBackup(w, req, func(routineName string) *quartz.JobDetail {
+		assert.Equal(t, "test-routine", routineName)
+		return quartz.NewJobDetail(
+			job.NewFunctionJob(func(context.Context) (struct{}, error) { return struct{}{}, nil }),
+			quartz.NewJobKeyWithGroup("test-routine-adhoc", "ad-hoc"),
+		)
+	})
+
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	mockScheduler.AssertExpectations(t)
+}
+
+func testScheduleBackupValidation(
+	t *testing.T,
+	pathPrefix string,
+	handler func(*Service, http.ResponseWriter, *http.Request),
+) {
+	t.Helper()
+
 	tests := []struct {
 		name           string
 		routineName    string
@@ -131,7 +197,7 @@ func TestService_ScheduleFullBackup(t *testing.T) {
 				scheduler: mockScheduler,
 			}
 
-			req := httptest.NewRequest(http.MethodPost, "/v1/backups/schedule/"+tt.routineName, nil)
+			req := httptest.NewRequest(http.MethodPost, pathPrefix+tt.routineName, nil)
 			if tt.delayParam != "" {
 				q := req.URL.Query()
 				q.Add("delay", tt.delayParam)
@@ -140,7 +206,7 @@ func TestService_ScheduleFullBackup(t *testing.T) {
 			req.SetPathValue("name", tt.routineName)
 
 			w := httptest.NewRecorder()
-			svc.ScheduleFullBackup(w, req)
+			handler(svc, w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			mockScheduler.AssertExpectations(t)

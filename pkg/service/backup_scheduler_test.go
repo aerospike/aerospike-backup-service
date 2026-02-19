@@ -36,7 +36,7 @@ func TestScheduleRoutines(t *testing.T) {
 				},
 			},
 			expectedCalls:     2, // One for full backup, one for incremental
-			expectedJobsAdded: 1, // Only full backup job added
+			expectedJobsAdded: 2, // Full and incremental jobs added
 		},
 		{
 			name: "skip disabled routine",
@@ -60,7 +60,7 @@ func TestScheduleRoutines(t *testing.T) {
 				},
 			},
 			expectedCalls:     1, // One call for full backup only
-			expectedJobsAdded: 1, // Only full backup job added
+			expectedJobsAdded: 2, // Full job plus ad-hoc incremental job added
 		},
 	}
 

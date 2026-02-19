@@ -55,6 +55,19 @@ func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
 	return quartz.NewJobDetail(job.Job(), jobKey)
 }
 
+// NewAdHocIncrementalBackupJobForRoutine returns a new incremental backup job for the routine name.
+func NewAdHocIncrementalBackupJobForRoutine(routineName string) *quartz.JobDetail {
+	key := jobKey(routineName, jobTypeIncremental).String()
+	job, found := jobStore.Load(key)
+	if !found {
+		return nil
+	}
+
+	jobKey := adhocKey(routineName)
+
+	return quartz.NewJobDetail(job.Job(), jobKey)
+}
+
 // NewScheduler creates a new quartz.Scheduler.
 func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler, error) {
 	scheduler, err := quartz.NewStdScheduler(
@@ -88,9 +101,12 @@ func scheduleRoutines(
 		newJobs[job.JobKey().String()] = job
 
 		// schedule an incremental backup job for the routine
-		if err = scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routineName); err != nil {
+		incrementalJob, err := scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routineName)
+		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
+			continue
 		}
+		newJobs[incrementalJob.JobKey().String()] = incrementalJob
 	}
 
 	jobStore.ReplaceContent(newJobs)
@@ -107,13 +123,13 @@ func scheduleFullBackup(
 
 func scheduleIncrementalBackup(
 	scheduler Scheduler, runner backupRunner, interval string, routineName string,
-) error {
+) (*quartz.JobDetail, error) {
+	job := createJobDetail(runner, routineName, jobTypeIncremental)
 	if len(interval) == 0 { // no need to schedule if there is no interval set
-		return nil
+		return job, nil
 	}
 
-	job := createJobDetail(runner, routineName, jobTypeIncremental)
-	return schedule(scheduler, interval, job)
+	return job, schedule(scheduler, interval, job)
 }
 
 func createJobDetail(runner backupRunner, routineName string, jobType jobType) *quartz.JobDetail {
