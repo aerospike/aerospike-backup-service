@@ -136,6 +136,14 @@ func (p *BackupPolicy) GetFileLimitOrDefault() int {
 	return *defaultConfig.backupPolicy.FileLimit
 }
 
+func (p *BackupPolicy) GetSocketTimeoutOrDefault() time.Duration {
+	if p != nil && p.SocketTimeout != nil && *p.SocketTimeout > 0 {
+		return *p.SocketTimeout
+	}
+
+	return DefaultSocketTimeout
+}
+
 // RetentionPolicy defines the rules for automatically removing old full and incremental backups.
 // This policy is applied by the Retention Manager after each successful full backup.
 type RetentionPolicy struct {

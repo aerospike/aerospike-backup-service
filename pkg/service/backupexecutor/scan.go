@@ -3,15 +3,12 @@ package backupexecutor
 import (
 	"context"
 	"fmt"
-	"math"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
-	"github.com/reugn/go-quartz/quartz"
 )
 
 // runScanBackup performs a regular scan-based backup.
@@ -100,7 +97,7 @@ func scanPolicy(
 		scanPolicy.TotalTimeout = *backupPolicy.TotalTimeout
 	}
 
-	scanPolicy.SocketTimeout = calculateSocketTimeout(backupRoutine, isFullBackup(timeBounds), time.Now())
+	scanPolicy.SocketTimeout = backupPolicy.GetSocketTimeoutOrDefault()
 	scanPolicy.UseCompression = backupPolicy.UseCompressionOrDefault()
 	scanPolicy.MaxConcurrentNodes = ptr.ValueOrZero(backupPolicy.MaxConcurrentNodes)
 
@@ -117,39 +114,6 @@ func scanPolicy(
 	}
 
 	return scanPolicy
-}
-
-// calculateSocketTimeout calculates socket timeout for the given backup routine and timestamp.
-// timeout should not exceed the next interval trigger.
-func calculateSocketTimeout(routine *model.BackupRoutine, isFullBackup bool, now time.Time) time.Duration {
-	var timeout = model.DefaultSocketTimeout
-	if routine.BackupPolicy.SocketTimeout != nil && *routine.BackupPolicy.SocketTimeout != 0 {
-		timeout = *routine.BackupPolicy.SocketTimeout
-	}
-
-	// If timeout is 0, treat as infinite
-	if timeout == 0 {
-		timeout = time.Duration(math.MaxInt64)
-	}
-
-	nextTrigger := timeToNextTrigger(routine, isFullBackup, now)
-
-	return min(timeout, nextTrigger, model.DefaultSocketTimeout)
-}
-
-func timeToNextTrigger(routine *model.BackupRoutine, isFullBackup bool, now time.Time) time.Duration {
-	var cron string
-	if isFullBackup {
-		cron = routine.IntervalCron
-	} else {
-		cron = routine.IncrIntervalCron
-	}
-
-	cronTrigger, _ := quartz.NewCronTrigger(cron)
-	fireTime, _ := cronTrigger.NextFireTime(now.UnixNano())
-	delta := time.Unix(0, fireTime).Sub(now)
-
-	return delta
 }
 
 func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy {
