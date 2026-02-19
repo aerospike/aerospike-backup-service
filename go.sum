@@ -50,8 +50,8 @@ github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/aerospike/aerospike-client-go/v8 v8.6.0 h1:EFSn94Mu1Et/hTIOIE4wsUgoaY7JGOdKj0zWKugu/GU=
 github.com/aerospike/aerospike-client-go/v8 v8.6.0/go.mod h1:nT+zujQ8DC8fjRY+naK4oa3IYF8QyELW3HjNYO0zYX0=
-github.com/aerospike/aerospike-management-lib v1.9.0 h1:Xe9cLkYyT1natIGDC14aDfUR7xCm1X9f85ic++BOAfE=
-github.com/aerospike/aerospike-management-lib v1.9.0/go.mod h1:6sZCPf1pUV1AfSINw1XJBSJ8Hkm9janMlS9EQKk6hP0=
+github.com/aerospike/aerospike-management-lib v1.10.0 h1:FEjLL1KnYQD0/EIMKtAl3x86mQG8mXtrQDAQi84L1fQ=
+github.com/aerospike/aerospike-management-lib v1.10.0/go.mod h1:vp1gxtJikA1Q2Sjo82SsoYoRzQiz6MipQDNQSg34f+s=
 github.com/aerospike/backup-go v0.9.1-0.20260216071153-e5440f5d83a5 h1:7zXf+5vlNo/O1tBP5cG1xMv71H4DjICE05d5rTGCbK4=
 github.com/aerospike/backup-go v0.9.1-0.20260216071153-e5440f5d83a5/go.mod h1:4p2uac3YTnw97y/GX7PxxlBKgQJhbMZ5arhFu6agJ9g=
 github.com/aws/aws-sdk-go-v2 v1.41.1 h1:ABlyEARCDLN034NhxlRUSZr4l71mh+T5KAeGh6cerhU=
