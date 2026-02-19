@@ -67,7 +67,7 @@ func InitComponents(
 	}
 
 	restoreJobs := service.NewRestoreJobsHolder()
-	permissionChecker := service.NewRestorePermissionChecker(registry, config)
+	restorePreflight := service.NewRestorePreflight(registry, config)
 
 	restoreMgr := service.NewRestoreManager(
 		restoreexecutor.NewRestore(operations),
@@ -75,7 +75,7 @@ func InitComponents(
 		restoreJobs,
 		backendService,
 		&routineStorage,
-		permissionChecker,
+		restorePreflight,
 	)
 
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)

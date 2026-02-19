@@ -158,7 +158,12 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
 
 	env.expectSuccessfulClientInteraction(t, cluster)
-
+	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
+		[]model.BackupDetails{
+			{BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "source-ns", FileCount: 1}},
+		},
+		nil,
+	)
 	env.infoGetter.EXPECT().GetNamespacesList(mock.Anything).Return([]string{"other NS"}, nil)
 
 	// Execute the restore
@@ -335,7 +340,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	restoreJobsHolder := NewRestoreJobsHolder()
 	mockRegistry.EXPECT().GetRunningState().Return(map[string]*model.RoutineState{}).AnyTimes()
 	mockRoutines.EXPECT().Routines().Return(map[string]*model.BackupRoutine{}).AnyTimes()
-	restorePermissionChecker := NewRestorePermissionChecker(mockRegistry, mockRoutines)
+	restorePreflight := NewRestorePreflight(mockRegistry, mockRoutines)
 
 	restoreManager := NewRestoreManager(
 		mockRestore,
@@ -343,7 +348,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 		restoreJobsHolder,
 		mockBackupReader,
 		&collections.LockMap{},
-		restorePermissionChecker,
+		restorePreflight,
 	)
 
 	return &testRestoreEnv{
@@ -539,8 +544,8 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 				Return([]model.BackupDetails{backup}, nil).
 				Times(2)
 
+			client := env.expectSuccessfulClientInteraction(t, request.DestinationCluster)
 			if tt.shouldSucceed {
-				client := env.expectSuccessfulClientInteraction(t, request.DestinationCluster)
 				// Restore runs executor once per backup in chain (full + incremental = 2).
 				env.mockRestore.EXPECT().
 					Run(gomock.Any(), client, gomock.Any()).

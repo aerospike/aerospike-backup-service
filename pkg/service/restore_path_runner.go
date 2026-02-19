@@ -13,12 +13,12 @@ import (
 )
 
 type pathRestoreRunner struct {
-	restoreJobs              *RestoreJobsHolder
-	restoreService           restoreexecutor.Restore
-	backupReader             BackupReader
-	clientManager            aerospike.ClientManager
-	routineStorage           *collections.LockMap
-	restorePermissionChecker RestorePermissionChecker
+	restoreJobs    *RestoreJobsHolder
+	restoreService restoreexecutor.Restore
+	backupReader   BackupReader
+	clientManager  aerospike.ClientManager
+	routineStorage *collections.LockMap
+	preflight      RestorePreflight
 }
 
 func newPathRestoreRunner(
@@ -27,15 +27,15 @@ func newPathRestoreRunner(
 	backupReader BackupReader,
 	clientManager aerospike.ClientManager,
 	routineStorage *collections.LockMap,
-	restorePermissionChecker RestorePermissionChecker,
+	preflight RestorePreflight,
 ) *pathRestoreRunner {
 	return &pathRestoreRunner{
-		restoreJobs:              restoreJobs,
-		restoreService:           restoreService,
-		backupReader:             backupReader,
-		clientManager:            clientManager,
-		routineStorage:           routineStorage,
-		restorePermissionChecker: restorePermissionChecker,
+		restoreJobs:    restoreJobs,
+		restoreService: restoreService,
+		backupReader:   backupReader,
+		clientManager:  clientManager,
+		routineStorage: routineStorage,
+		preflight:      preflight,
 	}
 }
 
@@ -69,10 +69,6 @@ func (r *pathRestoreRunner) executeRestore(
 	}
 	defer r.clientManager.Close(client)
 
-	if err := validateDestinationNamespace(ctx, request.Policy, client.InfoClient()); err != nil {
-		return err
-	}
-
 	// Lock the routine storage from retention manager for the duration of restore.
 	// Restore holds RLock to allow concurrent restores for the same routine.
 	routineName, _, _ := strings.Cut(request.BackupDataPath, "/") // when restore by path routine is first segment
@@ -95,13 +91,11 @@ func (r *pathRestoreRunner) executeRestore(
 		return nil
 	}
 
-	if err := validateBackupsCreatedAtTheSameTime(backups); err != nil {
-		return err
-	}
-
-	if err := r.restorePermissionChecker.EnsureAllowedForPathRestore(
+	if err := r.preflight.ValidatePathRestore(
+		ctx,
 		request.DestinationCluster,
-		request.Policy.Namespace,
+		request.Policy,
+		client.InfoClient(),
 		backups,
 	); err != nil {
 		return err
@@ -121,21 +115,6 @@ func (r *pathRestoreRunner) executeRestore(
 	}
 
 	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
-
-	return nil
-}
-
-func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
-	if len(backups) == 0 {
-		return nil
-	}
-
-	for _, b := range backups {
-		if b.Created != backups[0].Created {
-			return fmt.Errorf("backups from different times were found: %s and %s",
-				b.Created.String(), backups[0].Created.String())
-		}
-	}
 
 	return nil
 }
