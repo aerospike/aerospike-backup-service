@@ -112,9 +112,6 @@ func (r *restorePreflight) checkRunningBackupsConflict(
 	cluster *model.AerospikeCluster,
 	destinationNamespaces []string,
 ) error {
-	if cluster == nil {
-		return nil
-	}
 	// Fetch all configured backup routines to check their cluster and namespace scope.
 	routines := r.routines.Routines()
 
