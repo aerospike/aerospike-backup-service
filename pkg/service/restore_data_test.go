@@ -292,7 +292,8 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 		nil,
 	)
 
-	env.restorePreflight.EXPECT().ValidatePathRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	env.restorePreflight.EXPECT().
+		ValidatePathRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	var runStarted sync.WaitGroup
 	runStarted.Add(1)
@@ -491,7 +492,8 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 		Storage: &model.LocalStorage{},
 	}
 
-	env.restorePreflight.EXPECT().ValidateTimeRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	env.restorePreflight.EXPECT().
+		ValidateTimeRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	gomock.InOrder(
 		env.mockBackupReader.EXPECT().
