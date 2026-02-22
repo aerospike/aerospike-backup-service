@@ -106,3 +106,15 @@ target aerospike-backup-service {
   tags = tags("aerospike-backup-service")
   output = norm("${OUTPUT}")
 }
+
+variable PREBUILT_BINARY_DIR {
+  default = "./build/target"
+}
+
+target "aerospike-backup-service-prebuilt" {
+  inherits   = ["aerospike-backup-service"]
+  target     = "runtime-prebuilt"
+  args       = { REGISTRY = "${REGISTRY}" }
+  secret     = []
+  contexts   = { prebuilt = "${PREBUILT_BINARY_DIR}" }
+}

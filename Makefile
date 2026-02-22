@@ -97,6 +97,30 @@ packages: buildx
 	   done; \
 	done
 
+.PHONY: package-only
+package-only:
+	@for arch in $(ARCHS); do \
+	   OS=$$(echo $$arch | cut -d/ -f1); \
+	   ARCH=$$(echo $$arch | cut -d/ -f2); \
+	   OS=$$OS ARCH=$$ARCH \
+	   NAME=$(BINARY_NAME) \
+	   VERSION=$(VERSION) \
+	   WORKSPACE=$(WORKSPACE) \
+	   MAINTAINER=$(MAINTAINER) \
+	   DESCRIPTION=$(DESCRIPTION) \
+	   HOMEPAGE=$(HOMEPAGE) \
+	   VENDOR=$(VENDOR) \
+	   LICENSE=$(LICENSE) \
+	   envsubst '$$OS $$ARCH $$NAME $$VERSION $$WORKSPACE $$MAINTAINER $$DESCRIPTION $$HOMEPAGE $$VENDOR $$LICENSE' \
+	   < $(PACKAGE_DIR)/nfpm.tmpl.yaml > $(PACKAGE_DIR)/nfpm-$$OS-$$ARCH.yaml; \
+	   for packager in $(PACKAGERS); do \
+	      $(NFPM) package \
+	      --config $(PACKAGE_DIR)/nfpm-$$OS-$$ARCH.yaml \
+	      --packager $$packager \
+	      --target $(TARGET_DIR); \
+	   done; \
+	done
+
 .PHONY: checksums
 checksums:
 	@find . -type f \

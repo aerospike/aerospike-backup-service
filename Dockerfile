@@ -54,3 +54,38 @@ USER absuser
 EXPOSE 8080
 ENTRYPOINT ["aerospike-backup-service"]
 CMD ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml"]
+
+# Accept pre-built binaries via external build context named "prebuilt"
+FROM scratch AS prebuilt
+
+FROM --platform=$BUILDPLATFORM ${REGISTRY}/alpine:latest AS verify-prebuilt
+ARG TARGETARCH
+COPY --from=xx / /
+COPY --from=prebuilt /aerospike-backup-service_linux_${TARGETARCH} \
+    /verify/aerospike-backup-service
+RUN xx-verify /verify/aerospike-backup-service
+
+FROM ${REGISTRY}/alpine:latest AS runtime-prebuilt
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN apk update && \
+    apk upgrade --no-cache
+
+RUN apk add --no-cache shadow && \
+    addgroup -g 65532 -S abgroup && \
+    adduser -S -u 65532 -G abgroup -h /home/absuser absuser
+
+COPY --chown=absuser:absgroup --chmod=0755 \
+    --from=verify-prebuilt /verify/aerospike-backup-service \
+    /usr/bin/aerospike-backup-service
+
+COPY --chown=absuser:absgroup \
+    build/package/config/aerospike-backup-service.yml \
+    /etc/aerospike-backup-service/aerospike-backup-service.yml
+
+USER absuser
+
+EXPOSE 8080
+ENTRYPOINT ["aerospike-backup-service"]
+CMD ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml"]

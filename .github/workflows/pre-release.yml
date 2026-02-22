@@ -54,11 +54,57 @@ jobs:
           draft: true
           prerelease: true
 
+  build-binary:
+    needs:
+      - create-release
+    runs-on: ubuntu-22.04
+    outputs:
+      go_version: ${{ steps.metadata.outputs.GO_VERSION }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+          ref: ${{ github.ref }}
+          submodules: recursive
+
+      - name: Resolve Go version
+        id: metadata
+        run: |
+          GO_MINOR=$(awk '/^go /{print $2}' go.mod | cut -d. -f1-2)
+          GO_VERSION=$(curl -s 'https://go.dev/dl/?mode=json&include=all' | \
+            jq -r --arg ver "go${GO_MINOR}" \
+            '.[] | select(.version | startswith($ver)) | .version' | \
+            sort -V | tail -n1 | cut -c3- | tr -d '\n')
+          echo "GO_VERSION=$GO_VERSION" >> $GITHUB_OUTPUT
+          echo "GO_VERSION=$GO_VERSION" >> $GITHUB_ENV
+
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: ${{ steps.metadata.outputs.GO_VERSION }}
+
+      - name: Build binaries (linux/amd64 and linux/arm64)
+        run: make buildx
+
+      - name: Upload binaries artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: binaries
+          path: build/target/
+          retention-days: 1
+
   build-packages:
     permissions:
       contents: write
     needs:
       - create-release
+      - build-binary
     runs-on: ubuntu-22.04
     outputs:
       package_version: ${{ steps.metadata.outputs.PACKAGE_VERSION }}
@@ -74,17 +120,21 @@ jobs:
           fetch-depth: 1
           ref: ${{ github.ref }}
 
-      - name: Set up Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
-        with:
-          go-version: '1.24.x'
-
       - name: setup GPG
         uses: aerospike/shared-workflows/.github/actions/setup-gpg@dda8173aca1f1e73f95267572a7d3849cd00f1b8 # v1.0.0
         with:
           gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
           gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
           gpg-key-pass: ${{ secrets.GPG_PASS }}
+
+      - name: Download binaries artifact
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89 # v4.2.1
+        with:
+          name: binaries
+          path: build/target/
+
+      - name: Make binaries executable
+        run: chmod +x build/target/*
 
       - name: Install Dependencies
         run: |
@@ -153,7 +203,7 @@ jobs:
             exit 1
           fi
           
-          make packages
+          make package-only
           BUILD_RESULT=$?
           
           if [ $BUILD_RESULT -eq 0 ]; then
@@ -449,6 +499,7 @@ jobs:
   build-docker-image:
     needs:
       - create-release
+      - build-binary
     runs-on: ubuntu-24.04
     outputs:
       image_version: ${{ steps.metadata.outputs.IMAGE_VERSION }}
@@ -465,6 +516,15 @@ jobs:
         with:
           fetch-depth: 1
           ref: ${{ github.ref }}
+
+      - name: Download binaries artifact
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89 # v4.2.1
+        with:
+          name: binaries
+          path: build/target/
+
+      - name: Make binaries executable
+        run: chmod +x build/target/*
 
       - name: Get Metadata
         id: metadata
@@ -539,7 +599,6 @@ jobs:
           VERSION: ${{env.VERSION}}
           ISO8601: ${{env.ISO8601}}
           IMAGE_NAME: ${{env.IMAGE_NAME}}
-          GO_VERSION: ${{env.GO_VERSION}}
           OUTPUT: "type=image,push=true type=oci,dest=./abs-image.tar"
           REPO: ${{ vars.ARTIFACTORY_REGISTRY_URL }}/${{ vars.ARTIFACTORY_CONTAINER_DEV }}
           ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
@@ -555,6 +614,7 @@ jobs:
           echo "Building Docker image with buildx bake."
           jfrog docker buildx bake \
             --file ${{ github.workspace }}/build/docker-build/docker-bake.hcl \
+            aerospike-backup-service-prebuilt \
             --metadata-file=build-metadata \
             --progress plain \
             --no-cache \
