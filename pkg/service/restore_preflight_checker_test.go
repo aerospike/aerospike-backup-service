@@ -55,7 +55,7 @@ func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	)
 
 	require.Error(t, err)
-	assert.EqualError(t, err, restoreNotAllowedDuringBackupsMsg)
+	assert.Contains(t, err.Error(), "restore not allowed during backups on cluster cluster-a, namespace \"ns1\"")
 }
 
 func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) {
@@ -94,5 +94,5 @@ func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	)
 
 	require.Error(t, err)
-	assert.EqualError(t, err, restoreNotAllowedDuringBackupsMsg)
+	assert.Contains(t, err.Error(), "restore not allowed during backups on cluster cluster-a, namespace \"ns1\"")
 }

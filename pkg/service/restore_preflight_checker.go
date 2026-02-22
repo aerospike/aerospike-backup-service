@@ -146,8 +146,9 @@ func (r *restorePreflight) ensureAllowed(
 			continue
 		}
 
-		if namespacesOverlap(destinationNamespaces, routine.Namespaces) {
-			return ErrRestoreNotAllowedDuringBackups
+		if overlappingNS := namespacesOverlap(destinationNamespaces, routine.Namespaces); overlappingNS != "" {
+			return fmt.Errorf("restore not allowed during backups on cluster %s, namespace %q. "+
+				"Please cancel existing backups jobs to perform restore", cluster.ToString(), overlappingNS)
 		}
 	}
 
@@ -243,22 +244,26 @@ func sourceNamespacesFromBackupsByNamespace(backupsByNamespace map[string][]mode
 }
 
 // namespacesOverlap reports whether restore and backup namespace scopes intersect.
-func namespacesOverlap(restoreNamespaces []string, backupNamespaces []string) bool {
-	// Empty restore namespace set means "unknown/all namespaces".
-	restoreNamespaces = slices.DeleteFunc(slices.Clone(restoreNamespaces), func(namespace string) bool {
-		return namespace == ""
-	})
+// It returns the first overlapping namespace found, or an empty string if none.
+func namespacesOverlap(restoreNamespaces []string, backupNamespaces []string) string {
 	if len(restoreNamespaces) == 0 {
-		return true
+		if len(backupNamespaces) == 0 {
+			return "all"
+		}
+		return backupNamespaces[0]
 	}
 	// Empty backup namespace list means routine backs up the whole cluster.
 	if len(backupNamespaces) == 0 {
-		return true
+		return restoreNamespaces[0]
 	}
 
-	return slices.ContainsFunc(backupNamespaces, func(namespace string) bool {
-		return slices.Contains(restoreNamespaces, namespace)
-	})
+	for _, ns := range backupNamespaces {
+		if slices.Contains(restoreNamespaces, ns) {
+			return ns
+		}
+	}
+
+	return ""
 }
 
 // clustersMatch compares clusters by label first and by full hash as fallback.

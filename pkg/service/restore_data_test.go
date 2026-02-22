@@ -42,7 +42,9 @@ func TestRestoreOK(t *testing.T) {
 		Run(gomock.Any(), client, request).
 		Return(mockRestoreHandler, nil)
 
-	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now(), FileCount: 1}}
+	detailsDetails := model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "test-ns", FileCount: 1},
+	}
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
 		[]model.BackupDetails{detailsDetails}, nil)
 
@@ -82,7 +84,9 @@ func TestCancelRestoreOK(t *testing.T) {
 	})
 	mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
-	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now(), FileCount: 1}}
+	detailsDetails := model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "test-ns", FileCount: 1},
+	}
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
 		[]model.BackupDetails{detailsDetails}, nil)
 
@@ -225,7 +229,9 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 		Run(gomock.Any(), client, request).
 		Return(nil, restoreErr)
 
-	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now(), FileCount: 1}}
+	detailsDetails := model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "test-ns", FileCount: 1},
+	}
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
 		[]model.BackupDetails{detailsDetails}, nil)
 
@@ -383,6 +389,7 @@ func (env *testRestoreEnv) expectSuccessfulClientInteraction(
 
 	client := aerospike.NewMockClient(env.ctrl)
 	client.EXPECT().InfoClient().Return(env.infoGetter).AnyTimes()
+	env.infoGetter.EXPECT().GetNamespacesList(mock.Anything).Return([]string{"test-ns"}, nil).Maybe()
 
 	env.mockClientManager.EXPECT().
 		GetClient(gomock.Any(), cluster, gomock.Any()).
