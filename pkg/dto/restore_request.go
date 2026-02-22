@@ -132,7 +132,7 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 		Policy:             *r.Policy.ToModel(),
 		SecretAgent:        secretAgent,
 		Time:               time.UnixMilli(r.Time),
-		Routine:            routine.Copy(), // restore will work on it's own copy.
+		Routine:            *routine.Copy(), // restore will work on it's own copy.
 		DisableReordering:  r.DisableReordering,
 	}, nil
 }

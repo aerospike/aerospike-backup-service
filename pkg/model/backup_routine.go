@@ -53,6 +53,8 @@ func init() {
 }
 
 // Copy returns a deep copy of the BackupRoutine.
+// Long-running backup/restore operations must work on an immutable routine snapshot.
+// A shallow copy would still share nested pointers/slices and could observe config changes mid-run.
 func (r *BackupRoutine) Copy() *BackupRoutine {
 	if r == nil {
 		return nil

@@ -467,7 +467,7 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
 		DestinationCluster: model.AerospikeCluster{},
 		Policy:             model.RestorePolicy{},
-		Routine:            routine,
+		Routine:            *routine,
 		Time:               requestTime,
 		DisableReordering:  true,
 	}
@@ -577,7 +577,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 			request := &model.RestoreTimestampRequest{
 				DestinationCluster: model.AerospikeCluster{},
 				Policy:             tt.policy,
-				Routine:            &model.BackupRoutine{Name: "test-routine"},
+				Routine:            model.BackupRoutine{Name: "test-routine"},
 				Time:               time.Now(),
 				DisableReordering:  true,
 			}

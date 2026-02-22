@@ -479,7 +479,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 			want: &model.RestoreTimestampRequest{
 				DestinationCluster: *cluster,
 				Time:               time.UnixMilli(1739538000000),
-				Routine:            routine,
+				Routine:            *routine,
 				Policy:             model.RestorePolicy{},
 			},
 		},

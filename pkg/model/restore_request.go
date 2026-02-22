@@ -33,7 +33,7 @@ type RestoreTimestampRequest struct {
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
 	Time time.Time
 	// The backup routine.
-	Routine *BackupRoutine
+	Routine BackupRoutine
 	// Disable reverse order of incremental backups optimization.
 	DisableReordering bool
 }

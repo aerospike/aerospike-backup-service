@@ -63,7 +63,7 @@ func (r *timeRestoreRunner) findBackupsToRestore(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (map[string][]model.BackupDetails, error) {
 	backups, err := r.backupReader.GetBackups(ctx,
-		NewFullBackupFilter(request.Routine).
+		NewFullBackupFilter(&request.Routine).
 			WithToTime(request.Time).
 			Last(),
 	)
@@ -79,7 +79,7 @@ func (r *timeRestoreRunner) findBackupsToRestore(
 
 	// Find incremental backups.
 	incrementalBackups, err := r.backupReader.GetBackups(ctx,
-		NewIncrementalBackupFilter(request.Routine).
+		NewIncrementalBackupFilter(&request.Routine).
 			WithFromTime(backups[0].Created).
 			WithToTime(request.Time))
 	if err != nil {
