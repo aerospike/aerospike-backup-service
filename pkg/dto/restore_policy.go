@@ -85,6 +85,8 @@ type TimestampRestorePolicy struct {
 }
 
 // Validate validates the base restore policy.
+//
+//nolint:gocognit,funlen
 func (p *BaseRestorePolicy) Validate() error {
 	if p == nil {
 		return nil
@@ -124,8 +126,18 @@ func (p *BaseRestorePolicy) Validate() error {
 	if duplicates := collections.CheckDuplicates(p.SetList); len(duplicates) > 0 {
 		return errValidationDuplicate("set-list", duplicates)
 	}
+	for i, set := range p.SetList {
+		if set == "" {
+			return errValidationEmptyField(fmt.Sprintf("set-list[%d]", i))
+		}
+	}
 	if duplicates := collections.CheckDuplicates(p.BinList); len(duplicates) > 0 {
 		return errValidationDuplicate("bin-list", duplicates)
+	}
+	for i, bin := range p.BinList {
+		if bin == "" {
+			return errValidationEmptyField(fmt.Sprintf("bin-list[%d]", i))
+		}
 	}
 
 	if err := p.EncryptionPolicy.Validate(); err != nil {

@@ -75,7 +75,7 @@ type BackupRoutine struct {
 
 // Validate validates the backup routine configuration.
 //
-//nolint:gocognit
+//nolint:gocognit,funlen
 func (r *BackupRoutine) Validate() error {
 	if r.SourceCluster == "" {
 		return errValidationEmptyField("source-cluster")
@@ -120,6 +120,11 @@ func (r *BackupRoutine) Validate() error {
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
 	}
+	for i, ns := range *r.Namespaces {
+		if ns == "" {
+			return errValidationEmptyField(fmt.Sprintf("namespaces[%d]", i))
+		}
+	}
 
 	if duplicates := collections.CheckDuplicates(*r.Namespaces); len(duplicates) > 0 {
 		return errValidationDuplicate("namespaces", duplicates)
@@ -127,8 +132,18 @@ func (r *BackupRoutine) Validate() error {
 	if duplicates := collections.CheckDuplicates(r.SetList); len(duplicates) > 0 {
 		return errValidationDuplicate("set-list", duplicates)
 	}
+	for i, set := range r.SetList {
+		if set == "" {
+			return errValidationEmptyField(fmt.Sprintf("set-list[%d]", i))
+		}
+	}
 	if duplicates := collections.CheckDuplicates(r.BinList); len(duplicates) > 0 {
 		return errValidationDuplicate("bin-list", duplicates)
+	}
+	for i, bin := range r.BinList {
+		if bin == "" {
+			return errValidationEmptyField(fmt.Sprintf("bin-list[%d]", i))
+		}
 	}
 	if duplicates := collections.CheckDuplicates(r.RackList); len(duplicates) > 0 {
 		return errValidationDuplicate("rack-list", duplicates)

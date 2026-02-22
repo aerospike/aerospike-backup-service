@@ -78,16 +78,16 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 
 func (m *BackupMetadata) Validate() error {
 	if m.Created.IsZero() {
-		return fmt.Errorf("`created` is required")
+		return errors.New("`created` is required")
 	}
 	if m.Finished.IsZero() {
-		return fmt.Errorf("`finished` is required")
+		return errors.New("`finished` is required")
 	}
 	if m.From.IsZero() {
-		return fmt.Errorf("`from` is required")
+		return errors.New("`from` is required")
 	}
 	if m.Namespace == "" {
-		return fmt.Errorf("`namespace` is required")
+		return errors.New("`namespace` is required")
 	}
 
 	return nil

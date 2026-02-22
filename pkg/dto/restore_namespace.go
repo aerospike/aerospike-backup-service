@@ -19,11 +19,11 @@ type RestoreNamespace struct {
 
 // Validate validates the restore namespace.
 func (n *RestoreNamespace) Validate() error {
-	if n.Source == nil {
+	if n.Source == nil || *n.Source == "" {
 		return errValidationEmptyField("source")
 	}
 
-	if n.Destination == nil {
+	if n.Destination == nil || *n.Destination == "" {
 		return errValidationEmptyField("destination")
 	}
 
