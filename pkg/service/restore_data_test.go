@@ -448,6 +448,7 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	)
 
 	client := env.expectSuccessfulClientInteraction(t, request.DestinationCluster)
+	env.infoGetter.EXPECT().GetNamespacesList(mock.Anything).Return([]string{"ns1"}, nil)
 	// Restore runs executor once per backup in chain (full then incremental).
 	gomock.InOrder(
 		env.mockRestore.EXPECT().
@@ -545,6 +546,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 				Times(2)
 
 			client := env.expectSuccessfulClientInteraction(t, request.DestinationCluster)
+			env.infoGetter.EXPECT().GetNamespacesList(mock.Anything).Return([]string{"ns1"}, nil).Maybe()
 			if tt.shouldSucceed {
 				// Restore runs executor once per backup in chain (full + incremental = 2).
 				env.mockRestore.EXPECT().

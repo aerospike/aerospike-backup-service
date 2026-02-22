@@ -12,7 +12,7 @@ import (
 
 func TestMakeRestoreConfig(t *testing.T) {
 	restoreRequest := &model.RestoreRequest{
-		Policy: &model.RestorePolicy{
+		Policy: model.RestorePolicy{
 			BinList:            []string{"bin1", "bin2"},
 			SetList:            []string{"set1", "set2"},
 			NoRecords:          ptr.Of(false),

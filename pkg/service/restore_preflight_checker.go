@@ -22,19 +22,16 @@ type RestorePreflight interface {
 	// ValidatePathRestore validates path-restore preconditions.
 	ValidatePathRestore(
 		ctx context.Context,
-		cluster *model.AerospikeCluster,
-		remapping *model.RestoreNamespace,
+		request *model.RestoreRequest,
 		infoGetter backup.InfoGetter,
 		backups []model.BackupDetails,
 	) error
 	// ValidateTimeRestore validates point-in-time restore preconditions.
 	ValidateTimeRestore(
 		ctx context.Context,
-		cluster *model.AerospikeCluster,
-		remapping *model.RestoreNamespace,
+		request *model.RestoreTimestampRequest,
 		infoGetter backup.InfoGetter,
 		backupsByNamespace map[string][]model.BackupDetails,
-		request *model.RestoreTimestampRequest,
 	) error
 }
 
@@ -57,59 +54,56 @@ func NewRestorePreflight(
 // ValidatePathRestore validates path-restore preconditions.
 func (r *restorePreflight) ValidatePathRestore(
 	ctx context.Context,
-	cluster *model.AerospikeCluster,
-	remapping *model.RestoreNamespace,
+	request *model.RestoreRequest,
 	infoGetter backup.InfoGetter,
 	backups []model.BackupDetails,
 ) error {
 	if err := validateBackupsCreatedAtTheSameTime(backups); err != nil {
 		return err
 	}
-	if err := validateDestinationNamespace(ctx, remapping, infoGetter); err != nil {
-		return err
+
+	for _, b := range backups {
+		if err := validateBackupEncryption(b, request.Policy.EncryptionPolicy); err != nil {
+			return err
+		}
 	}
 
-	return r.ensureAllowedForPathRestore(cluster, remapping, backups)
+	sourceNamespaces := sourceNamespacesFromBackups(backups)
+	return r.validateCommon(ctx, request.DestinationCluster, request.Policy.Namespace, sourceNamespaces, infoGetter)
 }
 
 // ValidateTimeRestore validates point-in-time restore preconditions.
 func (r *restorePreflight) ValidateTimeRestore(
 	ctx context.Context,
-	cluster *model.AerospikeCluster,
-	remapping *model.RestoreNamespace,
+	request *model.RestoreTimestampRequest,
 	infoGetter backup.InfoGetter,
 	backupsByNamespace map[string][]model.BackupDetails,
-	request *model.RestoreTimestampRequest,
 ) error {
-	if err := validateEncryption(backupsByNamespace, request); err != nil {
-		return err
+	for _, backups := range backupsByNamespace {
+		for _, b := range backups {
+			if err := validateBackupEncryption(b, request.Policy.EncryptionPolicy); err != nil {
+				return err
+			}
+		}
 	}
-	if err := validateDestinationNamespace(ctx, remapping, infoGetter); err != nil {
-		return err
-	}
 
-	return r.ensureAllowedForTimeRestore(cluster, remapping, backupsByNamespace)
-}
-
-// ensureAllowedForPathRestore checks restore eligibility for backups found by path.
-func (r *restorePreflight) ensureAllowedForPathRestore(
-	cluster *model.AerospikeCluster,
-	remapping *model.RestoreNamespace,
-	backups []model.BackupDetails,
-) error {
-	sourceNamespaces := sourceNamespacesFromBackups(backups)
-	destinationNamespaces := destinationNamespacesForRestore(remapping, sourceNamespaces)
-	return r.ensureAllowed(cluster, destinationNamespaces)
-}
-
-// ensureAllowedForTimeRestore checks restore eligibility for point-in-time backups.
-func (r *restorePreflight) ensureAllowedForTimeRestore(
-	cluster *model.AerospikeCluster,
-	remapping *model.RestoreNamespace,
-	backupsByNamespace map[string][]model.BackupDetails,
-) error {
 	sourceNamespaces := sourceNamespacesFromBackupsByNamespace(backupsByNamespace)
+	return r.validateCommon(ctx, request.DestinationCluster, request.Policy.Namespace, sourceNamespaces, infoGetter)
+}
+
+func (r *restorePreflight) validateCommon(
+	ctx context.Context,
+	cluster *model.AerospikeCluster,
+	remapping *model.RestoreNamespace,
+	sourceNamespaces []string,
+	infoGetter backup.InfoGetter,
+) error {
 	destinationNamespaces := destinationNamespacesForRestore(remapping, sourceNamespaces)
+
+	if err := validateDestinationNamespaces(ctx, destinationNamespaces, infoGetter); err != nil {
+		return err
+	}
+
 	return r.ensureAllowed(cluster, destinationNamespaces)
 }
 
@@ -151,26 +145,25 @@ func (r *restorePreflight) ensureAllowed(
 	return nil
 }
 
-// validateDestinationNamespace checks destination namespace existence in destination cluster.
-func validateDestinationNamespace(
+// validateDestinationNamespaces checks destination namespaces existence in destination cluster.
+func validateDestinationNamespaces(
 	ctx context.Context,
-	remapping *model.RestoreNamespace,
+	destinationNamespaces []string,
 	infoGetter backup.InfoGetter,
 ) error {
-	if remapping == nil {
-		return nil
-	}
-	if remapping.Destination == nil {
+	if len(destinationNamespaces) == 0 {
 		return nil
 	}
 
-	destinationNS := *remapping.Destination
 	namespaces, err := infoGetter.GetNamespacesList(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get namespaces from destination cluster: %w", err)
 	}
-	if !slices.Contains(namespaces, destinationNS) {
-		return fmt.Errorf("destination cluster does not have required namespace: %s", destinationNS)
+
+	for _, destNS := range destinationNamespaces {
+		if !slices.Contains(namespaces, destNS) {
+			return fmt.Errorf("destination cluster does not have required namespace: %s", destNS)
+		}
 	}
 
 	return nil
@@ -183,7 +176,7 @@ func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
 	}
 
 	for _, backup := range backups {
-		if backup.Created != backups[0].Created {
+		if !backup.Created.Equal(backups[0].Created) {
 			return fmt.Errorf("backups from different times were found: %s and %s",
 				backup.Created.String(), backups[0].Created.String())
 		}
@@ -192,35 +185,26 @@ func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
 	return nil
 }
 
-// validateEncryption validates restore encryption policy against backup metadata.
-func validateEncryption(
-	backupsByNamespace map[string][]model.BackupDetails,
-	request *model.RestoreTimestampRequest,
-) error {
-	for _, backups := range backupsByNamespace {
-		for _, backup := range backups {
-			if backup.Encryption == "" || backup.Encryption == model.EncryptNone {
-				continue
-			}
-			if request.Policy.EncryptionPolicy == nil {
-				return fmt.Errorf("backup is encrypted with mode '%s', "+
-					"but no encryption policy was provided in the restore request", backup.Encryption)
-			}
-
-			userEncryptionPolicy := request.Policy.EncryptionPolicy
-			if userEncryptionPolicy.Mode != backup.Encryption {
-				return fmt.Errorf("backup is encrypted with mode '%s', "+
-					"but the provided encryption policy specifies mode '%s'", backup.Encryption, userEncryptionPolicy.Mode)
-			}
-			if userEncryptionPolicy.KeyFile == nil &&
-				userEncryptionPolicy.KeyEnv == nil &&
-				userEncryptionPolicy.KeySecret == nil {
-				return errors.New("backup is encrypted, " +
-					"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
-			}
-		}
+// validateBackupEncryption validates that the backup encryption matches the provided policy.
+func validateBackupEncryption(backup model.BackupDetails, policy *model.EncryptionPolicy) error {
+	if backup.Encryption == "" || backup.Encryption == model.EncryptNone {
+		return nil
+	}
+	if policy == nil {
+		return fmt.Errorf("backup is encrypted with mode '%s', "+
+			"but no encryption policy was provided in the restore request", backup.Encryption)
 	}
 
+	if policy.Mode != backup.Encryption {
+		return fmt.Errorf("backup is encrypted with mode '%s', "+
+			"but the provided encryption policy specifies mode '%s'", backup.Encryption, policy.Mode)
+	}
+	if policy.KeyFile == nil &&
+		policy.KeyEnv == nil &&
+		policy.KeySecret == nil {
+		return errors.New("backup is encrypted, " +
+			"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
+	}
 	return nil
 }
 

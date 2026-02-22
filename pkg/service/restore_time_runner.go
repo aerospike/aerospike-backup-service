@@ -124,11 +124,9 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 
 	if err := r.preflight.ValidateTimeRestore(
 		ctx,
-		request.DestinationCluster,
-		request.Policy.Namespace,
+		request,
 		client.InfoClient(),
 		backupsByNamespace,
-		request,
 	); err != nil {
 		return err
 	}

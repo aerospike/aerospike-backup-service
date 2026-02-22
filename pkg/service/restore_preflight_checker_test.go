@@ -5,10 +5,19 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/backup-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
+
+type fakeInfoGetter struct {
+	backup.InfoGetter
+}
+
+func (f fakeInfoGetter) GetNamespacesList(ctx context.Context) ([]string, error) {
+	return []string{"ns1"}, nil
+}
 
 func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -31,11 +40,15 @@ func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	})
 
 	preflight := NewRestorePreflight(registry, routines)
+
+	infoGetter := fakeInfoGetter{}
+
 	err := preflight.ValidatePathRestore(
 		context.Background(),
-		cluster,
-		nil,
-		nil,
+		&model.RestoreRequest{
+			DestinationCluster: cluster,
+		},
+		infoGetter,
 		[]model.BackupDetails{
 			{BackupMetadata: model.BackupMetadata{Namespace: "ns1"}},
 		},
@@ -66,15 +79,18 @@ func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	})
 
 	preflight := NewRestorePreflight(registry, routines)
+
+	infoGetter := fakeInfoGetter{}
+
 	err := preflight.ValidateTimeRestore(
 		context.Background(),
-		cluster,
-		nil,
-		nil,
+		&model.RestoreTimestampRequest{
+			DestinationCluster: cluster,
+		},
+		infoGetter,
 		map[string][]model.BackupDetails{
 			"ns1": {{BackupMetadata: model.BackupMetadata{Namespace: "ns1"}}},
 		},
-		&model.RestoreTimestampRequest{},
 	)
 
 	require.Error(t, err)
