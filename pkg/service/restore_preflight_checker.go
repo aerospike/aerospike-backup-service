@@ -8,7 +8,6 @@ import (
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 )
 
@@ -81,7 +80,7 @@ func (r *restorePreflight) ValidatePathRestore(
 		return err
 	}
 
-	return r.ensureAllowed(request.DestinationCluster, destinationNamespaces)
+	return r.checkRunningBackupsConflict(request.DestinationCluster, destinationNamespaces)
 }
 
 // ValidateTimeRestore validates point-in-time restore preconditions.
@@ -104,39 +103,40 @@ func (r *restorePreflight) ValidateTimeRestore(
 		return err
 	}
 
-	return r.ensureAllowed(request.DestinationCluster, destinationNamespaces)
+	return r.checkRunningBackupsConflict(request.DestinationCluster, destinationNamespaces)
 }
 
-// ensureAllowed blocks restore when an overlapping backup is already running.
-func (r *restorePreflight) ensureAllowed(
+// checkRunningBackupsConflict validates the provided destination cluster and namespaces
+// against all currently active backup routines to prevent concurrent operations on the same data.
+func (r *restorePreflight) checkRunningBackupsConflict(
 	cluster *model.AerospikeCluster,
 	destinationNamespaces []string,
 ) error {
 	if cluster == nil {
 		return nil
 	}
-
-	runningState := r.runningBackups.GetRunningState()
-	if len(runningState) == 0 {
-		return nil
-	}
-
+	// Fetch all configured backup routines to check their cluster and namespace scope.
 	routines := r.routines.Routines()
 
-	for routineName, routineState := range runningState {
-		if routineState == nil || (routineState.Full == nil && routineState.Incremental == nil) {
+	// Get the current state of all running backups.
+	for routineName, routineState := range r.runningBackups.GetRunningState() {
+		// Skip routines that don't have an active full or incremental backup job.
+		if routineState.Full == nil && routineState.Incremental == nil {
 			continue
 		}
 
 		routine, found := routines[routineName]
-		if !found || routine == nil || routine.SourceCluster == nil {
+		if !found {
 			continue
 		}
 
-		if !clustersMatch(routine.SourceCluster, cluster) {
+		// Only block if the running backup targets the same destination cluster as the restore.
+		if routine.SourceCluster.Hash() != cluster.Hash() {
 			continue
 		}
 
+		// Block if there is any overlap between the destination namespaces of the restore
+		// and the source namespaces of the running backup.
 		if overlappingNS := namespacesOverlap(destinationNamespaces, routine.Namespaces); overlappingNS != "" {
 			return fmt.Errorf("restore not allowed during backups on cluster %s, namespace %q. "+
 				"Please cancel existing backups jobs to perform restore", cluster.ToString(), overlappingNS)
@@ -184,26 +184,27 @@ func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
 
 // validateBackupsEncryption validates that the backups encryption matches the provided policy.
 func validateBackupsEncryption(backups []model.BackupDetails, policy *model.EncryptionPolicy) error {
-	for _, backup := range backups {
-		if backup.Encryption == "" || backup.Encryption == model.EncryptNone {
+	for _, b := range backups {
+		if b.Encryption == "" || b.Encryption == model.EncryptNone {
 			continue
 		}
 		if policy == nil {
-			return fmt.Errorf("backup is encrypted with mode '%s', "+
-				"but no encryption policy was provided in the restore request", backup.Encryption)
+			return fmt.Errorf("b is encrypted with mode '%s', "+
+				"but no encryption policy was provided in the restore request", b.Encryption)
 		}
 
-		if policy.Mode != backup.Encryption {
-			return fmt.Errorf("backup is encrypted with mode '%s', "+
-				"but the provided encryption policy specifies mode '%s'", backup.Encryption, policy.Mode)
+		if policy.Mode != b.Encryption {
+			return fmt.Errorf("b is encrypted with mode '%s', "+
+				"but the provided encryption policy specifies mode '%s'", b.Encryption, policy.Mode)
 		}
 		if policy.KeyFile == nil &&
 			policy.KeyEnv == nil &&
 			policy.KeySecret == nil {
-			return errors.New("backup is encrypted, " +
+			return errors.New("b is encrypted, " +
 				"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
 		}
 	}
+
 	return nil
 }
 
@@ -252,21 +253,6 @@ func namespacesOverlap(restoreNamespaces []string, backupNamespaces []string) st
 	}
 
 	return ""
-}
-
-// clustersMatch compares clusters by label first and by full hash as fallback.
-func clustersMatch(first *model.AerospikeCluster, second *model.AerospikeCluster) bool {
-	if first == nil || second == nil {
-		return false
-	}
-
-	firstLabel := ptr.ValueOrZero(first.ClusterLabel)
-	secondLabel := ptr.ValueOrZero(second.ClusterLabel)
-	if firstLabel != "" && secondLabel != "" {
-		return firstLabel == secondLabel
-	}
-
-	return first.Hash() == second.Hash()
 }
 
 func allBackupsEmpty(backups []model.BackupDetails) bool {
