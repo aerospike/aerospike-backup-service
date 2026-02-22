@@ -379,7 +379,7 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 				Policy:         &RestorePolicy{},
 			},
 			want: &model.RestoreRequest{
-				DestinationCluster: cluster,
+				DestinationCluster: *cluster,
 				SourceStorage:      storage,
 				BackupDataPath:     "test/path",
 				Policy:             model.RestorePolicy{},
@@ -401,7 +401,7 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 				Policy:         &RestorePolicy{},
 			},
 			want: &model.RestoreRequest{
-				DestinationCluster: cluster,
+				DestinationCluster: *cluster,
 				SourceStorage:      storage,
 				BackupDataPath:     "test/path",
 				Policy:             model.RestorePolicy{},
@@ -445,9 +445,7 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 			require.NoError(t, err)
 			if tt.want != nil {
 				require.Equal(t, tt.want.BackupDataPath, got.BackupDataPath)
-				if tt.want.DestinationCluster != nil {
-					require.Equal(t, tt.want.DestinationCluster.Hash(), got.DestinationCluster.Hash())
-				}
+				require.Equal(t, tt.want.DestinationCluster.Hash(), got.DestinationCluster.Hash())
 			}
 		})
 	}
@@ -479,7 +477,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 				Policy:  &TimestampRestorePolicy{},
 			},
 			want: &model.RestoreTimestampRequest{
-				DestinationCluster: cluster,
+				DestinationCluster: *cluster,
 				Time:               time.UnixMilli(1739538000000),
 				Routine:            routine,
 				Policy:             model.RestorePolicy{},
@@ -520,9 +518,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 			if tt.want != nil {
 				require.Equal(t, tt.want.Time, got.Time)
 				require.Equal(t, tt.want.Routine, got.Routine)
-				if tt.want.DestinationCluster != nil {
-					require.Equal(t, tt.want.DestinationCluster.Hash(), got.DestinationCluster.Hash())
-				}
+				require.Equal(t, tt.want.DestinationCluster.Hash(), got.DestinationCluster.Hash())
 			}
 		})
 	}

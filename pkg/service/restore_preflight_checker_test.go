@@ -46,7 +46,7 @@ func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	err := preflight.ValidatePathRestore(
 		t.Context(),
 		&model.RestoreRequest{
-			DestinationCluster: cluster,
+			DestinationCluster: *cluster,
 		},
 		infoGetter,
 		[]model.BackupDetails{
@@ -85,7 +85,7 @@ func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	err := preflight.ValidateTimeRestore(
 		t.Context(),
 		&model.RestoreTimestampRequest{
-			DestinationCluster: cluster,
+			DestinationCluster: *cluster,
 		},
 		infoGetter,
 		map[string][]model.BackupDetails{

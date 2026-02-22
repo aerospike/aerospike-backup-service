@@ -26,7 +26,7 @@ func TestRestoreOK(t *testing.T) {
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
 	storage := &model.LocalStorage{Path: "/backup/path"}
-	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
+	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
 	client := env.expectSuccessfulClientInteraction(t, cluster)
 
@@ -72,7 +72,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
 	storage := &model.LocalStorage{}
-	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
+	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
 	client := env.expectSuccessfulClientInteraction(t, cluster)
 
@@ -137,7 +137,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 
 	cluster := &model.AerospikeCluster{}
 	storage := &model.LocalStorage{Path: "/backup/path"}
-	request := model.NewRestoreRequest(cluster, model.RestorePolicy{}, storage, nil, "/backup/path/data")
+	request := model.NewRestoreRequest(*cluster, model.RestorePolicy{}, storage, nil, "/backup/path/data")
 
 	clientErr := errors.New("connection error")
 	env.mockClientManager.EXPECT().
@@ -168,7 +168,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 		},
 	}
 	storage := &model.LocalStorage{Path: "/backup/path"}
-	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
+	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
 	env.expectSuccessfulClientInteraction(t, cluster)
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
@@ -200,7 +200,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
 	storage := &model.LocalStorage{Path: "/backup/path"}
-	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
+	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
 	env.expectSuccessfulClientInteraction(t, cluster)
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
@@ -237,7 +237,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
 	storage := &model.LocalStorage{Path: "/backup/path"}
-	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
+	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
 	client := env.expectSuccessfulClientInteraction(t, cluster)
 
@@ -276,7 +276,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 	cluster := &model.AerospikeCluster{}
 	storage := &model.LocalStorage{}
 	policy := model.RestorePolicy{}
-	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
+	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
 	client := env.expectSuccessfulClientInteraction(t, cluster)
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
@@ -465,7 +465,7 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 
 	routine := &model.BackupRoutine{Name: "test-routine"}
 	request := &model.RestoreTimestampRequest{
-		DestinationCluster: &model.AerospikeCluster{},
+		DestinationCluster: model.AerospikeCluster{},
 		Policy:             model.RestorePolicy{},
 		Routine:            routine,
 		Time:               requestTime,
@@ -502,7 +502,7 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 			Return([]model.BackupDetails{incrBackup}, nil),
 	)
 
-	client := env.expectSuccessfulClientInteraction(t, request.DestinationCluster)
+	client := env.expectSuccessfulClientInteraction(t, &request.DestinationCluster)
 	// Restore runs executor once per backup in chain (full then incremental).
 	gomock.InOrder(
 		env.mockRestore.EXPECT().
@@ -575,7 +575,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 			defer env.ctrl.Finish()
 
 			request := &model.RestoreTimestampRequest{
-				DestinationCluster: &model.AerospikeCluster{},
+				DestinationCluster: model.AerospikeCluster{},
 				Policy:             tt.policy,
 				Routine:            &model.BackupRoutine{Name: "test-routine"},
 				Time:               time.Now(),
@@ -599,7 +599,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 				Return([]model.BackupDetails{backup}, nil).
 				Times(2)
 
-			client := env.expectSuccessfulClientInteraction(t, request.DestinationCluster)
+			client := env.expectSuccessfulClientInteraction(t, &request.DestinationCluster)
 			if tt.shouldSucceed {
 				env.restorePreflight.EXPECT().
 					ValidateTimeRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).

@@ -109,7 +109,7 @@ func (r *restorePreflight) ValidateTimeRestore(
 // checkRunningBackupsConflict validates the provided destination cluster and namespaces
 // against all currently active backup routines to prevent concurrent operations on the same data.
 func (r *restorePreflight) checkRunningBackupsConflict(
-	cluster *model.AerospikeCluster,
+	cluster model.AerospikeCluster,
 	destinationNamespaces []string,
 ) error {
 	// Fetch all configured backup routines to check their cluster and namespace scope.
@@ -149,6 +149,7 @@ func validateDestinationNamespaces(
 	destinationNamespaces []string,
 	infoGetter backup.InfoGetter,
 ) error {
+	// Empty list means "all namespaces"; no specific namespace existence check is required.
 	if len(destinationNamespaces) == 0 {
 		return nil
 	}

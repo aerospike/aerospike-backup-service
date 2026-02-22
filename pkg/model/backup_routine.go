@@ -10,11 +10,11 @@ type BackupRoutine struct {
 	// The unique name of the routine (key in routines map).
 	Name string
 
-	// The corresponding backup policy.
+	// The corresponding backup policy. Not nil.
 	BackupPolicy *BackupPolicy
-	// The corresponding source cluster.
+	// The corresponding source cluster. Not nil.
 	SourceCluster *AerospikeCluster
-	// The corresponding storage provider configuration.
+	// The corresponding storage provider configuration. Not nil.
 	Storage Storage
 	// The Secret Agent configuration for the routine (optional).
 	SecretAgent *SecretAgent

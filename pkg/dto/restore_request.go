@@ -128,7 +128,7 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 	}
 
 	return &model.RestoreTimestampRequest{
-		DestinationCluster: cluster,
+		DestinationCluster: *cluster,
 		Policy:             *r.Policy.ToModel(),
 		SecretAgent:        secretAgent,
 		Time:               time.UnixMilli(r.Time),
@@ -154,7 +154,7 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 	}
 
 	return &model.RestoreRequest{
-		DestinationCluster: cluster,
+		DestinationCluster: *cluster,
 		Policy:             *r.Policy.ToModel(),
 		SourceStorage:      storage,
 		SecretAgent:        secretAgent,
