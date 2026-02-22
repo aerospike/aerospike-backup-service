@@ -44,13 +44,13 @@ func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	infoGetter := fakeInfoGetter{}
 
 	err := preflight.ValidatePathRestore(
-		context.Background(),
+		t.Context(),
 		&model.RestoreRequest{
 			DestinationCluster: cluster,
 		},
 		infoGetter,
 		[]model.BackupDetails{
-			{BackupMetadata: model.BackupMetadata{Namespace: "ns1"}},
+			{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}},
 		},
 	)
 
@@ -83,13 +83,13 @@ func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	infoGetter := fakeInfoGetter{}
 
 	err := preflight.ValidateTimeRestore(
-		context.Background(),
+		t.Context(),
 		&model.RestoreTimestampRequest{
 			DestinationCluster: cluster,
 		},
 		infoGetter,
 		map[string][]model.BackupDetails{
-			"ns1": {{BackupMetadata: model.BackupMetadata{Namespace: "ns1"}}},
+			"ns1": {{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}}},
 		},
 	)
 

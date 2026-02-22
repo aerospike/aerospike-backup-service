@@ -84,13 +84,6 @@ func (r *pathRestoreRunner) executeRestore(
 		return fmt.Errorf("failed to read backups: %w", err)
 	}
 
-	if len(backups) > 0 && allBackupsEmpty(backups) {
-		// edge case: backups exist but are empty - nothing to restore.
-		// If no backups found, we still attempt restore, as CLI-created files may exist without metadata.
-		logger.Info("Empty backup found, nothing to restore")
-		return nil
-	}
-
 	if err := r.preflight.ValidatePathRestore(
 		ctx,
 		request,
@@ -116,16 +109,6 @@ func (r *pathRestoreRunner) executeRestore(
 	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
 
 	return nil
-}
-
-func allBackupsEmpty(backups []model.BackupDetails) bool {
-	for _, b := range backups {
-		if b.FileCount > 0 {
-			return false
-		}
-	}
-
-	return true
 }
 
 func recordsInBackup(backups []model.BackupDetails) uint64 {

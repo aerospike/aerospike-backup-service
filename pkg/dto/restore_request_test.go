@@ -382,7 +382,7 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 				DestinationCluster: cluster,
 				SourceStorage:      storage,
 				BackupDataPath:     "test/path",
-				Policy:             &model.RestorePolicy{},
+				Policy:             model.RestorePolicy{},
 			},
 		},
 		{
@@ -404,7 +404,7 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 				DestinationCluster: cluster,
 				SourceStorage:      storage,
 				BackupDataPath:     "test/path",
-				Policy:             &model.RestorePolicy{},
+				Policy:             model.RestorePolicy{},
 			},
 		},
 		{
@@ -482,7 +482,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 				DestinationCluster: cluster,
 				Time:               time.UnixMilli(1739538000000),
 				Routine:            routine,
-				Policy:             &model.RestorePolicy{},
+				Policy:             model.RestorePolicy{},
 			},
 		},
 		{

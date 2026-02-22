@@ -58,6 +58,14 @@ func (r *restorePreflight) ValidatePathRestore(
 	infoGetter backup.InfoGetter,
 	backups []model.BackupDetails,
 ) error {
+	if len(backups) == 0 {
+		return nil // no backup metadata found; nothing to validate, will try to restore as-is.
+	}
+
+	if allBackupsEmpty(backups) {
+		return errors.New("backup metadata indicates there is no data to restore (file count is zero)")
+	}
+
 	if err := validateBackupsCreatedAtTheSameTime(backups); err != nil {
 		return err
 	}
@@ -69,6 +77,7 @@ func (r *restorePreflight) ValidatePathRestore(
 	}
 
 	sourceNamespaces := sourceNamespacesFromBackups(backups)
+
 	return r.validateCommon(ctx, request.DestinationCluster, request.Policy.Namespace, sourceNamespaces, infoGetter)
 }
 
@@ -175,10 +184,10 @@ func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
 		return nil
 	}
 
-	for _, backup := range backups {
-		if !backup.Created.Equal(backups[0].Created) {
+	for _, b := range backups {
+		if !b.Created.Equal(backups[0].Created) {
 			return fmt.Errorf("backups from different times were found: %s and %s",
-				backup.Created.String(), backups[0].Created.String())
+				b.Created.String(), backups[0].Created.String())
 		}
 	}
 
@@ -205,6 +214,7 @@ func validateBackupEncryption(backup model.BackupDetails, policy *model.Encrypti
 		return errors.New("backup is encrypted, " +
 			"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
 	}
+
 	return nil
 }
 
@@ -220,11 +230,8 @@ func destinationNamespacesForRestore(remapping *model.RestoreNamespace, sourceNa
 // sourceNamespacesFromBackups extracts source namespaces from backup metadata entries.
 func sourceNamespacesFromBackups(backups []model.BackupDetails) []string {
 	namespaces := make([]string, 0, len(backups))
-	for _, backup := range backups {
-		if backup.Namespace == "" {
-			continue
-		}
-		namespaces = append(namespaces, backup.Namespace)
+	for _, b := range backups {
+		namespaces = append(namespaces, b.Namespace)
 	}
 
 	return namespaces
@@ -267,4 +274,14 @@ func clustersMatch(first *model.AerospikeCluster, second *model.AerospikeCluster
 	}
 
 	return first.Hash() == second.Hash()
+}
+
+func allBackupsEmpty(backups []model.BackupDetails) bool {
+	for _, b := range backups {
+		if b.FileCount > 0 {
+			return false
+		}
+	}
+
+	return true
 }
