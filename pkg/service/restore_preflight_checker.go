@@ -70,15 +70,18 @@ func (r *restorePreflight) ValidatePathRestore(
 		return err
 	}
 
-	for _, b := range backups {
-		if err := validateBackupEncryption(b, request.Policy.EncryptionPolicy); err != nil {
-			return err
-		}
+	if err := validateBackupsEncryption(backups, request.Policy.EncryptionPolicy); err != nil {
+		return err
 	}
 
 	sourceNamespaces := sourceNamespacesFromBackups(backups)
+	destinationNamespaces := destinationNamespacesForRestore(request.Policy.Namespace, sourceNamespaces)
 
-	return r.validateCommon(ctx, request.DestinationCluster, request.Policy.Namespace, sourceNamespaces, infoGetter)
+	if err := validateDestinationNamespaces(ctx, destinationNamespaces, infoGetter); err != nil {
+		return err
+	}
+
+	return r.ensureAllowed(request.DestinationCluster, destinationNamespaces)
 }
 
 // ValidateTimeRestore validates point-in-time restore preconditions.
@@ -89,31 +92,19 @@ func (r *restorePreflight) ValidateTimeRestore(
 	backupsByNamespace map[string][]model.BackupDetails,
 ) error {
 	for _, backups := range backupsByNamespace {
-		for _, b := range backups {
-			if err := validateBackupEncryption(b, request.Policy.EncryptionPolicy); err != nil {
-				return err
-			}
+		if err := validateBackupsEncryption(backups, request.Policy.EncryptionPolicy); err != nil {
+			return err
 		}
 	}
 
 	sourceNamespaces := sourceNamespacesFromBackupsByNamespace(backupsByNamespace)
-	return r.validateCommon(ctx, request.DestinationCluster, request.Policy.Namespace, sourceNamespaces, infoGetter)
-}
-
-func (r *restorePreflight) validateCommon(
-	ctx context.Context,
-	cluster *model.AerospikeCluster,
-	remapping *model.RestoreNamespace,
-	sourceNamespaces []string,
-	infoGetter backup.InfoGetter,
-) error {
-	destinationNamespaces := destinationNamespacesForRestore(remapping, sourceNamespaces)
+	destinationNamespaces := destinationNamespacesForRestore(request.Policy.Namespace, sourceNamespaces)
 
 	if err := validateDestinationNamespaces(ctx, destinationNamespaces, infoGetter); err != nil {
 		return err
 	}
 
-	return r.ensureAllowed(cluster, destinationNamespaces)
+	return r.ensureAllowed(request.DestinationCluster, destinationNamespaces)
 }
 
 // ensureAllowed blocks restore when an overlapping backup is already running.
@@ -181,10 +172,6 @@ func validateDestinationNamespaces(
 
 // validateBackupsCreatedAtTheSameTime ensures all selected backups belong to the same snapshot.
 func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
-	if len(backups) == 0 {
-		return nil
-	}
-
 	for _, b := range backups {
 		if !b.Created.Equal(backups[0].Created) {
 			return fmt.Errorf("backups from different times were found: %s and %s",
@@ -195,27 +182,28 @@ func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
 	return nil
 }
 
-// validateBackupEncryption validates that the backup encryption matches the provided policy.
-func validateBackupEncryption(backup model.BackupDetails, policy *model.EncryptionPolicy) error {
-	if backup.Encryption == "" || backup.Encryption == model.EncryptNone {
-		return nil
-	}
-	if policy == nil {
-		return fmt.Errorf("backup is encrypted with mode '%s', "+
-			"but no encryption policy was provided in the restore request", backup.Encryption)
-	}
+// validateBackupsEncryption validates that the backups encryption matches the provided policy.
+func validateBackupsEncryption(backups []model.BackupDetails, policy *model.EncryptionPolicy) error {
+	for _, backup := range backups {
+		if backup.Encryption == "" || backup.Encryption == model.EncryptNone {
+			continue
+		}
+		if policy == nil {
+			return fmt.Errorf("backup is encrypted with mode '%s', "+
+				"but no encryption policy was provided in the restore request", backup.Encryption)
+		}
 
-	if policy.Mode != backup.Encryption {
-		return fmt.Errorf("backup is encrypted with mode '%s', "+
-			"but the provided encryption policy specifies mode '%s'", backup.Encryption, policy.Mode)
+		if policy.Mode != backup.Encryption {
+			return fmt.Errorf("backup is encrypted with mode '%s', "+
+				"but the provided encryption policy specifies mode '%s'", backup.Encryption, policy.Mode)
+		}
+		if policy.KeyFile == nil &&
+			policy.KeyEnv == nil &&
+			policy.KeySecret == nil {
+			return errors.New("backup is encrypted, " +
+				"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
+		}
 	}
-	if policy.KeyFile == nil &&
-		policy.KeyEnv == nil &&
-		policy.KeySecret == nil {
-		return errors.New("backup is encrypted, " +
-			"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
-	}
-
 	return nil
 }
 
