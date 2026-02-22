@@ -1,28 +1,44 @@
+# dependable.yml configuration for Aerospike Backup Service
 version: 2
-
-multi-ecosystem-groups:
-  all-dependencies:
-    schedule:
-      interval: monthly
-
 updates:
-  - package-ecosystem: github-actions
-    directory: /
-    multi-ecosystem-group: all-dependencies
-    patterns:
-      - "*"
+  # Maintain dependencies for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      # Check for updates once a month
+      interval: "monthly"
+    groups:
+      # Group all updates into a single PR named 'github-actions-dependencies'
+      github-actions-dependencies:
+        patterns:
+          - "*"
+    # Limit to 1 open PR to avoid clutter
     open-pull-requests-limit: 1
 
-  - package-ecosystem: docker
-    directory: /
-    multi-ecosystem-group: all-dependencies
-    patterns:
-      - "*"
+  # Maintain dependencies for Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      # Check for updates once a month
+      interval: "monthly"
+    groups:
+      # Group all updates into a single PR named 'docker-dependencies'
+      docker-dependencies:
+        patterns:
+          - "*"
+    # Limit to 1 open PR to avoid clutter
     open-pull-requests-limit: 1
 
-  - package-ecosystem: gomod
-    directory: /
-    multi-ecosystem-group: all-dependencies
-    patterns:
-      - "*"
+  # Maintain dependencies for Go modules
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      # Check for updates once a month
+      interval: "monthly"
+    groups:
+      # Group all updates into a single PR named 'gomod-dependencies'
+      gomod-dependencies:
+        patterns:
+          - "*"
+    # Limit to 1 open PR to avoid clutter
     open-pull-requests-limit: 1
