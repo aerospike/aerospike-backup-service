@@ -67,7 +67,30 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshaling YAML: %w", err)
 	}
+
+	err = metadata.Validate()
+	if err != nil {
+		return nil, fmt.Errorf("corrupted metadata: %w", err)
+	}
+
 	return &metadata, nil
+}
+
+func (m *BackupMetadata) Validate() error {
+	if m.Created.IsZero() {
+		return fmt.Errorf("`created` is required")
+	}
+	if m.Finished.IsZero() {
+		return fmt.Errorf("`finished` is required")
+	}
+	if m.From.IsZero() {
+		return fmt.Errorf("`from` is required")
+	}
+	if m.Namespace == "" {
+		return fmt.Errorf("`namespace` is required")
+	}
+
+	return nil
 }
 
 func NewBackupMetadata(
