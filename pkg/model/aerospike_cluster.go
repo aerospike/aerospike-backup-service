@@ -76,6 +76,29 @@ func (c *AerospikeCluster) Hash() string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
+// ToString returns a user-friendly cluster identifier.
+// It prefers ClusterLabel; if missing, it uses a stable first seed node string.
+func (c *AerospikeCluster) ToString() string {
+	if c == nil {
+		return nilString
+	}
+
+	if label := ptr.ValueOrZero(c.ClusterLabel); label != "" {
+		return label
+	}
+
+	if len(c.SeedNodes) > 0 {
+		nodeStrings := make([]string, len(c.SeedNodes))
+		for i, node := range c.SeedNodes {
+			nodeStrings[i] = node.String()
+		}
+		sort.Strings(nodeStrings)
+		return nodeStrings[0]
+	}
+
+	return nilString
+}
+
 // GetAuthMode safely returns the authentication mode.
 func (c *AerospikeCluster) GetAuthMode() *string {
 	if c.Credentials != nil {
