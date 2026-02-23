@@ -33,7 +33,6 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 		metadata := model.BackupMetadata{
 			Created:   tm,
 			Finished:  tm,
-			From:      tm,
 			Namespace: testNamespace,
 		}
 
@@ -110,7 +109,6 @@ func TestWithToTime(t *testing.T) {
 	metadata := model.BackupMetadata{
 		Created:   created,
 		Finished:  created.Add(1 * time.Hour), // finished after toTime
-		From:      created,
 		Namespace: testNamespace,
 	}
 	err := service.WriteBackupMetadata(t.Context(), routine, backupPath, metadata)
@@ -144,7 +142,6 @@ func TestWithTimeBounds(t *testing.T) {
 		err := service.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
 			Created:   tm,
 			Finished:  tm,
-			From:      tm,
 			Namespace: testNamespace,
 		})
 		require.NoError(t, err)
@@ -201,7 +198,6 @@ func TestGetBackupsReturnsSortedByCreated(t *testing.T) {
 		err := service.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
 			Created:   createdTimes[i],
 			Finished:  createdTimes[i],
-			From:      createdTimes[i],
 			Namespace: testNamespace,
 		})
 		require.NoError(t, err)
@@ -225,7 +221,6 @@ func TestLocalDeleteBackup(t *testing.T) {
 	metadata := model.BackupMetadata{
 		Created:   created,
 		Finished:  created,
-		From:      created,
 		Namespace: testNamespace,
 	}
 
@@ -258,7 +253,6 @@ func TestIncrementalBackup(t *testing.T) {
 	fullMetadata := model.BackupMetadata{
 		Created:     fullBackupTime,
 		Finished:    fullBackupTime,
-		From:        fullBackupTime,
 		Namespace:   testNamespace,
 		RecordCount: 1000,
 		ByteCount:   10240,
@@ -323,7 +317,6 @@ func TestReadPath(t *testing.T) {
 	fullMetadata := model.BackupMetadata{
 		Created:   fullBackupTime,
 		Finished:  fullBackupTime,
-		From:      fullBackupTime,
 		Namespace: testNamespace,
 	}
 
