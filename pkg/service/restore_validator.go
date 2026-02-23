@@ -34,7 +34,7 @@ type restoreValidatorImpl struct {
 	routines       routineProvider
 }
 
-// NewRestoreValidator creates a preflight validator for restore operations.
+// NewRestoreValidator creates a validator for restore operations.
 func NewRestoreValidator(
 	runningBackups RunningBackupsRegistry,
 	routines routineProvider,

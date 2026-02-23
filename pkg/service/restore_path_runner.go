@@ -18,7 +18,7 @@ type pathRestoreRunner struct {
 	backupReader   BackupReader
 	clientManager  aerospike.ClientManager
 	routineStorage *collections.LockMap
-	preflight      RestoreValidator
+	validator      RestoreValidator
 }
 
 func newPathRestoreRunner(
@@ -27,7 +27,7 @@ func newPathRestoreRunner(
 	backupReader BackupReader,
 	clientManager aerospike.ClientManager,
 	routineStorage *collections.LockMap,
-	preflight RestoreValidator,
+	validator RestoreValidator,
 ) *pathRestoreRunner {
 	return &pathRestoreRunner{
 		restoreJobs:    restoreJobs,
@@ -35,7 +35,7 @@ func newPathRestoreRunner(
 		backupReader:   backupReader,
 		clientManager:  clientManager,
 		routineStorage: routineStorage,
-		preflight:      preflight,
+		validator:      validator,
 	}
 }
 
@@ -84,7 +84,7 @@ func (r *pathRestoreRunner) executeRestore(
 		return fmt.Errorf("failed to read backups: %w", err)
 	}
 
-	if err := r.preflight.ValidatePath(
+	if err := r.validator.ValidatePath(
 		ctx,
 		request,
 		client.InfoClient(),

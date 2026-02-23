@@ -18,7 +18,7 @@ func (f fakeInfoGetter) GetNamespacesList(ctx context.Context) ([]string, error)
 	return []string{"ns1"}, nil
 }
 
-func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) {
+func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -39,11 +39,11 @@ func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 		GetRoutineState(backupRoutines["routine-1"]).
 		Return(&model.RoutineState{Full: &model.RunningJob{}})
 
-	preflight := NewRestoreValidator(registry, routines)
+	validator := NewRestoreValidator(registry, routines)
 
 	infoGetter := fakeInfoGetter{}
 
-	err := preflight.ValidatePath(
+	err := validator.ValidatePath(
 		t.Context(),
 		&model.RestoreRequest{
 			DestinationCluster: *cluster,
@@ -58,7 +58,7 @@ func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
 }
 
-func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) {
+func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -79,11 +79,11 @@ func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 		GetRoutineState(backupRoutines["routine-1"]).
 		Return(&model.RoutineState{Incremental: &model.RunningJob{}})
 
-	preflight := NewRestoreValidator(registry, routines)
+	validator := NewRestoreValidator(registry, routines)
 
 	infoGetter := fakeInfoGetter{}
 
-	err := preflight.ValidateTimestamp(
+	err := validator.ValidateTimestamp(
 		t.Context(),
 		&model.RestoreTimestampRequest{
 			DestinationCluster: *cluster,

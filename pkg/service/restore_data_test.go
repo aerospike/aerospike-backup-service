@@ -393,7 +393,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupReader := NewMockBackupReader(ctrl)
 	restoreJobsHolder := NewRestoreJobsHolder()
-	restorePreflight := NewMockRestoreValidator(ctrl)
+	validator := NewMockRestoreValidator(ctrl)
 
 	restoreManager := NewRestoreManager(
 		mockRestore,
@@ -401,7 +401,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 		restoreJobsHolder,
 		mockBackupReader,
 		&collections.LockMap{},
-		restorePreflight,
+		validator,
 	)
 
 	return &testRestoreEnv{
@@ -410,7 +410,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 		mockClientManager: mockClientManager,
 		mockBackupReader:  mockBackupReader,
 		jobsHolder:        restoreJobsHolder,
-		restoreValidator:  restorePreflight,
+		restoreValidator:  validator,
 		restoreManager:    restoreManager,
 		infoGetter:        infoGetter,
 	}
@@ -613,7 +613,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 			} else {
 				env.restoreValidator.EXPECT().
 					ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(errors.New("preflight failed")).
+					Return(errors.New("validator failed")).
 					AnyTimes()
 			}
 

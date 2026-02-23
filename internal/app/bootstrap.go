@@ -67,7 +67,7 @@ func InitComponents(
 	}
 
 	restoreJobs := service.NewRestoreJobsHolder()
-	restorePreflight := service.NewRestoreValidator(registry, config)
+	restoreValidator := service.NewRestoreValidator(registry, config)
 
 	restoreMgr := service.NewRestoreManager(
 		restoreexecutor.NewRestore(operations),
@@ -75,7 +75,7 @@ func InitComponents(
 		restoreJobs,
 		backendService,
 		&routineStorage,
-		restorePreflight,
+		restoreValidator,
 	)
 
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
