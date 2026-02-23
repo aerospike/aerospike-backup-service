@@ -91,6 +91,8 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
 	h.fullBackupLock.Lock()
+	h.logger.Info("Full backup started", slog.Time("now", now))
+
 	if h.skipFullBackup() {
 		h.fullBackupLock.Unlock()
 		return errBackupSkipped
@@ -177,8 +179,9 @@ func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.T
 }
 
 func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, now time.Time) {
+	h.logger.Info("Incremental backup started", slog.Time("now", now))
+
 	if h.skipIncrementalBackup(now) {
-		h.logger.Debug("Incremental backup skipped")
 		observeBackupEvent(h.routine.Name, jobTypeIncremental, BackupOutcomeSkip, 0)
 		return
 	}
