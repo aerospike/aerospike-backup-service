@@ -55,7 +55,7 @@ func run() int {
 
 	err := rootCmd.Execute()
 	if err != nil {
-		slog.Error("Error in rootCmd.Execute", attr.Error(err))
+		slog.Error("Command execution failed", attr.Error(err))
 	}
 
 	return log.ToExitVal(err)
@@ -108,7 +108,7 @@ func runHTTPServer(ctx context.Context, service *handlers.Service) error {
 		return err
 	}
 
-	slog.Info("HTTP server shutdown gracefully")
+	slog.Info("HTTP server shut down gracefully")
 
 	return nil
 }

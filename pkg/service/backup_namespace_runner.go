@@ -96,11 +96,11 @@ func (op *BackupNamespaceRunner) deleteFolder(ctx context.Context, path string) 
 	err := op.backendService.Delete(ctx, op.routine, path)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			op.logger.Info("Delete folder context cancelled")
+			op.logger.Info("Delete folder context canceled")
 			return
 		}
 
-		op.logger.Error("Could not delete folder", attr.Error(err))
+		op.logger.Error("Failed to delete folder", attr.Error(err))
 		return
 	}
 }

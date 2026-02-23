@@ -18,12 +18,12 @@ var (
 func init() {
 	swaggerDoc, err := swag.ReadDoc("swagger")
 	if err != nil {
-		slog.Warn("Failed to read swagger doc", attr.Error(err))
+		slog.Warn("Failed to read Swagger doc", attr.Error(err))
 		return
 	}
 	fieldsByStruct, err = parseOpenAPISpec(swaggerDoc)
 	if err != nil {
-		slog.Warn("Failed to parse swagger doc", attr.Error(err))
+		slog.Warn("Failed to parse Swagger doc", attr.Error(err))
 		return
 	}
 

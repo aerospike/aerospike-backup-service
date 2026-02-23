@@ -209,7 +209,7 @@ func (h *BackupRoutineOrchestrator) processBackupError(backupType jobType, durat
 	}
 
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		h.logger.Info(operation + " context cancelled")
+		h.logger.Info(operation + " context canceled")
 		observeBackupEvent(h.routine.Name, backupType, BackupOutcomeCancelled, duration)
 		return
 	}

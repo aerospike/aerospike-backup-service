@@ -88,7 +88,7 @@ func TestRequestLogger(t *testing.T) {
 			handler:      func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) },
 			body:         &errorReader{},
 			wantLevel:    slog.LevelError,
-			wantMsg:      "failed to read request body",
+			wantMsg:      "Failed to read request body",
 			wantErrorMsg: "unexpected EOF",
 		},
 	}

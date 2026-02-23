@@ -38,7 +38,7 @@ func (nv *NamespaceValidatorImpl) Validate(ctx context.Context, cfg *model.Confi
 	missing := nv.findMissingNamespaces(ctx, cfg.Routines())
 
 	for routine, namespaces := range missing {
-		slog.Warn("namespaces referenced by routine are missing in the cluster",
+		slog.Warn("Namespaces referenced by routine are missing in the cluster",
 			attr.Routine(routine),
 			slog.Any("missingNamespaces", namespaces),
 		)
@@ -77,7 +77,7 @@ func (nv *NamespaceValidatorImpl) fetchNamespacesByCluster(
 	for cluster := range clusters {
 		namespaces, err := nv.fetchClusterNamespaces(ctx, cluster)
 		if err != nil {
-			slog.Error("failed to fetch namespaces for cluster", attr.Error(err))
+			slog.Error("Failed to fetch namespaces for cluster", attr.Error(err))
 			continue
 		}
 		namespacesByCluster[cluster] = namespaces

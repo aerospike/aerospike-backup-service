@@ -107,7 +107,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Contex
 	}
 
 	if errors.Is(err, context.Canceled) {
-		slog.Info("History synchronization context cancelled")
+		slog.Info("History synchronization context canceled")
 		return
 	}
 
