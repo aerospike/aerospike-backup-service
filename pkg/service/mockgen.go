@@ -260,10 +260,10 @@ func (mr *MockRunningBackupsRegistryMockRecorder) Cancel(routineName any) *gomoc
 }
 
 // GetRoutineState mocks base method.
-func (m *MockRunningBackupsRegistry) GetRoutineState(routine *model.BackupRoutine) *model.RoutineState {
+func (m *MockRunningBackupsRegistry) GetRoutineState(routine *model.BackupRoutine) model.RoutineState {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRoutineState", routine)
-	ret0, _ := ret[0].(*model.RoutineState)
+	ret0, _ := ret[0].(model.RoutineState)
 	return ret0
 }
 
@@ -274,10 +274,10 @@ func (mr *MockRunningBackupsRegistryMockRecorder) GetRoutineState(routine any) *
 }
 
 // GetRunningState mocks base method.
-func (m *MockRunningBackupsRegistry) GetRunningState() map[string]*model.RoutineState {
+func (m *MockRunningBackupsRegistry) GetRunningState() map[string]model.RoutineState {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRunningState")
-	ret0, _ := ret[0].(map[string]*model.RoutineState)
+	ret0, _ := ret[0].(map[string]model.RoutineState)
 	return ret0
 }
 

@@ -50,4 +50,8 @@ generate_mocks \
     "pkg/service/aerospike" \
     "ClientManager,NamespaceValidator,Client,ClientFactory"
 
+generate_mocks \
+    "internal/server/handlers" \
+    "RunningBackupsRegistry"
+
 echo "All mocks generated successfully."

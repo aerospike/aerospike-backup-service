@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func TestAddRoutine(t *testing.T) {
@@ -272,15 +273,17 @@ func TestEnableRoutine(t *testing.T) {
 
 func TestDisableRoutine(t *testing.T) {
 	tests := []struct {
-		name           string
-		routineName    string
-		expectedStatus int
-		expectedError  string
+		name               string
+		routineName        string
+		expectedStatus     int
+		expectedError      string
+		expectedCancelRuns int
 	}{
 		{
-			name:           "successful disable",
-			routineName:    "test-routine",
-			expectedStatus: http.StatusNoContent,
+			name:               "successful disable",
+			routineName:        "test-routine",
+			expectedStatus:     http.StatusNoContent,
+			expectedCancelRuns: 1,
 		},
 		{
 			name:           "missing routine name",
@@ -298,10 +301,14 @@ func TestDisableRoutine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRegistry := &mockRunningBackupsRegistry{}
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRegistry := NewMockRunningBackupsRegistry(ctrl)
+			mockRegistry.EXPECT().Cancel(tt.routineName).Times(tt.expectedCancelRuns)
+
 			svc := setupTestService()
 			svc.registry = mockRegistry
-			mockRegistry.On("Cancel", "test-routine").Once()
 
 			routine := &model.BackupRoutine{
 				Name: "test-routine",
@@ -320,7 +327,6 @@ func TestDisableRoutine(t *testing.T) {
 			} else {
 				// Check that the routine is disabled after successful disable operation
 				assert.True(t, routine.Disabled)
-				mockRegistry.AssertExpectations(t)
 			}
 		})
 	}
