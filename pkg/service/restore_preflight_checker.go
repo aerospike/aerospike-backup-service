@@ -11,11 +11,6 @@ import (
 	"github.com/aerospike/backup-go"
 )
 
-const restoreNotAllowedDuringBackupsMsg = "restore not allowed during backups on the same cluster:namespace. " +
-	"Please cancel existing backups jobs to perform restore"
-
-var ErrRestoreNotAllowedDuringBackups = errors.New(restoreNotAllowedDuringBackupsMsg)
-
 // RestorePreflight validates restore preconditions before actual execution starts.
 type RestorePreflight interface {
 	// ValidatePathRestore validates path-restore preconditions.
@@ -112,31 +107,24 @@ func (r *restorePreflight) checkRunningBackupsConflict(
 	cluster model.AerospikeCluster,
 	destinationNamespaces []string,
 ) error {
-	// Fetch all configured backup routines to check their cluster and namespace scope.
-	routines := r.routines.Routines()
-
-	// Get the current state of all running backups.
-	for routineName, routineState := range r.runningBackups.GetRunningState() {
-		// Skip routines that don't have an active full or incremental backup job.
-		if routineState.Full == nil && routineState.Incremental == nil {
-			continue
-		}
-
-		routine, found := routines[routineName]
-		if !found {
+	clusterHash := cluster.Hash()
+	for _, routine := range r.routines.Routines() {
+		state := r.runningBackups.GetRoutineState(routine)
+		if state.Full == nil && state.Incremental == nil {
+			// Skip routines that don't have an active full or incremental backup job.
 			continue
 		}
 
 		// Only block if the running backup targets the same destination cluster as the restore.
-		if routine.SourceCluster.Hash() != cluster.Hash() {
+		if routine.SourceCluster.Hash() != clusterHash {
 			continue
 		}
 
 		// Block if there is any overlap between the destination namespaces of the restore
 		// and the source namespaces of the running backup.
 		if overlappingNS := namespacesOverlap(destinationNamespaces, routine.Namespaces); overlappingNS != "" {
-			return fmt.Errorf("restore not allowed during backups on cluster %s, namespace %q. "+
-				"Please cancel existing backups jobs to perform restore", cluster.ToString(), overlappingNS)
+			return fmt.Errorf("restore not allowed during backups on routine %s (cluster %s, namespace %q). "+
+				"Please cancel existing backups jobs to perform restore", routine.Name, cluster.ToString(), overlappingNS)
 		}
 	}
 

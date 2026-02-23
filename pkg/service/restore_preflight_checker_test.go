@@ -7,7 +7,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
@@ -28,16 +27,17 @@ func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 
 	clusterLabel := "cluster-a"
 	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
-	registry.EXPECT().GetRunningState().Return(map[string]*model.RoutineState{
-		"routine-1": {Full: &model.RunningJob{}},
-	})
-	routines.EXPECT().Routines().Return(map[string]*model.BackupRoutine{
+	backupRoutines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",
 			SourceCluster: cluster,
 			Namespaces:    []string{"ns1"},
 		},
-	})
+	}
+	routines.EXPECT().Routines().Return(backupRoutines)
+	registry.EXPECT().
+		GetRoutineState(backupRoutines["routine-1"]).
+		Return(&model.RoutineState{Full: &model.RunningJob{}})
 
 	preflight := NewRestorePreflight(registry, routines)
 
@@ -54,8 +54,8 @@ func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 		},
 	)
 
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "restore not allowed during backups on cluster cluster-a, namespace \"ns1\"")
+	assert.ErrorContains(t, err,
+		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
 }
 
 func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) {
@@ -67,16 +67,17 @@ func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 
 	clusterLabel := "cluster-a"
 	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
-	registry.EXPECT().GetRunningState().Return(map[string]*model.RoutineState{
-		"routine-1": {Incremental: &model.RunningJob{}},
-	})
-	routines.EXPECT().Routines().Return(map[string]*model.BackupRoutine{
+	backupRoutines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",
 			SourceCluster: cluster,
 			Namespaces:    []string{"ns1"},
 		},
-	})
+	}
+	routines.EXPECT().Routines().Return(backupRoutines)
+	registry.EXPECT().
+		GetRoutineState(backupRoutines["routine-1"]).
+		Return(&model.RoutineState{Incremental: &model.RunningJob{}})
 
 	preflight := NewRestorePreflight(registry, routines)
 
@@ -93,6 +94,6 @@ func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 		},
 	)
 
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "restore not allowed during backups on cluster cluster-a, namespace \"ns1\"")
+	assert.ErrorContains(t, err,
+		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
 }
