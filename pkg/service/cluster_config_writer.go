@@ -53,7 +53,7 @@ func (w *DefaultClusterConfigWriter) Write(
 
 	client, err := w.clientManager.GetClient(ctx, routine.SourceCluster, logger)
 	if err != nil {
-		return fmt.Errorf("cannot get backup client: %w", err)
+		return fmt.Errorf("failed to get backup client: %w", err)
 	}
 
 	defer w.clientManager.Close(client)

@@ -93,13 +93,13 @@ func (nv *NamespaceValidatorImpl) fetchClusterNamespaces(
 ) ([]string, error) {
 	client, err := nv.clientManager.GetClient(ctx, cluster, nil)
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to cluster: %w", err)
+		return nil, fmt.Errorf("failed to connect to cluster: %w", err)
 	}
 	defer nv.clientManager.Close(client)
 
 	namespaces, err := client.InfoClient().GetNamespacesList(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve namespaces: %w", err)
+		return nil, fmt.Errorf("failed to retrieve namespaces: %w", err)
 	}
 
 	return namespaces, nil

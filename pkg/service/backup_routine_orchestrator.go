@@ -135,13 +135,13 @@ func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
 func (h *BackupRoutineOrchestrator) prepareCluster(ctx context.Context) (aerospike.Client, []string, error) {
 	client, err := h.clientManager.GetClient(ctx, h.routine.SourceCluster, h.logger)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot get backup client: %w", err)
+		return nil, nil, fmt.Errorf("failed to get backup client: %w", err)
 	}
 
 	namespaces, err := h.resolveNamespaces(ctx, h.routine.Namespaces, client.InfoClient())
 	if err != nil {
 		h.clientManager.Close(client)
-		return nil, nil, fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
+		return nil, nil, fmt.Errorf("failed to retrieve namespaces from source cluster: %w", err)
 	}
 
 	return client, namespaces, nil

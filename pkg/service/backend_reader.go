@@ -101,7 +101,7 @@ func (r *backupReader) readBackupDetails(
 		}
 		metadata, err := model.NewMetadataFromBytes(file)
 		if err != nil {
-			return nil, fmt.Errorf("error decoding backup metadata YAML: %w", err)
+			return nil, fmt.Errorf("failed to decode backup metadata YAML: %w", err)
 		}
 		key := keyFromStoragePath(path)
 		details := model.NewBackupDetails(*metadata, key, storage)

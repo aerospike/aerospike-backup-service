@@ -115,7 +115,7 @@ func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Confi
 
 	err := updateFunc(s.config)
 	if err != nil {
-		return fmt.Errorf("cannot update configuration: %w", err)
+		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
 	err = s.configurationManager.Write(ctx, s.config)
