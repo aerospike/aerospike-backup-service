@@ -27,7 +27,6 @@ const minAdHocBackupDelay = 50 * time.Millisecond
 // @Router   /v1/backups/full [get]
 // @Success  200 {object} map[string][]dto.BackupDetails "Full backups by routine"
 // @Failure  400 {string} string
-// @Failure  500 {string} string
 func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
@@ -57,7 +56,6 @@ func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 // @Router   /v1/backups/full/{name} [get]
 // @Success  200 {object} []dto.BackupDetails "Full backups for routine"
 // @Failure  400 {string} string
-// @Failure  500 {string} string
 func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
 	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
@@ -97,7 +95,6 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 // @Router   /v1/backups/incremental [get]
 // @Success  200 {object} map[string][]dto.BackupDetails "Incremental backups by routine"
 // @Failure  400 {string} string
-// @Failure  500 {string} string
 func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Request) {
 	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
@@ -127,7 +124,6 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 // @Router   /v1/backups/incremental/{name} [get]
 // @Success  200 {object} []dto.BackupDetails "Incremental backups for routine"
 // @Failure  400 {string} string
-// @Failure  500 {string} string
 func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
 	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
@@ -200,8 +196,7 @@ func (s *Service) readBackupsForRoutine(
 // @Router   /v1/backups/full/{name} [post]
 // @Success  202
 // @Failure  400 {string} string
-// @Failure  404 {string} string
-// @Failure  500 {string} string
+// @Failure  404 {string} string "The specified routine was not found"
 func (s *Service) TriggerFullBackup(w http.ResponseWriter, r *http.Request) {
 	s.scheduleBackup(w, r, service.NewAdHocFullBackupJobForRoutine)
 }
@@ -217,7 +212,7 @@ func (s *Service) TriggerFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/backups/schedule/{name} [post]
 // @Success     202
 // @Failure     400 {string} string
-// @Failure     404 {string} string
+// @Failure     404 {string} string "The specified routine was not found"
 func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 	s.scheduleBackup(w, r, service.NewAdHocFullBackupJobForRoutine)
 }
@@ -231,7 +226,7 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Router   /v1/backups/incremental/{name} [post]
 // @Success  202
 // @Failure  400 {string} string
-// @Failure  404 {string} string
+// @Failure  404 {string} string "The specified routine was not found"
 func (s *Service) TriggerIncrementalBackup(w http.ResponseWriter, r *http.Request) {
 	s.scheduleBackup(w, r, service.NewAdHocIncrementalBackupJobForRoutine)
 }
@@ -290,7 +285,7 @@ func parseDelay(delayParameter string) (int, error) {
 // @Param    name path string true "Backup routine name"
 // @Router   /v1/backups/currentBackup/{name} [get]
 // @Success  200 {object} dto.RoutineState "Current backup statistics"
-// @Failure  404 {string} string
+// @Failure  404 {string} string "The specified routine was not found"
 // @Failure  400 {string} string
 func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
@@ -316,8 +311,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 // @Param    name path string true "Backup routine name"
 // @Router   /v1/backups/cancel/{name} [post]
 // @Success  202
-// @Failure  404 {string} string
-// @Failure  500 {string} string
+// @Failure  404 {string} string "The specified routine was not found"
 func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
 	if routineName == "" {

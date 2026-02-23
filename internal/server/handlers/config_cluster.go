@@ -54,7 +54,6 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/clusters [get]
 // @Produce     json
 // @Success  	200 {object} map[string]dto.AerospikeCluster
-// @Failure     500 {string} string
 func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
 	backupConfig := s.config.BackupConfigCopy()
 	clusters := dto.ConvertModelMapToDTO(

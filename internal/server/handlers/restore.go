@@ -114,6 +114,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/restore/status/{jobId} [get]
 // @Success     200 {object} dto.RestoreJobStatus "Restore job status details"
 // @Failure     400 {string} string
+// @Failure     404 {string} string "The specified restore job was not found"
 func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	jobID, err := extractJobID(r)
 	if err != nil {
@@ -158,7 +159,6 @@ func extractJobID(r *http.Request) (model.RestoreJobID, error) {
 // @Router   /v1/restore/jobs [get]
 // @Success  200 {object} map[string]dto.RestoreJobStatus "Restore jobs"
 // @Failure  400 {string} string
-// @Failure  500 {string} string
 //
 //nolint:lll
 func (s *Service) RetrieveRestoreJobs(w http.ResponseWriter, r *http.Request) {
@@ -235,7 +235,7 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 // @Param       jobId path int true "Restore job ID" format(int64)
 // @Success     202 {string} string "Restore job canceled successfully"
 // @Failure     400 {string} string "Invalid job ID"
-// @Failure     404 {string} string "Job not found"
+// @Failure     404 {string} string "The specified restore job was not found"
 func (s *Service) CancelRestoreHandler(w http.ResponseWriter, r *http.Request) {
 	jobID, err := extractJobID(r)
 	if err != nil {
