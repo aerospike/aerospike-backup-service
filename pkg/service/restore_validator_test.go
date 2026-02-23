@@ -39,11 +39,11 @@ func TestRestorePreflight_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 		GetRoutineState(backupRoutines["routine-1"]).
 		Return(&model.RoutineState{Full: &model.RunningJob{}})
 
-	preflight := NewRestorePreflight(registry, routines)
+	preflight := NewRestoreValidator(registry, routines)
 
 	infoGetter := fakeInfoGetter{}
 
-	err := preflight.ValidatePathRestore(
+	err := preflight.ValidatePath(
 		t.Context(),
 		&model.RestoreRequest{
 			DestinationCluster: *cluster,
@@ -79,11 +79,11 @@ func TestRestorePreflight_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 		GetRoutineState(backupRoutines["routine-1"]).
 		Return(&model.RoutineState{Incremental: &model.RunningJob{}})
 
-	preflight := NewRestorePreflight(registry, routines)
+	preflight := NewRestoreValidator(registry, routines)
 
 	infoGetter := fakeInfoGetter{}
 
-	err := preflight.ValidateTimeRestore(
+	err := preflight.ValidateTimestamp(
 		t.Context(),
 		&model.RestoreTimestampRequest{
 			DestinationCluster: *cluster,

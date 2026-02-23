@@ -63,7 +63,7 @@ func NewRestoreManager(
 	restoreJobs *RestoreJobsHolder,
 	backupReader BackupReader,
 	routineStorage *collections.LockMap,
-	restorePreflight RestorePreflight,
+	restorePreflight RestoreValidator,
 ) RestoreManager {
 	return &RestoreManagerImpl{
 		restoreJobs: restoreJobs,

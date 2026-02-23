@@ -28,7 +28,7 @@ func TestRestoreOK(t *testing.T) {
 	storage := &model.LocalStorage{Path: "/backup/path"}
 	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
-	client := env.expectSuccessfulClientInteraction(t, cluster)
+	client := env.expectSuccessfulClientInteraction(t)
 
 	mockRestoreHandler := restoreexecutor.NewMockRestoreHandler(env.ctrl)
 	stats := models.NewRestoreStats()
@@ -47,8 +47,8 @@ func TestRestoreOK(t *testing.T) {
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
 		[]model.BackupDetails{detailsDetails}, nil)
 
-	env.restorePreflight.EXPECT().
-		ValidatePathRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+	env.restoreValidator.EXPECT().
+		ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).
 		AnyTimes()
 
@@ -74,7 +74,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	storage := &model.LocalStorage{}
 	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
-	client := env.expectSuccessfulClientInteraction(t, cluster)
+	client := env.expectSuccessfulClientInteraction(t)
 
 	waitReturned := make(chan struct{}) // To signal Wait has returned
 	mockRestoreHandler := restoreexecutor.NewMockRestoreHandler(env.ctrl)
@@ -97,8 +97,8 @@ func TestCancelRestoreOK(t *testing.T) {
 	// Expect Run to start the process
 	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(mockRestoreHandler, nil)
 
-	env.restorePreflight.EXPECT().
-		ValidatePathRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+	env.restoreValidator.EXPECT().
+		ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).
 		AnyTimes()
 
@@ -170,14 +170,14 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	storage := &model.LocalStorage{Path: "/backup/path"}
 	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
-	env.expectSuccessfulClientInteraction(t, cluster)
+	env.expectSuccessfulClientInteraction(t)
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
 		[]model.BackupDetails{
 			{BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "source-ns", FileCount: 1}},
 		},
 		nil,
 	)
-	env.restorePreflight.EXPECT().ValidatePathRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+	env.restoreValidator.EXPECT().ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(errors.New("destination cluster does not have required namespace: test-ns"))
 
 	// Execute the restore
@@ -202,7 +202,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 	storage := &model.LocalStorage{Path: "/backup/path"}
 	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
-	env.expectSuccessfulClientInteraction(t, cluster)
+	env.expectSuccessfulClientInteraction(t)
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
 		[]model.BackupDetails{
 			{
@@ -215,7 +215,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 		},
 		nil,
 	)
-	env.restorePreflight.EXPECT().ValidatePathRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+	env.restoreValidator.EXPECT().ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(errors.New("backups from different times were found"))
 
 	// Execute the restore
@@ -239,10 +239,10 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 	storage := &model.LocalStorage{Path: "/backup/path"}
 	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
-	client := env.expectSuccessfulClientInteraction(t, cluster)
+	client := env.expectSuccessfulClientInteraction(t)
 
-	env.restorePreflight.EXPECT().
-		ValidatePathRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+	env.restoreValidator.EXPECT().
+		ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).
 		AnyTimes()
 
@@ -278,7 +278,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 	policy := model.RestorePolicy{}
 	request := model.NewRestoreRequest(*cluster, policy, storage, nil, "/backup/path/data")
 
-	client := env.expectSuccessfulClientInteraction(t, cluster)
+	client := env.expectSuccessfulClientInteraction(t)
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
 		[]model.BackupDetails{
 			{
@@ -292,8 +292,8 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 		nil,
 	)
 
-	env.restorePreflight.EXPECT().
-		ValidatePathRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	env.restoreValidator.EXPECT().
+		ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	var runStarted sync.WaitGroup
 	runStarted.Add(1)
@@ -379,7 +379,7 @@ type testRestoreEnv struct {
 	infoGetter        *mocks.MockInfoGetter
 	mockBackupReader  *MockBackupReader
 	jobsHolder        *RestoreJobsHolder
-	restorePreflight  *MockRestorePreflight
+	restoreValidator  *MockRestoreValidator
 	restoreManager    RestoreManager
 }
 
@@ -393,7 +393,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupReader := NewMockBackupReader(ctrl)
 	restoreJobsHolder := NewRestoreJobsHolder()
-	restorePreflight := NewMockRestorePreflight(ctrl)
+	restorePreflight := NewMockRestoreValidator(ctrl)
 
 	restoreManager := NewRestoreManager(
 		mockRestore,
@@ -410,7 +410,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 		mockClientManager: mockClientManager,
 		mockBackupReader:  mockBackupReader,
 		jobsHolder:        restoreJobsHolder,
-		restorePreflight:  restorePreflight,
+		restoreValidator:  restorePreflight,
 		restoreManager:    restoreManager,
 		infoGetter:        infoGetter,
 	}
@@ -431,7 +431,6 @@ func (env *testRestoreEnv) expectDefaultRestoreHandler() *restoreexecutor.MockRe
 // It returns the mocked client instance for potential further use in the test.
 func (env *testRestoreEnv) expectSuccessfulClientInteraction(
 	t *testing.T,
-	cluster *model.AerospikeCluster,
 ) aerospike.Client {
 	t.Helper()
 
@@ -492,8 +491,8 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 		Storage: &model.LocalStorage{},
 	}
 
-	env.restorePreflight.EXPECT().
-		ValidateTimeRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	env.restoreValidator.EXPECT().
+		ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	gomock.InOrder(
 		env.mockBackupReader.EXPECT().
@@ -504,7 +503,7 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 			Return([]model.BackupDetails{incrBackup}, nil),
 	)
 
-	client := env.expectSuccessfulClientInteraction(t, &request.DestinationCluster)
+	client := env.expectSuccessfulClientInteraction(t)
 	// Restore runs executor once per backup in chain (full then incremental).
 	gomock.InOrder(
 		env.mockRestore.EXPECT().
@@ -601,10 +600,10 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 				Return([]model.BackupDetails{backup}, nil).
 				Times(2)
 
-			client := env.expectSuccessfulClientInteraction(t, &request.DestinationCluster)
+			client := env.expectSuccessfulClientInteraction(t)
 			if tt.shouldSucceed {
-				env.restorePreflight.EXPECT().
-					ValidateTimeRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				env.restoreValidator.EXPECT().
+					ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
 					AnyTimes()
 				// Restore runs executor once per backup in chain (full + incremental = 2).
@@ -612,8 +611,8 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 					Run(gomock.Any(), client, gomock.Any()).
 					Return(env.expectDefaultRestoreHandler(), nil).Times(2)
 			} else {
-				env.restorePreflight.EXPECT().
-					ValidateTimeRestore(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				env.restoreValidator.EXPECT().
+					ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(errors.New("preflight failed")).
 					AnyTimes()
 			}

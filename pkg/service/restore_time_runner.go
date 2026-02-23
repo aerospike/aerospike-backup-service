@@ -21,7 +21,7 @@ type timeRestoreRunner struct {
 	backupReader   BackupReader
 	clientManager  aerospike.ClientManager
 	routineStorage *collections.LockMap
-	preflight      RestorePreflight
+	preflight      RestoreValidator
 }
 
 func newTimeRestoreRunner(
@@ -30,7 +30,7 @@ func newTimeRestoreRunner(
 	backupReader BackupReader,
 	clientManager aerospike.ClientManager,
 	routineStorage *collections.LockMap,
-	preflight RestorePreflight,
+	preflight RestoreValidator,
 ) *timeRestoreRunner {
 	return &timeRestoreRunner{
 		restoreJobs:    restoreJobs,
@@ -122,7 +122,7 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 	}
 	defer r.clientManager.Close(client)
 
-	if err := r.preflight.ValidateTimeRestore(
+	if err := r.preflight.ValidateTimestamp(
 		ctx,
 		request,
 		client.InfoClient(),

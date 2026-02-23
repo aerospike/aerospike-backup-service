@@ -11,17 +11,17 @@ import (
 	"github.com/aerospike/backup-go"
 )
 
-// RestorePreflight validates restore preconditions before actual execution starts.
-type RestorePreflight interface {
-	// ValidatePathRestore validates path-restore preconditions.
-	ValidatePathRestore(
+// RestoreValidator validates restore preconditions before actual execution starts.
+type RestoreValidator interface {
+	// ValidatePath validates path-restore preconditions.
+	ValidatePath(
 		ctx context.Context,
 		request *model.RestoreRequest,
 		infoGetter backup.InfoGetter,
 		backups []model.BackupDetails,
 	) error
-	// ValidateTimeRestore validates point-in-time restore preconditions.
-	ValidateTimeRestore(
+	// ValidateTimestamp validates point-in-time restore preconditions.
+	ValidateTimestamp(
 		ctx context.Context,
 		request *model.RestoreTimestampRequest,
 		infoGetter backup.InfoGetter,
@@ -29,24 +29,24 @@ type RestorePreflight interface {
 	) error
 }
 
-type restorePreflight struct {
+type restoreValidatorImpl struct {
 	runningBackups RunningBackupsRegistry
 	routines       routineProvider
 }
 
-// NewRestorePreflight creates a preflight validator for restore operations.
-func NewRestorePreflight(
+// NewRestoreValidator creates a preflight validator for restore operations.
+func NewRestoreValidator(
 	runningBackups RunningBackupsRegistry,
 	routines routineProvider,
-) RestorePreflight {
-	return &restorePreflight{
+) RestoreValidator {
+	return &restoreValidatorImpl{
 		runningBackups: runningBackups,
 		routines:       routines,
 	}
 }
 
-// ValidatePathRestore validates path-restore preconditions.
-func (r *restorePreflight) ValidatePathRestore(
+// ValidatePath validates path-restore preconditions.
+func (r *restoreValidatorImpl) ValidatePath(
 	ctx context.Context,
 	request *model.RestoreRequest,
 	infoGetter backup.InfoGetter,
@@ -78,8 +78,8 @@ func (r *restorePreflight) ValidatePathRestore(
 	return r.checkRunningBackupsConflict(request.DestinationCluster, destinationNamespaces)
 }
 
-// ValidateTimeRestore validates point-in-time restore preconditions.
-func (r *restorePreflight) ValidateTimeRestore(
+// ValidateTimestamp validates point-in-time restore preconditions.
+func (r *restoreValidatorImpl) ValidateTimestamp(
 	ctx context.Context,
 	request *model.RestoreTimestampRequest,
 	infoGetter backup.InfoGetter,
@@ -103,7 +103,7 @@ func (r *restorePreflight) ValidateTimeRestore(
 
 // checkRunningBackupsConflict validates the provided destination cluster and namespaces
 // against all currently active backup routines to prevent concurrent operations on the same data.
-func (r *restorePreflight) checkRunningBackupsConflict(
+func (r *restoreValidatorImpl) checkRunningBackupsConflict(
 	cluster model.AerospikeCluster,
 	destinationNamespaces []string,
 ) error {
