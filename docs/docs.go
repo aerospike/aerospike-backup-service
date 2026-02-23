@@ -684,13 +684,13 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "The specified cluster could not be found",
+                        "description": "The specified cluster was not found",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "The specified cluster could not be found",
+                        "description": "The specified cluster was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -871,13 +871,13 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "The specified policy could not be found",
+                        "description": "The specified policy was not found",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "The specified policy could not be found",
+                        "description": "The specified policy was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1052,7 +1052,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "The specified routine could not be found",
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1291,7 +1291,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "The specified storage could not be found",
+                        "description": "The specified storage was not found",
                         "schema": {
                             "type": "string"
                         }

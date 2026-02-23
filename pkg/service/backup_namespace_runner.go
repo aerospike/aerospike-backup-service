@@ -109,7 +109,7 @@ func (op *BackupNamespaceRunner) writeBackupMetadata(
 	ctx context.Context, metadata model.BackupMetadata, backupFolder string,
 ) error {
 	if err := op.backendService.WriteBackupMetadata(ctx, op.routine, backupFolder, metadata); err != nil {
-		return fmt.Errorf("could not write backup metadata to %q: %w", backupFolder, err)
+		return fmt.Errorf("failed to write backup metadata to %q: %w", backupFolder, err)
 	}
 
 	op.logger.Info("Wrote backup metadata",

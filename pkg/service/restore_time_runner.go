@@ -80,7 +80,7 @@ func (r *timeRestoreRunner) findBackupsToRestore(
 			WithFromTime(backups[0].Created).
 			WithToTime(request.Time))
 	if err != nil {
-		return nil, fmt.Errorf("could not find incremental backups: %w", err)
+		return nil, fmt.Errorf("failed to find incremental backups: %w", err)
 	}
 
 	backupsByNs := make(map[string][]model.BackupDetails)
@@ -206,7 +206,7 @@ func (r *timeRestoreRunner) restoreNamespace(
 	if !request.DisableReordering {
 		counter, err := client.InfoClient().GetRecordCount(ctx, namespace, effectivePolicy.SetList)
 		if err != nil {
-			return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
+			return fmt.Errorf("failed to determine if namespace %s is empty: %w", namespace, err)
 		}
 
 		if counter == 0 {
@@ -271,7 +271,7 @@ func (r *timeRestoreRunner) restoreFromPath(
 	)
 	handler, err := r.restoreService.Run(ctx, client, restoreRequest)
 	if err != nil {
-		return nil, fmt.Errorf("could not start restore from backup at %s: %w", backupPath, err)
+		return nil, fmt.Errorf("failed to start restore from backup at %s: %w", backupPath, err)
 	}
 
 	return handler, nil

@@ -202,7 +202,7 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routine *model.BackupRoutin
 	nextRunTime, err := nextBackup(routine)
 	if err != nil {
 		slog.Default().With(attr.Routine(routine.Name)).
-			Warn("Could not calculate next fire time", attr.Error(err))
+			Warn("Failed to calculate next fire time", attr.Error(err))
 		nextRunTime = model.NewNoBackupTime()
 	}
 

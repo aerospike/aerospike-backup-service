@@ -19,7 +19,6 @@ import (
 // @Param       cluster body dto.AerospikeCluster true "Aerospike cluster details"
 // @Success     201
 // @Failure     400 {string} string
-// @Failure     500 {string} string
 func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -76,8 +75,7 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 // @Produce     json
 // @Success  	200 {object} dto.AerospikeCluster
 // @Failure     400 {string} string
-// @Failure     404 {string} string "The specified cluster could not be found"
-// @Failure     500 {string} string "The specified cluster could not be found"
+// @Failure     404 {string} string "The specified cluster was not found"
 func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	clusterName := r.PathValue("name")
 	if clusterName == "" {

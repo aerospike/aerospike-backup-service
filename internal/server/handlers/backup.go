@@ -218,7 +218,6 @@ func (s *Service) TriggerFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Success     202
 // @Failure     400 {string} string
 // @Failure     404 {string} string
-// @Failure     500 {string} string
 func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 	s.scheduleBackup(w, r, service.NewAdHocFullBackupJobForRoutine)
 }
@@ -233,7 +232,6 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Success  202
 // @Failure  400 {string} string
 // @Failure  404 {string} string
-// @Failure  500 {string} string
 func (s *Service) TriggerIncrementalBackup(w http.ResponseWriter, r *http.Request) {
 	s.scheduleBackup(w, r, service.NewAdHocIncrementalBackupJobForRoutine)
 }
@@ -294,7 +292,6 @@ func parseDelay(delayParameter string) (int, error) {
 // @Success  200 {object} dto.RoutineState "Current backup statistics"
 // @Failure  404 {string} string
 // @Failure  400 {string} string
-// @Failure  500 {string} string
 func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
 	if routineName == "" {

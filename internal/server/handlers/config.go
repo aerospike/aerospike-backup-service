@@ -22,7 +22,6 @@ func (s *Service) ConfigActionHandler(_ http.ResponseWriter, _ *http.Request) {
 // @Router      /v1/config [get]
 // @Produce     json
 // @Success     200 {object} dto.Config
-// @Failure     500 {string} string
 func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 	httpOK(w, dto.NewConfigFromModel(s.config))
 }

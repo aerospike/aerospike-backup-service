@@ -236,7 +236,6 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     202 {string} string "Restore job canceled successfully"
 // @Failure     400 {string} string "Invalid job ID"
 // @Failure     404 {string} string "Job not found"
-// @Failure     500 {string} string "Internal server error"
 func (s *Service) CancelRestoreHandler(w http.ResponseWriter, r *http.Request) {
 	jobID, err := extractJobID(r)
 	if err != nil {
