@@ -66,14 +66,14 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 	keys, err := a.scheduler.GetJobKeys(matcher.JobGroupEquals(string(quartzGroupScheduled)))
 	if err != nil {
-		return fmt.Errorf("cannot fetch jobs: %w", err)
+		return fmt.Errorf("failed to fetch jobs: %w", err)
 	}
 
 	slog.Info("Delete scheduled jobs", slog.Any("keys", keys))
 	for _, key := range keys {
 		err = a.scheduler.DeleteJob(key)
 		if err != nil {
-			return fmt.Errorf("cannot delete job %q: %w", key, err)
+			return fmt.Errorf("failed to delete job %q: %w", key, err)
 		}
 	}
 

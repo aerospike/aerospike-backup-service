@@ -112,17 +112,7 @@
                         "description": "Accepted"
                     },
                     "404": {
-                        "description": "Not Found",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified routine was not found",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -174,17 +164,7 @@
                         }
                     },
                     "404": {
-                        "description": "Not Found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified routine was not found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -242,16 +222,6 @@
                     },
                     "400": {
                         "description": "Bad Request",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -322,16 +292,6 @@
                                 }
                             }
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
                     }
                 }
             },
@@ -375,17 +335,7 @@
                         }
                     },
                     "404": {
-                        "description": "Not Found",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified routine was not found",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -443,16 +393,6 @@
                     },
                     "400": {
                         "description": "Bad Request",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -523,16 +463,6 @@
                                 }
                             }
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
                     }
                 }
             },
@@ -576,17 +506,7 @@
                         }
                     },
                     "404": {
-                        "description": "Not Found",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified routine was not found",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -641,17 +561,7 @@
                         }
                     },
                     "404": {
-                        "description": "Not Found",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified routine was not found",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -677,16 +587,6 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/dto.Config"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
                                 }
                             }
                         }
@@ -771,16 +671,6 @@
                                 }
                             }
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -825,17 +715,7 @@
                         }
                     },
                     "404": {
-                        "description": "The specified cluster could not be found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "The specified cluster could not be found",
+                        "description": "The specified cluster was not found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -915,16 +795,6 @@
                                 }
                             }
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
                     }
                 }
             },
@@ -982,16 +852,6 @@
                                 }
                             }
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -1036,17 +896,7 @@
                         }
                     },
                     "404": {
-                        "description": "The specified policy could not be found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "The specified policy could not be found",
+                        "description": "The specified policy was not found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1237,7 +1087,7 @@
                         }
                     },
                     "404": {
-                        "description": "The specified routine could not be found",
+                        "description": "The specified routine was not found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1377,17 +1227,7 @@
                         "description": "Routine successfully disabled."
                     },
                     "404": {
-                        "description": "Not Found",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Unexpected error occurred.",
+                        "description": "The specified routine was not found",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1422,7 +1262,7 @@
                         "description": "Routine successfully enabled."
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "The specified routine was not found",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1451,16 +1291,6 @@
                                     "additionalProperties": {
                                         "$ref": "#/components/schemas/dto.Storage"
                                     }
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
                                 }
                             }
                         }
@@ -1508,17 +1338,7 @@
                         }
                     },
                     "404": {
-                        "description": "The specified storage could not be found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified storage was not found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1676,17 +1496,7 @@
                         }
                     },
                     "404": {
-                        "description": "Job not found",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "The specified restore job was not found",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1846,16 +1656,6 @@
                                 }
                             }
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -1892,6 +1692,16 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "The specified restore job was not found",
                         "content": {
                             "application/json": {
                                 "schema": {

@@ -38,7 +38,7 @@ func (nv *NamespaceValidatorImpl) Validate(ctx context.Context, cfg *model.Confi
 	missing := nv.findMissingNamespaces(ctx, cfg.Routines())
 
 	for routine, namespaces := range missing {
-		slog.Warn("namespaces referenced by routine are missing in the cluster",
+		slog.Warn("Namespaces referenced by routine are missing in the cluster",
 			attr.Routine(routine),
 			slog.Any("missingNamespaces", namespaces),
 		)
@@ -77,7 +77,7 @@ func (nv *NamespaceValidatorImpl) fetchNamespacesByCluster(
 	for cluster := range clusters {
 		namespaces, err := nv.fetchClusterNamespaces(ctx, cluster)
 		if err != nil {
-			slog.Error("failed to fetch namespaces for cluster", attr.Error(err))
+			slog.Error("Failed to fetch namespaces for cluster", attr.Error(err))
 			continue
 		}
 		namespacesByCluster[cluster] = namespaces
@@ -93,13 +93,13 @@ func (nv *NamespaceValidatorImpl) fetchClusterNamespaces(
 ) ([]string, error) {
 	client, err := nv.clientManager.GetClient(ctx, cluster, nil)
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to cluster: %w", err)
+		return nil, fmt.Errorf("failed to connect to cluster: %w", err)
 	}
 	defer nv.clientManager.Close(client)
 
 	namespaces, err := client.InfoClient().GetNamespacesList(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("cannot retrieve namespaces: %w", err)
+		return nil, fmt.Errorf("failed to retrieve namespaces: %w", err)
 	}
 
 	return namespaces, nil

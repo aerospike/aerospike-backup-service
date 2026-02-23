@@ -91,6 +91,8 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
 	h.fullBackupLock.Lock()
+	h.logger.Info("Full backup started", slog.Time("now", now))
+
 	if h.skipFullBackup() {
 		h.fullBackupLock.Unlock()
 		return errBackupSkipped
@@ -133,13 +135,13 @@ func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
 func (h *BackupRoutineOrchestrator) prepareCluster(ctx context.Context) (aerospike.Client, []string, error) {
 	client, err := h.clientManager.GetClient(ctx, h.routine.SourceCluster, h.logger)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot get backup client: %w", err)
+		return nil, nil, fmt.Errorf("failed to get backup client: %w", err)
 	}
 
 	namespaces, err := h.resolveNamespaces(ctx, h.routine.Namespaces, client.InfoClient())
 	if err != nil {
 		h.clientManager.Close(client)
-		return nil, nil, fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
+		return nil, nil, fmt.Errorf("failed to retrieve namespaces from source cluster: %w", err)
 	}
 
 	return client, namespaces, nil
@@ -177,8 +179,9 @@ func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.T
 }
 
 func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, now time.Time) {
+	h.logger.Info("Incremental backup started", slog.Time("now", now))
+
 	if h.skipIncrementalBackup(now) {
-		h.logger.Debug("Incremental backup skipped")
 		observeBackupEvent(h.routine.Name, jobTypeIncremental, BackupOutcomeSkip, 0)
 		return
 	}
@@ -206,7 +209,7 @@ func (h *BackupRoutineOrchestrator) processBackupError(backupType jobType, durat
 	}
 
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		h.logger.Info(operation + " context cancelled")
+		h.logger.Info(operation + " context canceled")
 		observeBackupEvent(h.routine.Name, backupType, BackupOutcomeCancelled, duration)
 		return
 	}

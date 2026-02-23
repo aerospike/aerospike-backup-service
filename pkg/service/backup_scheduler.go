@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/reugn/go-quartz/logger"
@@ -70,9 +71,10 @@ func NewAdHocIncrementalBackupJobForRoutine(routineName string) *quartz.JobDetai
 
 // NewScheduler creates a new quartz.Scheduler.
 func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler, error) {
+	warnOnlyLogger := log.NewMinLevelLogger(appLogger, slog.LevelWarn)
 	scheduler, err := quartz.NewStdScheduler(
 		quartz.WithOutdatedThreshold(time.Second),
-		quartz.WithLogger(logger.NewSlogLogger(ctx, appLogger)),
+		quartz.WithLogger(logger.NewSlogLogger(ctx, warnOnlyLogger)),
 		quartz.WithJobMetadata(),
 	)
 	return scheduler, err

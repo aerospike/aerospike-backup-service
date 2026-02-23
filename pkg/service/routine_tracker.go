@@ -90,7 +90,7 @@ func (t *routineTracker) recordSuccessfulBackup(routineName string, job jobType,
 	defer t.mu.Unlock()
 
 	logger := slog.Default().With(attr.Routine(routineName))
-	logger.Info("set last backup time",
+	logger.Info("Set last backup time",
 		slog.String("time", timestamp.String()),
 		slog.String("job", string(job)),
 	)

@@ -117,13 +117,7 @@ const docTemplate = `{
                         "description": "Accepted"
                     },
                     "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -164,13 +158,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -219,12 +207,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -280,12 +262,6 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 }
             },
@@ -321,13 +297,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -376,12 +346,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -437,12 +401,6 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 }
             },
@@ -478,13 +436,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -527,13 +479,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -556,12 +502,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Config"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 }
@@ -641,12 +581,6 @@ const docTemplate = `{
                                 "$ref": "#/definitions/dto.AerospikeCluster"
                             }
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 }
             }
@@ -684,13 +618,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "The specified cluster could not be found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "The specified cluster could not be found",
+                        "description": "The specified cluster was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -772,12 +700,6 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 }
             },
@@ -828,12 +750,6 @@ const docTemplate = `{
                                 "$ref": "#/definitions/dto.BackupPolicy"
                             }
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 }
             }
@@ -871,13 +787,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "The specified policy could not be found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "The specified policy could not be found",
+                        "description": "The specified policy was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1052,7 +962,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "The specified routine could not be found",
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1186,13 +1096,7 @@ const docTemplate = `{
                         "description": "Routine successfully disabled."
                     },
                     "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Unexpected error occurred.",
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1221,7 +1125,7 @@ const docTemplate = `{
                         "description": "Routine successfully enabled."
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1247,12 +1151,6 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "$ref": "#/definitions/dto.Storage"
                             }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 }
@@ -1291,13 +1189,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "The specified storage could not be found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "The specified storage was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1441,13 +1333,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Job not found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
+                        "description": "The specified restore job was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1588,12 +1474,6 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 }
             }
@@ -1627,6 +1507,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified restore job was not found",
                         "schema": {
                             "type": "string"
                         }

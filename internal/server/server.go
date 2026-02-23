@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/middleware"
 )
@@ -52,7 +53,7 @@ func NewHTTPServer(service *handlers.Service) *HTTPServer {
 func (s *HTTPServer) Start() error {
 	err := s.server.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
-		slog.Info(err.Error())
+		slog.Info("HTTP server closed", attr.Error(err))
 		return nil
 	}
 	return err

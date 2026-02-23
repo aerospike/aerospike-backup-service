@@ -53,7 +53,6 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/storage [get]
 // @Produce     json
 // @Success  	200 {object} map[string]dto.Storage
-// @Failure     500 {string} string
 func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 	backupConfig := s.config.BackupConfigCopy()
 	httpOK(w, dto.ConvertStorageMapToDTO(backupConfig.Storage, backupConfig))
@@ -68,8 +67,7 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Produce     json
 // @Success  	200 {object} dto.Storage
 // @Response    400 {string} string
-// @Failure     404 {string} string "The specified storage could not be found"
-// @Failure     500 {string} string
+// @Failure     404 {string} string "The specified storage was not found"
 func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 	storageName := r.PathValue("name")
 	if storageName == "" {

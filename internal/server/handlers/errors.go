@@ -4,13 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"mime"
 	"net/http"
 	"path/filepath"
 	"strconv"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -73,19 +71,14 @@ func httpOK(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		slog.Error("Error encoding JSON response", attr.Error(err))
-	}
+	_ = json.NewEncoder(w).Encode(data)
 }
 
 // httpAcceptedWithJobID responds with a job ID and 202 status.
 func httpAcceptedWithJobID(w http.ResponseWriter, jobID model.RestoreJobID) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	_, err := fmt.Fprintf(w, "%d", jobID)
-	if err != nil {
-		slog.Error("Error encoding job id response", attr.Error(err))
-	}
+	_, _ = fmt.Fprintf(w, "%d", jobID)
 }
 
 // httpAccepted responds with an empty 202 Accepted.
@@ -108,8 +101,5 @@ func httpContent(w http.ResponseWriter, buf []byte, filename string) {
 
 	w.WriteHeader(http.StatusOK)
 
-	if _, err := w.Write(buf); err != nil {
-		slog.Error("Error encoding writing response", attr.Error(err))
-		http.Error(w, "Failed to send file", http.StatusInternalServerError)
-	}
+	_, _ = w.Write(buf)
 }

@@ -107,7 +107,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Contex
 	}
 
 	if errors.Is(err, context.Canceled) {
-		slog.Info("History synchronization context cancelled")
+		slog.Info("History synchronization context canceled")
 		return
 	}
 
@@ -202,7 +202,7 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routine *model.BackupRoutin
 	nextRunTime, err := nextBackup(routine)
 	if err != nil {
 		slog.Default().With(attr.Routine(routine.Name)).
-			Warn("Could not calculate next fire time", attr.Error(err))
+			Warn("Failed to calculate next fire time", attr.Error(err))
 		nextRunTime = model.NewNoBackupTime()
 	}
 
