@@ -80,13 +80,19 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 	return scheduler, err
 }
 
-// scheduleRoutines schedules the given handlers using the scheduler.
+// scheduleRoutines schedules provided routines and updates jobStore incrementally.
+// Deleted routines can be represented as disabled markers with only Name set.
 func scheduleRoutines(
-	scheduler Scheduler, config *model.Config, components *BackupComponents, pathService PathService,
+	scheduler Scheduler,
+	routines []*model.BackupRoutine,
+	components *BackupComponents,
+	pathService PathService,
 ) error {
 	newJobs := map[string]*quartz.JobDetail{}
 	var errs error
-	for routineName, routine := range config.Routines() {
+
+	for _, routine := range routines {
+		routineName := routine.Name
 		if routine.Disabled {
 			slog.Debug("Skipping disabled routine", attr.Routine(routineName))
 			continue
@@ -111,7 +117,14 @@ func scheduleRoutines(
 		newJobs[incrementalJob.JobKey().String()] = incrementalJob
 	}
 
-	jobStore.ReplaceContent(newJobs)
+	for _, routine := range routines {
+		routineName := routine.Name
+		jobStore.Remove(jobKey(routineName, jobTypeFull).String())
+		jobStore.Remove(jobKey(routineName, jobTypeIncremental).String())
+	}
+	for key, job := range newJobs {
+		jobStore.Store(key, job)
+	}
 
 	return errs
 }

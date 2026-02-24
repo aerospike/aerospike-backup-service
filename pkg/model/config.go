@@ -179,6 +179,7 @@ func (c *Config) UpdatePolicy(name string, p *BackupPolicy) error {
 	for _, r := range c.backupConfig.BackupRoutines {
 		if r.BackupPolicy == oldPolicy {
 			r.BackupPolicy = p
+			c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, r.Name)
 		}
 	}
 	c.backupConfig.BackupPolicies[name] = p
@@ -232,6 +233,7 @@ func (c *Config) DeleteRoutine(name string) error {
 	if _, exists := c.backupConfig.BackupRoutines[name]; !exists {
 		return fmt.Errorf("delete backup routine %q: %w", name, ErrNotFound)
 	}
+	c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, name)
 	delete(c.backupConfig.BackupRoutines, name)
 
 	return nil
@@ -289,6 +291,7 @@ func (c *Config) UpdateCluster(name string, cluster *AerospikeCluster) error {
 	for _, r := range c.backupConfig.BackupRoutines {
 		if r.SourceCluster == oldCluster {
 			r.SourceCluster = cluster
+			c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, r.Name)
 		}
 	}
 
@@ -337,9 +340,7 @@ func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
 	}
 
 	c.backupConfig.BackupRoutines[name].Disabled = isDisabled
-	if !isDisabled { // only invalidate if we are enabling the routine
-		c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, routine.Name)
-	}
+	c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, routine.Name)
 
 	return nil
 }
@@ -357,9 +358,13 @@ func (c *Config) PopInvalidatedRoutines() []*BackupRoutine {
 			continue // skip duplicate
 		}
 		seen[name] = struct{}{}
-		if routine, exists := c.backupConfig.BackupRoutines[name]; exists { // ensure the routine still exists in the config
+		if routine, exists := c.backupConfig.BackupRoutines[name]; exists {
 			routines = append(routines, routine)
+			continue
 		}
+
+		// Keep deleted routines by name so scheduler can unschedule them.
+		routines = append(routines, &BackupRoutine{Name: name, Disabled: true})
 	}
 
 	// Drain invalidations so the next call only returns newly invalidated routines.

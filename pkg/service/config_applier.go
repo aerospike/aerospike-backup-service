@@ -46,31 +46,64 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	err := a.clearPeriodicSchedulerJobs()
+	invalidatedRoutines := a.config.PopInvalidatedRoutines()
+	if len(invalidatedRoutines) == 0 {
+		return nil
+	}
+
+	err := a.clearPeriodicSchedulerJobs(invalidatedRoutines)
 	if err != nil {
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
 
-	err = scheduleRoutines(a.scheduler, a.config, a.components, a.pathService)
+	err = scheduleRoutines(
+		a.scheduler,
+		invalidatedRoutines,
+		a.components,
+		a.pathService,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
 
-	// Scan existing backups to find the last successful runs for every routine.
-	go a.registry.SynchroniseBackupHistory(ctx)
+	routinesToSync := make([]*model.BackupRoutine, 0, len(invalidatedRoutines))
+	for _, routine := range invalidatedRoutines {
+		// Deleted routines are represented as disabled markers in PopInvalidatedRoutines.
+		if existingRoutine, exists := a.config.Routine(routine.Name); exists {
+			routinesToSync = append(routinesToSync, existingRoutine)
+		}
+	}
+
+	// Scan existing backups only for routines that were invalidated and still exist.
+	go a.registry.SynchroniseBackupHistory(ctx, routinesToSync)
 
 	return nil
 }
 
 // we don't want to delete ad-hoc jobs.
-func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
+func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routines []*model.BackupRoutine) error {
+	targetKeys := make(map[string]struct{}, len(routines)*2)
+	for _, routine := range routines {
+		routineName := routine.Name
+		targetKeys[jobKey(routineName, jobTypeFull).String()] = struct{}{}
+		targetKeys[jobKey(routineName, jobTypeIncremental).String()] = struct{}{}
+	}
+
 	keys, err := a.scheduler.GetJobKeys(matcher.JobGroupEquals(string(quartzGroupScheduled)))
 	if err != nil {
 		return fmt.Errorf("failed to fetch jobs: %w", err)
 	}
 
-	slog.Info("Delete scheduled jobs", slog.Any("keys", keys))
+	keysToDelete := make([]*quartz.JobKey, 0, len(keys))
 	for _, key := range keys {
+		if _, shouldDelete := targetKeys[key.String()]; !shouldDelete {
+			continue
+		}
+		keysToDelete = append(keysToDelete, key)
+	}
+
+	slog.Info("Delete scheduled jobs", slog.Any("keys", keysToDelete))
+	for _, key := range keysToDelete {
 		err = a.scheduler.DeleteJob(key)
 		if err != nil {
 			return fmt.Errorf("failed to delete job %q: %w", key, err)

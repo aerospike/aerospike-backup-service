@@ -66,14 +66,16 @@ func TestScheduleRoutines(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			jobStore.ReplaceContent(map[string]*quartz.JobDetail{})
+
 			scheduler := new(MockScheduler)
 			scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
 
-			config := model.NewConfig()
+			routines := make([]*model.BackupRoutine, 0, len(tt.routines))
 			for _, routine := range tt.routines {
-				_ = config.AddRoutine(routine)
+				routines = append(routines, routine)
 			}
-			err := scheduleRoutines(scheduler, config, &BackupComponents{}, nil)
+			err := scheduleRoutines(scheduler, routines, &BackupComponents{}, nil)
 
 			require.NoError(t, err)
 			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)
