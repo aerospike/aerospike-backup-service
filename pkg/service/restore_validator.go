@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/backup-go"
 )
 
@@ -85,15 +85,13 @@ func (r *restoreValidatorImpl) ValidateTimestamp(
 	infoGetter backup.InfoGetter,
 	backupsByNamespace map[string][]model.BackupDetails,
 ) error {
-	for _, backups := range backupsByNamespace {
-		if err := validateBackupsEncryption(backups, request.Policy.EncryptionPolicy); err != nil {
-			return err
-		}
+	backups := collections.Flatten(backupsByNamespace)
+	if err := validateBackupsEncryption(backups, request.Policy.EncryptionPolicy); err != nil {
+		return err
 	}
 
-	sourceNamespaces := sourceNamespacesFromBackupsByNamespace(backupsByNamespace)
+	sourceNamespaces := collections.Keys(backupsByNamespace)
 	destinationNamespaces := destinationNamespacesForRestore(request.Policy.Namespace, sourceNamespaces)
-
 	if err := validateDestinationNamespaces(ctx, destinationNamespaces, infoGetter); err != nil {
 		return err
 	}
@@ -211,11 +209,6 @@ func sourceNamespacesFromBackups(backups []model.BackupDetails) []string {
 	}
 
 	return namespaces
-}
-
-// sourceNamespacesFromBackupsByNamespace extracts source namespaces from map keys.
-func sourceNamespacesFromBackupsByNamespace(backupsByNamespace map[string][]model.BackupDetails) []string {
-	return slices.Collect(maps.Keys(backupsByNamespace))
 }
 
 // namespacesOverlap reports whether restore and backup namespace scopes intersect.
