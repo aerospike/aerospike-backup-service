@@ -22,7 +22,7 @@ type TLS struct {
 // String returns a string representation of the TLS.
 func (tls *TLS) String() string {
 	if tls == nil {
-		return nilString
+		return ""
 	}
 	return fmt.Sprintf(
 		"%s:%v:%v:%v:%v",

@@ -46,7 +46,7 @@ func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
 // String returns a string representation of the SecretAgent.
 func (s *SecretAgent) String() string {
 	if s == nil {
-		return nilString
+		return ""
 	}
 	return fmt.Sprintf("%v:%v:%v:%v:%v:%v",
 		s.ConnectionType,

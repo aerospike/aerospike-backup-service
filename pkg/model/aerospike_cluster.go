@@ -10,8 +10,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
-const nilString = "<nil>"
-
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 type AerospikeCluster struct {
 	// The cluster name.
@@ -80,7 +78,7 @@ func (c *AerospikeCluster) Hash() string {
 // It prefers ClusterLabel; if missing, it uses a stable first seed node string.
 func (c *AerospikeCluster) ToString() string {
 	if c == nil {
-		return nilString
+		return ""
 	}
 
 	if label := ptr.ValueOrZero(c.ClusterLabel); label != "" {
@@ -96,7 +94,7 @@ func (c *AerospikeCluster) ToString() string {
 		return nodeStrings[0]
 	}
 
-	return nilString
+	return ""
 }
 
 // GetAuthMode safely returns the authentication mode.
@@ -125,7 +123,7 @@ type Credentials struct {
 // String returns a string representation of the Credentials.
 func (c *Credentials) String() string {
 	if c == nil {
-		return nilString
+		return ""
 	}
 	return fmt.Sprintf("%v:%v:%v:%v:%v",
 		ptr.ValueOrZero(c.User),
