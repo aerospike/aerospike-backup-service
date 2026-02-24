@@ -51,6 +51,7 @@ func (r *BackupTime) LatestRun() *time.Time {
 	if r.incremental.After(*r.full) {
 		return copyTimePtr(r.incremental)
 	}
+
 	return copyTimePtr(r.full)
 }
 
