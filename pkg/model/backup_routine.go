@@ -10,11 +10,11 @@ type BackupRoutine struct {
 	// The unique name of the routine (key in routines map).
 	Name string
 
-	// The corresponding backup policy.
+	// The corresponding backup policy. Not nil.
 	BackupPolicy *BackupPolicy
-	// The corresponding source cluster.
+	// The corresponding source cluster. Not nil.
 	SourceCluster *AerospikeCluster
-	// The corresponding storage provider configuration.
+	// The corresponding storage provider configuration. Not nil.
 	Storage Storage
 	// The Secret Agent configuration for the routine (optional).
 	SecretAgent *SecretAgent
@@ -53,6 +53,8 @@ func init() {
 }
 
 // Copy returns a deep copy of the BackupRoutine.
+// Long-running backup/restore operations must work on an immutable routine snapshot.
+// A shallow copy would still share nested pointers/slices and could observe config changes mid-run.
 func (r *BackupRoutine) Copy() *BackupRoutine {
 	if r == nil {
 		return nil

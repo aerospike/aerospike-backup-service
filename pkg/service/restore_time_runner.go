@@ -21,6 +21,7 @@ type timeRestoreRunner struct {
 	backupReader   BackupReader
 	clientManager  aerospike.ClientManager
 	routineStorage *collections.LockMap
+	validator      RestoreValidator
 }
 
 func newTimeRestoreRunner(
@@ -29,6 +30,7 @@ func newTimeRestoreRunner(
 	backupReader BackupReader,
 	clientManager aerospike.ClientManager,
 	routineStorage *collections.LockMap,
+	validator RestoreValidator,
 ) *timeRestoreRunner {
 	return &timeRestoreRunner{
 		restoreJobs:    restoreJobs,
@@ -36,6 +38,7 @@ func newTimeRestoreRunner(
 		backupReader:   backupReader,
 		clientManager:  clientManager,
 		routineStorage: routineStorage,
+		validator:      validator,
 	}
 }
 
@@ -60,7 +63,7 @@ func (r *timeRestoreRunner) findBackupsToRestore(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (map[string][]model.BackupDetails, error) {
 	backups, err := r.backupReader.GetBackups(ctx,
-		NewFullBackupFilter(request.Routine).
+		NewFullBackupFilter(&request.Routine).
 			WithToTime(request.Time).
 			Last(),
 	)
@@ -76,7 +79,7 @@ func (r *timeRestoreRunner) findBackupsToRestore(
 
 	// Find incremental backups.
 	incrementalBackups, err := r.backupReader.GetBackups(ctx,
-		NewIncrementalBackupFilter(request.Routine).
+		NewIncrementalBackupFilter(&request.Routine).
 			WithFromTime(backups[0].Created).
 			WithToTime(request.Time))
 	if err != nil {
@@ -112,20 +115,33 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 		return err
 	}
 
-	if err := validateEncryption(backupsByNamespace, request); err != nil {
-		return err
-	}
-
-	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster, logger)
+	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, logger)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
 			ptr.ValueOrZero(request.DestinationCluster.ClusterLabel), err)
 	}
 	defer r.clientManager.Close(client)
-	if err := validateDestinationNamespace(ctx, request.Policy, client.InfoClient()); err != nil {
+
+	if err := r.validator.ValidateTimestamp(
+		ctx,
+		request,
+		client.InfoClient(),
+		backupsByNamespace,
+	); err != nil {
 		return err
 	}
 
+	return r.restoreAllNamespaces(ctx, client, request, jobID, logger, backupsByNamespace)
+}
+
+func (r *timeRestoreRunner) restoreAllNamespaces(
+	ctx context.Context,
+	client aerospike.Client,
+	request *model.RestoreTimestampRequest,
+	jobID model.RestoreJobID,
+	logger *slog.Logger,
+	backupsByNamespace map[string][]model.BackupDetails,
+) error {
 	var (
 		wg         sync.WaitGroup
 		multiError error
@@ -155,41 +171,6 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 	return multiError
 }
 
-func validateEncryption(
-	backupsByNamespace map[string][]model.BackupDetails,
-	request *model.RestoreTimestampRequest,
-) error {
-	for _, backups := range backupsByNamespace {
-		for _, b := range backups {
-			if b.Encryption != "" && b.Encryption != model.EncryptNone { // Backup is encrypted
-				// Check if user provided an encryption policy in the request
-				if request.Policy == nil || request.Policy.EncryptionPolicy == nil {
-					return fmt.Errorf("backup is encrypted with mode '%s', "+
-						"but no encryption policy was provided in the restore request", b.Encryption)
-				}
-
-				userEncryptionPolicy := request.Policy.EncryptionPolicy
-
-				// Check if the provided encryption mode matches the backup's encryption mode
-				if userEncryptionPolicy.Mode != b.Encryption {
-					return fmt.Errorf("backup is encrypted with mode '%s', "+
-						"but the provided encryption policy specifies mode '%s'", b.Encryption, userEncryptionPolicy.Mode)
-				}
-
-				// Check if an encryption key is provided
-				if userEncryptionPolicy.KeyFile == nil &&
-					userEncryptionPolicy.KeyEnv == nil &&
-					userEncryptionPolicy.KeySecret == nil {
-					return errors.New("backup is encrypted, " +
-						"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
 func (r *timeRestoreRunner) restoreNamespace(
 	ctx context.Context,
 	client aerospike.Restorer,
@@ -200,7 +181,7 @@ func (r *timeRestoreRunner) restoreNamespace(
 	logger *slog.Logger,
 ) error {
 	// Policy is guaranteed non-nil by request validation in the API layer.
-	effectivePolicy := *request.Policy // make a thread-safe copy.
+	effectivePolicy := request.Policy // make a thread-safe copy.
 
 	// Restore all backups in order.
 	if !request.DisableReordering {
@@ -238,7 +219,7 @@ func (r *timeRestoreRunner) restoreNamespace(
 			Mode: b.Compression,
 		}
 
-		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage, &effectivePolicy)
+		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage, effectivePolicy)
 		if err != nil {
 			return err
 		}
@@ -260,7 +241,7 @@ func (r *timeRestoreRunner) restoreFromPath(
 	request *model.RestoreTimestampRequest,
 	backupPath string,
 	storage model.Storage,
-	policy *model.RestorePolicy,
+	policy model.RestorePolicy,
 ) (restoreexecutor.RestoreHandler, error) {
 	restoreRequest := model.NewRestoreRequest(
 		request.DestinationCluster,

@@ -220,6 +220,7 @@ func TestLocalDeleteBackup(t *testing.T) {
 
 	metadata := model.BackupMetadata{
 		Created:   created,
+		Finished:  created,
 		Namespace: testNamespace,
 	}
 
@@ -314,7 +315,9 @@ func TestReadPath(t *testing.T) {
 	fullBackupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, fullBackupTime)
 
 	fullMetadata := model.BackupMetadata{
-		Created: fullBackupTime,
+		Created:   fullBackupTime,
+		Finished:  fullBackupTime,
+		Namespace: testNamespace,
 	}
 
 	err := service.WriteBackupMetadata(t.Context(), routine, fullBackupPath, fullMetadata)
@@ -325,7 +328,10 @@ func TestReadPath(t *testing.T) {
 	incrementalPath := pathService.GetBackupPath(routineName, jobTypeIncremental, testNamespace, incrementalTime)
 
 	incMetadata := model.BackupMetadata{
-		Created: incrementalTime,
+		Created:   incrementalTime,
+		Finished:  incrementalTime,
+		From:      fullBackupTime,
+		Namespace: testNamespace,
 	}
 
 	err = service.WriteBackupMetadata(t.Context(), routine, incrementalPath, incMetadata)

@@ -38,6 +38,7 @@ type BackupMetadata struct {
 	// The time the backup operation completed.
 	Finished time.Time `yaml:"finished" json:"finished"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups).
+	// It's 0 for full backups.
 	From time.Time `yaml:"from" json:"from"`
 	// The namespace of a backup.
 	Namespace string `yaml:"namespace" json:"namespace"`
@@ -67,7 +68,27 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
+
+	err = metadata.Validate()
+	if err != nil {
+		return nil, fmt.Errorf("corrupted metadata: %w", err)
+	}
+
 	return &metadata, nil
+}
+
+func (m *BackupMetadata) Validate() error {
+	if m.Created.IsZero() {
+		return errors.New("`created` is required")
+	}
+	if m.Finished.IsZero() {
+		return errors.New("`finished` is required")
+	}
+	if m.Namespace == "" {
+		return errors.New("`namespace` is required")
+	}
+
+	return nil
 }
 
 func NewBackupMetadata(

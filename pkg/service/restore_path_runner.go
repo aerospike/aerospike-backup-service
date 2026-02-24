@@ -18,6 +18,7 @@ type pathRestoreRunner struct {
 	backupReader   BackupReader
 	clientManager  aerospike.ClientManager
 	routineStorage *collections.LockMap
+	validator      RestoreValidator
 }
 
 func newPathRestoreRunner(
@@ -26,6 +27,7 @@ func newPathRestoreRunner(
 	backupReader BackupReader,
 	clientManager aerospike.ClientManager,
 	routineStorage *collections.LockMap,
+	validator RestoreValidator,
 ) *pathRestoreRunner {
 	return &pathRestoreRunner{
 		restoreJobs:    restoreJobs,
@@ -33,6 +35,7 @@ func newPathRestoreRunner(
 		backupReader:   backupReader,
 		clientManager:  clientManager,
 		routineStorage: routineStorage,
+		validator:      validator,
 	}
 }
 
@@ -60,15 +63,11 @@ func (r *pathRestoreRunner) executeRestore(
 	jobID model.RestoreJobID,
 	logger *slog.Logger,
 ) error {
-	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster, logger)
+	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, logger)
 	if err != nil {
 		return err
 	}
 	defer r.clientManager.Close(client)
-
-	if err := validateDestinationNamespace(ctx, request.Policy, client.InfoClient()); err != nil {
-		return err
-	}
 
 	// Lock the routine storage from retention manager for the duration of restore.
 	// Restore holds RLock to allow concurrent restores for the same routine.
@@ -85,14 +84,12 @@ func (r *pathRestoreRunner) executeRestore(
 		return fmt.Errorf("failed to read backups: %w", err)
 	}
 
-	if len(backups) > 0 && allBackupsEmpty(backups) {
-		// edge case: backups exist but are empty - nothing to restore.
-		// If no backups found, we still attempt restore, as CLI-created files may exist without metadata.
-		logger.Info("Empty backup found, nothing to restore")
-		return nil
-	}
-
-	if err := validateBackupsCreatedAtTheSameTime(backups); err != nil {
+	if err := r.validator.ValidatePath(
+		ctx,
+		request,
+		client.InfoClient(),
+		backups,
+	); err != nil {
 		return err
 	}
 
@@ -112,31 +109,6 @@ func (r *pathRestoreRunner) executeRestore(
 	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
 
 	return nil
-}
-
-func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
-	if len(backups) == 0 {
-		return nil
-	}
-
-	for _, b := range backups {
-		if b.Created != backups[0].Created {
-			return fmt.Errorf("backups from different times were found: %s and %s",
-				b.Created.String(), backups[0].Created.String())
-		}
-	}
-
-	return nil
-}
-
-func allBackupsEmpty(backups []model.BackupDetails) bool {
-	for _, b := range backups {
-		if b.FileCount > 0 {
-			return false
-		}
-	}
-
-	return true
 }
 
 func recordsInBackup(backups []model.BackupDetails) uint64 {

@@ -3,7 +3,6 @@ package restoreexecutor
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -99,7 +98,7 @@ func makeWritePolicy(restoreRequest *model.RestoreRequest) *as.WritePolicy {
 	writePolicy.RecordExistsAction = recordExistsAction(
 		restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
 
-	writePolicy.SocketTimeout = calculateSocketTimeout(restoreRequest.Policy)
+	writePolicy.SocketTimeout = restoreRequest.Policy.GetSocketTimeoutOrDefault()
 
 	if restoreRequest.Policy.TotalTimeout != nil {
 		writePolicy.TotalTimeout = *restoreRequest.Policy.TotalTimeout
@@ -123,12 +122,4 @@ func recordExistsAction(replace, unique *bool) as.RecordExistsAction {
 	default:
 		return as.UPDATE
 	}
-}
-
-func calculateSocketTimeout(policy *model.RestorePolicy) time.Duration {
-	if policy.SocketTimeout != nil {
-		return *policy.SocketTimeout
-	}
-
-	return model.DefaultSocketTimeout
 }

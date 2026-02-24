@@ -24,6 +24,8 @@ import (
 )
 
 // InitComponents builds the full object graph and returns scheduler and HTTP service.
+//
+//nolint:funlen // deliberately keep all initialization in a single function.
 func InitComponents(
 	ctx context.Context,
 	configFile string,
@@ -64,7 +66,18 @@ func InitComponents(
 		return nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
 
-	restoreMgr, restoreJobs := newRestoreManager(operations, clientManager, backendService, &routineStorage)
+	restoreJobs := service.NewRestoreJobsHolder()
+	restoreValidator := service.NewRestoreValidator(registry, config)
+
+	restoreMgr := service.NewRestoreManager(
+		restoreexecutor.NewRestore(operations),
+		clientManager,
+		restoreJobs,
+		backendService,
+		&routineStorage,
+		restoreValidator,
+	)
+
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
@@ -113,22 +126,4 @@ func initLogger(config *model.Config) *slog.Logger {
 		slog.String("config", string(configStr)))
 
 	return logger
-}
-
-func newRestoreManager(
-	operations *storage.Operations,
-	clientManager aerospike.ClientManager,
-	backendService service.BackupReader,
-	routineStorage *u.LockMap,
-) (service.RestoreManager, *service.RestoreJobsHolder) {
-	restoreJobs := service.NewRestoreJobsHolder()
-	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestore(operations),
-		clientManager,
-		restoreJobs,
-		backendService,
-		routineStorage,
-	)
-
-	return restoreMgr, restoreJobs
 }

@@ -4,13 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -65,6 +63,7 @@ func NewRestoreManager(
 	restoreJobs *RestoreJobsHolder,
 	backupReader BackupReader,
 	routineStorage *collections.LockMap,
+	validator RestoreValidator,
 ) RestoreManager {
 	return &RestoreManagerImpl{
 		restoreJobs: restoreJobs,
@@ -74,6 +73,7 @@ func NewRestoreManager(
 			backupReader,
 			clientManager,
 			routineStorage,
+			validator,
 		),
 		timeRunner: newTimeRestoreRunner(
 			restoreJobs,
@@ -81,6 +81,7 @@ func NewRestoreManager(
 			backupReader,
 			clientManager,
 			routineStorage,
+			validator,
 		),
 	}
 }
@@ -143,27 +144,6 @@ func (r *RestoreManagerImpl) GetFilteredJobs(
 	})
 
 	return results
-}
-
-// validateDestinationNamespace checks if destination cluster contains namespace from restore policy (if it is set).
-func validateDestinationNamespace(
-	ctx context.Context,
-	policy *model.RestorePolicy,
-	infoGetter backup.InfoGetter,
-) error {
-	// Policy is guaranteed non-nil by request validation in the API layer.
-	if policy.Namespace != nil {
-		destinationNS := *policy.Namespace.Destination
-		namespaces, err := infoGetter.GetNamespacesList(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get namespaces from destination cluster: %w", err)
-		}
-		if !slices.Contains(namespaces, destinationNS) {
-			return fmt.Errorf("destination cluster does not have required namespace: %s", destinationNS)
-		}
-	}
-
-	return nil
 }
 
 func logAttrs(s *models.RestoreStats) []slog.Attr {
