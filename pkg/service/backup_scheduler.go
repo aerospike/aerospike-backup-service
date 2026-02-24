@@ -51,9 +51,9 @@ func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
 		return nil
 	}
 
-	jobKey := adhocKey(routineName)
+	adhocJobKey := adhocKey(routineName)
 
-	return quartz.NewJobDetail(job.Job(), jobKey)
+	return quartz.NewJobDetail(job.Job(), adhocJobKey)
 }
 
 // NewAdHocIncrementalBackupJobForRoutine returns a new incremental backup job for the routine name.
@@ -64,9 +64,9 @@ func NewAdHocIncrementalBackupJobForRoutine(routineName string) *quartz.JobDetai
 		return nil
 	}
 
-	jobKey := adhocKey(routineName)
+	adhocJobKey := adhocKey(routineName)
 
-	return quartz.NewJobDetail(job.Job(), jobKey)
+	return quartz.NewJobDetail(job.Job(), adhocJobKey)
 }
 
 // NewScheduler creates a new quartz.Scheduler.
@@ -80,8 +80,7 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 	return scheduler, err
 }
 
-// scheduleRoutines schedules provided routines and updates jobStore incrementally.
-// Deleted routines can be represented as disabled markers with only Name set.
+// scheduleRoutines schedules provided routines and stores their job details for ad-hoc trigger lookups.
 func scheduleRoutines(
 	scheduler Scheduler,
 	routines []*model.BackupRoutine,
@@ -117,11 +116,6 @@ func scheduleRoutines(
 		newJobs[incrementalJob.JobKey().String()] = incrementalJob
 	}
 
-	for _, routine := range routines {
-		routineName := routine.Name
-		jobStore.Remove(jobKey(routineName, jobTypeFull).String())
-		jobStore.Remove(jobKey(routineName, jobTypeIncremental).String())
-	}
 	for key, job := range newJobs {
 		jobStore.Store(key, job)
 	}

@@ -46,19 +46,23 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	invalidatedRoutines := a.config.PopInvalidatedRoutines()
-	if len(invalidatedRoutines) == 0 {
+	// Pop exactly once, so all follow-up steps (unschedule, reschedule, rescan)
+	// operate on the same coherent invalidation snapshot.
+	invalidatedRoutineNames := a.config.PopInvalidatedRoutineNames()
+	if len(invalidatedRoutineNames) == 0 {
 		return nil
 	}
 
-	err := a.clearPeriodicSchedulerJobs(invalidatedRoutines)
+	err := a.clearPeriodicSchedulerJobs(invalidatedRoutineNames)
 	if err != nil {
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
 
+	routinesToApply := a.existingRoutines(invalidatedRoutineNames)
+
 	err = scheduleRoutines(
 		a.scheduler,
-		invalidatedRoutines,
+		routinesToApply,
 		a.components,
 		a.pathService,
 	)
@@ -66,40 +70,34 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
 
-	routinesToSync := make([]*model.BackupRoutine, 0, len(invalidatedRoutines))
-	for _, routine := range invalidatedRoutines {
-		// Deleted routines are represented as disabled markers in PopInvalidatedRoutines.
-		if existingRoutine, exists := a.config.Routine(routine.Name); exists {
-			routinesToSync = append(routinesToSync, existingRoutine)
-		}
-	}
-
 	// Scan existing backups only for routines that were invalidated and still exist.
-	go a.registry.SynchroniseBackupHistory(ctx, routinesToSync)
+	go a.registry.SynchroniseBackupHistory(ctx, routinesToApply)
 
 	return nil
 }
 
-// we don't want to delete ad-hoc jobs.
-func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routines []*model.BackupRoutine) error {
-	targetKeys := make(map[string]struct{}, len(routines)*2)
-	for _, routine := range routines {
-		routineName := routine.Name
-		targetKeys[jobKey(routineName, jobTypeFull).String()] = struct{}{}
-		targetKeys[jobKey(routineName, jobTypeIncremental).String()] = struct{}{}
-	}
-
+func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routineNames []string) error {
+	// Delete only scheduled jobs that correspond to invalidated routines.
+	// This keeps unaffected routines untouched and avoids full scheduler churn.
 	keys, err := a.scheduler.GetJobKeys(matcher.JobGroupEquals(string(quartzGroupScheduled)))
 	if err != nil {
 		return fmt.Errorf("failed to fetch jobs: %w", err)
 	}
 
-	keysToDelete := make([]*quartz.JobKey, 0, len(keys))
+	existing := make(map[string]*quartz.JobKey, len(keys))
 	for _, key := range keys {
-		if _, shouldDelete := targetKeys[key.String()]; !shouldDelete {
-			continue
+		existing[key.String()] = key
+	}
+
+	keysToDelete := make([]*quartz.JobKey, 0, len(routineNames)*2)
+	deletedKeyStrings := make([]string, 0, len(routineNames)*2)
+	for _, routineName := range routineNames {
+		for _, keyString := range scheduledJobKeyStrings(routineName) {
+			if key, ok := existing[keyString]; ok {
+				keysToDelete = append(keysToDelete, key)
+				deletedKeyStrings = append(deletedKeyStrings, keyString)
+			}
 		}
-		keysToDelete = append(keysToDelete, key)
 	}
 
 	slog.Info("Delete scheduled jobs", slog.Any("keys", keysToDelete))
@@ -110,5 +108,29 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routines []*model.Back
 		}
 	}
 
+	// Keep ad-hoc job source in sync with scheduler state.
+	// IMPORTANT: remove from jobStore only after scheduler deletions succeed.
+	// This preserves consistency if DeleteJob fails midway.
+	for _, keyString := range deletedKeyStrings {
+		jobStore.Remove(keyString)
+	}
+
 	return nil
+}
+
+func (a *DefaultConfigApplier) existingRoutines(routineNames []string) []*model.BackupRoutine {
+	existing := make([]*model.BackupRoutine, 0, len(routineNames))
+	for _, routineName := range routineNames {
+		if actualRoutine, ok := a.config.Routine(routineName); ok {
+			existing = append(existing, actualRoutine)
+		}
+	}
+	return existing
+}
+
+func scheduledJobKeyStrings(routineName string) []string {
+	return []string{
+		jobKey(routineName, jobTypeFull).String(),
+		jobKey(routineName, jobTypeIncremental).String(),
+	}
 }
