@@ -362,5 +362,8 @@ func (c *Config) PopInvalidatedRoutines() []*BackupRoutine {
 		}
 	}
 
+	// Drain invalidations so the next call only returns newly invalidated routines.
+	c.backupConfig.invalidatedRoutines = nil
+
 	return routines
 }
