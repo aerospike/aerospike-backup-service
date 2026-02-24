@@ -175,18 +175,18 @@ func validateBackupsEncryption(backups []model.BackupDetails, policy *model.Encr
 			continue
 		}
 		if policy == nil {
-			return fmt.Errorf("b is encrypted with mode '%s', "+
+			return fmt.Errorf("backup is encrypted with mode '%s', "+
 				"but no encryption policy was provided in the restore request", b.Encryption)
 		}
 
 		if policy.Mode != b.Encryption {
-			return fmt.Errorf("b is encrypted with mode '%s', "+
+			return fmt.Errorf("backup is encrypted with mode '%s', "+
 				"but the provided encryption policy specifies mode '%s'", b.Encryption, policy.Mode)
 		}
 		if policy.KeyFile == nil &&
 			policy.KeyEnv == nil &&
 			policy.KeySecret == nil {
-			return errors.New("b is encrypted, " +
+			return errors.New("backup is encrypted, " +
 				"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
 		}
 	}
