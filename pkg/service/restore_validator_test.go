@@ -14,7 +14,7 @@ type fakeInfoGetter struct {
 	backup.InfoGetter
 }
 
-func (f fakeInfoGetter) GetNamespacesList(ctx context.Context) ([]string, error) {
+func (f fakeInfoGetter) GetNamespacesList(_ context.Context) ([]string, error) {
 	return []string{"ns1"}, nil
 }
 
