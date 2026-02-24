@@ -48,7 +48,6 @@ func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/policies [get]
 // @Produce     json
 // @Success  	200 {object} map[string]dto.BackupPolicy
-// @Failure     500 {string} string
 func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 	policies := dto.ConvertModelMapToDTO(s.config.BackupConfigCopy().BackupPolicies, dto.NewBackupPolicyFromModel)
 	httpOK(w, policies)
@@ -63,8 +62,7 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Produce     json
 // @Success  	200 {object} dto.BackupPolicy
 // @Response    400 {string} string
-// @Failure     404 {string} string "The specified policy could not be found"
-// @Failure     500 {string} string "The specified policy could not be found"
+// @Failure     404 {string} string "The specified policy was not found"
 func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {

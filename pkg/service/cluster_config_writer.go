@@ -53,14 +53,14 @@ func (w *DefaultClusterConfigWriter) Write(
 
 	client, err := w.clientManager.GetClient(ctx, routine.SourceCluster, logger)
 	if err != nil {
-		return fmt.Errorf("cannot get backup client: %w", err)
+		return fmt.Errorf("failed to get backup client: %w", err)
 	}
 
 	defer w.clientManager.Close(client)
 
 	infos := cluster.ReadConfiguration(client.AerospikeClient(), logger)
 	if len(infos) == 0 {
-		return errors.New("could not read Aerospike configuration")
+		return errors.New("failed to read Aerospike configuration")
 	}
 
 	var errs error

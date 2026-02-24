@@ -24,13 +24,13 @@ func runScanRestore(
 	reader, err := operations.CreateDirReader(ctx,
 		request.SourceStorage, request.BackupDataPath, options.WithValidator(asb.NewValidator()))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create backup reader, %w", err)
+		return nil, fmt.Errorf("failed to create backup reader: %w", err)
 	}
 
 	config := makeRestoreConfig(request)
 	handler, err := client.Restore(ctx, config, reader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start restore, %w", err)
+		return nil, fmt.Errorf("failed to start restore: %w", err)
 	}
 
 	return handler, nil

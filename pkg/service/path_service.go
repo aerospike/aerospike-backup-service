@@ -102,7 +102,7 @@ func (s *PathServiceImpl) ExtractTimestampFromPath(path string) string {
 		return matches[2] // The timestamp is in the second capturing group
 	}
 
-	slog.Warn("could not extract timestamp", slog.String("path", path))
+	slog.Warn("Failed to extract timestamp", slog.String("path", path))
 	return ""
 }
 

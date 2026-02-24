@@ -22,7 +22,6 @@ func (s *Service) ConfigActionHandler(_ http.ResponseWriter, _ *http.Request) {
 // @Router      /v1/config [get]
 // @Produce     json
 // @Success     200 {object} dto.Config
-// @Failure     500 {string} string
 func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 	httpOK(w, dto.NewConfigFromModel(s.config))
 }
@@ -116,7 +115,7 @@ func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Confi
 
 	err := updateFunc(s.config)
 	if err != nil {
-		return fmt.Errorf("cannot update configuration: %w", err)
+		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
 	err = s.configurationManager.Write(ctx, s.config)

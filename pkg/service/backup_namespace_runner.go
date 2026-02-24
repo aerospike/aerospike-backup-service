@@ -96,11 +96,11 @@ func (op *BackupNamespaceRunner) deleteFolder(ctx context.Context, path string) 
 	err := op.backendService.Delete(ctx, op.routine, path)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			op.logger.Info("Delete folder context cancelled")
+			op.logger.Info("Delete folder context canceled")
 			return
 		}
 
-		op.logger.Error("Could not delete folder", attr.Error(err))
+		op.logger.Error("Failed to delete folder", attr.Error(err))
 		return
 	}
 }
@@ -109,7 +109,7 @@ func (op *BackupNamespaceRunner) writeBackupMetadata(
 	ctx context.Context, metadata model.BackupMetadata, backupFolder string,
 ) error {
 	if err := op.backendService.WriteBackupMetadata(ctx, op.routine, backupFolder, metadata); err != nil {
-		return fmt.Errorf("could not write backup metadata to %q: %w", backupFolder, err)
+		return fmt.Errorf("failed to write backup metadata to %q: %w", backupFolder, err)
 	}
 
 	op.logger.Info("Wrote backup metadata",

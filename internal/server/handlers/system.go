@@ -3,13 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	_ "github.com/aerospike/aerospike-backup-service/v3/docs" // auto-generated Swagger spec
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
@@ -25,10 +23,7 @@ func RootActionHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		w.WriteHeader(http.StatusNotFound)
 	}
-	_, err := fmt.Fprintf(w, "")
-	if err != nil {
-		slog.Error("failed to write response", attr.Error(err))
-	}
+	_, _ = fmt.Fprintf(w, "")
 }
 
 // HealthActionHandler
@@ -38,10 +33,7 @@ func RootActionHandler(w http.ResponseWriter, r *http.Request) {
 // @Router      /health [get]
 // @Success 	200
 func HealthActionHandler(w http.ResponseWriter, _ *http.Request) {
-	_, err := fmt.Fprintf(w, "Ok")
-	if err != nil {
-		slog.Error("failed to write response", attr.Error(err))
-	}
+	_, _ = fmt.Fprintf(w, "Ok")
 }
 
 // ReadyActionHandler
@@ -51,10 +43,7 @@ func HealthActionHandler(w http.ResponseWriter, _ *http.Request) {
 // @Router      /ready [get]
 // @Success 	200
 func ReadyActionHandler(w http.ResponseWriter, _ *http.Request) {
-	_, err := fmt.Fprintf(w, "Ok")
-	if err != nil {
-		slog.Error("failed to write response", attr.Error(err))
-	}
+	_, _ = fmt.Fprintf(w, "Ok")
 }
 
 // VersionActionHandler
@@ -71,9 +60,7 @@ func VersionActionHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		slog.Error("failed to write response", attr.Error(err))
-	}
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // MetricsActionHandler

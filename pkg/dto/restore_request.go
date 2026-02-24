@@ -150,7 +150,7 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 
 	secretAgent, err := r.SecretAgentConfig.ToModel(config)
 	if err != nil {
-		return nil, fmt.Errorf("invalid secret-agent: %w", err)
+		return nil, fmt.Errorf("invalid secret agent: %w", err)
 	}
 
 	return &model.RestoreRequest{

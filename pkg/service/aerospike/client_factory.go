@@ -125,7 +125,7 @@ func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
 	var err error
 	policy.TlsConfig, err = NewTLSConfig(tlsToApply)
 	if err != nil {
-		slog.Error("Failed to initialize tls.Config",
+		slog.Error("Failed to initialize TLS config",
 			slog.String("cluster", ptr.ValueOrZero(c.ClusterLabel)),
 			attr.Error(err))
 	}

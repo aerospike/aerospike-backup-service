@@ -58,7 +58,7 @@ func (h *backupCompletionHandler) OnSuccess(
 	go func() {
 		if err := h.retentionManager.deleteOldBackups(ctx, routine); err != nil {
 			if errors.Is(err, context.Canceled) {
-				logger.Info("Old backups clean up context cancelled")
+				logger.Info("Old backups cleanup context canceled")
 				return
 			}
 			logger.Error("Failed to clean up old backups", attr.Error(err))
@@ -69,7 +69,7 @@ func (h *backupCompletionHandler) OnSuccess(
 		if routine.BackupPolicy.WithClusterConfig != nil && *routine.BackupPolicy.WithClusterConfig {
 			if err := h.clusterConfigWriter.Write(ctx, routine, timestamp); err != nil {
 				if errors.Is(err, context.Canceled) {
-					logger.Info("Cluster configuration backup context cancelled")
+					logger.Info("Cluster configuration backup context canceled")
 					return
 				}
 

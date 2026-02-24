@@ -264,7 +264,7 @@ func TestMetadataWriteError(t *testing.T) {
 		GetStats().
 		Return(backupStats)
 
-	mocks.backendService.EXPECT(). // backup succeeded, but could not write metadata => delete all
+	mocks.backendService.EXPECT(). // backup succeeded, but failed to write metadata => delete all
 					WriteBackupMetadata(gomock.Any(), routine, backupFolder, gomock.Any()).
 					Return(metadataError)
 
@@ -277,7 +277,7 @@ func TestMetadataWriteError(t *testing.T) {
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "could not write backup metadata")
+	require.Contains(t, err.Error(), "failed to write backup metadata")
 }
 
 func TestRetryableBackupHandler_Cancel(t *testing.T) {
