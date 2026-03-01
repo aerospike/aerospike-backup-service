@@ -24,36 +24,38 @@ type BackupConfig struct {
 	invalidatedRoutines map[string]struct{} // set of routines that need to be rescanned after a change
 }
 
+func NewConfig() *Config {
+	return &Config{
+		backupConfig: *newBackupConfig(),
+	}
+}
+
+func newBackupConfig() *BackupConfig {
+	return &BackupConfig{
+		AerospikeClusters:   make(map[string]*AerospikeCluster),
+		Storage:             make(map[string]Storage),
+		BackupPolicies:      make(map[string]*BackupPolicy),
+		BackupRoutines:      make(map[string]*BackupRoutine),
+		SecretAgents:        make(map[string]*SecretAgent),
+		invalidatedRoutines: make(map[string]struct{}),
+	}
+}
+
 func (bc *BackupConfig) copy() *BackupConfig {
 	if bc == nil {
 		return nil
 	}
 
 	newConfig := &BackupConfig{
-		AerospikeClusters: maps.Clone(bc.AerospikeClusters),
-		Storage:           maps.Clone(bc.Storage),
-		BackupPolicies:    maps.Clone(bc.BackupPolicies),
-		BackupRoutines:    maps.Clone(bc.BackupRoutines),
-		SecretAgents:      maps.Clone(bc.SecretAgents),
+		AerospikeClusters:   maps.Clone(bc.AerospikeClusters),
+		Storage:             maps.Clone(bc.Storage),
+		BackupPolicies:      maps.Clone(bc.BackupPolicies),
+		BackupRoutines:      maps.Clone(bc.BackupRoutines),
+		SecretAgents:        maps.Clone(bc.SecretAgents),
+		invalidatedRoutines: make(map[string]struct{}),
 	}
 
 	return newConfig
-}
-
-func newBackupConfig() *BackupConfig {
-	return &BackupConfig{
-		AerospikeClusters: make(map[string]*AerospikeCluster),
-		Storage:           make(map[string]Storage),
-		BackupPolicies:    make(map[string]*BackupPolicy),
-		BackupRoutines:    make(map[string]*BackupRoutine),
-		SecretAgents:      make(map[string]*SecretAgent),
-	}
-}
-
-func NewConfig() *Config {
-	return &Config{
-		backupConfig: *newBackupConfig(),
-	}
 }
 
 var (
@@ -356,9 +358,5 @@ func (c *Config) PopInvalidatedRoutineNames() []string {
 // invalidateRoutine marks a routine as invalidated.
 // Caller must hold c.mu.
 func (c *Config) invalidateRoutine(name string) {
-	if c.backupConfig.invalidatedRoutines == nil {
-		c.backupConfig.invalidatedRoutines = make(map[string]struct{})
-	}
-
 	c.backupConfig.invalidatedRoutines[name] = struct{}{}
 }
