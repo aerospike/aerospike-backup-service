@@ -87,9 +87,6 @@ func scheduleRoutines(
 	components *BackupComponents,
 	pathService PathService,
 ) error {
-	// Accumulate newly prepared job details and publish them to jobStore only at
-	// the end. This avoids exposing half-built ad-hoc sources while iterating.
-	newJobs := map[string]*quartz.JobDetail{}
 	var errs error
 
 	for _, routine := range routines {
@@ -99,7 +96,7 @@ func scheduleRoutines(
 			continue
 		}
 
-		routine = routine.Copy() // orchestrator will work with it's own copy
+		routine = routine.Copy() // orchestrator will work with its own copy
 		runner := newOrchestrator(routine, components, pathService)
 		// schedule a full backup job for the routine
 		job, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routineName)
@@ -107,7 +104,7 @@ func scheduleRoutines(
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule full backup: %w", err))
 			continue
 		}
-		newJobs[job.JobKey().String()] = job
+		jobStore.Store(job.JobKey().String(), job)
 
 		// schedule an incremental backup job for the routine
 		incrementalJob, err := scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routineName)
@@ -115,13 +112,7 @@ func scheduleRoutines(
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
 			continue
 		}
-		// Store even if incremental interval is empty: ad-hoc incremental trigger
-		// still needs a prepared JobDetail, only periodic trigger is omitted.
-		newJobs[incrementalJob.JobKey().String()] = incrementalJob
-	}
-
-	for key, job := range newJobs {
-		jobStore.Store(key, job)
+		jobStore.Store(incrementalJob.JobKey().String(), incrementalJob)
 	}
 
 	return errs
