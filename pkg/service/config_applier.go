@@ -56,16 +56,13 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	// 1) delete old periodic jobs for invalidated routines,
 	// 2) schedule current ones.
 	// Ad-hoc triggers are intentionally not touched here.
-	err := a.clearPeriodicSchedulerJobs(invalidatedRoutineNames)
-	if err != nil {
-		return fmt.Errorf("failed to clear periodic jobs: %w", err)
-	}
+	a.clearPeriodicSchedulerJobs(invalidatedRoutineNames)
 
 	// Missing name means the routine was deleted after invalidation:
 	// it should be unscheduled only and skipped for reschedule/rescan.
 	routinesToApply := a.existingRoutines(invalidatedRoutineNames)
 
-	err = scheduleRoutines(
+	err := scheduleRoutines(
 		a.scheduler,
 		routinesToApply,
 		a.components,
@@ -83,7 +80,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 
 // clearPeriodicSchedulerJobs deletes only scheduled jobs that correspond to invalidated routines.
 // This keeps unaffected routines untouched. and avoids full scheduler churn.
-func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routineNames []string) error {
+func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routineNames []string) {
 	keysToDelete := make([]*quartz.JobKey, 0, len(routineNames)*2)
 	for _, routineName := range routineNames {
 		keysToDelete = append(keysToDelete,
@@ -96,8 +93,6 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routineNames []string)
 		_ = a.scheduler.DeleteJob(key) // ignore errors because we delete all jobs
 		jobStore.Remove(key.String())
 	}
-
-	return nil
 }
 
 func (a *DefaultConfigApplier) existingRoutines(routineNames []string) []*model.BackupRoutine {
