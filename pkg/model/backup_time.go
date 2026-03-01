@@ -42,41 +42,34 @@ func (r *BackupTime) LatestRun() *time.Time {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	if r.full == nil {
-		return copyTimePtr(r.incremental)
+	if r.incremental != nil && r.full != nil && r.incremental.After(*r.full) {
+		return r.incremental
 	}
-	if r.incremental == nil {
-		return copyTimePtr(r.full)
-	}
-	if r.incremental.After(*r.full) {
-		return copyTimePtr(r.incremental)
-	}
-
-	return copyTimePtr(r.full)
+	return r.full
 }
 
 func (r *BackupTime) SetFullBackupTime(t *time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.full = copyTimePtr(t)
+	r.full = t
 }
 
 func (r *BackupTime) SetIncrementalBackupTime(t *time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.incremental = copyTimePtr(t)
+	r.incremental = t
 }
 
 func (r *BackupTime) FullBackupTime() *time.Time {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return copyTimePtr(r.full)
+	return r.full
 }
 
 func (r *BackupTime) IncrementalBackupTime() *time.Time {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return copyTimePtr(r.incremental)
+	return r.incremental
 }
 
 func (r *BackupTime) String() string {
@@ -94,12 +87,4 @@ func (r *BackupTime) String() string {
 	}
 
 	return fmt.Sprintf("Full: %s, Incremental: %s", full, incremental)
-}
-
-func copyTimePtr(t *time.Time) *time.Time {
-	if t == nil {
-		return nil
-	}
-	copied := *t
-	return &copied
 }
