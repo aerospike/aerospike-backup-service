@@ -83,3 +83,31 @@ func TestScheduleRoutines(t *testing.T) {
 		})
 	}
 }
+
+func TestScheduleRoutines_DoesNotClearExistingJobStoreEntries(t *testing.T) {
+	const legacyKey = "legacy-job"
+	jobStore.ReplaceContent(map[string]*quartz.JobDetail{
+		legacyKey: nil,
+	})
+
+	scheduler := new(MockScheduler)
+	scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil).Twice()
+
+	err := scheduleRoutines(scheduler, []*model.BackupRoutine{
+		{
+			Name:             "new-routine",
+			IntervalCron:     "0 0 * * * *",
+			IncrIntervalCron: "0 */6 * * * *",
+		},
+	}, &BackupComponents{}, nil)
+	require.NoError(t, err)
+
+	_, hasLegacy := jobStore.Load(legacyKey)
+	require.True(t, hasLegacy)
+
+	_, hasFull := jobStore.Load(jobKey("new-routine", jobTypeFull).String())
+	require.True(t, hasFull)
+
+	_, hasIncremental := jobStore.Load(jobKey("new-routine", jobTypeIncremental).String())
+	require.True(t, hasIncremental)
+}
