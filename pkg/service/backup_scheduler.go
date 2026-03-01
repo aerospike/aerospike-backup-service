@@ -87,6 +87,8 @@ func scheduleRoutines(
 	components *BackupComponents,
 	pathService PathService,
 ) error {
+	// Accumulate newly prepared job details and publish them to jobStore only at
+	// the end. This avoids exposing half-built ad-hoc sources while iterating.
 	newJobs := map[string]*quartz.JobDetail{}
 	var errs error
 
@@ -113,6 +115,8 @@ func scheduleRoutines(
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
 			continue
 		}
+		// Store even if incremental interval is empty: ad-hoc incremental trigger
+		// still needs a prepared JobDetail, only periodic trigger is omitted.
 		newJobs[incrementalJob.JobKey().String()] = incrementalJob
 	}
 

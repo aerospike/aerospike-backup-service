@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/reugn/go-quartz/matcher"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -53,11 +52,17 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 		return nil
 	}
 
+	// Quartz has no "replace these jobs atomically" API; we must do two phases:
+	// 1) delete old periodic jobs for invalidated routines,
+	// 2) schedule current ones.
+	// Ad-hoc triggers are intentionally not touched here.
 	err := a.clearPeriodicSchedulerJobs(invalidatedRoutineNames)
 	if err != nil {
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
 
+	// Missing name means the routine was deleted after invalidation:
+	// it should be unscheduled only and skipped for reschedule/rescan.
 	routinesToApply := a.existingRoutines(invalidatedRoutineNames)
 
 	err = scheduleRoutines(
@@ -76,43 +81,23 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	return nil
 }
 
+// clearPeriodicSchedulerJobs deletes only scheduled jobs that correspond to invalidated routines.
+// This keeps unaffected routines untouched. and avoids full scheduler churn.
 func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routineNames []string) error {
-	// Delete only scheduled jobs that correspond to invalidated routines.
-	// This keeps unaffected routines untouched and avoids full scheduler churn.
-	keys, err := a.scheduler.GetJobKeys(matcher.JobGroupEquals(string(quartzGroupScheduled)))
-	if err != nil {
-		return fmt.Errorf("failed to fetch jobs: %w", err)
-	}
-
-	existing := make(map[string]*quartz.JobKey, len(keys))
-	for _, key := range keys {
-		existing[key.String()] = key
-	}
-
 	keysToDelete := make([]*quartz.JobKey, 0, len(routineNames)*2)
-	deletedKeyStrings := make([]string, 0, len(routineNames)*2)
 	for _, routineName := range routineNames {
-		for _, keyString := range scheduledJobKeyStrings(routineName) {
-			if key, ok := existing[keyString]; ok {
-				keysToDelete = append(keysToDelete, key)
-				deletedKeyStrings = append(deletedKeyStrings, keyString)
-			}
-		}
+		keysToDelete = append(keysToDelete,
+			jobKey(routineName, jobTypeFull),
+			jobKey(routineName, jobTypeIncremental))
 	}
 
 	slog.Info("Delete scheduled jobs", slog.Any("keys", keysToDelete))
 	for _, key := range keysToDelete {
-		err = a.scheduler.DeleteJob(key)
+		err := a.scheduler.DeleteJob(key)
 		if err != nil {
 			return fmt.Errorf("failed to delete job %q: %w", key, err)
 		}
-	}
-
-	// Keep ad-hoc job source in sync with scheduler state.
-	// IMPORTANT: remove from jobStore only after scheduler deletions succeed.
-	// This preserves consistency if DeleteJob fails midway.
-	for _, keyString := range deletedKeyStrings {
-		jobStore.Remove(keyString)
+		jobStore.Remove(key.String())
 	}
 
 	return nil
@@ -125,12 +110,6 @@ func (a *DefaultConfigApplier) existingRoutines(routineNames []string) []*model.
 			existing = append(existing, actualRoutine)
 		}
 	}
-	return existing
-}
 
-func scheduledJobKeyStrings(routineName string) []string {
-	return []string{
-		jobKey(routineName, jobTypeFull).String(),
-		jobKey(routineName, jobTypeIncremental).String(),
-	}
+	return existing
 }
