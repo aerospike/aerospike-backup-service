@@ -14,6 +14,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -235,10 +236,7 @@ func TestRunFullBackupInternal_ContextCancelled(t *testing.T) {
 	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeCancelled))
 }
 
-func TestSkipIncrementalBackup(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
+func TestCanStartIncrementalBackup(t *testing.T) {
 	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	lastFullBackupTime := now.Add(-25 * time.Hour)
 
@@ -300,15 +298,17 @@ func TestSkipIncrementalBackup(t *testing.T) {
 				routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
 			}
 
-			mockRegistry := NewMockRunningBackupsRegistry(ctrl)
-			mockRegistry.EXPECT().GetRoutineState(routine).Return(tt.routineState).AnyTimes()
-			mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
+			facts := StartFacts{
+				FullRunningNow:        tt.routineState.Full != nil,
+				IncrementalRunningNow: tt.routineState.Incremental != nil,
+				HasCompletedFull:      !tt.routineState.LastRunTime.NoFullBackup(),
+				FullScheduledNow:      timeutil.IsCronFireTime(routine.IntervalCron, tt.now),
+				Now:                   tt.now,
+			}
 
-			orchestrator := newOrchestrator(routine, NewBackupComponents(
-				nil, nil, mockRegistry, mockCompletionHandler, nil,
-			), NewPathService(nil))
-
-			assert.Equal(t, tt.expectedToSkip, orchestrator.skipIncrementalBackup(tt.now))
+			policy := NewBackupExecutionGate(nil)
+			err := policy.CanStart(jobTypeIncremental, routine, facts)
+			assert.Equal(t, tt.expectedToSkip, err != nil)
 		})
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -32,8 +31,8 @@ type BackupRoutineOrchestrator struct {
 	clientManager     aerospike.ClientManager
 	registry          RunningBackupsRegistry
 	completionHandler BackupCompletionHandler
-
-	fullBackupLock sync.Mutex
+	executionGate     *BackupExecutionGate
+	startAdmission    BackupStartAdmission
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
@@ -45,6 +44,8 @@ type BackupComponents struct {
 	registry          RunningBackupsRegistry  // Stores the backup handler during execution.
 	completionHandler BackupCompletionHandler // Runs post-success/failure actions (registry, retention, cluster config).
 	backendService    BackupWriter            // Writes backup metadata and deletes created files on failure.
+	executionGate     *BackupExecutionGate    // Decides whether backup can start now.
+	startAdmission    BackupStartAdmission    // Atomically reserves and attaches backup start.
 }
 
 func NewBackupComponents(
@@ -54,13 +55,19 @@ func NewBackupComponents(
 	completionHandler BackupCompletionHandler,
 	backendService BackupWriter,
 ) *BackupComponents {
-	return &BackupComponents{
+	components := &BackupComponents{
 		clientManager:     clientManager,
 		backupExecutor:    backupExecutor,
 		registry:          registry,
 		completionHandler: completionHandler,
 		backendService:    backendService,
+		executionGate:     NewBackupExecutionGate(nil),
 	}
+	if registry != nil {
+		components.startAdmission = NewBackupStartAdmission(registry, components.executionGate)
+	}
+
+	return components
 }
 
 func newOrchestrator(
@@ -71,17 +78,35 @@ func newOrchestrator(
 	logger := slog.With(attr.Routine(routine.Name))
 	retry := newRetryExecutor(*routine.BackupPolicy.GetRetryPolicyOrDefault(), logger, nonRetryableErrors...)
 	runner := NewBackupNamespaceRunner(routine, h.backupExecutor, retry, h.backendService, logger, pathService)
+	gate := h.executionGate
+	if gate == nil {
+		gate = NewBackupExecutionGate(nil)
+	}
+	admission := h.startAdmission
+	if admission == nil && h.registry != nil {
+		admission = NewBackupStartAdmission(h.registry, gate)
+	}
 	return &BackupRoutineOrchestrator{
 		routine:           routine,
 		runner:            runner,
 		clientManager:     h.clientManager,
 		registry:          h.registry,
 		completionHandler: h.completionHandler,
+		executionGate:     gate,
+		startAdmission:    admission,
 		logger:            logger,
 	}
 }
 
 func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.Time) {
+	token, err := h.tryAcquireStart(jobTypeFull, now)
+	if err != nil {
+		h.processBackupError(jobTypeFull, 0, err)
+		return
+	}
+	// Always release token to clear pending admission reservation.
+	defer h.startAdmission.Release(token)
+
 	duration, err := timeutil.MeasureDuration(func() error {
 		return h.runFullBackupInternal(ctx, now)
 	})
@@ -90,27 +115,17 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 }
 
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
-	h.fullBackupLock.Lock()
 	h.logger.Info("Full backup started", slog.Time("now", now))
-
-	if h.skipFullBackup() {
-		h.fullBackupLock.Unlock()
-		return errBackupSkipped
-	}
 
 	client, namespaces, err := h.prepareCluster(ctx)
 	if err != nil {
-		h.fullBackupLock.Unlock()
 		return err
 	}
 	defer h.clientManager.Close(client)
 
 	timeBounds := h.createTimeBounds(jobTypeFull, now)
 	backupHandler := startNamespacesBackup(ctx, h.runner, client, namespaces, timeBounds, now, h.routine, jobTypeFull)
-
 	h.registry.register(h.routine.Name, jobTypeFull, backupHandler)
-	// The lock must be held until the backup is registered.
-	h.fullBackupLock.Unlock()
 
 	if err = backupHandler.Wait(ctx); err != nil {
 		h.completionHandler.OnFailure(h.routine, jobTypeFull)
@@ -120,16 +135,6 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	h.completionHandler.OnSuccess(ctx, h.routine, jobTypeFull, now, h.logger)
 
 	return nil
-}
-
-func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
-	currentStat := h.registry.GetRoutineState(h.routine)
-	if currentStat.Full != nil {
-		h.logger.Info("Full backup is currently in progress, skipping another full backup")
-		return true
-	}
-
-	return false
 }
 
 func (h *BackupRoutineOrchestrator) prepareCluster(ctx context.Context) (aerospike.Client, []string, error) {
@@ -179,12 +184,16 @@ func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.T
 }
 
 func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, now time.Time) {
-	h.logger.Info("Incremental backup started", slog.Time("now", now))
-
-	if h.skipIncrementalBackup(now) {
-		observeBackupEvent(h.routine.Name, jobTypeIncremental, BackupOutcomeSkip, 0)
+	token, err := h.tryAcquireStart(jobTypeIncremental, now)
+	if err != nil {
+		h.processBackupError(jobTypeIncremental, 0, err)
 		return
 	}
+	// Mirror full-backup token lifecycle: reserve early and always release
+	// pending reservation on exit.
+	defer h.startAdmission.Release(token)
+
+	h.logger.Info("Incremental backup started", slog.Time("now", now))
 
 	duration, err := timeutil.MeasureDuration(func() error {
 		return h.runIncrementalBackupInternal(ctx, now)
@@ -228,41 +237,11 @@ func (h *BackupRoutineOrchestrator) processBackupError(backupType jobType, durat
 	observeBackupEvent(h.routine.Name, backupType, BackupOutcomeFailure, duration)
 }
 
-func (h *BackupRoutineOrchestrator) skipIncrementalBackup(now time.Time) bool {
-	currentStat := h.registry.GetRoutineState(h.routine)
-
-	// Skip if no initial full backup has been completed
-	if currentStat.LastRunTime.NoFullBackup() {
-		h.logger.Debug("Skipping incremental backup: initial full backup not yet completed")
-		return true
-	}
-
-	// Concurrent incremental are only allowed when explicitly set (default is false).
-	if h.routine.BackupPolicy.AllowConcurrentIncremental() {
-		return false
-	}
-
-	switch {
-	case currentStat.Full != nil:
-		h.logger.Debug("Skipping incremental backup: full backup in progress")
-		return true
-	case currentStat.Incremental != nil:
-		h.logger.Debug("Skipping incremental backup: another incremental backup in progress")
-		return true
-	case timeutil.IsCronFireTime(h.routine.IntervalCron, now):
-		h.logger.Debug("Skipping incremental backup: full backup scheduled at same time")
-		return true
-	}
-
-	return false
-}
-
 func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Context, now time.Time) error {
 	client, namespaces, err := h.prepareCluster(ctx)
 	if err != nil {
 		return err
 	}
-
 	defer h.clientManager.Close(client)
 
 	timeBounds := h.createTimeBounds(jobTypeIncremental, now)
@@ -278,4 +257,17 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 	h.completionHandler.OnSuccess(ctx, h.routine, jobTypeIncremental, now, h.logger)
 
 	return nil
+}
+
+func (h *BackupRoutineOrchestrator) tryAcquireStart(
+	backupType jobType,
+	now time.Time,
+) (StartToken, error) {
+	if h.startAdmission == nil {
+		return StartToken{}, errors.New("backup start admission is not configured")
+	}
+
+	// Acquire atomically checks policy against running+pending state and reserves
+	// a start slot until Release is called.
+	return h.startAdmission.TryAcquire(h.routine, backupType, now)
 }
