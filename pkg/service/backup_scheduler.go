@@ -90,16 +90,14 @@ func scheduleRoutines(
 	var errs error
 
 	for _, routine := range routines {
-		routineName := routine.Name
 		if routine.Disabled {
-			slog.Debug("Skipping disabled routine", attr.Routine(routineName))
+			slog.Debug("Skipping disabled routine", attr.Routine(routine.Name))
 			continue
 		}
 
-		routine = routine.Copy() // orchestrator will work with its own copy
-		runner := newOrchestrator(routine, components, pathService)
+		runner := newOrchestrator(routine.Copy(), components, pathService) // orchestrator will work with its own copy
 		// schedule a full backup job for the routine
-		job, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routineName)
+		job, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routine.Name)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule full backup: %w", err))
 			continue
@@ -107,7 +105,7 @@ func scheduleRoutines(
 		jobStore.Store(job.JobKey().String(), job)
 
 		// schedule an incremental backup job for the routine
-		incrementalJob, err := scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routineName)
+		incrementalJob, err := scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routine.Name)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
 			continue
