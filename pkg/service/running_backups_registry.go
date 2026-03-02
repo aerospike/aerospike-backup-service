@@ -171,18 +171,18 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 }
 
 // register adds a new backup handler for a specific routine and job type.
-func (r *RunningBackupsRegistryImpl) register(routineName string, job jobType, handler CancelableBackupHandler) {
-	r.getTracker(routineName).register(job, handler)
+func (r *RunningBackupsRegistryImpl) register(routineName string, jobType jobType, handler CancelableBackupHandler) {
+	r.getTracker(routineName).register(jobType, handler)
 }
 
 // recordSuccessfulBackup removes a backup from the registry and updates the last success timestamp.
-func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(routineName string, job jobType, timestamp time.Time) {
-	r.getTracker(routineName).recordSuccessfulBackup(routineName, job, timestamp)
+func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(routineName string, jobType jobType, timestamp time.Time) {
+	r.getTracker(routineName).recordSuccessfulBackup(routineName, jobType, timestamp)
 }
 
 // clearFailedBackup deletes a backup from the registry.
-func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, job jobType) {
-	r.getTracker(routineName).clearFailedBackup(job)
+func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, jobType jobType) {
+	r.getTracker(routineName).clearFailedBackup(jobType)
 }
 
 // GetRoutineState returns the current backup statistics for a routine.
