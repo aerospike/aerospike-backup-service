@@ -48,16 +48,16 @@ func (r *BackupTime) LatestRun() *time.Time {
 	return r.full
 }
 
-func (r *BackupTime) SetFullBackupTime(t *time.Time) {
+func (r *BackupTime) SetFullBackupTime(t time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.full = t
+	r.full = &t
 }
 
-func (r *BackupTime) SetIncrementalBackupTime(t *time.Time) {
+func (r *BackupTime) SetIncrementalBackupTime(t time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.incremental = t
+	r.incremental = &t
 }
 
 func (r *BackupTime) FullBackupTime() *time.Time {
