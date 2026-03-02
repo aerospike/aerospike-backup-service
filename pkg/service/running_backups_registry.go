@@ -163,8 +163,13 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 	// On success, update the tracker's history
 	slog.Info("Last existing backup", attr.Routine(routine.Name), slog.Any("time", lastRun))
 	tracker.setLastRun(lastRun)
-	if lastRun.LatestRun() != nil {
-		lastBackupTimestamp.WithLabelValues(routine.Name).Set(float64(lastRun.LatestRun().Unix()))
+	if lastRun.FullBackupTime() != nil {
+		t := float64(lastRun.FullBackupTime().Unix())
+		lastBackupTimestamp.WithLabelValues(routine.Name, string(jobTypeFull)).Set(t)
+	}
+	if lastRun.IncrementalBackupTime() != nil {
+		t := float64(lastRun.IncrementalBackupTime().Unix())
+		lastBackupTimestamp.WithLabelValues(routine.Name, string(jobTypeIncremental)).Set(t)
 	}
 
 	return nil

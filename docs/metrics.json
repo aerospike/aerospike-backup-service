@@ -35,7 +35,8 @@
     "type": "Gauge",
     "description": "Unix timestamp of the last successful backup per routine",
     "labels": [
-      "routine"
+      "routine",
+      "type"
     ],
     "deprecated": false
   },
