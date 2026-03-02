@@ -63,13 +63,11 @@ func (t *routineTracker) getState(timeout time.Duration) (*trackerSnapshot, erro
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	snapshot := &trackerSnapshot{
+	return &trackerSnapshot{
 		full:    currentBackupStatus(t.handlers[jobTypeFull]),
 		incr:    currentBackupStatus(t.handlers[jobTypeIncremental]),
 		lastRun: t.lastRun,
-	}
-
-	return snapshot, nil
+	}, nil
 }
 
 // register adds a new running backup handler.
@@ -94,16 +92,16 @@ func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType jobT
 
 	switch jobType {
 	case jobTypeFull:
-		t.lastRun.SetFullBackupTime(&timestamp)
+		t.lastRun.SetFullBackupTime(timestamp)
 	case jobTypeIncremental:
-		t.lastRun.SetIncrementalBackupTime(&timestamp)
+		t.lastRun.SetIncrementalBackupTime(timestamp)
 	}
 
 	// set last successful backup time for just finished backup
 	lastBackupTimestamp.WithLabelValues(routineName, string(jobType)).Set(float64(timestamp.Unix()))
 
 	// Remove the handler
-	t.handlers[jobType] = nil
+	delete(t.handlers, jobType)
 }
 
 // clearFailedBackup removes a failed backup handler without updating history.
