@@ -242,7 +242,6 @@ func setupTestService() *Service {
 	mockScheduler := &MockScheduler{}
 	mockConfigApplier := &MockConfigApplier{}
 	mockConfigurationManager := &configurationManagerMock{}
-	mockRegistry := &mockRunningBackupsRegistry{}
 
 	return NewService(
 		context.Background(),
@@ -252,7 +251,7 @@ func setupTestService() *Service {
 		nil,
 		nil,
 		nil,
-		mockRegistry,
+		nil,
 		mockConfigurationManager,
 		nil,
 	)
