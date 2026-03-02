@@ -289,15 +289,15 @@ func (mr *MockRunningBackupsRegistryMockRecorder) GetRunningState() *gomock.Call
 }
 
 // SynchroniseBackupHistory mocks base method.
-func (m *MockRunningBackupsRegistry) SynchroniseBackupHistory(ctx context.Context) {
+func (m *MockRunningBackupsRegistry) SynchroniseBackupHistory(ctx context.Context, routines []*model.BackupRoutine) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SynchroniseBackupHistory", ctx)
+	m.ctrl.Call(m, "SynchroniseBackupHistory", ctx, routines)
 }
 
 // SynchroniseBackupHistory indicates an expected call of SynchroniseBackupHistory.
-func (mr *MockRunningBackupsRegistryMockRecorder) SynchroniseBackupHistory(ctx any) *gomock.Call {
+func (mr *MockRunningBackupsRegistryMockRecorder) SynchroniseBackupHistory(ctx, routines any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SynchroniseBackupHistory", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).SynchroniseBackupHistory), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SynchroniseBackupHistory", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).SynchroniseBackupHistory), ctx, routines)
 }
 
 // clearFailedBackup mocks base method.
@@ -606,20 +606,6 @@ func NewMockroutineProvider(ctrl *gomock.Controller) *MockroutineProvider {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockroutineProvider) EXPECT() *MockroutineProviderMockRecorder {
 	return m.recorder
-}
-
-// PopInvalidatedRoutines mocks base method.
-func (m *MockroutineProvider) PopInvalidatedRoutines() []*model.BackupRoutine {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PopInvalidatedRoutines")
-	ret0, _ := ret[0].([]*model.BackupRoutine)
-	return ret0
-}
-
-// PopInvalidatedRoutines indicates an expected call of PopInvalidatedRoutines.
-func (mr *MockroutineProviderMockRecorder) PopInvalidatedRoutines() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PopInvalidatedRoutines", reflect.TypeOf((*MockroutineProvider)(nil).PopInvalidatedRoutines))
 }
 
 // Routines mocks base method.

@@ -32,12 +32,11 @@ type RunningBackupsRegistry interface {
 	// Cancel stops all ongoing backups for a specific routine.
 	Cancel(routineName string)
 	// SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
-	// found in the storage backends. It scans all backup routines in parallel.
-	SynchroniseBackupHistory(ctx context.Context)
+	// found in the storage backends. It scans provided routines in parallel.
+	SynchroniseBackupHistory(ctx context.Context, routines []*model.BackupRoutine)
 }
 
 type routineProvider interface {
-	PopInvalidatedRoutines() []*model.BackupRoutine
 	Routines() map[string]*model.BackupRoutine
 }
 
@@ -76,31 +75,30 @@ func (r *RunningBackupsRegistryImpl) getTracker(routineName string) *routineTrac
 }
 
 // SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
-// found in the storage backends. It scans all backup routines in parallel.
-func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Context) {
-	invalidatedRoutines := r.config.PopInvalidatedRoutines()
-	if len(invalidatedRoutines) == 0 {
+// found in the storage backends. It scans provided routines in parallel.
+func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Context, routines []*model.BackupRoutine) {
+	if len(routines) == 0 {
 		return
 	}
 
-	names := make([]string, len(invalidatedRoutines))
-	for i, t := range invalidatedRoutines {
+	names := make([]string, len(routines))
+	for i, t := range routines {
 		names[i] = t.Name
 	}
 
 	slog.Info("Start backup history synchronization",
 		slog.Any("routines", names),
-		slog.Int("len", len(invalidatedRoutines)),
+		slog.Int("len", len(routines)),
 	)
 
 	duration, err := timeutil.MeasureDuration(func() error {
-		return r.scanRoutinesHistory(ctx, invalidatedRoutines)
+		return r.scanRoutinesHistory(ctx, routines)
 	})
 
 	if err == nil {
 		slog.Info("History synchronization completed",
 			slog.Any("routines", names),
-			slog.Int("len", len(invalidatedRoutines)),
+			slog.Int("len", len(routines)),
 			slog.Duration("duration", duration),
 		)
 		return

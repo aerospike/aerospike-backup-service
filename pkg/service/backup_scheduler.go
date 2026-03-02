@@ -51,9 +51,9 @@ func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
 		return nil
 	}
 
-	jobKey := adhocKey(routineName)
+	adhocJobKey := adhocKey(routineName)
 
-	return quartz.NewJobDetail(job.Job(), jobKey)
+	return quartz.NewJobDetail(job.Job(), adhocJobKey)
 }
 
 // NewAdHocIncrementalBackupJobForRoutine returns a new incremental backup job for the routine name.
@@ -64,9 +64,9 @@ func NewAdHocIncrementalBackupJobForRoutine(routineName string) *quartz.JobDetai
 		return nil
 	}
 
-	jobKey := adhocKey(routineName)
+	adhocJobKey := adhocKey(routineName)
 
-	return quartz.NewJobDetail(job.Job(), jobKey)
+	return quartz.NewJobDetail(job.Job(), adhocJobKey)
 }
 
 // NewScheduler creates a new quartz.Scheduler.
@@ -80,38 +80,38 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 	return scheduler, err
 }
 
-// scheduleRoutines schedules the given handlers using the scheduler.
+// scheduleRoutines schedules provided routines and stores their job details for ad-hoc trigger lookups.
 func scheduleRoutines(
-	scheduler Scheduler, config *model.Config, components *BackupComponents, pathService PathService,
+	scheduler Scheduler,
+	routines []*model.BackupRoutine,
+	components *BackupComponents,
+	pathService PathService,
 ) error {
-	newJobs := map[string]*quartz.JobDetail{}
 	var errs error
-	for routineName, routine := range config.Routines() {
+
+	for _, routine := range routines {
 		if routine.Disabled {
-			slog.Debug("Skipping disabled routine", attr.Routine(routineName))
+			slog.Debug("Skipping disabled routine", attr.Routine(routine.Name))
 			continue
 		}
 
-		routine = routine.Copy() // orchestrator will work with it's own copy
-		runner := newOrchestrator(routine, components, pathService)
+		runner := newOrchestrator(routine.Copy(), components, pathService) // orchestrator will work with its own copy
 		// schedule a full backup job for the routine
-		job, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routineName)
+		job, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routine.Name)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule full backup: %w", err))
 			continue
 		}
-		newJobs[job.JobKey().String()] = job
+		jobStore.Store(job.JobKey().String(), job)
 
 		// schedule an incremental backup job for the routine
-		incrementalJob, err := scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routineName)
+		incrementalJob, err := scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routine.Name)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
 			continue
 		}
-		newJobs[incrementalJob.JobKey().String()] = incrementalJob
+		jobStore.Store(incrementalJob.JobKey().String(), incrementalJob)
 	}
-
-	jobStore.ReplaceContent(newJobs)
 
 	return errs
 }
