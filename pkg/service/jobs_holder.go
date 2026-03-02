@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
@@ -78,7 +80,7 @@ func (j *restoreJob) addTotalRecords(t uint64) {
 }
 
 // finish marks the job as finished with a given status and error.
-func (j *restoreJob) finish(err error) {
+func (j *restoreJob) finish(err error, logger *slog.Logger) {
 	j.Lock()
 	defer j.Unlock()
 
@@ -88,10 +90,16 @@ func (j *restoreJob) finish(err error) {
 	switch {
 	case err == nil:
 		j.status = model.JobStatusDone
+		logger.Info("restore finished")
 	case errors.Is(err, context.Canceled):
 		j.status = model.JobStatusCancelled
+		logger.Info("restore cancelled")
+	case errors.Is(err, ErrRestorePrerequisitesFailed):
+		j.status = model.JobStatusFailed
+		logger.Warn("failed to start restore", attr.Error(err))
 	default:
 		j.status = model.JobStatusFailed
+		logger.Error("restore failed", attr.Error(err))
 	}
 }
 
@@ -157,9 +165,9 @@ func (h *RestoreJobsHolder) addTotalRecords(id model.RestoreJobID, t uint64) {
 	}
 }
 
-func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
+func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error, logger *slog.Logger) {
 	if job, ok := h.Load(id); ok {
-		job.finish(err)
+		job.finish(err, logger)
 	}
 }
 

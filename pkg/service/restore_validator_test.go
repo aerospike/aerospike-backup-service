@@ -6,7 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
@@ -37,7 +37,7 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	routines.EXPECT().Routines().Return(backupRoutines)
 	registry.EXPECT().
 		GetRoutineState(backupRoutines["routine-1"]).
-		Return(&model.RoutineState{Full: &model.RunningJob{}})
+		Return(model.RoutineState{Full: &model.RunningJob{}})
 
 	validator := NewRestoreValidator(registry, routines)
 
@@ -54,8 +54,9 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 		},
 	)
 
-	assert.ErrorContains(t, err,
+	require.ErrorContains(t, err,
 		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
+	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
 }
 
 func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) {
@@ -77,7 +78,7 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	routines.EXPECT().Routines().Return(backupRoutines)
 	registry.EXPECT().
 		GetRoutineState(backupRoutines["routine-1"]).
-		Return(&model.RoutineState{Incremental: &model.RunningJob{}})
+		Return(model.RoutineState{Incremental: &model.RunningJob{}})
 
 	validator := NewRestoreValidator(registry, routines)
 
@@ -94,6 +95,7 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 		},
 	)
 
-	assert.ErrorContains(t, err,
+	require.ErrorContains(t, err,
 		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
+	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
 }

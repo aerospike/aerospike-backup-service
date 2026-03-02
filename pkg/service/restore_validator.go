@@ -11,6 +11,8 @@ import (
 	"github.com/aerospike/backup-go"
 )
 
+var ErrRestorePrerequisitesFailed = errors.New("restore pre-requisites failed")
+
 // RestoreValidator validates restore preconditions before actual execution starts.
 type RestoreValidator interface {
 	// ValidatePath validates path-restore preconditions.
@@ -57,25 +59,30 @@ func (r *restoreValidatorImpl) ValidatePath(
 	}
 
 	if allBackupsEmpty(backups) {
-		return errors.New("backup metadata indicates there is no data to restore (file count is zero)")
+		return fmt.Errorf("%w: backup metadata indicates there is no data to restore (file count is zero)",
+			ErrRestorePrerequisitesFailed)
 	}
 
 	if err := validateBackupsCreatedAtTheSameTime(backups); err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
 	}
 
 	if err := validateBackupsEncryption(backups, request.Policy.EncryptionPolicy); err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
 	}
 
 	sourceNamespaces := sourceNamespacesFromBackups(backups)
 	destinationNamespaces := destinationNamespacesForRestore(request.Policy.Namespace, sourceNamespaces)
 
 	if err := validateDestinationNamespaces(ctx, destinationNamespaces, infoGetter); err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
 	}
 
-	return r.checkRunningBackupsConflict(request.DestinationCluster, destinationNamespaces)
+	if err := r.checkRunningBackupsConflict(request.DestinationCluster, destinationNamespaces); err != nil {
+		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
+	}
+
+	return nil
 }
 
 // ValidateTimestamp validates point-in-time restore preconditions.
@@ -87,16 +94,20 @@ func (r *restoreValidatorImpl) ValidateTimestamp(
 ) error {
 	backups := collections.Flatten(backupsByNamespace)
 	if err := validateBackupsEncryption(backups, request.Policy.EncryptionPolicy); err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
 	}
 
 	sourceNamespaces := collections.Keys(backupsByNamespace)
 	destinationNamespaces := destinationNamespacesForRestore(request.Policy.Namespace, sourceNamespaces)
 	if err := validateDestinationNamespaces(ctx, destinationNamespaces, infoGetter); err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
 	}
 
-	return r.checkRunningBackupsConflict(request.DestinationCluster, destinationNamespaces)
+	if err := r.checkRunningBackupsConflict(request.DestinationCluster, destinationNamespaces); err != nil {
+		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
+	}
+
+	return nil
 }
 
 // checkRunningBackupsConflict validates the provided destination cluster and namespaces
