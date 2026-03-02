@@ -52,7 +52,7 @@ func (r *timeRestoreRunner) RestoreByTime(
 
 	go func() {
 		err := r.restoreByTimeSync(ctx, request, jobID, logger)
-		r.restoreJobs.finishJob(jobID, err)
+		r.restoreJobs.finishJob(jobID, err, logger)
 	}()
 
 	return jobID, nil
@@ -131,7 +131,7 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 		return err
 	}
 
-	return r.restoreAllNamespaces(ctx, client, request, jobID, logger, backupsByNamespace)
+	return r.restoreAllNamespaces(ctx, client, request, jobID, backupsByNamespace, logger)
 }
 
 func (r *timeRestoreRunner) restoreAllNamespaces(
@@ -139,8 +139,8 @@ func (r *timeRestoreRunner) restoreAllNamespaces(
 	client aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
-	logger *slog.Logger,
 	backupsByNamespace map[string][]model.BackupDetails,
+	logger *slog.Logger,
 ) error {
 	var (
 		wg         sync.WaitGroup

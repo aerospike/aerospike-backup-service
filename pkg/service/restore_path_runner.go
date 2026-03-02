@@ -51,7 +51,7 @@ func (r *pathRestoreRunner) Restore(ctx context.Context, request *model.RestoreR
 		if err != nil { // if some of the restore sub-operations failed, we need to cancel the rest.
 			cancel()
 		}
-		r.restoreJobs.finishJob(jobID, err)
+		r.restoreJobs.finishJob(jobID, err, logger)
 	}()
 
 	return jobID, nil
