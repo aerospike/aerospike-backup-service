@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -36,49 +35,6 @@ func (m *MockBackupBackendService) WriteBackupMetadata(
 func (m *MockBackupBackendService) Delete(ctx context.Context, routineName *model.BackupRoutine, path string) error {
 	args := m.Called(ctx, routineName, path)
 	return args.Error(0)
-}
-
-// MockBackupMetadataReader mocks the BackupMetadataReader interface.
-type MockBackupMetadataReader struct {
-	mock.Mock
-}
-
-func (m *MockBackupMetadataReader) FullBackupList(ctx context.Context, timeBounds model.TimeBounds,
-) ([]model.BackupDetails, error) {
-	args := m.Called(ctx, timeBounds)
-	return args.Get(0).([]model.BackupDetails), args.Error(1)
-}
-
-func (m *MockBackupMetadataReader) IncrementalBackupList(ctx context.Context, timeBounds model.TimeBounds,
-) ([]model.BackupDetails, error) {
-	args := m.Called(ctx, timeBounds)
-	return args.Get(0).([]model.BackupDetails), args.Error(1)
-}
-
-func (m *MockBackupMetadataReader) ReadClusterConfiguration(ctx context.Context, path string) ([]byte, error) {
-	args := m.Called(ctx, path)
-	return args.Get(0).([]byte), args.Error(1)
-}
-
-func (m *MockBackupMetadataReader) LastIncrementalBackupTime(
-	ctx context.Context, timeBounds model.TimeBounds,
-) (time.Time, error) {
-	args := m.Called(ctx, timeBounds)
-	return args.Get(0).(time.Time), args.Error(1)
-}
-
-func (m *MockBackupMetadataReader) LastFullBackupTime(
-	ctx context.Context, timeBounds model.TimeBounds,
-) (time.Time, error) {
-	args := m.Called(ctx, timeBounds)
-	return args.Get(0).(time.Time), args.Error(1)
-}
-
-func (m *MockBackupMetadataReader) FindIncrementalBackupsForNamespace(
-	ctx context.Context, bounds model.TimeBounds, namespace string,
-) ([]model.BackupDetails, error) {
-	args := m.Called(ctx, bounds, namespace)
-	return args.Get(0).([]model.BackupDetails), args.Error(1)
 }
 
 // MockScheduler mocks the quartz.Scheduler interface.
@@ -155,28 +111,4 @@ type MockConfigApplier struct{}
 
 func (a *MockConfigApplier) ApplyNewConfig(_ context.Context) error {
 	return nil
-}
-
-type mockRunningBackupsRegistry struct {
-	mock.Mock
-}
-
-func (m *mockRunningBackupsRegistry) GetRoutineState(routine *model.BackupRoutine) *model.RoutineState {
-	args := m.Called(routine)
-	if state, ok := args.Get(0).(*model.RoutineState); ok {
-		return state
-	}
-	return nil
-}
-
-func (m *mockRunningBackupsRegistry) GetRunningState() map[string]*model.RoutineState {
-	args := m.Called()
-	if state, ok := args.Get(0).(map[string]*model.RoutineState); ok {
-		return state
-	}
-	return nil
-}
-
-func (m *mockRunningBackupsRegistry) Cancel(routineName string) {
-	m.Called(routineName)
 }

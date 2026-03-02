@@ -50,6 +50,7 @@ func (w *DefaultClusterConfigWriter) Write(
 	timestamp time.Time,
 ) error {
 	logger := slog.Default().With(attr.Routine(routine.Name))
+	logger.Info("writing cluster config", slog.Time("timestamp", timestamp))
 
 	client, err := w.clientManager.GetClient(ctx, routine.SourceCluster, logger)
 	if err != nil {

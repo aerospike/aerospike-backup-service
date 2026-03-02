@@ -25,23 +25,15 @@ type RoutineState struct {
 	NextIncremental *time.Time `json:"next-incremental,omitempty"`
 }
 
-func NewRoutineStateFromModel(m *model.RoutineState) *RoutineState {
-	if m == nil {
-		return nil
+func NewRoutineStateFromModel(m model.RoutineState) RoutineState {
+	return RoutineState{
+		Full:            NewRunningJobFromModel(m.Full),
+		Incremental:     NewRunningJobFromModel(m.Incremental),
+		LastFull:        m.LastRunTime.FullBackupTime(),
+		LastIncremental: m.LastRunTime.IncrementalBackupTime(),
+		NextFull:        m.NextRunTime.FullBackupTime(),
+		NextIncremental: m.NextRunTime.IncrementalBackupTime(),
 	}
-
-	c := &RoutineState{}
-	c.fromModel(m)
-	return c
-}
-
-func (c *RoutineState) fromModel(m *model.RoutineState) {
-	c.Full = NewRunningJobFromModel(m.Full)
-	c.Incremental = NewRunningJobFromModel(m.Incremental)
-	c.LastFull = m.LastRunTime.FullBackupTime()
-	c.LastIncremental = m.LastRunTime.IncrementalBackupTime()
-	c.NextFull = m.NextRunTime.FullBackupTime()
-	c.NextIncremental = m.NextRunTime.IncrementalBackupTime()
 }
 
 // RunningJob tracks progress of currently running job.

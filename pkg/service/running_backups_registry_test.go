@@ -43,12 +43,8 @@ func TestHistoryScan(t *testing.T) {
 	historyMgr := NewMockHistoryManager(ctrl)
 	backupTime := model.NewBackupTime(time.Now(), time.Now().Add(-1*time.Hour))
 	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(backupTime, nil).Times(1)
-
-	mockReader := NewMockroutineProvider(ctrl)
-	mockReader.EXPECT().PopInvalidatedRoutines().Return([]*model.BackupRoutine{{Name: routineName}}).Times(1)
-
-	registry := NewRunningBackupsRegistry(historyMgr, mockReader)
-	registry.SynchroniseBackupHistory(t.Context())
+	registry := NewRunningBackupsRegistry(historyMgr, nil)
+	registry.SynchroniseBackupHistory(t.Context(), []*model.BackupRoutine{{Name: routineName}})
 
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
