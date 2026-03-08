@@ -216,11 +216,11 @@ func (mc *MetricsCollector) collectRestoreMetrics() {
 type BackupOutcome string
 
 const (
-	BackupOutcomeSuccess   BackupOutcome = "success"
-	BackupOutcomeFailure   BackupOutcome = "failure"
-	BackupOutcomeCancelled BackupOutcome = "canceled"
-	BackupOutcomeRetry     BackupOutcome = "retry"
-	BackupOutcomeSkip      BackupOutcome = "skip"
+	BackupOutcomeSuccess  BackupOutcome = "success"
+	BackupOutcomeFailure  BackupOutcome = "failure"
+	BackupOutcomeCanceled BackupOutcome = "canceled"
+	BackupOutcomeRetry    BackupOutcome = "retry"
+	BackupOutcomeSkip     BackupOutcome = "skip"
 )
 
 // observeBackupEvent updates Prometheus backup counters/histograms.
@@ -262,7 +262,7 @@ func observeBackupEvent(routineName string, backupType jobType, outcome BackupOu
 		}
 	case BackupOutcomeRetry:
 		// No deprecated counter for retry.
-	case BackupOutcomeCancelled:
+	case BackupOutcomeCanceled:
 		// No deprecated counter for canceled.
 	}
 }

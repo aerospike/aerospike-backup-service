@@ -5,10 +5,10 @@ import "github.com/aerospike/backup-go/models"
 type JobStatus string
 
 const (
-	JobStatusRunning   JobStatus = "Running"
-	JobStatusDone      JobStatus = "Done"
-	JobStatusFailed    JobStatus = "Failed"
-	JobStatusCancelled JobStatus = "Canceled"
+	JobStatusRunning  JobStatus = "Running"
+	JobStatusDone     JobStatus = "Done"
+	JobStatusFailed   JobStatus = "Failed"
+	JobStatusCanceled JobStatus = "Canceled"
 )
 
 // RestoreJobStatus represents a restore job status.

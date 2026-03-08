@@ -130,7 +130,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, status)
 
-		assert.Equal(t, model.JobStatusCancelled, status.Status)
+		assert.Equal(t, model.JobStatusCanceled, status.Status)
 		job, err = holder.getJob(jobID)
 		require.NoError(t, err)
 		require.ErrorIs(t, job.err, context.Canceled)

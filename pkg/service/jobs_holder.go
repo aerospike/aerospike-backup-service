@@ -92,7 +92,7 @@ func (j *restoreJob) finish(err error, logger *slog.Logger) {
 		j.status = model.JobStatusDone
 		logger.Info("restore finished")
 	case errors.Is(err, context.Canceled):
-		j.status = model.JobStatusCancelled
+		j.status = model.JobStatusCanceled
 		logger.Info("restore canceled")
 	case errors.Is(err, ErrRestorePrerequisitesFailed):
 		j.status = model.JobStatusFailed

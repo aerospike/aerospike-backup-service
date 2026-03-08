@@ -128,7 +128,7 @@ func TestCancelRestoreOK(t *testing.T) {
 
 	require.NoError(t, waitErr)
 	require.NotNil(t, jobStatus)
-	assert.Equal(t, model.JobStatusCancelled, jobStatus.Status)
+	assert.Equal(t, model.JobStatusCanceled, jobStatus.Status)
 }
 
 func TestRestoreFailsWithClientError(t *testing.T) {
@@ -345,7 +345,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 
 	require.NoError(t, err)
-	assert.Equal(t, model.JobStatusCancelled, jobStatus.Status)
+	assert.Equal(t, model.JobStatusCanceled, jobStatus.Status)
 	require.ErrorIs(t, jobStatus.Error, context.Canceled)
 }
 

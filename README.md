@@ -344,7 +344,7 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
 
   `sum( aerospike_backup_service_backup_events_total{outcome="failure"} )`
 
-- 🚫 Total number of cancelled backups:
+- 🚫 Total number of Canceled backups:
   `sum(aerospike_backup_service_backup_events_total{outcome="cancel"})`
 
 - ⏰ Time since last backup for routine
@@ -757,8 +757,8 @@ Provides a list of all restore jobs, with optional filtering by time range and s
 
 - `from` (optional): Lower bound timestamp filter in milliseconds since epoch.
 - `to` (optional): Upper bound timestamp filter in milliseconds since epoch.
-- `status` (optional): Comma-separated status filter (e.g., `Running,Done,Failed,Cancelled`). Use `!` prefix to exclude
-  statuses (e.g., `!Failed,Cancelled`).
+- `status` (optional): Comma-separated status filter (e.g., `Running,Done,Failed,Canceled`). Use `!` prefix to exclude
+  statuses (e.g., `!Failed,Canceled`).
 
 <details>
     <summary>Response example</summary>

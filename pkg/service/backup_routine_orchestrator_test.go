@@ -200,7 +200,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
 }
 
-func TestRunFullBackupInternal_ContextCancelled(t *testing.T) {
+func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -229,7 +229,7 @@ func TestRunFullBackupInternal_ContextCancelled(t *testing.T) {
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
-	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeCancelled))
+	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeCanceled))
 }
 
 func TestSkipIncrementalBackup(t *testing.T) {
@@ -356,7 +356,7 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeFailure))
 }
 
-func TestRunIncrementalBackup_ContextCancelled(t *testing.T) {
+func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -389,7 +389,7 @@ func TestRunIncrementalBackup_ContextCancelled(t *testing.T) {
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSkip))
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeFailure))
-	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeCancelled))
+	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeCanceled))
 }
 
 func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
