@@ -80,7 +80,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	mockRestoreHandler := restoreexecutor.NewMockRestoreHandler(env.ctrl)
 	mockRestoreHandler.EXPECT().GetStats().Return(models.NewRestoreStats()).AnyTimes()
 
-	// Wait should block until context is cancelled, then return context.Canceled
+	// Wait should block until context is canceled, then return context.Canceled
 	mockRestoreHandler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 		<-ctx.Done()        // Wait for cancellation signal
 		close(waitReturned) // Signal return

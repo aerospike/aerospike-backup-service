@@ -14,7 +14,7 @@ const (
 	JobStatusRunning   JobStatus = "Running"
 	JobStatusDone      JobStatus = "Done"
 	JobStatusFailed    JobStatus = "Failed"
-	JobStatusCancelled JobStatus = "Cancelled"
+	JobStatusCancelled JobStatus = "Canceled"
 )
 
 var allJobStatuses = []JobStatus{

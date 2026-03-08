@@ -310,7 +310,7 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 			return ctx.Err()
 		})
 
-	mocks.backendService.EXPECT(). // backup cancelled => delete all
+	mocks.backendService.EXPECT(). // backup canceled => delete all
 					Delete(gomock.Any(), routine, timestampPath).
 					Return(nil)
 
