@@ -521,6 +521,83 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	assert.Equal(t, model.JobStatusDone, jobStatus.Status)
 }
 
+func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+	defer env.ctrl.Finish()
+
+	now := time.Now()
+	fullAt11 := now.Add(-2 * time.Hour)
+	fullAt12 := now.Add(-1 * time.Hour)
+	requestTime := fullAt12.Add(30 * time.Minute)
+
+	routine := &model.BackupRoutine{Name: "test-routine"}
+	request := &model.RestoreTimestampRequest{
+		DestinationCluster: model.AerospikeCluster{},
+		Policy:             model.RestorePolicy{},
+		Routine:            *routine,
+		Time:               requestTime,
+		DisableReordering:  true,
+	}
+
+	smallAt11 := model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{
+			Created:   fullAt11,
+			Namespace: "small-ns",
+			FileCount: 1,
+		},
+		Key:     "full/small/11",
+		Storage: &model.LocalStorage{},
+	}
+	smallAt12 := model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{
+			Created:   fullAt12,
+			Namespace: "small-ns",
+			FileCount: 1,
+		},
+		Key:     "full/small/12",
+		Storage: &model.LocalStorage{},
+	}
+	largeAt11 := model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{
+			Created:   fullAt11,
+			Namespace: "large-ns",
+			FileCount: 1,
+		},
+		Key:     "full/large/11",
+		Storage: &model.LocalStorage{},
+	}
+
+	env.restoreValidator.EXPECT().
+		ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).
+		AnyTimes()
+
+	gomock.InOrder(
+		env.mockBackupReader.EXPECT().
+			GetBackups(gomock.Any(), fullBackupFilterMatcher{toTime: requestTime}).
+			Return([]model.BackupDetails{smallAt11, smallAt12, largeAt11}, nil),
+		env.mockBackupReader.EXPECT().
+			GetBackups(gomock.Any(), incrementalFilterMatcher{fromTime: fullAt11, toTime: requestTime}).
+			Return(nil, nil),
+	)
+
+	client := env.expectSuccessfulClientInteraction(t)
+	env.mockRestore.EXPECT().
+		Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: smallAt12.Key}).
+		Return(env.expectDefaultRestoreHandler(), nil).
+		Times(1)
+	env.mockRestore.EXPECT().
+		Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: largeAt11.Key}).
+		Return(env.expectDefaultRestoreHandler(), nil).
+		Times(1)
+
+	jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
+	require.NoError(t, err)
+	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+	require.NoError(t, err)
+	assert.Equal(t, model.JobStatusDone, jobStatus.Status)
+}
+
 func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 	tests := []struct {
 		name              string

@@ -1,10 +1,12 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"slices"
 	"sync"
 
@@ -62,40 +64,81 @@ func (r *timeRestoreRunner) RestoreByTime(
 func (r *timeRestoreRunner) findBackupsToRestore(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (map[string][]model.BackupDetails, error) {
-	backups, err := r.backupReader.GetBackups(ctx,
+	fullBackups, err := r.backupReader.GetBackups(ctx,
 		NewFullBackupFilter(&request.Routine).
-			WithToTime(request.Time).
-			Last(),
+			WithToTime(request.Time),
 	)
-	// backups contains list of full backups for every namespace.
-	// They all have same created time, routine name and storage.
 	if err != nil {
-		return nil, fmt.Errorf("failed to read last full backup: %w", err)
+		return nil, fmt.Errorf("failed to read full backups: %w", err)
 	}
 
-	if len(backups) == 0 {
+	if len(fullBackups) == 0 {
 		return nil, errors.New("no full backups found")
 	}
 
-	// Find incremental backups.
+	latestFullByNamespace := latestBackupsByNamespace(fullBackups)
+	earliestFullBackup := earliestBackup(latestFullByNamespace)
+
+	// Use the earliest selected full backup as lower bound for one batched incremental scan.
 	incrementalBackups, err := r.backupReader.GetBackups(ctx,
 		NewIncrementalBackupFilter(&request.Routine).
-			WithFromTime(backups[0].Created).
+			WithFromTime(earliestFullBackup.Created).
 			WithToTime(request.Time))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find incremental backups: %w", err)
 	}
 
-	backupsByNs := make(map[string][]model.BackupDetails)
+	return buildRestoreChainsByNamespace(latestFullByNamespace, incrementalBackups), nil
+}
+
+// latestBackupsByNamespace picks the newest backup per namespace from the provided list.
+func latestBackupsByNamespace(backups []model.BackupDetails) map[string]model.BackupDetails {
+	latestByNamespace := make(map[string]model.BackupDetails, len(backups))
 	for _, b := range backups {
-		backupsByNs[b.Namespace] = append(backupsByNs[b.Namespace], b)
+		current, exists := latestByNamespace[b.Namespace]
+		if !exists || current.Created.Before(b.Created) {
+			latestByNamespace[b.Namespace] = b
+		}
 	}
 
+	return latestByNamespace
+}
+
+// earliestBackup returns the oldest backup among per-namespace selections.
+func earliestBackup(backupsByNamespace map[string]model.BackupDetails) model.BackupDetails {
+	backups := slices.Collect(maps.Values(backupsByNamespace))
+	return slices.MinFunc(backups, func(a, b model.BackupDetails) int {
+		return a.Created.Compare(b.Created)
+	})
+}
+
+// buildRestoreChainsByNamespace constructs restore chains for each namespace:
+// selected full backup first, followed by eligible incrementals in chronological order.
+func buildRestoreChainsByNamespace(
+	latestFullByNamespace map[string]model.BackupDetails,
+	incrementalBackups []model.BackupDetails,
+) map[string][]model.BackupDetails {
+	incrementalsByNamespace := make(map[string][]model.BackupDetails)
 	for _, b := range incrementalBackups {
-		backupsByNs[b.Namespace] = append(backupsByNs[b.Namespace], b)
+		incrementalsByNamespace[b.Namespace] = append(incrementalsByNamespace[b.Namespace], b)
 	}
 
-	return backupsByNs, nil
+	chains := make(map[string][]model.BackupDetails, len(latestFullByNamespace))
+	for ns, full := range latestFullByNamespace {
+		chains[ns] = append(chains[ns], full)
+		for _, incr := range incrementalsByNamespace[ns] {
+			// Only apply incrementals newer than this namespace's selected full.
+			if incr.Created.Before(full.Created) {
+				continue
+			}
+			chains[ns] = append(chains[ns], incr)
+		}
+		slices.SortFunc(chains[ns], func(a, b model.BackupDetails) int {
+			return a.Created.Compare(b.Created)
+		})
+	}
+
+	return chains
 }
 
 func (r *timeRestoreRunner) restoreByTimeSync(
