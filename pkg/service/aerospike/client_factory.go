@@ -99,7 +99,7 @@ func (f *DefaultClientFactory) clientPolicy(ctx context.Context, c *model.Aerosp
 
 	if len(c.PreferRacks) > 0 {
 		policy.RackAware = true
-		policy.RackIds = c.PreferRacks // prioritise these racks
+		policy.RackIds = c.PreferRacks // prioritize these racks
 	}
 
 	return policy, nil

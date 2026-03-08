@@ -27,7 +27,7 @@ type restoreJob struct {
 	// Each handler corresponds to a specific backup being restored.
 	handlers []restoreexecutor.RestoreHandler
 
-	// status indicates the current state of the job (Running, Done, Failed, Cancelled).
+	// status indicates the current state of the job (Running, Done, Failed, Canceled).
 	status model.JobStatus
 
 	// err holds all errors that occurred during the job execution.
@@ -93,7 +93,7 @@ func (j *restoreJob) finish(err error, logger *slog.Logger) {
 		logger.Info("restore finished")
 	case errors.Is(err, context.Canceled):
 		j.status = model.JobStatusCancelled
-		logger.Info("restore cancelled")
+		logger.Info("restore canceled")
 	case errors.Is(err, ErrRestorePrerequisitesFailed):
 		j.status = model.JobStatusFailed
 		logger.Warn("failed to start restore", attr.Error(err))

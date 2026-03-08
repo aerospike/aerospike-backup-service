@@ -95,11 +95,11 @@ var (
 	// Labels:
 	//   - routine: name of the backup routine, e.g., "daily-ns1"
 	//   - type: "full" or "incremental"
-	//   - outcome: one of "success", "failure", "cancelled", "skip" or "retry"
+	//   - outcome: one of "success", "failure", "canceled", "skip" or "retry"
 	backupCounters = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_backup_events_total",
-			Help: "Backup service job events by routine, type (full/incremental), and outcome (success, failure, cancelled, retry, skip)",
+			Help: "Backup service job events by routine, type (full/incremental), and outcome (success, failure, canceled, retry, skip)",
 		},
 		[]string{"routine", "type", "outcome"},
 	)
@@ -218,7 +218,7 @@ type BackupOutcome string
 const (
 	BackupOutcomeSuccess   BackupOutcome = "success"
 	BackupOutcomeFailure   BackupOutcome = "failure"
-	BackupOutcomeCancelled BackupOutcome = "cancelled"
+	BackupOutcomeCancelled BackupOutcome = "canceled"
 	BackupOutcomeRetry     BackupOutcome = "retry"
 	BackupOutcomeSkip      BackupOutcome = "skip"
 )
@@ -263,6 +263,6 @@ func observeBackupEvent(routineName string, backupType jobType, outcome BackupOu
 	case BackupOutcomeRetry:
 		// No deprecated counter for retry.
 	case BackupOutcomeCancelled:
-		// No deprecated counter for cancelled.
+		// No deprecated counter for canceled.
 	}
 }

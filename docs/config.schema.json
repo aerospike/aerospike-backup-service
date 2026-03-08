@@ -793,7 +793,7 @@
           "Running",
           "Done",
           "Failed",
-          "Cancelled"
+          "Canceled"
         ],
         "x-enum-varnames": [
           "JobStatusRunning",

@@ -42,7 +42,7 @@ func ReadConfiguration(client aerospike.Cluster, logger *slog.Logger) []asconfig
 
 		configAsString, err := try.Recover(asconf.ToConfFile)
 		if err != nil {
-			logger.Error("Error serialising configuration",
+			logger.Error("Error serializing configuration",
 				slog.Any("host", host), attr.Error(err))
 			continue
 		}

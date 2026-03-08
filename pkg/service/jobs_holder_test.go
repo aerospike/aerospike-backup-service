@@ -95,7 +95,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		assert.Equal(t, model.JobStatusDone, status.Status)
 	})
 
-	t.Run("job is cancelled", func(t *testing.T) {
+	t.Run("job is canceled", func(t *testing.T) {
 		holder := NewRestoreJobsHolder()
 		jobID := holder.newJob("test-label", func() {})
 		recordsPerGoroutine := uint64(10)
