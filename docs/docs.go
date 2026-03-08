@@ -1454,7 +1454,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated status filter (Running,Done,Failed,Cancelled). Use ! prefix for exclude filter (e.g., !Failed,Cancelled)",
+                        "description": "Comma-separated status filter (Running,Done,Failed,Canceled). Use ! prefix for exclude filter (e.g., !Failed,Canceled)",
                         "name": "status",
                         "in": "query"
                     }
@@ -2426,7 +2426,7 @@ const docTemplate = `{
                 "Running",
                 "Done",
                 "Failed",
-                "Cancelled"
+                "Canceled"
             ],
             "x-enum-varnames": [
                 "JobStatusRunning",
