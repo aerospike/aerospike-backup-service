@@ -11,17 +11,17 @@ import (
 type JobStatus string
 
 const (
-	JobStatusRunning   JobStatus = "Running"
-	JobStatusDone      JobStatus = "Done"
-	JobStatusFailed    JobStatus = "Failed"
-	JobStatusCancelled JobStatus = "Canceled"
+	JobStatusRunning  JobStatus = "Running"
+	JobStatusDone     JobStatus = "Done"
+	JobStatusFailed   JobStatus = "Failed"
+	JobStatusCanceled JobStatus = "Canceled"
 )
 
 var allJobStatuses = []JobStatus{
 	JobStatusRunning,
 	JobStatusDone,
 	JobStatusFailed,
-	JobStatusCancelled,
+	JobStatusCanceled,
 }
 
 // restoreStatusFromString returns the corresponding JobStatus enum for string representation.

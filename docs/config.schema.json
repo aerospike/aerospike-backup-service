@@ -799,7 +799,7 @@
           "JobStatusRunning",
           "JobStatusDone",
           "JobStatusFailed",
-          "JobStatusCancelled"
+          "JobStatusCanceled"
         ]
       },
       "dto.LocalStorage": {

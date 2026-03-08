@@ -2432,7 +2432,7 @@ const docTemplate = `{
                 "JobStatusRunning",
                 "JobStatusDone",
                 "JobStatusFailed",
-                "JobStatusCancelled"
+                "JobStatusCanceled"
             ]
         },
         "dto.LocalStorage": {
