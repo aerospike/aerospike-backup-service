@@ -138,7 +138,7 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 }
 
 func (mc *MetricsCollector) collectRestoreMetrics() {
-	restoreInProgress.WithLabelValues().Set(float64(mc.restores.Size()))
+	restoreInProgress.WithLabelValues().Set(float64(mc.restores.RunningSize()))
 }
 
 type BackupOutcome string

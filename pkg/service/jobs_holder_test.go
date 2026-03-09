@@ -197,3 +197,20 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		require.ErrorIs(t, job.err, ErrRestorePrerequisitesFailed)
 	})
 }
+
+func TestRestoreJobsHolder_RunningSize(t *testing.T) {
+	holder := NewRestoreJobsHolder()
+	jobRunning := holder.newJob("running", func() {})
+	jobDone := holder.newJob("done", func() {})
+	jobCanceled := holder.newJob("canceled", func() {})
+	jobFailed := holder.newJob("failed", func() {})
+
+	holder.finishJob(jobDone, nil, slog.New(slog.DiscardHandler))
+	holder.finishJob(jobCanceled, context.Canceled, slog.New(slog.DiscardHandler))
+	holder.finishJob(jobFailed, errors.New("failed"), slog.New(slog.DiscardHandler))
+
+	assert.Equal(t, 1, holder.RunningSize())
+
+	holder.finishJob(jobRunning, nil, slog.New(slog.DiscardHandler))
+	assert.Zero(t, holder.RunningSize())
+}

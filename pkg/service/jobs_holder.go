@@ -129,6 +129,12 @@ func (j *restoreJob) buildStatus() *model.RestoreJobStatus {
 	}
 }
 
+func (j *restoreJob) isRunning() bool {
+	j.RLock()
+	defer j.RUnlock()
+	return j.status == model.JobStatusRunning
+}
+
 // RestoreJobsHolder is a thread-safe map of restore jobs.
 type RestoreJobsHolder struct {
 	*collections.SafeMap[model.RestoreJobID, *restoreJob]
@@ -169,6 +175,17 @@ func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error, logger *
 	if job, ok := h.Load(id); ok {
 		job.finish(err, logger)
 	}
+}
+
+// RunningSize returns the number of restore jobs currently in running state.
+func (h *RestoreJobsHolder) RunningSize() int {
+	running := 0
+	h.Iterate(func(_ model.RestoreJobID, job *restoreJob) {
+		if job.isRunning() {
+			running++
+		}
+	})
+	return running
 }
 
 func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*restoreJob, error) {
