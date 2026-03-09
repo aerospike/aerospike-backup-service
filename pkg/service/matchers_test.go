@@ -46,17 +46,17 @@ func newTimeMatcher(fromTime time.Time) gomock.Matcher {
 	return timeMatcher{expectedFromTime: fromTime}
 }
 
-// fullBackupFilterMatcher matches RoutineFilter for full backups with ToTime and Last().
+// fullBackupFilterMatcher matches RoutineFilter for full backups with ToTime.
 type fullBackupFilterMatcher struct{ toTime time.Time }
 
 func (m fullBackupFilterMatcher) Matches(x any) bool {
 	rf, ok := x.(*RoutineFilter)
-	return ok && rf.JobType == jobTypeFull && rf.onlyLast &&
+	return ok && rf.JobType == jobTypeFull &&
 		rf.ToTime != nil && rf.ToTime.Equal(m.toTime)
 }
 
 func (m fullBackupFilterMatcher) String() string {
-	return "full backup filter with ToTime and Last()"
+	return "full backup filter with ToTime"
 }
 
 // incrementalFilterMatcher matches RoutineFilter for incrementals with FromTime and ToTime.
