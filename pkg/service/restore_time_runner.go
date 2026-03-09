@@ -75,13 +75,19 @@ func (r *timeRestoreRunner) findBackupsToRestore(
 		return nil, errors.New("no full backups found")
 	}
 
-	latestFullByNamespace := latestBackupsByNamespace(fullBackups) // map namespace -> latest full backup for this ns
-	earliestFullBackup := earliestBackup(latestFullByNamespace)    // earliest full backup among all
+	// map namespace -> latest full backup for this ns
+	latestFullByNamespace := latestBackupsByNamespace(fullBackups)
+	// earliest full backup among all
+	earliestSelectedFull := earliestSelectedFullBackup(latestFullByNamespace)
 
-	// Use the earliest selected full backup as lower bound for one batched incremental scan.
+	// Strategy:
+	// 1) choose the latest full backup per namespace,
+	// 2) read incrementals once from the earliest of those selected full backups,
+	// 3) then filter incrementals per namespace against that namespace's selected full.
+	// This keeps storage reads batched while still producing correct per-namespace chains.
 	incrementalBackups, err := r.backupReader.GetBackups(ctx,
 		NewIncrementalBackupFilter(&request.Routine).
-			WithFromTime(earliestFullBackup.Created). // lower bound optimization to avoid scanning unnecessary backups
+			WithFromTime(earliestSelectedFull.Created). // lower bound for a single batched incremental scan
 			WithToTime(request.Time))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find incremental backups: %w", err)
@@ -105,9 +111,9 @@ func latestBackupsByNamespace(backups []model.BackupDetails) map[string]model.Ba
 	return latestByNamespace
 }
 
-// earliestBackup returns the oldest backup among per-namespace selections.
-func earliestBackup(backupsByNamespace map[string]model.BackupDetails) model.BackupDetails {
-	backups := slices.Collect(maps.Values(backupsByNamespace))
+// earliestSelectedFullBackup returns the oldest backup from selected per-namespace full backups.
+func earliestSelectedFullBackup(selectedFullByNamespace map[string]model.BackupDetails) model.BackupDetails {
+	backups := slices.Collect(maps.Values(selectedFullByNamespace))
 	return slices.MinFunc(backups, func(a, b model.BackupDetails) int {
 		return a.Created.Compare(b.Created)
 	})
@@ -196,6 +202,8 @@ func (r *timeRestoreRunner) restoreAllNamespaces(
 		errMu      sync.Mutex
 	)
 
+	// Best-effort restore: process all namespaces even if some fail, then return combined error.
+	// This allows users to retry only failed namespaces later.
 	// Run namespace restores concurrently and collect errors safely.
 	for namespace, nsBackup := range backupsByNamespace {
 		wg.Add(1)
