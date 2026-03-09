@@ -97,9 +97,6 @@ func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType jobT
 		t.lastRun.SetIncrementalBackupTime(timestamp)
 	}
 
-	// set last successful backup time for just finished backup
-	lastBackupTimestamp.WithLabelValues(routineName, string(jobType)).Set(float64(timestamp.Unix()))
-
 	// Remove the handler
 	delete(t.handlers, jobType)
 }

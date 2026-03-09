@@ -10,70 +10,6 @@ import (
 
 //nolint:lll
 var (
-	// A counter metric for backup run number.
-	backupCounter = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "aerospike_backup_service_runs_total",
-			Help: "Successful backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-		},
-		[]string{},
-	)
-	// A counter metric for incremental backup run number.
-	incrBackupCounter = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "aerospike_backup_service_incremental_runs_total",
-			Help: "Successful incremental backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-		},
-		[]string{},
-	)
-	// A counter metric for backup skip number.
-	backupSkippedCounter = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "aerospike_backup_service_skip_total",
-			Help: "Full backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-		},
-		[]string{},
-	)
-	// A counter metric for incremental backup skip number.
-	incrBackupSkippedCounter = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "aerospike_backup_service_incremental_skip_total",
-			Help: "Incremental backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-		},
-		[]string{},
-	)
-	// A counter metric for backup failure number.
-	backupFailureCounter = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "aerospike_backup_service_failure_total",
-			Help: "Full backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-		},
-		[]string{},
-	)
-	// A counter metric for incremental backup failure number.
-	incrBackupFailureCounter = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "aerospike_backup_service_incremental_failure_total",
-			Help: "Incremental backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-		},
-		[]string{},
-	)
-	// A gauge metric for full backup duration.
-	backupDurationGauge = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_duration_millis",
-			Help: "Full backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)",
-		},
-		[]string{},
-	)
-	// A gauge metric for incremental backup duration.
-	incrBackupDurationGauge = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_incremental_duration_millis",
-			Help: "Incremental backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)",
-		},
-		[]string{},
-	)
 	// A gauge metric for backup process, filter by name and type.
 	backupProgress = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -133,14 +69,6 @@ var AllMetrics []prometheus.Collector
 
 func init() {
 	AllMetrics = []prometheus.Collector{
-		backupCounter,
-		incrBackupCounter,
-		backupSkippedCounter,
-		incrBackupSkippedCounter,
-		backupFailureCounter,
-		incrBackupFailureCounter,
-		backupDurationGauge,
-		incrBackupDurationGauge,
 		backupProgress,
 		restoreInProgress,
 		backupCounters,
@@ -231,6 +159,10 @@ func observeBackupEvent(routineName string, backupType jobType, outcome BackupOu
 		"outcome": string(outcome),
 	}).Inc()
 
+	if outcome == BackupOutcomeSuccess {
+		lastBackupTimestamp.WithLabelValues(routineName, string(backupType)).Set(float64(time.Now().Unix()))
+	}
+
 	if duration > 0 {
 		backupDurations.With(prometheus.Labels{
 			"routine": routineName,
@@ -238,31 +170,4 @@ func observeBackupEvent(routineName string, backupType jobType, outcome BackupOu
 		}).Observe(duration.Seconds())
 	}
 
-	// update deprecated counters
-	switch outcome {
-	case BackupOutcomeSuccess:
-		if backupType == jobTypeFull {
-			backupCounter.WithLabelValues().Inc()
-			backupDurationGauge.WithLabelValues().Set(float64(duration.Milliseconds()))
-		} else {
-			incrBackupCounter.WithLabelValues().Inc()
-			incrBackupDurationGauge.WithLabelValues().Set(float64(duration.Milliseconds()))
-		}
-	case BackupOutcomeFailure:
-		if backupType == jobTypeFull {
-			backupFailureCounter.WithLabelValues().Inc()
-		} else {
-			incrBackupFailureCounter.WithLabelValues().Inc()
-		}
-	case BackupOutcomeSkip:
-		if backupType == jobTypeFull {
-			backupSkippedCounter.WithLabelValues().Inc()
-		} else {
-			incrBackupSkippedCounter.WithLabelValues().Inc()
-		}
-	case BackupOutcomeRetry:
-		// No deprecated counter for retry.
-	case BackupOutcomeCanceled:
-		// No deprecated counter for canceled.
-	}
 }
