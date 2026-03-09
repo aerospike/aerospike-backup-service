@@ -683,10 +683,10 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 					ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
 					AnyTimes()
-				// Restore runs executor once per backup in chain (full + incremental = 2).
+				// Incrementals with the same timestamp as full are skipped, so only full runs.
 				env.mockRestore.EXPECT().
 					Run(gomock.Any(), client, gomock.Any()).
-					Return(env.expectDefaultRestoreHandler(), nil).Times(2)
+					Return(env.expectDefaultRestoreHandler(), nil).Times(1)
 			} else {
 				env.restoreValidator.EXPECT().
 					ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
