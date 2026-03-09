@@ -43,8 +43,10 @@
   {
     "name": "aerospike_backup_service_restore_in_progress",
     "type": "Gauge",
-    "description": "Number of restore processes running",
-    "labels": null,
+    "description": "Number of restore jobs by status",
+    "labels": [
+      "status"
+    ],
     "deprecated": false
   },
   {

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -22,9 +23,9 @@ var (
 	restoreInProgress = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_restore_in_progress",
-			Help: "Number of restore processes running",
+			Help: "Number of restore jobs by status",
 		},
-		[]string{},
+		[]string{"status"},
 	)
 
 	// A counter metric for backup job events.
@@ -138,7 +139,16 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 }
 
 func (mc *MetricsCollector) collectRestoreMetrics() {
-	restoreInProgress.WithLabelValues().Set(float64(mc.restores.RunningSize()))
+	counts := mc.restores.StatusCounts()
+
+	restoreInProgress.WithLabelValues(string(model.JobStatusRunning)).
+		Set(float64(counts[model.JobStatusRunning]))
+	restoreInProgress.WithLabelValues(string(model.JobStatusDone)).
+		Set(float64(counts[model.JobStatusDone]))
+	restoreInProgress.WithLabelValues(string(model.JobStatusFailed)).
+		Set(float64(counts[model.JobStatusFailed]))
+	restoreInProgress.WithLabelValues(string(model.JobStatusCanceled)).
+		Set(float64(counts[model.JobStatusCanceled]))
 }
 
 type BackupOutcome string
@@ -169,5 +179,4 @@ func observeBackupEvent(routineName string, backupType jobType, outcome BackupOu
 			"type":    string(backupType),
 		}).Observe(duration.Seconds())
 	}
-
 }

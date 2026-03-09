@@ -198,7 +198,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	})
 }
 
-func TestRestoreJobsHolder_RunningSize(t *testing.T) {
+func TestRestoreJobsHolder_StatusCounts(t *testing.T) {
 	holder := NewRestoreJobsHolder()
 	jobRunning := holder.newJob("running", func() {})
 	jobDone := holder.newJob("done", func() {})
@@ -209,8 +209,16 @@ func TestRestoreJobsHolder_RunningSize(t *testing.T) {
 	holder.finishJob(jobCanceled, context.Canceled, slog.New(slog.DiscardHandler))
 	holder.finishJob(jobFailed, errors.New("failed"), slog.New(slog.DiscardHandler))
 
-	assert.Equal(t, 1, holder.RunningSize())
+	counts := holder.StatusCounts()
+	assert.Equal(t, 1, counts[model.JobStatusRunning])
+	assert.Equal(t, 1, counts[model.JobStatusDone])
+	assert.Equal(t, 1, counts[model.JobStatusCanceled])
+	assert.Equal(t, 1, counts[model.JobStatusFailed])
 
 	holder.finishJob(jobRunning, nil, slog.New(slog.DiscardHandler))
-	assert.Zero(t, holder.RunningSize())
+	counts = holder.StatusCounts()
+	assert.Zero(t, counts[model.JobStatusRunning])
+	assert.Equal(t, 2, counts[model.JobStatusDone])
+	assert.Equal(t, 1, counts[model.JobStatusCanceled])
+	assert.Equal(t, 1, counts[model.JobStatusFailed])
 }
