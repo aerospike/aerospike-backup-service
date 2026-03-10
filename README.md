@@ -180,7 +180,7 @@ Quartz uses either:
 <!-- DefaultConfig -->
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.4.0/docs/config.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.5.0/docs/config.schema.json
 ---
 aerospike-clusters:
   abs-cluster: # <--- Custom cluster name
