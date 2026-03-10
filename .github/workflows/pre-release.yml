@@ -87,6 +87,8 @@ jobs:
           gpg-key-pass: ${{ secrets.GPG_PASS }}
 
       - name: Install Dependencies
+        env:
+          GOTOOLCHAIN: auto
         run: |
           echo "Installing nfpm..."
           go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
@@ -554,6 +556,7 @@ jobs:
           
           echo "Building Docker image with buildx bake."
           jfrog docker buildx bake \
+            -t "$REPO/$IMAGE_NAME:$TAG" \
             --file ${{ github.workspace }}/build/docker-build/docker-bake.hcl \
             --metadata-file=build-metadata \
             --progress plain \
