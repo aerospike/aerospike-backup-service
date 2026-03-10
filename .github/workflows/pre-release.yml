@@ -557,8 +557,7 @@ jobs:
           echo "Context Directory: $CONTEXT"
           
           echo "Building Docker image with buildx bake."
-          jfrog docker buildx bake \
-            -t "$REPO/$IMAGE_NAME:$TAG" \
+          docker buildx bake \
             --file ${{ github.workspace }}/build/docker-build/docker-bake.hcl \
             --metadata-file=build-metadata \
             --progress plain \
