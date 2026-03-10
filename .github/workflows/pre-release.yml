@@ -545,6 +545,7 @@ jobs:
           GO_VERSION: ${{env.GO_VERSION}}
           OUTPUT: "type=image,push=true type=oci,dest=./abs-image.tar"
           REPO: ${{ vars.ARTIFACTORY_REGISTRY_URL }}/${{ vars.ARTIFACTORY_CONTAINER_DEV }}
+          ARTIFACTORY_REGISTRY_URL: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
           ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
         run: |
           echo "Starting Docker image build and push process."
