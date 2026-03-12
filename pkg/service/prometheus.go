@@ -19,11 +19,11 @@ var (
 		},
 		[]string{"routine", "type"},
 	)
-	// A gauge metric for number of restore processes.
-	restoreInProgress = prometheus.NewGaugeVec(
+	// A gauge metric for current number of restore jobs by status.
+	restoreJobsByStatus = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_restore_in_progress",
-			Help: "Number of restore jobs by status",
+			Name: "aerospike_backup_service_restore_jobs_by_status",
+			Help: "Current number of restore jobs by status",
 		},
 		[]string{"status"},
 	)
@@ -71,7 +71,7 @@ var AllMetrics []prometheus.Collector
 func init() {
 	AllMetrics = []prometheus.Collector{
 		backupProgress,
-		restoreInProgress,
+		restoreJobsByStatus,
 		backupCounters,
 		backupDurations,
 		lastBackupTimestamp,
@@ -142,7 +142,7 @@ func (mc *MetricsCollector) collectRestoreMetrics() {
 	counts := mc.restores.StatusCounts()
 
 	for _, state := range model.AllJobStatuses() {
-		restoreInProgress.WithLabelValues(string(state)).Set(float64(counts[state]))
+		restoreJobsByStatus.WithLabelValues(string(state)).Set(float64(counts[state]))
 	}
 }
 

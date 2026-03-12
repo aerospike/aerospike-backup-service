@@ -319,15 +319,7 @@ following application metrics:
 | `aerospike_backup_service_backup_events_total`              | Counter   | Backup service job events by routine, type (full/incremental), and outcome (success, failure, canceled, retry, skip) | routine, type, outcome |
 | `aerospike_backup_service_backup_progress_pct`              | Gauge     | Progress of backup processes in percentage                                                                           | routine, type          |
 | `aerospike_backup_service_last_successful_backup_timestamp` | Gauge     | Unix timestamp of the last successful backup per routine                                                             | routine, type          |
-| `aerospike_backup_service_restore_in_progress`              | Gauge     | Number of restore jobs by status                                                                                     | status                 |
-| `aerospike_backup_service_duration_millis`                  | Gauge     | Full backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)            |                        |
-| `aerospike_backup_service_failure_total`                    | Counter   | Full backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                         |                        |
-| `aerospike_backup_service_incremental_duration_millis`      | Gauge     | Incremental backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)     |                        |
-| `aerospike_backup_service_incremental_failure_total`        | Counter   | Incremental backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                  |                        |
-| `aerospike_backup_service_incremental_runs_total`           | Counter   | Successful incremental backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)          |                        |
-| `aerospike_backup_service_incremental_skip_total`           | Counter   | Incremental backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                     |                        |
-| `aerospike_backup_service_runs_total`                       | Counter   | Successful backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                      |                        |
-| `aerospike_backup_service_skip_total`                       | Counter   | Full backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                            |                        |
+| `aerospike_backup_service_restore_jobs_by_status`           | Gauge     | Current number of restore jobs by status                                                                             | status                 |
 
 **Example PromQL Queries**
 
@@ -1023,7 +1015,7 @@ New metrics have been added to provide more detailed monitoring of backup and re
 - `aerospike_backup_service_backup_events_total`: A counter for backup events, labeled by routine, type, and outcome.
 - `aerospike_backup_service_backup_duration_seconds`: A histogram of backup durations.
 - `aerospike_backup_service_last_successful_backup_timestamp`: A gauge for the timestamp of the last successful backup.
-- `aerospike_backup_service_restore_in_progress`: A counter for the number of restore processes currently running.
+- `aerospike_backup_service_restore_jobs_by_status`: A gauge for the current number of restore jobs by status.
 
 The `aerospike_backup_service_restore_progress_pct` metric has been removed as it created a new time series for each
 restore job, leading to high cardinality issues in Prometheus. Restore progress can now be monitored via the

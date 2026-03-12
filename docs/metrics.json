@@ -41,68 +41,12 @@
     "deprecated": false
   },
   {
-    "name": "aerospike_backup_service_restore_in_progress",
+    "name": "aerospike_backup_service_restore_jobs_by_status",
     "type": "Gauge",
-    "description": "Number of restore jobs by status",
+    "description": "Current number of restore jobs by status",
     "labels": [
       "status"
     ],
     "deprecated": false
-  },
-  {
-    "name": "aerospike_backup_service_duration_millis",
-    "type": "Gauge",
-    "description": "Full backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)",
-    "labels": null,
-    "deprecated": true
-  },
-  {
-    "name": "aerospike_backup_service_failure_total",
-    "type": "Counter",
-    "description": "Full backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-    "labels": null,
-    "deprecated": true
-  },
-  {
-    "name": "aerospike_backup_service_incremental_duration_millis",
-    "type": "Gauge",
-    "description": "Incremental backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)",
-    "labels": null,
-    "deprecated": true
-  },
-  {
-    "name": "aerospike_backup_service_incremental_failure_total",
-    "type": "Counter",
-    "description": "Incremental backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-    "labels": null,
-    "deprecated": true
-  },
-  {
-    "name": "aerospike_backup_service_incremental_runs_total",
-    "type": "Counter",
-    "description": "Successful incremental backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-    "labels": null,
-    "deprecated": true
-  },
-  {
-    "name": "aerospike_backup_service_incremental_skip_total",
-    "type": "Counter",
-    "description": "Incremental backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-    "labels": null,
-    "deprecated": true
-  },
-  {
-    "name": "aerospike_backup_service_runs_total",
-    "type": "Counter",
-    "description": "Successful backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-    "labels": null,
-    "deprecated": true
-  },
-  {
-    "name": "aerospike_backup_service_skip_total",
-    "type": "Counter",
-    "description": "Full backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
-    "labels": null,
-    "deprecated": true
   }
 ]
