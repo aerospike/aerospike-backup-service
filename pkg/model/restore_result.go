@@ -11,6 +11,16 @@ const (
 	JobStatusCanceled JobStatus = "Canceled"
 )
 
+// AllJobStatuses returns all defined restore job statuses.
+func AllJobStatuses() []JobStatus {
+	return []JobStatus{
+		JobStatusRunning,
+		JobStatusDone,
+		JobStatusFailed,
+		JobStatusCanceled,
+	}
+}
+
 // RestoreJobStatus represents a restore job status.
 // The information included depends on the Status field:
 //   - JobStatusRunning -> current statistics and estimation.

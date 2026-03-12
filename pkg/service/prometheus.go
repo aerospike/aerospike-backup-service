@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -140,8 +141,8 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 func (mc *MetricsCollector) collectRestoreMetrics() {
 	counts := mc.restores.StatusCounts()
 
-	for state, count := range counts {
-		restoreInProgress.WithLabelValues(string(state)).Set(float64(count))
+	for _, state := range model.AllJobStatuses() {
+		restoreInProgress.WithLabelValues(string(state)).Set(float64(counts[state]))
 	}
 }
 
