@@ -3,7 +3,6 @@ package service
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -17,40 +16,9 @@ var (
 	errUnsupportedBackupTypeToStart = errors.New("unsupported backup type")
 )
 
-// backupExecutionOverlapPolicy encapsulates overlap constraints between backup types.
-// Keep all overlap decisions here so future flags (for example AllowConcurrentFull)
-// can be introduced without changing orchestration flow.
-type backupExecutionOverlapPolicy interface {
-	allowConcurrentFull(routine *model.BackupRoutine) bool
-	allowConcurrentIncremental(routine *model.BackupRoutine) bool
-	blockIncrementalWhenFullRunning(routine *model.BackupRoutine) bool
-	blockIncrementalAtFullCronFire(routine *model.BackupRoutine) bool
-}
-
-type routinePolicyOverlap struct{}
-
-func (routinePolicyOverlap) allowConcurrentFull(_ *model.BackupRoutine) bool {
-	// Future extension point for BackupPolicy.AllowConcurrentFull.
-	return false
-}
-
-func (routinePolicyOverlap) allowConcurrentIncremental(routine *model.BackupRoutine) bool {
-	return routine.BackupPolicy.AllowConcurrentIncremental()
-}
-
-func (p routinePolicyOverlap) blockIncrementalWhenFullRunning(routine *model.BackupRoutine) bool {
-	return !p.allowConcurrentIncremental(routine)
-}
-
-func (p routinePolicyOverlap) blockIncrementalAtFullCronFire(routine *model.BackupRoutine) bool {
-	return !p.allowConcurrentIncremental(routine)
-}
-
 // BackupExecutionGate is the single entry point that determines whether a backup
 // can be executed right now.
-type BackupExecutionGate struct {
-	policy backupExecutionOverlapPolicy
-}
+type BackupExecutionGate struct{}
 
 // BackupStartPolicy contains only business rules that decide whether a backup
 // can start for the provided policy facts.
@@ -69,15 +37,10 @@ type StartFacts struct {
 	IncrementalRunningNow bool
 	HasCompletedFull      bool
 	FullScheduledNow      bool
-	Now                   time.Time
 }
 
-func NewBackupExecutionGate(policy backupExecutionOverlapPolicy) *BackupExecutionGate {
-	if policy == nil {
-		policy = routinePolicyOverlap{}
-	}
-
-	return &BackupExecutionGate{policy: policy}
+func NewBackupExecutionGate() *BackupExecutionGate {
+	return &BackupExecutionGate{}
 }
 
 func (g *BackupExecutionGate) CanStart(
@@ -95,8 +58,11 @@ func (g *BackupExecutionGate) CanStart(
 	}
 }
 
-func (g *BackupExecutionGate) canStartFull(routine *model.BackupRoutine, facts StartFacts) error {
-	if facts.FullRunningNow && !g.policy.allowConcurrentFull(routine) {
+func (g *BackupExecutionGate) canStartFull(
+	routine *model.BackupRoutine,
+	facts StartFacts,
+) error {
+	if facts.FullRunningNow && !g.allowConcurrentFull(routine) {
 		return errFullAlreadyRunning
 	}
 
@@ -111,17 +77,34 @@ func (g *BackupExecutionGate) canStartIncremental(
 		return errIncrementalNoFullBackup
 	}
 
-	if facts.IncrementalRunningNow && !g.policy.allowConcurrentIncremental(routine) {
+	if facts.IncrementalRunningNow && !g.allowConcurrentIncremental(routine) {
 		return errIncrementalAlreadyRunning
 	}
 
-	if facts.FullRunningNow && g.policy.blockIncrementalWhenFullRunning(routine) {
+	if facts.FullRunningNow && g.blockIncrementalWhenFullRunning(routine) {
 		return errIncrementalFullRunning
 	}
 
-	if facts.FullScheduledNow && g.policy.blockIncrementalAtFullCronFire(routine) {
+	if facts.FullScheduledNow && g.blockIncrementalAtFullCronFire(routine) {
 		return errIncrementalFullScheduledNow
 	}
 
 	return nil
+}
+
+func (g *BackupExecutionGate) allowConcurrentFull(_ *model.BackupRoutine) bool {
+	// Future extension point for BackupPolicy.AllowConcurrentFull.
+	return false
+}
+
+func (g *BackupExecutionGate) allowConcurrentIncremental(routine *model.BackupRoutine) bool {
+	return routine.BackupPolicy.AllowConcurrentIncremental()
+}
+
+func (g *BackupExecutionGate) blockIncrementalWhenFullRunning(routine *model.BackupRoutine) bool {
+	return !g.allowConcurrentIncremental(routine)
+}
+
+func (g *BackupExecutionGate) blockIncrementalAtFullCronFire(routine *model.BackupRoutine) bool {
+	return !g.allowConcurrentIncremental(routine)
 }

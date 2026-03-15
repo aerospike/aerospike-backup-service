@@ -42,10 +42,6 @@ func NewBackupStartAdmission(
 	registry RunningBackupsRegistry,
 	policy BackupStartPolicy,
 ) BackupStartAdmission {
-	if policy == nil {
-		policy = NewBackupExecutionGate(nil)
-	}
-
 	return &startAdmission{
 		registry: registry,
 		policy:   policy,
@@ -91,9 +87,10 @@ func (a *startAdmission) buildStartFactsLocked(routine *model.BackupRoutine, now
 		if token.routineName != routine.Name {
 			continue
 		}
-		if token.backupType == jobTypeFull {
+		switch token.backupType {
+		case jobTypeFull:
 			fullRunning = true
-		} else if token.backupType == jobTypeIncremental {
+		case jobTypeIncremental:
 			incrRunning = true
 		}
 		if fullRunning && incrRunning {
@@ -108,6 +105,5 @@ func (a *startAdmission) buildStartFactsLocked(routine *model.BackupRoutine, now
 		// History still comes from registry.
 		HasCompletedFull: !state.LastRunTime.NoFullBackup(),
 		FullScheduledNow: timeutil.IsCronFireTime(routine.IntervalCron, now),
-		Now:              now,
 	}
 }

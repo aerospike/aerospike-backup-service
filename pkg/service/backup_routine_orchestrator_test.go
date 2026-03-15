@@ -113,7 +113,6 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		nil,
 		NewBackupStartAdmission(mockRegistry, denyStartPolicy{}),
 	))
 
@@ -155,7 +154,6 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		nil,
 		NewBackupStartAdmission(mockRegistry, nil),
 	))
 
@@ -205,7 +203,6 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		nil,
 		NewBackupStartAdmission(mockRegistry, nil),
 	))
 
@@ -242,7 +239,6 @@ func TestRunFullBackupInternal_ContextCancelled(t *testing.T) {
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		nil,
 		NewBackupStartAdmission(mockRegistry, nil),
 	))
 
@@ -322,10 +318,9 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 				IncrementalRunningNow: tt.routineState.Incremental != nil,
 				HasCompletedFull:      !tt.routineState.LastRunTime.NoFullBackup(),
 				FullScheduledNow:      timeutil.IsCronFireTime(routine.IntervalCron, tt.now),
-				Now:                   tt.now,
 			}
 
-			policy := NewBackupExecutionGate(nil)
+			policy := NewBackupExecutionGate()
 			err := policy.CanStart(jobTypeIncremental, routine, facts)
 			assert.Equal(t, tt.expectedToSkip, err != nil)
 		})
@@ -368,7 +363,6 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 		mockCompletionHandler,
 		nil,
 		NewPathService(nil),
-		nil,
 		NewBackupStartAdmission(mockRegistry, nil),
 	))
 
@@ -407,7 +401,6 @@ func TestRunIncrementalBackup_ContextCancelled(t *testing.T) {
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		nil,
 		NewBackupStartAdmission(mockRegistry, nil),
 	))
 
@@ -505,7 +498,6 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *mode
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		nil,
 		NewBackupStartAdmission(mockRegistry, nil),
 	))
 

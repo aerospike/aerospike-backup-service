@@ -29,7 +29,6 @@ type BackupRoutineOrchestrator struct {
 	clientManager     aerospike.ClientManager
 	registry          RunningBackupsRegistry
 	completionHandler BackupCompletionHandler
-	executionGate     BackupStartPolicy
 	startAdmission    BackupStartAdmission
 }
 
@@ -42,7 +41,6 @@ type BackupComponents struct {
 	registry          RunningBackupsRegistry  // Stores the backup handler during execution.
 	completionHandler BackupCompletionHandler // Runs post-success/failure actions (registry, retention, cluster config).
 	backendService    BackupWriter            // Writes backup metadata and deletes created files on failure.
-	executionGate     BackupStartPolicy       // Decides whether backup can start now.
 	startAdmission    BackupStartAdmission    // Atomically reserves and attaches backup start.
 	pathService       PathService             // Resolve backup path.
 }
@@ -54,7 +52,6 @@ func NewBackupComponents(
 	completionHandler BackupCompletionHandler,
 	backendService BackupWriter,
 	pathService PathService,
-	executionGate BackupStartPolicy,
 	startAdmission BackupStartAdmission,
 ) *BackupComponents {
 	return &BackupComponents{
@@ -63,7 +60,6 @@ func NewBackupComponents(
 		registry:          registry,
 		completionHandler: completionHandler,
 		backendService:    backendService,
-		executionGate:     executionGate,
 		pathService:       pathService,
 		startAdmission:    startAdmission,
 	}
@@ -82,7 +78,6 @@ func newOrchestrator(
 		clientManager:     c.clientManager,
 		registry:          c.registry,
 		completionHandler: c.completionHandler,
-		executionGate:     c.executionGate,
 		startAdmission:    c.startAdmission,
 		logger:            logger,
 	}
