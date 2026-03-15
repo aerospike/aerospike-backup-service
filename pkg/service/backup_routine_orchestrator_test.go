@@ -24,6 +24,12 @@ import (
 
 var mockClient = &backup.Client{}
 
+type denyStartPolicy struct{}
+
+func (p denyStartPolicy) CanStart(_ jobType, _ *model.BackupRoutine, _ StartFacts) error {
+	return errors.New("admission denied")
+}
+
 func testRoutine() *model.BackupRoutine {
 	return &model.BackupRoutine{
 		Name:          routineName,
@@ -60,7 +66,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	stats.IncFiles()
 	stats.ReadRecords.Add(10)
 
-	initialState := &model.RoutineState{}
+	initialState := &model.RoutineState{LastRunTime: model.NewNoBackupTime()}
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockClient, nil)
 	mockClientManager.EXPECT().Close(mockClient)
@@ -106,10 +112,13 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mockRegistry,
 		mockCompletionHandler,
 		mockBackupBackend,
-	), NewPathService(nil))
+		NewPathService(nil),
+		nil,
+		NewBackupStartAdmission(mockRegistry, denyStartPolicy{}),
+	))
 
 	backupCounters.Reset()
-	o.runFullBackup(t.Context(), now)
+	o.runBackup(t.Context(), now, jobTypeFull)
 
 	registryWG.Wait()
 	assert.Equal(t, uint64(10), stats.TotalRecords.Load(), "Backup stats should be correct")
@@ -133,6 +142,7 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 
 	// Simulate an ongoing full backup
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(&model.RoutineState{
+		LastRunTime: model.NewNoBackupTime(),
 		Full: &model.RunningJob{
 			StartTime: time.Now(),
 		},
@@ -144,11 +154,14 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		mockRegistry,
 		mockCompletionHandler,
 		mockBackupBackend,
-	), NewPathService(nil))
+		NewPathService(nil),
+		nil,
+		NewBackupStartAdmission(mockRegistry, nil),
+	))
 
 	backupCounters.Reset()
 
-	o.runFullBackup(t.Context(), time.Now())
+	o.runBackup(t.Context(), time.Now(), jobTypeFull)
 
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
 	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
@@ -182,7 +195,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	connectionError := errors.New("connection failed")
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(1)
 
-	initialState := &model.RoutineState{}
+	initialState := &model.RoutineState{LastRunTime: model.NewNoBackupTime()}
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
 
 	o := newOrchestrator(routine, NewBackupComponents(
@@ -191,10 +204,13 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 		mockRegistry,
 		mockCompletionHandler,
 		mockBackupBackend,
-	), NewPathService(nil))
+		NewPathService(nil),
+		nil,
+		NewBackupStartAdmission(mockRegistry, nil),
+	))
 
 	backupCounters.Reset()
-	o.runFullBackup(t.Context(), time.Now())
+	o.runBackup(t.Context(), time.Now(), jobTypeFull)
 
 	assert.Contains(t, buf.String(), connectionError.Error())
 
@@ -215,7 +231,7 @@ func TestRunFullBackupInternal_ContextCancelled(t *testing.T) {
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
 	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
 
-	initialState := &model.RoutineState{}
+	initialState := &model.RoutineState{LastRunTime: model.NewNoBackupTime()}
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, context.Canceled).Times(1)
 
@@ -225,10 +241,13 @@ func TestRunFullBackupInternal_ContextCancelled(t *testing.T) {
 		mockRegistry,
 		mockCompletionHandler,
 		mockBackupBackend,
-	), NewPathService(nil))
+		NewPathService(nil),
+		nil,
+		NewBackupStartAdmission(mockRegistry, nil),
+	))
 
 	backupCounters.Reset()
-	o.runFullBackup(t.Context(), time.Now())
+	o.runBackup(t.Context(), time.Now(), jobTypeFull)
 
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
@@ -348,11 +367,14 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 		mockRegistry,
 		mockCompletionHandler,
 		nil,
-	), NewPathService(nil))
+		NewPathService(nil),
+		nil,
+		NewBackupStartAdmission(mockRegistry, nil),
+	))
 
 	backupCounters.Reset()
 
-	o.runIncrementalBackup(t.Context(), time.Now())
+	o.runBackup(t.Context(), time.Now(), jobTypeIncremental)
 
 	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeSkip))
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
@@ -384,10 +406,13 @@ func TestRunIncrementalBackup_ContextCancelled(t *testing.T) {
 		mockRegistry,
 		mockCompletionHandler,
 		mockBackupBackend,
-	), NewPathService(nil))
+		NewPathService(nil),
+		nil,
+		NewBackupStartAdmission(mockRegistry, nil),
+	))
 
 	backupCounters.Reset()
-	o.runIncrementalBackup(t.Context(), time.Now())
+	o.runBackup(t.Context(), time.Now(), jobTypeIncremental)
 
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSkip))
@@ -479,9 +504,12 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *mode
 		mockRegistry,
 		mockCompletionHandler,
 		mockBackupBackend,
-	), NewPathService(nil))
+		NewPathService(nil),
+		nil,
+		NewBackupStartAdmission(mockRegistry, nil),
+	))
 
-	o.runIncrementalBackup(t.Context(), time.Now())
+	o.runBackup(t.Context(), time.Now(), jobTypeIncremental)
 	time.Sleep(10 * time.Millisecond) // time to unregister routine.
 
 	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")

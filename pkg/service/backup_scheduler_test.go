@@ -73,7 +73,7 @@ func TestScheduleRoutines(t *testing.T) {
 			for _, routine := range tt.routines {
 				_ = config.AddRoutine(routine)
 			}
-			err := scheduleRoutines(scheduler, config, &BackupComponents{}, nil)
+			err := scheduleRoutines(scheduler, config, &BackupComponents{})
 
 			require.NoError(t, err)
 			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)

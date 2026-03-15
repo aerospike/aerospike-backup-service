@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
 // BackupCompletionHandler runs all actions after a backup succeeds or fails:
@@ -84,4 +85,47 @@ func (h *backupCompletionHandler) OnFailure(
 	jobType jobType,
 ) {
 	h.registry.clearFailedBackup(routine.Name, jobType)
+}
+
+// reportBackupOutcome classifies the backup terminal outcome from err and logs it.
+// It also emits the corresponding backup event prometheus metrics.
+func reportBackupOutcome(
+	routineName string,
+	backupType jobType,
+	duration time.Duration,
+	err error,
+	logger *slog.Logger,
+) {
+	operation := backupType.String()
+
+	if err == nil {
+		logger.Debug(operation+" finished", slog.Duration("duration", duration))
+		observeBackupEvent(routineName, backupType, BackupOutcomeSuccess, duration)
+		return
+	}
+
+	if errors.Is(err, errBackupSkipped) {
+		logger.Debug(operation + " skipped")
+		observeBackupEvent(routineName, backupType, BackupOutcomeSkip, 0)
+		return
+	}
+
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		logger.Info(operation + " context canceled")
+		observeBackupEvent(routineName, backupType, BackupOutcomeCancelled, duration)
+		return
+	}
+
+	var aerr *as.AerospikeError
+	if errors.As(err, &aerr) {
+		logger.Error(
+			operation+" failed due to Aerospike error",
+			slog.Int("resultCode", int(aerr.ResultCode)),
+			attr.Error(err),
+		)
+	} else {
+		logger.Error(operation+" failed", attr.Error(err))
+	}
+
+	observeBackupEvent(routineName, backupType, BackupOutcomeFailure, duration)
 }

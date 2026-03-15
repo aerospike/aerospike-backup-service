@@ -14,10 +14,8 @@ import (
 
 // backupRunner defines an interface for running backups.
 type backupRunner interface {
-	// runFullBackup starts a full backup operation.
-	runFullBackup(ctx context.Context, now time.Time)
-	// runIncrementalBackup starts an incremental backup operation.
-	runIncrementalBackup(ctx context.Context, now time.Time)
+	// runBackup starts a backup operation for the requested backup type.
+	runBackup(ctx context.Context, now time.Time, backupType jobType)
 }
 
 // backupJob implements the quartz.Job interface.
@@ -42,14 +40,7 @@ func (j *backupJob) Execute(ctx context.Context) error {
 
 	if j.isRunning.CompareAndSwap(false, true) {
 		defer j.isRunning.Store(false)
-		switch j.jobType {
-		case jobTypeFull:
-			j.runner.runFullBackup(ctx, now)
-		case jobTypeIncremental:
-			j.runner.runIncrementalBackup(ctx, now)
-		default:
-			j.logger.Error("Unsupported backup type")
-		}
+		j.runner.runBackup(ctx, now, j.jobType)
 		return nil
 	}
 
