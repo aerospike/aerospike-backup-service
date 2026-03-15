@@ -23,7 +23,7 @@ var (
 	restoreJobsByStatus = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_restore_jobs_by_status",
-			Help: "Current number of restore jobs by status",
+			Help: "Current number of restore jobs by status (running, success, failure, canceled)",
 		},
 		[]string{"status"},
 	)

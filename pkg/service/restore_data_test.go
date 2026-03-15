@@ -60,7 +60,7 @@ func TestRestoreOK(t *testing.T) {
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 
 	require.NoError(t, err)
-	assert.Equal(t, model.JobStatusDone, jobStatus.Status)
+	assert.Equal(t, model.RestoreDone, jobStatus.Status)
 	assert.Equal(t, uint64(10), jobStatus.Counters.GetReadRecords(), "Read records count mismatch")
 	require.NoError(t, jobStatus.Error, "Expected no error in final job status")
 }
@@ -128,7 +128,7 @@ func TestCancelRestoreOK(t *testing.T) {
 
 	require.NoError(t, waitErr)
 	require.NotNil(t, jobStatus)
-	assert.Equal(t, model.JobStatusCanceled, jobStatus.Status)
+	assert.Equal(t, model.RestoreCanceled, jobStatus.Status)
 }
 
 func TestRestoreFailsWithClientError(t *testing.T) {
@@ -152,7 +152,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 
 	require.NoError(t, err)
-	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
+	assert.Equal(t, model.RestoreFailed, jobStatus.Status)
 	require.ErrorIs(t, jobStatus.Error, clientErr)
 }
 
@@ -188,7 +188,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 
 	require.NoError(t, err)
-	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
+	assert.Equal(t, model.RestoreFailed, jobStatus.Status)
 	assert.Contains(t, jobStatus.Error.Error(),
 		"destination cluster does not have required namespace: test-ns")
 }
@@ -226,7 +226,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 
 	require.NoError(t, err)
-	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
+	assert.Equal(t, model.RestoreFailed, jobStatus.Status)
 	assert.Contains(t, jobStatus.Error.Error(), "backups from different times were found")
 }
 
@@ -265,7 +265,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 
 	require.NoError(t, err)
-	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
+	assert.Equal(t, model.RestoreFailed, jobStatus.Status)
 	assert.Contains(t, jobStatus.Error.Error(), "failed to start restore operation")
 }
 
@@ -345,7 +345,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 
 	require.NoError(t, err)
-	assert.Equal(t, model.JobStatusCanceled, jobStatus.Status)
+	assert.Equal(t, model.RestoreCanceled, jobStatus.Status)
 	require.ErrorIs(t, jobStatus.Error, context.Canceled)
 }
 
@@ -365,7 +365,7 @@ func waitForRestore(
 		if err != nil {
 			return false
 		}
-		return jobStatus.Status != model.JobStatusRunning
+		return jobStatus.Status != model.RestoreRunning
 	}, 2*time.Second, 10*time.Millisecond, "Job should eventually stop running")
 
 	return jobStatus, err
@@ -518,7 +518,7 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	require.NoError(t, err)
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 	require.NoError(t, err)
-	assert.Equal(t, model.JobStatusDone, jobStatus.Status)
+	assert.Equal(t, model.RestoreDone, jobStatus.Status)
 }
 
 func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
@@ -595,7 +595,7 @@ func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
 	require.NoError(t, err)
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 	require.NoError(t, err)
-	assert.Equal(t, model.JobStatusDone, jobStatus.Status)
+	assert.Equal(t, model.RestoreDone, jobStatus.Status)
 }
 
 func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
@@ -701,9 +701,9 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 			require.NoError(t, err)
 
 			if tt.shouldSucceed {
-				assert.Equal(t, model.JobStatusDone, jobStatus.Status)
+				assert.Equal(t, model.RestoreDone, jobStatus.Status)
 			} else {
-				assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
+				assert.Equal(t, model.RestoreFailed, jobStatus.Status)
 				require.Error(t, jobStatus.Error)
 			}
 		})

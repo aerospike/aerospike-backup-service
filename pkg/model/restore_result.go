@@ -2,33 +2,33 @@ package model
 
 import "github.com/aerospike/backup-go/models"
 
-type JobStatus string
+type RestoreState string
 
 const (
-	JobStatusRunning  JobStatus = "Running"
-	JobStatusDone     JobStatus = "Done"
-	JobStatusFailed   JobStatus = "Failed"
-	JobStatusCanceled JobStatus = "Canceled"
+	RestoreRunning  RestoreState = "running"
+	RestoreDone     RestoreState = "done"
+	RestoreFailed   RestoreState = "failed"
+	RestoreCanceled RestoreState = "canceled"
 )
 
 // AllJobStatuses returns all defined restore job statuses.
-func AllJobStatuses() []JobStatus {
-	return []JobStatus{
-		JobStatusRunning,
-		JobStatusDone,
-		JobStatusFailed,
-		JobStatusCanceled,
+func AllJobStatuses() []RestoreState {
+	return []RestoreState{
+		RestoreRunning,
+		RestoreDone,
+		RestoreFailed,
+		RestoreCanceled,
 	}
 }
 
 // RestoreJobStatus represents a restore job status.
 // The information included depends on the Status field:
-//   - JobStatusRunning -> current statistics and estimation.
-//   - JobStatusDone -> statistics.
-//   - JobStatusFailed -> error.
+//   - RestoreRunning -> current statistics and estimation.
+//   - RestoreDone -> statistics.
+//   - RestoreFailed -> error.
 type RestoreJobStatus struct {
 	Counters       *models.RestoreStats
 	CurrentRestore *RunningJob
-	Status         JobStatus
+	Status         RestoreState
 	Error          error
 }

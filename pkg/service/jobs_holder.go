@@ -28,7 +28,7 @@ type restoreJob struct {
 	handlers []restoreexecutor.RestoreHandler
 
 	// status indicates the current state of the job (Running, Done, Failed, Canceled).
-	status model.JobStatus
+	status model.RestoreState
 
 	// err holds all errors that occurred during the job execution.
 	// It is nil if the job is running or completed successfully.
@@ -56,7 +56,7 @@ type restoreJob struct {
 
 func newRestoreJob(label string, cancel context.CancelFunc) *restoreJob {
 	return &restoreJob{
-		status:  model.JobStatusRunning,
+		status:  model.RestoreRunning,
 		started: time.Now().Truncate(time.Millisecond),
 		label:   label,
 		cancel:  cancel,
@@ -89,16 +89,16 @@ func (j *restoreJob) finish(err error, logger *slog.Logger) {
 
 	switch {
 	case err == nil:
-		j.status = model.JobStatusDone
+		j.status = model.RestoreDone
 		logger.Info("restore finished")
 	case errors.Is(err, context.Canceled):
-		j.status = model.JobStatusCanceled
+		j.status = model.RestoreCanceled
 		logger.Info("restore canceled")
 	case errors.Is(err, ErrRestorePrerequisitesFailed):
-		j.status = model.JobStatusFailed
+		j.status = model.RestoreFailed
 		logger.Warn("failed to start restore", attr.Error(err))
 	default:
-		j.status = model.JobStatusFailed
+		j.status = model.RestoreFailed
 		logger.Error("restore failed", attr.Error(err))
 	}
 }
@@ -118,7 +118,7 @@ func (j *restoreJob) buildStatus() *model.RestoreJobStatus {
 	sumMetrics := models.SumMetrics(metrics...)
 	restoreStats := models.SumRestoreStats(stats...)
 	doneRecords := restoreStats.GetReadRecords()
-	runningJob := NewRunningJob(
+	runningJob := NewRestoreRunningJob(
 		j.started, j.finished, doneRecords, j.totalRecords, sumMetrics, j.status)
 
 	return &model.RestoreJobStatus{
@@ -129,7 +129,7 @@ func (j *restoreJob) buildStatus() *model.RestoreJobStatus {
 	}
 }
 
-func (j *restoreJob) getStatus() model.JobStatus {
+func (j *restoreJob) getStatus() model.RestoreState {
 	j.RLock()
 	defer j.RUnlock()
 	return j.status
@@ -178,8 +178,8 @@ func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error, logger *
 }
 
 // StatusCounts returns counts of restore jobs by status in one pass.
-func (h *RestoreJobsHolder) StatusCounts() map[model.JobStatus]int {
-	counts := make(map[model.JobStatus]int)
+func (h *RestoreJobsHolder) StatusCounts() map[model.RestoreState]int {
+	counts := make(map[model.RestoreState]int)
 
 	h.Iterate(func(_ model.RestoreJobID, job *restoreJob) {
 		counts[job.getStatus()]++

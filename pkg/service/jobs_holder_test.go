@@ -70,7 +70,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		assert.NotNil(t, status)
 
 		// Assert against the fields of the returned status object
-		assert.Equal(t, model.JobStatusRunning, status.Status) // Job is still running until finishJob is called
+		assert.Equal(t, model.RestoreRunning, status.Status) // Job is still running until finishJob is called
 		assert.NotNil(t, status.CurrentRestore)
 		assert.Equal(t, uint64(numGoroutines)*recordsPerGoroutine, status.CurrentRestore.TotalRecords,
 			"TotalRecords should be %d", uint64(numGoroutines)*recordsPerGoroutine)
@@ -92,7 +92,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, status)
 
-		assert.Equal(t, model.JobStatusDone, status.Status)
+		assert.Equal(t, model.RestoreDone, status.Status)
 	})
 
 	t.Run("job is canceled", func(t *testing.T) {
@@ -130,7 +130,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, status)
 
-		assert.Equal(t, model.JobStatusCanceled, status.Status)
+		assert.Equal(t, model.RestoreCanceled, status.Status)
 		job, err = holder.getJob(jobID)
 		require.NoError(t, err)
 		require.ErrorIs(t, job.err, context.Canceled)
@@ -172,7 +172,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, status)
 
-		assert.Equal(t, model.JobStatusFailed, status.Status)
+		assert.Equal(t, model.RestoreFailed, status.Status)
 		job, err = holder.getJob(jobID)
 		require.NoError(t, err)
 		require.ErrorIs(t, job.err, failErr)
@@ -193,7 +193,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 
 		status := job.buildStatus()
 		assert.NotNil(t, status)
-		assert.Equal(t, model.JobStatusFailed, status.Status)
+		assert.Equal(t, model.RestoreFailed, status.Status)
 		require.ErrorIs(t, job.err, ErrRestorePrerequisitesFailed)
 	})
 }
@@ -210,15 +210,15 @@ func TestRestoreJobsHolder_StatusCounts(t *testing.T) {
 	holder.finishJob(jobFailed, errors.New("failed"), slog.New(slog.DiscardHandler))
 
 	counts := holder.StatusCounts()
-	assert.Equal(t, 1, counts[model.JobStatusRunning])
-	assert.Equal(t, 1, counts[model.JobStatusDone])
-	assert.Equal(t, 1, counts[model.JobStatusCanceled])
-	assert.Equal(t, 1, counts[model.JobStatusFailed])
+	assert.Equal(t, 1, counts[model.RestoreRunning])
+	assert.Equal(t, 1, counts[model.RestoreDone])
+	assert.Equal(t, 1, counts[model.RestoreCanceled])
+	assert.Equal(t, 1, counts[model.RestoreFailed])
 
 	holder.finishJob(jobRunning, nil, slog.New(slog.DiscardHandler))
 	counts = holder.StatusCounts()
-	assert.Zero(t, counts[model.JobStatusRunning])
-	assert.Equal(t, 2, counts[model.JobStatusDone])
-	assert.Equal(t, 1, counts[model.JobStatusCanceled])
-	assert.Equal(t, 1, counts[model.JobStatusFailed])
+	assert.Zero(t, counts[model.RestoreRunning])
+	assert.Equal(t, 2, counts[model.RestoreDone])
+	assert.Equal(t, 1, counts[model.RestoreCanceled])
+	assert.Equal(t, 1, counts[model.RestoreFailed])
 }

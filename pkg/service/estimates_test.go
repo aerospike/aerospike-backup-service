@@ -12,10 +12,10 @@ import (
 func TestNewRunningJob(t *testing.T) {
 	startTime := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	finishTime := startTime.Add(time.Hour)
-	jobRunning := model.JobStatusRunning
+	jobRunning := model.RestoreRunning
 
 	t.Run("zero total returns minimal job", func(t *testing.T) {
-		result := NewRunningJob(startTime, &finishTime, 0, 0, nil, jobRunning)
+		result := NewRestoreRunningJob(startTime, &finishTime, 0, 0, nil, jobRunning)
 
 		assert.Equal(t, startTime, result.StartTime)
 		assert.Equal(t, &finishTime, result.FinishTime)
@@ -26,7 +26,7 @@ func TestNewRunningJob(t *testing.T) {
 	})
 
 	t.Run("zero progress", func(t *testing.T) {
-		result := NewRunningJob(startTime, nil, 0, 100, nil, jobRunning)
+		result := NewRestoreRunningJob(startTime, nil, 0, 100, nil, jobRunning)
 
 		assert.Zero(t, result.DoneRecords)
 		assert.Zero(t, result.PercentageDone)
@@ -35,7 +35,7 @@ func TestNewRunningJob(t *testing.T) {
 	})
 
 	t.Run("50 percent completion", func(t *testing.T) {
-		result := NewRunningJob(startTime, nil, 50, 100, nil, jobRunning)
+		result := NewRestoreRunningJob(startTime, nil, 50, 100, nil, jobRunning)
 
 		assert.Equal(t, uint64(50), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
@@ -44,7 +44,7 @@ func TestNewRunningJob(t *testing.T) {
 	})
 
 	t.Run("completed job", func(t *testing.T) {
-		result := NewRunningJob(startTime, &finishTime, 100, 100, nil, jobRunning)
+		result := NewRestoreRunningJob(startTime, &finishTime, 100, 100, nil, jobRunning)
 
 		assert.Equal(t, uint64(100), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
@@ -53,7 +53,7 @@ func TestNewRunningJob(t *testing.T) {
 	})
 
 	t.Run("exceed 100%", func(t *testing.T) {
-		result := NewRunningJob(startTime, nil, 110, 100, nil, jobRunning)
+		result := NewRestoreRunningJob(startTime, nil, 110, 100, nil, jobRunning)
 
 		assert.Equal(t, uint64(110), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
@@ -63,7 +63,7 @@ func TestNewRunningJob(t *testing.T) {
 
 func TestDoneRestoreJobStatus(t *testing.T) {
 	job := &restoreJob{
-		status:       model.JobStatusDone,
+		status:       model.RestoreDone,
 		totalRecords: 50,
 	}
 
@@ -72,5 +72,5 @@ func TestDoneRestoreJobStatus(t *testing.T) {
 	require.NoError(t, status.Error)
 	assert.NotNil(t, status.CurrentRestore)
 	assert.Equal(t, uint(100), status.CurrentRestore.PercentageDone)
-	assert.Equal(t, model.JobStatusDone, status.Status)
+	assert.Equal(t, model.RestoreDone, status.Status)
 }
