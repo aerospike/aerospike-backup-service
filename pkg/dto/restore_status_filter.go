@@ -7,7 +7,7 @@ import (
 )
 
 func NewStatusFilterFromString(statusParam string) (model.StatusFilter, error) {
-	fields := make([]model.JobStatus, 0)
+	fields := make([]model.RestoreState, 0)
 
 	isExclude := strings.HasPrefix(statusParam, "!")
 	if isExclude {
@@ -24,7 +24,7 @@ func NewStatusFilterFromString(statusParam string) (model.StatusFilter, error) {
 		if !ok {
 			return model.StatusFilter{}, errValidationInvalidValue("status", s, allJobStatuses)
 		}
-		fields = append(fields, model.JobStatus(status))
+		fields = append(fields, model.RestoreState(status))
 	}
 
 	return model.NewStatusFilter(fields, isExclude), nil
