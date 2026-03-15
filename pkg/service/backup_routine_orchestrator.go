@@ -29,7 +29,7 @@ type BackupRoutineOrchestrator struct {
 	clientManager     aerospike.ClientManager
 	registry          RunningBackupsRegistry
 	completionHandler BackupCompletionHandler
-	startAdmission    BackupStartAdmission
+	startController   StartController
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
@@ -41,7 +41,7 @@ type BackupComponents struct {
 	registry          RunningBackupsRegistry  // Stores the backup handler during execution.
 	completionHandler BackupCompletionHandler // Runs post-success/failure actions (registry, retention, cluster config).
 	backendService    BackupWriter            // Writes backup metadata and deletes created files on failure.
-	startAdmission    BackupStartAdmission    // Atomically reserves and attaches backup start.
+	startController   StartController         // Atomically reserves and attaches backup start.
 	pathService       PathService             // Resolve backup path.
 }
 
@@ -52,7 +52,7 @@ func NewBackupComponents(
 	completionHandler BackupCompletionHandler,
 	backendService BackupWriter,
 	pathService PathService,
-	startAdmission BackupStartAdmission,
+	startController StartController,
 ) *BackupComponents {
 	return &BackupComponents{
 		clientManager:     clientManager,
@@ -61,7 +61,7 @@ func NewBackupComponents(
 		completionHandler: completionHandler,
 		backendService:    backendService,
 		pathService:       pathService,
-		startAdmission:    startAdmission,
+		startController:   startController,
 	}
 }
 
@@ -78,13 +78,13 @@ func newOrchestrator(
 		clientManager:     c.clientManager,
 		registry:          c.registry,
 		completionHandler: c.completionHandler,
-		startAdmission:    c.startAdmission,
+		startController:   c.startController,
 		logger:            logger,
 	}
 }
 
 func (h *BackupRoutineOrchestrator) runBackup(ctx context.Context, now time.Time, backupType jobType) {
-	release, err := h.startAdmission.Acquire(h.routine, backupType, now)
+	release, err := h.startController.Acquire(h.routine, backupType, now)
 	if err != nil {
 		reportBackupOutcome(h.routine.Name, backupType, 0, err, h.logger)
 		return

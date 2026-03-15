@@ -16,13 +16,8 @@ var (
 	errUnsupportedBackupTypeToStart = errors.New("unsupported backup type")
 )
 
-// BackupExecutionGate is the single entry point that determines whether a backup
-// can be executed right now.
-type BackupExecutionGate struct{}
-
-// BackupStartPolicy contains only business rules that decide whether a backup
-// can start for the provided policy facts.
-type BackupStartPolicy interface {
+// StartDecider contains only business rules that decide whether a backup can start for the provided facts.
+type StartDecider interface {
 	CanStart(
 		backupType jobType,
 		routine *model.BackupRoutine,
@@ -30,8 +25,12 @@ type BackupStartPolicy interface {
 	) error
 }
 
-// StartFacts is a compact, policy-oriented snapshot used by CanStart.
-// It deliberately excludes full routine state to keep business checks explicit.
+// startDeciderImpl is the single entry point that determines whether a backup can be executed right now.
+type startDeciderImpl struct{}
+
+var _ StartDecider = (*startDeciderImpl)(nil)
+
+// StartFacts is a compact snapshot used by CanStart.
 type StartFacts struct {
 	FullRunningNow        bool
 	IncrementalRunningNow bool
@@ -39,11 +38,11 @@ type StartFacts struct {
 	FullScheduledNow      bool
 }
 
-func NewBackupExecutionGate() *BackupExecutionGate {
-	return &BackupExecutionGate{}
+func NewStartDecider() StartDecider {
+	return &startDeciderImpl{}
 }
 
-func (g *BackupExecutionGate) CanStart(
+func (g *startDeciderImpl) CanStart(
 	backupType jobType,
 	routine *model.BackupRoutine,
 	facts StartFacts,
@@ -58,18 +57,18 @@ func (g *BackupExecutionGate) CanStart(
 	}
 }
 
-func (g *BackupExecutionGate) canStartFull(
+func (g *startDeciderImpl) canStartFull(
 	routine *model.BackupRoutine,
 	facts StartFacts,
 ) error {
-	if facts.FullRunningNow && !g.allowConcurrentFull(routine) {
+	if facts.FullRunningNow && !allowConcurrentFull(routine) {
 		return errFullAlreadyRunning
 	}
 
 	return nil
 }
 
-func (g *BackupExecutionGate) canStartIncremental(
+func (g *startDeciderImpl) canStartIncremental(
 	routine *model.BackupRoutine,
 	facts StartFacts,
 ) error {
@@ -77,34 +76,22 @@ func (g *BackupExecutionGate) canStartIncremental(
 		return errIncrementalNoFullBackup
 	}
 
-	if facts.IncrementalRunningNow && !g.allowConcurrentIncremental(routine) {
+	if facts.IncrementalRunningNow && !routine.BackupPolicy.AllowConcurrentIncremental() {
 		return errIncrementalAlreadyRunning
 	}
 
-	if facts.FullRunningNow && g.blockIncrementalWhenFullRunning(routine) {
+	if facts.FullRunningNow && !routine.BackupPolicy.AllowConcurrentIncremental() {
 		return errIncrementalFullRunning
 	}
 
-	if facts.FullScheduledNow && g.blockIncrementalAtFullCronFire(routine) {
+	if facts.FullScheduledNow && !routine.BackupPolicy.AllowConcurrentIncremental() {
 		return errIncrementalFullScheduledNow
 	}
 
 	return nil
 }
 
-func (g *BackupExecutionGate) allowConcurrentFull(_ *model.BackupRoutine) bool {
+func allowConcurrentFull(_ *model.BackupRoutine) bool {
 	// Future extension point for BackupPolicy.AllowConcurrentFull.
 	return false
-}
-
-func (g *BackupExecutionGate) allowConcurrentIncremental(routine *model.BackupRoutine) bool {
-	return routine.BackupPolicy.AllowConcurrentIncremental()
-}
-
-func (g *BackupExecutionGate) blockIncrementalWhenFullRunning(routine *model.BackupRoutine) bool {
-	return !g.allowConcurrentIncremental(routine)
-}
-
-func (g *BackupExecutionGate) blockIncrementalAtFullCronFire(routine *model.BackupRoutine) bool {
-	return !g.allowConcurrentIncremental(routine)
 }

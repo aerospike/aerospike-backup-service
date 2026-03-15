@@ -10,9 +10,9 @@ import (
 	"github.com/google/uuid"
 )
 
-// BackupStartAdmission owns only concurrency admission:
-// atomically check policy against running+pending state and reserve a pending slot.
-type BackupStartAdmission interface {
+// StartController owns only concurrency admission:
+// atomically check startDecider against running+pending state and reserve a pending slot.
+type StartController interface {
 	Acquire(
 		routine *model.BackupRoutine,
 		backupType jobType,
@@ -23,9 +23,9 @@ type BackupStartAdmission interface {
 // TokenID is an opaque reservation handle used internally by start admission.
 type TokenID = uuid.UUID
 
-type startAdmission struct {
-	registry RunningBackupsRegistry
-	policy   BackupStartPolicy
+type startControllerImpl struct {
+	registry     RunningBackupsRegistry
+	startDecider StartDecider
 
 	mu sync.Mutex
 	// tokenToReservation tracks which reservation each token owns.
@@ -34,6 +34,8 @@ type startAdmission struct {
 	activeReservations map[reservationKey]int
 }
 
+var _ StartController = (*startControllerImpl)(nil)
+
 type reservationKey struct {
 	routineName string
 	backupType  jobType
@@ -41,17 +43,17 @@ type reservationKey struct {
 
 func NewBackupStartAdmission(
 	registry RunningBackupsRegistry,
-	policy BackupStartPolicy,
-) BackupStartAdmission {
-	return &startAdmission{
+	policy StartDecider,
+) StartController {
+	return &startControllerImpl{
 		registry:           registry,
-		policy:             policy,
+		startDecider:       policy,
 		tokenToReservation: make(map[TokenID]reservationKey),
 		activeReservations: make(map[reservationKey]int),
 	}
 }
 
-func (a *startAdmission) Acquire(
+func (a *startControllerImpl) Acquire(
 	routine *model.BackupRoutine,
 	backupType jobType,
 	now time.Time,
@@ -60,7 +62,7 @@ func (a *startAdmission) Acquire(
 	defer a.mu.Unlock()
 
 	facts := a.buildStartFactsLocked(routine, now)
-	if err := a.policy.CanStart(backupType, routine, facts); err != nil {
+	if err := a.startDecider.CanStart(backupType, routine, facts); err != nil {
 		return nil, fmt.Errorf("%w: %w", errBackupSkipped, err)
 	}
 
@@ -78,7 +80,7 @@ func (a *startAdmission) Acquire(
 }
 
 // release is idempotent: unknown/already-released token is a no-op.
-func (a *startAdmission) release(tokenID TokenID) {
+func (a *startControllerImpl) release(tokenID TokenID) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -96,7 +98,7 @@ func (a *startAdmission) release(tokenID TokenID) {
 	a.activeReservations[key] = count - 1
 }
 
-func (a *startAdmission) buildStartFactsLocked(routine *model.BackupRoutine, now time.Time) StartFacts {
+func (a *startControllerImpl) buildStartFactsLocked(routine *model.BackupRoutine, now time.Time) StartFacts {
 	state := a.registry.GetRoutineState(routine)
 	fullRunning := a.activeReservations[reservationKey{
 		routineName: routine.Name,

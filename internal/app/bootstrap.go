@@ -56,7 +56,7 @@ func InitComponents(
 	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, operations)
 	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
 	backupExecutor := backupexecutor.NewDefaultBackupExecutor(operations)
-	executionGate := service.NewBackupExecutionGate()
+	executionGate := service.NewStartDecider()
 	startAdmission := service.NewBackupStartAdmission(registry, executionGate)
 	backupComponents := service.NewBackupComponents(
 		clientManager, backupExecutor, registry, completionHandler, backendService, pathService, startAdmission,

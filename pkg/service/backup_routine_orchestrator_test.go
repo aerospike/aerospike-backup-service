@@ -320,7 +320,7 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 				FullScheduledNow:      timeutil.IsCronFireTime(routine.IntervalCron, tt.now),
 			}
 
-			policy := NewBackupExecutionGate()
+			policy := NewStartDecider()
 			err := policy.CanStart(jobTypeIncremental, routine, facts)
 			assert.Equal(t, tt.expectedToSkip, err != nil)
 		})
