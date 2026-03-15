@@ -13,27 +13,28 @@ import (
 // BackupStartAdmission owns only concurrency admission:
 // atomically check policy against running+pending state and reserve a pending slot.
 type BackupStartAdmission interface {
-	TryAcquire(
+	Acquire(
 		routine *model.BackupRoutine,
 		backupType jobType,
 		now time.Time,
-	) (StartToken, error)
-	Release(token StartToken)
+	) (release func(), err error)
 }
 
-// StartToken is an opaque reservation handle returned by TryAcquire.
-// It must be passed back to Release.
-type StartToken = uuid.UUID
+// TokenID is an opaque reservation handle used internally by start admission.
+type TokenID = uuid.UUID
 
 type startAdmission struct {
 	registry RunningBackupsRegistry
 	policy   BackupStartPolicy
 
-	mu     sync.Mutex
-	tokens map[StartToken]reservation
+	mu sync.Mutex
+	// tokenToReservation tracks which reservation each token owns.
+	tokenToReservation map[TokenID]reservationKey
+	// activeReservations tracks how many pending starts exist by routine+type.
+	activeReservations map[reservationKey]int
 }
 
-type reservation struct {
+type reservationKey struct {
 	routineName string
 	backupType  jobType
 }
@@ -43,60 +44,68 @@ func NewBackupStartAdmission(
 	policy BackupStartPolicy,
 ) BackupStartAdmission {
 	return &startAdmission{
-		registry: registry,
-		policy:   policy,
-		tokens:   make(map[uuid.UUID]reservation),
+		registry:           registry,
+		policy:             policy,
+		tokenToReservation: make(map[TokenID]reservationKey),
+		activeReservations: make(map[reservationKey]int),
 	}
 }
 
-func (a *startAdmission) TryAcquire(
+func (a *startAdmission) Acquire(
 	routine *model.BackupRoutine,
 	backupType jobType,
 	now time.Time,
-) (StartToken, error) {
+) (func(), error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
 	facts := a.buildStartFactsLocked(routine, now)
 	if err := a.policy.CanStart(backupType, routine, facts); err != nil {
-		return StartToken{}, fmt.Errorf("%w: %w", errBackupSkipped, err)
+		return nil, fmt.Errorf("%w: %w", errBackupSkipped, err)
 	}
 
-	id := uuid.New()
-	a.tokens[id] = reservation{
+	tokenID := uuid.New()
+	key := reservationKey{
 		routineName: routine.Name,
 		backupType:  backupType,
 	}
+	a.tokenToReservation[tokenID] = key
+	a.activeReservations[key]++
 
-	return id, nil
+	return func() {
+		a.release(tokenID)
+	}, nil
 }
 
-// Release is idempotent: unknown/already-released token is a no-op.
-func (a *startAdmission) Release(token StartToken) {
+// release is idempotent: unknown/already-released token is a no-op.
+func (a *startAdmission) release(tokenID TokenID) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	delete(a.tokens, token)
+	key, ok := a.tokenToReservation[tokenID]
+	if !ok {
+		return
+	}
+	delete(a.tokenToReservation, tokenID)
+
+	count := a.activeReservations[key]
+	if count <= 1 {
+		delete(a.activeReservations, key)
+		return
+	}
+	a.activeReservations[key] = count - 1
 }
 
 func (a *startAdmission) buildStartFactsLocked(routine *model.BackupRoutine, now time.Time) StartFacts {
 	state := a.registry.GetRoutineState(routine)
-	fullRunning := false
-	incrRunning := false
-	for _, token := range a.tokens {
-		if token.routineName != routine.Name {
-			continue
-		}
-		switch token.backupType {
-		case jobTypeFull:
-			fullRunning = true
-		case jobTypeIncremental:
-			incrRunning = true
-		}
-		if fullRunning && incrRunning {
-			break
-		}
-	}
+	fullRunning := a.activeReservations[reservationKey{
+		routineName: routine.Name,
+		backupType:  jobTypeFull,
+	}] > 0
+	incrRunning := a.activeReservations[reservationKey{
+		routineName: routine.Name,
+		backupType:  jobTypeIncremental,
+	}] > 0
 
 	return StartFacts{
 		// Reservation is treated as running for admission checks.

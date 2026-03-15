@@ -84,13 +84,13 @@ func newOrchestrator(
 }
 
 func (h *BackupRoutineOrchestrator) runBackup(ctx context.Context, now time.Time, backupType jobType) {
-	token, err := h.startAdmission.TryAcquire(h.routine, backupType, now)
+	release, err := h.startAdmission.Acquire(h.routine, backupType, now)
 	if err != nil {
 		reportBackupOutcome(h.routine.Name, backupType, 0, err, h.logger)
 		return
 	}
-	// Always release token to clear pending admission reservation.
-	defer h.startAdmission.Release(token)
+	// Always release reservation to clear pending admission slot.
+	defer release()
 
 	duration, err := timeutil.MeasureDuration(func() error {
 		return h.runBackupInternal(ctx, now, backupType)
