@@ -41,8 +41,10 @@ type Scheduler interface {
 	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error
 }
 
+// ErrRoutineNotFound indicates that the requested routine does not exist in config.
 var ErrRoutineNotFound = errors.New("routine not found")
 
+// AdHocScheduler schedules one-off full or incremental backup jobs on demand.
 type AdHocScheduler interface {
 	// TriggerAdHocFullBackup schedules one full backup run for routineName after delay.
 	TriggerAdHocFullBackup(routineName string, delay time.Duration) error
@@ -50,6 +52,7 @@ type AdHocScheduler interface {
 	TriggerAdHocIncrementalBackup(routineName string, delay time.Duration) error
 }
 
+// adHocSchedulerImpl resolves routines and builds ad-hoc jobs at trigger time.
 type adHocSchedulerImpl struct {
 	scheduler  quartz.Scheduler
 	config     *model.Config
@@ -58,6 +61,7 @@ type adHocSchedulerImpl struct {
 
 var _ AdHocScheduler = &adHocSchedulerImpl{}
 
+// NewAdHocScheduler creates an ad-hoc scheduler backed by quartz and current config.
 func NewAdHocScheduler(
 	scheduler quartz.Scheduler,
 	config *model.Config,
@@ -70,14 +74,17 @@ func NewAdHocScheduler(
 	}
 }
 
+// TriggerAdHocFullBackup schedules a one-off full backup for routineName.
 func (s *adHocSchedulerImpl) TriggerAdHocFullBackup(routineName string, delay time.Duration) error {
 	return s.triggerAdHocBackup(routineName, delay, jobTypeFull)
 }
 
+// TriggerAdHocIncrementalBackup schedules a one-off incremental backup for routineName.
 func (s *adHocSchedulerImpl) TriggerAdHocIncrementalBackup(routineName string, delay time.Duration) error {
 	return s.triggerAdHocBackup(routineName, delay, jobTypeIncremental)
 }
 
+// triggerAdHocBackup resolves routine, creates a fresh job, and schedules it once.
 func (s *adHocSchedulerImpl) triggerAdHocBackup(routineName string, delay time.Duration, jobType jobType) error {
 	routine, found := s.config.Routine(routineName)
 	if !found {
@@ -117,46 +124,41 @@ func scheduleRoutines(
 			continue
 		}
 
-		runner := newOrchestrator(routine.Copy(), components) // orchestrator will work with its own copy
-		// schedule a full backup job for the routine
-		_, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routine.Name)
-		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("failed to schedule full backup: %w", err))
-			continue
-		}
-
-		// schedule an incremental backup job for the routine
-		_, err = scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routine.Name)
-		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
-			continue
-		}
+		errs = errors.Join(errs, scheduleRoutineBackups(scheduler, routine.Copy(), components))
 	}
 
 	return errs
 }
 
-func scheduleFullBackup(
-	scheduler Scheduler, runner backupRunner, interval string, routineName string,
-) (*quartz.JobDetail, error) {
-	job := createJobDetail(runner, routineName, jobTypeFull)
-	return job, schedule(scheduler, interval, job)
-}
+func scheduleRoutineBackups(
+	scheduler Scheduler,
+	routine *model.BackupRoutine,
+	components *BackupComponents,
+) error {
+	runner := newOrchestrator(routine, components)
 
-func scheduleIncrementalBackup(
-	scheduler Scheduler, runner backupRunner, interval string, routineName string,
-) (*quartz.JobDetail, error) {
-	job := createJobDetail(runner, routineName, jobTypeIncremental)
-	if len(interval) == 0 { // no need to schedule if there is no interval set
-		return job, nil
+	fullJob := quartz.NewJobDetail(
+		newBackupJob(runner, jobTypeFull, routine.Name),
+		jobKey(routine.Name, jobTypeFull),
+	)
+	if err := schedule(scheduler, routine.IntervalCron, fullJob); err != nil {
+		return fmt.Errorf("failed to schedule full backup: %w", err)
 	}
 
-	return job, schedule(scheduler, interval, job)
-}
+	if len(routine.IncrIntervalCron) == 0 {
+		// Incremental scheduling is optional and skipped when cron is not configured.
+		return nil
+	}
 
-func createJobDetail(runner backupRunner, routineName string, jobType jobType) *quartz.JobDetail {
-	job := newBackupJob(runner, jobType, routineName)
-	return quartz.NewJobDetail(job, jobKey(routineName, jobType))
+	incrementalJob := quartz.NewJobDetail(
+		newBackupJob(runner, jobTypeIncremental, routine.Name),
+		jobKey(routine.Name, jobTypeIncremental),
+	)
+	if err := schedule(scheduler, routine.IncrIntervalCron, incrementalJob); err != nil {
+		return fmt.Errorf("failed to schedule incremental backup: %w", err)
+	}
+
+	return nil
 }
 
 func schedule(scheduler Scheduler, interval string, jobDetail *quartz.JobDetail) error {
