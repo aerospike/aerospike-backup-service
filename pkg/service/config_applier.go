@@ -63,7 +63,6 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 		a.scheduler,
 		routinesToApply,
 		a.components,
-		a.pathService,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)

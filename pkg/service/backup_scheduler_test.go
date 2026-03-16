@@ -99,7 +99,7 @@ func TestScheduleRoutines_DoesNotClearExistingJobStoreEntries(t *testing.T) {
 			IntervalCron:     "0 0 * * * *",
 			IncrIntervalCron: "0 */6 * * * *",
 		},
-	}, &BackupComponents{}, nil)
+	}, &BackupComponents{})
 	require.NoError(t, err)
 
 	_, hasLegacy := jobStore.Load(legacyKey)

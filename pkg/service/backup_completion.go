@@ -112,7 +112,7 @@ func reportBackupOutcome(
 
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		logger.Info(operation + " context canceled")
-		observeBackupEvent(routineName, backupType, BackupOutcomeCancelled, duration)
+		observeBackupEvent(routineName, backupType, BackupOutcomeCanceled, duration)
 		return
 	}
 

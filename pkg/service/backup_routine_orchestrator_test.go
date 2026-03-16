@@ -192,7 +192,9 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	connectionError := errors.New("connection failed")
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(1)
 
-	mockRegistry.EXPECT().GetRoutineState(routine).Return(model.RoutineState{})
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(model.RoutineState{
+		LastRunTime: model.NewNoBackupTime(),
+	})
 
 	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
