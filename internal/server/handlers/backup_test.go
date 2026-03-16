@@ -214,7 +214,7 @@ func testScheduleBackupValidation(
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := &Service{
-				backupScheduler: &MockScheduler{},
+				backupScheduler: service.NewAdHocScheduler(nil, nil, nil),
 			}
 
 			req := httptest.NewRequest(http.MethodPost, pathPrefix+tt.routineName, nil)
