@@ -2,18 +2,16 @@ package service
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 var (
-	errFullAlreadyRunning           = errors.New("full backup already in progress")
-	errIncrementalNoFullBackup      = errors.New("initial full backup not yet completed")
-	errIncrementalFullRunning       = errors.New("full backup in progress")
-	errIncrementalAlreadyRunning    = errors.New("incremental backup already in progress")
-	errIncrementalFullScheduledNow  = errors.New("full backup scheduled at same time")
-	errUnsupportedBackupTypeToStart = errors.New("unsupported backup type")
+	errFullAlreadyRunning          = errors.New("full backup already in progress")
+	errIncrementalNoFullBackup     = errors.New("initial full backup not yet completed")
+	errIncrementalFullRunning      = errors.New("full backup in progress")
+	errIncrementalAlreadyRunning   = errors.New("incremental backup already in progress")
+	errIncrementalFullScheduledNow = errors.New("full backup scheduled at same time")
 )
 
 // StartDecider decides whether a backup is allowed to start for a given routine.
@@ -63,14 +61,11 @@ func (g *startDeciderImpl) CanStart(
 	routine *model.BackupRoutine,
 	facts StartFacts,
 ) error {
-	switch backupType {
-	case jobTypeFull:
+	if backupType == jobTypeFull {
 		return g.canStartFull(routine, facts)
-	case jobTypeIncremental:
-		return g.canStartIncremental(routine, facts)
-	default:
-		return fmt.Errorf("%w: %s", errUnsupportedBackupTypeToStart, backupType)
 	}
+
+	return g.canStartIncremental(routine, facts)
 }
 
 func (g *startDeciderImpl) canStartFull(
