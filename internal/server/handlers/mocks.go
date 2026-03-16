@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -53,6 +54,16 @@ func (m *MockScheduler) IsStarted() bool {
 
 func (m *MockScheduler) ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error {
 	args := m.Called(jobDetail, trigger)
+	return args.Error(0)
+}
+
+func (m *MockScheduler) TriggerAdHocFullBackup(routineName string, delay time.Duration) error {
+	args := m.Called(routineName, delay)
+	return args.Error(0)
+}
+
+func (m *MockScheduler) TriggerAdHocIncrementalBackup(routineName string, delay time.Duration) error {
+	args := m.Called(routineName, delay)
 	return args.Error(0)
 }
 

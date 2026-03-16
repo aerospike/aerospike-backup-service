@@ -8,7 +8,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/reugn/go-quartz/quartz"
 )
 
 // Service holds all dependencies required to access business logic from endpoints.
@@ -16,7 +15,7 @@ type Service struct {
 	sysCtx               context.Context //nolint:containedctx
 	config               *model.Config
 	configApplier        service.ConfigApplier
-	scheduler            quartz.Scheduler
+	backupScheduler      service.AdHocScheduler
 	restoreManager       service.RestoreManager
 	configRetriever      service.ConfigRetriever
 	backupReader         service.BackupReader
@@ -31,7 +30,7 @@ func NewService(
 	ctx context.Context,
 	config *model.Config,
 	configApplier service.ConfigApplier,
-	scheduler quartz.Scheduler,
+	backupScheduler service.AdHocScheduler,
 	restoreManager service.RestoreManager,
 	configRetriever service.ConfigRetriever,
 	backupReader service.BackupReader,
@@ -43,7 +42,7 @@ func NewService(
 		sysCtx:               ctx,
 		config:               config,
 		configApplier:        configApplier,
-		scheduler:            scheduler,
+		backupScheduler:      backupScheduler,
 		restoreManager:       restoreManager,
 		configRetriever:      configRetriever,
 		backupReader:         backupReader,

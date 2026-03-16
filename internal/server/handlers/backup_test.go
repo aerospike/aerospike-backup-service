@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,8 +10,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/reugn/go-quartz/job"
-	"github.com/reugn/go-quartz/quartz"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -128,30 +127,55 @@ func TestService_TriggerIncrementalBackup(t *testing.T) {
 }
 
 func TestService_ScheduleBackupHappyPath(t *testing.T) {
-	mockScheduler := &MockScheduler{}
-	mockScheduler.
-		On("ScheduleJob", mock.AnythingOfType("*quartz.JobDetail"), mock.Anything).
-		Return(nil).
-		Once()
-
-	svc := &Service{
-		scheduler: mockScheduler,
-	}
+	svc := &Service{}
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/backups/incremental/test-routine?delay=1000", nil)
 	req.SetPathValue("name", "test-routine")
 	w := httptest.NewRecorder()
 
-	svc.scheduleBackup(w, req, func(routineName string) *quartz.JobDetail {
-		assert.Equal(t, "test-routine", routineName)
-		return quartz.NewJobDetail(
-			job.NewFunctionJob(func(context.Context) (struct{}, error) { return struct{}{}, nil }),
-			quartz.NewJobKeyWithGroup("test-routine-adhoc", "ad-hoc"),
-		)
+	var (
+		calledRoutine string
+		calledDelay   time.Duration
+	)
+	svc.scheduleBackup(w, req, func(routineName string, delay time.Duration) error {
+		calledRoutine = routineName
+		calledDelay = delay
+		return nil
 	})
 
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	mockScheduler.AssertExpectations(t)
+	assert.Equal(t, "test-routine", calledRoutine)
+	assert.Equal(t, time.Second, calledDelay)
+}
+
+func TestService_ScheduleBackup_RoutineNotFound(t *testing.T) {
+	svc := &Service{}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/backups/full/missing-routine", nil)
+	req.SetPathValue("name", "missing-routine")
+	w := httptest.NewRecorder()
+
+	svc.scheduleBackup(w, req, func(_ string, _ time.Duration) error {
+		return service.ErrRoutineNotFound
+	})
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), `routine "missing-routine" not found`)
+}
+
+func TestService_ScheduleBackup_TriggerError(t *testing.T) {
+	svc := &Service{}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/backups/full/routine", nil)
+	req.SetPathValue("name", "routine")
+	w := httptest.NewRecorder()
+
+	svc.scheduleBackup(w, req, func(_ string, _ time.Duration) error {
+		return errors.New("boom")
+	})
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Contains(t, w.Body.String(), "failed to schedule job")
 }
 
 func testScheduleBackupValidation(
@@ -189,12 +213,8 @@ func testScheduleBackupValidation(
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockScheduler := &MockScheduler{}
-			cfg := model.NewConfig()
-
 			svc := &Service{
-				config:    cfg,
-				scheduler: mockScheduler,
+				backupScheduler: &MockScheduler{},
 			}
 
 			req := httptest.NewRequest(http.MethodPost, pathPrefix+tt.routineName, nil)
@@ -209,7 +229,6 @@ func testScheduleBackupValidation(
 			handler(svc, w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			mockScheduler.AssertExpectations(t)
 		})
 	}
 }

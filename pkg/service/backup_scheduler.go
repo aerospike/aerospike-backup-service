@@ -10,7 +10,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -24,8 +23,9 @@ const (
 	quartzGroupAdHoc     quartzGroup = "ad-hoc"
 	quartzGroupScheduled quartzGroup = "scheduled"
 
-	jobTypeFull        jobType = "full"
-	jobTypeIncremental jobType = "incremental"
+	jobTypeFull         jobType = "full"
+	jobTypeIncremental  jobType = "incremental"
+	minAdHocBackupDelay         = 50 * time.Millisecond
 )
 
 func (j jobType) String() string {
@@ -41,32 +41,56 @@ type Scheduler interface {
 	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error
 }
 
-var jobStore = collections.NewSafeMap[string, *quartz.JobDetail]()
+var ErrRoutineNotFound = errors.New("routine not found")
 
-// NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
-func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
-	key := jobKey(routineName, jobTypeFull).String()
-	job, found := jobStore.Load(key)
-	if !found {
-		return nil
-	}
-
-	adhocJobKey := adhocKey(routineName)
-
-	return quartz.NewJobDetail(job.Job(), adhocJobKey)
+type AdHocScheduler interface {
+	// TriggerAdHocFullBackup schedules one full backup run for routineName after delay.
+	TriggerAdHocFullBackup(routineName string, delay time.Duration) error
+	// TriggerAdHocIncrementalBackup schedules one incremental backup run for routineName after delay.
+	TriggerAdHocIncrementalBackup(routineName string, delay time.Duration) error
 }
 
-// NewAdHocIncrementalBackupJobForRoutine returns a new incremental backup job for the routine name.
-func NewAdHocIncrementalBackupJobForRoutine(routineName string) *quartz.JobDetail {
-	key := jobKey(routineName, jobTypeIncremental).String()
-	job, found := jobStore.Load(key)
+type adHocSchedulerImpl struct {
+	scheduler  quartz.Scheduler
+	config     *model.Config
+	components *BackupComponents
+}
+
+var _ AdHocScheduler = &adHocSchedulerImpl{}
+
+func NewAdHocScheduler(
+	scheduler quartz.Scheduler,
+	config *model.Config,
+	components *BackupComponents,
+) AdHocScheduler {
+	return &adHocSchedulerImpl{
+		scheduler:  scheduler,
+		config:     config,
+		components: components,
+	}
+}
+
+func (s *adHocSchedulerImpl) TriggerAdHocFullBackup(routineName string, delay time.Duration) error {
+	return s.triggerAdHocBackup(routineName, delay, jobTypeFull)
+}
+
+func (s *adHocSchedulerImpl) TriggerAdHocIncrementalBackup(routineName string, delay time.Duration) error {
+	return s.triggerAdHocBackup(routineName, delay, jobTypeIncremental)
+}
+
+func (s *adHocSchedulerImpl) triggerAdHocBackup(routineName string, delay time.Duration, jobType jobType) error {
+	routine, found := s.config.Routine(routineName)
 	if !found {
-		return nil
+		return ErrRoutineNotFound
 	}
 
-	adhocJobKey := adhocKey(routineName)
+	runner := newOrchestrator(routine.Copy(), s.components) // orchestrator will work with its own copy
+	jobDetail := quartz.NewJobDetail(newBackupJob(runner, jobType, routine.Name), adhocKey(routine.Name))
+	if jobDetail == nil {
+		return errors.New("failed to create backup job")
+	}
 
-	return quartz.NewJobDetail(job.Job(), adhocJobKey)
+	return s.scheduler.ScheduleJob(jobDetail, quartz.NewRunOnceTrigger(max(delay, minAdHocBackupDelay)))
 }
 
 // NewScheduler creates a new quartz.Scheduler.
@@ -80,7 +104,7 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 	return scheduler, err
 }
 
-// scheduleRoutines schedules provided routines and stores their job details for ad-hoc trigger lookups.
+// scheduleRoutines schedules provided routines.
 func scheduleRoutines(
 	scheduler Scheduler,
 	routines []*model.BackupRoutine, components *BackupComponents,
@@ -95,20 +119,18 @@ func scheduleRoutines(
 
 		runner := newOrchestrator(routine.Copy(), components) // orchestrator will work with its own copy
 		// schedule a full backup job for the routine
-		job, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routine.Name)
+		_, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routine.Name)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule full backup: %w", err))
 			continue
 		}
-		jobStore.Store(job.JobKey().String(), job)
 
 		// schedule an incremental backup job for the routine
-		incrementalJob, err := scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routine.Name)
+		_, err = scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routine.Name)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
 			continue
 		}
-		jobStore.Store(incrementalJob.JobKey().String(), incrementalJob)
 	}
 
 	return errs

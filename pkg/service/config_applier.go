@@ -87,7 +87,6 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routineNames []string)
 	slog.Info("Delete scheduled jobs", slog.Any("keys", keysToDelete))
 	for _, key := range keysToDelete {
 		_ = a.scheduler.DeleteJob(key) // ignore errors because we delete all jobs
-		jobStore.Remove(key.String())
 	}
 }
 
