@@ -66,8 +66,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	stats.IncFiles()
 	stats.ReadRecords.Add(10)
 
-	initialState := &model.RoutineState{LastRunTime: model.NewNoBackupTime()}
-	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(model.RoutineState{})
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockClient, nil)
 	mockClientManager.EXPECT().Close(mockClient)
 
@@ -140,7 +139,7 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
 
 	// Simulate an ongoing full backup
-	mockRegistry.EXPECT().GetRoutineState(routine).Return(&model.RoutineState{
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(model.RoutineState{
 		LastRunTime: model.NewNoBackupTime(),
 		Full: &model.RunningJob{
 			StartTime: time.Now(),
@@ -193,8 +192,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	connectionError := errors.New("connection failed")
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(1)
 
-	initialState := &model.RoutineState{LastRunTime: model.NewNoBackupTime()}
-	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(model.RoutineState{})
 
 	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
@@ -216,7 +214,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
 }
 
-func TestRunFullBackupInternal_ContextCancelled(t *testing.T) {
+func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -228,8 +226,7 @@ func TestRunFullBackupInternal_ContextCancelled(t *testing.T) {
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
 	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
 
-	initialState := &model.RoutineState{LastRunTime: model.NewNoBackupTime()}
-	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(model.RoutineState{})
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, context.Canceled).Times(1)
 
 	o := newOrchestrator(routine, NewBackupComponents(
@@ -248,7 +245,7 @@ func TestRunFullBackupInternal_ContextCancelled(t *testing.T) {
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
-	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeCancelled))
+	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeCanceled))
 }
 
 func TestCanStartIncrementalBackup(t *testing.T) {
@@ -257,7 +254,7 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		routineState   *model.RoutineState
+		routineState   model.RoutineState
 		concurrent     bool
 		intervalCron   string
 		now            time.Time
@@ -265,7 +262,7 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 	}{
 		{
 			name: "don't skip usually",
-			routineState: &model.RoutineState{
+			routineState: model.RoutineState{
 				LastRunTime: model.NewFullBackupTime(lastFullBackupTime),
 			},
 			intervalCron:   "@daily",
@@ -274,12 +271,12 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 		},
 		{
 			name:           "skip when no full backup",
-			routineState:   &model.RoutineState{LastRunTime: model.NewNoBackupTime()},
+			routineState:   model.RoutineState{LastRunTime: model.NewNoBackupTime()},
 			expectedToSkip: true,
 		},
 		{
 			name: "skip when full backup in progress",
-			routineState: &model.RoutineState{
+			routineState: model.RoutineState{
 				LastRunTime: model.NewFullBackupTime(now.Add(-24 * time.Hour)),
 				Full:        &model.RunningJob{StartTime: now},
 			},
@@ -287,7 +284,7 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 		},
 		{
 			name: "don't skip when full backup in progress and concurrent allowed",
-			routineState: &model.RoutineState{
+			routineState: model.RoutineState{
 				LastRunTime: model.NewFullBackupTime(now.Add(-24 * time.Hour)),
 				Full:        &model.RunningJob{StartTime: now},
 			},
@@ -296,7 +293,7 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 		},
 		{
 			name: "skip when full backup is scheduled at same time",
-			routineState: &model.RoutineState{
+			routineState: model.RoutineState{
 				LastRunTime: model.NewFullBackupTime(lastFullBackupTime),
 			},
 			intervalCron:   "@daily",
@@ -328,7 +325,7 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 }
 
 func TestRunIncrementalBackup_Success(t *testing.T) {
-	routineState := &model.RoutineState{
+	routineState := model.RoutineState{
 		// no full or incremental backups are running now
 		LastRunTime: model.NewFullBackupTime(time.Now()),
 	}
@@ -347,7 +344,7 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	defer ctrl.Finish()
 
 	routine := testRoutine()
-	routineState := &model.RoutineState{
+	routineState := model.RoutineState{
 		// no full or incremental backups exists
 		LastRunTime: model.NewNoBackupTime(),
 	}
@@ -375,12 +372,12 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeFailure))
 }
 
-func TestRunIncrementalBackup_ContextCancelled(t *testing.T) {
+func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	routine := testRoutine()
-	routineState := &model.RoutineState{
+	routineState := model.RoutineState{
 		LastRunTime: model.NewFullBackupTime(time.Now().Add(-time.Hour)),
 	}
 
@@ -410,11 +407,11 @@ func TestRunIncrementalBackup_ContextCancelled(t *testing.T) {
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSkip))
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeFailure))
-	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeCancelled))
+	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeCanceled))
 }
 
 func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
-	routineState := &model.RoutineState{
+	routineState := model.RoutineState{
 		Full: &model.RunningJob{
 			StartTime: time.Now(),
 		},
@@ -431,7 +428,7 @@ func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
 }
 
 func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
-	routineState := &model.RoutineState{
+	routineState := model.RoutineState{
 		Incremental: &model.RunningJob{
 			StartTime: time.Now(),
 		},
@@ -447,7 +444,7 @@ func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
 	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
 }
 
-func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *model.BackupRoutine) {
+func runIncrementalBackup(t *testing.T, state model.RoutineState, routine *model.BackupRoutine) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

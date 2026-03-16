@@ -8,7 +8,7 @@
             "name": "Apache 2.0",
             "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
         },
-        "version": "v3.4.0"
+        "version": "v3.5.0"
     },
     "paths": {
         "/": {
@@ -1625,7 +1625,7 @@
                         }
                     },
                     {
-                        "description": "Comma-separated status filter (Running,Done,Failed,Cancelled). Use ! prefix for exclude filter (e.g., !Failed,Cancelled)",
+                        "description": "Comma-separated status filter (Running,Done,Failed,Canceled). Use ! prefix for exclude filter (e.g., !Failed,Canceled)",
                         "name": "status",
                         "in": "query",
                         "schema": {
@@ -2714,13 +2714,13 @@
                     "Running",
                     "Done",
                     "Failed",
-                    "Cancelled"
+                    "Canceled"
                 ],
                 "x-enum-varnames": [
                     "JobStatusRunning",
                     "JobStatusDone",
                     "JobStatusFailed",
-                    "JobStatusCancelled"
+                    "JobStatusCanceled"
                 ]
             },
             "dto.LocalStorage": {

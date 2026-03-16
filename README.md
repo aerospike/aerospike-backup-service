@@ -180,7 +180,7 @@ Quartz uses either:
 <!-- DefaultConfig -->
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.4.0/docs/config.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.5.0/docs/config.schema.json
 ---
 aerospike-clusters:
   abs-cluster: # <--- Custom cluster name
@@ -313,21 +313,21 @@ following application metrics:
 
 <!-- Metrics -->
 
-| Name                                                        | Type      | Description                                                                                                           | Labels                 |
-|-------------------------------------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------|------------------------|
-| `aerospike_backup_service_backup_duration_seconds`          | Histogram | Duration in seconds of finished backups by routine and type (full/incremental)                                        | routine, type          |
-| `aerospike_backup_service_backup_events_total`              | Counter   | Backup service job events by routine, type (full/incremental), and outcome (success, failure, cancelled, retry, skip) | routine, type, outcome |
-| `aerospike_backup_service_backup_progress_pct`              | Gauge     | Progress of backup processes in percentage                                                                            | routine, type          |
-| `aerospike_backup_service_last_successful_backup_timestamp` | Gauge     | Unix timestamp of the last successful backup per routine                                                              | routine                |
-| `aerospike_backup_service_restore_in_progress`              | Gauge     | Number of restore processes running                                                                                   |                        |
-| `aerospike_backup_service_duration_millis`                  | Gauge     | Full backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)             |                        |
-| `aerospike_backup_service_failure_total`                    | Counter   | Full backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                          |                        |
-| `aerospike_backup_service_incremental_duration_millis`      | Gauge     | Incremental backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)      |                        |
-| `aerospike_backup_service_incremental_failure_total`        | Counter   | Incremental backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                   |                        |
-| `aerospike_backup_service_incremental_runs_total`           | Counter   | Successful incremental backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)           |                        |
-| `aerospike_backup_service_incremental_skip_total`           | Counter   | Incremental backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                      |                        |
-| `aerospike_backup_service_runs_total`                       | Counter   | Successful backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                       |                        |
-| `aerospike_backup_service_skip_total`                       | Counter   | Full backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                             |                        |
+| Name                                                        | Type      | Description                                                                                                          | Labels                 |
+|-------------------------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------|------------------------|
+| `aerospike_backup_service_backup_duration_seconds`          | Histogram | Duration in seconds of finished backups by routine and type (full/incremental)                                       | routine, type          |
+| `aerospike_backup_service_backup_events_total`              | Counter   | Backup service job events by routine, type (full/incremental), and outcome (success, failure, canceled, retry, skip) | routine, type, outcome |
+| `aerospike_backup_service_backup_progress_pct`              | Gauge     | Progress of backup processes in percentage                                                                           | routine, type          |
+| `aerospike_backup_service_last_successful_backup_timestamp` | Gauge     | Unix timestamp of the last successful backup per routine                                                             | routine, type          |
+| `aerospike_backup_service_restore_in_progress`              | Gauge     | Number of restore processes running                                                                                  |                        |
+| `aerospike_backup_service_duration_millis`                  | Gauge     | Full backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)            |                        |
+| `aerospike_backup_service_failure_total`                    | Counter   | Full backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                         |                        |
+| `aerospike_backup_service_incremental_duration_millis`      | Gauge     | Incremental backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)     |                        |
+| `aerospike_backup_service_incremental_failure_total`        | Counter   | Incremental backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                  |                        |
+| `aerospike_backup_service_incremental_runs_total`           | Counter   | Successful incremental backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)          |                        |
+| `aerospike_backup_service_incremental_skip_total`           | Counter   | Incremental backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                     |                        |
+| `aerospike_backup_service_runs_total`                       | Counter   | Successful backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                      |                        |
+| `aerospike_backup_service_skip_total`                       | Counter   | Full backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                            |                        |
 
 **Example PromQL Queries**
 
@@ -344,7 +344,7 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
 
   `sum( aerospike_backup_service_backup_events_total{outcome="failure"} )`
 
-- 🚫 Total number of cancelled backups:
+- 🚫 Total number of Canceled backups:
   `sum(aerospike_backup_service_backup_events_total{outcome="cancel"})`
 
 - ⏰ Time since last backup for routine
@@ -757,8 +757,8 @@ Provides a list of all restore jobs, with optional filtering by time range and s
 
 - `from` (optional): Lower bound timestamp filter in milliseconds since epoch.
 - `to` (optional): Upper bound timestamp filter in milliseconds since epoch.
-- `status` (optional): Comma-separated status filter (e.g., `Running,Done,Failed,Cancelled`). Use `!` prefix to exclude
-  statuses (e.g., `!Failed,Cancelled`).
+- `status` (optional): Comma-separated status filter (e.g., `Running,Done,Failed,Canceled`). Use `!` prefix to exclude
+  statuses (e.g., `!Failed,Canceled`).
 
 <details>
     <summary>Response example</summary>

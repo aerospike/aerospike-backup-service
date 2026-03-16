@@ -1454,7 +1454,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated status filter (Running,Done,Failed,Cancelled). Use ! prefix for exclude filter (e.g., !Failed,Cancelled)",
+                        "description": "Comma-separated status filter (Running,Done,Failed,Canceled). Use ! prefix for exclude filter (e.g., !Failed,Canceled)",
                         "name": "status",
                         "in": "query"
                     }
@@ -2426,13 +2426,13 @@ const docTemplate = `{
                 "Running",
                 "Done",
                 "Failed",
-                "Cancelled"
+                "Canceled"
             ],
             "x-enum-varnames": [
                 "JobStatusRunning",
                 "JobStatusDone",
                 "JobStatusFailed",
-                "JobStatusCancelled"
+                "JobStatusCanceled"
             ]
         },
         "dto.LocalStorage": {
@@ -3565,7 +3565,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "v3.4.0",
+	Version:          "v3.5.0",
 	Host:             "localhost:8080",
 	BasePath:         "",
 	Schemes:          []string{},

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"testing"
 
@@ -82,7 +83,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 			"Counters.Bytes should be %d", uint64(numGoroutines)*byteWritten)
 
 		// finish job
-		holder.finishJob(jobID, nil)
+		holder.finishJob(jobID, nil, slog.New(slog.DiscardHandler))
 		job, err = holder.getJob(jobID)
 		require.NoError(t, err)
 		status = job.buildStatus()
@@ -94,7 +95,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		assert.Equal(t, model.JobStatusDone, status.Status)
 	})
 
-	t.Run("job is cancelled", func(t *testing.T) {
+	t.Run("job is canceled", func(t *testing.T) {
 		holder := NewRestoreJobsHolder()
 		jobID := holder.newJob("test-label", func() {})
 		recordsPerGoroutine := uint64(10)
@@ -116,7 +117,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			// finish job with cancellation
-			holder.finishJob(jobID, context.Canceled)
+			holder.finishJob(jobID, context.Canceled, slog.New(slog.DiscardHandler))
 		}()
 
 		wg.Wait()
@@ -129,7 +130,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, status)
 
-		assert.Equal(t, model.JobStatusCancelled, status.Status)
+		assert.Equal(t, model.JobStatusCanceled, status.Status)
 		job, err = holder.getJob(jobID)
 		require.NoError(t, err)
 		require.ErrorIs(t, job.err, context.Canceled)
@@ -158,7 +159,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			// finish job with failure
-			holder.finishJob(jobID, failErr)
+			holder.finishJob(jobID, failErr, slog.New(slog.DiscardHandler))
 		}()
 
 		wg.Wait()
@@ -175,5 +176,24 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		job, err = holder.getJob(jobID)
 		require.NoError(t, err)
 		require.ErrorIs(t, job.err, failErr)
+	})
+
+	t.Run("job failed due to restore pre-requisites", func(t *testing.T) {
+		holder := NewRestoreJobsHolder()
+		jobID := holder.newJob("test-label", func() {})
+		failErr := errors.Join(
+			ErrRestorePrerequisitesFailed,
+			errors.New("destination cluster does not have required namespace: ns1"),
+		)
+
+		holder.finishJob(jobID, failErr, slog.New(slog.DiscardHandler))
+
+		job, err := holder.getJob(jobID)
+		require.NoError(t, err)
+
+		status := job.buildStatus()
+		assert.NotNil(t, status)
+		assert.Equal(t, model.JobStatusFailed, status.Status)
+		require.ErrorIs(t, job.err, ErrRestorePrerequisitesFailed)
 	})
 }

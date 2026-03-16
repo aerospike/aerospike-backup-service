@@ -793,13 +793,13 @@
           "Running",
           "Done",
           "Failed",
-          "Cancelled"
+          "Canceled"
         ],
         "x-enum-varnames": [
           "JobStatusRunning",
           "JobStatusDone",
           "JobStatusFailed",
-          "JobStatusCancelled"
+          "JobStatusCanceled"
         ]
       },
       "dto.LocalStorage": {

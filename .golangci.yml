@@ -61,6 +61,8 @@ linters:
       default-signifies-exhaustive: true
     nlreturn:
       block-size: 10
+    misspell:
+      locale: US
     tagliatelle:
       case:
         rules:

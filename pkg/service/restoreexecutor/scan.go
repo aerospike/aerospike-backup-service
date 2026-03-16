@@ -117,7 +117,7 @@ func recordExistsAction(replace, unique *bool) as.RecordExistsAction {
 	case unique != nil && *unique:
 		return as.CREATE_ONLY
 
-	// default behaviour: merge bins with existing record, or create a new
+	// default behavior: merge bins with existing record, or create a new
 	// record if it does not exist
 	default:
 		return as.UPDATE
