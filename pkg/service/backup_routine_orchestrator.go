@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	errBackupSkipped   = errors.New("full backup skipped")
+	errBackupSkipped   = errors.New("backup skipped")
 	nonRetryableErrors = []error{asinfo.ErrNoNode}
 )
 
