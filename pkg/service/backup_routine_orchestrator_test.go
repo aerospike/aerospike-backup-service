@@ -113,7 +113,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		NewBackupStartAdmission(mockRegistry, denyStartPolicy{}),
+		NewStartController(mockRegistry, denyStartPolicy{}),
 	))
 
 	backupCounters.Reset()
@@ -154,7 +154,7 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		NewBackupStartAdmission(mockRegistry, nil),
+		NewStartController(mockRegistry, nil),
 	))
 
 	backupCounters.Reset()
@@ -203,7 +203,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		NewBackupStartAdmission(mockRegistry, nil),
+		NewStartController(mockRegistry, nil),
 	))
 
 	backupCounters.Reset()
@@ -239,7 +239,7 @@ func TestRunFullBackupInternal_ContextCancelled(t *testing.T) {
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		NewBackupStartAdmission(mockRegistry, nil),
+		NewStartController(mockRegistry, nil),
 	))
 
 	backupCounters.Reset()
@@ -363,7 +363,7 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 		mockCompletionHandler,
 		nil,
 		NewPathService(nil),
-		NewBackupStartAdmission(mockRegistry, nil),
+		NewStartController(mockRegistry, nil),
 	))
 
 	backupCounters.Reset()
@@ -401,7 +401,7 @@ func TestRunIncrementalBackup_ContextCancelled(t *testing.T) {
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		NewBackupStartAdmission(mockRegistry, nil),
+		NewStartController(mockRegistry, nil),
 	))
 
 	backupCounters.Reset()
@@ -498,7 +498,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *mode
 		mockCompletionHandler,
 		mockBackupBackend,
 		NewPathService(nil),
-		NewBackupStartAdmission(mockRegistry, nil),
+		NewStartController(mockRegistry, nil),
 	))
 
 	o.runBackup(t.Context(), time.Now(), jobTypeIncremental)

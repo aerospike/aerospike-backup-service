@@ -10,9 +10,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// StartController owns only concurrency admission:
-// atomically check startDecider against running+pending state and reserve a pending slot.
+// StartController coordinates admission for backup starts.
 type StartController interface {
+	// Acquire attempts to reserve a pending-start slot for the given routine and backup type.
+	//
+	// If admission is denied, Acquire returns an error wrapped with errBackupSkipped.
+	// If admission succeeds, it returns a release callback that MUST be called exactly
+	// once to clear the reservation.
 	Acquire(
 		routine *model.BackupRoutine,
 		backupType jobType,
@@ -20,7 +24,7 @@ type StartController interface {
 	) (release func(), err error)
 }
 
-// TokenID is an opaque reservation handle used internally by start admission.
+// TokenID identifies a single in-flight admission reservation.
 type TokenID = uuid.UUID
 
 type startControllerImpl struct {
@@ -41,7 +45,8 @@ type reservationKey struct {
 	backupType  jobType
 }
 
-func NewBackupStartAdmission(
+// NewStartController builds a StartController backed by the provided registry and decision policy.
+func NewStartController(
 	registry RunningBackupsRegistry,
 	policy StartDecider,
 ) StartController {
@@ -53,6 +58,10 @@ func NewBackupStartAdmission(
 	}
 }
 
+// Acquire performs atomic "check-and-reserve" admission.
+//
+// The method holds the controller mutex while evaluating facts and writing the
+// reservation so no competing Acquire call can observe a stale intermediate state.
 func (a *startControllerImpl) Acquire(
 	routine *model.BackupRoutine,
 	backupType jobType,
@@ -79,7 +88,10 @@ func (a *startControllerImpl) Acquire(
 	}, nil
 }
 
-// release is idempotent: unknown/already-released token is a no-op.
+// release clears one reservation by token.
+//
+// This operation is idempotent: unknown or already-released tokens are ignored.
+// Multiple reservations for the same routine/type are tracked by a reference count.
 func (a *startControllerImpl) release(tokenID TokenID) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -98,6 +110,7 @@ func (a *startControllerImpl) release(tokenID TokenID) {
 	a.activeReservations[key] = count - 1
 }
 
+// buildStartFactsLocked composes admission facts.
 func (a *startControllerImpl) buildStartFactsLocked(routine *model.BackupRoutine, now time.Time) StartFacts {
 	state := a.registry.GetRoutineState(routine)
 	fullRunning := a.activeReservations[reservationKey{

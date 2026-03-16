@@ -16,8 +16,15 @@ var (
 	errUnsupportedBackupTypeToStart = errors.New("unsupported backup type")
 )
 
-// StartDecider contains only business rules that decide whether a backup can start for the provided facts.
+// StartDecider decides whether a backup is allowed to start for a given routine.
+//
+// Implementations should be pure business logic over StartFacts and routine policy,
+// with no mutation, locking, or I/O side effects.
 type StartDecider interface {
+	// CanStart evaluates admission rules for one start attempt.
+	//
+	// Returns nil when the start is allowed; otherwise returns a descriptive error
+	// that explains why admission must be denied.
 	CanStart(
 		backupType jobType,
 		routine *model.BackupRoutine,
@@ -30,18 +37,27 @@ type startDeciderImpl struct{}
 
 var _ StartDecider = (*startDeciderImpl)(nil)
 
-// StartFacts is a compact snapshot used by CanStart.
+// StartFacts is the admission-time snapshot consumed by StartDecider.CanStart.
+//
+// The controller builds this snapshot from registry state plus in-memory pending
+// reservations so decision logic can remain deterministic and side-effect free.
 type StartFacts struct {
-	FullRunningNow        bool
+	// FullRunningNow reports whether a full backup is currently running or pending start.
+	FullRunningNow bool
+	// IncrementalRunningNow reports whether an incremental backup is running or pending start.
 	IncrementalRunningNow bool
-	HasCompletedFull      bool
-	FullScheduledNow      bool
+	// HasCompletedFull reports whether at least one full backup completed in history.
+	HasCompletedFull bool
+	// FullScheduledNow reports whether this tick is a full-backup cron fire time.
+	FullScheduledNow bool
 }
 
+// NewStartDecider returns the default StartDecider implementation used by the service.
 func NewStartDecider() StartDecider {
 	return &startDeciderImpl{}
 }
 
+// CanStart dispatches admission checks by backup type.
 func (g *startDeciderImpl) CanStart(
 	backupType jobType,
 	routine *model.BackupRoutine,
