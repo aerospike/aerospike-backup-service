@@ -18,7 +18,6 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 		name           string
 		routineState   model.RoutineState
 		concurrent     bool
-		intervalCron   string
 		now            time.Time
 		expectedToSkip bool
 	}{
@@ -27,7 +26,6 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 			routineState: model.RoutineState{
 				LastRunTime: model.NewFullBackupTime(lastFullBackupTime),
 			},
-			intervalCron:   "@daily",
 			now:            now.Add(1 * time.Hour),
 			expectedToSkip: false,
 		},
@@ -58,7 +56,6 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 			routineState: model.RoutineState{
 				LastRunTime: model.NewFullBackupTime(lastFullBackupTime),
 			},
-			intervalCron:   "@daily",
 			now:            now,
 			expectedToSkip: true,
 		},
@@ -67,7 +64,6 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			routine := testRoutine()
-			routine.IntervalCron = tt.intervalCron
 			if tt.concurrent {
 				routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
 			}
