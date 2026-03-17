@@ -52,7 +52,6 @@ type AdHocScheduler interface {
 // adHocSchedulerImpl resolves routines and builds ad-hoc jobs at trigger time.
 type adHocSchedulerImpl struct {
 	scheduler  quartz.Scheduler
-	config     *model.Config
 	components *BackupComponents
 }
 
@@ -61,12 +60,10 @@ var _ AdHocScheduler = &adHocSchedulerImpl{}
 // NewAdHocScheduler creates an ad-hoc scheduler backed by quartz and current config.
 func NewAdHocScheduler(
 	scheduler quartz.Scheduler,
-	config *model.Config,
 	components *BackupComponents,
 ) AdHocScheduler {
 	return &adHocSchedulerImpl{
 		scheduler:  scheduler,
-		config:     config,
 		components: components,
 	}
 }

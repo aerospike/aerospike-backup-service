@@ -82,7 +82,7 @@ func InitComponents(
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
-	backupScheduler := service.NewAdHocScheduler(scheduler, config, backupComponents)
+	backupScheduler := service.NewAdHocScheduler(scheduler, backupComponents)
 	httpService := handlers.NewService(
 		ctx,
 		config,
