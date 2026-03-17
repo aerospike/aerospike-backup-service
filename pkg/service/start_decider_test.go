@@ -63,20 +63,19 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			routine := testRoutine()
-			if tt.concurrent {
-				routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
+			policy := &model.BackupPolicy{
+				ConcurrentIncremental: ptr.Of(tt.concurrent),
 			}
 
 			facts := StartFacts{
 				FullRunningNow:        tt.routineState.Full != nil,
 				IncrementalRunningNow: tt.routineState.Incremental != nil,
 				HasCompletedFull:      !tt.routineState.LastRunTime.NoFullBackup(),
-				FullScheduledNow:      timeutil.IsCronFireTime(routine.IntervalCron, tt.now),
+				FullScheduledNow:      timeutil.IsCronFireTime("@daily", tt.now),
 			}
 
-			policy := NewStartDecider()
-			err := policy.CanStart(jobTypeIncremental, routine, facts)
+			decider := NewStartDecider()
+			err := decider.CanStart(jobTypeIncremental, policy, facts)
 			assert.Equal(t, tt.expectedToSkip, err != nil)
 		})
 	}
@@ -106,10 +105,10 @@ func TestCanStartFullBackup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			routine := testRoutine()
-			policy := NewStartDecider()
+			policy := &model.BackupPolicy{}
+			decider := NewStartDecider()
 
-			err := policy.CanStart(jobTypeFull, routine, tt.facts)
+			err := decider.CanStart(jobTypeFull, policy, tt.facts)
 			if tt.expectedErr == nil {
 				assert.NoError(t, err)
 				return

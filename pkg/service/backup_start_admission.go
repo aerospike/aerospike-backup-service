@@ -67,7 +67,7 @@ func (a *startControllerImpl) TryStart(
 	defer a.mu.Unlock()
 
 	facts := a.buildStartFacts(routine, now)
-	if err := a.startDecider.CanStart(backupType, routine, facts); err != nil {
+	if err := a.startDecider.CanStart(backupType, routine.BackupPolicy, facts); err != nil {
 		return nil, fmt.Errorf("%w: %w", errBackupSkipped, err)
 	}
 

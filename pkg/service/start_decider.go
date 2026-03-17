@@ -25,7 +25,7 @@ type StartDecider interface {
 	// that explains why admission must be denied.
 	CanStart(
 		backupType jobType,
-		routine *model.BackupRoutine,
+		policy *model.BackupPolicy,
 		facts StartFacts,
 	) error
 }
@@ -58,21 +58,21 @@ func NewStartDecider() StartDecider {
 // CanStart dispatches admission checks by backup type.
 func (g *startDeciderImpl) CanStart(
 	backupType jobType,
-	routine *model.BackupRoutine,
+	policy *model.BackupPolicy,
 	facts StartFacts,
 ) error {
 	if backupType == jobTypeFull {
-		return g.canStartFull(routine, facts)
+		return g.canStartFull(policy, facts)
 	}
 
-	return g.canStartIncremental(routine, facts)
+	return g.canStartIncremental(policy, facts)
 }
 
 func (g *startDeciderImpl) canStartFull(
-	routine *model.BackupRoutine,
+	policy *model.BackupPolicy,
 	facts StartFacts,
 ) error {
-	if facts.FullRunningNow && !allowConcurrentFull(routine) {
+	if facts.FullRunningNow && !allowConcurrentFull(policy) {
 		return errFullAlreadyRunning
 	}
 
@@ -80,29 +80,29 @@ func (g *startDeciderImpl) canStartFull(
 }
 
 func (g *startDeciderImpl) canStartIncremental(
-	routine *model.BackupRoutine, // pass policy
+	policy *model.BackupPolicy, // pass policy
 	facts StartFacts,
 ) error {
 	if !facts.HasCompletedFull {
 		return errIncrementalNoFullBackup
 	}
 
-	if facts.IncrementalRunningNow && !routine.BackupPolicy.AllowConcurrentIncremental() {
+	if facts.IncrementalRunningNow && !policy.AllowConcurrentIncremental() {
 		return errIncrementalAlreadyRunning
 	}
 
-	if facts.FullRunningNow && !routine.BackupPolicy.AllowConcurrentIncremental() {
+	if facts.FullRunningNow && !policy.AllowConcurrentIncremental() {
 		return errIncrementalFullRunning
 	}
 
-	if facts.FullScheduledNow && !routine.BackupPolicy.AllowConcurrentIncremental() {
+	if facts.FullScheduledNow && !policy.AllowConcurrentIncremental() {
 		return errIncrementalFullScheduledNow
 	}
 
 	return nil
 }
 
-func allowConcurrentFull(_ *model.BackupRoutine) bool {
+func allowConcurrentFull(_ *model.BackupPolicy) bool {
 	// Future extension point for BackupPolicy.AllowConcurrentFull.
 	return false
 }
