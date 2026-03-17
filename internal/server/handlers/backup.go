@@ -229,11 +229,17 @@ func (s *Service) TriggerIncrementalBackup(w http.ResponseWriter, r *http.Reques
 func (s *Service) scheduleBackup(
 	w http.ResponseWriter,
 	r *http.Request,
-	triggerBackup func(routineName string, delay time.Duration) error,
+	triggerBackup func(routine *model.BackupRoutine, delay time.Duration) error,
 ) {
 	routineName := r.PathValue("name")
 	if routineName == "" {
 		http.Error(w, "routine name required", http.StatusBadRequest)
+		return
+	}
+
+	routine, found := s.config.Routine(routineName)
+	if !found {
+		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
 
@@ -243,13 +249,8 @@ func (s *Service) scheduleBackup(
 		return
 	}
 
-	err = triggerBackup(routineName, time.Duration(delayMillis)*time.Millisecond)
+	err = triggerBackup(routine, time.Duration(delayMillis)*time.Millisecond)
 	if err != nil {
-		if errors.Is(err, service.ErrRoutineNotFound) {
-			httpError(w, errRoutineNotFound(routineName))
-			return
-		}
-
 		httpError(w, errors.New("failed to schedule job"))
 		return
 	}

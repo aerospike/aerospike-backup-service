@@ -41,15 +41,12 @@ type Scheduler interface {
 	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error
 }
 
-// ErrRoutineNotFound indicates that the requested routine does not exist in config.
-var ErrRoutineNotFound = errors.New("routine not found")
-
 // AdHocScheduler schedules one-off full or incremental backup jobs on demand.
 type AdHocScheduler interface {
 	// TriggerAdHocFullBackup schedules one full backup run for routineName after delay.
-	TriggerAdHocFullBackup(routineName string, delay time.Duration) error
+	TriggerAdHocFullBackup(routine *model.BackupRoutine, delay time.Duration) error
 	// TriggerAdHocIncrementalBackup schedules one incremental backup run for routineName after delay.
-	TriggerAdHocIncrementalBackup(routineName string, delay time.Duration) error
+	TriggerAdHocIncrementalBackup(routine *model.BackupRoutine, delay time.Duration) error
 }
 
 // adHocSchedulerImpl resolves routines and builds ad-hoc jobs at trigger time.
@@ -75,27 +72,23 @@ func NewAdHocScheduler(
 }
 
 // TriggerAdHocFullBackup schedules a one-off full backup for routineName.
-func (s *adHocSchedulerImpl) TriggerAdHocFullBackup(routineName string, delay time.Duration) error {
-	return s.triggerAdHocBackup(routineName, delay, jobTypeFull)
+func (s *adHocSchedulerImpl) TriggerAdHocFullBackup(routine *model.BackupRoutine, delay time.Duration) error {
+	return s.triggerAdHocBackup(routine, delay, jobTypeFull)
 }
 
 // TriggerAdHocIncrementalBackup schedules a one-off incremental backup for routineName.
-func (s *adHocSchedulerImpl) TriggerAdHocIncrementalBackup(routineName string, delay time.Duration) error {
-	return s.triggerAdHocBackup(routineName, delay, jobTypeIncremental)
+func (s *adHocSchedulerImpl) TriggerAdHocIncrementalBackup(routine *model.BackupRoutine, delay time.Duration) error {
+	return s.triggerAdHocBackup(routine, delay, jobTypeIncremental)
 }
 
 // triggerAdHocBackup resolves routine, creates a fresh job, and schedules it once.
-func (s *adHocSchedulerImpl) triggerAdHocBackup(routineName string, delay time.Duration, jobType jobType) error {
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		return ErrRoutineNotFound
-	}
-
+func (s *adHocSchedulerImpl) triggerAdHocBackup(
+	routine *model.BackupRoutine,
+	delay time.Duration,
+	jobType jobType,
+) error {
 	runner := newOrchestrator(routine.Copy(), s.components) // orchestrator will work with its own copy
 	jobDetail := quartz.NewJobDetail(newBackupJob(runner, jobType, routine.Name), adhocKey(routine.Name))
-	if jobDetail == nil {
-		return errors.New("failed to create backup job")
-	}
 
 	return s.scheduler.ScheduleJob(jobDetail, quartz.NewRunOnceTrigger(max(delay, minAdHocBackupDelay)))
 }
