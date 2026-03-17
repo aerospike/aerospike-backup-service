@@ -81,3 +81,41 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 		})
 	}
 }
+
+func TestCanStartFullBackup(t *testing.T) {
+	tests := []struct {
+		name        string
+		facts       StartFacts
+		expectedErr error
+	}{
+		{
+			name: "allow full backup when no full is running",
+			facts: StartFacts{
+				FullRunningNow: false,
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "deny full backup when another full is running",
+			facts: StartFacts{
+				FullRunningNow: true,
+			},
+			expectedErr: errFullAlreadyRunning,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			routine := testRoutine()
+			policy := NewStartDecider()
+
+			err := policy.CanStart(jobTypeFull, routine, tt.facts)
+			if tt.expectedErr == nil {
+				assert.NoError(t, err)
+				return
+			}
+
+			assert.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}

@@ -70,7 +70,7 @@ func (a *startControllerImpl) Acquire(
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	facts := a.buildStartFactsLocked(routine, now)
+	facts := a.buildStartFacts(routine, now)
 	if err := a.startDecider.CanStart(backupType, routine, facts); err != nil {
 		return nil, fmt.Errorf("%w: %w", errBackupSkipped, err)
 	}
@@ -110,8 +110,8 @@ func (a *startControllerImpl) release(tokenID TokenID) {
 	a.activeReservations[key] = count - 1
 }
 
-// buildStartFactsLocked composes admission facts.
-func (a *startControllerImpl) buildStartFactsLocked(routine *model.BackupRoutine, now time.Time) StartFacts {
+// buildStartFacts composes admission facts.
+func (a *startControllerImpl) buildStartFacts(routine *model.BackupRoutine, now time.Time) StartFacts {
 	state := a.registry.GetRoutineState(routine)
 	fullRunning := a.activeReservations[reservationKey{
 		routineName: routine.Name,
