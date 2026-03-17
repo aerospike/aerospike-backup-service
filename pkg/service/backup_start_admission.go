@@ -12,15 +12,15 @@ import (
 
 // StartController coordinates admission for backup starts.
 type StartController interface {
-	// Acquire attempts to reserve a pending-start slot for the given routine and backup type.
+	// TryStart attempts to reserve a pending-start slot for the given routine and backup type.
 	//
 	// If admission is denied, Acquire returns an error wrapped with errBackupSkipped.
 	// If admission succeeds, it returns a release callback that MUST be called exactly
 	// once to clear the reservation.
-	Acquire(
+	TryStart(
 		routine *model.BackupRoutine,
-		backupType jobType,
 		now time.Time,
+		backupType jobType,
 	) (release func(), err error)
 }
 
@@ -58,14 +58,10 @@ func NewStartController(
 	}
 }
 
-// Acquire performs atomic "check-and-reserve" admission.
-//
-// The method holds the controller mutex while evaluating facts and writing the
-// reservation so no competing Acquire call can observe a stale intermediate state.
-func (a *startControllerImpl) Acquire(
+func (a *startControllerImpl) TryStart(
 	routine *model.BackupRoutine,
-	backupType jobType,
 	now time.Time,
+	backupType jobType,
 ) (func(), error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()

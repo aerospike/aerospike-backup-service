@@ -84,7 +84,7 @@ func newOrchestrator(
 }
 
 func (h *BackupRoutineOrchestrator) runBackup(ctx context.Context, now time.Time, backupType jobType) {
-	release, err := h.startController.Acquire(h.routine, backupType, now)
+	release, err := h.startController.TryStart(h.routine, now, backupType)
 	if err != nil {
 		reportBackupOutcome(h.routine.Name, backupType, 0, err, h.logger)
 		return

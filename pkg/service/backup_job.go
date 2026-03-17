@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sync/atomic"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -22,7 +21,6 @@ type backupRunner interface {
 type backupJob struct {
 	runner      backupRunner
 	jobType     jobType
-	isRunning   atomic.Bool
 	routineName string
 	logger      *slog.Logger
 }
@@ -38,14 +36,7 @@ func (j *backupJob) Execute(ctx context.Context) error {
 	}
 	now := time.Unix(0, jobMetadata.RunTime).Truncate(time.Millisecond)
 
-	if j.isRunning.CompareAndSwap(false, true) {
-		defer j.isRunning.Store(false)
-		j.runner.runBackup(ctx, now, j.jobType)
-		return nil
-	}
-
-	j.logger.Debug("Backup is currently in progress, skipping it")
-	observeBackupEvent(j.routineName, j.jobType, BackupOutcomeSkip, 0)
+	j.runner.runBackup(ctx, now, j.jobType)
 
 	return nil
 }

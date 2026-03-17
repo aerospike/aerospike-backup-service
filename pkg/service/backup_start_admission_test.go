@@ -27,17 +27,17 @@ func TestStartControllerAcquire_DeniesConcurrentAcquireForSameRoutineType(t *tes
 		NewStartDecider(),
 	)
 
-	release, err := controller.Acquire(routine, jobTypeFull, now)
+	release, err := controller.TryStart(routine, now, jobTypeFull)
 	require.NoError(t, err)
 	require.NotNil(t, release)
 
-	secondRelease, err := controller.Acquire(routine, jobTypeFull, now)
+	secondRelease, err := controller.TryStart(routine, now, jobTypeFull)
 	assert.Nil(t, secondRelease)
 	require.ErrorIs(t, err, errFullAlreadyRunning)
 
 	release()
 
-	thirdRelease, err := controller.Acquire(routine, jobTypeFull, now)
+	thirdRelease, err := controller.TryStart(routine, now, jobTypeFull)
 	require.NoError(t, err)
 	require.NotNil(t, thirdRelease)
 	thirdRelease()
@@ -59,17 +59,17 @@ func TestStartControllerAcquire_DeniesIncrementalWhenFullIsReserved(t *testing.T
 		NewStartDecider(),
 	)
 
-	releaseFull, err := controller.Acquire(routine, jobTypeFull, now)
+	releaseFull, err := controller.TryStart(routine, now, jobTypeFull)
 	require.NoError(t, err)
 	require.NotNil(t, releaseFull)
 
-	releaseIncremental, err := controller.Acquire(routine, jobTypeIncremental, now)
+	releaseIncremental, err := controller.TryStart(routine, now, jobTypeIncremental)
 	assert.Nil(t, releaseIncremental)
 	require.ErrorIs(t, err, errIncrementalFullRunning)
 
 	releaseFull()
 
-	releaseIncremental, err = controller.Acquire(routine, jobTypeIncremental, now)
+	releaseIncremental, err = controller.TryStart(routine, now, jobTypeIncremental)
 	require.NoError(t, err)
 	require.NotNil(t, releaseIncremental)
 	releaseIncremental()
@@ -91,7 +91,7 @@ func TestStartControllerRelease_IsIdempotent(t *testing.T) {
 		NewStartDecider(),
 	)
 
-	release, err := controller.Acquire(routine, jobTypeFull, now)
+	release, err := controller.TryStart(routine, now, jobTypeFull)
 	require.NoError(t, err)
 	require.NotNil(t, release)
 
@@ -100,7 +100,7 @@ func TestStartControllerRelease_IsIdempotent(t *testing.T) {
 		release()
 	})
 
-	releaseAgain, err := controller.Acquire(routine, jobTypeFull, now)
+	releaseAgain, err := controller.TryStart(routine, now, jobTypeFull)
 	require.NoError(t, err)
 	require.NotNil(t, releaseAgain)
 	releaseAgain()
@@ -123,9 +123,9 @@ func TestStartControllerRelease_TracksReservationCountByToken(t *testing.T) {
 		NewStartDecider(),
 	)
 
-	releaseOne, err := controller.Acquire(routine, jobTypeIncremental, now)
+	releaseOne, err := controller.TryStart(routine, now, jobTypeIncremental)
 	require.NoError(t, err)
-	releaseTwo, err := controller.Acquire(routine, jobTypeIncremental, now)
+	releaseTwo, err := controller.TryStart(routine, now, jobTypeIncremental)
 	require.NoError(t, err)
 
 	impl := controller.(*startControllerImpl)

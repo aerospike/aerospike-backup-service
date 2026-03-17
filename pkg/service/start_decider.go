@@ -80,7 +80,7 @@ func (g *startDeciderImpl) canStartFull(
 }
 
 func (g *startDeciderImpl) canStartIncremental(
-	routine *model.BackupRoutine,
+	routine *model.BackupRoutine, // pass policy
 	facts StartFacts,
 ) error {
 	if !facts.HasCompletedFull {

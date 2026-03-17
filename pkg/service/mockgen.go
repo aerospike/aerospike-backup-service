@@ -691,17 +691,17 @@ func (m *MockStartController) EXPECT() *MockStartControllerMockRecorder {
 	return m.recorder
 }
 
-// Acquire mocks base method.
-func (m *MockStartController) Acquire(routine *model.BackupRoutine, backupType jobType, now time.Time) (func(), error) {
+// TryStart mocks base method.
+func (m *MockStartController) TryStart(routine *model.BackupRoutine, now time.Time, backupType jobType) (func(), error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Acquire", routine, backupType, now)
+	ret := m.ctrl.Call(m, "TryStart", routine, now, backupType)
 	ret0, _ := ret[0].(func())
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Acquire indicates an expected call of Acquire.
-func (mr *MockStartControllerMockRecorder) Acquire(routine, backupType, now any) *gomock.Call {
+// TryStart indicates an expected call of TryStart.
+func (mr *MockStartControllerMockRecorder) TryStart(routine, now, backupType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Acquire", reflect.TypeOf((*MockStartController)(nil).Acquire), routine, backupType, now)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryStart", reflect.TypeOf((*MockStartController)(nil).TryStart), routine, now, backupType)
 }

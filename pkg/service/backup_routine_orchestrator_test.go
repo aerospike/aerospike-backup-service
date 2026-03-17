@@ -98,7 +98,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		Return(nil).Times(2) // for ns1 and ns2
 
 	startController := NewMockStartController(ctrl)
-	startController.EXPECT().Acquire(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
+	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
 	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
@@ -134,7 +134,7 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
 
 	startController := NewMockStartController(ctrl)
-	startController.EXPECT().Acquire(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, errBackupSkipped)
+	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, errBackupSkipped)
 
 	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
@@ -183,7 +183,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(1)
 
 	startController := NewMockStartController(ctrl)
-	startController.EXPECT().Acquire(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
+	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
 	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
@@ -220,7 +220,7 @@ func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, context.Canceled).Times(1)
 
 	startController := NewMockStartController(ctrl)
-	startController.EXPECT().Acquire(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
+	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
 	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
@@ -265,7 +265,7 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
 
 	startController := NewMockStartController(ctrl)
-	startController.EXPECT().Acquire(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, errBackupSkipped)
+	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, errBackupSkipped)
 
 	o := newOrchestrator(routine, NewBackupComponents(
 		nil,
@@ -302,7 +302,7 @@ func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
 		Return(nil, context.DeadlineExceeded).Times(1)
 
 	startController := NewMockStartController(ctrl)
-	startController.EXPECT().Acquire(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
+	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
 	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
@@ -401,7 +401,7 @@ func runIncrementalBackup(t *testing.T, state model.RoutineState, routine *model
 		Return(nil).Times(2)
 
 	startController := NewMockStartController(ctrl)
-	startController.EXPECT().Acquire(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
+	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
 	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
