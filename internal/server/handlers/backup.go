@@ -10,12 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/reugn/go-quartz/quartz"
 )
-
-// minAdHocBackupDelay is the minimum delay for ad-hoc backup triggers so the
-// Quartz scheduler does not expire the trigger before the job runs.
-const minAdHocBackupDelay = 50 * time.Millisecond
 
 // GetAllFullBackups
 // @Summary  Get available full backups.
@@ -198,7 +193,7 @@ func (s *Service) readBackupsForRoutine(
 // @Failure  400 {string} string
 // @Failure  404 {string} string "The specified routine was not found"
 func (s *Service) TriggerFullBackup(w http.ResponseWriter, r *http.Request) {
-	s.scheduleBackup(w, r, service.NewAdHocFullBackupJobForRoutine)
+	s.scheduleBackup(w, r, s.backupScheduler.TriggerAdHocFullBackup)
 }
 
 // ScheduleFullBackup
@@ -214,7 +209,7 @@ func (s *Service) TriggerFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 // @Failure     404 {string} string "The specified routine was not found"
 func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
-	s.scheduleBackup(w, r, service.NewAdHocFullBackupJobForRoutine)
+	s.scheduleBackup(w, r, s.backupScheduler.TriggerAdHocFullBackup)
 }
 
 // TriggerIncrementalBackup
@@ -228,17 +223,23 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Failure  400 {string} string
 // @Failure  404 {string} string "The specified routine was not found"
 func (s *Service) TriggerIncrementalBackup(w http.ResponseWriter, r *http.Request) {
-	s.scheduleBackup(w, r, service.NewAdHocIncrementalBackupJobForRoutine)
+	s.scheduleBackup(w, r, s.backupScheduler.TriggerAdHocIncrementalBackup)
 }
 
 func (s *Service) scheduleBackup(
 	w http.ResponseWriter,
 	r *http.Request,
-	newJobDetail func(routineName string) *quartz.JobDetail,
+	triggerBackup func(routine *model.BackupRoutine, delay time.Duration) error,
 ) {
 	routineName := r.PathValue("name")
 	if routineName == "" {
 		http.Error(w, "routine name required", http.StatusBadRequest)
+		return
+	}
+
+	routine, found := s.config.Routine(routineName)
+	if !found {
+		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
 
@@ -248,15 +249,8 @@ func (s *Service) scheduleBackup(
 		return
 	}
 
-	jobDetail := newJobDetail(routineName)
-	if jobDetail == nil {
-		httpError(w, errRoutineNotFound(routineName))
-		return
-	}
-
-	trigger := quartz.NewRunOnceTrigger(max(time.Duration(delayMillis)*time.Millisecond, minAdHocBackupDelay))
-
-	if err := s.scheduler.ScheduleJob(jobDetail, trigger); err != nil {
+	err = triggerBackup(routine, time.Duration(delayMillis)*time.Millisecond)
+	if err != nil {
 		httpError(w, errors.New("failed to schedule job"))
 		return
 	}

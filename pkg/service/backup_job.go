@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sync/atomic"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -14,17 +13,14 @@ import (
 
 // backupRunner defines an interface for running backups.
 type backupRunner interface {
-	// runFullBackup starts a full backup operation.
-	runFullBackup(ctx context.Context, now time.Time)
-	// runIncrementalBackup starts an incremental backup operation.
-	runIncrementalBackup(ctx context.Context, now time.Time)
+	// runBackup starts a backup operation for the requested backup type.
+	runBackup(ctx context.Context, now time.Time, backupType jobType)
 }
 
 // backupJob implements the quartz.Job interface.
 type backupJob struct {
 	runner      backupRunner
 	jobType     jobType
-	isRunning   atomic.Bool
 	routineName string
 	logger      *slog.Logger
 }
@@ -40,21 +36,7 @@ func (j *backupJob) Execute(ctx context.Context) error {
 	}
 	now := time.Unix(0, jobMetadata.RunTime).Truncate(time.Millisecond)
 
-	if j.isRunning.CompareAndSwap(false, true) {
-		defer j.isRunning.Store(false)
-		switch j.jobType {
-		case jobTypeFull:
-			j.runner.runFullBackup(ctx, now)
-		case jobTypeIncremental:
-			j.runner.runIncrementalBackup(ctx, now)
-		default:
-			j.logger.Error("Unsupported backup type")
-		}
-		return nil
-	}
-
-	j.logger.Debug("Backup is currently in progress, skipping it")
-	observeBackupEvent(j.routineName, j.jobType, BackupOutcomeSkip, 0)
+	j.runner.runBackup(ctx, now, j.jobType)
 
 	return nil
 }

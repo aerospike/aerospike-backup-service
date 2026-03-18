@@ -56,10 +56,11 @@ func InitComponents(
 	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, operations)
 	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
 	backupExecutor := backupexecutor.NewDefaultBackupExecutor(operations)
+	startController := service.NewStartController(registry, service.NewStartDecider())
 	backupComponents := service.NewBackupComponents(
-		clientManager, backupExecutor, registry, completionHandler, backendService,
+		clientManager, backupExecutor, registry, completionHandler, backendService, pathService, startController,
 	)
-	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config, pathService)
+	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config)
 
 	err = configApplier.ApplyNewConfig(ctx)
 	if err != nil {
@@ -81,11 +82,12 @@ func InitComponents(
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
+	backupScheduler := service.NewAdHocScheduler(scheduler, backupComponents)
 	httpService := handlers.NewService(
 		ctx,
 		config,
 		configApplier,
-		scheduler,
+		backupScheduler,
 		restoreMgr,
 		configRetriever,
 		backendService,

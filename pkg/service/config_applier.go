@@ -17,12 +17,11 @@ type ConfigApplier interface {
 }
 
 type DefaultConfigApplier struct {
-	mu          sync.Mutex
-	scheduler   quartz.Scheduler
-	registry    RunningBackupsRegistry
-	components  *BackupComponents
-	config      *model.Config
-	pathService PathService
+	mu         sync.Mutex
+	scheduler  quartz.Scheduler
+	registry   RunningBackupsRegistry
+	components *BackupComponents
+	config     *model.Config
 }
 
 func NewDefaultConfigApplier(
@@ -30,14 +29,12 @@ func NewDefaultConfigApplier(
 	registry RunningBackupsRegistry,
 	components *BackupComponents,
 	config *model.Config,
-	pathService PathService,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
-		scheduler:   scheduler,
-		registry:    registry,
-		components:  components,
-		config:      config,
-		pathService: pathService,
+		scheduler:  scheduler,
+		registry:   registry,
+		components: components,
+		config:     config,
 	}
 }
 
@@ -66,7 +63,6 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 		a.scheduler,
 		routinesToApply,
 		a.components,
-		a.pathService,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
@@ -91,7 +87,6 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routineNames []string)
 	slog.Info("Delete scheduled jobs", slog.Any("keys", keysToDelete))
 	for _, key := range keysToDelete {
 		_ = a.scheduler.DeleteJob(key) // ignore errors because we delete all jobs
-		jobStore.Remove(key.String())
 	}
 }
 
