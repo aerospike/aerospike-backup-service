@@ -22,7 +22,6 @@ import (
 type BackupNamespaceRunner struct {
 	routine        *model.BackupRoutine
 	backupExecutor backupexecutor.Backup
-	retry          executor
 	backendService BackupWriter
 	logger         *slog.Logger
 	pathService    PathService
@@ -32,7 +31,6 @@ type BackupNamespaceRunner struct {
 func NewBackupNamespaceRunner(
 	routine *model.BackupRoutine,
 	backupExecutor backupexecutor.Backup,
-	retry executor,
 	backendService BackupWriter,
 	logger *slog.Logger,
 	pathService PathService,
@@ -40,7 +38,6 @@ func NewBackupNamespaceRunner(
 	return &BackupNamespaceRunner{
 		routine:        routine,
 		backupExecutor: backupExecutor,
-		retry:          retry,
 		backendService: backendService,
 		logger:         logger,
 		pathService:    pathService,
@@ -69,26 +66,29 @@ func (op *BackupNamespaceRunner) Run(
 
 	return newRetryableBackupHandler(
 		ctx,
-		op.retry,
-		func(ctx context.Context) (backupexecutor.BackupHandler, error) { // start
-			return op.backupExecutor.Run(ctx, client, backupRoutine, timeBounds, namespace, backupFolder)
+		*backupRoutine.BackupPolicy.GetRetryPolicyOrDefault(),
+		retryableBackupCallbacks{
+			Start: func(ctx context.Context) (backupexecutor.BackupHandler, error) {
+				return op.backupExecutor.Run(ctx, client, backupRoutine, timeBounds, namespace, backupFolder)
+			},
+			OnFail: func(ctx context.Context) {
+				op.deleteFolder(ctx, op.pathService.GetTimestampPath(op.routine.Name, startTime, backupType))
+			},
+			OnSuccess: func(ctx context.Context, stats *models.BackupStats) error {
+				// For incremental backups, skip metadata for empty backups
+				if backupType == jobTypeIncremental && stats.IsEmpty() {
+					return nil
+				}
+				metadata := model.NewBackupMetadata(
+					stats, namespace, ptr.ValueOrZero(timeBounds.FromTime), startTime, backupRoutine.BackupPolicy,
+				)
+				return op.writeBackupMetadata(ctx, metadata, backupFolder)
+			},
+			OnRetry: func() {
+				observeBackupEvent(op.routine.Name, backupType, BackupOutcomeRetry, 0)
+			},
 		},
-		func(ctx context.Context) { // on fail
-			op.deleteFolder(ctx, op.pathService.GetTimestampPath(op.routine.Name, startTime, backupType))
-		},
-		func(ctx context.Context, stats *models.BackupStats) error { // on success
-			// For incremental backups, skip metadata for empty backups
-			if backupType == jobTypeIncremental && stats.IsEmpty() {
-				return nil
-			}
-			metadata := model.NewBackupMetadata(
-				stats, namespace, ptr.ValueOrZero(timeBounds.FromTime), startTime, backupRoutine.BackupPolicy,
-			)
-			return op.writeBackupMetadata(ctx, metadata, backupFolder)
-		},
-		func() { // on retry
-			observeBackupEvent(op.routine.Name, backupType, BackupOutcomeRetry, 0)
-		},
+		op.logger,
 	)
 }
 

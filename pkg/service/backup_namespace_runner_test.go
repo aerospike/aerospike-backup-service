@@ -39,7 +39,6 @@ func initMocks(t *testing.T) (testMocks, *BackupNamespaceRunner, *model.BackupRo
 	runner := NewBackupNamespaceRunner(
 		routine,
 		mockBackupExecutor,
-		&simpleExecutor{},
 		mockBackendService,
 		slog.Default(),
 		NewPathService(nil),
