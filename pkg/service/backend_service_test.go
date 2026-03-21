@@ -28,7 +28,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	}
 
 	for _, tm := range times {
-		backupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, tm)
+		backupPath := pathService.GetBackupPath(routineName, model.BackupJobTypeFull, testNamespace, tm)
 
 		metadata := model.BackupMetadata{
 			Created:   tm,
@@ -105,7 +105,7 @@ func TestWithToTime(t *testing.T) {
 	created := time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
 	toTime := created
 
-	backupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, created)
+	backupPath := pathService.GetBackupPath(routineName, model.BackupJobTypeFull, testNamespace, created)
 	metadata := model.BackupMetadata{
 		Created:   created,
 		Finished:  created.Add(1 * time.Hour), // finished after toTime
@@ -138,7 +138,7 @@ func TestWithTimeBounds(t *testing.T) {
 	jan4 := time.Date(2021, 1, 4, 0, 0, 0, 0, time.UTC)
 
 	for _, tm := range []time.Time{jan2, jan3, jan4} {
-		path := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, tm)
+		path := pathService.GetBackupPath(routineName, model.BackupJobTypeFull, testNamespace, tm)
 		err := service.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
 			Created:   tm,
 			Finished:  tm,
@@ -194,7 +194,7 @@ func TestGetBackupsReturnsSortedByCreated(t *testing.T) {
 	}
 
 	for i, pathTime := range pathTimes {
-		path := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, pathTime)
+		path := pathService.GetBackupPath(routineName, model.BackupJobTypeFull, testNamespace, pathTime)
 		err := service.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
 			Created:   createdTimes[i],
 			Finished:  createdTimes[i],
@@ -216,7 +216,7 @@ func TestLocalDeleteBackup(t *testing.T) {
 
 	// Create backup
 	created := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-	backupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, created)
+	backupPath := pathService.GetBackupPath(routineName, model.BackupJobTypeFull, testNamespace, created)
 
 	metadata := model.BackupMetadata{
 		Created:   created,
@@ -248,7 +248,7 @@ func TestIncrementalBackup(t *testing.T) {
 
 	// First create a full backup as baseline
 	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-	fullBackupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, fullBackupTime)
+	fullBackupPath := pathService.GetBackupPath(routineName, model.BackupJobTypeFull, testNamespace, fullBackupTime)
 
 	fullMetadata := model.BackupMetadata{
 		Created:     fullBackupTime,
@@ -264,7 +264,7 @@ func TestIncrementalBackup(t *testing.T) {
 
 	// Now create an incremental backup
 	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
-	incrementalPath := pathService.GetBackupPath(routineName, jobTypeIncremental, testNamespace, incrementalTime)
+	incrementalPath := pathService.GetBackupPath(routineName, model.BackupJobTypeIncremental, testNamespace, incrementalTime)
 
 	incMetadata := model.BackupMetadata{
 		Created:     incrementalTime,
@@ -312,7 +312,7 @@ func TestReadPath(t *testing.T) {
 
 	// First create a full backup as baseline
 	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-	fullBackupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, fullBackupTime)
+	fullBackupPath := pathService.GetBackupPath(routineName, model.BackupJobTypeFull, testNamespace, fullBackupTime)
 
 	fullMetadata := model.BackupMetadata{
 		Created:   fullBackupTime,
@@ -325,7 +325,7 @@ func TestReadPath(t *testing.T) {
 
 	// Now create an incremental backup
 	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
-	incrementalPath := pathService.GetBackupPath(routineName, jobTypeIncremental, testNamespace, incrementalTime)
+	incrementalPath := pathService.GetBackupPath(routineName, model.BackupJobTypeIncremental, testNamespace, incrementalTime)
 
 	incMetadata := model.BackupMetadata{
 		Created:   incrementalTime,

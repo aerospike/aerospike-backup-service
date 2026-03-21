@@ -20,7 +20,7 @@ type StartController interface {
 	TryStart(
 		routine *model.BackupRoutine,
 		now time.Time,
-		backupType jobType,
+		backupType model.BackupJobType,
 	) (release func(), err error)
 }
 
@@ -42,7 +42,7 @@ var _ StartController = (*startControllerImpl)(nil)
 
 type reservationKey struct {
 	routineName string
-	backupType  jobType
+	backupType  model.BackupJobType
 }
 
 // NewStartController builds a StartController backed by the provided registry and decision policy.
@@ -61,7 +61,7 @@ func NewStartController(
 func (a *startControllerImpl) TryStart(
 	routine *model.BackupRoutine,
 	now time.Time,
-	backupType jobType,
+	backupType model.BackupJobType,
 ) (func(), error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -111,11 +111,11 @@ func (a *startControllerImpl) buildStartFacts(routine *model.BackupRoutine, now 
 	state := a.registry.GetRoutineState(routine)
 	fullRunning := a.activeReservations[reservationKey{
 		routineName: routine.Name,
-		backupType:  jobTypeFull,
+		backupType:  model.BackupJobTypeFull,
 	}] > 0
 	incrRunning := a.activeReservations[reservationKey{
 		routineName: routine.Name,
-		backupType:  jobTypeIncremental,
+		backupType:  model.BackupJobTypeIncremental,
 	}] > 0
 
 	return StartFacts{

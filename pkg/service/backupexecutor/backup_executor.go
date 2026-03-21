@@ -3,11 +3,13 @@ package backupexecutor
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
+	"github.com/aerospike/backup-go/models"
 )
 
 type storageWriter interface {
@@ -20,7 +22,6 @@ type Backup interface {
 	// Run runs the backup and returns a handler for monitoring progress.
 	Run(
 		ctx context.Context,
-		client aerospike.Backuper,
 		routine *model.BackupRoutine,
 		timeBounds model.TimeBounds,
 		namespace string,
@@ -30,12 +31,14 @@ type Backup interface {
 
 // DefaultBackupExecutor implements the actual backup logic.
 type DefaultBackupExecutor struct {
-	operations storageWriter
+	clientManager aerospike.ClientManager
+	operations    storageWriter
 }
 
-func NewDefaultBackupExecutor(operations storageWriter) *DefaultBackupExecutor {
+func NewDefaultBackupExecutor(clientManager aerospike.ClientManager, operations storageWriter) *DefaultBackupExecutor {
 	return &DefaultBackupExecutor{
-		operations: operations,
+		clientManager: clientManager,
+		operations:    operations,
 	}
 }
 
@@ -45,30 +48,66 @@ func NewDefaultBackupExecutor(operations storageWriter) *DefaultBackupExecutor {
 // - For incremental backups with XDR config, it uses XDR-only backup.
 func (r *DefaultBackupExecutor) Run(
 	ctx context.Context,
-	client aerospike.Backuper,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,
 	path string,
 ) (BackupHandler, error) {
+	client, err := r.clientManager.GetClient(ctx, routine.SourceCluster, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get backup client: %w", err)
+	}
+
 	xdrEnabled := routine.BackupPolicy.XDRConfig != nil
 	withStorageClass := options.WithStorageClass(routine.Storage.GetStorageClass().DataClass)
 	writer, err := r.operations.CreateDirWriter(ctx, routine.Storage, path, withStorageClass)
 	if err != nil {
+		r.clientManager.Close(client)
 		return nil, fmt.Errorf("failed to create backup writer: %w", err)
 	}
 
+	var handler BackupHandler
 	switch {
 	case !xdrEnabled:
 		// Regular scan backup
-		return runScanBackup(ctx, client, routine, timeBounds, namespace, writer)
+		handler, err = runScanBackup(ctx, client, routine, timeBounds, namespace, writer)
 	case isFullBackup(timeBounds):
 		// Full backup with XDR - combine XDR for records and scan for UDFs/indexes
-		return runCombinedBackup(ctx, client, routine, timeBounds, namespace, writer)
+		handler, err = runCombinedBackup(ctx, client, routine, timeBounds, namespace, writer)
 	default:
 		// Incremental backup with XDR
-		return runXDRBackup(ctx, client, routine, timeBounds, namespace, writer)
+		handler, err = runXDRBackup(ctx, client, routine, timeBounds, namespace, writer)
 	}
+	if err != nil {
+		r.clientManager.Close(client)
+		return nil, err
+	}
+
+	return &closeOnWaitBackupHandler{
+		inner:         handler,
+		client:        client,
+		clientManager: r.clientManager,
+	}, nil
+}
+
+type closeOnWaitBackupHandler struct {
+	inner         BackupHandler
+	client        aerospike.Client
+	clientManager aerospike.ClientManager
+	closeOnce     sync.Once
+}
+
+func (h *closeOnWaitBackupHandler) Wait(ctx context.Context) error {
+	defer h.closeOnce.Do(func() { h.clientManager.Close(h.client) })
+	return h.inner.Wait(ctx)
+}
+
+func (h *closeOnWaitBackupHandler) GetMetrics() *models.Metrics {
+	return h.inner.GetMetrics()
+}
+
+func (h *closeOnWaitBackupHandler) GetStats() *models.BackupStats {
+	return h.inner.GetStats()
 }
 
 func isFullBackup(timeBounds model.TimeBounds) bool {

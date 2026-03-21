@@ -55,12 +55,17 @@ func InitComponents(
 	retentionManager := service.NewBackupRetentionManager(backendService, &routineStorage)
 	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, operations)
 	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
-	backupExecutor := backupexecutor.NewDefaultBackupExecutor(operations)
+	backupExecutor := backupexecutor.NewDefaultBackupExecutor(clientManager, operations)
 	startController := service.NewStartController(registry, service.NewStartDecider())
-	backupComponents := service.NewBackupComponents(
-		clientManager, backupExecutor, registry, completionHandler, backendService, pathService, startController,
+	namespaceBackupExecutor := service.NewNamespaceBackupExecutor(clientManager, backupExecutor, backendService, pathService)
+	backupPipeline := service.NewBackupOrchestrator(
+		registry,
+		completionHandler,
+		startController,
+		namespaceBackupExecutor,
 	)
-	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config)
+	backupScheduler := service.NewBackupScheduler(scheduler, backupPipeline)
+	configApplier := service.NewDefaultConfigApplier(backupScheduler, registry, config)
 
 	err = configApplier.ApplyNewConfig(ctx)
 	if err != nil {
@@ -82,7 +87,6 @@ func InitComponents(
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
-	backupScheduler := service.NewAdHocScheduler(scheduler, backupComponents)
 	httpService := handlers.NewService(
 		ctx,
 		config,

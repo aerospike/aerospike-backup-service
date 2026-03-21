@@ -59,12 +59,11 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	stats.IncFiles()
 	stats.ReadRecords.Add(10)
 
-	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockClient, nil)
-	mockClientManager.EXPECT().Close(mockClient)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockClient, nil).Times(2)
+	mockClientManager.EXPECT().Close(mockClient).Times(2)
 
 	mockBackupExecutor.EXPECT().Run(
 		gomock.Any(),
-		mockClient,
 		gomock.Any(),
 		gomock.Any(),
 		"ns1",
@@ -73,7 +72,6 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 
 	mockBackupExecutor.EXPECT().Run(
 		gomock.Any(),
-		mockClient,
 		gomock.Any(),
 		gomock.Any(),
 		"ns2",
@@ -85,12 +83,12 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 
 	registryWG := sync.WaitGroup{}
 	registryWG.Add(2)
-	mockRegistry.EXPECT().register(routineName, jobTypeFull, gomock.Any()).Do(func(_, _, _ any) {
+	mockRegistry.EXPECT().register(routineName, model.BackupJobTypeFull, gomock.Any()).Do(func(_, _, _ any) {
 		registryWG.Done()
 	})
 	now := time.Now()
 	mockCompletionHandler.EXPECT().
-		OnSuccess(gomock.Any(), routine, jobTypeFull, newTimeMatcher(now), gomock.Any()).Do(func(_, _, _, _, _ any) {
+		OnSuccess(gomock.Any(), routine, model.BackupJobTypeFull, newTimeMatcher(now), gomock.Any()).Do(func(_, _, _, _, _ any) {
 		registryWG.Done()
 	})
 
@@ -100,25 +98,18 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	startController := NewMockStartController(ctrl)
 	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
-	o := newOrchestrator(routine, NewBackupComponents(
-		mockClientManager,
-		mockBackupExecutor,
-		mockRegistry,
-		mockCompletionHandler,
-		mockBackupBackend,
-		NewPathService(ptr.Of(model.TimestampFormatISO)),
-		startController,
-	))
+	nsExec := NewNamespaceBackupExecutor(mockClientManager, mockBackupExecutor, mockBackupBackend, NewPathService(ptr.Of(model.TimestampFormatISO)))
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, startController, nsExec)
 
 	backupCounters.Reset()
-	o.runBackup(t.Context(), now, jobTypeFull)
+	p.RunBackup(t.Context(), routine, now, model.BackupJobTypeFull)
 
 	registryWG.Wait()
 	assert.Equal(t, uint64(10), stats.TotalRecords.Load(), "Backup stats should be correct")
 
-	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeFailure))
 }
 
 func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
@@ -136,23 +127,16 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 	startController := NewMockStartController(ctrl)
 	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, errBackupSkipped)
 
-	o := newOrchestrator(routine, NewBackupComponents(
-		mockClientManager,
-		mockBackupExecutor,
-		mockRegistry,
-		mockCompletionHandler,
-		mockBackupBackend,
-		NewPathService(nil),
-		startController,
-	))
+	nsExec := NewNamespaceBackupExecutor(mockClientManager, mockBackupExecutor, mockBackupBackend, NewPathService(nil))
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, startController, nsExec)
 
 	backupCounters.Reset()
 
-	o.runBackup(t.Context(), time.Now(), jobTypeFull)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeFull)
 
-	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
-	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSuccess))
+	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeFailure))
 }
 
 func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
@@ -180,29 +164,22 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
 
 	connectionError := errors.New("connection failed")
-	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(1)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(2)
 
 	startController := NewMockStartController(ctrl)
 	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
-	o := newOrchestrator(routine, NewBackupComponents(
-		mockClientManager,
-		mockBackupExecutor,
-		mockRegistry,
-		mockCompletionHandler,
-		mockBackupBackend,
-		NewPathService(nil),
-		startController,
-	))
+	nsExec := NewNamespaceBackupExecutor(mockClientManager, mockBackupExecutor, mockBackupBackend, NewPathService(nil))
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, startController, nsExec)
 
 	backupCounters.Reset()
-	o.runBackup(t.Context(), time.Now(), jobTypeFull)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeFull)
 
 	assert.Contains(t, buf.String(), connectionError.Error())
 
-	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
-	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSkip))
+	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeFailure))
 }
 
 func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
@@ -217,28 +194,21 @@ func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
 	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
 
-	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, context.Canceled).Times(1)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, context.Canceled).Times(2)
 
 	startController := NewMockStartController(ctrl)
 	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
-	o := newOrchestrator(routine, NewBackupComponents(
-		mockClientManager,
-		mockBackupExecutor,
-		mockRegistry,
-		mockCompletionHandler,
-		mockBackupBackend,
-		NewPathService(ptr.Of(model.TimestampFormatISO)),
-		startController,
-	))
+	nsExec := NewNamespaceBackupExecutor(mockClientManager, mockBackupExecutor, mockBackupBackend, NewPathService(ptr.Of(model.TimestampFormatISO)))
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, startController, nsExec)
 
 	backupCounters.Reset()
-	o.runBackup(t.Context(), time.Now(), jobTypeFull)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeFull)
 
-	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
-	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeCanceled))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeCanceled))
 }
 
 func TestRunIncrementalBackup_Success(t *testing.T) {
@@ -251,9 +221,9 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 
 	runIncrementalBackup(t, routineState, testRoutine())
 
-	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeFailure))
-	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSkip))
+	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeFailure))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSkip))
 }
 
 func TestRunIncrementalBackup_Skip(t *testing.T) {
@@ -267,23 +237,16 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	startController := NewMockStartController(ctrl)
 	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, errBackupSkipped)
 
-	o := newOrchestrator(routine, NewBackupComponents(
-		nil,
-		nil,
-		mockRegistry,
-		mockCompletionHandler,
-		nil,
-		NewPathService(nil),
-		startController,
-	))
+	nsExec := NewNamespaceBackupExecutor(nil, nil, nil, NewPathService(nil))
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, startController, nsExec)
 
 	backupCounters.Reset()
 
-	o.runBackup(t.Context(), time.Now(), jobTypeIncremental)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeIncremental)
 
-	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeFailure))
 }
 
 func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
@@ -299,28 +262,21 @@ func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
 	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
 
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil, context.DeadlineExceeded).Times(1)
+		Return(nil, context.DeadlineExceeded).Times(2)
 
 	startController := NewMockStartController(ctrl)
 	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
-	o := newOrchestrator(routine, NewBackupComponents(
-		mockClientManager,
-		mockBackupExecutor,
-		mockRegistry,
-		mockCompletionHandler,
-		mockBackupBackend,
-		NewPathService(nil),
-		startController,
-	))
+	nsExec := NewNamespaceBackupExecutor(mockClientManager, mockBackupExecutor, mockBackupBackend, NewPathService(nil))
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, startController, nsExec)
 
 	backupCounters.Reset()
-	o.runBackup(t.Context(), time.Now(), jobTypeIncremental)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeIncremental)
 
-	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeFailure))
-	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeCanceled))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeCanceled))
 }
 
 func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
@@ -337,7 +293,7 @@ func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
 	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
 	runIncrementalBackup(t, routineState, routine)
 
-	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
+	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSuccess))
 }
 
 func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
@@ -354,7 +310,7 @@ func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
 	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
 	runIncrementalBackup(t, routineState, routine)
 
-	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
+	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSuccess))
 }
 
 func runIncrementalBackup(t *testing.T, state model.RoutineState, routine *model.BackupRoutine) {
@@ -379,12 +335,11 @@ func runIncrementalBackup(t *testing.T, state model.RoutineState, routine *model
 	// Simulate an ongoing full backup
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(state).Times(1) // in createTimeBounds
 
-	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockClient, nil)
-	mockClientManager.EXPECT().Close(mockClient)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockClient, nil).Times(2)
+	mockClientManager.EXPECT().Close(mockClient).Times(2)
 
 	mockBackupExecutor.EXPECT().Run(
 		gomock.Any(),
-		mockClient,
 		gomock.Any(),
 		newTimeBoundsFromTimeMatcher(*state.LastRunTime.FullBackupTime()),
 		gomock.Any(),
@@ -394,8 +349,8 @@ func runIncrementalBackup(t *testing.T, state model.RoutineState, routine *model
 	mockBackupHandler.EXPECT().GetStats().Return(stats).AnyTimes()
 	mockBackupHandler.EXPECT().Wait(gomock.Any()).Return(nil).Times(2) // for ns1 and ns2
 
-	mockRegistry.EXPECT().register(routineName, jobTypeIncremental, gomock.Any())
-	mockCompletionHandler.EXPECT().OnSuccess(gomock.Any(), routine, jobTypeIncremental, gomock.Any(), gomock.Any())
+	mockRegistry.EXPECT().register(routineName, model.BackupJobTypeIncremental, gomock.Any())
+	mockCompletionHandler.EXPECT().OnSuccess(gomock.Any(), routine, model.BackupJobTypeIncremental, gomock.Any(), gomock.Any())
 
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2)
@@ -403,23 +358,16 @@ func runIncrementalBackup(t *testing.T, state model.RoutineState, routine *model
 	startController := NewMockStartController(ctrl)
 	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
-	o := newOrchestrator(routine, NewBackupComponents(
-		mockClientManager,
-		mockBackupExecutor,
-		mockRegistry,
-		mockCompletionHandler,
-		mockBackupBackend,
-		NewPathService(nil),
-		startController,
-	))
+	nsExec := NewNamespaceBackupExecutor(mockClientManager, mockBackupExecutor, mockBackupBackend, NewPathService(nil))
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, startController, nsExec)
 
-	o.runBackup(t.Context(), time.Now(), jobTypeIncremental)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeIncremental)
 	time.Sleep(10 * time.Millisecond) // time to unregister routine.
 
 	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")
 }
 
-func prometheusCounter(jobType jobType, outcome BackupOutcome) int {
+func prometheusCounter(jobType model.BackupJobType, outcome BackupOutcome) int {
 	counter := backupCounters.WithLabelValues(routineName, string(jobType), string(outcome))
 	return int(testutil.ToFloat64(counter))
 }

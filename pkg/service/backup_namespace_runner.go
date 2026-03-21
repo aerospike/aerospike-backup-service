@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -15,33 +14,57 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// BackupNamespaceRunner starts a backup operation for a single namespace. It encapsulates
-// all the logic needed to perform a backup of one namespace, including running the backup,
-// managing metadata, and handling cleanup.
-// Every routine has its own BackupNamespaceRunner.
-type BackupNamespaceRunner struct {
-	routine        *model.BackupRoutine
+// NamespaceBackupExecutor runs a backup for one namespace.
+type NamespaceBackupExecutor struct {
+	clientManager  aerospike.ClientManager
 	backupExecutor backupexecutor.Backup
 	backendService BackupWriter
-	logger         *slog.Logger
 	pathService    PathService
 }
 
-// NewBackupNamespaceRunner creates a new BackupNamespaceRunner instance.
-func NewBackupNamespaceRunner(
-	routine *model.BackupRoutine,
+func NewNamespaceBackupExecutor(
+	clientManager aerospike.ClientManager,
 	backupExecutor backupexecutor.Backup,
 	backendService BackupWriter,
-	logger *slog.Logger,
 	pathService PathService,
-) *BackupNamespaceRunner {
-	return &BackupNamespaceRunner{
-		routine:        routine,
+) *NamespaceBackupExecutor {
+	return &NamespaceBackupExecutor{
+		clientManager:  clientManager,
 		backupExecutor: backupExecutor,
 		backendService: backendService,
-		logger:         logger,
 		pathService:    pathService,
 	}
+}
+
+// StartBackup resolves namespaces for the routine and starts one backup handler per namespace.
+func (e *NamespaceBackupExecutor) StartBackup(
+	ctx context.Context,
+	logger *slog.Logger,
+	backupRoutine *model.BackupRoutine,
+	runSpec model.BackupRunSpec,
+) (*BackupNamespacesOperation, error) {
+	namespaces := backupRoutine.Namespaces
+	if len(namespaces) == 0 {
+		client, err := e.clientManager.GetClient(ctx, backupRoutine.SourceCluster, logger)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get backup client: %w", err)
+		}
+		namespaces, err = client.InfoClient().GetNamespacesList(ctx)
+		e.clientManager.Close(client)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve namespaces from source cluster: %w", err)
+		}
+	}
+
+	op := &BackupNamespacesOperation{
+		handlers: make(map[string]CancelableBackupHandler, len(namespaces)),
+	}
+
+	for _, namespace := range namespaces {
+		op.handlers[namespace] = e.Run(ctx, logger, backupRoutine, namespace, runSpec)
+	}
+
+	return op, nil
 }
 
 // CancelableBackupHandler extends BackupHandler with support for canceling the backup.
@@ -51,68 +74,77 @@ type CancelableBackupHandler interface {
 	Cancel()
 }
 
-// Run executes the backup operation for the namespace. It handles the entire backup process
-// including folder management, metadata writing, and error handling.
-func (op *BackupNamespaceRunner) Run(
+// Run executes the backup operation for the namespace.
+func (e *NamespaceBackupExecutor) Run(
 	ctx context.Context,
-	client aerospike.Backuper,
+	logger *slog.Logger,
 	backupRoutine *model.BackupRoutine,
-	backupType jobType,
 	namespace string,
-	startTime time.Time,
-	timeBounds model.TimeBounds,
+	runSpec model.BackupRunSpec,
 ) CancelableBackupHandler {
-	backupFolder := op.pathService.GetBackupPath(op.routine.Name, backupType, namespace, startTime)
+	backupFolder := e.pathService.GetBackupPath(backupRoutine.Name, runSpec.Type, namespace, runSpec.StartTime)
 
 	return newRetryableBackupHandler(
 		ctx,
 		*backupRoutine.BackupPolicy.GetRetryPolicyOrDefault(),
 		retryableBackupCallbacks{
 			Start: func(ctx context.Context) (backupexecutor.BackupHandler, error) {
-				return op.backupExecutor.Run(ctx, client, backupRoutine, timeBounds, namespace, backupFolder)
+				return e.backupExecutor.Run(ctx, backupRoutine, runSpec.TimeBounds, namespace, backupFolder)
 			},
 			OnFail: func(ctx context.Context) {
-				op.deleteFolder(ctx, op.pathService.GetTimestampPath(op.routine.Name, startTime, backupType))
+				e.deleteFolder(
+					ctx,
+					logger,
+					backupRoutine,
+					e.pathService.GetTimestampPath(backupRoutine.Name, runSpec.StartTime, runSpec.Type),
+				)
 			},
 			OnSuccess: func(ctx context.Context, stats *models.BackupStats) error {
-				// For incremental backups, skip metadata for empty backups
-				if backupType == jobTypeIncremental && stats.IsEmpty() {
+				if runSpec.Type == model.BackupJobTypeIncremental && stats.IsEmpty() {
 					return nil
 				}
 				metadata := model.NewBackupMetadata(
-					stats, namespace, ptr.ValueOrZero(timeBounds.FromTime), startTime, backupRoutine.BackupPolicy,
+					stats,
+					namespace,
+					ptr.ValueOrZero(runSpec.TimeBounds.FromTime),
+					runSpec.StartTime,
+					backupRoutine.BackupPolicy,
 				)
-				return op.writeBackupMetadata(ctx, metadata, backupFolder)
+				return e.writeBackupMetadata(ctx, logger, backupRoutine, metadata, backupFolder)
 			},
 			OnRetry: func() {
-				observeBackupEvent(op.routine.Name, backupType, BackupOutcomeRetry, 0)
+				observeBackupEvent(backupRoutine.Name, runSpec.Type, BackupOutcomeRetry, 0)
 			},
 		},
-		op.logger,
+		logger,
 	)
 }
 
-func (op *BackupNamespaceRunner) deleteFolder(ctx context.Context, path string) {
-	err := op.backendService.Delete(ctx, op.routine, path)
+func (e *NamespaceBackupExecutor) deleteFolder(ctx context.Context, logger *slog.Logger, routine *model.BackupRoutine, path string) {
+	err := e.backendService.Delete(ctx, routine, path)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			op.logger.Info("Delete folder context canceled")
+			logger.Info("Delete folder context canceled")
 			return
 		}
 
-		op.logger.Error("Failed to delete folder", attr.Error(err))
+		logger.Error("Failed to delete folder", attr.Error(err))
 		return
 	}
 }
 
-func (op *BackupNamespaceRunner) writeBackupMetadata(
-	ctx context.Context, metadata model.BackupMetadata, backupFolder string,
+func (e *NamespaceBackupExecutor) writeBackupMetadata(
+	ctx context.Context,
+	logger *slog.Logger,
+	routine *model.BackupRoutine,
+	metadata model.BackupMetadata,
+	backupFolder string,
 ) error {
-	if err := op.backendService.WriteBackupMetadata(ctx, op.routine, backupFolder, metadata); err != nil {
+	if err := e.backendService.WriteBackupMetadata(ctx, routine, backupFolder, metadata); err != nil {
 		return fmt.Errorf("failed to write backup metadata to %q: %w", backupFolder, err)
 	}
 
-	op.logger.Info("Wrote backup metadata",
+	logger.Info("Wrote backup metadata",
 		slog.Any("folder", backupFolder),
 		slog.Any("metadata", metadata))
 

@@ -104,7 +104,7 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 	ctx context.Context, timestamps []time.Time, retainCount int, routine *model.BackupRoutine,
 ) error {
 	if retainCount == 0 { // Delete all incremental backups.
-		path := backupRootPath(routine.Name, jobTypeIncremental)
+		path := backupRootPath(routine.Name, model.BackupJobTypeIncremental)
 		return e.backendService.Delete(ctx, routine, path)
 	}
 

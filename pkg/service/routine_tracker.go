@@ -17,7 +17,7 @@ type routineTracker struct {
 	mu sync.RWMutex
 
 	// --- Live State ---
-	handlers map[jobType]CancelableBackupHandler
+	handlers map[model.BackupJobType]CancelableBackupHandler
 
 	// --- History State ---
 	lastRun *model.BackupTime
@@ -37,7 +37,7 @@ type routineTracker struct {
 func newRoutineTracker() *routineTracker {
 	return &routineTracker{
 		initialSyncDone: make(chan struct{}),
-		handlers:        make(map[jobType]CancelableBackupHandler),
+		handlers:        make(map[model.BackupJobType]CancelableBackupHandler),
 		lastRun:         model.NewNoBackupTime(), // Start with non-nil empty state
 	}
 }
@@ -64,14 +64,14 @@ func (t *routineTracker) getState(timeout time.Duration) (*trackerSnapshot, erro
 	defer t.mu.RUnlock()
 
 	return &trackerSnapshot{
-		full:    currentBackupStatus(t.handlers[jobTypeFull]),
-		incr:    currentBackupStatus(t.handlers[jobTypeIncremental]),
+		full:    currentBackupStatus(t.handlers[model.BackupJobTypeFull]),
+		incr:    currentBackupStatus(t.handlers[model.BackupJobTypeIncremental]),
 		lastRun: t.lastRun,
 	}, nil
 }
 
 // register adds a new running backup handler.
-func (t *routineTracker) register(jobType jobType, handler CancelableBackupHandler) {
+func (t *routineTracker) register(jobType model.BackupJobType, handler CancelableBackupHandler) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -80,7 +80,7 @@ func (t *routineTracker) register(jobType jobType, handler CancelableBackupHandl
 }
 
 // recordSuccessfulBackup removes a successful backup and updates its last run time.
-func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType jobType, timestamp time.Time) {
+func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType model.BackupJobType, timestamp time.Time) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -91,9 +91,9 @@ func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType jobT
 	)
 
 	switch jobType {
-	case jobTypeFull:
+	case model.BackupJobTypeFull:
 		t.lastRun.SetFullBackupTime(timestamp)
-	case jobTypeIncremental:
+	case model.BackupJobTypeIncremental:
 		t.lastRun.SetIncrementalBackupTime(timestamp)
 	}
 
@@ -105,7 +105,7 @@ func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType jobT
 }
 
 // clearFailedBackup removes a failed backup handler without updating history.
-func (t *routineTracker) clearFailedBackup(jobType jobType) {
+func (t *routineTracker) clearFailedBackup(jobType model.BackupJobType) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 

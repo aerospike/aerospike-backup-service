@@ -4,36 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
-
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/backup-go/models"
 )
-
-// startNamespacesBackup initiates a new backup process for the routine (multiple namespaces).
-// Each namespace is backed up independently using the provided BackupNamespaceRunner.
-// Returns a BackupNamespacesOperation that tracks the progress and status of the backup processes.
-func startNamespacesBackup(
-	ctx context.Context,
-	runner *BackupNamespaceRunner,
-	client aerospike.Backuper,
-	namespaces []string,
-	timeBounds model.TimeBounds,
-	now time.Time,
-	backupRoutine *model.BackupRoutine,
-	jobType jobType,
-) *BackupNamespacesOperation {
-	op := &BackupNamespacesOperation{
-		handlers: make(map[string]CancelableBackupHandler, len(namespaces)),
-	}
-
-	for _, namespace := range namespaces {
-		op.handlers[namespace] = runner.Run(ctx, client, backupRoutine, jobType, namespace, now, timeBounds)
-	}
-
-	return op
-}
 
 // BackupNamespacesOperation aggregates backup operations across multiple namespaces.
 // It creates individual backup process instances for each namespace and

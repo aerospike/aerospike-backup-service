@@ -27,17 +27,17 @@ func TestStartControllerAcquire_DeniesConcurrentAcquireForSameRoutineType(t *tes
 		NewStartDecider(),
 	)
 
-	release, err := controller.TryStart(routine, now, jobTypeFull)
+	release, err := controller.TryStart(routine, now, model.BackupJobTypeFull)
 	require.NoError(t, err)
 	require.NotNil(t, release)
 
-	secondRelease, err := controller.TryStart(routine, now, jobTypeFull)
+	secondRelease, err := controller.TryStart(routine, now, model.BackupJobTypeFull)
 	assert.Nil(t, secondRelease)
 	require.ErrorIs(t, err, errFullAlreadyRunning)
 
 	release()
 
-	thirdRelease, err := controller.TryStart(routine, now, jobTypeFull)
+	thirdRelease, err := controller.TryStart(routine, now, model.BackupJobTypeFull)
 	require.NoError(t, err)
 	require.NotNil(t, thirdRelease)
 	thirdRelease()
@@ -59,17 +59,17 @@ func TestStartControllerAcquire_DeniesIncrementalWhenFullIsReserved(t *testing.T
 		NewStartDecider(),
 	)
 
-	releaseFull, err := controller.TryStart(routine, now, jobTypeFull)
+	releaseFull, err := controller.TryStart(routine, now, model.BackupJobTypeFull)
 	require.NoError(t, err)
 	require.NotNil(t, releaseFull)
 
-	releaseIncremental, err := controller.TryStart(routine, now, jobTypeIncremental)
+	releaseIncremental, err := controller.TryStart(routine, now, model.BackupJobTypeIncremental)
 	assert.Nil(t, releaseIncremental)
 	require.ErrorIs(t, err, errIncrementalFullRunning)
 
 	releaseFull()
 
-	releaseIncremental, err = controller.TryStart(routine, now, jobTypeIncremental)
+	releaseIncremental, err = controller.TryStart(routine, now, model.BackupJobTypeIncremental)
 	require.NoError(t, err)
 	require.NotNil(t, releaseIncremental)
 	releaseIncremental()
@@ -91,7 +91,7 @@ func TestStartControllerRelease_IsIdempotent(t *testing.T) {
 		NewStartDecider(),
 	)
 
-	release, err := controller.TryStart(routine, now, jobTypeFull)
+	release, err := controller.TryStart(routine, now, model.BackupJobTypeFull)
 	require.NoError(t, err)
 	require.NotNil(t, release)
 
@@ -100,7 +100,7 @@ func TestStartControllerRelease_IsIdempotent(t *testing.T) {
 		release()
 	})
 
-	releaseAgain, err := controller.TryStart(routine, now, jobTypeFull)
+	releaseAgain, err := controller.TryStart(routine, now, model.BackupJobTypeFull)
 	require.NoError(t, err)
 	require.NotNil(t, releaseAgain)
 	releaseAgain()
@@ -123,15 +123,15 @@ func TestStartControllerRelease_TracksReservationCountByToken(t *testing.T) {
 		NewStartDecider(),
 	)
 
-	releaseOne, err := controller.TryStart(routine, now, jobTypeIncremental)
+	releaseOne, err := controller.TryStart(routine, now, model.BackupJobTypeIncremental)
 	require.NoError(t, err)
-	releaseTwo, err := controller.TryStart(routine, now, jobTypeIncremental)
+	releaseTwo, err := controller.TryStart(routine, now, model.BackupJobTypeIncremental)
 	require.NoError(t, err)
 
 	impl := controller.(*startControllerImpl)
 	key := reservationKey{
 		routineName: routine.Name,
-		backupType:  jobTypeIncremental,
+		backupType:  model.BackupJobTypeIncremental,
 	}
 	require.Equal(t, 2, impl.activeReservations[key])
 	require.Len(t, impl.tokenToReservation, 2)

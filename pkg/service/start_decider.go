@@ -24,7 +24,7 @@ type StartDecider interface {
 	// Returns nil when the start is allowed; otherwise returns a descriptive error
 	// that explains why admission must be denied.
 	CanStart(
-		backupType jobType,
+		backupType model.BackupJobType,
 		policy *model.BackupPolicy,
 		facts StartFacts,
 	) error
@@ -57,11 +57,11 @@ func NewStartDecider() StartDecider {
 
 // CanStart dispatches admission checks by backup type.
 func (g *startDeciderImpl) CanStart(
-	backupType jobType,
+	backupType model.BackupJobType,
 	policy *model.BackupPolicy,
 	facts StartFacts,
 ) error {
-	if backupType == jobTypeFull {
+	if backupType == model.BackupJobTypeFull {
 		return g.canStartFull(policy, facts)
 	}
 

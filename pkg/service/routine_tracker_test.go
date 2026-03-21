@@ -72,8 +72,8 @@ func TestRegisterAndGetState(t *testing.T) {
 	incrHandler.EXPECT().GetStats().Return(incrBackupStats).AnyTimes()
 	incrHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
-	tracker.register(jobTypeFull, fullHandler)
-	tracker.register(jobTypeIncremental, incrHandler)
+	tracker.register(model.BackupJobTypeFull, fullHandler)
+	tracker.register(model.BackupJobTypeIncremental, incrHandler)
 
 	snapshot, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)
@@ -91,11 +91,11 @@ func TestRecordSuccessfulBackup(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	handler := NewMockCancelableBackupHandler(ctrl)
-	tracker.register(jobTypeFull, handler)
+	tracker.register(model.BackupJobTypeFull, handler)
 
 	// record a successful full backup
 	now := time.Now()
-	tracker.recordSuccessfulBackup(routineName, jobTypeFull, now)
+	tracker.recordSuccessfulBackup(routineName, model.BackupJobTypeFull, now)
 
 	snapshot, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)
@@ -104,9 +104,9 @@ func TestRecordSuccessfulBackup(t *testing.T) {
 	assert.Nil(t, snapshot.lastRun.IncrementalBackupTime())
 
 	// record a successful incremental backup
-	tracker.register(jobTypeIncremental, handler)
+	tracker.register(model.BackupJobTypeIncremental, handler)
 	nowIncr := time.Now()
-	tracker.recordSuccessfulBackup(routineName, jobTypeIncremental, nowIncr)
+	tracker.recordSuccessfulBackup(routineName, model.BackupJobTypeIncremental, nowIncr)
 
 	snapshotIncr, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)
@@ -123,10 +123,10 @@ func TestClearFailedBackup(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	handler := NewMockCancelableBackupHandler(ctrl)
-	tracker.register(jobTypeFull, handler)
+	tracker.register(model.BackupJobTypeFull, handler)
 
 	// clear a failed backup
-	tracker.clearFailedBackup(jobTypeFull)
+	tracker.clearFailedBackup(model.BackupJobTypeFull)
 
 	snapshot, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)

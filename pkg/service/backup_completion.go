@@ -16,9 +16,9 @@ import (
 type BackupCompletionHandler interface {
 	// OnSuccess is called after a backup completes successfully.
 	// For full backups it also runs retention and backs up cluster configuration.
-	OnSuccess(ctx context.Context, routine *model.BackupRoutine, jobType jobType, timestamp time.Time, logger *slog.Logger)
+	OnSuccess(ctx context.Context, routine *model.BackupRoutine, jobType model.BackupJobType, timestamp time.Time, logger *slog.Logger)
 	// OnFailure is called when a backup fails (clears failed state in registry).
-	OnFailure(routine *model.BackupRoutine, jobType jobType)
+	OnFailure(routine *model.BackupRoutine, jobType model.BackupJobType)
 }
 
 type backupCompletionHandler struct {
@@ -46,13 +46,13 @@ var _ BackupCompletionHandler = (*backupCompletionHandler)(nil)
 func (h *backupCompletionHandler) OnSuccess(
 	ctx context.Context,
 	routine *model.BackupRoutine,
-	jobType jobType,
+	jobType model.BackupJobType,
 	timestamp time.Time,
 	logger *slog.Logger,
 ) {
 	go h.registry.recordSuccessfulBackup(routine.Name, jobType, timestamp)
 
-	if jobType != jobTypeFull {
+	if jobType != model.BackupJobTypeFull {
 		return
 	}
 
@@ -82,7 +82,7 @@ func (h *backupCompletionHandler) OnSuccess(
 
 func (h *backupCompletionHandler) OnFailure(
 	routine *model.BackupRoutine,
-	jobType jobType,
+	jobType model.BackupJobType,
 ) {
 	h.registry.clearFailedBackup(routine.Name, jobType)
 }
@@ -91,7 +91,7 @@ func (h *backupCompletionHandler) OnFailure(
 // It also emits the corresponding backup event prometheus metrics.
 func reportBackupOutcome(
 	routineName string,
-	backupType jobType,
+	backupType model.BackupJobType,
 	duration time.Duration,
 	err error,
 	logger *slog.Logger,
