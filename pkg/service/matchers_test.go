@@ -8,25 +8,6 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-type timeBounderMatcher struct {
-	expectedFromTime time.Time
-}
-
-func (m timeBounderMatcher) Matches(x any) bool {
-	if timeBounds, ok := x.(model.TimeBounds); ok {
-		return timeBounds.FromTime != nil && timeBounds.FromTime.Equal(m.expectedFromTime)
-	}
-	return false
-}
-
-func (m timeBounderMatcher) String() string {
-	return fmt.Sprintf("TimeBounds with FromTime=%v", m.expectedFromTime)
-}
-
-func newTimeBoundsFromTimeMatcher(fromTime time.Time) gomock.Matcher {
-	return timeBounderMatcher{expectedFromTime: fromTime}
-}
-
 type timeMatcher struct {
 	expectedFromTime time.Time
 }

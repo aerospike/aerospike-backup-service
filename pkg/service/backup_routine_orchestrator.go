@@ -14,13 +14,12 @@ import (
 
 var errBackupSkipped = errors.New("backup skipped")
 
-// BackupOrchestrator runs backup operations for a routine. It holds only shared dependencies;
-// each invocation receives an immutable *model.BackupRoutine snapshot.
+// BackupOrchestrator runs backup operations for a routine.
 type BackupOrchestrator struct {
 	registry          RunningBackupsRegistry
 	completionHandler BackupCompletionHandler
 	startController   StartController
-	nsExec            *NamespaceBackupExecutor
+	runner            AllNamespacesBackupRunner
 }
 
 // NewBackupOrchestrator builds a [BackupOrchestrator] from shared service dependencies.
@@ -28,13 +27,13 @@ func NewBackupOrchestrator(
 	registry RunningBackupsRegistry,
 	completionHandler BackupCompletionHandler,
 	startController StartController,
-	nsExec *NamespaceBackupExecutor,
+	backupRunner AllNamespacesBackupRunner,
 ) *BackupOrchestrator {
 	return &BackupOrchestrator{
 		registry:          registry,
 		completionHandler: completionHandler,
 		startController:   startController,
-		nsExec:            nsExec,
+		runner:            backupRunner,
 	}
 }
 
@@ -75,7 +74,7 @@ func (p *BackupOrchestrator) runBackupInternal(
 		StartTime:  now,
 		TimeBounds: p.createTimeBounds(backupType, now, routine),
 	}
-	backupHandler, err := p.nsExec.StartBackup(ctx, logger, routine, runSpec)
+	backupHandler, err := p.runner.StartBackup(ctx, logger, routine, runSpec)
 	if err != nil {
 		return err
 	}

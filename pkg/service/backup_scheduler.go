@@ -25,7 +25,9 @@ const (
 
 // JobScheduler is the subset of quartz.Scheduler used for backup job scheduling and removal.
 type JobScheduler interface {
+	// ScheduleJob registers jobDetail with the provided trigger.
 	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error
+	// DeleteJob removes the job identified by key.
 	DeleteJob(key *quartz.JobKey) error
 }
 

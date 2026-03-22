@@ -57,17 +57,18 @@ func InitComponents(
 	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
 	backupExecutor := backupexecutor.NewDefaultBackupExecutor(clientManager, operations)
 	startController := service.NewStartController(registry, service.NewStartDecider())
-	namespaceBackupExecutor := service.NewNamespaceBackupExecutor(
-		clientManager,
-		backupExecutor,
-		backendService,
-		pathService,
+	singleNamespaceExecutor := service.NewSingleNamespaceExecutor(backupExecutor, backendService, pathService)
+	namespaceResolver := aerospike.NewNamespaceResolver(clientManager)
+	allNamespacesBackupRunner := service.NewAllNamespacesBackupRunner(
+		singleNamespaceExecutor,
+		namespaceResolver,
 	)
+
 	backupOrchestrator := service.NewBackupOrchestrator(
 		registry,
 		completionHandler,
 		startController,
-		namespaceBackupExecutor,
+		allNamespacesBackupRunner,
 	)
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
 	configApplier := service.NewDefaultConfigApplier(backupScheduler, registry, config)

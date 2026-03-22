@@ -78,7 +78,7 @@ func TestScheduleRoutines(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				NewNamespaceBackupExecutor(nil, nil, nil, nil),
+				NewAllNamespacesBackupRunner(nil, nil),
 			))
 			err := bs.ScheduleRoutines(routines)
 

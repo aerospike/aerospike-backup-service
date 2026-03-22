@@ -36,7 +36,7 @@ generate_mocks() {
 
 generate_mocks \
     "pkg/service" \
-    "RestoreManager,BackupReaderWriter,BackupReader,RunningBackupsRegistry,RetentionManager,ClusterConfigWriter,CancelableBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController"
+    "RestoreManager,BackupReaderWriter,BackupReader,RunningBackupsRegistry,RetentionManager,ClusterConfigWriter,CancelableBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController,AllNamespacesBackupRunner,SingleNamespaceExecutor"
 
 generate_mocks \
     "pkg/service/restoreexecutor" \
