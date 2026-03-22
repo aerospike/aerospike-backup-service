@@ -58,13 +58,13 @@ func InitComponents(
 	backupExecutor := backupexecutor.NewDefaultBackupExecutor(clientManager, operations)
 	startController := service.NewStartController(registry, service.NewStartDecider())
 	namespaceBackupExecutor := service.NewNamespaceBackupExecutor(clientManager, backupExecutor, backendService, pathService)
-	backupPipeline := service.NewBackupOrchestrator(
+	backupOrchestrator := service.NewBackupOrchestrator(
 		registry,
 		completionHandler,
 		startController,
 		namespaceBackupExecutor,
 	)
-	backupScheduler := service.NewBackupScheduler(scheduler, backupPipeline)
+	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
 	configApplier := service.NewDefaultConfigApplier(backupScheduler, registry, config)
 
 	err = configApplier.ApplyNewConfig(ctx)

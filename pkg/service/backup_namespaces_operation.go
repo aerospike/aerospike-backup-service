@@ -36,6 +36,7 @@ func (op *BackupNamespacesOperation) Cancel() {
 	}
 }
 
+// GetMetrics sums backup-go metrics across all namespace handlers.
 func (op *BackupNamespacesOperation) GetMetrics() *models.Metrics {
 	metrics := make([]*models.Metrics, 0, len(op.handlers))
 

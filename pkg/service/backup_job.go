@@ -12,7 +12,7 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
-// backupJob implements the quartz.Job interface.
+// backupJob is a Quartz job that runs one full or incremental backup for a fixed routine snapshot.
 type backupJob struct {
 	orchestrator *BackupOrchestrator
 	routine      *model.BackupRoutine
@@ -41,10 +41,10 @@ func (j *backupJob) Description() string {
 	return fmt.Sprintf("%s %s backup job", j.routine.Name, j.jobType)
 }
 
-// newBackupJob creates a new backup job with an immutable routine snapshot.
-func newBackupJob(pipeline *BackupOrchestrator, routine *model.BackupRoutine, bt model.BackupJobType) quartz.Job {
+// newBackupJob builds a [quartz.Job] that invokes [BackupOrchestrator.RunBackup] with the given routine copy and type.
+func newBackupJob(orchestrator *BackupOrchestrator, routine *model.BackupRoutine, bt model.BackupJobType) quartz.Job {
 	return &backupJob{
-		orchestrator: pipeline,
+		orchestrator: orchestrator,
 		routine:      routine,
 		jobType:      bt,
 		logger:       slog.Default().With(attr.Routine(routine.Name), slog.Any("type", bt)),

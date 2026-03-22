@@ -14,7 +14,8 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// NamespaceBackupExecutor runs a backup for one namespace.
+// NamespaceBackupExecutor fans out backup work: it resolves namespaces, runs one
+// namespace backup at a time via [NamespaceBackupExecutor.Run], and writes metadata through the backend.
 type NamespaceBackupExecutor struct {
 	clientManager  aerospike.ClientManager
 	backupExecutor backupexecutor.Backup
@@ -22,6 +23,8 @@ type NamespaceBackupExecutor struct {
 	pathService    PathService
 }
 
+// NewNamespaceBackupExecutor creates an executor that uses the given client manager, backup implementation,
+// storage writer, and path layout.
 func NewNamespaceBackupExecutor(
 	clientManager aerospike.ClientManager,
 	backupExecutor backupexecutor.Backup,
@@ -36,7 +39,8 @@ func NewNamespaceBackupExecutor(
 	}
 }
 
-// StartBackup resolves namespaces for the routine and starts one backup handler per namespace.
+// StartBackup resolves the namespace list (from config or live cluster discovery when empty),
+// then starts one [CancelableBackupHandler] per namespace and returns them as a [BackupNamespacesOperation].
 func (e *NamespaceBackupExecutor) StartBackup(
 	ctx context.Context,
 	logger *slog.Logger,
@@ -74,7 +78,8 @@ type CancelableBackupHandler interface {
 	Cancel()
 }
 
-// Run executes the backup operation for the namespace.
+// Run starts a retryable backup for a single namespace: storage path from runSpec, delegate to
+// [backupexecutor.Backup.Run], optional cleanup and metadata on success or failure.
 func (e *NamespaceBackupExecutor) Run(
 	ctx context.Context,
 	logger *slog.Logger,
@@ -120,6 +125,7 @@ func (e *NamespaceBackupExecutor) Run(
 	)
 }
 
+// deleteFolder removes a timestamp or partial backup path on failure or cancel; logs non-cancel errors.
 func (e *NamespaceBackupExecutor) deleteFolder(ctx context.Context, logger *slog.Logger, routine *model.BackupRoutine, path string) {
 	err := e.backendService.Delete(ctx, routine, path)
 	if err != nil {
@@ -133,6 +139,7 @@ func (e *NamespaceBackupExecutor) deleteFolder(ctx context.Context, logger *slog
 	}
 }
 
+// writeBackupMetadata persists backup metadata to storage and logs the folder on success.
 func (e *NamespaceBackupExecutor) writeBackupMetadata(
 	ctx context.Context,
 	logger *slog.Logger,

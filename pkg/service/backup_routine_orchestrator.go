@@ -23,7 +23,7 @@ type BackupOrchestrator struct {
 	nsExec            *NamespaceBackupExecutor
 }
 
-// NewBackupOrchestrator constructs a orchestrator from app-wide collaborators.
+// NewBackupOrchestrator builds a [BackupOrchestrator] from shared service dependencies.
 func NewBackupOrchestrator(
 	registry RunningBackupsRegistry,
 	completionHandler BackupCompletionHandler,
@@ -55,6 +55,7 @@ func (p *BackupOrchestrator) RunBackup(ctx context.Context, routine *model.Backu
 	reportBackupOutcome(routine.Name, backupType, duration, err, logger)
 }
 
+// runBackupInternal starts namespace backups, registers the aggregate handler, and runs completion hooks.
 func (p *BackupOrchestrator) runBackupInternal(
 	ctx context.Context,
 	routine *model.BackupRoutine,
@@ -85,6 +86,7 @@ func (p *BackupOrchestrator) runBackupInternal(
 	return nil
 }
 
+// createTimeBounds derives incremental from-time and optional sealed to-time for this run.
 func (p *BackupOrchestrator) createTimeBounds(jobType model.BackupJobType, now time.Time, routine *model.BackupRoutine) model.TimeBounds {
 	var (
 		fromTime *time.Time

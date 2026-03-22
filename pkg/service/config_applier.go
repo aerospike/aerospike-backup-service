@@ -16,6 +16,8 @@ type ConfigApplier interface {
 	ApplyNewConfig(ctx context.Context) error
 }
 
+// DefaultConfigApplier applies configuration changes by unscheduling affected cron jobs, rescheduling
+// from the new config snapshot, and triggering backup-history sync for those routines.
 type DefaultConfigApplier struct {
 	mu              sync.Mutex
 	backupScheduler *BackupScheduler
@@ -23,6 +25,7 @@ type DefaultConfigApplier struct {
 	config          *model.Config
 }
 
+// NewDefaultConfigApplier wires config invalidation to the backup scheduler and running-backups registry.
 func NewDefaultConfigApplier(
 	backupScheduler *BackupScheduler,
 	registry RunningBackupsRegistry,
@@ -35,6 +38,7 @@ func NewDefaultConfigApplier(
 	}
 }
 
+// ApplyNewConfig reschedules periodic jobs and rescans backup history for routines marked invalid in config.
 func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()

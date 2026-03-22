@@ -40,14 +40,15 @@ type AdHocScheduler interface {
 // BackupScheduler wires Quartz to the backup orchestrator: periodic cron jobs, ad-hoc runs, and job deletion.
 type BackupScheduler struct {
 	scheduler JobScheduler
-	pipeline  *BackupOrchestrator
+	// orchestrator runs each fired job (cron or ad-hoc) via [BackupOrchestrator.RunBackup].
+	orchestrator *BackupOrchestrator
 }
 
 var _ AdHocScheduler = (*BackupScheduler)(nil)
 
-// NewBackupScheduler creates a scheduler backed by Quartz and the shared backup orchestrator.
-func NewBackupScheduler(scheduler JobScheduler, pipeline *BackupOrchestrator) *BackupScheduler {
-	return &BackupScheduler{scheduler: scheduler, pipeline: pipeline}
+// NewBackupScheduler creates a scheduler backed by Quartz and the shared [BackupOrchestrator].
+func NewBackupScheduler(scheduler JobScheduler, orchestrator *BackupOrchestrator) *BackupScheduler {
+	return &BackupScheduler{scheduler: scheduler, orchestrator: orchestrator}
 }
 
 // DeleteJob removes a scheduled job (e.g. when clearing periodic jobs on config change).
@@ -71,9 +72,10 @@ func (s *BackupScheduler) ScheduleRoutines(routines []*model.BackupRoutine) erro
 	return errs
 }
 
+// scheduleRoutineBackups registers the full cron job and, when configured, the incremental cron job for one routine.
 func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) error {
 	fullJob := quartz.NewJobDetail(
-		newBackupJob(s.pipeline, routine, model.BackupJobTypeFull),
+		newBackupJob(s.orchestrator, routine, model.BackupJobTypeFull),
 		jobKey(routine.Name, model.BackupJobTypeFull),
 	)
 	if err := s.scheduleCronJob(routine.IntervalCron, fullJob); err != nil {
@@ -86,7 +88,7 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 	}
 
 	incrementalJob := quartz.NewJobDetail(
-		newBackupJob(s.pipeline, routine, model.BackupJobTypeIncremental),
+		newBackupJob(s.orchestrator, routine, model.BackupJobTypeIncremental),
 		jobKey(routine.Name, model.BackupJobTypeIncremental),
 	)
 	if err := s.scheduleCronJob(routine.IncrIntervalCron, incrementalJob); err != nil {
@@ -96,6 +98,7 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 	return nil
 }
 
+// scheduleCronJob attaches a cron trigger to jobDetail and schedules it on the underlying Quartz scheduler.
 func (s *BackupScheduler) scheduleCronJob(interval string, jobDetail *quartz.JobDetail) error {
 	cronTrigger, err := quartz.NewCronTrigger(interval)
 	if err != nil {
@@ -125,12 +128,13 @@ func (s *BackupScheduler) TriggerAdHocIncrementalBackup(routine *model.BackupRou
 	return s.triggerAdHocBackup(routine, delay, model.BackupJobTypeIncremental)
 }
 
+// triggerAdHocBackup schedules a single run-once job in the ad-hoc group after at least [minAdHocBackupDelay].
 func (s *BackupScheduler) triggerAdHocBackup(
 	routine *model.BackupRoutine,
 	delay time.Duration,
 	jt model.BackupJobType,
 ) error {
-	jobDetail := quartz.NewJobDetail(newBackupJob(s.pipeline, routine.Copy(), jt), adhocKey(routine.Name))
+	jobDetail := quartz.NewJobDetail(newBackupJob(s.orchestrator, routine.Copy(), jt), adhocKey(routine.Name))
 
 	return s.scheduler.ScheduleJob(jobDetail, quartz.NewRunOnceTrigger(max(delay, minAdHocBackupDelay)))
 }
@@ -146,11 +150,13 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 	return scheduler, err
 }
 
+// jobKey returns the stable Quartz key for a periodic full or incremental job in the scheduled group.
 func jobKey(routineName string, jt model.BackupJobType) *quartz.JobKey {
 	jobName := fmt.Sprintf("%s-%s", routineName, jt)
 	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupScheduled))
 }
 
+// adhocKey builds a unique job key for a one-off backup in the ad-hoc Quartz group.
 func adhocKey(name string) *quartz.JobKey {
 	jobName := fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli())
 	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupAdHoc))

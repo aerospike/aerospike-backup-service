@@ -6,10 +6,11 @@ import "time"
 type BackupJobType string
 
 const (
-	BackupJobTypeFull         BackupJobType = "full"
+	BackupJobTypeFull        BackupJobType = "full"
 	BackupJobTypeIncremental BackupJobType = "incremental"
 )
 
+// String returns a short human-readable label for metrics and logs.
 func (j BackupJobType) String() string {
 	if j == BackupJobTypeFull {
 		return "Full backup"
@@ -20,7 +21,10 @@ func (j BackupJobType) String() string {
 
 // BackupRunSpec captures run-specific backup parameters passed across layers.
 type BackupRunSpec struct {
-	Type       BackupJobType
-	StartTime  time.Time
+	// Type is full or incremental for this run.
+	Type BackupJobType
+	// StartTime is the logical start instant for this run (paths and metadata).
+	StartTime time.Time
+	// TimeBounds constrains what data is included (incremental from/to, sealed to-time).
 	TimeBounds TimeBounds
 }

@@ -29,12 +29,14 @@ type Backup interface {
 	) (BackupHandler, error)
 }
 
-// DefaultBackupExecutor implements the actual backup logic.
+// DefaultBackupExecutor implements [Backup] using backup-go (scan, XDR, or combined) against Aerospike
+// and writes backup data via the storage operations facade.
 type DefaultBackupExecutor struct {
 	clientManager aerospike.ClientManager
 	operations    storageWriter
 }
 
+// NewDefaultBackupExecutor creates an executor that acquires clients through clientManager and writes via operations.
 func NewDefaultBackupExecutor(clientManager aerospike.ClientManager, operations storageWriter) *DefaultBackupExecutor {
 	return &DefaultBackupExecutor{
 		clientManager: clientManager,
@@ -90,6 +92,7 @@ func (r *DefaultBackupExecutor) Run(
 	}, nil
 }
 
+// closeOnWaitBackupHandler wraps a [BackupHandler] and closes the Aerospike client after [BackupHandler.Wait] completes.
 type closeOnWaitBackupHandler struct {
 	inner         BackupHandler
 	client        aerospike.Client
@@ -97,15 +100,18 @@ type closeOnWaitBackupHandler struct {
 	closeOnce     sync.Once
 }
 
+// Wait delegates to the inner handler, then closes the client exactly once.
 func (h *closeOnWaitBackupHandler) Wait(ctx context.Context) error {
 	defer h.closeOnce.Do(func() { h.clientManager.Close(h.client) })
 	return h.inner.Wait(ctx)
 }
 
+// GetMetrics returns metrics from the inner backup handler.
 func (h *closeOnWaitBackupHandler) GetMetrics() *models.Metrics {
 	return h.inner.GetMetrics()
 }
 
+// GetStats returns stats from the inner backup handler.
 func (h *closeOnWaitBackupHandler) GetStats() *models.BackupStats {
 	return h.inner.GetStats()
 }
