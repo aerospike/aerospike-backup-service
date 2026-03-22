@@ -74,7 +74,7 @@ func (p *BackupOrchestrator) runBackupInternal(
 		StartTime:  now,
 		TimeBounds: p.createTimeBounds(backupType, now, routine),
 	}
-	backupHandler, err := p.runner.StartBackup(ctx, logger, routine, runSpec)
+	backupHandler, err := p.runner.StartBackup(ctx, routine, runSpec, logger)
 	if err != nil {
 		return err
 	}

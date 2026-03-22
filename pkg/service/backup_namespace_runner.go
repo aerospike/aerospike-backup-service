@@ -14,9 +14,9 @@ type AllNamespacesBackupRunner interface {
 	// StartBackup resolves target namespaces and starts one cancelable backup per namespace.
 	StartBackup(
 		ctx context.Context,
-		logger *slog.Logger,
 		backupRoutine *model.BackupRoutine,
 		runSpec model.BackupRunSpec,
+		logger *slog.Logger,
 	) (*BackupNamespacesOperation, error)
 }
 
@@ -44,9 +44,9 @@ func NewAllNamespacesBackupRunner(
 // aggregate [BackupNamespacesOperation].
 func (r *AllNamespacesBackupRunnerImpl) StartBackup(
 	ctx context.Context,
-	logger *slog.Logger,
 	backupRoutine *model.BackupRoutine,
 	runSpec model.BackupRunSpec,
+	logger *slog.Logger,
 ) (*BackupNamespacesOperation, error) {
 	namespaces, err := r.resolver.ResolveNamespaces(ctx, backupRoutine, logger)
 	if err != nil {
@@ -58,7 +58,7 @@ func (r *AllNamespacesBackupRunnerImpl) StartBackup(
 	}
 
 	for _, namespace := range namespaces {
-		op.handlers[namespace] = r.executor.Run(ctx, logger, backupRoutine, namespace, runSpec)
+		op.handlers[namespace] = r.executor.Run(ctx, backupRoutine, namespace, runSpec, logger)
 	}
 
 	return op, nil

@@ -19,10 +19,10 @@ type SingleNamespaceExecutor interface {
 	// Run starts backup execution for a single namespace and returns a cancelable handler.
 	Run(
 		ctx context.Context,
-		logger *slog.Logger,
 		backupRoutine *model.BackupRoutine,
 		namespace string,
 		runSpec model.BackupRunSpec,
+		logger *slog.Logger,
 	) CancelableBackupHandler
 }
 
@@ -58,10 +58,10 @@ type CancelableBackupHandler interface {
 // with cleanup and metadata callbacks wired for the routine's storage layout.
 func (e *singleNamespaceExecutorImpl) Run(
 	ctx context.Context,
-	logger *slog.Logger,
 	backupRoutine *model.BackupRoutine,
 	namespace string,
 	runSpec model.BackupRunSpec,
+	logger *slog.Logger,
 ) CancelableBackupHandler {
 	backupFolder := e.pathService.GetBackupPath(backupRoutine.Name, runSpec.Type, namespace, runSpec.StartTime)
 
@@ -70,7 +70,7 @@ func (e *singleNamespaceExecutorImpl) Run(
 		*backupRoutine.BackupPolicy.GetRetryPolicyOrDefault(),
 		retryableBackupCallbacks{
 			Start: func(ctx context.Context) (backupexecutor.BackupHandler, error) {
-				return e.backupExecutor.Run(ctx, backupRoutine, runSpec.TimeBounds, namespace, backupFolder)
+				return e.backupExecutor.Run(ctx, backupRoutine, runSpec.TimeBounds, namespace, backupFolder, logger)
 			},
 			OnFail: func(ctx context.Context) {
 				path := e.pathService.GetTimestampPath(backupRoutine.Name, runSpec.StartTime, runSpec.Type)
@@ -88,7 +88,7 @@ func (e *singleNamespaceExecutorImpl) Run(
 					backupRoutine.BackupPolicy,
 				)
 
-				return e.writeBackupMetadata(ctx, logger, backupRoutine, metadata, backupFolder)
+				return e.writeBackupMetadata(ctx, backupRoutine, metadata, backupFolder, logger)
 			},
 			OnRetry: func() {
 				observeBackupEvent(backupRoutine.Name, runSpec.Type, BackupOutcomeRetry, 0)
@@ -121,10 +121,10 @@ func (e *singleNamespaceExecutorImpl) deleteFolder(
 // writeBackupMetadata persists backup metadata to storage and logs the folder on success.
 func (e *singleNamespaceExecutorImpl) writeBackupMetadata(
 	ctx context.Context,
-	logger *slog.Logger,
 	routine *model.BackupRoutine,
 	metadata model.BackupMetadata,
 	backupFolder string,
+	logger *slog.Logger,
 ) error {
 	if err := e.backendService.WriteBackupMetadata(ctx, routine, backupFolder, metadata); err != nil {
 		return fmt.Errorf("failed to write backup metadata to %q: %w", backupFolder, err)

@@ -3,6 +3,7 @@ package backupexecutor
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -26,6 +27,7 @@ type Backup interface {
 		timeBounds model.TimeBounds,
 		namespace string,
 		path string,
+		logger *slog.Logger,
 	) (BackupHandler, error)
 }
 
@@ -54,8 +56,9 @@ func (r *DefaultBackupExecutor) Run(
 	timeBounds model.TimeBounds,
 	namespace string,
 	path string,
+	logger *slog.Logger,
 ) (BackupHandler, error) {
-	client, err := r.clientManager.GetClient(ctx, routine.SourceCluster, nil)
+	client, err := r.clientManager.GetClient(ctx, routine.SourceCluster, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backup client: %w", err)
 	}

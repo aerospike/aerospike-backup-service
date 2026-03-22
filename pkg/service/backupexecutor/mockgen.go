@@ -11,6 +11,7 @@ package backupexecutor
 
 import (
 	context "context"
+	slog "log/slog"
 	reflect "reflect"
 
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -43,18 +44,18 @@ func (m *MockBackup) EXPECT() *MockBackupMockRecorder {
 }
 
 // Run mocks base method.
-func (m *MockBackup) Run(ctx context.Context, routine *model.BackupRoutine, timeBounds model.TimeBounds, namespace, path string) (BackupHandler, error) {
+func (m *MockBackup) Run(ctx context.Context, routine *model.BackupRoutine, timeBounds model.TimeBounds, namespace, path string, logger *slog.Logger) (BackupHandler, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx, routine, timeBounds, namespace, path)
+	ret := m.ctrl.Call(m, "Run", ctx, routine, timeBounds, namespace, path, logger)
 	ret0, _ := ret[0].(BackupHandler)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockBackupMockRecorder) Run(ctx, routine, timeBounds, namespace, path any) *gomock.Call {
+func (mr *MockBackupMockRecorder) Run(ctx, routine, timeBounds, namespace, path, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockBackup)(nil).Run), ctx, routine, timeBounds, namespace, path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockBackup)(nil).Run), ctx, routine, timeBounds, namespace, path, logger)
 }
 
 // MockBackupHandler is a mock of BackupHandler interface.

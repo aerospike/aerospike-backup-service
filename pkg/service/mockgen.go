@@ -731,18 +731,18 @@ func (m *MockAllNamespacesBackupRunner) EXPECT() *MockAllNamespacesBackupRunnerM
 }
 
 // StartBackup mocks base method.
-func (m *MockAllNamespacesBackupRunner) StartBackup(ctx context.Context, logger *slog.Logger, backupRoutine *model.BackupRoutine, runSpec model.BackupRunSpec) (*BackupNamespacesOperation, error) {
+func (m *MockAllNamespacesBackupRunner) StartBackup(ctx context.Context, backupRoutine *model.BackupRoutine, runSpec model.BackupRunSpec, logger *slog.Logger) (*BackupNamespacesOperation, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartBackup", ctx, logger, backupRoutine, runSpec)
+	ret := m.ctrl.Call(m, "StartBackup", ctx, backupRoutine, runSpec, logger)
 	ret0, _ := ret[0].(*BackupNamespacesOperation)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // StartBackup indicates an expected call of StartBackup.
-func (mr *MockAllNamespacesBackupRunnerMockRecorder) StartBackup(ctx, logger, backupRoutine, runSpec any) *gomock.Call {
+func (mr *MockAllNamespacesBackupRunnerMockRecorder) StartBackup(ctx, backupRoutine, runSpec, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartBackup", reflect.TypeOf((*MockAllNamespacesBackupRunner)(nil).StartBackup), ctx, logger, backupRoutine, runSpec)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartBackup", reflect.TypeOf((*MockAllNamespacesBackupRunner)(nil).StartBackup), ctx, backupRoutine, runSpec, logger)
 }
 
 // MockSingleNamespaceExecutor is a mock of SingleNamespaceExecutor interface.
@@ -770,15 +770,15 @@ func (m *MockSingleNamespaceExecutor) EXPECT() *MockSingleNamespaceExecutorMockR
 }
 
 // Run mocks base method.
-func (m *MockSingleNamespaceExecutor) Run(ctx context.Context, logger *slog.Logger, backupRoutine *model.BackupRoutine, namespace string, runSpec model.BackupRunSpec) CancelableBackupHandler {
+func (m *MockSingleNamespaceExecutor) Run(ctx context.Context, backupRoutine *model.BackupRoutine, namespace string, runSpec model.BackupRunSpec, logger *slog.Logger) CancelableBackupHandler {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx, logger, backupRoutine, namespace, runSpec)
+	ret := m.ctrl.Call(m, "Run", ctx, backupRoutine, namespace, runSpec, logger)
 	ret0, _ := ret[0].(CancelableBackupHandler)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockSingleNamespaceExecutorMockRecorder) Run(ctx, logger, backupRoutine, namespace, runSpec any) *gomock.Call {
+func (mr *MockSingleNamespaceExecutorMockRecorder) Run(ctx, backupRoutine, namespace, runSpec, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockSingleNamespaceExecutor)(nil).Run), ctx, logger, backupRoutine, namespace, runSpec)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockSingleNamespaceExecutor)(nil).Run), ctx, backupRoutine, namespace, runSpec, logger)
 }
