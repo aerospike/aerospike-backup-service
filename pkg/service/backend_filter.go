@@ -23,7 +23,7 @@ type BaseFilter struct {
 type RoutineFilter struct {
 	BaseFilter
 	routine *model.BackupRoutine
-	JobType model.BackupJobType
+	JobType model.BackupType
 
 	onlyLast bool // return last backup only
 }

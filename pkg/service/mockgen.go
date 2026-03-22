@@ -301,7 +301,7 @@ func (mr *MockRunningBackupsRegistryMockRecorder) SynchroniseBackupHistory(ctx, 
 }
 
 // clearFailedBackup mocks base method.
-func (m *MockRunningBackupsRegistry) clearFailedBackup(routineName string, jt model.BackupJobType) {
+func (m *MockRunningBackupsRegistry) clearFailedBackup(routineName string, jt model.BackupType) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "clearFailedBackup", routineName, jt)
 }
@@ -313,7 +313,7 @@ func (mr *MockRunningBackupsRegistryMockRecorder) clearFailedBackup(routineName,
 }
 
 // recordSuccessfulBackup mocks base method.
-func (m *MockRunningBackupsRegistry) recordSuccessfulBackup(routineName string, jt model.BackupJobType, timestamp time.Time) {
+func (m *MockRunningBackupsRegistry) recordSuccessfulBackup(routineName string, jt model.BackupType, timestamp time.Time) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "recordSuccessfulBackup", routineName, jt, timestamp)
 }
@@ -325,7 +325,7 @@ func (mr *MockRunningBackupsRegistryMockRecorder) recordSuccessfulBackup(routine
 }
 
 // register mocks base method.
-func (m *MockRunningBackupsRegistry) register(routineName string, jt model.BackupJobType, handler CancelableBackupHandler) {
+func (m *MockRunningBackupsRegistry) register(routineName string, jt model.BackupType, handler CancelableBackupHandler) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "register", routineName, jt, handler)
 }
@@ -592,7 +592,7 @@ func (m *MockBackupCompletionHandler) EXPECT() *MockBackupCompletionHandlerMockR
 }
 
 // OnFailure mocks base method.
-func (m *MockBackupCompletionHandler) OnFailure(routine *model.BackupRoutine, jobType model.BackupJobType) {
+func (m *MockBackupCompletionHandler) OnFailure(routine *model.BackupRoutine, jobType model.BackupType) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "OnFailure", routine, jobType)
 }
@@ -604,7 +604,7 @@ func (mr *MockBackupCompletionHandlerMockRecorder) OnFailure(routine, jobType an
 }
 
 // OnSuccess mocks base method.
-func (m *MockBackupCompletionHandler) OnSuccess(ctx context.Context, routine *model.BackupRoutine, jobType model.BackupJobType, timestamp time.Time, logger *slog.Logger) {
+func (m *MockBackupCompletionHandler) OnSuccess(ctx context.Context, routine *model.BackupRoutine, jobType model.BackupType, timestamp time.Time, logger *slog.Logger) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "OnSuccess", ctx, routine, jobType, timestamp, logger)
 }
@@ -692,7 +692,7 @@ func (m *MockStartController) EXPECT() *MockStartControllerMockRecorder {
 }
 
 // TryStart mocks base method.
-func (m *MockStartController) TryStart(routine *model.BackupRoutine, now time.Time, backupType model.BackupJobType) (func(), error) {
+func (m *MockStartController) TryStart(routine *model.BackupRoutine, now time.Time, backupType model.BackupType) (func(), error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TryStart", routine, now, backupType)
 	ret0, _ := ret[0].(func())

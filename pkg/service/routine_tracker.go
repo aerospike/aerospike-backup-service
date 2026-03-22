@@ -17,7 +17,7 @@ type routineTracker struct {
 	mu sync.RWMutex
 
 	// --- Live State ---
-	handlers map[model.BackupJobType]CancelableBackupHandler
+	handlers map[model.BackupType]CancelableBackupHandler
 
 	// --- History State ---
 	lastRun *model.BackupTime
@@ -37,7 +37,7 @@ type routineTracker struct {
 func newRoutineTracker() *routineTracker {
 	return &routineTracker{
 		initialSyncDone: make(chan struct{}),
-		handlers:        make(map[model.BackupJobType]CancelableBackupHandler),
+		handlers:        make(map[model.BackupType]CancelableBackupHandler),
 		lastRun:         model.NewNoBackupTime(), // Start with non-nil empty state
 	}
 }
@@ -71,7 +71,7 @@ func (t *routineTracker) getState(timeout time.Duration) (*trackerSnapshot, erro
 }
 
 // register adds a new running backup handler.
-func (t *routineTracker) register(jobType model.BackupJobType, handler CancelableBackupHandler) {
+func (t *routineTracker) register(jobType model.BackupType, handler CancelableBackupHandler) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -80,7 +80,7 @@ func (t *routineTracker) register(jobType model.BackupJobType, handler Cancelabl
 }
 
 // recordSuccessfulBackup removes a successful backup and updates its last run time.
-func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType model.BackupJobType, timestamp time.Time) {
+func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType model.BackupType, timestamp time.Time) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -105,7 +105,7 @@ func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType mode
 }
 
 // clearFailedBackup removes a failed backup handler without updating history.
-func (t *routineTracker) clearFailedBackup(jobType model.BackupJobType) {
+func (t *routineTracker) clearFailedBackup(jobType model.BackupType) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 

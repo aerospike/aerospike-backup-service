@@ -97,12 +97,8 @@ func (e *NamespaceBackupExecutor) Run(
 				return e.backupExecutor.Run(ctx, backupRoutine, runSpec.TimeBounds, namespace, backupFolder)
 			},
 			OnFail: func(ctx context.Context) {
-				e.deleteFolder(
-					ctx,
-					logger,
-					backupRoutine,
-					e.pathService.GetTimestampPath(backupRoutine.Name, runSpec.StartTime, runSpec.Type),
-				)
+				path := e.pathService.GetTimestampPath(backupRoutine.Name, runSpec.StartTime, runSpec.Type)
+				e.deleteFolder(ctx, backupRoutine, path, logger)
 			},
 			OnSuccess: func(ctx context.Context, stats *models.BackupStats) error {
 				if runSpec.Type == model.BackupJobTypeIncremental && stats.IsEmpty() {
@@ -115,6 +111,7 @@ func (e *NamespaceBackupExecutor) Run(
 					runSpec.StartTime,
 					backupRoutine.BackupPolicy,
 				)
+
 				return e.writeBackupMetadata(ctx, logger, backupRoutine, metadata, backupFolder)
 			},
 			OnRetry: func() {
@@ -126,7 +123,12 @@ func (e *NamespaceBackupExecutor) Run(
 }
 
 // deleteFolder removes a timestamp or partial backup path on failure or cancel; logs non-cancel errors.
-func (e *NamespaceBackupExecutor) deleteFolder(ctx context.Context, logger *slog.Logger, routine *model.BackupRoutine, path string) {
+func (e *NamespaceBackupExecutor) deleteFolder(
+	ctx context.Context,
+	routine *model.BackupRoutine,
+	path string,
+	logger *slog.Logger,
+) {
 	err := e.backendService.Delete(ctx, routine, path)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {

@@ -225,7 +225,12 @@ const (
 )
 
 // observeBackupEvent updates Prometheus backup counters/histograms.
-func observeBackupEvent(routineName string, backupType model.BackupJobType, outcome BackupOutcome, duration time.Duration) {
+func observeBackupEvent(
+	routineName string,
+	backupType model.BackupType,
+	outcome BackupOutcome,
+	duration time.Duration,
+) {
 	backupCounters.With(prometheus.Labels{
 		"routine": routineName,
 		"type":    string(backupType),

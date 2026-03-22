@@ -132,7 +132,7 @@ func (s *BackupScheduler) TriggerAdHocIncrementalBackup(routine *model.BackupRou
 func (s *BackupScheduler) triggerAdHocBackup(
 	routine *model.BackupRoutine,
 	delay time.Duration,
-	jt model.BackupJobType,
+	jt model.BackupType,
 ) error {
 	jobDetail := quartz.NewJobDetail(newBackupJob(s.orchestrator, routine.Copy(), jt), adhocKey(routine.Name))
 
@@ -151,7 +151,7 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 }
 
 // jobKey returns the stable Quartz key for a periodic full or incremental job in the scheduled group.
-func jobKey(routineName string, jt model.BackupJobType) *quartz.JobKey {
+func jobKey(routineName string, jt model.BackupType) *quartz.JobKey {
 	jobName := fmt.Sprintf("%s-%s", routineName, jt)
 	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupScheduled))
 }

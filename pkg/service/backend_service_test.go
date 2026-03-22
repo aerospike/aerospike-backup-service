@@ -264,7 +264,12 @@ func TestIncrementalBackup(t *testing.T) {
 
 	// Now create an incremental backup
 	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
-	incrementalPath := pathService.GetBackupPath(routineName, model.BackupJobTypeIncremental, testNamespace, incrementalTime)
+	incrementalPath := pathService.GetBackupPath(
+		routineName,
+		model.BackupJobTypeIncremental,
+		testNamespace,
+		incrementalTime,
+	)
 
 	incMetadata := model.BackupMetadata{
 		Created:     incrementalTime,
@@ -325,7 +330,12 @@ func TestReadPath(t *testing.T) {
 
 	// Now create an incremental backup
 	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
-	incrementalPath := pathService.GetBackupPath(routineName, model.BackupJobTypeIncremental, testNamespace, incrementalTime)
+	incrementalPath := pathService.GetBackupPath(
+		routineName,
+		model.BackupJobTypeIncremental,
+		testNamespace,
+		incrementalTime,
+	)
 
 	incMetadata := model.BackupMetadata{
 		Created:   incrementalTime,

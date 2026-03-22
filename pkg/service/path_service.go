@@ -25,11 +25,11 @@ const (
 type PathService interface {
 	// GetTimestampPath returns a timestamped path for a backup.
 	// The path is composed of {routineName}/{backupType}/{timestamp}.
-	GetTimestampPath(routineName string, timestamp time.Time, backupType model.BackupJobType) string
+	GetTimestampPath(routineName string, timestamp time.Time, backupType model.BackupType) string
 
 	// GetBackupPath returns the path for a specific namespace backup.
 	// The path is composed of {routineName}/{backupType}/{timestamp}/data/{namespace}.
-	GetBackupPath(routineName string, backupType model.BackupJobType, namespace string, timestamp time.Time) string
+	GetBackupPath(routineName string, backupType model.BackupType, namespace string, timestamp time.Time) string
 
 	// GetConfigurationPath returns the path for a configuration backup.
 	// The path is composed of {routineName}/backup/{timestamp}/configuration.
@@ -61,14 +61,18 @@ func NewPathService(format *model.TimestampFormat) *PathServiceImpl {
 }
 
 // GetTimestampPath returns the timestamped path for a backup.
-func (s *PathServiceImpl) GetTimestampPath(routineName string, timestamp time.Time, backupType model.BackupJobType) string {
+func (s *PathServiceImpl) GetTimestampPath(
+	routineName string,
+	timestamp time.Time,
+	backupType model.BackupType,
+) string {
 	return path.Join(backupRootPath(routineName, backupType), s.formatTimestamp(timestamp))
 }
 
 // GetBackupPath returns the path for a specific namespace backup.
 func (s *PathServiceImpl) GetBackupPath(
 	routineName string,
-	backupType model.BackupJobType,
+	backupType model.BackupType,
 	namespace string,
 	timestamp time.Time,
 ) string {
@@ -107,7 +111,7 @@ func (s *PathServiceImpl) ExtractTimestampFromPath(path string) string {
 }
 
 // backupRootPath returns the root path for a backup.
-func backupRootPath(routineName string, backupType model.BackupJobType) string {
+func backupRootPath(routineName string, backupType model.BackupType) string {
 	if backupType == model.BackupJobTypeFull {
 		return path.Join(routineName, fullBackupDirectory)
 	}

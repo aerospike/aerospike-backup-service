@@ -98,7 +98,8 @@ func TestRun_SuccessfulFullBackup(t *testing.T) {
 			return nil
 		})
 
-	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, model.BackupRunSpec{Type: model.BackupJobTypeFull, StartTime: now, TimeBounds: timeBounds})
+	spec := model.BackupRunSpec{Type: model.BackupJobTypeFull, StartTime: now, TimeBounds: timeBounds}
+	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, spec)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
@@ -151,7 +152,8 @@ func TestSuccessfulIncrementalBackup(t *testing.T) {
 			return nil
 		})
 
-	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, model.BackupRunSpec{Type: model.BackupJobTypeIncremental, StartTime: now, TimeBounds: timeBounds})
+	spec := model.BackupRunSpec{Type: model.BackupJobTypeIncremental, StartTime: now, TimeBounds: timeBounds}
+	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, spec)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
@@ -194,7 +196,8 @@ func TestEmptyIncrementalBackup(t *testing.T) {
 
 	// No WriteBackupMetadata call expected for empty incremental backup.
 
-	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, model.BackupRunSpec{Type: model.BackupJobTypeIncremental, StartTime: now, TimeBounds: timeBounds})
+	spec := model.BackupRunSpec{Type: model.BackupJobTypeIncremental, StartTime: now, TimeBounds: timeBounds}
+	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, spec)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
@@ -223,7 +226,8 @@ func TestBackupExecutorError(t *testing.T) {
 		Return(nil, errors.New("executor error"))
 
 	// backup fails to start => nothing is written via backendService
-	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, model.BackupRunSpec{Type: model.BackupJobTypeFull, StartTime: now, TimeBounds: timeBounds})
+	spec := model.BackupRunSpec{Type: model.BackupJobTypeFull, StartTime: now, TimeBounds: timeBounds}
+	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, spec)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
@@ -261,7 +265,8 @@ func TestBackupHandlerError(t *testing.T) {
 					Delete(gomock.Any(), backupRoutine, timestampPath).
 					Return(nil)
 
-	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, model.BackupRunSpec{Type: model.BackupJobTypeFull, StartTime: now, TimeBounds: timeBounds})
+	spec := model.BackupRunSpec{Type: model.BackupJobTypeFull, StartTime: now, TimeBounds: timeBounds}
+	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, spec)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
@@ -310,7 +315,8 @@ func TestMetadataWriteError(t *testing.T) {
 		Delete(gomock.Any(), backupRoutine, timestampPath).
 		Return(nil)
 
-	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, model.BackupRunSpec{Type: model.BackupJobTypeFull, StartTime: now, TimeBounds: timeBounds})
+	spec := model.BackupRunSpec{Type: model.BackupJobTypeFull, StartTime: now, TimeBounds: timeBounds}
+	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, spec)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
@@ -358,7 +364,13 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 					Delete(gomock.Any(), backupRoutine, timestampPath).
 					Return(nil)
 
-	handler := runner.Run(t.Context(), slog.Default(), backupRoutine, testNamespace, model.BackupRunSpec{Type: model.BackupJobTypeFull, StartTime: now, TimeBounds: timeBounds})
+	handler := runner.Run(
+		t.Context(),
+		slog.Default(),
+		backupRoutine,
+		testNamespace,
+		model.BackupRunSpec{Type: model.BackupJobTypeFull, StartTime: now, TimeBounds: timeBounds},
+	)
 
 	// Wait for the handler.Wait to be called
 	wg.Wait()

@@ -16,7 +16,7 @@ import (
 type backupJob struct {
 	orchestrator *BackupOrchestrator
 	routine      *model.BackupRoutine
-	jobType      model.BackupJobType
+	jobType      model.BackupType
 	logger       *slog.Logger
 }
 
@@ -42,7 +42,7 @@ func (j *backupJob) Description() string {
 }
 
 // newBackupJob builds a [quartz.Job] that invokes [BackupOrchestrator.RunBackup] with the given routine copy and type.
-func newBackupJob(orchestrator *BackupOrchestrator, routine *model.BackupRoutine, bt model.BackupJobType) quartz.Job {
+func newBackupJob(orchestrator *BackupOrchestrator, routine *model.BackupRoutine, bt model.BackupType) quartz.Job {
 	return &backupJob{
 		orchestrator: orchestrator,
 		routine:      routine,

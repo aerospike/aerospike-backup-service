@@ -74,7 +74,12 @@ func TestScheduleRoutines(t *testing.T) {
 			for _, routine := range tt.routines {
 				routines = append(routines, routine)
 			}
-			bs := NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, NewNamespaceBackupExecutor(nil, nil, nil, nil)))
+			bs := NewBackupScheduler(scheduler, NewBackupOrchestrator(
+				nil,
+				nil,
+				nil,
+				NewNamespaceBackupExecutor(nil, nil, nil, nil),
+			))
 			err := bs.ScheduleRoutines(routines)
 
 			require.NoError(t, err)

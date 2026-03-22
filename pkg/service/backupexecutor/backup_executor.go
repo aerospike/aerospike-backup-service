@@ -92,7 +92,8 @@ func (r *DefaultBackupExecutor) Run(
 	}, nil
 }
 
-// closeOnWaitBackupHandler wraps a [BackupHandler] and closes the Aerospike client after [BackupHandler.Wait] completes.
+// closeOnWaitBackupHandler wraps a [BackupHandler] and closes the
+// Aerospike client after [BackupHandler.Wait] completes.
 type closeOnWaitBackupHandler struct {
 	inner         BackupHandler
 	client        aerospike.Client

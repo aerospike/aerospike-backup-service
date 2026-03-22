@@ -39,7 +39,12 @@ func NewBackupOrchestrator(
 }
 
 // RunBackup executes a full or incremental backup for the given routine snapshot.
-func (p *BackupOrchestrator) RunBackup(ctx context.Context, routine *model.BackupRoutine, now time.Time, backupType model.BackupJobType) {
+func (p *BackupOrchestrator) RunBackup(
+	ctx context.Context,
+	routine *model.BackupRoutine,
+	now time.Time,
+	backupType model.BackupType,
+) {
 	logger := slog.With(attr.Routine(routine.Name))
 	release, err := p.startController.TryStart(routine, now, backupType)
 	if err != nil {
@@ -60,7 +65,7 @@ func (p *BackupOrchestrator) runBackupInternal(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	now time.Time,
-	backupType model.BackupJobType,
+	backupType model.BackupType,
 	logger *slog.Logger,
 ) error {
 	logger.Info(backupType.String()+" backup started", slog.Time("now", now))
@@ -87,7 +92,11 @@ func (p *BackupOrchestrator) runBackupInternal(
 }
 
 // createTimeBounds derives incremental from-time and optional sealed to-time for this run.
-func (p *BackupOrchestrator) createTimeBounds(jobType model.BackupJobType, now time.Time, routine *model.BackupRoutine) model.TimeBounds {
+func (p *BackupOrchestrator) createTimeBounds(
+	jobType model.BackupType,
+	now time.Time,
+	routine *model.BackupRoutine,
+) model.TimeBounds {
 	var (
 		fromTime *time.Time
 		toTime   *time.Time

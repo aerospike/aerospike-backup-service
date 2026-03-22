@@ -57,7 +57,12 @@ func InitComponents(
 	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
 	backupExecutor := backupexecutor.NewDefaultBackupExecutor(clientManager, operations)
 	startController := service.NewStartController(registry, service.NewStartDecider())
-	namespaceBackupExecutor := service.NewNamespaceBackupExecutor(clientManager, backupExecutor, backendService, pathService)
+	namespaceBackupExecutor := service.NewNamespaceBackupExecutor(
+		clientManager,
+		backupExecutor,
+		backendService,
+		pathService,
+	)
 	backupOrchestrator := service.NewBackupOrchestrator(
 		registry,
 		completionHandler,

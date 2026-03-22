@@ -20,7 +20,7 @@ type StartController interface {
 	TryStart(
 		routine *model.BackupRoutine,
 		now time.Time,
-		backupType model.BackupJobType,
+		backupType model.BackupType,
 	) (release func(), err error)
 }
 
@@ -42,7 +42,7 @@ var _ StartController = (*startControllerImpl)(nil)
 
 type reservationKey struct {
 	routineName string
-	backupType  model.BackupJobType
+	backupType  model.BackupType
 }
 
 // NewStartController builds a StartController backed by the provided registry and decision policy.
@@ -61,7 +61,7 @@ func NewStartController(
 func (a *startControllerImpl) TryStart(
 	routine *model.BackupRoutine,
 	now time.Time,
-	backupType model.BackupJobType,
+	backupType model.BackupType,
 ) (func(), error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
