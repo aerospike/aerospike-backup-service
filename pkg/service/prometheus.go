@@ -198,13 +198,13 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 	for routineName, currentStat := range runningState {
 		// Update Full backup metric if running
 		if currentStat.Full != nil {
-			backupProgress.WithLabelValues(routineName, string(model.BackupJobTypeFull)).
+			backupProgress.WithLabelValues(routineName, string(model.BackupTypeFull)).
 				Set(float64(currentStat.Full.PercentageDone))
 		}
 
 		// Update Incremental backup metric if running
 		if currentStat.Incremental != nil {
-			backupProgress.WithLabelValues(routineName, string(model.BackupJobTypeIncremental)).
+			backupProgress.WithLabelValues(routineName, string(model.BackupTypeIncremental)).
 				Set(float64(currentStat.Incremental.PercentageDone))
 		}
 	}
@@ -247,7 +247,7 @@ func observeBackupEvent(
 	// update deprecated counters
 	switch outcome {
 	case BackupOutcomeSuccess:
-		if backupType == model.BackupJobTypeFull {
+		if backupType == model.BackupTypeFull {
 			backupCounter.WithLabelValues().Inc()
 			backupDurationGauge.WithLabelValues().Set(float64(duration.Milliseconds()))
 		} else {
@@ -255,13 +255,13 @@ func observeBackupEvent(
 			incrBackupDurationGauge.WithLabelValues().Set(float64(duration.Milliseconds()))
 		}
 	case BackupOutcomeFailure:
-		if backupType == model.BackupJobTypeFull {
+		if backupType == model.BackupTypeFull {
 			backupFailureCounter.WithLabelValues().Inc()
 		} else {
 			incrBackupFailureCounter.WithLabelValues().Inc()
 		}
 	case BackupOutcomeSkip:
-		if backupType == model.BackupJobTypeFull {
+		if backupType == model.BackupTypeFull {
 			backupSkippedCounter.WithLabelValues().Inc()
 		} else {
 			incrBackupSkippedCounter.WithLabelValues().Inc()

@@ -77,7 +77,7 @@ func (e *singleNamespaceExecutorImpl) Run(
 				e.deleteFolder(ctx, backupRoutine, path, logger)
 			},
 			OnSuccess: func(ctx context.Context, stats *models.BackupStats) error {
-				if runSpec.Type == model.BackupJobTypeIncremental && stats.IsEmpty() {
+				if runSpec.Type == model.BackupTypeIncremental && stats.IsEmpty() {
 					return nil
 				}
 				metadata := model.NewBackupMetadata(

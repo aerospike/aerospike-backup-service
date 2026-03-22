@@ -112,7 +112,7 @@ func (s *PathServiceImpl) ExtractTimestampFromPath(path string) string {
 
 // backupRootPath returns the root path for a backup.
 func backupRootPath(routineName string, backupType model.BackupType) string {
-	if backupType == model.BackupJobTypeFull {
+	if backupType == model.BackupTypeFull {
 		return path.Join(routineName, fullBackupDirectory)
 	}
 

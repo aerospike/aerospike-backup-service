@@ -111,11 +111,11 @@ func (a *startControllerImpl) buildStartFacts(routine *model.BackupRoutine, now 
 	state := a.registry.GetRoutineState(routine)
 	fullRunning := a.activeReservations[reservationKey{
 		routineName: routine.Name,
-		backupType:  model.BackupJobTypeFull,
+		backupType:  model.BackupTypeFull,
 	}] > 0
 	incrRunning := a.activeReservations[reservationKey{
 		routineName: routine.Name,
-		backupType:  model.BackupJobTypeIncremental,
+		backupType:  model.BackupTypeIncremental,
 	}] > 0
 
 	return StartFacts{

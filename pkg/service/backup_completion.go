@@ -58,7 +58,7 @@ func (h *backupCompletionHandler) OnSuccess(
 ) {
 	go h.registry.recordSuccessfulBackup(routine.Name, jobType, timestamp)
 
-	if jobType != model.BackupJobTypeFull {
+	if jobType != model.BackupTypeFull {
 		return
 	}
 
@@ -102,7 +102,7 @@ func reportBackupOutcome(
 	err error,
 	logger *slog.Logger,
 ) {
-	operation := backupType.String()
+	operation := string(backupType) + " backup"
 
 	if err == nil {
 		logger.Debug(operation+" finished", slog.Duration("duration", duration))

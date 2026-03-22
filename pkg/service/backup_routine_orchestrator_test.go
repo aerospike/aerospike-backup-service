@@ -78,9 +78,9 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	op := newBackupNamespacesOperation(ctrl, routine.Namespaces, stats)
 
 	mockRunner.EXPECT().StartBackup(gomock.Any(), gomock.Any(), routine, gomock.Any()).Return(op, nil)
-	mockRegistry.EXPECT().register(routineName, model.BackupJobTypeFull, gomock.Any())
+	mockRegistry.EXPECT().register(routineName, model.BackupTypeFull, gomock.Any())
 	mockCompletionHandler.EXPECT().
-		OnSuccess(gomock.Any(), routine, model.BackupJobTypeFull, newTimeMatcher(now), gomock.Any())
+		OnSuccess(gomock.Any(), routine, model.BackupTypeFull, newTimeMatcher(now), gomock.Any())
 
 	mockStartController := NewMockStartController(ctrl)
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
@@ -88,12 +88,12 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockStartController, mockRunner)
 
 	backupCounters.Reset()
-	p.RunBackup(t.Context(), routine, now, model.BackupJobTypeFull)
+	p.RunBackup(t.Context(), routine, now, model.BackupTypeFull)
 
 	assert.Equal(t, uint64(10), stats.TotalRecords.Load(), "Backup stats should be correct")
-	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeFailure))
 }
 
 func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
@@ -113,11 +113,11 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 
 	backupCounters.Reset()
 
-	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeFull)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupTypeFull)
 
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSuccess))
-	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeFailure))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSuccess))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeFailure))
 }
 
 func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
@@ -149,13 +149,13 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockStartController, mockRunner)
 
 	backupCounters.Reset()
-	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeFull)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupTypeFull)
 
 	assert.Contains(t, buf.String(), connectionError.Error())
 
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSkip))
-	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeFailure))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSkip))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, BackupOutcomeFailure))
 }
 
 func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
@@ -176,12 +176,12 @@ func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockStartController, mockRunner)
 
 	backupCounters.Reset()
-	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeFull)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupTypeFull)
 
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeFailure))
-	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeFull, BackupOutcomeCanceled))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, BackupOutcomeCanceled))
 }
 
 func TestRunIncrementalBackup_Success(t *testing.T) {
@@ -194,9 +194,9 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 
 	runIncrementalBackupSuccess(t, routineState, testRoutine())
 
-	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeFailure))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSkip))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeFailure))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSkip))
 }
 
 func TestRunIncrementalBackup_Skip(t *testing.T) {
@@ -215,11 +215,11 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 
 	backupCounters.Reset()
 
-	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeIncremental)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupTypeIncremental)
 
-	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeFailure))
 }
 
 func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
@@ -245,12 +245,12 @@ func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockStartController, mockRunner)
 
 	backupCounters.Reset()
-	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeIncremental)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupTypeIncremental)
 
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeFailure))
-	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeCanceled))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeCanceled))
 }
 
 func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
@@ -266,7 +266,7 @@ func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
 	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
 	runIncrementalBackupSuccess(t, routineState, routine)
 
-	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSuccess))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSuccess))
 }
 
 func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
@@ -282,7 +282,7 @@ func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
 	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
 	runIncrementalBackupSuccess(t, routineState, routine)
 
-	assert.Equal(t, 1, prometheusCounter(model.BackupJobTypeIncremental, BackupOutcomeSuccess))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSuccess))
 }
 
 func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine *model.BackupRoutine) {
@@ -306,16 +306,16 @@ func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine
 		routine,
 		gomock.AssignableToTypeOf(model.BackupRunSpec{}),
 	).Do(func(_ context.Context, _ *slog.Logger, _ *model.BackupRoutine, spec model.BackupRunSpec) {
-		assert.Equal(t, model.BackupJobTypeIncremental, spec.Type)
+		assert.Equal(t, model.BackupTypeIncremental, spec.Type)
 		assert.NotNil(t, spec.TimeBounds.FromTime)
 		assert.Equal(t, fromTime, *spec.TimeBounds.FromTime)
 	}).Return(op, nil)
 
-	mockRegistry.EXPECT().register(routineName, model.BackupJobTypeIncremental, gomock.Any())
+	mockRegistry.EXPECT().register(routineName, model.BackupTypeIncremental, gomock.Any())
 	mockCompletionHandler.EXPECT().OnSuccess(
 		gomock.Any(),
 		routine,
-		model.BackupJobTypeIncremental,
+		model.BackupTypeIncremental,
 		gomock.Any(),
 		gomock.Any(),
 	)
@@ -325,7 +325,7 @@ func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine
 
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, startController, mockRunner)
 
-	p.RunBackup(t.Context(), routine, time.Now(), model.BackupJobTypeIncremental)
+	p.RunBackup(t.Context(), routine, time.Now(), model.BackupTypeIncremental)
 
 	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")
 }

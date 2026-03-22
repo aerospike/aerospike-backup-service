@@ -64,8 +64,8 @@ func (t *routineTracker) getState(timeout time.Duration) (*trackerSnapshot, erro
 	defer t.mu.RUnlock()
 
 	return &trackerSnapshot{
-		full:    currentBackupStatus(t.handlers[model.BackupJobTypeFull]),
-		incr:    currentBackupStatus(t.handlers[model.BackupJobTypeIncremental]),
+		full:    currentBackupStatus(t.handlers[model.BackupTypeFull]),
+		incr:    currentBackupStatus(t.handlers[model.BackupTypeIncremental]),
 		lastRun: t.lastRun,
 	}, nil
 }
@@ -91,9 +91,9 @@ func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType mode
 	)
 
 	switch jobType {
-	case model.BackupJobTypeFull:
+	case model.BackupTypeFull:
 		t.lastRun.SetFullBackupTime(timestamp)
-	case model.BackupJobTypeIncremental:
+	case model.BackupTypeIncremental:
 		t.lastRun.SetIncrementalBackupTime(timestamp)
 	}
 

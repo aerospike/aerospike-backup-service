@@ -75,7 +75,7 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 			}
 
 			decider := NewStartDecider()
-			err := decider.CanStart(model.BackupJobTypeIncremental, policy, facts)
+			err := decider.CanStart(model.BackupTypeIncremental, policy, facts)
 			assert.Equal(t, tt.expectedToSkip, err != nil)
 		})
 	}
@@ -108,7 +108,7 @@ func TestCanStartFullBackup(t *testing.T) {
 			policy := &model.BackupPolicy{}
 			decider := NewStartDecider()
 
-			err := decider.CanStart(model.BackupJobTypeFull, policy, tt.facts)
+			err := decider.CanStart(model.BackupTypeFull, policy, tt.facts)
 			if tt.expectedErr == nil {
 				assert.NoError(t, err)
 				return

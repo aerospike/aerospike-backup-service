@@ -31,7 +31,7 @@ func TestExtractTimestampFromPath(t *testing.T) {
 
 		for format := range maps.Keys(model.TimestampFormatPresets) {
 			service := NewPathService(&format)
-			formatTimestamp := service.GetBackupPath("routine", model.BackupJobTypeFull, "ns1", now)
+			formatTimestamp := service.GetBackupPath("routine", model.BackupTypeFull, "ns1", now)
 			timestamp := service.ExtractTimestampFromPath(formatTimestamp)
 			assert.Equal(t, strconv.FormatInt(now.UnixMilli(), 10), timestamp)
 		}
@@ -60,7 +60,7 @@ func TestPathService_GetConfigurationFilePath(t *testing.T) {
 func TestExtractBackupDirFromKey(t *testing.T) {
 	routineName := "test-routine"
 	namespace := "test-ns"
-	backupType := model.BackupJobTypeFull
+	backupType := model.BackupTypeFull
 	now := time.Now()
 
 	for _, format := range []*model.TimestampFormat{nil, ptr.Of(model.TimestampFormatEU)} {

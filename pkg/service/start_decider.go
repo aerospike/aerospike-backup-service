@@ -61,7 +61,7 @@ func (g *startDeciderImpl) CanStart(
 	policy *model.BackupPolicy,
 	facts StartFacts,
 ) error {
-	if backupType == model.BackupJobTypeFull {
+	if backupType == model.BackupTypeFull {
 		return g.canStartFull(policy, facts)
 	}
 

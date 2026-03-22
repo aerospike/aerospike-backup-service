@@ -67,7 +67,7 @@ func (p *BackupOrchestrator) runBackupInternal(
 	backupType model.BackupType,
 	logger *slog.Logger,
 ) error {
-	logger.Info(backupType.String()+" backup started", slog.Time("now", now))
+	logger.Info(string(backupType)+" backup started", slog.Time("now", now))
 
 	runSpec := model.BackupRunSpec{
 		Type:       backupType,
@@ -101,7 +101,7 @@ func (p *BackupOrchestrator) createTimeBounds(
 		toTime   *time.Time
 	)
 
-	if jobType == model.BackupJobTypeIncremental {
+	if jobType == model.BackupTypeIncremental {
 		fromTime = p.registry.GetRoutineState(routine).LastRunTime.LatestRun()
 	}
 

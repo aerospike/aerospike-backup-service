@@ -24,7 +24,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
 	// Register a full backup handler
-	registry.register(routineName, model.BackupJobTypeFull, handler)
+	registry.register(routineName, model.BackupTypeFull, handler)
 	registry.getTracker(routineName).signalSyncDone() // no need to scan history
 
 	stat := registry.GetRoutineState(&model.BackupRoutine{
@@ -53,7 +53,7 @@ func TestHistoryScan(t *testing.T) {
 	handler.EXPECT().GetStats().Return(backupStats).AnyTimes()
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
-	registry.register(routineName, model.BackupJobTypeFull, handler)
+	registry.register(routineName, model.BackupTypeFull, handler)
 
 	stat := registry.GetRoutineState(&model.BackupRoutine{
 		Name:         routineName,
@@ -74,11 +74,11 @@ func TestFinishFull(t *testing.T) {
 	handler := NewMockCancelableBackupHandler(ctrl)
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
-	registry.register(routineName, model.BackupJobTypeFull, handler)
+	registry.register(routineName, model.BackupTypeFull, handler)
 	registry.getTracker(routineName).signalSyncDone() // no need to scan history
 
 	now := time.Now()
-	registry.recordSuccessfulBackup(routineName, model.BackupJobTypeFull, now)
+	registry.recordSuccessfulBackup(routineName, model.BackupTypeFull, now)
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,
@@ -100,12 +100,12 @@ func TestFinishIncremental(t *testing.T) {
 	handler := NewMockCancelableBackupHandler(ctrl)
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
-	registry.register(routineName, model.BackupJobTypeIncremental, handler)
+	registry.register(routineName, model.BackupTypeIncremental, handler)
 	registry.getTracker(routineName).signalSyncDone() // no need to scan history
 
 	now := time.Now()
-	registry.recordSuccessfulBackup(routineName, model.BackupJobTypeFull, now.Add(-1*time.Second))
-	registry.recordSuccessfulBackup(routineName, model.BackupJobTypeIncremental, now)
+	registry.recordSuccessfulBackup(routineName, model.BackupTypeFull, now.Add(-1*time.Second))
+	registry.recordSuccessfulBackup(routineName, model.BackupTypeIncremental, now)
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,
@@ -147,9 +147,9 @@ func TestGetAllCurrentStats(t *testing.T) {
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
 	// Register handlers for multiple routines
-	registry.register(routine1, model.BackupJobTypeFull, handler)
+	registry.register(routine1, model.BackupTypeFull, handler)
 	registry.getTracker(routine1).signalSyncDone() // no need to scan history
-	registry.register(routine2, model.BackupJobTypeIncremental, handler)
+	registry.register(routine2, model.BackupTypeIncremental, handler)
 	registry.getTracker(routine2).signalSyncDone() // no need to scan history
 
 	// Get all current stats
@@ -177,8 +177,8 @@ func TestCancel(t *testing.T) {
 	handlerIncr := NewMockCancelableBackupHandler(ctrl)
 	handlerIncr.EXPECT().Cancel()
 
-	registry.register(routineName, model.BackupJobTypeFull, handlerFull)
-	registry.register(routineName, model.BackupJobTypeIncremental, handlerIncr)
+	registry.register(routineName, model.BackupTypeFull, handlerFull)
+	registry.register(routineName, model.BackupTypeIncremental, handlerIncr)
 
 	registry.Cancel(routineName)
 }

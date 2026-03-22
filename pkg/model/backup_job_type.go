@@ -6,18 +6,9 @@ import "time"
 type BackupType string
 
 const (
-	BackupJobTypeFull        BackupType = "full"
-	BackupJobTypeIncremental BackupType = "incremental"
+	BackupTypeFull        BackupType = "full"
+	BackupTypeIncremental BackupType = "incremental"
 )
-
-// String returns a short human-readable label for metrics and logs.
-func (j BackupType) String() string {
-	if j == BackupJobTypeFull {
-		return "Full backup"
-	}
-
-	return "Incremental backup"
-}
 
 // BackupRunSpec captures run-specific backup parameters passed across layers.
 type BackupRunSpec struct {

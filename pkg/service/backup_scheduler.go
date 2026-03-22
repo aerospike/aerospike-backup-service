@@ -77,8 +77,8 @@ func (s *BackupScheduler) ScheduleRoutines(routines []*model.BackupRoutine) erro
 // scheduleRoutineBackups registers the full cron job and, when configured, the incremental cron job for one routine.
 func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) error {
 	fullJob := quartz.NewJobDetail(
-		newBackupJob(s.orchestrator, routine, model.BackupJobTypeFull),
-		jobKey(routine.Name, model.BackupJobTypeFull),
+		newBackupJob(s.orchestrator, routine, model.BackupTypeFull),
+		jobKey(routine.Name, model.BackupTypeFull),
 	)
 	if err := s.scheduleCronJob(routine.IntervalCron, fullJob); err != nil {
 		return fmt.Errorf("failed to schedule full backup: %w", err)
@@ -90,8 +90,8 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 	}
 
 	incrementalJob := quartz.NewJobDetail(
-		newBackupJob(s.orchestrator, routine, model.BackupJobTypeIncremental),
-		jobKey(routine.Name, model.BackupJobTypeIncremental),
+		newBackupJob(s.orchestrator, routine, model.BackupTypeIncremental),
+		jobKey(routine.Name, model.BackupTypeIncremental),
 	)
 	if err := s.scheduleCronJob(routine.IncrIntervalCron, incrementalJob); err != nil {
 		return fmt.Errorf("failed to schedule incremental backup: %w", err)
@@ -122,12 +122,12 @@ func (s *BackupScheduler) scheduleCronJob(interval string, jobDetail *quartz.Job
 
 // TriggerAdHocFullBackup schedules a one-off full backup for routineName.
 func (s *BackupScheduler) TriggerAdHocFullBackup(routine *model.BackupRoutine, delay time.Duration) error {
-	return s.triggerAdHocBackup(routine, delay, model.BackupJobTypeFull)
+	return s.triggerAdHocBackup(routine, delay, model.BackupTypeFull)
 }
 
 // TriggerAdHocIncrementalBackup schedules a one-off incremental backup for routineName.
 func (s *BackupScheduler) TriggerAdHocIncrementalBackup(routine *model.BackupRoutine, delay time.Duration) error {
-	return s.triggerAdHocBackup(routine, delay, model.BackupJobTypeIncremental)
+	return s.triggerAdHocBackup(routine, delay, model.BackupTypeIncremental)
 }
 
 // triggerAdHocBackup schedules a single run-once job in the ad-hoc group after at least [minAdHocBackupDelay].

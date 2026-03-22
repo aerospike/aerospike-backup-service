@@ -77,8 +77,8 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routineNames []string)
 	keysToDelete := make([]*quartz.JobKey, 0, len(routineNames)*2)
 	for _, routineName := range routineNames {
 		keysToDelete = append(keysToDelete,
-			jobKey(routineName, model.BackupJobTypeFull),
-			jobKey(routineName, model.BackupJobTypeIncremental))
+			jobKey(routineName, model.BackupTypeFull),
+			jobKey(routineName, model.BackupTypeIncremental))
 	}
 
 	slog.Info("Delete scheduled jobs", slog.Any("keys", keysToDelete))

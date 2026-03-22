@@ -32,7 +32,7 @@ type RoutineFilter struct {
 func NewFullBackupFilter(routine *model.BackupRoutine) *RoutineFilter {
 	return &RoutineFilter{
 		routine: routine,
-		JobType: model.BackupJobTypeFull,
+		JobType: model.BackupTypeFull,
 	}
 }
 
@@ -40,7 +40,7 @@ func NewFullBackupFilter(routine *model.BackupRoutine) *RoutineFilter {
 func NewIncrementalBackupFilter(routine *model.BackupRoutine) *RoutineFilter {
 	return &RoutineFilter{
 		routine: routine,
-		JobType: model.BackupJobTypeIncremental,
+		JobType: model.BackupTypeIncremental,
 	}
 }
 

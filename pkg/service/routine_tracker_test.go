@@ -72,8 +72,8 @@ func TestRegisterAndGetState(t *testing.T) {
 	incrHandler.EXPECT().GetStats().Return(incrBackupStats).AnyTimes()
 	incrHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
-	tracker.register(model.BackupJobTypeFull, fullHandler)
-	tracker.register(model.BackupJobTypeIncremental, incrHandler)
+	tracker.register(model.BackupTypeFull, fullHandler)
+	tracker.register(model.BackupTypeIncremental, incrHandler)
 
 	snapshot, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)
@@ -91,11 +91,11 @@ func TestRecordSuccessfulBackup(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	handler := NewMockCancelableBackupHandler(ctrl)
-	tracker.register(model.BackupJobTypeFull, handler)
+	tracker.register(model.BackupTypeFull, handler)
 
 	// record a successful full backup
 	now := time.Now()
-	tracker.recordSuccessfulBackup(routineName, model.BackupJobTypeFull, now)
+	tracker.recordSuccessfulBackup(routineName, model.BackupTypeFull, now)
 
 	snapshot, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)
@@ -104,9 +104,9 @@ func TestRecordSuccessfulBackup(t *testing.T) {
 	assert.Nil(t, snapshot.lastRun.IncrementalBackupTime())
 
 	// record a successful incremental backup
-	tracker.register(model.BackupJobTypeIncremental, handler)
+	tracker.register(model.BackupTypeIncremental, handler)
 	nowIncr := time.Now()
-	tracker.recordSuccessfulBackup(routineName, model.BackupJobTypeIncremental, nowIncr)
+	tracker.recordSuccessfulBackup(routineName, model.BackupTypeIncremental, nowIncr)
 
 	snapshotIncr, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)
@@ -123,10 +123,10 @@ func TestClearFailedBackup(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	handler := NewMockCancelableBackupHandler(ctrl)
-	tracker.register(model.BackupJobTypeFull, handler)
+	tracker.register(model.BackupTypeFull, handler)
 
 	// clear a failed backup
-	tracker.clearFailedBackup(model.BackupJobTypeFull)
+	tracker.clearFailedBackup(model.BackupTypeFull)
 
 	snapshot, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)

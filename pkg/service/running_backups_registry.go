@@ -163,11 +163,11 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 	tracker.setLastRun(lastRun)
 	if lastRun.FullBackupTime() != nil {
 		t := float64(lastRun.FullBackupTime().Unix())
-		lastBackupTimestamp.WithLabelValues(routine.Name, string(model.BackupJobTypeFull)).Set(t)
+		lastBackupTimestamp.WithLabelValues(routine.Name, string(model.BackupTypeFull)).Set(t)
 	}
 	if lastRun.IncrementalBackupTime() != nil {
 		t := float64(lastRun.IncrementalBackupTime().Unix())
-		lastBackupTimestamp.WithLabelValues(routine.Name, string(model.BackupJobTypeIncremental)).Set(t)
+		lastBackupTimestamp.WithLabelValues(routine.Name, string(model.BackupTypeIncremental)).Set(t)
 	}
 
 	return nil
