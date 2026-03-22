@@ -77,7 +77,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	stats := newTestBackupStats(10)
 	op := newBackupNamespacesOperation(ctrl, routine.Namespaces, stats)
 
-	mockRunner.EXPECT().StartBackup(gomock.Any(), gomock.Any(), routine, gomock.Any()).Return(op, nil)
+	mockRunner.EXPECT().StartBackup(gomock.Any(), routine, gomock.Any(), gomock.Any()).Return(op, nil)
 	mockRegistry.EXPECT().register(routineName, model.BackupTypeFull, gomock.Any())
 	mockCompletionHandler.EXPECT().
 		OnSuccess(gomock.Any(), routine, model.BackupTypeFull, newTimeMatcher(now), gomock.Any())
@@ -141,7 +141,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 
 	connectionError := errors.New("connection failed")
 	mockRunner := NewMockAllNamespacesBackupRunner(ctrl)
-	mockRunner.EXPECT().StartBackup(gomock.Any(), gomock.Any(), routine, gomock.Any()).Return(nil, connectionError)
+	mockRunner.EXPECT().StartBackup(gomock.Any(), routine, gomock.Any(), gomock.Any()).Return(nil, connectionError)
 
 	mockStartController := NewMockStartController(ctrl)
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
@@ -168,7 +168,7 @@ func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
 
 	mockRunner := NewMockAllNamespacesBackupRunner(ctrl)
-	mockRunner.EXPECT().StartBackup(gomock.Any(), gomock.Any(), routine, gomock.Any()).Return(nil, context.Canceled)
+	mockRunner.EXPECT().StartBackup(gomock.Any(), routine, gomock.Any(), gomock.Any()).Return(nil, context.Canceled)
 
 	mockStartController := NewMockStartController(ctrl)
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
@@ -236,7 +236,7 @@ func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(state).Times(1)
 
 	mockRunner := NewMockAllNamespacesBackupRunner(ctrl)
-	mockRunner.EXPECT().StartBackup(gomock.Any(), gomock.Any(), routine, gomock.Any()).
+	mockRunner.EXPECT().StartBackup(gomock.Any(), routine, gomock.Any(), gomock.Any()).
 		Return(nil, context.DeadlineExceeded)
 
 	mockStartController := NewMockStartController(ctrl)
@@ -302,10 +302,10 @@ func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(state).Times(1)
 	mockRunner.EXPECT().StartBackup(
 		gomock.Any(),
-		gomock.Any(),
 		routine,
 		gomock.AssignableToTypeOf(model.BackupRunSpec{}),
-	).Do(func(_ context.Context, _ *slog.Logger, _ *model.BackupRoutine, spec model.BackupRunSpec) {
+		gomock.Any(),
+	).Do(func(_ context.Context, _ *model.BackupRoutine, spec model.BackupRunSpec, _ *slog.Logger) {
 		assert.Equal(t, model.BackupTypeIncremental, spec.Type)
 		assert.NotNil(t, spec.TimeBounds.FromTime)
 		assert.Equal(t, fromTime, *spec.TimeBounds.FromTime)
