@@ -16,7 +16,7 @@ import (
 type backupJob struct {
 	orchestrator BackupOrchestrator
 	routine      *model.BackupRoutine
-	jobType      model.BackupType
+	backupType   model.BackupType
 	logger       *slog.Logger
 }
 
@@ -31,14 +31,14 @@ func (j *backupJob) Execute(ctx context.Context) error {
 	}
 	now := time.Unix(0, jobMetadata.RunTime).Truncate(time.Millisecond)
 
-	j.orchestrator.Backup(ctx, j.routine, now, j.jobType)
+	j.orchestrator.Backup(ctx, j.routine, now, j.backupType)
 
 	return nil
 }
 
 // Description returns the description of the backup job.
 func (j *backupJob) Description() string {
-	return fmt.Sprintf("%s %s backup job", j.routine.Name, j.jobType)
+	return fmt.Sprintf("%s %s backup job", j.routine.Name, j.backupType)
 }
 
 // newBackupJob builds a [quartz.Job] that invokes [BackupOrchestrator.RunBackup] with the given routine copy and type.
@@ -46,7 +46,7 @@ func newBackupJob(orchestrator BackupOrchestrator, routine *model.BackupRoutine,
 	return &backupJob{
 		orchestrator: orchestrator,
 		routine:      routine,
-		jobType:      bt,
+		backupType:   bt,
 		logger:       slog.Default().With(attr.Routine(routine.Name), slog.Any("type", bt)),
 	}
 }

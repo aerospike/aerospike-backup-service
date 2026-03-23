@@ -100,7 +100,7 @@ func (p *BackupOrchestratorImpl) runBackupInternal(
 
 // createTimeBounds derives incremental from-time and optional sealed to-time for this run.
 func (p *BackupOrchestratorImpl) createTimeBounds(
-	jobType model.BackupType,
+	backupType model.BackupType,
 	now time.Time,
 	routine *model.BackupRoutine,
 ) model.TimeBounds {
@@ -109,7 +109,7 @@ func (p *BackupOrchestratorImpl) createTimeBounds(
 		toTime   *time.Time
 	)
 
-	if jobType == model.BackupTypeIncremental {
+	if backupType == model.BackupTypeIncremental {
 		fromTime = p.registry.GetRoutineState(routine).LastRunTime.LatestRun()
 	}
 

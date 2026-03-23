@@ -19,12 +19,12 @@ type BackupCompletionHandler interface {
 	OnSuccess(
 		ctx context.Context,
 		routine *model.BackupRoutine,
-		jobType model.BackupType,
+		backupType model.BackupType,
 		timestamp time.Time,
 		logger *slog.Logger,
 	)
 	// OnFailure is called when a backup fails (clears failed state in registry).
-	OnFailure(routine *model.BackupRoutine, jobType model.BackupType)
+	OnFailure(routine *model.BackupRoutine, backupType model.BackupType)
 }
 
 type backupCompletionHandler struct {
@@ -52,13 +52,13 @@ var _ BackupCompletionHandler = (*backupCompletionHandler)(nil)
 func (h *backupCompletionHandler) OnSuccess(
 	ctx context.Context,
 	routine *model.BackupRoutine,
-	jobType model.BackupType,
+	backupType model.BackupType,
 	timestamp time.Time,
 	logger *slog.Logger,
 ) {
-	go h.registry.recordSuccessfulBackup(routine.Name, jobType, timestamp)
+	go h.registry.recordSuccessfulBackup(routine.Name, backupType, timestamp)
 
-	if jobType != model.BackupTypeFull {
+	if backupType != model.BackupTypeFull {
 		return
 	}
 
@@ -88,9 +88,9 @@ func (h *backupCompletionHandler) OnSuccess(
 
 func (h *backupCompletionHandler) OnFailure(
 	routine *model.BackupRoutine,
-	jobType model.BackupType,
+	backupType model.BackupType,
 ) {
-	h.registry.clearFailedBackup(routine.Name, jobType)
+	h.registry.clearFailedBackup(routine.Name, backupType)
 }
 
 // reportBackupOutcome classifies the backup terminal outcome from err and logs it.

@@ -592,27 +592,27 @@ func (m *MockBackupCompletionHandler) EXPECT() *MockBackupCompletionHandlerMockR
 }
 
 // OnFailure mocks base method.
-func (m *MockBackupCompletionHandler) OnFailure(routine *model.BackupRoutine, jobType model.BackupType) {
+func (m *MockBackupCompletionHandler) OnFailure(routine *model.BackupRoutine, backupType model.BackupType) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "OnFailure", routine, jobType)
+	m.ctrl.Call(m, "OnFailure", routine, backupType)
 }
 
 // OnFailure indicates an expected call of OnFailure.
-func (mr *MockBackupCompletionHandlerMockRecorder) OnFailure(routine, jobType any) *gomock.Call {
+func (mr *MockBackupCompletionHandlerMockRecorder) OnFailure(routine, backupType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnFailure", reflect.TypeOf((*MockBackupCompletionHandler)(nil).OnFailure), routine, jobType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnFailure", reflect.TypeOf((*MockBackupCompletionHandler)(nil).OnFailure), routine, backupType)
 }
 
 // OnSuccess mocks base method.
-func (m *MockBackupCompletionHandler) OnSuccess(ctx context.Context, routine *model.BackupRoutine, jobType model.BackupType, timestamp time.Time, logger *slog.Logger) {
+func (m *MockBackupCompletionHandler) OnSuccess(ctx context.Context, routine *model.BackupRoutine, backupType model.BackupType, timestamp time.Time, logger *slog.Logger) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "OnSuccess", ctx, routine, jobType, timestamp, logger)
+	m.ctrl.Call(m, "OnSuccess", ctx, routine, backupType, timestamp, logger)
 }
 
 // OnSuccess indicates an expected call of OnSuccess.
-func (mr *MockBackupCompletionHandlerMockRecorder) OnSuccess(ctx, routine, jobType, timestamp, logger any) *gomock.Call {
+func (mr *MockBackupCompletionHandlerMockRecorder) OnSuccess(ctx, routine, backupType, timestamp, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnSuccess", reflect.TypeOf((*MockBackupCompletionHandler)(nil).OnSuccess), ctx, routine, jobType, timestamp, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnSuccess", reflect.TypeOf((*MockBackupCompletionHandler)(nil).OnSuccess), ctx, routine, backupType, timestamp, logger)
 }
 
 // MockRestoreValidator is a mock of RestoreValidator interface.

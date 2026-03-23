@@ -176,24 +176,24 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 // register adds a new backup handler for a specific routine and job type.
 func (r *RunningBackupsRegistryImpl) register(
 	routineName string,
-	jobType model.BackupType,
+	backupType model.BackupType,
 	handler CancelableBackupHandler,
 ) {
-	r.getTracker(routineName).register(jobType, handler)
+	r.getTracker(routineName).register(backupType, handler)
 }
 
 // recordSuccessfulBackup removes a backup from the registry and updates the last success timestamp.
 func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(
 	routineName string,
-	jobType model.BackupType,
+	backupType model.BackupType,
 	timestamp time.Time,
 ) {
-	r.getTracker(routineName).recordSuccessfulBackup(routineName, jobType, timestamp)
+	r.getTracker(routineName).recordSuccessfulBackup(routineName, backupType, timestamp)
 }
 
 // clearFailedBackup deletes a backup from the registry.
-func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, jobType model.BackupType) {
-	r.getTracker(routineName).clearFailedBackup(jobType)
+func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, backupType model.BackupType) {
+	r.getTracker(routineName).clearFailedBackup(backupType)
 }
 
 // GetRoutineState returns the current backup statistics for a routine.

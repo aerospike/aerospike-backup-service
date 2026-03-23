@@ -71,26 +71,26 @@ func (t *routineTracker) getState(timeout time.Duration) (*trackerSnapshot, erro
 }
 
 // register adds a new running backup handler.
-func (t *routineTracker) register(jobType model.BackupType, handler CancelableBackupHandler) {
+func (t *routineTracker) register(backupType model.BackupType, handler CancelableBackupHandler) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	// Set handler
-	t.handlers[jobType] = handler
+	t.handlers[backupType] = handler
 }
 
 // recordSuccessfulBackup removes a successful backup and updates its last run time.
-func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType model.BackupType, timestamp time.Time) {
+func (t *routineTracker) recordSuccessfulBackup(routineName string, backupType model.BackupType, timestamp time.Time) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	logger := slog.Default().With(attr.Routine(routineName))
 	logger.Info("Set last backup time",
 		slog.String("time", timestamp.String()),
-		slog.String("job", string(jobType)),
+		slog.String("job", string(backupType)),
 	)
 
-	switch jobType {
+	switch backupType {
 	case model.BackupTypeFull:
 		t.lastRun.SetFullBackupTime(timestamp)
 	case model.BackupTypeIncremental:
@@ -98,19 +98,19 @@ func (t *routineTracker) recordSuccessfulBackup(routineName string, jobType mode
 	}
 
 	// set last successful backup time for just finished backup
-	lastBackupTimestamp.WithLabelValues(routineName, string(jobType)).Set(float64(timestamp.Unix()))
+	lastBackupTimestamp.WithLabelValues(routineName, string(backupType)).Set(float64(timestamp.Unix()))
 
 	// Remove the handler
-	delete(t.handlers, jobType)
+	delete(t.handlers, backupType)
 }
 
 // clearFailedBackup removes a failed backup handler without updating history.
-func (t *routineTracker) clearFailedBackup(jobType model.BackupType) {
+func (t *routineTracker) clearFailedBackup(backupType model.BackupType) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	// Remove the handler
-	delete(t.handlers, jobType)
+	delete(t.handlers, backupType)
 }
 
 // setLastRun updates the history state.

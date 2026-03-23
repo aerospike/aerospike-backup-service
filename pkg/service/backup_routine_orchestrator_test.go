@@ -330,7 +330,7 @@ func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine
 	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")
 }
 
-func prometheusCounter(jobType model.BackupType, outcome BackupOutcome) int {
-	counter := backupCounters.WithLabelValues(routineName, string(jobType), string(outcome))
+func prometheusCounter(backupType model.BackupType, outcome BackupOutcome) int {
+	counter := backupCounters.WithLabelValues(routineName, string(backupType), string(outcome))
 	return int(testutil.ToFloat64(counter))
 }
