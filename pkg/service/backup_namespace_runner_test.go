@@ -24,17 +24,13 @@ type testMocks struct {
 	backendService *MockBackupReaderWriter
 }
 
-func initMocks(t *testing.T) (testMocks, SingleNamespaceExecutor, *model.BackupRoutine) {
+func initMocks(t *testing.T) (testMocks, SingleNamespaceExecutor) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
 	mockBackupHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	mockBackendService := NewMockBackupReaderWriter(ctrl)
-
-	routine := &model.BackupRoutine{
-		Name: routineName,
-	}
 
 	executor := NewSingleNamespaceExecutor(
 		mockBackupExecutor,
@@ -47,14 +43,14 @@ func initMocks(t *testing.T) (testMocks, SingleNamespaceExecutor, *model.BackupR
 		backupExecutor: mockBackupExecutor,
 		backupHandler:  mockBackupHandler,
 		backendService: mockBackendService,
-	}, executor, routine
+	}, executor
 }
 
 func TestRun_SuccessfulFullBackup(t *testing.T) {
 	now := time.UnixMilli(123456789000)
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 
-	mocks, runner, _ := initMocks(t)
+	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	backupRoutine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
@@ -99,7 +95,7 @@ func TestSuccessfulIncrementalBackup(t *testing.T) {
 	fromTime := time.UnixMilli(100000000000)
 	backupFolder := "test-routine/incremental/123456789000/data/test-ns"
 
-	mocks, runner, _ := initMocks(t)
+	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	backupRoutine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
@@ -146,7 +142,7 @@ func TestEmptyIncrementalBackup(t *testing.T) {
 	fromTime := time.UnixMilli(100000000000)
 	backupFolder := "test-routine/incremental/123456789000/data/test-ns"
 
-	mocks, runner, _ := initMocks(t)
+	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	backupRoutine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
@@ -182,7 +178,7 @@ func TestBackupExecutorError(t *testing.T) {
 	now := time.UnixMilli(123456789000)
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 
-	mocks, runner, _ := initMocks(t)
+	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	backupRoutine := &model.BackupRoutine{
@@ -215,7 +211,7 @@ func TestBackupHandlerError(t *testing.T) {
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 	timestampPath := "test-routine/backup/123456789000"
 
-	mocks, runner, _ := initMocks(t)
+	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	backupRoutine := &model.BackupRoutine{
@@ -255,7 +251,7 @@ func TestMetadataWriteError(t *testing.T) {
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 	timestampPath := "test-routine/backup/123456789000"
 
-	mocks, runner, _ := initMocks(t)
+	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	backupRoutine := &model.BackupRoutine{
@@ -306,7 +302,7 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 	timestampPath := "test-routine/backup/123456789000"
 
-	mocks, runner, _ := initMocks(t)
+	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	backupRoutine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
