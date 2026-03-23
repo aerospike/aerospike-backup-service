@@ -14,22 +14,29 @@ import (
 
 var errBackupSkipped = errors.New("backup skipped")
 
-// BackupOrchestrator runs backup operations for a routine.
-type BackupOrchestrator struct {
+// BackupOrchestrator runs a full or incremental backup for a routine.
+type BackupOrchestrator interface {
+	RunBackup(ctx context.Context, routine *model.BackupRoutine, now time.Time, backupType model.BackupType)
+}
+
+// BackupOrchestratorImpl runs backup operations for a routine.
+type BackupOrchestratorImpl struct {
 	registry          RunningBackupsRegistry
 	completionHandler BackupCompletionHandler
 	startController   StartController
 	runner            AllNamespacesBackupRunner
 }
 
-// NewBackupOrchestrator builds a [BackupOrchestrator] from shared service dependencies.
+var _ BackupOrchestrator = (*BackupOrchestratorImpl)(nil)
+
+// NewBackupOrchestrator builds a [BackupOrchestratorImpl] from shared service dependencies.
 func NewBackupOrchestrator(
 	registry RunningBackupsRegistry,
 	completionHandler BackupCompletionHandler,
 	startController StartController,
 	backupRunner AllNamespacesBackupRunner,
-) *BackupOrchestrator {
-	return &BackupOrchestrator{
+) *BackupOrchestratorImpl {
+	return &BackupOrchestratorImpl{
 		registry:          registry,
 		completionHandler: completionHandler,
 		startController:   startController,
@@ -38,7 +45,7 @@ func NewBackupOrchestrator(
 }
 
 // RunBackup executes a full or incremental backup for the given routine snapshot.
-func (p *BackupOrchestrator) RunBackup(
+func (p *BackupOrchestratorImpl) RunBackup(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	now time.Time,
@@ -60,7 +67,7 @@ func (p *BackupOrchestrator) RunBackup(
 }
 
 // runBackupInternal starts namespace backups, registers the aggregate handler, and runs completion hooks.
-func (p *BackupOrchestrator) runBackupInternal(
+func (p *BackupOrchestratorImpl) runBackupInternal(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	now time.Time,
@@ -91,7 +98,7 @@ func (p *BackupOrchestrator) runBackupInternal(
 }
 
 // createTimeBounds derives incremental from-time and optional sealed to-time for this run.
-func (p *BackupOrchestrator) createTimeBounds(
+func (p *BackupOrchestratorImpl) createTimeBounds(
 	jobType model.BackupType,
 	now time.Time,
 	routine *model.BackupRoutine,

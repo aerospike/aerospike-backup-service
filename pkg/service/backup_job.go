@@ -14,7 +14,7 @@ import (
 
 // backupJob is a Quartz job that runs one full or incremental backup for a fixed routine snapshot.
 type backupJob struct {
-	orchestrator *BackupOrchestrator
+	orchestrator BackupOrchestrator
 	routine      *model.BackupRoutine
 	jobType      model.BackupType
 	logger       *slog.Logger
@@ -42,7 +42,7 @@ func (j *backupJob) Description() string {
 }
 
 // newBackupJob builds a [quartz.Job] that invokes [BackupOrchestrator.RunBackup] with the given routine copy and type.
-func newBackupJob(orchestrator *BackupOrchestrator, routine *model.BackupRoutine, bt model.BackupType) quartz.Job {
+func newBackupJob(orchestrator BackupOrchestrator, routine *model.BackupRoutine, bt model.BackupType) quartz.Job {
 	return &backupJob{
 		orchestrator: orchestrator,
 		routine:      routine,

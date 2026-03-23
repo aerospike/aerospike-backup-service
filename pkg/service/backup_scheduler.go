@@ -43,13 +43,13 @@ type AdHocScheduler interface {
 type BackupScheduler struct {
 	scheduler JobScheduler
 	// orchestrator runs each fired job (cron or ad-hoc) via [BackupOrchestrator.RunBackup].
-	orchestrator *BackupOrchestrator
+	orchestrator BackupOrchestrator
 }
 
 var _ AdHocScheduler = (*BackupScheduler)(nil)
 
-// NewBackupScheduler creates a scheduler backed by Quartz and the shared [BackupOrchestrator].
-func NewBackupScheduler(scheduler JobScheduler, orchestrator *BackupOrchestrator) *BackupScheduler {
+// NewBackupScheduler creates a scheduler backed by Quartz and a [BackupOrchestrator].
+func NewBackupScheduler(scheduler JobScheduler, orchestrator BackupOrchestrator) *BackupScheduler {
 	return &BackupScheduler{scheduler: scheduler, orchestrator: orchestrator}
 }
 
