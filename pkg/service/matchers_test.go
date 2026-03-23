@@ -32,7 +32,7 @@ type fullBackupFilterMatcher struct{ toTime time.Time }
 
 func (m fullBackupFilterMatcher) Matches(x any) bool {
 	rf, ok := x.(*RoutineFilter)
-	return ok && rf.JobType == model.BackupTypeFull &&
+	return ok && rf.backupType == model.BackupTypeFull &&
 		rf.ToTime != nil && rf.ToTime.Equal(m.toTime)
 }
 
@@ -45,7 +45,7 @@ type incrementalFilterMatcher struct{ fromTime, toTime time.Time }
 
 func (m incrementalFilterMatcher) Matches(x any) bool {
 	rf, ok := x.(*RoutineFilter)
-	return ok && rf.JobType == model.BackupTypeIncremental &&
+	return ok && rf.backupType == model.BackupTypeIncremental &&
 		rf.FromTime != nil && rf.FromTime.Equal(m.fromTime) &&
 		rf.ToTime != nil && rf.ToTime.Equal(m.toTime)
 }

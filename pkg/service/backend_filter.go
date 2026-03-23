@@ -22,8 +22,8 @@ type BaseFilter struct {
 // RoutineFilter for filtering by routine and job type.
 type RoutineFilter struct {
 	BaseFilter
-	routine *model.BackupRoutine
-	JobType model.BackupType
+	routine    *model.BackupRoutine
+	backupType model.BackupType
 
 	onlyLast bool // return last backup only
 }
@@ -31,16 +31,16 @@ type RoutineFilter struct {
 // NewFullBackupFilter creates a filter for full backups.
 func NewFullBackupFilter(routine *model.BackupRoutine) *RoutineFilter {
 	return &RoutineFilter{
-		routine: routine,
-		JobType: model.BackupTypeFull,
+		routine:    routine,
+		backupType: model.BackupTypeFull,
 	}
 }
 
 // NewIncrementalBackupFilter creates a filter for incremental backups.
 func NewIncrementalBackupFilter(routine *model.BackupRoutine) *RoutineFilter {
 	return &RoutineFilter{
-		routine: routine,
-		JobType: model.BackupTypeIncremental,
+		routine:    routine,
+		backupType: model.BackupTypeIncremental,
 	}
 }
 
@@ -74,19 +74,19 @@ func (f *RoutineFilter) WithTimeBounds(bounds model.TimeBounds) *RoutineFilter {
 // String returns a readable filter representation for logging/debugging.
 func (f *RoutineFilter) String() string {
 	return fmt.Sprintf("routine: %v type: %v last: %v timebounds: %s",
-		f.routine, f.JobType, f.onlyLast, f.timeBounds().String())
+		f.routine, f.backupType, f.onlyLast, f.timeBounds().String())
 }
 
 // getPath returns the storage root path for this routine and job type.
 func (f *RoutineFilter) getPath() string {
-	return backupRootPath(f.routine.Name, f.JobType)
+	return backupRootPath(f.routine.Name, f.backupType)
 }
 
 // getUpperBoundary returns the storage path prefix upper bound derived from ToTime.
 // If ToTime is unset, all timestamps are allowed.
 func (f *RoutineFilter) getUpperBoundary(pathService PathService) string {
 	if f.ToTime != nil {
-		return pathService.GetTimestampPath(f.routine.Name, *f.ToTime, f.JobType)
+		return pathService.GetTimestampPath(f.routine.Name, *f.ToTime, f.backupType)
 	}
 
 	return "\uffff"
