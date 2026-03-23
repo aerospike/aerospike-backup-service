@@ -14,8 +14,9 @@ import (
 
 var errBackupSkipped = errors.New("backup skipped")
 
-// BackupOrchestrator runs a full or incremental backup for a routine.
+// BackupOrchestrator runs a full or incremental backup for a routine snapshot.
 type BackupOrchestrator interface {
+	// RunBackup executes a full or incremental backup for the given routine snapshot.
 	RunBackup(ctx context.Context, routine *model.BackupRoutine, now time.Time, backupType model.BackupType)
 }
 

@@ -8,8 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
-// AllNamespacesBackupRunner coordinates backup runs for every namespace in a routine
-// (explicitly configured or discovered on the source cluster).
+// AllNamespacesBackupRunner coordinates backup runs for every namespace in a routine.
 type AllNamespacesBackupRunner interface {
 	// StartBackup resolves target namespaces and starts one cancelable backup per namespace.
 	StartBackup(
@@ -39,8 +38,7 @@ func NewAllNamespacesBackupRunner(
 	}
 }
 
-// StartBackup resolves the namespace list (configured or discovered from the source
-// cluster), starts one [CancelableBackupHandler] per namespace, and returns the
+// StartBackup resolves the namespace list, starts one backup per namespace, and returns the
 // aggregate [BackupNamespacesOperation].
 func (r *AllNamespacesBackupRunnerImpl) StartBackup(
 	ctx context.Context,
