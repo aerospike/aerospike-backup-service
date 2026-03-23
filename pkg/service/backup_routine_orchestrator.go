@@ -16,8 +16,8 @@ var errBackupSkipped = errors.New("backup skipped")
 
 // BackupOrchestrator runs a full or incremental backup for a routine snapshot.
 type BackupOrchestrator interface {
-	// RunBackup executes a full or incremental backup for the given routine snapshot.
-	RunBackup(ctx context.Context, routine *model.BackupRoutine, now time.Time, backupType model.BackupType)
+	// Backup executes a full or incremental backup for the given routine snapshot.
+	Backup(ctx context.Context, routine *model.BackupRoutine, now time.Time, backupType model.BackupType)
 }
 
 // BackupOrchestratorImpl runs backup operations for a routine.
@@ -25,7 +25,7 @@ type BackupOrchestratorImpl struct {
 	registry          RunningBackupsRegistry
 	completionHandler BackupCompletionHandler
 	startController   StartController
-	runner            AllNamespacesBackupRunner
+	routineRunner     RoutineBackupRunner
 }
 
 var _ BackupOrchestrator = (*BackupOrchestratorImpl)(nil)
@@ -35,18 +35,18 @@ func NewBackupOrchestrator(
 	registry RunningBackupsRegistry,
 	completionHandler BackupCompletionHandler,
 	startController StartController,
-	backupRunner AllNamespacesBackupRunner,
+	backupRunner RoutineBackupRunner,
 ) *BackupOrchestratorImpl {
 	return &BackupOrchestratorImpl{
 		registry:          registry,
 		completionHandler: completionHandler,
 		startController:   startController,
-		runner:            backupRunner,
+		routineRunner:     backupRunner,
 	}
 }
 
-// RunBackup executes a full or incremental backup for the given routine snapshot.
-func (p *BackupOrchestratorImpl) RunBackup(
+// Run executes a full or incremental backup for the given routine snapshot.
+func (p *BackupOrchestratorImpl) Backup(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	now time.Time,
@@ -82,7 +82,7 @@ func (p *BackupOrchestratorImpl) runBackupInternal(
 		StartTime:  now,
 		TimeBounds: p.createTimeBounds(backupType, now, routine),
 	}
-	backupHandler, err := p.runner.StartBackup(ctx, routine, runSpec, logger)
+	backupHandler, err := p.routineRunner.Run(ctx, routine, runSpec, logger)
 	if err != nil {
 		return err
 	}

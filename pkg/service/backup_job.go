@@ -31,7 +31,7 @@ func (j *backupJob) Execute(ctx context.Context) error {
 	}
 	now := time.Unix(0, jobMetadata.RunTime).Truncate(time.Millisecond)
 
-	j.orchestrator.RunBackup(ctx, j.routine, now, j.jobType)
+	j.orchestrator.Backup(ctx, j.routine, now, j.jobType)
 
 	return nil
 }

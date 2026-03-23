@@ -12,7 +12,7 @@ type NamespaceResolver interface {
 	// ResolveNamespaces returns the list of namespaces to back up for the routine.
 	ResolveNamespaces(
 		ctx context.Context,
-		backupRoutine *model.BackupRoutine,
+		routine *model.BackupRoutine,
 		logger *slog.Logger,
 	) ([]string, error)
 }
@@ -29,14 +29,14 @@ func NewNamespaceResolver(clientManager ClientManager) NamespaceResolver {
 
 func (r *clusterNamespaceResolver) ResolveNamespaces(
 	ctx context.Context,
-	backupRoutine *model.BackupRoutine,
+	routine *model.BackupRoutine,
 	logger *slog.Logger,
 ) ([]string, error) {
-	if len(backupRoutine.Namespaces) > 0 {
-		return backupRoutine.Namespaces, nil
+	if len(routine.Namespaces) > 0 {
+		return routine.Namespaces, nil
 	}
 
-	client, err := r.clientManager.GetClient(ctx, backupRoutine.SourceCluster, logger)
+	client, err := r.clientManager.GetClient(ctx, routine.SourceCluster, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backup client: %w", err)
 	}

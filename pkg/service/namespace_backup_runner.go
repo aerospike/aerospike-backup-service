@@ -13,34 +13,34 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// SingleNamespaceExecutor runs the backup pipeline for one namespace: retries,
+// NamespaceBackupRunner runs the backup pipeline for one namespace: retries,
 // backend cleanup on failure/cancel, and metadata writes on success.
-type SingleNamespaceExecutor interface {
+type NamespaceBackupRunner interface {
 	// Run starts backup execution for a single namespace and returns a cancelable handler.
 	Run(
 		ctx context.Context,
-		backupRoutine *model.BackupRoutine,
+		routine *model.BackupRoutine,
 		namespace string,
 		runSpec model.BackupRunSpec,
 		logger *slog.Logger,
 	) CancelableBackupHandler
 }
 
-// NewSingleNamespaceExecutor builds a [SingleNamespaceExecutor] from the low-level
-// backup runner, storage writer, and path layout service.
-func NewSingleNamespaceExecutor(
+// NewNamespaceBackupRunner builds a [NamespaceBackupRunner] from the low-level
+// backup routineRunner, storage writer, and path layout service.
+func NewNamespaceBackupRunner(
 	backupExecutor backupexecutor.Backup,
 	backendService BackupWriter,
 	pathService PathService,
-) SingleNamespaceExecutor {
-	return &singleNamespaceExecutorImpl{
+) NamespaceBackupRunner {
+	return &NamespaceBackupRunnerImpl{
 		backupExecutor: backupExecutor,
 		backendService: backendService,
 		pathService:    pathService,
 	}
 }
 
-type singleNamespaceExecutorImpl struct {
+type NamespaceBackupRunnerImpl struct {
 	backupExecutor backupexecutor.Backup
 	backendService BackupWriter
 	pathService    PathService
@@ -56,25 +56,25 @@ type CancelableBackupHandler interface {
 
 // Run starts a retryable backup for one namespace via [backupexecutor.Backup.Run],
 // with cleanup and metadata callbacks wired for the routine's storage layout.
-func (e *singleNamespaceExecutorImpl) Run(
+func (e *NamespaceBackupRunnerImpl) Run(
 	ctx context.Context,
-	backupRoutine *model.BackupRoutine,
+	routine *model.BackupRoutine,
 	namespace string,
 	runSpec model.BackupRunSpec,
 	logger *slog.Logger,
 ) CancelableBackupHandler {
-	backupFolder := e.pathService.GetBackupPath(backupRoutine.Name, runSpec.Type, namespace, runSpec.StartTime)
+	backupFolder := e.pathService.GetBackupPath(routine.Name, runSpec.Type, namespace, runSpec.StartTime)
 
 	return newRetryableBackupHandler(
 		ctx,
-		*backupRoutine.BackupPolicy.GetRetryPolicyOrDefault(),
+		*routine.BackupPolicy.GetRetryPolicyOrDefault(),
 		retryableBackupCallbacks{
 			Start: func(ctx context.Context) (backupexecutor.BackupHandler, error) {
-				return e.backupExecutor.Run(ctx, backupRoutine, runSpec.TimeBounds, namespace, backupFolder, logger)
+				return e.backupExecutor.Run(ctx, routine, runSpec.TimeBounds, namespace, backupFolder, logger)
 			},
 			OnFail: func(ctx context.Context) {
-				path := e.pathService.GetTimestampPath(backupRoutine.Name, runSpec.StartTime, runSpec.Type)
-				e.deleteFolder(ctx, backupRoutine, path, logger)
+				path := e.pathService.GetTimestampPath(routine.Name, runSpec.StartTime, runSpec.Type)
+				e.deleteFolder(ctx, routine, path, logger)
 			},
 			OnSuccess: func(ctx context.Context, stats *models.BackupStats) error {
 				if runSpec.Type == model.BackupTypeIncremental && stats.IsEmpty() {
@@ -85,13 +85,13 @@ func (e *singleNamespaceExecutorImpl) Run(
 					namespace,
 					ptr.ValueOrZero(runSpec.TimeBounds.FromTime),
 					runSpec.StartTime,
-					backupRoutine.BackupPolicy,
+					routine.BackupPolicy,
 				)
 
-				return e.writeBackupMetadata(ctx, backupRoutine, metadata, backupFolder, logger)
+				return e.writeBackupMetadata(ctx, routine, metadata, backupFolder, logger)
 			},
 			OnRetry: func() {
-				observeBackupEvent(backupRoutine.Name, runSpec.Type, BackupOutcomeRetry, 0)
+				observeBackupEvent(routine.Name, runSpec.Type, BackupOutcomeRetry, 0)
 			},
 		},
 		logger,
@@ -100,7 +100,7 @@ func (e *singleNamespaceExecutorImpl) Run(
 
 // deleteFolder removes backup data under the given path on failure or cancel; logs
 // errors except when the context was canceled during delete.
-func (e *singleNamespaceExecutorImpl) deleteFolder(
+func (e *NamespaceBackupRunnerImpl) deleteFolder(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	path string,
@@ -119,7 +119,7 @@ func (e *singleNamespaceExecutorImpl) deleteFolder(
 }
 
 // writeBackupMetadata persists backup metadata to storage and logs the folder on success.
-func (e *singleNamespaceExecutorImpl) writeBackupMetadata(
+func (e *NamespaceBackupRunnerImpl) writeBackupMetadata(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	metadata model.BackupMetadata,

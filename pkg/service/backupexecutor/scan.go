@@ -37,19 +37,19 @@ const megabyte = 1_048_576
 
 func makeBackupConfig(
 	namespace string,
-	backupRoutine *model.BackupRoutine,
+	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 ) (*backup.ConfigBackup, error) {
 	config := backup.NewDefaultBackupConfig()
 
 	config.Namespace = namespace
-	config.BinList = backupRoutine.BinList
-	config.NodeList = backupRoutine.NodeList
-	config.SetList = backupRoutine.SetList
+	config.BinList = routine.BinList
+	config.NodeList = routine.NodeList
+	config.SetList = routine.SetList
 
-	if backupRoutine.PartitionList != "" {
+	if routine.PartitionList != "" {
 		// namespace parameter is only applicable for partition by digest; it's not supported by service.
-		partitionFilters, err := backup.ParsePartitionFilterListString("", backupRoutine.PartitionList)
+		partitionFilters, err := backup.ParsePartitionFilterListString("", routine.PartitionList)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse partition list: %w", err)
 		}
@@ -57,7 +57,7 @@ func makeBackupConfig(
 		config.PartitionFilters = partitionFilters
 	}
 
-	backupPolicy := backupRoutine.BackupPolicy
+	backupPolicy := routine.BackupPolicy
 	config.NoRecords = ptr.ValueOrZero(backupPolicy.NoRecords)
 	if isFullBackup(timeBounds) {
 		config.NoIndexes = ptr.ValueOrZero(backupPolicy.NoIndexes)
@@ -72,15 +72,15 @@ func makeBackupConfig(
 	config.FileLimit = uint64(backupPolicy.GetFileLimitOrDefault() * megabyte) // lib expects limit in bytes.
 	config.RecordsPerSecond = ptr.ValueOrZero(backupPolicy.RecordsPerSecond)
 	config.Bandwidth = ptr.ValueOrZero(backupPolicy.Bandwidth) * megabyte // lib expects file size in bytes.
-	config.ScanPolicy = scanPolicy(backupPolicy, backupRoutine)
-	config.RackList = backupRoutine.RackList // backup only these racks
+	config.ScanPolicy = scanPolicy(backupPolicy, routine)
+	config.RackList = routine.RackList // backup only these racks
 
 	config.ModBefore = timeBounds.ToTime
 	config.ModAfter = timeBounds.FromTime
 
 	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
 	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)
-	config.SecretAgentConfig = backupRoutine.SecretAgent.ToSecretAgentConfig()
+	config.SecretAgentConfig = routine.SecretAgent.ToSecretAgentConfig()
 
 	config.MetricsEnabled = true
 
@@ -89,7 +89,7 @@ func makeBackupConfig(
 
 func scanPolicy(
 	backupPolicy *model.BackupPolicy,
-	backupRoutine *model.BackupRoutine,
+	routine *model.BackupRoutine,
 ) *as.ScanPolicy {
 	scanPolicy := as.NewScanPolicy()
 	if backupPolicy.TotalTimeout != nil {
@@ -104,11 +104,11 @@ func scanPolicy(
 	scanPolicy.SleepBetweenRetries = model.ScanRetryPolicy.BaseTimeout
 	scanPolicy.SleepMultiplier = model.ScanRetryPolicy.Multiplier
 
-	if len(backupRoutine.SourceCluster.PreferRacks) > 0 {
+	if len(routine.SourceCluster.PreferRacks) > 0 {
 		scanPolicy.ReplicaPolicy = as.PREFER_RACK
 	}
 
-	if len(backupRoutine.RackList) > 0 || len(backupRoutine.NodeList) > 0 {
+	if len(routine.RackList) > 0 || len(routine.NodeList) > 0 {
 		scanPolicy.ReplicaPolicy = as.MASTER
 	}
 
