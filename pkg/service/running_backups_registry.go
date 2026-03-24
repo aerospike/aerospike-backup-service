@@ -17,13 +17,13 @@ import (
 // RunningBackupsRegistry defines the interface for managing running backups and their statuses.
 type RunningBackupsRegistry interface {
 	// register adds a new backup handler for a specific routine and job type.
-	register(routineName string, jt jobType, handler CancelableBackupHandler)
+	register(routineName string, jt model.BackupType, handler CancelableBackupHandler)
 	// clearFailedBackup deletes a backup from the registry.
 	// Should be called for failed backups.
-	clearFailedBackup(routineName string, jt jobType)
+	clearFailedBackup(routineName string, jt model.BackupType)
 	// recordSuccessfulBackup removes a backup from the registry and updates the last success timestamp.
 	// Should be called after successful backup completion.
-	recordSuccessfulBackup(routineName string, jt jobType, timestamp time.Time)
+	recordSuccessfulBackup(routineName string, jt model.BackupType, timestamp time.Time)
 
 	// GetRoutineState returns the current backup statistics for a routine.
 	GetRoutineState(routine *model.BackupRoutine) model.RoutineState
@@ -163,29 +163,37 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 	tracker.setLastRun(lastRun)
 	if lastRun.FullBackupTime() != nil {
 		t := float64(lastRun.FullBackupTime().Unix())
-		lastBackupTimestamp.WithLabelValues(routine.Name, string(jobTypeFull)).Set(t)
+		lastBackupTimestamp.WithLabelValues(routine.Name, string(model.BackupTypeFull)).Set(t)
 	}
 	if lastRun.IncrementalBackupTime() != nil {
 		t := float64(lastRun.IncrementalBackupTime().Unix())
-		lastBackupTimestamp.WithLabelValues(routine.Name, string(jobTypeIncremental)).Set(t)
+		lastBackupTimestamp.WithLabelValues(routine.Name, string(model.BackupTypeIncremental)).Set(t)
 	}
 
 	return nil
 }
 
 // register adds a new backup handler for a specific routine and job type.
-func (r *RunningBackupsRegistryImpl) register(routineName string, jobType jobType, handler CancelableBackupHandler) {
-	r.getTracker(routineName).register(jobType, handler)
+func (r *RunningBackupsRegistryImpl) register(
+	routineName string,
+	backupType model.BackupType,
+	handler CancelableBackupHandler,
+) {
+	r.getTracker(routineName).register(backupType, handler)
 }
 
 // recordSuccessfulBackup removes a backup from the registry and updates the last success timestamp.
-func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(routineName string, jobType jobType, timestamp time.Time) {
-	r.getTracker(routineName).recordSuccessfulBackup(routineName, jobType, timestamp)
+func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(
+	routineName string,
+	backupType model.BackupType,
+	timestamp time.Time,
+) {
+	r.getTracker(routineName).recordSuccessfulBackup(routineName, backupType, timestamp)
 }
 
 // clearFailedBackup deletes a backup from the registry.
-func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, jobType jobType) {
-	r.getTracker(routineName).clearFailedBackup(jobType)
+func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, backupType model.BackupType) {
+	r.getTracker(routineName).clearFailedBackup(backupType)
 }
 
 // GetRoutineState returns the current backup statistics for a routine.

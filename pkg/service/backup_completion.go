@@ -16,9 +16,15 @@ import (
 type BackupCompletionHandler interface {
 	// OnSuccess is called after a backup completes successfully.
 	// For full backups it also runs retention and backs up cluster configuration.
-	OnSuccess(ctx context.Context, routine *model.BackupRoutine, jobType jobType, timestamp time.Time, logger *slog.Logger)
+	OnSuccess(
+		ctx context.Context,
+		routine *model.BackupRoutine,
+		backupType model.BackupType,
+		timestamp time.Time,
+		logger *slog.Logger,
+	)
 	// OnFailure is called when a backup fails (clears failed state in registry).
-	OnFailure(routine *model.BackupRoutine, jobType jobType)
+	OnFailure(routine *model.BackupRoutine, backupType model.BackupType)
 }
 
 type backupCompletionHandler struct {
@@ -46,13 +52,13 @@ var _ BackupCompletionHandler = (*backupCompletionHandler)(nil)
 func (h *backupCompletionHandler) OnSuccess(
 	ctx context.Context,
 	routine *model.BackupRoutine,
-	jobType jobType,
+	backupType model.BackupType,
 	timestamp time.Time,
 	logger *slog.Logger,
 ) {
-	go h.registry.recordSuccessfulBackup(routine.Name, jobType, timestamp)
+	go h.registry.recordSuccessfulBackup(routine.Name, backupType, timestamp)
 
-	if jobType != jobTypeFull {
+	if backupType != model.BackupTypeFull {
 		return
 	}
 
@@ -82,21 +88,21 @@ func (h *backupCompletionHandler) OnSuccess(
 
 func (h *backupCompletionHandler) OnFailure(
 	routine *model.BackupRoutine,
-	jobType jobType,
+	backupType model.BackupType,
 ) {
-	h.registry.clearFailedBackup(routine.Name, jobType)
+	h.registry.clearFailedBackup(routine.Name, backupType)
 }
 
 // reportBackupOutcome classifies the backup terminal outcome from err and logs it.
 // It also emits the corresponding backup event prometheus metrics.
 func reportBackupOutcome(
 	routineName string,
-	backupType jobType,
+	backupType model.BackupType,
 	duration time.Duration,
 	err error,
 	logger *slog.Logger,
 ) {
-	operation := backupType.String()
+	operation := string(backupType) + " backup"
 
 	if err == nil {
 		logger.Debug(operation+" finished", slog.Duration("duration", duration))

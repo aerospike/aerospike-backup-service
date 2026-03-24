@@ -191,7 +191,7 @@ func testScheduleBackupValidation(
 			_ = config.AddRoutine(&model.BackupRoutine{Name: tt.routineName})
 
 			svc := &Service{
-				backupScheduler: service.NewAdHocScheduler(nil, nil),
+				backupScheduler: service.NewBackupScheduler(nil, nil),
 				config:          config,
 			}
 

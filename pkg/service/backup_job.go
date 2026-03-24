@@ -8,21 +8,16 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/reugn/go-quartz/quartz"
 )
 
-// backupRunner defines an interface for running backups.
-type backupRunner interface {
-	// runBackup starts a backup operation for the requested backup type.
-	runBackup(ctx context.Context, now time.Time, backupType jobType)
-}
-
-// backupJob implements the quartz.Job interface.
+// backupJob is a Quartz job that runs one full or incremental backup for a fixed routine snapshot.
 type backupJob struct {
-	runner      backupRunner
-	jobType     jobType
-	routineName string
-	logger      *slog.Logger
+	orchestrator BackupOrchestrator
+	routine      *model.BackupRoutine
+	backupType   model.BackupType
+	logger       *slog.Logger
 }
 
 var _ quartz.Job = (*backupJob)(nil)
@@ -36,22 +31,22 @@ func (j *backupJob) Execute(ctx context.Context) error {
 	}
 	now := time.Unix(0, jobMetadata.RunTime).Truncate(time.Millisecond)
 
-	j.runner.runBackup(ctx, now, j.jobType)
+	j.orchestrator.Backup(ctx, j.routine, now, j.backupType)
 
 	return nil
 }
 
 // Description returns the description of the backup job.
 func (j *backupJob) Description() string {
-	return fmt.Sprintf("%s %s backup job", j.routineName, j.jobType)
+	return fmt.Sprintf("%s %s backup job", j.routine.Name, j.backupType)
 }
 
-// newBackupJob creates a new backup job.
-func newBackupJob(runner backupRunner, jobType jobType, routineName string) quartz.Job {
+// newBackupJob builds a [quartz.Job] that invokes [BackupOrchestrator.RunBackup] with the given routine copy and type.
+func newBackupJob(orchestrator BackupOrchestrator, routine *model.BackupRoutine, bt model.BackupType) quartz.Job {
 	return &backupJob{
-		runner:      runner,
-		jobType:     jobType,
-		routineName: routineName,
-		logger:      slog.Default().With(attr.Routine(routineName), slog.Any("type", jobType)),
+		orchestrator: orchestrator,
+		routine:      routine,
+		backupType:   bt,
+		logger:       slog.Default().With(attr.Routine(routine.Name), slog.Any("type", bt)),
 	}
 }

@@ -9,13 +9,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockScheduler implements quartz.Scheduler for testing.
+// MockScheduler implements JobScheduler for testing.
 type MockScheduler struct {
 	mock.Mock
 }
 
 func (m *MockScheduler) ScheduleJob(detail *quartz.JobDetail, trigger quartz.Trigger) error {
 	args := m.Called(detail, trigger)
+	return args.Error(0)
+}
+
+func (m *MockScheduler) DeleteJob(key *quartz.JobKey) error {
+	args := m.Called(key)
 	return args.Error(0)
 }
 
@@ -69,7 +74,13 @@ func TestScheduleRoutines(t *testing.T) {
 			for _, routine := range tt.routines {
 				routines = append(routines, routine)
 			}
-			err := scheduleRoutines(scheduler, routines, &BackupComponents{})
+			bs := NewBackupScheduler(scheduler, NewBackupOrchestrator(
+				nil,
+				nil,
+				nil,
+				nil,
+			))
+			err := bs.ScheduleRoutines(routines)
 
 			require.NoError(t, err)
 			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)

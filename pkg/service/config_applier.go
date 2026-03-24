@@ -16,28 +16,29 @@ type ConfigApplier interface {
 	ApplyNewConfig(ctx context.Context) error
 }
 
+// DefaultConfigApplier applies configuration changes by unscheduling affected cron jobs, rescheduling
+// from the new config snapshot, and triggering backup-history sync for those routines.
 type DefaultConfigApplier struct {
-	mu         sync.Mutex
-	scheduler  quartz.Scheduler
-	registry   RunningBackupsRegistry
-	components *BackupComponents
-	config     *model.Config
+	mu              sync.Mutex
+	backupScheduler *BackupScheduler
+	registry        RunningBackupsRegistry
+	config          *model.Config
 }
 
+// NewDefaultConfigApplier wires config invalidation to the backup scheduler and running-backups registry.
 func NewDefaultConfigApplier(
-	scheduler quartz.Scheduler,
+	backupScheduler *BackupScheduler,
 	registry RunningBackupsRegistry,
-	components *BackupComponents,
 	config *model.Config,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
-		scheduler:  scheduler,
-		registry:   registry,
-		components: components,
-		config:     config,
+		backupScheduler: backupScheduler,
+		registry:        registry,
+		config:          config,
 	}
 }
 
+// ApplyNewConfig reschedules periodic jobs and rescans backup history for routines marked invalid in config.
 func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -59,11 +60,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	// it should be unscheduled only and skipped for reschedule/rescan.
 	routinesToApply := a.existingRoutines(invalidatedRoutineNames)
 
-	err := scheduleRoutines(
-		a.scheduler,
-		routinesToApply,
-		a.components,
-	)
+	err := a.backupScheduler.ScheduleRoutines(routinesToApply)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
@@ -80,13 +77,13 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routineNames []string)
 	keysToDelete := make([]*quartz.JobKey, 0, len(routineNames)*2)
 	for _, routineName := range routineNames {
 		keysToDelete = append(keysToDelete,
-			jobKey(routineName, jobTypeFull),
-			jobKey(routineName, jobTypeIncremental))
+			jobKey(routineName, model.BackupTypeFull),
+			jobKey(routineName, model.BackupTypeIncremental))
 	}
 
 	slog.Info("Delete scheduled jobs", slog.Any("keys", keysToDelete))
 	for _, key := range keysToDelete {
-		_ = a.scheduler.DeleteJob(key) // ignore errors because we delete all jobs
+		_ = a.backupScheduler.DeleteJob(key) // ignore errors because we delete all jobs
 	}
 }
 

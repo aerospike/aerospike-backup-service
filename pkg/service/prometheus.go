@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -197,13 +198,13 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 	for routineName, currentStat := range runningState {
 		// Update Full backup metric if running
 		if currentStat.Full != nil {
-			backupProgress.WithLabelValues(routineName, string(jobTypeFull)).
+			backupProgress.WithLabelValues(routineName, string(model.BackupTypeFull)).
 				Set(float64(currentStat.Full.PercentageDone))
 		}
 
 		// Update Incremental backup metric if running
 		if currentStat.Incremental != nil {
-			backupProgress.WithLabelValues(routineName, string(jobTypeIncremental)).
+			backupProgress.WithLabelValues(routineName, string(model.BackupTypeIncremental)).
 				Set(float64(currentStat.Incremental.PercentageDone))
 		}
 	}
@@ -224,7 +225,12 @@ const (
 )
 
 // observeBackupEvent updates Prometheus backup counters/histograms.
-func observeBackupEvent(routineName string, backupType jobType, outcome BackupOutcome, duration time.Duration) {
+func observeBackupEvent(
+	routineName string,
+	backupType model.BackupType,
+	outcome BackupOutcome,
+	duration time.Duration,
+) {
 	backupCounters.With(prometheus.Labels{
 		"routine": routineName,
 		"type":    string(backupType),
@@ -241,7 +247,7 @@ func observeBackupEvent(routineName string, backupType jobType, outcome BackupOu
 	// update deprecated counters
 	switch outcome {
 	case BackupOutcomeSuccess:
-		if backupType == jobTypeFull {
+		if backupType == model.BackupTypeFull {
 			backupCounter.WithLabelValues().Inc()
 			backupDurationGauge.WithLabelValues().Set(float64(duration.Milliseconds()))
 		} else {
@@ -249,13 +255,13 @@ func observeBackupEvent(routineName string, backupType jobType, outcome BackupOu
 			incrBackupDurationGauge.WithLabelValues().Set(float64(duration.Milliseconds()))
 		}
 	case BackupOutcomeFailure:
-		if backupType == jobTypeFull {
+		if backupType == model.BackupTypeFull {
 			backupFailureCounter.WithLabelValues().Inc()
 		} else {
 			incrBackupFailureCounter.WithLabelValues().Inc()
 		}
 	case BackupOutcomeSkip:
-		if backupType == jobTypeFull {
+		if backupType == model.BackupTypeFull {
 			backupSkippedCounter.WithLabelValues().Inc()
 		} else {
 			incrBackupSkippedCounter.WithLabelValues().Inc()

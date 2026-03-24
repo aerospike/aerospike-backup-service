@@ -1,4 +1,4 @@
-package service
+package try
 
 import (
 	"errors"
@@ -9,19 +9,20 @@ import (
 	"time"
 
 	"github.com/aerospike/backup-go/models"
+	"github.com/aerospike/backup-go/pkg/asinfo"
 	"github.com/stretchr/testify/require"
 )
 
-var r = newRetryExecutor(models.RetryPolicy{
+var testRetryPolicy = models.RetryPolicy{
 	MaxRetries:  2,
 	BaseTimeout: 100 * time.Millisecond,
 	Multiplier:  1,
-}, slog.Default())
+}
 
 func Test_timer(t *testing.T) {
 	counterLock := sync.Mutex{}
 	retryCounter := 2
-	err := r.run("test", func() error {
+	err := Retry(testRetryPolicy, slog.Default(), func() error {
 		counterLock.Lock()
 		defer counterLock.Unlock()
 		if retryCounter > 0 {
@@ -44,7 +45,7 @@ func Test_timer_expires(t *testing.T) {
 	counterLock := sync.Mutex{}
 	retryCounter := 0
 	const attempts = 3
-	_ = r.run("test", func() error {
+	_ = Retry(testRetryPolicy, slog.Default(), func() error {
 		counterLock.Lock()
 		defer counterLock.Unlock()
 		retryCounter++
@@ -71,8 +72,8 @@ func Test_timerRunTwice(t *testing.T) {
 		}
 		return nil
 	}
-	_ = r.run("test", f, func() {})
-	_ = r.run("test", f, func() {})
+	_ = Retry(testRetryPolicy, slog.Default(), f, func() {})
+	_ = Retry(testRetryPolicy, slog.Default(), f, func() {})
 
 	time.Sleep(1 * time.Second)
 	counterLock.Lock()
@@ -86,7 +87,7 @@ func Test_retry_attempts_expected_count(t *testing.T) {
 	attempts := 0
 	expectedAttempts := 3 // MaxRetries=2 + 1 initial attempt
 
-	err := r.run("retry-test", func() error {
+	err := Retry(testRetryPolicy, slog.Default(), func() error {
 		attempts++
 		return errors.New("still failing")
 	}, func() {})
@@ -96,24 +97,22 @@ func Test_retry_attempts_expected_count(t *testing.T) {
 }
 
 func Test_non_retryable_error_stops_retries(t *testing.T) {
-	sentinel := errors.New("permanent failure")
-
 	attempts := 0
 	onRetryCalls := 0
 
-	re := newRetryExecutor(models.RetryPolicy{
+	policy := models.RetryPolicy{
 		MaxRetries:  5,
 		BaseTimeout: time.Millisecond,
 		Multiplier:  1,
-	}, slog.Default(), sentinel)
+	}
 
-	err := re.run("non-retryable", func() error {
+	err := Retry(policy, slog.Default(), func() error {
 		attempts++
-		return fmt.Errorf("wrapped: %w", sentinel)
+		return fmt.Errorf("wrapped: %w", asinfo.ErrNoNode)
 	}, func() { onRetryCalls++ })
 
 	require.Error(t, err)
-	require.ErrorIs(t, err, sentinel)
+	require.ErrorIs(t, err, asinfo.ErrNoNode)
 	require.Equal(t, 1, attempts, "should attempt only once for non-retryable error")
 	require.Equal(t, 0, onRetryCalls, "onRetry should not be called for non-retryable error")
 }
