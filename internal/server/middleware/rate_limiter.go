@@ -84,7 +84,7 @@ func (wl *IPWhiteList) isAllowed(ip string) bool {
 	}
 	ipAddr, err := netip.ParseAddr(ip)
 	if err != nil {
-		slog.Warn("Invalid client IP", slog.String("ip", ip))
+		slog.Warn("Invalid client IP")
 		return false
 	}
 	_, ok := wl.addresses[ip]

@@ -1,10 +1,11 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -128,12 +129,12 @@ func (r *backupReader) filterAndSortBackups(
 		}
 	}
 
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Created.Equal(out[j].Created) {
-			return out[i].Key < out[j].Key
+	slices.SortFunc(out, func(a, b model.BackupDetails) int {
+		if c := a.Created.Compare(b.Created); c != 0 {
+			return c
 		}
 
-		return out[i].Created.Before(out[j].Created)
+		return cmp.Compare(a.Key, b.Key)
 	})
 
 	return out

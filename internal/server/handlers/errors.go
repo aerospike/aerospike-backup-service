@@ -98,8 +98,10 @@ func httpContent(w http.ResponseWriter, buf []byte, filename string) {
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	w.Header().Set("Content-Length", strconv.Itoa(len(buf)))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 
 	w.WriteHeader(http.StatusOK)
 
+	//nolint:gosec // G705 attachment with explicit Content-Type and nosniff; body is file bytes, not HTML document.
 	_, _ = w.Write(buf)
 }

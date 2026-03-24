@@ -58,7 +58,12 @@ func TestAddAerospikeCluster(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
 
-			req := httptest.NewRequest(http.MethodPost, "/v1/config/clusters/"+tt.clusterName, strings.NewReader(tt.requestBody))
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"/v1/config/clusters/"+tt.clusterName,
+				strings.NewReader(tt.requestBody),
+			)
 			req.SetPathValue("name", tt.clusterName)
 			w := httptest.NewRecorder()
 
@@ -79,7 +84,7 @@ func TestReadAerospikeClusters(t *testing.T) {
 	_ = svc.config.AddCluster("cluster1", &model.AerospikeCluster{})
 	_ = svc.config.AddCluster("cluster2", &model.AerospikeCluster{})
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/config/clusters", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/clusters", nil)
 	w := httptest.NewRecorder()
 
 	svc.ReadAerospikeClusters(w, req)
@@ -130,7 +135,7 @@ func TestReadAerospikeCluster(t *testing.T) {
 				_ = svc.config.AddCluster(tt.clusterName, tt.cluster)
 			}
 
-			req := httptest.NewRequest(http.MethodGet, "/v1/config/clusters/"+tt.clusterName, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/clusters/"+tt.clusterName, nil)
 			req.SetPathValue("name", tt.clusterName)
 			w := httptest.NewRecorder()
 
@@ -192,7 +197,12 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			initialCluster := &model.AerospikeCluster{}
 			_ = svc.config.AddCluster("test-cluster", initialCluster)
 
-			req := httptest.NewRequest(http.MethodPut, "/v1/config/clusters/"+tt.clusterName, strings.NewReader(tt.requestBody))
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPut,
+				"/v1/config/clusters/"+tt.clusterName,
+				strings.NewReader(tt.requestBody),
+			)
 			req.SetPathValue("name", tt.clusterName)
 			w := httptest.NewRecorder()
 
@@ -238,7 +248,7 @@ func TestDeleteAerospikeCluster(t *testing.T) {
 			svc := setupTestService()
 			_ = svc.config.AddCluster("test-cluster", &model.AerospikeCluster{})
 
-			req := httptest.NewRequest(http.MethodDelete, "/v1/config/clusters/"+tt.clusterName, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/clusters/"+tt.clusterName, nil)
 			req.SetPathValue("name", tt.clusterName)
 			w := httptest.NewRecorder()
 

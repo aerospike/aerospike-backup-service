@@ -99,7 +99,7 @@ func TestRequestLogger(t *testing.T) {
 			logger := &testLogger{}
 			handler := RequestLogger(slog.New(logger), skipPaths)(tt.handler)
 
-			req := httptest.NewRequest(http.MethodPost, tt.path, tt.body)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, tt.path, tt.body)
 			rec := httptest.NewRecorder()
 
 			handler.ServeHTTP(rec, req)

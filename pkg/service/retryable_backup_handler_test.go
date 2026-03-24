@@ -262,11 +262,9 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 	}, slog.Default())
 	var err error
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		err = handler.Wait(t.Context())
-		wg.Done()
-	}()
+	})
 
 	handler.Cancel()
 	wg.Wait()
