@@ -43,7 +43,12 @@ func TestAddRoutine(t *testing.T) {
 			svc := setupTestService()
 			_ = svc.config.AddPolicy("test-policy", &model.BackupPolicy{})
 
-			req := httptest.NewRequest(http.MethodPost, "/v1/config/routines/"+tt.routineName, strings.NewReader(tt.requestBody))
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"/v1/config/routines/"+tt.routineName,
+				strings.NewReader(tt.requestBody),
+			)
 			req.SetPathValue("name", tt.routineName)
 			w := httptest.NewRecorder()
 
@@ -63,7 +68,7 @@ func TestReadRoutines(t *testing.T) {
 	_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 	_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "routine2"})
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/config/routines", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/routines", nil)
 	w := httptest.NewRecorder()
 
 	svc.ReadRoutines(w, req)
@@ -112,7 +117,7 @@ func TestReadRoutine(t *testing.T) {
 				_ = svc.config.AddRoutine(tt.routine)
 			}
 
-			req := httptest.NewRequest(http.MethodGet, "/v1/config/routines/"+tt.routineName, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/routines/"+tt.routineName, nil)
 			req.SetPathValue("name", tt.routineName)
 			w := httptest.NewRecorder()
 
@@ -154,7 +159,12 @@ func TestUpdateRoutine(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
 
-			req := httptest.NewRequest(http.MethodPut, "/v1/config/routines/"+tt.routineName, strings.NewReader(tt.requestBody))
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPut,
+				"/v1/config/routines/"+tt.routineName,
+				strings.NewReader(tt.requestBody),
+			)
 			req.SetPathValue("name", tt.routineName)
 			w := httptest.NewRecorder()
 
@@ -199,7 +209,7 @@ func TestDeleteRoutine(t *testing.T) {
 			svc := setupTestService()
 			_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "test-routine"})
 
-			req := httptest.NewRequest(http.MethodDelete, "/v1/config/routines/"+tt.routineName, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/routines/"+tt.routineName, nil)
 			req.SetPathValue("name", tt.routineName)
 			w := httptest.NewRecorder()
 
@@ -254,7 +264,12 @@ func TestEnableRoutine(t *testing.T) {
 				_ = svc.config.AddRoutine(routine)
 			}
 
-			req := httptest.NewRequest(http.MethodPut, "/v1/config/routines/"+tt.routineName+"/enable", nil)
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPut,
+				"/v1/config/routines/"+tt.routineName+"/enable",
+				nil,
+			)
 			req.SetPathValue("name", tt.routineName)
 			w := httptest.NewRecorder()
 
@@ -315,7 +330,12 @@ func TestDisableRoutine(t *testing.T) {
 			}
 			_ = svc.config.AddRoutine(routine)
 
-			req := httptest.NewRequest(http.MethodPut, "/v1/config/routines/"+tt.routineName+"/disable", nil)
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPut,
+				"/v1/config/routines/"+tt.routineName+"/disable",
+				nil,
+			)
 			req.SetPathValue("name", tt.routineName)
 			w := httptest.NewRecorder()
 
