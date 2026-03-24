@@ -1,11 +1,12 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -213,14 +214,18 @@ func schemaToRows(input Schema) []Row {
 	}
 
 	// Sort fields: required first, then alphabetically
-	sort.Slice(fieldProps, func(i, j int) bool {
-		isReqI := requiredFields[fieldProps[i].Name]
-		isReqJ := requiredFields[fieldProps[j].Name]
+	slices.SortFunc(fieldProps, func(a, b FieldProperty) int {
+		isReqA := requiredFields[a.Name]
+		isReqB := requiredFields[b.Name]
+		if isReqA != isReqB {
+			if isReqA {
+				return -1
+			}
 
-		if isReqI != isReqJ {
-			return isReqI // True (required) comes before False (not required)
+			return 1
 		}
-		return strings.Compare(fieldProps[i].Name, fieldProps[j].Name) < 0
+
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	for _, fp := range fieldProps {

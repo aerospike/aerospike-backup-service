@@ -2,12 +2,13 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -459,11 +460,16 @@ func extractRows() []MetricRow {
 	}
 
 	// Sort rows to have non-deprecated metrics on top.
-	sort.Slice(rows, func(i, j int) bool {
-		if rows[i].Deprecated != rows[j].Deprecated {
-			return !rows[i].Deprecated
+	slices.SortFunc(rows, func(a, b MetricRow) int {
+		if a.Deprecated != b.Deprecated {
+			if a.Deprecated {
+				return 1
+			}
+
+			return -1
 		}
-		return rows[i].Name < rows[j].Name
+
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	return rows
