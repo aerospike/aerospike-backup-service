@@ -19,7 +19,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const examplesDir = "docs/examples"
+const (
+	examplesDir   = "docs/examples"
+	readmeRelPath = "README.md"
+)
 
 var allStorageTypes = map[string]dto.Storage{
 	"local": {
@@ -233,7 +236,7 @@ func main() {
 	generateExampleFiles()
 
 	// Update README sections
-	readme, err := os.ReadFile("README.md")
+	readme, err := os.ReadFile(readmeRelPath)
 	if err != nil {
 		panic(err)
 	}
@@ -245,7 +248,8 @@ func main() {
 	// add Prometheus metrics explanation table after <!-- Metrics -->
 	readme = updateMetrics(readme)
 
-	err = os.WriteFile("README.md", readme, 0600)
+	//nolint:gosec // G703 readmeRelPath is a fixed project path; readme is generated from the same file and templates.
+	err = os.WriteFile(readmeRelPath, readme, 0600)
 	if err != nil {
 		panic(err)
 	}
@@ -315,7 +319,7 @@ func updateDtoExamples(readme []byte) []byte {
 		}
 
 		var buffer bytes.Buffer
-		buffer.WriteString(fmt.Sprintf("<!-- %s -->\n\n```%s\n", name, format))
+		fmt.Fprintf(&buffer, "<!-- %s -->\n\n```%s\n", name, format)
 		buffer.Write(formattedExample)
 		buffer.WriteString("\n```")
 
@@ -402,20 +406,20 @@ func updateMetrics(readme []byte) []byte {
 
 	var sb strings.Builder
 	// Header
-	sb.WriteString(fmt.Sprintf("| %-*s | %-*s | %-*s | %-*s |\n",
-		maxName+quotes, "Name", maxType, "Type", maxHelp, "Description", maxLabels, "Labels"))
+	fmt.Fprintf(&sb, "| %-*s | %-*s | %-*s | %-*s |\n",
+		maxName+quotes, "Name", maxType, "Type", maxHelp, "Description", maxLabels, "Labels")
 	// Separator
-	sb.WriteString(fmt.Sprintf("|-%s-|-%s-|-%s-|-%s-|\n",
+	fmt.Fprintf(&sb, "|-%s-|-%s-|-%s-|-%s-|\n",
 		strings.Repeat("-", maxName+quotes),
 		strings.Repeat("-", maxType),
 		strings.Repeat("-", maxHelp),
-		strings.Repeat("-", maxLabels)))
+		strings.Repeat("-", maxLabels))
 	// Body
 	for _, r := range rows {
 		name := "`" + r.Name + "`"
 		labelsStr := strings.Join(r.Labels, ", ")
-		sb.WriteString(fmt.Sprintf("| %-*s | %-*s | %-*s | %-*s |\n",
-			maxName+quotes, name, maxType, r.Type, maxHelp, r.Description, maxLabels, labelsStr))
+		fmt.Fprintf(&sb, "| %-*s | %-*s | %-*s | %-*s |\n",
+			maxName+quotes, name, maxType, r.Type, maxHelp, r.Description, maxLabels, labelsStr)
 	}
 	table := sb.String()
 

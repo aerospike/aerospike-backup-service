@@ -73,7 +73,7 @@ func TestService_GetAllFullBackups(t *testing.T) {
 				backupReader: mockBackends,
 			}
 
-			req := httptest.NewRequest(http.MethodGet, "/v1/backups/full", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/backups/full", nil)
 			q := req.URL.Query()
 			for k, v := range tt.queryParams {
 				q.Add(k, v)
@@ -133,7 +133,7 @@ func TestService_ScheduleBackupHappyPath(t *testing.T) {
 		config: config,
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/backups/incremental/test-routine?delay=1000", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/backups/incremental/test-routine?delay=1000", nil)
 	req.SetPathValue("name", "test-routine")
 	w := httptest.NewRecorder()
 
@@ -195,7 +195,7 @@ func testScheduleBackupValidation(
 				config:          config,
 			}
 
-			req := httptest.NewRequest(http.MethodPost, pathPrefix+tt.routineName, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, pathPrefix+tt.routineName, nil)
 			if tt.delayParam != "" {
 				q := req.URL.Query()
 				q.Add("delay", tt.delayParam)
@@ -214,7 +214,7 @@ func testScheduleBackupValidation(
 func TestService_CancelCurrentBackup(t *testing.T) {
 	svc := &Service{}
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/backups/cancel/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/backups/cancel/", nil)
 	w := httptest.NewRecorder()
 	svc.CancelCurrentBackup(w, req)
 

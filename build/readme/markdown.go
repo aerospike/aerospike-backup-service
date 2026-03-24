@@ -51,18 +51,18 @@ func generateMarkdownTable(dtoName string) string {
 	var sb strings.Builder
 
 	// Add header for the DTO
-	sb.WriteString(fmt.Sprintf("## %s\n%s\n\n", dtoName, schema.Description))
+	fmt.Fprintf(&sb, "## %s\n%s\n\n", dtoName, schema.Description)
 
 	if len(rows) > 0 {
 		sb.WriteString(writeRows(rows))
 	}
 
 	if len(schema.Required) > 0 {
-		sb.WriteString(fmt.Sprintf("\n%s = Required field", requiredMarker))
+		fmt.Fprintf(&sb, "\n%s = Required field", requiredMarker)
 	}
 
 	if len(schema.Enum) > 0 {
-		sb.WriteString(fmt.Sprintf("Possible values: %s.\n", joinEnumValues(schema.Enum)))
+		fmt.Fprintf(&sb, "Possible values: %s.\n", joinEnumValues(schema.Enum))
 	}
 
 	return sb.String()
@@ -75,33 +75,33 @@ func writeRows(rows []Row) string {
 
 	maxName, maxHelp, maxDefault, maxPossibleValues := determineColumsWidth(rows)
 	// Write header
-	sb.WriteString(fmt.Sprintf("| %-*s | %-*s ", maxName, "Field", maxHelp, "Description"))
+	fmt.Fprintf(&sb, "| %-*s | %-*s ", maxName, "Field", maxHelp, "Description")
 	if hasDefaultColumn {
-		sb.WriteString(fmt.Sprintf("| %-*s ", maxDefault, "Default Value"))
+		fmt.Fprintf(&sb, "| %-*s ", maxDefault, "Default Value")
 	}
 	if hasPossibleValuesColumn {
-		sb.WriteString(fmt.Sprintf("| %-*s ", maxPossibleValues, "Possible Values"))
+		fmt.Fprintf(&sb, "| %-*s ", maxPossibleValues, "Possible Values")
 	}
 	sb.WriteString("|\n")
 
 	// Write separator
-	sb.WriteString(fmt.Sprintf("|-%s-|-%s-", strings.Repeat("-", maxName), strings.Repeat("-", maxHelp)))
+	fmt.Fprintf(&sb, "|-%s-|-%s-", strings.Repeat("-", maxName), strings.Repeat("-", maxHelp))
 	if hasDefaultColumn {
-		sb.WriteString(fmt.Sprintf("|-%s-", strings.Repeat("-", maxDefault)))
+		fmt.Fprintf(&sb, "|-%s-", strings.Repeat("-", maxDefault))
 	}
 	if hasPossibleValuesColumn {
-		sb.WriteString(fmt.Sprintf("|-%s-", strings.Repeat("-", maxPossibleValues)))
+		fmt.Fprintf(&sb, "|-%s-", strings.Repeat("-", maxPossibleValues))
 	}
 	sb.WriteString("|\n")
 
 	// Write rows
 	for _, r := range rows {
-		sb.WriteString(fmt.Sprintf("| %-*s | %-*s ", maxName, r.Name, maxHelp, r.Help))
+		fmt.Fprintf(&sb, "| %-*s | %-*s ", maxName, r.Name, maxHelp, r.Help)
 		if hasDefaultColumn {
-			sb.WriteString(fmt.Sprintf("| %-*s ", maxDefault, r.Default))
+			fmt.Fprintf(&sb, "| %-*s ", maxDefault, r.Default)
 		}
 		if hasPossibleValuesColumn {
-			sb.WriteString(fmt.Sprintf("| %-*s ", maxPossibleValues, r.PossibleValues))
+			fmt.Fprintf(&sb, "| %-*s ", maxPossibleValues, r.PossibleValues)
 		}
 		sb.WriteString("|\n")
 	}
