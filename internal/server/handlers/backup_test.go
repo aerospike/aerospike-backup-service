@@ -133,7 +133,8 @@ func TestService_ScheduleBackupHappyPath(t *testing.T) {
 		config: config,
 	}
 
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/backups/incremental/test-routine?delay=1000", nil)
+	const incrementalURL = "/v1/backups/incremental/test-routine?delay=1000"
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, incrementalURL, nil)
 	req.SetPathValue("name", "test-routine")
 	w := httptest.NewRecorder()
 
