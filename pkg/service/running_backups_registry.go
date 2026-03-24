@@ -120,15 +120,13 @@ func (r *RunningBackupsRegistryImpl) scanRoutinesHistory(ctx context.Context, ro
 	)
 
 	for _, routine := range routines {
-		wg.Add(1)
-		go func(routine *model.BackupRoutine) {
-			defer wg.Done()
+		wg.Go(func() {
 			err := r.scanSingleRoutineHistory(ctx, routine)
 
 			errMu.Lock()
 			errs = errors.Join(errs, err)
 			errMu.Unlock()
-		}(routine)
+		})
 	}
 
 	wg.Wait()
