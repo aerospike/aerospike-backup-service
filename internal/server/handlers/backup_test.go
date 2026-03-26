@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,8 +9,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/reugn/go-quartz/job"
-	"github.com/reugn/go-quartz/quartz"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -75,7 +73,7 @@ func TestService_GetAllFullBackups(t *testing.T) {
 				backupReader: mockBackends,
 			}
 
-			req := httptest.NewRequest(http.MethodGet, "/v1/backups/full", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/backups/full", nil)
 			q := req.URL.Query()
 			for k, v := range tt.queryParams {
 				q.Add(k, v)
@@ -128,30 +126,31 @@ func TestService_TriggerIncrementalBackup(t *testing.T) {
 }
 
 func TestService_ScheduleBackupHappyPath(t *testing.T) {
-	mockScheduler := &MockScheduler{}
-	mockScheduler.
-		On("ScheduleJob", mock.AnythingOfType("*quartz.JobDetail"), mock.Anything).
-		Return(nil).
-		Once()
+	config := model.NewConfig()
+	_ = config.AddRoutine(&model.BackupRoutine{Name: "test-routine"})
 
 	svc := &Service{
-		scheduler: mockScheduler,
+		config: config,
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/backups/incremental/test-routine?delay=1000", nil)
+	const incrementalURL = "/v1/backups/incremental/test-routine?delay=1000"
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, incrementalURL, nil)
 	req.SetPathValue("name", "test-routine")
 	w := httptest.NewRecorder()
 
-	svc.scheduleBackup(w, req, func(routineName string) *quartz.JobDetail {
-		assert.Equal(t, "test-routine", routineName)
-		return quartz.NewJobDetail(
-			job.NewFunctionJob(func(context.Context) (struct{}, error) { return struct{}{}, nil }),
-			quartz.NewJobKeyWithGroup("test-routine-adhoc", "ad-hoc"),
-		)
+	var (
+		calledRoutineName string
+		calledDelay       time.Duration
+	)
+	svc.scheduleBackup(w, req, func(routine *model.BackupRoutine, delay time.Duration) error {
+		calledRoutineName = routine.Name
+		calledDelay = delay
+		return nil
 	})
 
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	mockScheduler.AssertExpectations(t)
+	assert.Equal(t, "test-routine", calledRoutineName)
+	assert.Equal(t, time.Second, calledDelay)
 }
 
 func testScheduleBackupValidation(
@@ -189,15 +188,15 @@ func testScheduleBackupValidation(
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockScheduler := &MockScheduler{}
-			cfg := model.NewConfig()
+			config := model.NewConfig()
+			_ = config.AddRoutine(&model.BackupRoutine{Name: tt.routineName})
 
 			svc := &Service{
-				config:    cfg,
-				scheduler: mockScheduler,
+				backupScheduler: service.NewBackupScheduler(nil, nil),
+				config:          config,
 			}
 
-			req := httptest.NewRequest(http.MethodPost, pathPrefix+tt.routineName, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, pathPrefix+tt.routineName, nil)
 			if tt.delayParam != "" {
 				q := req.URL.Query()
 				q.Add("delay", tt.delayParam)
@@ -209,7 +208,6 @@ func testScheduleBackupValidation(
 			handler(svc, w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			mockScheduler.AssertExpectations(t)
 		})
 	}
 }
@@ -217,7 +215,7 @@ func testScheduleBackupValidation(
 func TestService_CancelCurrentBackup(t *testing.T) {
 	svc := &Service{}
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/backups/cancel/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/backups/cancel/", nil)
 	w := httptest.NewRecorder()
 	svc.CancelCurrentBackup(w, req)
 

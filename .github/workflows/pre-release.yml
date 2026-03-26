@@ -87,6 +87,8 @@ jobs:
           gpg-key-pass: ${{ secrets.GPG_PASS }}
 
       - name: Install Dependencies
+        env:
+          GOTOOLCHAIN: auto
         run: |
           echo "Installing nfpm..."
           go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
@@ -519,6 +521,7 @@ jobs:
         uses: step-security/setup-jfrog-cli@893a92f96c7727242adf0e603c77b1f2a22390e1 # v4.9.1
         env:
           JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          JF_USER: ${{ secrets.ARTIFACTORY_USER }}
           JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
           JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
 
@@ -542,6 +545,7 @@ jobs:
           GO_VERSION: ${{env.GO_VERSION}}
           OUTPUT: "type=image,push=true type=oci,dest=./abs-image.tar"
           REPO: ${{ vars.ARTIFACTORY_REGISTRY_URL }}/${{ vars.ARTIFACTORY_CONTAINER_DEV }}
+          ARTIFACTORY_REGISTRY_URL: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
           ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
         run: |
           echo "Starting Docker image build and push process."
@@ -553,7 +557,7 @@ jobs:
           echo "Context Directory: $CONTEXT"
           
           echo "Building Docker image with buildx bake."
-          jfrog docker buildx bake \
+          docker buildx bake \
             --file ${{ github.workspace }}/build/docker-build/docker-bake.hcl \
             --metadata-file=build-metadata \
             --progress plain \

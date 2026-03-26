@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/try"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -20,13 +22,19 @@ type retryableBackupHandler struct {
 
 var _ backupexecutor.BackupHandler = (*retryableBackupHandler)(nil)
 
+// retryableBackupCallbacks configures the backup lifecycle hooks for newRetryableBackupHandler.
+type retryableBackupCallbacks struct {
+	Start     func(ctx context.Context) (backupexecutor.BackupHandler, error)
+	OnFail    func(ctx context.Context)
+	OnSuccess func(ctx context.Context, stats *models.BackupStats) error
+	OnRetry   func()
+}
+
 func newRetryableBackupHandler(
 	ctx context.Context,
-	retry executor,
-	start func(ctx context.Context) (backupexecutor.BackupHandler, error),
-	onFail func(ctx context.Context),
-	onSuccess func(ctx context.Context, stats *models.BackupStats) error,
-	onRetry func(),
+	policy models.RetryPolicy,
+	callbacks retryableBackupCallbacks,
+	logger *slog.Logger,
 ) *retryableBackupHandler {
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	h := &retryableBackupHandler{
@@ -36,12 +44,12 @@ func newRetryableBackupHandler(
 
 	// Helper to retry onSuccess only
 	retryOnSuccess := func(handler backupexecutor.BackupHandler) error {
-		err := retry.run("write metadata", func() error {
-			return onSuccess(ctx, handler.GetStats())
+		err := try.Retry(policy, logger.With(slog.String("label", "write metadata")), func() error {
+			return callbacks.OnSuccess(ctx, handler.GetStats())
 		}, func() {})
 		if err != nil {
 			// Trigger onFail if onSuccess ultimately fails
-			onFail(ctx)
+			callbacks.OnFail(ctx)
 		}
 
 		return err
@@ -49,7 +57,7 @@ func newRetryableBackupHandler(
 
 	// Process backup function.
 	processBackup := func() error {
-		handler, err := start(ctx)
+		handler, err := callbacks.Start(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to start backup: %w", err)
 		}
@@ -57,7 +65,7 @@ func newRetryableBackupHandler(
 		h.setHandler(handler)
 
 		if err = handler.Wait(ctxWithCancel); err != nil {
-			onFail(ctx)
+			callbacks.OnFail(ctx)
 			h.setHandler(nil)
 			return fmt.Errorf("backup failed: %w", err)
 		}
@@ -67,7 +75,7 @@ func newRetryableBackupHandler(
 
 	// Start the backup process with retries
 	go func() {
-		h.errCh <- retry.run("backup", processBackup, onRetry)
+		h.errCh <- try.Retry(policy, logger.With(slog.String("label", "backup")), processBackup, callbacks.OnRetry)
 	}()
 
 	return h

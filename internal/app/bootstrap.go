@@ -55,11 +55,23 @@ func InitComponents(
 	retentionManager := service.NewBackupRetentionManager(backendService, &routineStorage)
 	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, operations)
 	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
-	backupExecutor := backupexecutor.NewDefaultBackupExecutor(operations)
-	backupComponents := service.NewBackupComponents(
-		clientManager, backupExecutor, registry, completionHandler, backendService,
+	backupExecutor := backupexecutor.NewDefaultBackupExecutor(clientManager, operations)
+	startController := service.NewStartController(registry, service.NewStartDecider())
+	namespaceRunner := service.NewNamespaceBackupRunner(backupExecutor, backendService, pathService)
+	namespaceResolver := aerospike.NewNamespaceResolver(clientManager)
+	routineBackupRunner := service.NewRoutineBackupRunner(
+		namespaceRunner,
+		namespaceResolver,
 	)
-	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config, pathService)
+
+	backupOrchestrator := service.NewBackupOrchestrator(
+		registry,
+		completionHandler,
+		startController,
+		routineBackupRunner,
+	)
+	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
+	configApplier := service.NewDefaultConfigApplier(backupScheduler, registry, config)
 
 	err = configApplier.ApplyNewConfig(ctx)
 	if err != nil {
@@ -85,7 +97,7 @@ func InitComponents(
 		ctx,
 		config,
 		configApplier,
-		scheduler,
+		backupScheduler,
 		restoreMgr,
 		configRetriever,
 		backendService,

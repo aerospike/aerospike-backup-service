@@ -49,7 +49,12 @@ func TestAddPolicy(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
 
-			req := httptest.NewRequest(http.MethodPost, "/v1/config/policies/"+tt.policyName, strings.NewReader(tt.requestBody))
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"/v1/config/policies/"+tt.policyName,
+				strings.NewReader(tt.requestBody),
+			)
 			req.SetPathValue("name", tt.policyName)
 			w := httptest.NewRecorder()
 
@@ -69,7 +74,7 @@ func TestReadPolicies(t *testing.T) {
 	_ = svc.config.AddPolicy("policy1", &model.BackupPolicy{})
 	_ = svc.config.AddPolicy("policy2", &model.BackupPolicy{})
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/config/policies", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/policies", nil)
 	w := httptest.NewRecorder()
 
 	svc.ReadPolicies(w, req)
@@ -120,7 +125,7 @@ func TestReadPolicy(t *testing.T) {
 				_ = svc.config.AddPolicy(tt.policyName, tt.policy)
 			}
 
-			req := httptest.NewRequest(http.MethodGet, "/v1/config/policies/"+tt.policyName, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/policies/"+tt.policyName, nil)
 			req.SetPathValue("name", tt.policyName)
 			w := httptest.NewRecorder()
 
@@ -176,7 +181,12 @@ func TestUpdatePolicy(t *testing.T) {
 			svc := setupTestService()
 			_ = svc.config.AddPolicy("test-policy", &model.BackupPolicy{})
 
-			req := httptest.NewRequest(http.MethodPut, "/v1/config/policies/"+tt.policyName, strings.NewReader(tt.requestBody))
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPut,
+				"/v1/config/policies/"+tt.policyName,
+				strings.NewReader(tt.requestBody),
+			)
 			req.SetPathValue("name", tt.policyName)
 			w := httptest.NewRecorder()
 
@@ -222,7 +232,7 @@ func TestDeletePolicy(t *testing.T) {
 			svc := setupTestService()
 			_ = svc.config.AddPolicy("test-policy", &model.BackupPolicy{})
 
-			req := httptest.NewRequest(http.MethodDelete, "/v1/config/policies/"+tt.policyName, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/policies/"+tt.policyName, nil)
 			req.SetPathValue("name", tt.policyName)
 
 			w := httptest.NewRecorder()
@@ -239,7 +249,6 @@ func TestDeletePolicy(t *testing.T) {
 
 // Helper function to setup test service with mocked dependencies.
 func setupTestService() *Service {
-	mockScheduler := &MockScheduler{}
 	mockConfigApplier := &MockConfigApplier{}
 	mockConfigurationManager := &configurationManagerMock{}
 
@@ -247,7 +256,7 @@ func setupTestService() *Service {
 		context.Background(),
 		model.NewConfig(),
 		mockConfigApplier,
-		mockScheduler,
+		nil,
 		nil,
 		nil,
 		nil,

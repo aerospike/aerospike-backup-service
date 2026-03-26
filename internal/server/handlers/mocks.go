@@ -5,7 +5,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/reugn/go-quartz/quartz"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -35,63 +34,6 @@ func (m *MockBackupBackendService) WriteBackupMetadata(
 func (m *MockBackupBackendService) Delete(ctx context.Context, routineName *model.BackupRoutine, path string) error {
 	args := m.Called(ctx, routineName, path)
 	return args.Error(0)
-}
-
-// MockScheduler mocks the quartz.Scheduler interface.
-type MockScheduler struct {
-	mock.Mock
-}
-
-func (m *MockScheduler) Start(ctx context.Context) {
-	m.Called(ctx)
-}
-
-func (m *MockScheduler) IsStarted() bool {
-	args := m.Called()
-	return args.Bool(0)
-}
-
-func (m *MockScheduler) ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error {
-	args := m.Called(jobDetail, trigger)
-	return args.Error(0)
-}
-
-func (m *MockScheduler) GetJobKeys(matchers ...quartz.Matcher[quartz.ScheduledJob]) ([]*quartz.JobKey, error) {
-	args := m.Called(matchers)
-	return args.Get(0).([]*quartz.JobKey), args.Error(1)
-}
-
-func (m *MockScheduler) GetScheduledJob(jobKey *quartz.JobKey) (quartz.ScheduledJob, error) {
-	args := m.Called(jobKey)
-	return args.Get(0).(quartz.ScheduledJob), args.Error(1)
-}
-
-func (m *MockScheduler) DeleteJob(jobKey *quartz.JobKey) error {
-	args := m.Called(jobKey)
-	return args.Error(0)
-}
-
-func (m *MockScheduler) PauseJob(jobKey *quartz.JobKey) error {
-	args := m.Called(jobKey)
-	return args.Error(0)
-}
-
-func (m *MockScheduler) ResumeJob(jobKey *quartz.JobKey) error {
-	args := m.Called(jobKey)
-	return args.Error(0)
-}
-
-func (m *MockScheduler) Clear() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *MockScheduler) Wait(ctx context.Context) {
-	m.Called(ctx)
-}
-
-func (m *MockScheduler) Stop() {
-	m.Called()
 }
 
 type configurationManagerMock struct{}

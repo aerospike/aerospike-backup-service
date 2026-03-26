@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"math/rand"
+	"math/rand/v2"
 	"sync"
 	"time"
 
@@ -150,7 +150,7 @@ func NewRestoreJobsHolder() *RestoreJobsHolder {
 // newJob creates a new restore job and return its id.
 func (h *RestoreJobsHolder) newJob(label string, cancel context.CancelFunc) model.RestoreJobID {
 	// #nosec G404
-	id := model.RestoreJobID(rand.Int63())
+	id := model.RestoreJobID(rand.Int64())
 	h.Store(id, newRestoreJob(label, cancel))
 
 	return id

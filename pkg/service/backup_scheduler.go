@@ -10,83 +10,56 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 )
 
-type (
-	quartzGroup string
-	jobType     string
-)
+type quartzGroup string
 
 const (
 	quartzGroupAdHoc     quartzGroup = "ad-hoc"
 	quartzGroupScheduled quartzGroup = "scheduled"
 
-	jobTypeFull        jobType = "full"
-	jobTypeIncremental jobType = "incremental"
+	minAdHocBackupDelay = 50 * time.Millisecond
 )
 
-func (j jobType) String() string {
-	if j == jobTypeFull {
-		return "Full backup"
-	}
-
-	return "Incremental backup"
-}
-
-type Scheduler interface {
-	// ScheduleJob schedules a backup job with the given trigger.
+// JobScheduler is the subset of quartz.Scheduler used for backup job scheduling and removal.
+type JobScheduler interface {
+	// ScheduleJob registers jobDetail with the provided trigger.
 	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error
+	// DeleteJob removes the job identified by key.
+	DeleteJob(key *quartz.JobKey) error
 }
 
-var jobStore = collections.NewSafeMap[string, *quartz.JobDetail]()
-
-// NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
-func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
-	key := jobKey(routineName, jobTypeFull).String()
-	job, found := jobStore.Load(key)
-	if !found {
-		return nil
-	}
-
-	adhocJobKey := adhocKey(routineName)
-
-	return quartz.NewJobDetail(job.Job(), adhocJobKey)
+// AdHocScheduler schedules one-off full or incremental backup jobs on demand.
+type AdHocScheduler interface {
+	// TriggerAdHocFullBackup schedules one full backup run for routineName after delay.
+	TriggerAdHocFullBackup(routine *model.BackupRoutine, delay time.Duration) error
+	// TriggerAdHocIncrementalBackup schedules one incremental backup run for routineName after delay.
+	TriggerAdHocIncrementalBackup(routine *model.BackupRoutine, delay time.Duration) error
 }
 
-// NewAdHocIncrementalBackupJobForRoutine returns a new incremental backup job for the routine name.
-func NewAdHocIncrementalBackupJobForRoutine(routineName string) *quartz.JobDetail {
-	key := jobKey(routineName, jobTypeIncremental).String()
-	job, found := jobStore.Load(key)
-	if !found {
-		return nil
-	}
-
-	adhocJobKey := adhocKey(routineName)
-
-	return quartz.NewJobDetail(job.Job(), adhocJobKey)
+// BackupScheduler wires Quartz to the backup orchestrator: periodic cron jobs, ad-hoc runs, and job deletion.
+type BackupScheduler struct {
+	scheduler JobScheduler
+	// orchestrator runs each fired job (cron or ad-hoc) via [BackupOrchestrator.RunBackup].
+	orchestrator BackupOrchestrator
 }
 
-// NewScheduler creates a new quartz.Scheduler.
-func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler, error) {
-	warnOnlyLogger := log.NewMinLevelLogger(appLogger, slog.LevelWarn)
-	scheduler, err := quartz.NewStdScheduler(
-		quartz.WithOutdatedThreshold(time.Second),
-		quartz.WithLogger(logger.NewSlogLogger(ctx, warnOnlyLogger)),
-		quartz.WithJobMetadata(),
-	)
-	return scheduler, err
+var _ AdHocScheduler = (*BackupScheduler)(nil)
+
+// NewBackupScheduler creates a scheduler backed by Quartz and a [BackupOrchestrator].
+func NewBackupScheduler(scheduler JobScheduler, orchestrator BackupOrchestrator) *BackupScheduler {
+	return &BackupScheduler{scheduler: scheduler, orchestrator: orchestrator}
 }
 
-// scheduleRoutines schedules provided routines and stores their job details for ad-hoc trigger lookups.
-func scheduleRoutines(
-	scheduler Scheduler,
-	routines []*model.BackupRoutine,
-	components *BackupComponents,
-	pathService PathService,
-) error {
+// DeleteJob removes a scheduled job (e.g. when clearing periodic jobs on config change).
+func (s *BackupScheduler) DeleteJob(key *quartz.JobKey) error {
+	return s.scheduler.DeleteJob(key)
+}
+
+// ScheduleRoutines registers cron triggers for the given routines (full and optional incremental).
+func (s *BackupScheduler) ScheduleRoutines(routines []*model.BackupRoutine) error {
 	var errs error
 
 	for _, routine := range routines {
@@ -95,51 +68,40 @@ func scheduleRoutines(
 			continue
 		}
 
-		runner := newOrchestrator(routine.Copy(), components, pathService) // orchestrator will work with its own copy
-		// schedule a full backup job for the routine
-		job, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routine.Name)
-		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("failed to schedule full backup: %w", err))
-			continue
-		}
-		jobStore.Store(job.JobKey().String(), job)
-
-		// schedule an incremental backup job for the routine
-		incrementalJob, err := scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routine.Name)
-		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
-			continue
-		}
-		jobStore.Store(incrementalJob.JobKey().String(), incrementalJob)
+		errs = errors.Join(errs, s.scheduleRoutineBackups(routine.Copy()))
 	}
 
 	return errs
 }
 
-func scheduleFullBackup(
-	scheduler Scheduler, runner backupRunner, interval string, routineName string,
-) (*quartz.JobDetail, error) {
-	job := createJobDetail(runner, routineName, jobTypeFull)
-	return job, schedule(scheduler, interval, job)
-}
-
-func scheduleIncrementalBackup(
-	scheduler Scheduler, runner backupRunner, interval string, routineName string,
-) (*quartz.JobDetail, error) {
-	job := createJobDetail(runner, routineName, jobTypeIncremental)
-	if len(interval) == 0 { // no need to schedule if there is no interval set
-		return job, nil
+// scheduleRoutineBackups registers the full cron job and, when configured, the incremental cron job for one routine.
+func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) error {
+	fullJob := quartz.NewJobDetail(
+		newBackupJob(s.orchestrator, routine, model.BackupTypeFull),
+		jobKey(routine.Name, model.BackupTypeFull),
+	)
+	if err := s.scheduleCronJob(routine.IntervalCron, fullJob); err != nil {
+		return fmt.Errorf("failed to schedule full backup: %w", err)
 	}
 
-	return job, schedule(scheduler, interval, job)
+	if len(routine.IncrIntervalCron) == 0 {
+		// Incremental scheduling is optional and skipped when cron is not configured.
+		return nil
+	}
+
+	incrementalJob := quartz.NewJobDetail(
+		newBackupJob(s.orchestrator, routine, model.BackupTypeIncremental),
+		jobKey(routine.Name, model.BackupTypeIncremental),
+	)
+	if err := s.scheduleCronJob(routine.IncrIntervalCron, incrementalJob); err != nil {
+		return fmt.Errorf("failed to schedule incremental backup: %w", err)
+	}
+
+	return nil
 }
 
-func createJobDetail(runner backupRunner, routineName string, jobType jobType) *quartz.JobDetail {
-	job := newBackupJob(runner, jobType, routineName)
-	return quartz.NewJobDetail(job, jobKey(routineName, jobType))
-}
-
-func schedule(scheduler Scheduler, interval string, jobDetail *quartz.JobDetail) error {
+// scheduleCronJob attaches a cron trigger to jobDetail and schedules it on the underlying Quartz scheduler.
+func (s *BackupScheduler) scheduleCronJob(interval string, jobDetail *quartz.JobDetail) error {
 	cronTrigger, err := quartz.NewCronTrigger(interval)
 	if err != nil {
 		return err
@@ -155,14 +117,48 @@ func schedule(scheduler Scheduler, interval string, jobDetail *quartz.JobDetail)
 		slog.Warn("Unexpected job type", slog.Any("job", jobDetail))
 	}
 
-	return scheduler.ScheduleJob(jobDetail, cronTrigger)
+	return s.scheduler.ScheduleJob(jobDetail, cronTrigger)
 }
 
-func jobKey(routineName string, jobType jobType) *quartz.JobKey {
-	jobName := fmt.Sprintf("%s-%s", routineName, jobType)
+// TriggerAdHocFullBackup schedules a one-off full backup for routineName.
+func (s *BackupScheduler) TriggerAdHocFullBackup(routine *model.BackupRoutine, delay time.Duration) error {
+	return s.triggerAdHocBackup(routine, delay, model.BackupTypeFull)
+}
+
+// TriggerAdHocIncrementalBackup schedules a one-off incremental backup for routineName.
+func (s *BackupScheduler) TriggerAdHocIncrementalBackup(routine *model.BackupRoutine, delay time.Duration) error {
+	return s.triggerAdHocBackup(routine, delay, model.BackupTypeIncremental)
+}
+
+// triggerAdHocBackup schedules a single run-once job in the ad-hoc group after at least [minAdHocBackupDelay].
+func (s *BackupScheduler) triggerAdHocBackup(
+	routine *model.BackupRoutine,
+	delay time.Duration,
+	jt model.BackupType,
+) error {
+	jobDetail := quartz.NewJobDetail(newBackupJob(s.orchestrator, routine.Copy(), jt), adhocKey(routine.Name))
+
+	return s.scheduler.ScheduleJob(jobDetail, quartz.NewRunOnceTrigger(max(delay, minAdHocBackupDelay)))
+}
+
+// NewScheduler creates a new quartz.Scheduler.
+func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler, error) {
+	warnOnlyLogger := log.NewMinLevelLogger(appLogger, slog.LevelWarn)
+	scheduler, err := quartz.NewStdScheduler(
+		quartz.WithOutdatedThreshold(time.Second),
+		quartz.WithLogger(logger.NewSlogLogger(ctx, warnOnlyLogger)),
+		quartz.WithJobMetadata(),
+	)
+	return scheduler, err
+}
+
+// jobKey returns the stable Quartz key for a periodic full or incremental job in the scheduled group.
+func jobKey(routineName string, jt model.BackupType) *quartz.JobKey {
+	jobName := fmt.Sprintf("%s-%s", routineName, jt)
 	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupScheduled))
 }
 
+// adhocKey builds a unique job key for a one-off backup in the ad-hoc Quartz group.
 func adhocKey(name string) *quartz.JobKey {
 	jobName := fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli())
 	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupAdHoc))

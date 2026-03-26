@@ -47,7 +47,12 @@ func TestAddStorage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
 
-			req := httptest.NewRequest(http.MethodPost, "/v1/config/storage/"+tt.storageName, strings.NewReader(tt.requestBody))
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"/v1/config/storage/"+tt.storageName,
+				strings.NewReader(tt.requestBody),
+			)
 			req.SetPathValue("name", tt.storageName)
 			w := httptest.NewRecorder()
 
@@ -68,7 +73,7 @@ func TestReadAllStorage(t *testing.T) {
 	_ = svc.config.AddStorage("storage1", &model.LocalStorage{})
 	_ = svc.config.AddStorage("storage2", &model.LocalStorage{})
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/config/storage", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/storage", nil)
 	w := httptest.NewRecorder()
 
 	svc.ReadAllStorage(w, req)
@@ -118,7 +123,7 @@ func TestReadStorage(t *testing.T) {
 				_ = svc.config.AddStorage(tt.storageName, tt.storage)
 			}
 
-			req := httptest.NewRequest(http.MethodGet, "/v1/config/storage/"+tt.storageName, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/storage/"+tt.storageName, nil)
 			req.SetPathValue("name", tt.storageName)
 			w := httptest.NewRecorder()
 
@@ -168,7 +173,12 @@ func TestUpdateStorage(t *testing.T) {
 			initialStorage := &model.LocalStorage{Path: "/"}
 			_ = svc.config.AddStorage("test-storage", initialStorage)
 
-			req := httptest.NewRequest(http.MethodPut, "/v1/config/storage/"+tt.storageName, strings.NewReader(tt.requestBody))
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPut,
+				"/v1/config/storage/"+tt.storageName,
+				strings.NewReader(tt.requestBody),
+			)
 			req.SetPathValue("name", tt.storageName)
 			w := httptest.NewRecorder()
 
@@ -214,7 +224,7 @@ func TestDeleteStorage(t *testing.T) {
 			svc := setupTestService()
 			_ = svc.config.AddStorage("test-storage", &model.LocalStorage{})
 
-			req := httptest.NewRequest(http.MethodDelete, "/v1/config/storage/"+tt.storageName, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/storage/"+tt.storageName, nil)
 			req.SetPathValue("name", tt.storageName)
 			w := httptest.NewRecorder()
 

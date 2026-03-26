@@ -126,13 +126,13 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 	for routineName, currentStat := range runningState {
 		// Update Full backup metric if running
 		if currentStat.Full != nil {
-			backupProgress.WithLabelValues(routineName, string(jobTypeFull)).
+			backupProgress.WithLabelValues(routineName, string(model.BackupTypeFull)).
 				Set(float64(currentStat.Full.PercentageDone))
 		}
 
 		// Update Incremental backup metric if running
 		if currentStat.Incremental != nil {
-			backupProgress.WithLabelValues(routineName, string(jobTypeIncremental)).
+			backupProgress.WithLabelValues(routineName, string(model.BackupTypeIncremental)).
 				Set(float64(currentStat.Incremental.PercentageDone))
 		}
 	}
@@ -157,7 +157,12 @@ const (
 )
 
 // observeBackupEvent updates Prometheus backup counters/histograms.
-func observeBackupEvent(routineName string, backupType jobType, outcome BackupOutcome, duration time.Duration) {
+func observeBackupEvent(
+	routineName string,
+	backupType model.BackupType,
+	outcome BackupOutcome,
+	duration time.Duration,
+) {
 	backupCounters.With(prometheus.Labels{
 		"routine": routineName,
 		"type":    string(backupType),

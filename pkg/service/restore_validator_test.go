@@ -23,23 +23,23 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	defer ctrl.Finish()
 
 	registry := NewMockRunningBackupsRegistry(ctrl)
-	routines := NewMockroutineProvider(ctrl)
+	config := NewMockroutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
 	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
-	backupRoutines := map[string]*model.BackupRoutine{
+	routines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",
 			SourceCluster: cluster,
 			Namespaces:    []string{"ns1"},
 		},
 	}
-	routines.EXPECT().Routines().Return(backupRoutines)
+	config.EXPECT().Routines().Return(routines)
 	registry.EXPECT().
-		GetRoutineState(backupRoutines["routine-1"]).
+		GetRoutineState(routines["routine-1"]).
 		Return(model.RoutineState{Full: &model.RunningJob{}})
 
-	validator := NewRestoreValidator(registry, routines)
+	validator := NewRestoreValidator(registry, config)
 
 	infoGetter := fakeInfoGetter{}
 
@@ -64,23 +64,23 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	defer ctrl.Finish()
 
 	registry := NewMockRunningBackupsRegistry(ctrl)
-	routines := NewMockroutineProvider(ctrl)
+	config := NewMockroutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
 	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
-	backupRoutines := map[string]*model.BackupRoutine{
+	routines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",
 			SourceCluster: cluster,
 			Namespaces:    []string{"ns1"},
 		},
 	}
-	routines.EXPECT().Routines().Return(backupRoutines)
+	config.EXPECT().Routines().Return(routines)
 	registry.EXPECT().
-		GetRoutineState(backupRoutines["routine-1"]).
+		GetRoutineState(routines["routine-1"]).
 		Return(model.RoutineState{Incremental: &model.RunningJob{}})
 
-	validator := NewRestoreValidator(registry, routines)
+	validator := NewRestoreValidator(registry, config)
 
 	infoGetter := fakeInfoGetter{}
 

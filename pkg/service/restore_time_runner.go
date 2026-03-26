@@ -206,10 +206,7 @@ func (r *timeRestoreRunner) restoreAllNamespaces(
 	// This allows users to retry only failed namespaces later.
 	// Run namespace restores concurrently and collect errors safely.
 	for namespace, nsBackup := range backupsByNamespace {
-		wg.Add(1)
-		go func(namespace string, nsBackup []model.BackupDetails) {
-			defer wg.Done()
-
+		wg.Go(func() {
 			nsLogger := logger.With(slog.String("namespace", namespace))
 			err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup, nsLogger)
 			if err != nil {
@@ -219,7 +216,7 @@ func (r *timeRestoreRunner) restoreAllNamespaces(
 						request.Routine.Name, namespace, err))
 				errMu.Unlock()
 			}
-		}(namespace, nsBackup)
+		})
 	}
 
 	wg.Wait()

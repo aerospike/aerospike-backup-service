@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockScheduler implements quartz.Scheduler for testing.
+// MockScheduler implements JobScheduler for testing.
 type MockScheduler struct {
 	mock.Mock
 }
@@ -19,12 +19,16 @@ func (m *MockScheduler) ScheduleJob(detail *quartz.JobDetail, trigger quartz.Tri
 	return args.Error(0)
 }
 
+func (m *MockScheduler) DeleteJob(key *quartz.JobKey) error {
+	args := m.Called(key)
+	return args.Error(0)
+}
+
 func TestScheduleRoutines(t *testing.T) {
 	tests := []struct {
-		name              string
-		routines          map[string]*model.BackupRoutine
-		expectedCalls     int
-		expectedJobsAdded int
+		name          string
+		routines      map[string]*model.BackupRoutine
+		expectedCalls int
 	}{
 		{
 			name: "successful scheduling of full and incremental backups",
@@ -35,8 +39,7 @@ func TestScheduleRoutines(t *testing.T) {
 					IncrIntervalCron: "0 */6 * * * *",
 				},
 			},
-			expectedCalls:     2, // One for full backup, one for incremental
-			expectedJobsAdded: 2, // Full and incremental jobs added
+			expectedCalls: 2, // One for full backup, one for incremental
 		},
 		{
 			name: "skip disabled routine",
@@ -48,8 +51,7 @@ func TestScheduleRoutines(t *testing.T) {
 					Disabled:         true,
 				},
 			},
-			expectedCalls:     0, // No calls expected for disabled routine
-			expectedJobsAdded: 0,
+			expectedCalls: 0, // No calls expected for disabled routine
 		},
 		{
 			name: "full backup only",
@@ -59,15 +61,12 @@ func TestScheduleRoutines(t *testing.T) {
 					IntervalCron: "0 0 * * * *",
 				},
 			},
-			expectedCalls:     1, // One call for full backup only
-			expectedJobsAdded: 2, // Full job plus ad-hoc incremental job added
+			expectedCalls: 1, // One call for full backup only
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			jobStore.ReplaceContent(map[string]*quartz.JobDetail{})
-
 			scheduler := new(MockScheduler)
 			scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
 
@@ -75,39 +74,16 @@ func TestScheduleRoutines(t *testing.T) {
 			for _, routine := range tt.routines {
 				routines = append(routines, routine)
 			}
-			err := scheduleRoutines(scheduler, routines, &BackupComponents{}, nil)
+			bs := NewBackupScheduler(scheduler, NewBackupOrchestrator(
+				nil,
+				nil,
+				nil,
+				nil,
+			))
+			err := bs.ScheduleRoutines(routines)
 
 			require.NoError(t, err)
 			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)
-			require.Equal(t, tt.expectedJobsAdded, jobStore.Size())
 		})
 	}
-}
-
-func TestScheduleRoutines_DoesNotClearExistingJobStoreEntries(t *testing.T) {
-	const legacyKey = "legacy-job"
-	jobStore.ReplaceContent(map[string]*quartz.JobDetail{
-		legacyKey: nil,
-	})
-
-	scheduler := new(MockScheduler)
-	scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil).Twice()
-
-	err := scheduleRoutines(scheduler, []*model.BackupRoutine{
-		{
-			Name:             "new-routine",
-			IntervalCron:     "0 0 * * * *",
-			IncrIntervalCron: "0 */6 * * * *",
-		},
-	}, &BackupComponents{}, nil)
-	require.NoError(t, err)
-
-	_, hasLegacy := jobStore.Load(legacyKey)
-	require.True(t, hasLegacy)
-
-	_, hasFull := jobStore.Load(jobKey("new-routine", jobTypeFull).String())
-	require.True(t, hasFull)
-
-	_, hasIncremental := jobStore.Load(jobKey("new-routine", jobTypeIncremental).String())
-	require.True(t, hasIncremental)
 }
