@@ -106,19 +106,19 @@ func reportBackupOutcome(
 
 	if err == nil {
 		logger.Debug(operation+" finished", slog.Duration("duration", duration))
-		observeBackupEvent(routineName, backupType, BackupOutcomeSuccess, duration)
+		observeBackupEvent(routineName, backupType, OutcomeSuccess, duration)
 		return
 	}
 
 	if errors.Is(err, errBackupSkipped) {
 		logger.Debug(operation + " skipped")
-		observeBackupEvent(routineName, backupType, BackupOutcomeSkip, 0)
+		observeBackupEvent(routineName, backupType, OutcomeSkip, 0)
 		return
 	}
 
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		logger.Info(operation + " context canceled")
-		observeBackupEvent(routineName, backupType, BackupOutcomeCanceled, duration)
+		observeBackupEvent(routineName, backupType, OutcomeCanceled, duration)
 		return
 	}
 
@@ -133,5 +133,5 @@ func reportBackupOutcome(
 		logger.Error(operation+" failed", attr.Error(err))
 	}
 
-	observeBackupEvent(routineName, backupType, BackupOutcomeFailure, duration)
+	observeBackupEvent(routineName, backupType, OutcomeFailure, duration)
 }

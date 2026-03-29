@@ -101,6 +101,8 @@ func (j *restoreJob) finish(err error, logger *slog.Logger) {
 		j.status = model.RestoreFailed
 		logger.Error("restore failed", attr.Error(err))
 	}
+
+	observeRestoreCompletion(j.status)
 }
 
 // buildStatus constructs a model.RestoreJobStatus from the current job state.

@@ -1,6 +1,10 @@
 package model
 
-import "github.com/aerospike/backup-go/models"
+import (
+	"strings"
+
+	"github.com/aerospike/backup-go/models"
+)
 
 type RestoreState string
 
@@ -19,6 +23,25 @@ func AllJobStatuses() []RestoreState {
 		RestoreFailed,
 		RestoreCanceled,
 	}
+}
+
+// ParseRestoreState parses a restore status from user input (e.g. query parameters).
+// It accepts canonical values (running, done, failed, canceled) case-insensitively,
+// and legacy aliases success and failure for done and failed.
+func ParseRestoreState(s string) (RestoreState, bool) {
+	s = strings.TrimSpace(s)
+	switch strings.ToLower(s) {
+	case "success":
+		return RestoreDone, true
+	case "failure":
+		return RestoreFailed, true
+	}
+	for _, st := range AllJobStatuses() {
+		if strings.EqualFold(s, string(st)) {
+			return st, true
+		}
+	}
+	return "", false
 }
 
 // RestoreJobStatus represents a restore job status.

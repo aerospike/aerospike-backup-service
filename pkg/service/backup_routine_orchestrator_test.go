@@ -91,9 +91,9 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	p.Backup(t.Context(), routine, now, model.BackupTypeFull)
 
 	assert.Equal(t, uint64(10), stats.TotalRecords.Load(), "Backup stats should be correct")
-	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, OutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, OutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, OutcomeFailure))
 }
 
 func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
@@ -115,9 +115,9 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 
 	p.Backup(t.Context(), routine, time.Now(), model.BackupTypeFull)
 
-	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSuccess))
-	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeFailure))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, OutcomeSuccess))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, OutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, OutcomeFailure))
 }
 
 func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
@@ -153,9 +153,9 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 
 	assert.Contains(t, buf.String(), connectionError.Error())
 
-	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSkip))
-	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, BackupOutcomeFailure))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, OutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, OutcomeSkip))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, OutcomeFailure))
 }
 
 func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
@@ -178,10 +178,10 @@ func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
 	backupCounters.Reset()
 	p.Backup(t.Context(), routine, time.Now(), model.BackupTypeFull)
 
-	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(model.BackupTypeFull, BackupOutcomeFailure))
-	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, BackupOutcomeCanceled))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, OutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, OutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupTypeFull, OutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeFull, OutcomeCanceled))
 }
 
 func TestRunIncrementalBackup_Success(t *testing.T) {
@@ -194,9 +194,9 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 
 	runIncrementalBackupSuccess(t, routineState, testRoutine())
 
-	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeFailure))
-	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSkip))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, OutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, OutcomeFailure))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, OutcomeSkip))
 }
 
 func TestRunIncrementalBackup_Skip(t *testing.T) {
@@ -217,9 +217,9 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 
 	p.Backup(t.Context(), routine, time.Now(), model.BackupTypeIncremental)
 
-	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, OutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, OutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, OutcomeFailure))
 }
 
 func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
@@ -247,10 +247,10 @@ func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
 	backupCounters.Reset()
 	p.Backup(t.Context(), routine, time.Now(), model.BackupTypeIncremental)
 
-	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSkip))
-	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeFailure))
-	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeCanceled))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, OutcomeSuccess))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, OutcomeSkip))
+	assert.Zero(t, prometheusCounter(model.BackupTypeIncremental, OutcomeFailure))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, OutcomeCanceled))
 }
 
 func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
@@ -266,7 +266,7 @@ func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
 	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
 	runIncrementalBackupSuccess(t, routineState, routine)
 
-	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSuccess))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, OutcomeSuccess))
 }
 
 func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
@@ -282,7 +282,7 @@ func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
 	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
 	runIncrementalBackupSuccess(t, routineState, routine)
 
-	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, BackupOutcomeSuccess))
+	assert.Equal(t, 1, prometheusCounter(model.BackupTypeIncremental, OutcomeSuccess))
 }
 
 func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine *model.BackupRoutine) {
@@ -330,7 +330,7 @@ func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine
 	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")
 }
 
-func prometheusCounter(backupType model.BackupType, outcome BackupOutcome) int {
+func prometheusCounter(backupType model.BackupType, outcome Outcome) int {
 	counter := backupCounters.WithLabelValues(routineName, string(backupType), string(outcome))
 	return int(testutil.ToFloat64(counter))
 }

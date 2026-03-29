@@ -91,7 +91,7 @@ func (e *NamespaceBackupRunnerImpl) Run(
 				return e.writeBackupMetadata(ctx, routine, metadata, backupFolder, logger)
 			},
 			OnRetry: func() {
-				observeBackupEvent(routine.Name, runSpec.Type, BackupOutcomeRetry, 0)
+				observeBackupEvent(routine.Name, runSpec.Type, OutcomeRetry, 0)
 			},
 		},
 		logger,

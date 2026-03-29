@@ -9,9 +9,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// Outcome is the outcome label on backup_events_total and restore_events_total.
+type Outcome string
+
+const (
+	OutcomeSuccess  Outcome = "success"
+	OutcomeFailure  Outcome = "failure"
+	OutcomeCanceled Outcome = "canceled"
+	OutcomeRetry    Outcome = "retry"
+	OutcomeSkip     Outcome = "skip"
+)
+
 //nolint:lll
 var (
-	// A gauge metric for backup process, filter by name and type.
 	backupProgress = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_backup_progress_pct",
@@ -19,32 +29,40 @@ var (
 		},
 		[]string{"routine", "type"},
 	)
-	// A gauge metric for current number of restore jobs by status.
-	restoreJobsByStatus = prometheus.NewGaugeVec(
+	// 1 while a (routine, type) backup slot is active; series removed when idle (Reset each scrape).
+	backupRunningGauge = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_restore_jobs_by_status",
-			Help: "Current number of restore jobs by status (running, success, failure, canceled)",
+			Name: "aerospike_backup_service_backup_running",
+			Help: "1 while the given routine and backup type (full/incremental) has a run in progress; " +
+				"absent after scrape Reset when idle",
 		},
-		[]string{"status"},
+		[]string{"routine", "type"},
+	)
+	// Number of restore jobs currently in running state (GaugeVec with no labels for readme/metrics extraction).
+	restoreRunningGauge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_restore_in_progress",
+			Help: "Number of restore processes running",
+		},
+		nil,
 	)
 
-	// A counter metric for backup job events.
-	// Labels:
-	//   - routine: name of the backup routine, e.g., "daily-ns1"
-	//   - type: "full" or "incremental"
-	//   - outcome: one of "success", "failure", "canceled", "skip" or "retry"
 	backupCounters = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_backup_events_total",
-			Help: "Backup service job events by routine, type (full/incremental), and outcome (success, failure, canceled, retry, skip)",
+			Help: "Total completed backup runs by routine, type, and outcome (success, failure, canceled, retry, skip)",
 		},
 		[]string{"routine", "type", "outcome"},
 	)
 
-	// A histogram metric for backup job durations (in seconds).
-	// Labels:
-	//   - routine: name of the backup routine, e.g., "daily-ns1"
-	//   - type: "full" or "incremental"
+	restoreEventsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aerospike_backup_service_restore_events_total",
+			Help: "Total completed restore jobs by outcome (success, failure, canceled)",
+		},
+		[]string{"outcome"},
+	)
+
 	backupDurations = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "aerospike_backup_service_backup_duration_seconds",
@@ -53,10 +71,6 @@ var (
 		},
 		[]string{"routine", "type"},
 	)
-	// A gauge metric for unix timestamp of the last successful backup per routine.
-	// Labels:
-	//   - routine: name of the backup routine, e.g., "daily-ns1"
-	//   - type: "full" or "incremental"
 	lastBackupTimestamp = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_last_successful_backup_timestamp",
@@ -71,8 +85,10 @@ var AllMetrics []prometheus.Collector
 func init() {
 	AllMetrics = []prometheus.Collector{
 		backupProgress,
-		restoreJobsByStatus,
+		backupRunningGauge,
+		restoreRunningGauge,
 		backupCounters,
+		restoreEventsTotal,
 		backupDurations,
 		lastBackupTimestamp,
 	}
@@ -120,17 +136,26 @@ func (mc *MetricsCollector) collectMetrics() {
 }
 
 func (mc *MetricsCollector) collectBackupMetrics() {
-	runningState := mc.backups.GetRunningState() // Collecting routines states can take some time.
+	runningState := mc.backups.GetRunningState()
+
+	backupRunningGauge.Reset()
+	for routineName, rs := range runningState {
+		if rs.Full != nil {
+			backupRunningGauge.WithLabelValues(routineName, string(model.BackupTypeFull)).Set(1)
+		}
+		if rs.Incremental != nil {
+			backupRunningGauge.WithLabelValues(routineName, string(model.BackupTypeIncremental)).Set(1)
+		}
+	}
+
 	backupProgress.Reset()
 
 	for routineName, currentStat := range runningState {
-		// Update Full backup metric if running
 		if currentStat.Full != nil {
 			backupProgress.WithLabelValues(routineName, string(model.BackupTypeFull)).
 				Set(float64(currentStat.Full.PercentageDone))
 		}
 
-		// Update Incremental backup metric if running
 		if currentStat.Incremental != nil {
 			backupProgress.WithLabelValues(routineName, string(model.BackupTypeIncremental)).
 				Set(float64(currentStat.Incremental.PercentageDone))
@@ -140,27 +165,29 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 
 func (mc *MetricsCollector) collectRestoreMetrics() {
 	counts := mc.restores.StatusCounts()
-
-	for _, state := range model.AllJobStatuses() {
-		restoreJobsByStatus.WithLabelValues(string(state)).Set(float64(counts[state]))
-	}
+	restoreRunningGauge.WithLabelValues().Set(float64(counts[model.RestoreRunning]))
 }
 
-type BackupOutcome string
-
-const (
-	BackupOutcomeSuccess  BackupOutcome = "success"
-	BackupOutcomeFailure  BackupOutcome = "failure"
-	BackupOutcomeCanceled BackupOutcome = "canceled"
-	BackupOutcomeRetry    BackupOutcome = "retry"
-	BackupOutcomeSkip     BackupOutcome = "skip"
-)
+// observeRestoreCompletion increments restore_events_total once per finished job.
+// Maps model restore state to the same outcome strings as backup_events_total.
+func observeRestoreCompletion(status model.RestoreState) {
+	switch status {
+	case model.RestoreDone:
+		restoreEventsTotal.WithLabelValues(string(OutcomeSuccess)).Inc()
+	case model.RestoreFailed:
+		restoreEventsTotal.WithLabelValues(string(OutcomeFailure)).Inc()
+	case model.RestoreCanceled:
+		restoreEventsTotal.WithLabelValues(string(OutcomeCanceled)).Inc()
+	default:
+		// running or unknown — should not happen after finish()
+	}
+}
 
 // observeBackupEvent updates Prometheus backup counters/histograms.
 func observeBackupEvent(
 	routineName string,
 	backupType model.BackupType,
-	outcome BackupOutcome,
+	outcome Outcome,
 	duration time.Duration,
 ) {
 	backupCounters.With(prometheus.Labels{
@@ -169,7 +196,7 @@ func observeBackupEvent(
 		"outcome": string(outcome),
 	}).Inc()
 
-	if outcome == BackupOutcomeSuccess {
+	if outcome == OutcomeSuccess {
 		lastBackupTimestamp.WithLabelValues(routineName, string(backupType)).Set(float64(time.Now().Unix()))
 	}
 
