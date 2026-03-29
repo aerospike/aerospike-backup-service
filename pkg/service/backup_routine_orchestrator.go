@@ -45,7 +45,7 @@ func NewBackupOrchestrator(
 	}
 }
 
-// Run executes a full or incremental backup for the given routine snapshot.
+// Backup executes a full or incremental backup for the given routine snapshot.
 func (p *BackupOrchestratorImpl) Backup(
 	ctx context.Context,
 	routine *model.BackupRoutine,

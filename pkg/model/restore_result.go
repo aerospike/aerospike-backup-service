@@ -41,6 +41,7 @@ func ParseRestoreState(s string) (RestoreState, bool) {
 			return st, true
 		}
 	}
+
 	return "", false
 }
 
