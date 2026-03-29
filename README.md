@@ -1017,7 +1017,7 @@ New metrics have been added to provide more detailed monitoring of backup and re
 - `aerospike_backup_service_backup_events_total`: A counter for backup events, labeled by routine, type, and outcome.
 - `aerospike_backup_service_backup_duration_seconds`: A histogram of backup durations.
 - `aerospike_backup_service_last_successful_backup_timestamp`: A gauge for the timestamp of the last successful backup.
-- `aerospike_backup_service_restore_jobs_by_status`: A gauge for the current number of restore jobs by status.
+- `aerospike_backup_service_restore_in_progress`: A gauge for the number of restore processes currently running.
 
 The `aerospike_backup_service_restore_progress_pct` metric has been removed as it created a new time series for each
 restore job, leading to high cardinality issues in Prometheus. Restore progress can now be monitored via the
