@@ -1,0 +1,90 @@
+package prometheus
+
+import (
+	"github.com/prometheus/client_golang/prometheus"
+)
+
+// Outcome is the outcome label on backup_events_total and restore_events_total.
+type Outcome string
+
+const (
+	OutcomeSuccess  Outcome = "success"
+	OutcomeFailure  Outcome = "failure"
+	OutcomeCanceled Outcome = "canceled"
+	OutcomeRetry    Outcome = "retry"
+	OutcomeSkip     Outcome = "skip"
+)
+
+var (
+	backupProgress = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_backup_progress_pct",
+			Help: "Progress of backup processes in percentage",
+		},
+		[]string{"routine", "type"},
+	)
+
+	backupRunningGauge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_backup_running",
+			Help: "Number of backups currently running for the given routine and backup type (full/incremental)",
+		},
+		[]string{"routine", "type"},
+	)
+
+	restoreRunningGauge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_restore_in_progress",
+			Help: "Number of restore processes running",
+		},
+		nil,
+	)
+
+	backupCounters = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aerospike_backup_service_backup_events_total",
+			Help: "Total completed backup runs by routine, type, and outcome (success, failure, canceled, retry, skip)",
+		},
+		[]string{"routine", "type", "outcome"},
+	)
+
+	restoreEventsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aerospike_backup_service_restore_events_total",
+			Help: "Total completed restore jobs by outcome (success, failure, canceled)",
+		},
+		[]string{"outcome"},
+	)
+
+	backupDurations = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "aerospike_backup_service_backup_duration_seconds",
+			Help:    "Duration in seconds of finished backups by routine and type (full/incremental)",
+			Buckets: prometheus.ExponentialBuckets(60, 1.5, 16), // 1 min to 10 hours
+		},
+		[]string{"routine", "type"},
+	)
+	lastBackupTimestamp = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_last_successful_backup_timestamp",
+			Help: "Unix timestamp of the last successful backup per routine",
+		},
+		[]string{"routine", "type"},
+	)
+)
+
+var AllMetrics []prometheus.Collector
+
+func init() {
+	AllMetrics = []prometheus.Collector{
+		backupProgress,
+		backupRunningGauge,
+		restoreRunningGauge,
+		backupCounters,
+		restoreEventsTotal,
+		backupDurations,
+		lastBackupTimestamp,
+	}
+
+	prometheus.MustRegister(AllMetrics...)
+}
