@@ -14,7 +14,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	metrics "github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/prometheus/client_golang/prometheus"
@@ -185,7 +184,7 @@ var jsonExamples = map[string]any{
 				Pipeline:           8192,
 			},
 		},
-		Status: model.RestoreRunning,
+		Status: dto.JobStatusRunning,
 		Error:  "",
 	},
 	"CurrentRestoresResponse": map[int]dto.RestoreJobStatus{
@@ -215,7 +214,7 @@ var jsonExamples = map[string]any{
 					Pipeline:           0,
 				},
 			},
-			Status: model.RestoreRunning,
+			Status: dto.JobStatusRunning,
 			Error:  "",
 		}},
 }

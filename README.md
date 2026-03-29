@@ -313,15 +313,15 @@ following application metrics:
 
 <!-- Metrics -->
 
-| Name                                                        | Type      | Description                                                                                                                       | Labels                 |
-|-------------------------------------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------|------------------------|
-| `aerospike_backup_service_backup_duration_seconds`          | Histogram | Duration in seconds of finished backups by routine and type (full/incremental)                                                    | routine, type          |
-| `aerospike_backup_service_backup_events_total`              | Counter   | Total completed backup runs by routine, type, and outcome (success, failure, canceled, retry, skip)                               | routine, type, outcome |
-| `aerospike_backup_service_backup_progress_pct`              | Gauge     | Progress of backup processes in percentage                                                                                        | routine, type          |
-| `aerospike_backup_service_backup_running`                   | Gauge     | 1 while the given routine and backup type (full/incremental) has a run in progress; absent after scrape Reset when idle           | routine, type          |
-| `aerospike_backup_service_last_successful_backup_timestamp` | Gauge     | Unix timestamp of the last successful backup per routine                                                                          | routine, type          |
-| `aerospike_backup_service_restore_events_total`             | Counter   | Total completed restore jobs by outcome (success, failure, canceled; same vocabulary as backup_events_total; retry/skip not used) | outcome                |
-| `aerospike_backup_service_restore_running`                  | Gauge     | Number of restore jobs currently running                                                                                          |                        |
+| Name                                                        | Type      | Description                                                                                         | Labels                 |
+|-------------------------------------------------------------|-----------|-----------------------------------------------------------------------------------------------------|------------------------|
+| `aerospike_backup_service_backup_duration_seconds`          | Histogram | Duration in seconds of finished backups by routine and type (full/incremental)                      | routine, type          |
+| `aerospike_backup_service_backup_events_total`              | Counter   | Total completed backup runs by routine, type, and outcome (success, failure, canceled, retry, skip) | routine, type, outcome |
+| `aerospike_backup_service_backup_progress_pct`              | Gauge     | Progress of backup processes in percentage                                                          | routine, type          |
+| `aerospike_backup_service_backup_running`                   | Gauge     | Number of backups currently running for the given routine and backup type (full/incremental)        | routine, type          |
+| `aerospike_backup_service_last_successful_backup_timestamp` | Gauge     | Unix timestamp of the last successful backup per routine                                            | routine, type          |
+| `aerospike_backup_service_restore_events_total`             | Counter   | Total completed restore jobs by outcome (success, failure, canceled)                                | outcome                |
+| `aerospike_backup_service_restore_in_progress`              | Gauge     | Number of restore processes running                                                                 |                        |
 
 **Example PromQL Queries**
 

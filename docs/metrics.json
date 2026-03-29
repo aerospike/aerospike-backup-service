@@ -33,7 +33,7 @@
   {
     "name": "aerospike_backup_service_backup_running",
     "type": "Gauge",
-    "description": "1 while the given routine and backup type (full/incremental) has a run in progress; absent after scrape Reset when idle",
+    "description": "Number of backups currently running for the given routine and backup type (full/incremental)",
     "labels": [
       "routine",
       "type"
@@ -53,16 +53,16 @@
   {
     "name": "aerospike_backup_service_restore_events_total",
     "type": "Counter",
-    "description": "Total completed restore jobs by outcome (success, failure, canceled; same vocabulary as backup_events_total; retry/skip not used)",
+    "description": "Total completed restore jobs by outcome (success, failure, canceled)",
     "labels": [
       "outcome"
     ],
     "deprecated": false
   },
   {
-    "name": "aerospike_backup_service_restore_running",
+    "name": "aerospike_backup_service_restore_in_progress",
     "type": "Gauge",
-    "description": "Number of restore jobs currently running",
+    "description": "Number of restore processes running",
     "labels": null,
     "deprecated": false
   }

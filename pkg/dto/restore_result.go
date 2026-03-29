@@ -1,6 +1,19 @@
 package dto
 
-import "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+import (
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+)
+
+// JobStatus represents possible states of restore jobs.
+// @Description JobStatus represents possible states of restore jobs.
+type JobStatus string
+
+const (
+	JobStatusRunning  JobStatus = "running"
+	JobStatusDone     JobStatus = "done"
+	JobStatusFailed   JobStatus = "failed"
+	JobStatusCanceled JobStatus = "canceled"
+)
 
 // RestoreJobStatus represents restore job status.
 // @Description RestoreJobStatus represents restore job status.
@@ -40,7 +53,7 @@ type RestoreJobStatus struct {
 	// Speed related metrics of the restore process.
 	CurrentRestore *RunningJob `yaml:"current-restore" json:"current-job"`
 	// Status of the restore job.
-	Status model.RestoreState `yaml:"status" json:"status" enums:"running,done,failed,canceled"`
+	Status JobStatus `yaml:"status" json:"status"`
 	// Error message if any.
 	Error string `yaml:"error,omitempty" json:"error,omitempty"`
 }
@@ -66,7 +79,7 @@ func (r *RestoreJobStatus) fromModel(m *model.RestoreJobStatus) {
 	r.FresherRecords = m.Counters.GetRecordsFresher()
 	r.IndexCount = uint64(m.Counters.GetSIndexes())
 	r.UDFCount = uint64(m.Counters.GetUDFs())
-	r.Status = m.Status
+	r.Status = JobStatus(m.Status)
 	r.ErrorsInDoubt = m.Counters.GetErrorsInDoubt()
 
 	if m.Error != nil {
