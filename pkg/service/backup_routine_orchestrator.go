@@ -55,7 +55,7 @@ func (p *BackupOrchestratorImpl) Backup(
 	logger := slog.With(attr.Routine(routine.Name))
 	release, err := p.startController.TryStart(routine, now, backupType)
 	if err != nil {
-		reportBackupOutcome(routine.Name, backupType, 0, err, logger)
+		p.completionHandler.ReportBackupOutcome(routine.Name, backupType, 0, err, logger)
 		return
 	}
 	defer release()
@@ -64,7 +64,7 @@ func (p *BackupOrchestratorImpl) Backup(
 		return p.runBackupInternal(ctx, routine, now, backupType, logger)
 	})
 
-	reportBackupOutcome(routine.Name, backupType, duration, err, logger)
+	p.completionHandler.ReportBackupOutcome(routine.Name, backupType, duration, err, logger)
 }
 
 // runBackupInternal starts namespace backups, registers the aggregate handler, and runs completion hooks.

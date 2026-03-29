@@ -1,4 +1,4 @@
-package service
+package prometheus
 
 import (
 	"context"
@@ -20,7 +20,6 @@ const (
 	OutcomeSkip     Outcome = "skip"
 )
 
-//nolint:lll
 var (
 	backupProgress = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -96,14 +95,25 @@ func init() {
 	prometheus.MustRegister(AllMetrics...)
 }
 
+// RunningBackupsRegistry defines the interface for managing running backups and their statuses.
+type RunningBackupsRegistry interface {
+	// GetRunningState returns statistics for all current backups.
+	GetRunningState() map[string]model.RoutineState
+	// Cancel stops all ongoing backups for a specific routine.
+}
+
+type RestoreJobsHolder interface {
+	StatusCounts() map[model.RestoreState]int
+}
+
 type MetricsCollector struct {
 	mu       sync.Mutex
 	backups  RunningBackupsRegistry
-	restores *RestoreJobsHolder
+	restores RestoreJobsHolder
 }
 
 // NewMetricsCollector creates a new MetricsCollector.
-func NewMetricsCollector(bh RunningBackupsRegistry, jh *RestoreJobsHolder) *MetricsCollector {
+func NewMetricsCollector(bh RunningBackupsRegistry, jh RestoreJobsHolder) *MetricsCollector {
 	return &MetricsCollector{
 		backups:  bh,
 		restores: jh,
@@ -168,9 +178,9 @@ func (mc *MetricsCollector) collectRestoreMetrics() {
 	restoreRunningGauge.WithLabelValues().Set(float64(counts[model.RestoreRunning]))
 }
 
-// observeRestoreCompletion increments restore_events_total once per finished job.
+// ObserveRestoreCompletion increments restore_events_total once per finished job.
 // Maps model restore state to the same outcome strings as backup_events_total.
-func observeRestoreCompletion(status model.RestoreState) {
+func ObserveRestoreCompletion(status model.RestoreState) {
 	switch status {
 	case model.RestoreDone:
 		restoreEventsTotal.WithLabelValues(string(OutcomeSuccess)).Inc()
@@ -183,8 +193,8 @@ func observeRestoreCompletion(status model.RestoreState) {
 	}
 }
 
-// observeBackupEvent updates Prometheus backup counters/histograms.
-func observeBackupEvent(
+// ObserveBackupEvent updates Prometheus backup counters/histograms.
+func ObserveBackupEvent(
 	routineName string,
 	backupType model.BackupType,
 	outcome Outcome,
@@ -205,5 +215,16 @@ func observeBackupEvent(
 			"routine": routineName,
 			"type":    string(backupType),
 		}).Observe(duration.Seconds())
+	}
+}
+
+func SetInitialLastBackup(name string, lastRun *model.BackupTime) {
+	if lastRun.FullBackupTime() != nil {
+		t := float64(lastRun.FullBackupTime().Unix())
+		lastBackupTimestamp.WithLabelValues(name, string(model.BackupTypeFull)).Set(t)
+	}
+	if lastRun.IncrementalBackupTime() != nil {
+		t := float64(lastRun.IncrementalBackupTime().Unix())
+		lastBackupTimestamp.WithLabelValues(name, string(model.BackupTypeIncremental)).Set(t)
 	}
 }

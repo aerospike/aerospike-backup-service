@@ -16,6 +16,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
@@ -90,7 +91,7 @@ func InitComponents(
 		restoreValidator,
 	)
 
-	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
+	prometheus.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
 	httpService := handlers.NewService(

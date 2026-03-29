@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
@@ -25,6 +26,15 @@ type BackupCompletionHandler interface {
 	)
 	// OnFailure is called when a backup fails (clears failed state in registry).
 	OnFailure(routine *model.BackupRoutine, backupType model.BackupType)
+
+	// ReportBackupOutcome classifies the backup terminal outcome from err and logs it.
+	ReportBackupOutcome(
+		routineName string,
+		backupType model.BackupType,
+		duration time.Duration,
+		err error,
+		logger *slog.Logger,
+	)
 }
 
 type backupCompletionHandler struct {
@@ -93,9 +103,9 @@ func (h *backupCompletionHandler) OnFailure(
 	h.registry.clearFailedBackup(routine.Name, backupType)
 }
 
-// reportBackupOutcome classifies the backup terminal outcome from err and logs it.
+// ReportBackupOutcome classifies the backup terminal outcome from err and logs it.
 // It also emits the corresponding backup event prometheus metrics.
-func reportBackupOutcome(
+func (h *backupCompletionHandler) ReportBackupOutcome(
 	routineName string,
 	backupType model.BackupType,
 	duration time.Duration,
@@ -106,19 +116,19 @@ func reportBackupOutcome(
 
 	if err == nil {
 		logger.Debug(operation+" finished", slog.Duration("duration", duration))
-		observeBackupEvent(routineName, backupType, OutcomeSuccess, duration)
+		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeSuccess, duration)
 		return
 	}
 
 	if errors.Is(err, errBackupSkipped) {
 		logger.Debug(operation + " skipped")
-		observeBackupEvent(routineName, backupType, OutcomeSkip, 0)
+		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeSkip, 0)
 		return
 	}
 
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		logger.Info(operation + " context canceled")
-		observeBackupEvent(routineName, backupType, OutcomeCanceled, duration)
+		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeCanceled, duration)
 		return
 	}
 
@@ -133,5 +143,5 @@ func reportBackupOutcome(
 		logger.Error(operation+" failed", attr.Error(err))
 	}
 
-	observeBackupEvent(routineName, backupType, OutcomeFailure, duration)
+	prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeFailure, duration)
 }

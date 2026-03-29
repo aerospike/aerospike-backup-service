@@ -10,6 +10,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
@@ -102,7 +103,7 @@ func (j *restoreJob) finish(err error, logger *slog.Logger) {
 		logger.Error("restore failed", attr.Error(err))
 	}
 
-	observeRestoreCompletion(j.status)
+	prometheus.ObserveRestoreCompletion(j.status)
 }
 
 // buildStatus constructs a model.RestoreJobStatus from the current job state.
@@ -179,7 +180,7 @@ func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error, logger *
 	}
 }
 
-// StatusCounts returns counts of restore jobs by status in one pass.
+// StatusCounts returns counts of restore jobs by status.
 func (h *RestoreJobsHolder) StatusCounts() map[model.RestoreState]int {
 	counts := make(map[model.RestoreState]int)
 

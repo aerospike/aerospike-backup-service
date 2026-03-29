@@ -615,6 +615,18 @@ func (mr *MockBackupCompletionHandlerMockRecorder) OnSuccess(ctx, routine, backu
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnSuccess", reflect.TypeOf((*MockBackupCompletionHandler)(nil).OnSuccess), ctx, routine, backupType, timestamp, logger)
 }
 
+// ReportBackupOutcome mocks base method.
+func (m *MockBackupCompletionHandler) ReportBackupOutcome(routineName string, backupType model.BackupType, duration time.Duration, err error, logger *slog.Logger) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ReportBackupOutcome", routineName, backupType, duration, err, logger)
+}
+
+// ReportBackupOutcome indicates an expected call of ReportBackupOutcome.
+func (mr *MockBackupCompletionHandlerMockRecorder) ReportBackupOutcome(routineName, backupType, duration, err, logger any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportBackupOutcome", reflect.TypeOf((*MockBackupCompletionHandler)(nil).ReportBackupOutcome), routineName, backupType, duration, err, logger)
+}
+
 // MockRestoreValidator is a mock of RestoreValidator interface.
 type MockRestoreValidator struct {
 	ctrl     *gomock.Controller

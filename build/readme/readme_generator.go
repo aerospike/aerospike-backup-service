@@ -15,7 +15,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	metrics "github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
@@ -439,7 +439,7 @@ func extractRows() []MetricRow {
 		`Desc{fqName:\s*"([^"]+)",\s*help:\s*"([^"]+)",\s*constLabels:\s*{[^}]*},\s*variableLabels:\s*{([^}]*)}}`)
 
 	// Iterate over all registered metrics.
-	for _, metric := range service.AllMetrics {
+	for _, metric := range metrics.AllMetrics {
 		ch := make(chan *prometheus.Desc, 1)
 		metric.Describe(ch)
 		close(ch)

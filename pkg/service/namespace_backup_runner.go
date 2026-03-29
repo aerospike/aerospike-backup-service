@@ -9,6 +9,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 )
@@ -91,7 +92,7 @@ func (e *NamespaceBackupRunnerImpl) Run(
 				return e.writeBackupMetadata(ctx, routine, metadata, backupFolder, logger)
 			},
 			OnRetry: func() {
-				observeBackupEvent(routine.Name, runSpec.Type, OutcomeRetry, 0)
+				prometheus.ObserveBackupEvent(routine.Name, runSpec.Type, prometheus.OutcomeRetry, 0)
 			},
 		},
 		logger,
