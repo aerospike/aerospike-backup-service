@@ -26,7 +26,7 @@ var (
 
 	backupRunningGauge = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_backups_active",
+			Name: "aerospike_backup_service_backup_active",
 			Help: "Number of backups currently running for the given routine and backup type (full/incremental)",
 		},
 		[]string{"routine", "type"},
@@ -34,7 +34,7 @@ var (
 
 	restoreRunningGauge = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_restores_active",
+			Name: "aerospike_backup_service_restore_active",
 			Help: "Number of restore processes running",
 		},
 		nil,
@@ -85,12 +85,12 @@ var (
 		[]string{"routine", "type"},
 	)
 
-	// Deprecated: use aerospike_backup_service_restores_active instead.
+	// Deprecated: use aerospike_backup_service_restore_active instead.
 	restoreRunningGaugeDeprecated = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_restore_in_progress",
 			Help: "Number of restore processes running " +
-				"(Deprecated: use aerospike_backup_service_restores_active instead.)",
+				"(Deprecated: use aerospike_backup_service_restore_active instead.)",
 		},
 		nil,
 	)

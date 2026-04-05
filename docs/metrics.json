@@ -1,5 +1,15 @@
 [
   {
+    "name": "aerospike_backup_service_backup_active",
+    "type": "Gauge",
+    "description": "Number of backups currently running for the given routine and backup type (full/incremental)",
+    "labels": [
+      "routine",
+      "type"
+    ],
+    "deprecated": false
+  },
+  {
     "name": "aerospike_backup_service_backup_duration_seconds",
     "type": "Histogram",
     "description": "Duration in seconds of finished backups by routine and type (full/incremental)",
@@ -31,16 +41,6 @@
     "deprecated": false
   },
   {
-    "name": "aerospike_backup_service_backups_active",
-    "type": "Gauge",
-    "description": "Number of backups currently running for the given routine and backup type (full/incremental)",
-    "labels": [
-      "routine",
-      "type"
-    ],
-    "deprecated": false
-  },
-  {
     "name": "aerospike_backup_service_last_successful_backup_timestamp_seconds",
     "type": "Gauge",
     "description": "Unix timestamp (seconds) of the last successful backup per routine",
@@ -51,19 +51,19 @@
     "deprecated": false
   },
   {
+    "name": "aerospike_backup_service_restore_active",
+    "type": "Gauge",
+    "description": "Number of restore processes running",
+    "labels": null,
+    "deprecated": false
+  },
+  {
     "name": "aerospike_backup_service_restore_events_total",
     "type": "Counter",
     "description": "Total completed restore jobs by outcome (success, failure, canceled)",
     "labels": [
       "outcome"
     ],
-    "deprecated": false
-  },
-  {
-    "name": "aerospike_backup_service_restores_active",
-    "type": "Gauge",
-    "description": "Number of restore processes running",
-    "labels": null,
     "deprecated": false
   },
   {
@@ -89,7 +89,7 @@
   {
     "name": "aerospike_backup_service_restore_in_progress",
     "type": "Gauge",
-    "description": "Number of restore processes running (Deprecated: use aerospike_backup_service_restores_active instead.)",
+    "description": "Number of restore processes running (Deprecated: use aerospike_backup_service_restore_active instead.)",
     "labels": null,
     "deprecated": true
   }
