@@ -22,7 +22,7 @@ func NewStatusFilterFromString(statusParam string) (model.StatusFilter, error) {
 
 		rs, ok := model.ParseRestoreState(s)
 		if !ok {
-			return model.StatusFilter{}, errValidationInvalidValue("status", s, model.AllJobStatuses())
+			return model.StatusFilter{}, errValidationInvalidValue("status", s, model.AllRestoreStatuses())
 		}
 		fields = append(fields, rs)
 	}

@@ -15,8 +15,8 @@ const (
 	RestoreCanceled RestoreState = "canceled"
 )
 
-// AllJobStatuses returns all defined restore job statuses.
-func AllJobStatuses() []RestoreState {
+// AllRestoreStatuses returns all defined restore job statuses.
+func AllRestoreStatuses() []RestoreState {
 	return []RestoreState{
 		RestoreRunning,
 		RestoreDone,
@@ -36,7 +36,7 @@ func ParseRestoreState(s string) (RestoreState, bool) {
 	case "failure":
 		return RestoreFailed, true
 	}
-	for _, st := range AllJobStatuses() {
+	for _, st := range AllRestoreStatuses() {
 		if strings.EqualFold(s, string(st)) {
 			return st, true
 		}
