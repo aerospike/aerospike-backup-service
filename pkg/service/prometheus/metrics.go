@@ -4,7 +4,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// Outcome is the outcome label on backups_total and restores_total.
+// Outcome is the outcome label on backup and restore events.
 type Outcome string
 
 const (
@@ -50,7 +50,7 @@ var (
 
 	restoreEventsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "aerospike_backup_service_restores_total",
+			Name: "aerospike_backup_service_restore_events_total",
 			Help: "Total completed restore jobs by outcome (success, failure, canceled)",
 		},
 		[]string{"outcome"},

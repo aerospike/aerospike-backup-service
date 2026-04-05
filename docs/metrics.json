@@ -51,19 +51,19 @@
     "deprecated": false
   },
   {
-    "name": "aerospike_backup_service_restores_active",
-    "type": "Gauge",
-    "description": "Number of restore processes running",
-    "labels": null,
-    "deprecated": false
-  },
-  {
-    "name": "aerospike_backup_service_restores_total",
+    "name": "aerospike_backup_service_restore_events_total",
     "type": "Counter",
     "description": "Total completed restore jobs by outcome (success, failure, canceled)",
     "labels": [
       "outcome"
     ],
+    "deprecated": false
+  },
+  {
+    "name": "aerospike_backup_service_restores_active",
+    "type": "Gauge",
+    "description": "Number of restore processes running",
+    "labels": null,
     "deprecated": false
   },
   {
