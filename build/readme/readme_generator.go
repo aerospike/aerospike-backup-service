@@ -266,6 +266,7 @@ func generateExampleFiles() {
 		if err != nil {
 			panic(fmt.Errorf("failed to marshal json example %q: %w", name, err))
 		}
+		fileContent = fmt.Appendln(fileContent, "")
 		err = os.WriteFile(fileName, fileContent, 0600)
 		if err != nil {
 			panic(fmt.Errorf("failed to write json example file %q: %w", fileName, err))

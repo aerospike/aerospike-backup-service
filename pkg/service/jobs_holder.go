@@ -83,7 +83,6 @@ func (j *restoreJob) addTotalRecords(t uint64) {
 // finish marks the job as finished with a given status and error.
 func (j *restoreJob) finish(err error, logger *slog.Logger) {
 	j.Lock()
-	defer j.Unlock()
 
 	j.finished = ptr.Of(time.Now().Truncate(time.Millisecond))
 	j.err = err
@@ -103,7 +102,10 @@ func (j *restoreJob) finish(err error, logger *slog.Logger) {
 		logger.Error("restore failed", attr.Error(err))
 	}
 
-	prometheus.ObserveRestoreCompletion(j.status)
+	finalStatus := j.status
+	j.Unlock()
+
+	prometheus.ObserveRestoreCompletion(finalStatus)
 }
 
 // buildStatus constructs a model.RestoreJobStatus from the current job state.

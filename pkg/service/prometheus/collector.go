@@ -62,6 +62,7 @@ func (mc *MetricsCollector) collectMetrics() {
 func (mc *MetricsCollector) collectBackupMetrics() {
 	runningState := mc.backups.GetRunningState()
 
+	// set backup running gauge.
 	backupRunningGauge.Reset()
 	for routineName, rs := range runningState {
 		if rs.Full != nil {
@@ -72,18 +73,19 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 		}
 	}
 
+	// set backup progress gauge.
 	backupProgressGauge.Reset()
 	backupProgressDeprecated.Reset()
 
-	for routineName, currentStat := range runningState {
-		if currentStat.Full != nil {
-			pct := float64(currentStat.Full.PercentageDone)
+	for routineName, rs := range runningState {
+		if rs.Full != nil {
+			pct := float64(rs.Full.PercentageDone)
 			backupProgressGauge.WithLabelValues(routineName, string(model.BackupTypeFull)).Set(pct / 100)
 			backupProgressDeprecated.WithLabelValues(routineName, string(model.BackupTypeFull)).Set(pct)
 		}
 
-		if currentStat.Incremental != nil {
-			pct := float64(currentStat.Incremental.PercentageDone)
+		if rs.Incremental != nil {
+			pct := float64(rs.Incremental.PercentageDone)
 			backupProgressGauge.WithLabelValues(routineName, string(model.BackupTypeIncremental)).Set(pct / 100)
 			backupProgressDeprecated.WithLabelValues(routineName, string(model.BackupTypeIncremental)).Set(pct)
 		}
