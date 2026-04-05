@@ -8,12 +8,9 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
-	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
-// BackupCompletionHandler runs all actions after a backup succeeds or fails:
-// record/clear registry state, retention, and cluster config (on success for full backup).
+// BackupCompletionHandler handles registry state and side-effects after backup completes.
 type BackupCompletionHandler interface {
 	// OnSuccess is called after a backup completes successfully.
 	// For full backups it also runs retention and backs up cluster configuration.
@@ -26,15 +23,6 @@ type BackupCompletionHandler interface {
 	)
 	// OnFailure is called when a backup fails (clears failed state in registry).
 	OnFailure(routine *model.BackupRoutine, backupType model.BackupType)
-
-	// ReportBackupOutcome classifies the backup terminal outcome from err and logs it.
-	ReportBackupOutcome(
-		routineName string,
-		backupType model.BackupType,
-		duration time.Duration,
-		err error,
-		logger *slog.Logger,
-	)
 }
 
 type backupCompletionHandler struct {
@@ -101,47 +89,4 @@ func (h *backupCompletionHandler) OnFailure(
 	backupType model.BackupType,
 ) {
 	h.registry.clearFailedBackup(routine.Name, backupType)
-}
-
-// ReportBackupOutcome classifies the backup terminal outcome from err and logs it.
-// It also emits the corresponding backup event prometheus metrics.
-func (h *backupCompletionHandler) ReportBackupOutcome(
-	routineName string,
-	backupType model.BackupType,
-	duration time.Duration,
-	err error,
-	logger *slog.Logger,
-) {
-	operation := string(backupType) + " backup"
-
-	if err == nil {
-		logger.Debug(operation+" finished", slog.Duration("duration", duration))
-		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeSuccess, duration)
-		return
-	}
-
-	if errors.Is(err, errBackupSkipped) {
-		logger.Debug(operation + " skipped")
-		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeSkip, 0)
-		return
-	}
-
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		logger.Info(operation + " context canceled")
-		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeCanceled, duration)
-		return
-	}
-
-	var aerr *as.AerospikeError
-	if errors.As(err, &aerr) {
-		logger.Error(
-			operation+" failed due to Aerospike error",
-			slog.Int("resultCode", int(aerr.ResultCode)),
-			attr.Error(err),
-		)
-	} else {
-		logger.Error(operation+" failed", attr.Error(err))
-	}
-
-	prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeFailure, duration)
 }

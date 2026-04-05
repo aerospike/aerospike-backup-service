@@ -92,7 +92,7 @@ func (e *NamespaceBackupRunnerImpl) Run(
 				return e.writeBackupMetadata(ctx, routine, metadata, backupFolder, logger)
 			},
 			OnRetry: func() {
-				prometheus.ObserveBackupEvent(routine.Name, runSpec.Type, prometheus.OutcomeRetry, 0)
+				prometheus.ObserveBackupEvent(routine.Name, runSpec.Type, prometheus.OutcomeRetry, 0, runSpec.StartTime)
 			},
 		},
 		logger,

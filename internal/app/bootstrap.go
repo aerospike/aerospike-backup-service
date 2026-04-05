@@ -68,6 +68,7 @@ func InitComponents(
 	backupOrchestrator := service.NewBackupOrchestrator(
 		registry,
 		completionHandler,
+		service.NewBackupReporter(),
 		startController,
 		routineBackupRunner,
 	)

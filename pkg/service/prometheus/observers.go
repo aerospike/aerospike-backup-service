@@ -23,11 +23,13 @@ func ObserveRestoreCompletion(status model.RestoreState) {
 }
 
 // ObserveBackupEvent updates Prometheus backup counters/histograms.
+// For successful backups, startTime is recorded as the last successful backup timestamp.
 func ObserveBackupEvent(
 	routineName string,
 	backupType model.BackupType,
 	outcome Outcome,
 	duration time.Duration,
+	startTime time.Time,
 ) {
 	labels := prometheus.Labels{
 		"routine": routineName,
@@ -37,7 +39,7 @@ func ObserveBackupEvent(
 	backupCounters.With(labels).Inc()
 
 	if outcome == OutcomeSuccess {
-		ts := float64(time.Now().Unix())
+		ts := float64(startTime.Unix())
 		lastBackupTimestamp.WithLabelValues(routineName, string(backupType)).Set(ts)
 		lastBackupTimestampDeprecated.WithLabelValues(routineName, string(backupType)).Set(ts)
 	}

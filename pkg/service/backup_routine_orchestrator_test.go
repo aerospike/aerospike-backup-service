@@ -70,6 +70,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
+	mockReporter := NewMockBackupReporter(ctrl)
 	mockRunner := NewMockRoutineBackupRunner(ctrl)
 
 	stats := newTestBackupStats(10)
@@ -79,13 +80,13 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockRegistry.EXPECT().register(routineName, model.BackupTypeFull, gomock.Any())
 	mockCompletionHandler.EXPECT().
 		OnSuccess(gomock.Any(), routine, model.BackupTypeFull, newTimeMatcher(now), gomock.Any())
-	mockCompletionHandler.EXPECT().
-		ReportBackupOutcome(routine.Name, model.BackupTypeFull, gomock.Any(), nil, gomock.Any())
+	mockReporter.EXPECT().
+		Report(routine.Name, model.BackupTypeFull, newTimeMatcher(now), gomock.Any(), nil, gomock.Any())
 
 	mockStartController := NewMockStartController(ctrl)
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
-	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockStartController, mockRunner)
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
 
 	p.Backup(t.Context(), routine, now, model.BackupTypeFull)
 
@@ -97,20 +98,23 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 	defer ctrl.Finish()
 
 	routine := testRoutine()
+	now := time.Now()
 
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
+	mockReporter := NewMockBackupReporter(ctrl)
 
+	skipReason := errors.New("backup already running")
 	mockStartController := NewMockStartController(ctrl)
-	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, errBackupSkipped)
+	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, skipReason)
 
-	mockCompletionHandler.EXPECT().
-		ReportBackupOutcome(routine.Name, model.BackupTypeFull, gomock.Any(), errBackupSkipped, gomock.Any())
+	mockReporter.EXPECT().
+		Report(routine.Name, model.BackupTypeFull, newTimeMatcher(now), gomock.Any(), skipReason, gomock.Any())
 
 	mockRunner := NewMockRoutineBackupRunner(ctrl)
-	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockStartController, mockRunner)
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
 
-	p.Backup(t.Context(), routine, time.Now(), model.BackupTypeFull)
+	p.Backup(t.Context(), routine, now, model.BackupTypeFull)
 }
 
 func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
@@ -118,9 +122,11 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	defer ctrl.Finish()
 
 	routine := testRoutine()
+	now := time.Now()
 
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
+	mockReporter := NewMockBackupReporter(ctrl)
 
 	connectionError := errors.New("connection failed")
 	mockRunner := NewMockRoutineBackupRunner(ctrl)
@@ -129,12 +135,12 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	mockStartController := NewMockStartController(ctrl)
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
-	mockCompletionHandler.EXPECT().
-		ReportBackupOutcome(routine.Name, model.BackupTypeFull, gomock.Any(), connectionError, gomock.Any())
+	mockReporter.EXPECT().
+		Report(routine.Name, model.BackupTypeFull, newTimeMatcher(now), gomock.Any(), connectionError, gomock.Any())
 
-	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockStartController, mockRunner)
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
 
-	p.Backup(t.Context(), routine, time.Now(), model.BackupTypeFull)
+	p.Backup(t.Context(), routine, now, model.BackupTypeFull)
 }
 
 func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
@@ -142,9 +148,11 @@ func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
 	defer ctrl.Finish()
 
 	routine := testRoutine()
+	now := time.Now()
 
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
+	mockReporter := NewMockBackupReporter(ctrl)
 
 	mockRunner := NewMockRoutineBackupRunner(ctrl)
 	mockRunner.EXPECT().Run(gomock.Any(), routine, gomock.Any(), gomock.Any()).Return(nil, context.Canceled)
@@ -152,12 +160,12 @@ func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
 	mockStartController := NewMockStartController(ctrl)
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
-	mockCompletionHandler.EXPECT().
-		ReportBackupOutcome(routine.Name, model.BackupTypeFull, gomock.Any(), context.Canceled, gomock.Any())
+	mockReporter.EXPECT().
+		Report(routine.Name, model.BackupTypeFull, newTimeMatcher(now), gomock.Any(), context.Canceled, gomock.Any())
 
-	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockStartController, mockRunner)
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
 
-	p.Backup(t.Context(), routine, time.Now(), model.BackupTypeFull)
+	p.Backup(t.Context(), routine, now, model.BackupTypeFull)
 }
 
 func TestRunIncrementalBackup_Success(t *testing.T) {
@@ -174,19 +182,22 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	defer ctrl.Finish()
 
 	routine := testRoutine()
+	now := time.Now()
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
+	mockReporter := NewMockBackupReporter(ctrl)
 
+	skipReason := errors.New("no previous full backup")
 	mockStartController := NewMockStartController(ctrl)
-	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, errBackupSkipped)
+	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, skipReason)
 
-	mockCompletionHandler.EXPECT().
-		ReportBackupOutcome(routine.Name, model.BackupTypeIncremental, gomock.Any(), errBackupSkipped, gomock.Any())
+	mockReporter.EXPECT().
+		Report(routine.Name, model.BackupTypeIncremental, newTimeMatcher(now), gomock.Any(), skipReason, gomock.Any())
 
 	mockRunner := NewMockRoutineBackupRunner(ctrl)
-	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockStartController, mockRunner)
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
 
-	p.Backup(t.Context(), routine, time.Now(), model.BackupTypeIncremental)
+	p.Backup(t.Context(), routine, now, model.BackupTypeIncremental)
 }
 
 func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
@@ -194,11 +205,13 @@ func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
 	defer ctrl.Finish()
 
 	routine := testRoutine()
+	now := time.Now()
 	from := time.Unix(1700000001, 0)
 	state := model.RoutineState{LastRunTime: model.NewFullBackupTime(from)}
 
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
+	mockReporter := NewMockBackupReporter(ctrl)
 
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(state).Times(1)
 
@@ -209,12 +222,14 @@ func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
 	mockStartController := NewMockStartController(ctrl)
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
-	mockCompletionHandler.EXPECT().
-		ReportBackupOutcome(routine.Name, model.BackupTypeIncremental, gomock.Any(), context.DeadlineExceeded, gomock.Any())
+	mockReporter.EXPECT().Report(
+		routine.Name, model.BackupTypeIncremental, newTimeMatcher(now), gomock.Any(),
+		context.DeadlineExceeded, gomock.Any(),
+	)
 
-	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockStartController, mockRunner)
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
 
-	p.Backup(t.Context(), routine, time.Now(), model.BackupTypeIncremental)
+	p.Backup(t.Context(), routine, now, model.BackupTypeIncremental)
 }
 
 func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
@@ -246,10 +261,12 @@ func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	now := time.Now()
 	fromTime := *state.LastRunTime.LatestRun()
 
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
+	mockReporter := NewMockBackupReporter(ctrl)
 	mockRunner := NewMockRoutineBackupRunner(ctrl)
 
 	stats := newTestBackupStats(5)
@@ -275,15 +292,15 @@ func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine
 		gomock.Any(),
 		gomock.Any(),
 	)
-	mockCompletionHandler.EXPECT().
-		ReportBackupOutcome(routine.Name, model.BackupTypeIncremental, gomock.Any(), nil, gomock.Any())
+	mockReporter.EXPECT().
+		Report(routine.Name, model.BackupTypeIncremental, newTimeMatcher(now), gomock.Any(), nil, gomock.Any())
 
 	startController := NewMockStartController(ctrl)
 	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
-	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, startController, mockRunner)
+	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, startController, mockRunner)
 
-	p.Backup(t.Context(), routine, time.Now(), model.BackupTypeIncremental)
+	p.Backup(t.Context(), routine, now, model.BackupTypeIncremental)
 
 	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")
 }
