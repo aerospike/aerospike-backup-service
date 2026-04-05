@@ -334,7 +334,12 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
 
   `sum by (type) ( aerospike_backup_service_backup_events_total{routine="daily-ns1", outcome="success"} )`
 
+- 🏃 Number of currently active backup processes:
+
+  `sum(aerospike_backup_service_backup_active)`
+
 - 🔁 Number of backup retry attempts in the past hour:
+
   `increase(aerospike_backup_service_backup_events_total{outcome="retry"}[1h])`
 
 - ❌ Total number of failed backups across all routines and types:
@@ -342,11 +347,12 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
   `sum( aerospike_backup_service_backup_events_total{outcome="failure"} )`
 
 - 🚫 Total number of Canceled backups:
-  `sum(aerospike_backup_service_backup_events_total{outcome="cancel"})`
 
-- ⏰ Time since last backup for routine
+  `sum(aerospike_backup_service_backup_events_total{outcome="canceled"})`
 
-  `time() - aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1"}`
+- ⏰ Time since last backup for routine:
+
+  `time() - aerospike_backup_service_last_successful_backup_timestamp_seconds{routine="daily-ns1"}`
 
 **Example Prometheus Alert**
 
@@ -366,7 +372,7 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
 
 ```yaml
 - alert: BackupTooOld
-  expr: (time() - aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1"}) > 86400
+  expr: (time() - aerospike_backup_service_last_successful_backup_timestamp_seconds{routine="daily-ns1"}) > 86400
   labels:
     severity: critical
   annotations:
