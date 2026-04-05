@@ -4,7 +4,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// Outcome is the outcome label on backup_events_total and restore_events_total.
+// Outcome is the outcome label on backups_total and restores_total.
 type Outcome string
 
 const (
@@ -18,15 +18,15 @@ const (
 var (
 	backupProgress = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_backup_progress_pct",
-			Help: "Progress of backup processes in percentage",
+			Name: "aerospike_backup_service_backup_progress_ratio",
+			Help: "Progress of backup processes as a ratio (0.0 to 1.0)",
 		},
 		[]string{"routine", "type"},
 	)
 
 	backupRunningGauge = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_backup_running",
+			Name: "aerospike_backup_service_backups_active",
 			Help: "Number of backups currently running for the given routine and backup type (full/incremental)",
 		},
 		[]string{"routine", "type"},
@@ -34,7 +34,7 @@ var (
 
 	restoreRunningGauge = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_restore_in_progress",
+			Name: "aerospike_backup_service_restores_active",
 			Help: "Number of restore processes running",
 		},
 		nil,
@@ -50,7 +50,7 @@ var (
 
 	restoreEventsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "aerospike_backup_service_restore_events_total",
+			Name: "aerospike_backup_service_restores_total",
 			Help: "Total completed restore jobs by outcome (success, failure, canceled)",
 		},
 		[]string{"outcome"},
@@ -64,10 +64,43 @@ var (
 		},
 		[]string{"routine", "type"},
 	)
+
 	lastBackupTimestamp = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_last_successful_backup_timestamp_seconds",
+			Help: "Unix timestamp (seconds) of the last successful backup per routine",
+		},
+		[]string{"routine", "type"},
+	)
+
+	// Deprecated metrics (for backwards compatibility).
+
+	// Deprecated: use aerospike_backup_service_backup_progress_ratio instead.
+	backupProgressDeprecated = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_backup_progress_pct",
+			Help: "Progress of backup processes in percentage " +
+				"(Deprecated: use aerospike_backup_service_backup_progress_ratio instead.)",
+		},
+		[]string{"routine", "type"},
+	)
+
+	// Deprecated: use aerospike_backup_service_restores_active instead.
+	restoreRunningGaugeDeprecated = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_restore_in_progress",
+			Help: "Number of restore processes running " +
+				"(Deprecated: use aerospike_backup_service_restores_active instead.)",
+		},
+		nil,
+	)
+
+	// Deprecated: use aerospike_backup_service_last_successful_backup_timestamp_seconds instead.
+	lastBackupTimestampDeprecated = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_last_successful_backup_timestamp",
-			Help: "Unix timestamp of the last successful backup per routine",
+			Help: "Unix timestamp of the last successful backup per routine " +
+				"(Deprecated: use aerospike_backup_service_last_successful_backup_timestamp_seconds instead.)",
 		},
 		[]string{"routine", "type"},
 	)
@@ -84,6 +117,11 @@ func init() {
 		restoreEventsTotal,
 		backupDurations,
 		lastBackupTimestamp,
+
+		// Deprecated metrics
+		backupProgressDeprecated,
+		restoreRunningGaugeDeprecated,
+		lastBackupTimestampDeprecated,
 	}
 
 	prometheus.MustRegister(AllMetrics...)

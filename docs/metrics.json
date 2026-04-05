@@ -21,9 +21,9 @@
     "deprecated": false
   },
   {
-    "name": "aerospike_backup_service_backup_progress_pct",
+    "name": "aerospike_backup_service_backup_progress_ratio",
     "type": "Gauge",
-    "description": "Progress of backup processes in percentage",
+    "description": "Progress of backup processes as a ratio (0.0 to 1.0)",
     "labels": [
       "routine",
       "type"
@@ -31,7 +31,7 @@
     "deprecated": false
   },
   {
-    "name": "aerospike_backup_service_backup_running",
+    "name": "aerospike_backup_service_backups_active",
     "type": "Gauge",
     "description": "Number of backups currently running for the given routine and backup type (full/incremental)",
     "labels": [
@@ -41,9 +41,9 @@
     "deprecated": false
   },
   {
-    "name": "aerospike_backup_service_last_successful_backup_timestamp",
+    "name": "aerospike_backup_service_last_successful_backup_timestamp_seconds",
     "type": "Gauge",
-    "description": "Unix timestamp of the last successful backup per routine",
+    "description": "Unix timestamp (seconds) of the last successful backup per routine",
     "labels": [
       "routine",
       "type"
@@ -51,7 +51,14 @@
     "deprecated": false
   },
   {
-    "name": "aerospike_backup_service_restore_events_total",
+    "name": "aerospike_backup_service_restores_active",
+    "type": "Gauge",
+    "description": "Number of restore processes running",
+    "labels": null,
+    "deprecated": false
+  },
+  {
+    "name": "aerospike_backup_service_restores_total",
     "type": "Counter",
     "description": "Total completed restore jobs by outcome (success, failure, canceled)",
     "labels": [
@@ -60,10 +67,30 @@
     "deprecated": false
   },
   {
+    "name": "aerospike_backup_service_backup_progress_pct",
+    "type": "Gauge",
+    "description": "Progress of backup processes in percentage (Deprecated: use aerospike_backup_service_backup_progress_ratio instead.)",
+    "labels": [
+      "routine",
+      "type"
+    ],
+    "deprecated": true
+  },
+  {
+    "name": "aerospike_backup_service_last_successful_backup_timestamp",
+    "type": "Gauge",
+    "description": "Unix timestamp of the last successful backup per routine (Deprecated: use aerospike_backup_service_last_successful_backup_timestamp_seconds instead.)",
+    "labels": [
+      "routine",
+      "type"
+    ],
+    "deprecated": true
+  },
+  {
     "name": "aerospike_backup_service_restore_in_progress",
     "type": "Gauge",
-    "description": "Number of restore processes running",
+    "description": "Number of restore processes running (Deprecated: use aerospike_backup_service_restores_active instead.)",
     "labels": null,
-    "deprecated": false
+    "deprecated": true
   }
 ]

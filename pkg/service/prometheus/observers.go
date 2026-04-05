@@ -7,8 +7,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// ObserveRestoreCompletion increments restore_events_total once per finished job.
-// Maps model restore state to the same outcome strings as backup_events_total.
+// ObserveRestoreCompletion increments restores_total once per finished job.
+// Maps model restore state to the same outcome strings as backups_total.
 func ObserveRestoreCompletion(status model.RestoreState) {
 	switch status {
 	case model.RestoreDone:
@@ -29,14 +29,17 @@ func ObserveBackupEvent(
 	outcome Outcome,
 	duration time.Duration,
 ) {
-	backupCounters.With(prometheus.Labels{
+	labels := prometheus.Labels{
 		"routine": routineName,
 		"type":    string(backupType),
 		"outcome": string(outcome),
-	}).Inc()
+	}
+	backupCounters.With(labels).Inc()
 
 	if outcome == OutcomeSuccess {
-		lastBackupTimestamp.WithLabelValues(routineName, string(backupType)).Set(float64(time.Now().Unix()))
+		ts := float64(time.Now().Unix())
+		lastBackupTimestamp.WithLabelValues(routineName, string(backupType)).Set(ts)
+		lastBackupTimestampDeprecated.WithLabelValues(routineName, string(backupType)).Set(ts)
 	}
 
 	if duration > 0 {
@@ -51,9 +54,11 @@ func SetInitialLastBackup(name string, lastRun *model.BackupTime) {
 	if lastRun.FullBackupTime() != nil {
 		t := float64(lastRun.FullBackupTime().Unix())
 		lastBackupTimestamp.WithLabelValues(name, string(model.BackupTypeFull)).Set(t)
+		lastBackupTimestampDeprecated.WithLabelValues(name, string(model.BackupTypeFull)).Set(t)
 	}
 	if lastRun.IncrementalBackupTime() != nil {
 		t := float64(lastRun.IncrementalBackupTime().Unix())
 		lastBackupTimestamp.WithLabelValues(name, string(model.BackupTypeIncremental)).Set(t)
+		lastBackupTimestampDeprecated.WithLabelValues(name, string(model.BackupTypeIncremental)).Set(t)
 	}
 }
