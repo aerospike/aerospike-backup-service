@@ -155,7 +155,7 @@ func extractJobID(r *http.Request) (model.RestoreJobID, error) {
 // @Produce  json
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
-// @Param    status query string false "Comma-separated filter: running, done, failed, canceled (case-insensitive). Aliases success→done, failure→failed. Prefix ! excludes (e.g. !failed,canceled)"
+// @Param    status query string false "Comma-separated filter: running, success, failure, canceled (case-insensitive). Aliases done→success, failed→failure. Prefix ! excludes (e.g. !canceled)"
 // @Router   /v1/restore/jobs [get]
 // @Success  200 {object} map[string]dto.RestoreJobStatus "Restore jobs"
 // @Failure  400 {string} string

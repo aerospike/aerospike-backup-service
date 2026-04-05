@@ -90,16 +90,16 @@ func (j *restoreJob) finish(err error, logger *slog.Logger) {
 
 	switch {
 	case err == nil:
-		j.status = model.RestoreDone
+		j.status = model.RestoreSuccess
 		logger.Info("restore finished")
 	case errors.Is(err, context.Canceled):
 		j.status = model.RestoreCanceled
 		logger.Info("restore canceled")
 	case errors.Is(err, ErrRestorePrerequisitesFailed):
-		j.status = model.RestoreFailed
+		j.status = model.RestoreFailure
 		logger.Warn("failed to start restore", attr.Error(err))
 	default:
-		j.status = model.RestoreFailed
+		j.status = model.RestoreFailure
 		logger.Error("restore failed", attr.Error(err))
 	}
 

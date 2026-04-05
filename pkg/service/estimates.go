@@ -66,7 +66,7 @@ func NewRestoreRunningJob(
 		percentage = min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
 		endTime = calculateEstimatedEndTime(startTime, percentage)
 		effectiveMetrics = metrics
-	case model.RestoreDone:
+	case model.RestoreSuccess:
 		percentage = 1.0 // 100% only for successfully finished jobs.
 	default:
 	}

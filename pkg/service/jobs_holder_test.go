@@ -92,7 +92,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, status)
 
-		assert.Equal(t, model.RestoreDone, status.Status)
+		assert.Equal(t, model.RestoreSuccess, status.Status)
 	})
 
 	t.Run("job is canceled", func(t *testing.T) {
@@ -172,7 +172,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, status)
 
-		assert.Equal(t, model.RestoreFailed, status.Status)
+		assert.Equal(t, model.RestoreFailure, status.Status)
 		job, err = holder.getJob(jobID)
 		require.NoError(t, err)
 		require.ErrorIs(t, job.err, failErr)
@@ -193,7 +193,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 
 		status := job.buildStatus()
 		assert.NotNil(t, status)
-		assert.Equal(t, model.RestoreFailed, status.Status)
+		assert.Equal(t, model.RestoreFailure, status.Status)
 		require.ErrorIs(t, job.err, ErrRestorePrerequisitesFailed)
 	})
 }
@@ -211,14 +211,14 @@ func TestRestoreJobsHolder_StatusCounts(t *testing.T) {
 
 	counts := holder.StatusCounts()
 	assert.Equal(t, 1, counts[model.RestoreRunning])
-	assert.Equal(t, 1, counts[model.RestoreDone])
+	assert.Equal(t, 1, counts[model.RestoreSuccess])
 	assert.Equal(t, 1, counts[model.RestoreCanceled])
-	assert.Equal(t, 1, counts[model.RestoreFailed])
+	assert.Equal(t, 1, counts[model.RestoreFailure])
 
 	holder.finishJob(jobRunning, nil, slog.New(slog.DiscardHandler))
 	counts = holder.StatusCounts()
 	assert.Zero(t, counts[model.RestoreRunning])
-	assert.Equal(t, 2, counts[model.RestoreDone])
+	assert.Equal(t, 2, counts[model.RestoreSuccess])
 	assert.Equal(t, 1, counts[model.RestoreCanceled])
-	assert.Equal(t, 1, counts[model.RestoreFailed])
+	assert.Equal(t, 1, counts[model.RestoreFailure])
 }

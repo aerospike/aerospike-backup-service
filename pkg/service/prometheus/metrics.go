@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	backupProgress = prometheus.NewGaugeVec(
+	backupProgressGauge = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_backup_progress_ratio",
 			Help: "Progress of backup processes as a ratio (0.0 to 1.0)",
@@ -40,7 +40,7 @@ var (
 		nil,
 	)
 
-	backupCounters = prometheus.NewCounterVec(
+	backupCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_backup_events_total",
 			Help: "Total completed backup runs by routine, type, and outcome (success, failure, canceled, retry, skip)",
@@ -48,7 +48,7 @@ var (
 		[]string{"routine", "type", "outcome"},
 	)
 
-	restoreEventsTotal = prometheus.NewCounterVec(
+	restoreCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_restore_events_total",
 			Help: "Total completed restore jobs by outcome (success, failure, canceled)",
@@ -56,7 +56,7 @@ var (
 		[]string{"outcome"},
 	)
 
-	backupDurations = prometheus.NewHistogramVec(
+	backupDurationHist = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "aerospike_backup_service_backup_duration_seconds",
 			Help:    "Duration in seconds of finished backups by routine and type (full/incremental)",
@@ -65,7 +65,7 @@ var (
 		[]string{"routine", "type"},
 	)
 
-	lastBackupTimestamp = prometheus.NewGaugeVec(
+	lastBackupTimestampGauge = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_last_successful_backup_timestamp_seconds",
 			Help: "Unix timestamp (seconds) of the last successful backup per routine",
@@ -110,13 +110,13 @@ var AllMetrics []prometheus.Collector
 
 func init() {
 	AllMetrics = []prometheus.Collector{
-		backupProgress,
+		backupProgressGauge,
 		backupRunningGauge,
 		restoreRunningGauge,
-		backupCounters,
-		restoreEventsTotal,
-		backupDurations,
-		lastBackupTimestamp,
+		backupCounter,
+		restoreCounter,
+		backupDurationHist,
+		lastBackupTimestampGauge,
 
 		// Deprecated metrics
 		backupProgressDeprecated,

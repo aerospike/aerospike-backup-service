@@ -63,7 +63,7 @@ func TestNewRunningJob(t *testing.T) {
 
 func TestDoneRestoreJobStatus(t *testing.T) {
 	job := &restoreJob{
-		status:       model.RestoreDone,
+		status:       model.RestoreSuccess,
 		totalRecords: 50,
 	}
 
@@ -72,5 +72,5 @@ func TestDoneRestoreJobStatus(t *testing.T) {
 	require.NoError(t, status.Error)
 	assert.NotNil(t, status.CurrentRestore)
 	assert.Equal(t, uint(100), status.CurrentRestore.PercentageDone)
-	assert.Equal(t, model.RestoreDone, status.Status)
+	assert.Equal(t, model.RestoreSuccess, status.Status)
 }

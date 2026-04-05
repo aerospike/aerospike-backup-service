@@ -10,8 +10,8 @@ type RestoreState string
 
 const (
 	RestoreRunning  RestoreState = "running"
-	RestoreDone     RestoreState = "done"
-	RestoreFailed   RestoreState = "failed"
+	RestoreSuccess  RestoreState = "success"
+	RestoreFailure  RestoreState = "failure"
 	RestoreCanceled RestoreState = "canceled"
 )
 
@@ -19,22 +19,22 @@ const (
 func AllRestoreStatuses() []RestoreState {
 	return []RestoreState{
 		RestoreRunning,
-		RestoreDone,
-		RestoreFailed,
+		RestoreSuccess,
+		RestoreFailure,
 		RestoreCanceled,
 	}
 }
 
 // ParseRestoreState parses a restore status from user input (e.g. query parameters).
-// It accepts canonical values (running, done, failed, canceled) case-insensitively,
-// and legacy aliases success and failure for done and failed.
+// It accepts canonical values (running, success, failure, canceled) case-insensitively,
+// and legacy aliases done and failed for success and failure.
 func ParseRestoreState(s string) (RestoreState, bool) {
 	s = strings.TrimSpace(s)
 	switch strings.ToLower(s) {
-	case "success":
-		return RestoreDone, true
-	case "failure":
-		return RestoreFailed, true
+	case "done":
+		return RestoreSuccess, true
+	case "failed":
+		return RestoreFailure, true
 	}
 	for _, st := range AllRestoreStatuses() {
 		if strings.EqualFold(s, string(st)) {
@@ -48,8 +48,8 @@ func ParseRestoreState(s string) (RestoreState, bool) {
 // RestoreJobStatus represents a restore job status.
 // The information included depends on the Status field:
 //   - RestoreRunning -> current statistics and estimation.
-//   - RestoreDone -> statistics.
-//   - RestoreFailed -> error.
+//   - RestoreSuccess -> statistics.
+//   - RestoreFailure -> error.
 type RestoreJobStatus struct {
 	Counters       *models.RestoreStats
 	CurrentRestore *RunningJob
