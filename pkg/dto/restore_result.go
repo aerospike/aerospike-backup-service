@@ -10,8 +10,8 @@ type JobStatus string
 
 const (
 	JobStatusRunning  JobStatus = "running"
-	JobStatusDone     JobStatus = "done"
-	JobStatusFailed   JobStatus = "failed"
+	JobStatusSuccess  JobStatus = "success"
+	JobStatusFailure  JobStatus = "failure"
 	JobStatusCanceled JobStatus = "canceled"
 )
 

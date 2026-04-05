@@ -2424,14 +2424,14 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "running",
-                "done",
-                "failed",
+                "success",
+                "failure",
                 "canceled"
             ],
             "x-enum-varnames": [
                 "JobStatusRunning",
-                "JobStatusDone",
-                "JobStatusFailed",
+                "JobStatusSuccess",
+                "JobStatusFailure",
                 "JobStatusCanceled"
             ]
         },
