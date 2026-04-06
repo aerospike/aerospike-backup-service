@@ -184,7 +184,7 @@ var jsonExamples = map[string]any{
 				Pipeline:           8192,
 			},
 		},
-		Status: dto.JobStatusRunning,
+		Status: dto.RestoreRunning,
 		Error:  "",
 	},
 	"CurrentRestoresResponse": map[int]dto.RestoreJobStatus{
@@ -214,7 +214,7 @@ var jsonExamples = map[string]any{
 					Pipeline:           0,
 				},
 			},
-			Status: dto.JobStatusRunning,
+			Status: dto.RestoreRunning,
 			Error:  "",
 		}},
 }

@@ -20,11 +20,11 @@ func NewStatusFilterFromString(statusParam string) (model.StatusFilter, error) {
 			continue
 		}
 
-		rs, ok := model.ParseRestoreState(s)
+		rs, ok := ParseJobStatus(s)
 		if !ok {
-			return model.StatusFilter{}, errValidationInvalidValue("status", s, model.AllRestoreStatuses())
+			return model.StatusFilter{}, errValidationInvalidValue("status", s, AllJobStatuses())
 		}
-		fields = append(fields, rs)
+		fields = append(fields, rs.ToModel())
 	}
 
 	return model.NewStatusFilter(fields, isExclude), nil

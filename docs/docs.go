@@ -2420,7 +2420,7 @@ const docTemplate = `{
             }
         },
         "dto.JobStatus": {
-            "description": "JobStatus represents possible states of restore jobs.",
+            "description": "Possible states of restore jobs.",
             "type": "string",
             "enum": [
                 "running",
@@ -2429,10 +2429,10 @@ const docTemplate = `{
                 "canceled"
             ],
             "x-enum-varnames": [
-                "JobStatusRunning",
-                "JobStatusSuccess",
-                "JobStatusFailure",
-                "JobStatusCanceled"
+                "RestoreRunning",
+                "RestoreSuccess",
+                "RestoreFailure",
+                "RestoreCanceled"
             ]
         },
         "dto.LocalStorage": {
