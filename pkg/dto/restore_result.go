@@ -8,7 +8,7 @@ import (
 // @Description JobStatus represents possible states of restore jobs.
 type JobStatus string
 
-const (
+const ( // These consts are required as strings for swagger generation.
 	JobStatusRunning  JobStatus = "running"
 	JobStatusSuccess  JobStatus = "success"
 	JobStatusFailure  JobStatus = "failure"
