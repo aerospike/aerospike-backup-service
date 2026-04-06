@@ -33,12 +33,12 @@ func AllJobStatuses() []string {
 func ParseJobStatus(s string) (JobStatus, bool) {
 	s = strings.TrimSpace(s)
 	switch strings.ToLower(s) {
-	case "done", string(RestoreRunning):
+	case "done", string(RestoreSuccess):
 		return RestoreSuccess, true
 	case "failed", string(RestoreFailure):
 		return RestoreFailure, true
-	case string(RestoreSuccess):
-		return RestoreSuccess, true
+	case string(RestoreRunning):
+		return RestoreRunning, true
 	case string(RestoreCanceled):
 		return RestoreCanceled, true
 	}
