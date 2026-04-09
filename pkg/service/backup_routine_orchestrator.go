@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -60,11 +61,16 @@ func (p *BackupOrchestratorImpl) Backup(
 	}
 	defer release()
 
+	ctx, cancel := context.WithCancel(ctx)
+
 	duration, err := timeutil.MeasureDuration(func() error {
 		return p.runBackupInternal(ctx, routine, now, backupType, logger)
 	})
 
 	reportBackupOutcome(routine.Name, backupType, duration, err, logger)
+
+	cancel()
+	go runtime.GC()
 }
 
 // runBackupInternal starts namespace backups, registers the aggregate handler, and runs completion hooks.
