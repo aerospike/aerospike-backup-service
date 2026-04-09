@@ -4,7 +4,14 @@ Two docker-compose files are provided:
 - `docker-compose.yaml` - Uses the pre-built image from Docker Hub (recommended for most users)
 - `docker-compose-build.yaml` - Builds the service from source (for development)
 
+**Note:** All commands must be run from the `build/docker-compose/` directory, as the compose files use relative paths for bind mounts.
+
 ## Install
+
+Navigate to the docker-compose directory:
+```shell
+cd build/docker-compose
+```
 
 Using the pre-built image (default):
 ```shell
@@ -46,10 +53,10 @@ docker logs -f <container-id>
 
 Using the pre-built image:
 ```shell
-docker compose down
+docker compose -f docker-compose.yaml down
 ```
 
-If using build from source:
+Building from source:
 ```shell
 docker compose -f docker-compose-build.yaml down
 ```
