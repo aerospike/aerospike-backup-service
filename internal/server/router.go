@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	_ "net/http/pprof" // registers handlers on DefaultServeMux
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 )
@@ -10,6 +11,7 @@ func NewServeMux(apiPath, sysPath string, service *handlers.Service) *http.Serve
 	mux := http.NewServeMux()
 
 	registerSystemRoutes(mux, sysPath)
+	registerPProfRoutes(mux)
 	registerConfigRoutes(mux, apiPath, service)
 	registerClusterRoutes(mux, apiPath, service)
 	registerStorageRoutes(mux, apiPath, service)
@@ -22,12 +24,17 @@ func NewServeMux(apiPath, sysPath string, service *handlers.Service) *http.Serve
 }
 
 func registerSystemRoutes(mux *http.ServeMux, sysPath string) {
-	mux.HandleFunc("GET "+sysPath, handlers.RootActionHandler)
+	mux.HandleFunc("GET /{$}", handlers.RootActionHandler)
 	mux.HandleFunc("GET "+sysPath+"health", handlers.HealthActionHandler)
 	mux.HandleFunc("GET "+sysPath+"ready", handlers.ReadyActionHandler)
 	mux.HandleFunc("GET "+sysPath+"version", handlers.VersionActionHandler)
 	mux.Handle("GET "+sysPath+"metrics", handlers.MetricsActionHandler())
 	mux.Handle("GET "+sysPath+"api-docs/", handlers.APIDocsActionHandler()) // Note the trailing slash
+}
+
+// registerPProfRoutes exposes net/http/pprof on /debug/pprof/ (heap, CPU profile with ?seconds=, etc.).
+func registerPProfRoutes(mux *http.ServeMux) {
+	mux.Handle("/debug/pprof/", http.DefaultServeMux)
 }
 
 func registerConfigRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {

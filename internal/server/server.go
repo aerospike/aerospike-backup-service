@@ -37,7 +37,7 @@ func NewHTTPServer(service *handlers.Service) *HTTPServer {
 
 	handler := middleware.Wrap(mux,
 		middleware.RateLimiter(serverConfig.GetRateOrDefault()),
-		middleware.RequestLogger(slog.Default(), []string{"health", "ready", "metrics"}),
+		middleware.RequestLogger(slog.Default(), []string{"health", "ready", "metrics", "debug/pprof"}),
 	)
 
 	return &HTTPServer{
