@@ -4,11 +4,18 @@ Two docker-compose files are provided:
 - `docker-compose.yaml` - Uses the pre-built image from Docker Hub (recommended for most users)
 - `docker-compose-build.yaml` - Builds the service from source (for development)
 
+**Note:** All commands must be run from the `build/docker-compose/` directory, as the compose files use relative paths for bind mounts.
+
 ## Install
+
+Navigate to the docker-compose directory:
+```shell
+cd build/docker-compose
+```
 
 Using the pre-built image (default):
 ```shell
-docker compose up -d
+docker compose -f docker-compose.yaml up -d
 ```
 
 Building from source:
@@ -30,10 +37,10 @@ docker ps
 ```
 
 ```
-CONTAINER ID   IMAGE                                        COMMAND                  CREATED              STATUS                             PORTS                              NAMES
-05e7e6247776   aerospike/aerospike-backup-service:3.5.0     "./backup -c config.…"   About a minute ago   Up 53 seconds (health: starting)   0.0.0.0:8080->8080/tcp             aerospike-backup-service
-7a359245eb3a   minio/minio:latest                           "/usr/bin/docker-ent…"   About a minute ago   Up About a minute (healthy)        0.0.0.0:9000-9001->9000-9001/tcp   minio
-bf93abfb953c   aerospike/aerospike-server-enterprise:8.1 "/usr/bin/as-tini-st…"   About a minute ago   Up About a minute (healthy)        0.0.0.0:3000-3003->3000-3003/tcp   aerospike-cluster
+CONTAINER ID   IMAGE                                       COMMAND                  CREATED              STATUS                        PORTS                                                             NAMES
+6113ba55af02   aerospike/aerospike-backup-service:3.5.0    "aerospike-backup-se…"   About a minute ago   Up 38 seconds (healthy)       0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp                       aerospike-backup-service
+018dd00cdd3c   aerospike/aerospike-server-enterprise:8.1   "/usr/bin/as-tini-st…"   About a minute ago   Up About a minute (healthy)   0.0.0.0:3000-3003->3000-3003/tcp, [::]:3000-3003->3000-3003/tcp   aerospike-cluster
+9bd8386be71d   minio/minio:latest                          "/usr/bin/docker-ent…"   About a minute ago   Up About a minute (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp   minio
 ```
 
 ## View Logs
@@ -46,10 +53,10 @@ docker logs -f <container-id>
 
 Using the pre-built image:
 ```shell
-docker compose down
+docker compose -f docker-compose.yaml down
 ```
 
-If using build from source:
+Building from source:
 ```shell
 docker compose -f docker-compose-build.yaml down
 ```
