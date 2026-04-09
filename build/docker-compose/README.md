@@ -1,9 +1,19 @@
 # Docker-Compose Installation
 
+Two docker-compose files are provided:
+- `docker-compose.yaml` - Uses the pre-built image from Docker Hub (recommended for most users)
+- `docker-compose-build.yaml` - Builds the service from source (for development)
+
 ## Install
 
+Using the pre-built image (default):
 ```shell
- docker compose up -d
+docker compose up -d
+```
+
+Building from source:
+```shell
+docker compose -f docker-compose-build.yaml up -d
 ```
 
 This command sets up:
@@ -20,10 +30,10 @@ docker ps
 ```
 
 ```
-CONTAINER ID   IMAGE                                                                              COMMAND                  CREATED              STATUS                             PORTS                              NAMES
-05e7e6247776   aerospike.jfrog.io/ecosystem-container-prod-local/aerospike-backup-service:latest   "./backup -c config.…"   About a minute ago   Up 53 seconds (health: starting)   0.0.0.0:8080->8080/tcp             aerospike-backup-service
-7a359245eb3a   minio/minio:latest                                                                 "/usr/bin/docker-ent…"   About a minute ago   Up About a minute (healthy)        0.0.0.0:9000-9001->9000-9001/tcp   minio
-bf93abfb953c   aerospike/aerospike-server-enterprise:6.4.0.10                                      "/usr/bin/as-tini-st…"   About a minute ago   Up About a minute (healthy)        0.0.0.0:3000-3003->3000-3003/tcp   aerospike-cluster
+CONTAINER ID   IMAGE                                        COMMAND                  CREATED              STATUS                             PORTS                              NAMES
+05e7e6247776   aerospike/aerospike-backup-service:3.5.0     "./backup -c config.…"   About a minute ago   Up 53 seconds (health: starting)   0.0.0.0:8080->8080/tcp             aerospike-backup-service
+7a359245eb3a   minio/minio:latest                           "/usr/bin/docker-ent…"   About a minute ago   Up About a minute (healthy)        0.0.0.0:9000-9001->9000-9001/tcp   minio
+bf93abfb953c   aerospike/aerospike-server-enterprise:8.1 "/usr/bin/as-tini-st…"   About a minute ago   Up About a minute (healthy)        0.0.0.0:3000-3003->3000-3003/tcp   aerospike-cluster
 ```
 
 ## View Logs
@@ -34,6 +44,12 @@ docker logs -f <container-id>
 
 ## Uninstall
 
+Using the pre-built image:
 ```shell
- docker compose down
+docker compose down
+```
+
+If using build from source:
+```shell
+docker compose -f docker-compose-build.yaml down
 ```

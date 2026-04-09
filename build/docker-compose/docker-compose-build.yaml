@@ -48,7 +48,9 @@ services:
       retries: 3
 
   aerospike-backup-service:
-    image: aerospike/aerospike-backup-service:3.5.0
+    build:
+      context: ../../
+      dockerfile: Dockerfile
     container_name: "aerospike-backup-service"
     ports:
       - "8080:8080"
