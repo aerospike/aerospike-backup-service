@@ -138,8 +138,10 @@ func (cm *ClientManagerImpl) createBackupClient(info *clientInfo, logger *slog.L
 	}
 	var options = []backup.ClientOpt{
 		backup.WithInfoPolicies(as.NewInfoPolicy(), model.InfoRetryPolicy),
-		backup.WithScanLimiter(info.scanLimiter),
 		backup.WithLogger(logger),
+	}
+	if info.scanLimiter != nil {
+		options = append(options, backup.WithScanLimiter(info.scanLimiter))
 	}
 
 	return cm.clientFactory.NewBackupClient(info.aeroClient, options...)
