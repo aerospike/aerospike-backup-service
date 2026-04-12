@@ -10,6 +10,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
@@ -28,7 +29,7 @@ type restoreJob struct {
 	handlers []restoreexecutor.RestoreHandler
 
 	// status indicates the current state of the job (Running, Done, Failed, Canceled).
-	status model.JobStatus
+	status model.RestoreState
 
 	// err holds all errors that occurred during the job execution.
 	// It is nil if the job is running or completed successfully.
@@ -56,7 +57,7 @@ type restoreJob struct {
 
 func newRestoreJob(label string, cancel context.CancelFunc) *restoreJob {
 	return &restoreJob{
-		status:  model.JobStatusRunning,
+		status:  model.RestoreRunning,
 		started: time.Now().Truncate(time.Millisecond),
 		label:   label,
 		cancel:  cancel,
@@ -82,25 +83,29 @@ func (j *restoreJob) addTotalRecords(t uint64) {
 // finish marks the job as finished with a given status and error.
 func (j *restoreJob) finish(err error, logger *slog.Logger) {
 	j.Lock()
-	defer j.Unlock()
 
 	j.finished = ptr.Of(time.Now().Truncate(time.Millisecond))
 	j.err = err
 
 	switch {
 	case err == nil:
-		j.status = model.JobStatusDone
+		j.status = model.RestoreSuccess
 		logger.Info("restore finished")
 	case errors.Is(err, context.Canceled):
-		j.status = model.JobStatusCanceled
+		j.status = model.RestoreCanceled
 		logger.Info("restore canceled")
 	case errors.Is(err, ErrRestorePrerequisitesFailed):
-		j.status = model.JobStatusFailed
+		j.status = model.RestoreFailure
 		logger.Warn("failed to start restore", attr.Error(err))
 	default:
-		j.status = model.JobStatusFailed
+		j.status = model.RestoreFailure
 		logger.Error("restore failed", attr.Error(err))
 	}
+
+	finalStatus := j.status
+	j.Unlock()
+
+	prometheus.ObserveRestoreCompletion(finalStatus)
 }
 
 // buildStatus constructs a model.RestoreJobStatus from the current job state.
@@ -118,7 +123,7 @@ func (j *restoreJob) buildStatus() *model.RestoreJobStatus {
 	sumMetrics := models.SumMetrics(metrics...)
 	restoreStats := models.SumRestoreStats(stats...)
 	doneRecords := restoreStats.GetReadRecords()
-	runningJob := NewRunningJob(
+	runningJob := NewRestoreRunningJob(
 		j.started, j.finished, doneRecords, j.totalRecords, sumMetrics, j.status)
 
 	return &model.RestoreJobStatus{
@@ -127,6 +132,12 @@ func (j *restoreJob) buildStatus() *model.RestoreJobStatus {
 		Counters:       restoreStats,
 		CurrentRestore: runningJob,
 	}
+}
+
+func (j *restoreJob) getStatus() model.RestoreState {
+	j.RLock()
+	defer j.RUnlock()
+	return j.status
 }
 
 // RestoreJobsHolder is a thread-safe map of restore jobs.
@@ -169,6 +180,17 @@ func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error, logger *
 	if job, ok := h.Load(id); ok {
 		job.finish(err, logger)
 	}
+}
+
+// StatusCounts returns counts of restore jobs by status.
+func (h *RestoreJobsHolder) StatusCounts() map[model.RestoreState]int {
+	counts := make(map[model.RestoreState]int)
+
+	h.Iterate(func(_ model.RestoreJobID, job *restoreJob) {
+		counts[job.getStatus()]++
+	})
+
+	return counts
 }
 
 func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*restoreJob, error) {

@@ -14,7 +14,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	metrics "github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
@@ -184,7 +184,7 @@ var jsonExamples = map[string]any{
 				Pipeline:           8192,
 			},
 		},
-		Status: dto.JobStatusRunning,
+		Status: dto.RestoreRunning,
 		Error:  "",
 	},
 	"CurrentRestoresResponse": map[int]dto.RestoreJobStatus{
@@ -214,7 +214,7 @@ var jsonExamples = map[string]any{
 					Pipeline:           0,
 				},
 			},
-			Status: dto.JobStatusRunning,
+			Status: dto.RestoreRunning,
 			Error:  "",
 		}},
 }
@@ -266,6 +266,7 @@ func generateExampleFiles() {
 		if err != nil {
 			panic(fmt.Errorf("failed to marshal json example %q: %w", name, err))
 		}
+		fileContent = fmt.Appendln(fileContent, "")
 		err = os.WriteFile(fileName, fileContent, 0600)
 		if err != nil {
 			panic(fmt.Errorf("failed to write json example file %q: %w", fileName, err))
@@ -438,7 +439,7 @@ func extractRows() []MetricRow {
 		`Desc{fqName:\s*"([^"]+)",\s*help:\s*"([^"]+)",\s*constLabels:\s*{[^}]*},\s*variableLabels:\s*{([^}]*)}}`)
 
 	// Iterate over all registered metrics.
-	for _, metric := range service.AllMetrics {
+	for _, metric := range metrics.AllMetrics {
 		ch := make(chan *prometheus.Desc, 1)
 		metric.Describe(ch)
 		close(ch)

@@ -787,19 +787,19 @@
         }
       },
       "dto.JobStatus": {
-        "description": "JobStatus represents possible states of restore jobs.",
+        "description": "Possible states of restore jobs.",
         "type": "string",
         "enum": [
-          "Running",
-          "Done",
-          "Failed",
-          "Canceled"
+          "running",
+          "success",
+          "failure",
+          "canceled"
         ],
         "x-enum-varnames": [
-          "JobStatusRunning",
-          "JobStatusDone",
-          "JobStatusFailed",
-          "JobStatusCanceled"
+          "RestoreRunning",
+          "RestoreSuccess",
+          "RestoreFailure",
+          "RestoreCanceled"
         ]
       },
       "dto.LocalStorage": {

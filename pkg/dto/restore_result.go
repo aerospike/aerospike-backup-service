@@ -1,39 +1,8 @@
 package dto
 
 import (
-	"strings"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
-
-// JobStatus represents possible states of restore jobs.
-// @Description JobStatus represents possible states of restore jobs.
-type JobStatus string
-
-const (
-	JobStatusRunning  JobStatus = "Running"
-	JobStatusDone     JobStatus = "Done"
-	JobStatusFailed   JobStatus = "Failed"
-	JobStatusCanceled JobStatus = "Canceled"
-)
-
-var allJobStatuses = []JobStatus{
-	JobStatusRunning,
-	JobStatusDone,
-	JobStatusFailed,
-	JobStatusCanceled,
-}
-
-// restoreStatusFromString returns the corresponding JobStatus enum for string representation.
-func restoreStatusFromString(s string) (value JobStatus, ok bool) {
-	for _, status := range allJobStatuses {
-		if strings.EqualFold(s, string(status)) {
-			return status, true
-		}
-	}
-
-	return "", false
-}
 
 // RestoreJobStatus represents restore job status.
 // @Description RestoreJobStatus represents restore job status.
@@ -99,7 +68,7 @@ func (r *RestoreJobStatus) fromModel(m *model.RestoreJobStatus) {
 	r.FresherRecords = m.Counters.GetRecordsFresher()
 	r.IndexCount = uint64(m.Counters.GetSIndexes())
 	r.UDFCount = uint64(m.Counters.GetUDFs())
-	r.Status = JobStatus(m.Status)
+	r.Status = JobStatusFromModel(m.Status)
 	r.ErrorsInDoubt = m.Counters.GetErrorsInDoubt()
 
 	if m.Error != nil {

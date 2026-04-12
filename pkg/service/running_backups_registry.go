@@ -10,6 +10,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 )
@@ -159,14 +160,7 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 	// On success, update the tracker's history
 	slog.Info("Last existing backup", attr.Routine(routine.Name), slog.Any("time", lastRun))
 	tracker.setLastRun(lastRun)
-	if lastRun.FullBackupTime() != nil {
-		t := float64(lastRun.FullBackupTime().Unix())
-		lastBackupTimestamp.WithLabelValues(routine.Name, string(model.BackupTypeFull)).Set(t)
-	}
-	if lastRun.IncrementalBackupTime() != nil {
-		t := float64(lastRun.IncrementalBackupTime().Unix())
-		lastBackupTimestamp.WithLabelValues(routine.Name, string(model.BackupTypeIncremental)).Set(t)
-	}
+	prometheus.SetInitialLastBackup(routine.Name, lastRun)
 
 	return nil
 }
