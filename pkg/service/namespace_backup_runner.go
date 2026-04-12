@@ -11,17 +11,21 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
+	"golang.org/x/sync/semaphore"
 )
 
 // NamespaceBackupRunner runs the backup pipeline for one namespace: retries,
 // backend cleanup on failure/cancel, and metadata writes on success.
 type NamespaceBackupRunner interface {
 	// Run starts backup execution for a single namespace and returns a cancelable handler.
+	// scanLimiter is a per-routine limiter shared across all namespace backups within
+	// a single routine run to ensure fair resource allocation.
 	Run(
 		ctx context.Context,
 		routine *model.BackupRoutine,
 		namespace string,
 		runSpec model.BackupRunSpec,
+		scanLimiter *semaphore.Weighted,
 		logger *slog.Logger,
 	) CancelableBackupHandler
 }
@@ -56,11 +60,14 @@ type CancelableBackupHandler interface {
 
 // Run starts a retryable backup for one namespace via [backupexecutor.Backup.Run],
 // with cleanup and metadata callbacks wired for the routine's storage layout.
+// scanLimiter is a per-routine limiter shared across all namespace backups within
+// a single routine run to ensure fair resource allocation.
 func (e *NamespaceBackupRunnerImpl) Run(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	namespace string,
 	runSpec model.BackupRunSpec,
+	scanLimiter *semaphore.Weighted,
 	logger *slog.Logger,
 ) CancelableBackupHandler {
 	backupFolder := e.pathService.GetBackupPath(routine.Name, runSpec.Type, namespace, runSpec.StartTime)
@@ -70,7 +77,7 @@ func (e *NamespaceBackupRunnerImpl) Run(
 		*routine.BackupPolicy.GetRetryPolicyOrDefault(),
 		retryableBackupCallbacks{
 			Start: func(ctx context.Context) (backupexecutor.BackupHandler, error) {
-				return e.backupExecutor.Run(ctx, routine, runSpec.TimeBounds, namespace, backupFolder, logger)
+				return e.backupExecutor.Run(ctx, routine, runSpec.TimeBounds, namespace, backupFolder, scanLimiter, logger)
 			},
 			OnFail: func(ctx context.Context) {
 				path := e.pathService.GetTimestampPath(routine.Name, runSpec.StartTime, runSpec.Type)

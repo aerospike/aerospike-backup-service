@@ -10,6 +10,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"golang.org/x/sync/semaphore"
@@ -18,7 +19,14 @@ import (
 // ClientManager is responsible for creating, storing and closing backup clients.
 type ClientManager interface {
 	// GetClient returns a backup client by aerospike cluster name (new or cached).
-	GetClient(ctx context.Context, cluster *model.AerospikeCluster, logger *slog.Logger) (Client, error)
+	// localLimiter is an optional per-routine scan limiter. When provided, it is combined
+	// with the global cluster limiter using a DualLimiter to enforce both limits.
+	GetClient(
+		ctx context.Context,
+		cluster *model.AerospikeCluster,
+		localLimiter *semaphore.Weighted,
+		logger *slog.Logger,
+	) (Client, error)
 	// Close ensures that the specified backup client is released (ref count decremented).
 	Close(Client)
 }
@@ -66,10 +74,13 @@ func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Dura
 
 // GetClient returns a backup client by aerospike cluster name (new or cached).
 // The returned client must be closed by calling Close().
+// localLimiter is an optional per-routine scan limiter. When provided, it is combined
+// with the global cluster limiter using a DualLimiter to enforce both limits.
 // logger will be passed to the backup client. If not set, a default logger will be used.
 func (cm *ClientManagerImpl) GetClient(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
+	localLimiter *semaphore.Weighted,
 	logger *slog.Logger,
 ) (Client, error) {
 	if cluster == nil {
@@ -95,7 +106,7 @@ func (cm *ClientManagerImpl) GetClient(
 		info.aeroClient = aeroClient
 	}
 
-	client, err := cm.createBackupClient(info, logger)
+	client, err := cm.createBackupClient(info, localLimiter, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -132,16 +143,18 @@ func newInfo(cluster *model.AerospikeCluster) *clientInfo {
 	return value
 }
 
-func (cm *ClientManagerImpl) createBackupClient(info *clientInfo, logger *slog.Logger) (Client, error) {
+func (cm *ClientManagerImpl) createBackupClient(
+	info *clientInfo,
+	localLimiter *semaphore.Weighted,
+	logger *slog.Logger,
+) (Client, error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	var options = []backup.ClientOpt{
+	options := []backup.ClientOpt{
 		backup.WithInfoPolicies(as.NewInfoPolicy(), model.InfoRetryPolicy),
 		backup.WithLogger(logger),
-	}
-	if info.scanLimiter != nil {
-		options = append(options, backup.WithScanLimiter(info.scanLimiter))
+		backup.WithScanLimiter(syncutil.NewDualLimiter(info.scanLimiter, localLimiter)),
 	}
 
 	return cm.clientFactory.NewBackupClient(info.aeroClient, options...)

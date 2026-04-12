@@ -17,6 +17,7 @@ import (
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	backup "github.com/aerospike/backup-go"
 	gomock "go.uber.org/mock/gomock"
+	semaphore "golang.org/x/sync/semaphore"
 )
 
 // MockClientManager is a mock of ClientManager interface.
@@ -56,18 +57,18 @@ func (mr *MockClientManagerMockRecorder) Close(arg0 any) *gomock.Call {
 }
 
 // GetClient mocks base method.
-func (m *MockClientManager) GetClient(ctx context.Context, cluster *model.AerospikeCluster, logger *slog.Logger) (Client, error) {
+func (m *MockClientManager) GetClient(ctx context.Context, cluster *model.AerospikeCluster, localLimiter *semaphore.Weighted, logger *slog.Logger) (Client, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClient", ctx, cluster, logger)
+	ret := m.ctrl.Call(m, "GetClient", ctx, cluster, localLimiter, logger)
 	ret0, _ := ret[0].(Client)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetClient indicates an expected call of GetClient.
-func (mr *MockClientManagerMockRecorder) GetClient(ctx, cluster, logger any) *gomock.Call {
+func (mr *MockClientManagerMockRecorder) GetClient(ctx, cluster, localLimiter, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClient", reflect.TypeOf((*MockClientManager)(nil).GetClient), ctx, cluster, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClient", reflect.TypeOf((*MockClientManager)(nil).GetClient), ctx, cluster, localLimiter, logger)
 }
 
 // MockNamespaceValidator is a mock of NamespaceValidator interface.

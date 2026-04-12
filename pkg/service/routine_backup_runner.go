@@ -6,6 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"golang.org/x/sync/semaphore"
 )
 
 // RoutineBackupRunner coordinates backup runs for every namespace in a routine.
@@ -51,12 +52,17 @@ func (r *RoutineBackupRunnerImpl) Run(
 		return nil, err
 	}
 
+	// Create a per-routine semaphore to limit concurrent scans across all namespaces.
+	// This ensures fair resource allocation when routines with multiple namespaces
+	// compete with single-namespace routines for the global cluster scan limit.
+	scanLimiter := semaphore.NewWeighted(int64(routine.BackupPolicy.GetParallelOrDefault()))
+
 	op := &BackupNamespacesOperation{
 		handlers: make(map[string]CancelableBackupHandler, len(namespaces)),
 	}
 
 	for _, namespace := range namespaces {
-		op.handlers[namespace] = r.nsRunner.Run(ctx, routine, namespace, runSpec, logger)
+		op.handlers[namespace] = r.nsRunner.Run(ctx, routine, namespace, runSpec, scanLimiter, logger)
 	}
 
 	return op, nil

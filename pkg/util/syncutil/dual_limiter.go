@@ -1,39 +1,41 @@
-package sync
+package syncutil
 
 import (
 	"context"
 	"math/rand/v2"
 	"time"
+
+	"golang.org/x/sync/semaphore"
 )
 
-// limiter limits concurrent access (e.g. number of parallel scans).
-// *semaphore.Weighted from [golang.org/x/sync/semaphore] implements this interface.
-type limiter interface {
-	// Acquire acquires the semaphore with a weight of n, blocking until resources
-	// are available or ctx is done. On success, returns nil. On failure, returns
-	// ctx.Err() and leaves the semaphore unchanged.
-	Acquire(ctx context.Context, n int64) error
-	// TryAcquire acquires the semaphore with a weight of n without blocking.
-	// On success, returns true. On failure, returns false and leaves the semaphore unchanged.
-	TryAcquire(n int64) bool
-	// Release releases the semaphore with a weight of n.
-	Release(n int64)
-}
-
-// DualLimiter coordinates acquisition across two underlying limiters.
+// DualLimiter coordinates acquisition across two semaphores.
+// It ensures that both are acquired atomically before proceeding,
+// which is useful for enforcing both a global limit and a per-routine limit.
+// Either semaphore can be nil, in which case only the non-nil one is used.
 type DualLimiter struct {
-	l1 limiter
-	l2 limiter
+	l1 *semaphore.Weighted
+	l2 *semaphore.Weighted
 }
 
-// NewDualLimiter creates a new DualLimiter.
-func NewDualLimiter(l1, l2 limiter) *DualLimiter {
+// NewDualLimiter creates a new DualLimiter that requires acquiring from both
+// l1 and l2 before proceeding. Either can be nil.
+func NewDualLimiter(l1, l2 *semaphore.Weighted) *DualLimiter {
 	return &DualLimiter{l1: l1, l2: l2}
 }
 
 // Acquire implements alternating blocking acquisition with a randomized jitter
 // to prevent livelocks when multiple goroutines compete for the same two resources.
 func (d *DualLimiter) Acquire(ctx context.Context, n int64) error {
+	if d.l1 == nil && d.l2 == nil {
+		return nil
+	}
+	if d.l1 == nil {
+		return d.l2.Acquire(ctx, n)
+	}
+	if d.l2 == nil {
+		return d.l1.Acquire(ctx, n)
+	}
+
 	primary, secondary := d.l1, d.l2
 
 	for {
@@ -67,20 +69,36 @@ func (d *DualLimiter) Acquire(ctx context.Context, n int64) error {
 	}
 }
 
-// Release releases n units from both underlying limiters.
+// Release releases n units from both underlying semaphores.
 func (d *DualLimiter) Release(n int64) {
-	d.l1.Release(n)
-	d.l2.Release(n)
+	if d.l1 != nil {
+		d.l1.Release(n)
+	}
+	if d.l2 != nil {
+		d.l2.Release(n)
+	}
 }
 
-// TryAcquire attempts to acquire n units from both limiters immediately.
+// TryAcquire attempts to acquire n units from both semaphores immediately.
 func (d *DualLimiter) TryAcquire(n int64) bool {
+	if d.l1 == nil && d.l2 == nil {
+		return true
+	}
+	if d.l1 == nil {
+		return d.l2.TryAcquire(n)
+	}
+	if d.l2 == nil {
+		return d.l1.TryAcquire(n)
+	}
+
 	if !d.l1.TryAcquire(n) {
 		return false
 	}
 	if !d.l2.TryAcquire(n) {
 		d.l1.Release(n)
+
 		return false
 	}
+
 	return true
 }

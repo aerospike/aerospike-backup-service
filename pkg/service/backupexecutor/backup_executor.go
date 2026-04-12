@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/aerospike/backup-go/models"
+	"golang.org/x/sync/semaphore"
 )
 
 type storageWriter interface {
@@ -27,6 +28,7 @@ type Backup interface {
 		timeBounds model.TimeBounds,
 		namespace string,
 		path string,
+		scanLimiter *semaphore.Weighted,
 		logger *slog.Logger,
 	) (BackupHandler, error)
 }
@@ -50,15 +52,18 @@ func NewDefaultBackupExecutor(clientManager aerospike.ClientManager, operations 
 // - For regular backups without XDR config, it uses scan-based backup (both full and incremental)
 // - For full backups with XDR config, it combines XDR for records and scan for UDFs/indexes
 // - For incremental backups with XDR config, it uses XDR-only backup.
+// scanLimiter is an optional per-routine scan limiter that limits parallel scans
+// within a single routine run, providing fair resource allocation across routines.
 func (r *DefaultBackupExecutor) Run(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,
 	path string,
+	scanLimiter *semaphore.Weighted,
 	logger *slog.Logger,
 ) (BackupHandler, error) {
-	client, err := r.clientManager.GetClient(ctx, routine.SourceCluster, logger)
+	client, err := r.clientManager.GetClient(ctx, routine.SourceCluster, scanLimiter, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backup client: %w", err)
 	}

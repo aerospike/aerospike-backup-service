@@ -52,7 +52,7 @@ func (w *DefaultClusterConfigWriter) Write(
 	logger := slog.Default().With(attr.Routine(routine.Name))
 	logger.Info("writing cluster config", slog.Time("timestamp", timestamp))
 
-	client, err := w.clientManager.GetClient(ctx, routine.SourceCluster, logger)
+	client, err := w.clientManager.GetClient(ctx, routine.SourceCluster, nil, logger)
 	if err != nil {
 		return fmt.Errorf("failed to get backup client: %w", err)
 	}

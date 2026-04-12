@@ -1,4 +1,4 @@
-package sync
+package syncutil
 
 import (
 	"context"
@@ -117,4 +117,77 @@ func TestDualLimiter_Release_IsSymmetric(t *testing.T) {
 	// Both should be at full capacity
 	assert.True(t, l1.TryAcquire(5), "l1 was not fully released")
 	assert.True(t, l2.TryAcquire(5), "l2 was not fully released")
+}
+
+func TestDualLimiter_Acquire_NilL1(t *testing.T) {
+	l2 := semaphore.NewWeighted(5)
+	dl := NewDualLimiter(nil, l2)
+
+	err := dl.Acquire(t.Context(), 3)
+	require.NoError(t, err)
+
+	// l2 should have 3 units held
+	assert.False(t, l2.TryAcquire(3), "l2 should have 3 units held")
+
+	dl.Release(3)
+	assert.True(t, l2.TryAcquire(5), "l2 should be fully released")
+}
+
+func TestDualLimiter_Acquire_NilL2(t *testing.T) {
+	l1 := semaphore.NewWeighted(5)
+	dl := NewDualLimiter(l1, nil)
+
+	err := dl.Acquire(t.Context(), 3)
+	require.NoError(t, err)
+
+	// l1 should have 3 units held
+	assert.False(t, l1.TryAcquire(3), "l1 should have 3 units held")
+
+	dl.Release(3)
+	assert.True(t, l1.TryAcquire(5), "l1 should be fully released")
+}
+
+func TestDualLimiter_Acquire_BothNil(t *testing.T) {
+	dl := NewDualLimiter(nil, nil)
+
+	err := dl.Acquire(t.Context(), 100)
+	require.NoError(t, err)
+
+	// Should be no-op
+	dl.Release(100)
+}
+
+func TestDualLimiter_TryAcquire_NilL1(t *testing.T) {
+	l2 := semaphore.NewWeighted(5)
+	dl := NewDualLimiter(nil, l2)
+
+	success := dl.TryAcquire(3)
+	assert.True(t, success)
+
+	// l2 should have 3 units held
+	assert.False(t, l2.TryAcquire(3), "l2 should have 3 units held")
+
+	dl.Release(3)
+}
+
+func TestDualLimiter_TryAcquire_NilL2(t *testing.T) {
+	l1 := semaphore.NewWeighted(5)
+	dl := NewDualLimiter(l1, nil)
+
+	success := dl.TryAcquire(3)
+	assert.True(t, success)
+
+	// l1 should have 3 units held
+	assert.False(t, l1.TryAcquire(3), "l1 should have 3 units held")
+
+	dl.Release(3)
+}
+
+func TestDualLimiter_TryAcquire_BothNil(t *testing.T) {
+	dl := NewDualLimiter(nil, nil)
+
+	success := dl.TryAcquire(100)
+	assert.True(t, success)
+
+	dl.Release(100)
 }
