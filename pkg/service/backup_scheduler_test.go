@@ -79,6 +79,7 @@ func TestScheduleRoutines(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				nil,
 			))
 			err := bs.ScheduleRoutines(routines)
 

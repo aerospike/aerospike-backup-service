@@ -1,13 +1,13 @@
 package model
 
-// StatusFilter defines a filter for JobStatus values.
+// StatusFilter defines a filter for RestoreState values.
 type StatusFilter struct {
-	fields    map[JobStatus]struct{}
+	fields    map[RestoreState]struct{}
 	isExclude bool
 }
 
-func NewStatusFilter(statuses []JobStatus, isExclude bool) StatusFilter {
-	fieldMap := make(map[JobStatus]struct{}, len(statuses))
+func NewStatusFilter(statuses []RestoreState, isExclude bool) StatusFilter {
+	fieldMap := make(map[RestoreState]struct{}, len(statuses))
 	for _, s := range statuses {
 		fieldMap[s] = struct{}{}
 	}
@@ -22,7 +22,7 @@ func NewStatusFilter(statuses []JobStatus, isExclude bool) StatusFilter {
 // If no statuses are defined in the filter, all statuses are considered a match.
 // In include mode, it returns true if the status IS in the included set.
 // In exclude mode, it returns true if the status is NOT in the excluded set.
-func (sf StatusFilter) Matches(status JobStatus) bool {
+func (sf StatusFilter) Matches(status RestoreState) bool {
 	if len(sf.fields) == 0 {
 		return true // No filters defined — match everything.
 	}

@@ -1454,7 +1454,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated status filter (Running,Done,Failed,Canceled). Use ! prefix for exclude filter (e.g., !Failed,Canceled)",
+                        "description": "Comma-separated filter: running, success, failure, canceled (case-insensitive). Aliases done→success, failed→failure. Prefix ! excludes (e.g. !canceled)",
                         "name": "status",
                         "in": "query"
                     }
@@ -2420,19 +2420,19 @@ const docTemplate = `{
             }
         },
         "dto.JobStatus": {
-            "description": "JobStatus represents possible states of restore jobs.",
+            "description": "Possible states of restore jobs.",
             "type": "string",
             "enum": [
-                "Running",
-                "Done",
-                "Failed",
-                "Canceled"
+                "running",
+                "success",
+                "failure",
+                "canceled"
             ],
             "x-enum-varnames": [
-                "JobStatusRunning",
-                "JobStatusDone",
-                "JobStatusFailed",
-                "JobStatusCanceled"
+                "RestoreRunning",
+                "RestoreSuccess",
+                "RestoreFailure",
+                "RestoreCanceled"
             ]
         },
         "dto.LocalStorage": {

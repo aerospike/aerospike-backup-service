@@ -13,24 +13,40 @@ func currentBackupStatus(handlers backupexecutor.BackupHandler) *model.RunningJo
 		return nil
 	}
 
+	// for backups, we don't store info on finished jobs; If we have a backup handler => it's running.
 	stats := handlers.GetStats()
 	if stats == nil { // no running jobs
 		return nil
 	}
 
-	// for backups, we don't store info on finished jobs; If we have a backup handler => it's running.
-	return NewRunningJob(
-		stats.StartTime, nil, stats.ReadRecords.Load(), stats.TotalRecords.Load(),
-		handlers.GetMetrics(), model.JobStatusRunning)
+	var done = stats.ReadRecords.Load()
+	var total = stats.TotalRecords.Load()
+
+	percentage := 0.0
+	if total != 0 {
+		percentage = min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
+	}
+
+	endTime := calculateEstimatedEndTime(stats.StartTime, percentage)
+
+	return &model.RunningJob{
+		StartTime:        stats.StartTime,
+		FinishTime:       nil,
+		DoneRecords:      done,
+		TotalRecords:     total,
+		EstimatedEndTime: endTime,
+		PercentageDone:   uint(percentage * 100),
+		Metrics:          handlers.GetMetrics(),
+	}
 }
 
-// NewRunningJob created new RunningJob (backup or restore) with calculated estimated time and percentage.
-func NewRunningJob(
+// NewRestoreRunningJob created new RunningJob for restore with calculated estimated time and percentage.
+func NewRestoreRunningJob(
 	startTime time.Time,
 	finishTime *time.Time,
 	done, total uint64,
 	metrics *models.Metrics,
-	jobStatus model.JobStatus,
+	jobStatus model.RestoreState,
 ) *model.RunningJob {
 	if total == 0 { // edge case for empty restore
 		return &model.RunningJob{
@@ -46,11 +62,11 @@ func NewRunningJob(
 	)
 
 	switch jobStatus {
-	case model.JobStatusRunning:
+	case model.RestoreRunning:
 		percentage = min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
 		endTime = calculateEstimatedEndTime(startTime, percentage)
 		effectiveMetrics = metrics
-	case model.JobStatusDone:
+	case model.RestoreSuccess:
 		percentage = 1.0 // 100% only for successfully finished jobs.
 	default:
 	}

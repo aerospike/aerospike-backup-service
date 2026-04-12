@@ -24,6 +24,7 @@ type BackupOrchestrator interface {
 type BackupOrchestratorImpl struct {
 	registry          RunningBackupsRegistry
 	completionHandler BackupCompletionHandler
+	outcomeReporter   BackupReporter
 	startController   StartController
 	routineRunner     RoutineBackupRunner
 }
@@ -34,18 +35,20 @@ var _ BackupOrchestrator = (*BackupOrchestratorImpl)(nil)
 func NewBackupOrchestrator(
 	registry RunningBackupsRegistry,
 	completionHandler BackupCompletionHandler,
+	reporter BackupReporter,
 	startController StartController,
 	backupRunner RoutineBackupRunner,
 ) *BackupOrchestratorImpl {
 	return &BackupOrchestratorImpl{
 		registry:          registry,
 		completionHandler: completionHandler,
+		outcomeReporter:   reporter,
 		startController:   startController,
 		routineRunner:     backupRunner,
 	}
 }
 
-// Run executes a full or incremental backup for the given routine snapshot.
+// Backup executes a full or incremental backup for the given routine snapshot.
 func (p *BackupOrchestratorImpl) Backup(
 	ctx context.Context,
 	routine *model.BackupRoutine,
@@ -55,7 +58,7 @@ func (p *BackupOrchestratorImpl) Backup(
 	logger := slog.With(attr.Routine(routine.Name))
 	release, err := p.startController.TryStart(routine, now, backupType)
 	if err != nil {
-		reportBackupOutcome(routine.Name, backupType, 0, err, logger)
+		p.outcomeReporter.Report(routine.Name, backupType, now, 0, err, logger)
 		return
 	}
 	defer release()
@@ -64,7 +67,7 @@ func (p *BackupOrchestratorImpl) Backup(
 		return p.runBackupInternal(ctx, routine, now, backupType, logger)
 	})
 
-	reportBackupOutcome(routine.Name, backupType, duration, err, logger)
+	p.outcomeReporter.Report(routine.Name, backupType, now, duration, err, logger)
 }
 
 // runBackupInternal starts namespace backups, registers the aggregate handler, and runs completion hooks.

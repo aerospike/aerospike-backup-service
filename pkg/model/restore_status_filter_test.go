@@ -7,27 +7,27 @@ import (
 )
 
 func TestStatusFilter_Matches(t *testing.T) {
-	statuses := []JobStatus{
-		JobStatusRunning,
-		JobStatusDone,
+	statuses := []RestoreState{
+		RestoreRunning,
+		RestoreSuccess,
 	}
 
 	// will allow running and done jobs to pass through the filter
 	inclusiveFilter := NewStatusFilter(statuses, false)
-	assert.True(t, inclusiveFilter.Matches(JobStatusRunning))
-	assert.True(t, inclusiveFilter.Matches(JobStatusDone))
-	assert.False(t, inclusiveFilter.Matches(JobStatusFailed))
+	assert.True(t, inclusiveFilter.Matches(RestoreRunning))
+	assert.True(t, inclusiveFilter.Matches(RestoreSuccess))
+	assert.False(t, inclusiveFilter.Matches(RestoreFailure))
 
 	// will block running and done jobs from passing through the filter
 	exclusiveFilter := NewStatusFilter(statuses, true)
-	assert.False(t, exclusiveFilter.Matches(JobStatusRunning))
-	assert.False(t, exclusiveFilter.Matches(JobStatusDone))
-	assert.True(t, exclusiveFilter.Matches(JobStatusFailed))
+	assert.False(t, exclusiveFilter.Matches(RestoreRunning))
+	assert.False(t, exclusiveFilter.Matches(RestoreSuccess))
+	assert.True(t, exclusiveFilter.Matches(RestoreFailure))
 
 	// will match all job statuses regardless of isExclude value
-	emptyInclude := NewStatusFilter([]JobStatus{}, false)
-	assert.True(t, emptyInclude.Matches(JobStatusRunning))
+	emptyInclude := NewStatusFilter([]RestoreState{}, false)
+	assert.True(t, emptyInclude.Matches(RestoreRunning))
 
-	emptyExclude := NewStatusFilter([]JobStatus{}, true)
-	assert.True(t, emptyExclude.Matches(JobStatusRunning))
+	emptyExclude := NewStatusFilter([]RestoreState{}, true)
+	assert.True(t, emptyExclude.Matches(RestoreRunning))
 }
