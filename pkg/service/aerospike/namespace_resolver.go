@@ -36,7 +36,7 @@ func (r *clusterNamespaceResolver) ResolveNamespaces(
 		return routine.Namespaces, nil
 	}
 
-	client, err := r.clientManager.GetClient(ctx, routine.SourceCluster, logger)
+	client, err := r.clientManager.GetClient(ctx, routine.SourceCluster, nil, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backup client: %w", err)
 	}

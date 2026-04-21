@@ -19,6 +19,7 @@ import (
 	backup "github.com/aerospike/backup-go"
 	models "github.com/aerospike/backup-go/models"
 	gomock "go.uber.org/mock/gomock"
+	semaphore "golang.org/x/sync/semaphore"
 )
 
 // MockRestoreManager is a mock of RestoreManager interface.
@@ -770,17 +771,17 @@ func (m *MockNamespaceBackupRunner) EXPECT() *MockNamespaceBackupRunnerMockRecor
 }
 
 // Run mocks base method.
-func (m *MockNamespaceBackupRunner) Run(ctx context.Context, routine *model.BackupRoutine, namespace string, runSpec model.BackupRunSpec, logger *slog.Logger) CancelableBackupHandler {
+func (m *MockNamespaceBackupRunner) Run(ctx context.Context, routine *model.BackupRoutine, namespace string, runSpec model.BackupRunSpec, scanLimiter *semaphore.Weighted, logger *slog.Logger) CancelableBackupHandler {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx, routine, namespace, runSpec, logger)
+	ret := m.ctrl.Call(m, "Run", ctx, routine, namespace, runSpec, scanLimiter, logger)
 	ret0, _ := ret[0].(CancelableBackupHandler)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockNamespaceBackupRunnerMockRecorder) Run(ctx, routine, namespace, runSpec, logger any) *gomock.Call {
+func (mr *MockNamespaceBackupRunnerMockRecorder) Run(ctx, routine, namespace, runSpec, scanLimiter, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockNamespaceBackupRunner)(nil).Run), ctx, routine, namespace, runSpec, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockNamespaceBackupRunner)(nil).Run), ctx, routine, namespace, runSpec, scanLimiter, logger)
 }
 
 // MockBackupReporter is a mock of BackupReporter interface.

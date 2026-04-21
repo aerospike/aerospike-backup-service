@@ -63,7 +63,7 @@ func (r *pathRestoreRunner) executeRestore(
 	jobID model.RestoreJobID,
 	logger *slog.Logger,
 ) error {
-	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, logger)
+	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
 	if err != nil {
 		return err
 	}

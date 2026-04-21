@@ -91,7 +91,7 @@ func (nv *NamespaceValidatorImpl) fetchClusterNamespaces(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
 ) ([]string, error) {
-	client, err := nv.clientManager.GetClient(ctx, cluster, nil)
+	client, err := nv.clientManager.GetClient(ctx, cluster, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to cluster: %w", err)
 	}

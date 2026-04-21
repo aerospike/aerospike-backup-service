@@ -47,12 +47,12 @@ func Test_GetClient(t *testing.T) {
 	)
 
 	// First call will create a new client
-	client, err := clientManager.GetClient(t.Context(), cluster, nil)
+	client, err := clientManager.GetClient(t.Context(), cluster, nil, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
 
 	// Second call will reuse the existing client
-	client2, err := clientManager.GetClient(t.Context(), cluster, nil)
+	client2, err := clientManager.GetClient(t.Context(), cluster, nil, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, client2)
 	assert.Equal(t, client, client2)
@@ -88,11 +88,11 @@ func Test_GetClientParallel(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
-		client, err = clientManager.GetClient(t.Context(), cluster, nil)
+		client, err = clientManager.GetClient(t.Context(), cluster, nil, nil)
 		wg.Done()
 	}()
 	go func() {
-		client2, err2 = clientManager.GetClient(t.Context(), cluster, nil)
+		client2, err2 = clientManager.GetClient(t.Context(), cluster, nil, nil)
 		wg.Done()
 	}()
 	wg.Wait()
@@ -128,9 +128,9 @@ func Test_GetTwoClients(t *testing.T) {
 		10*time.Second,
 	)
 
-	client, err := clientManager.GetClient(t.Context(), cluster, nil)
+	client, err := clientManager.GetClient(t.Context(), cluster, nil, nil)
 	require.NoError(t, err)
-	client2, err := clientManager.GetClient(t.Context(), cluster2, nil)
+	client2, err := clientManager.GetClient(t.Context(), cluster2, nil, nil)
 	require.NoError(t, err)
 
 	assert.NotSame(t, client, client2)
@@ -158,7 +158,7 @@ func Test_GetClient_UnhealthyConnection(t *testing.T) {
 	)
 
 	// Try to get client - should fail due to unhealthy connection
-	client, err := clientManager.GetClient(t.Context(), cluster, nil)
+	client, err := clientManager.GetClient(t.Context(), cluster, nil, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "aerospike cluster connection lost")
 	assert.Nil(t, client)
@@ -179,7 +179,7 @@ func Test_CreateClient_Errors(t *testing.T) {
 		10*time.Second,
 	)
 
-	client, err := clientManager.GetClient(t.Context(), aeroCluster, nil)
+	client, err := clientManager.GetClient(t.Context(), aeroCluster, nil, nil)
 	assert.Nil(t, client)
 	require.ErrorContains(t, err, "failed to connect to aerospike")
 }
@@ -207,7 +207,7 @@ func Test_Close(t *testing.T) {
 		100*time.Millisecond,
 	)
 
-	client, err := clientManager.GetClient(t.Context(), cluster, nil)
+	client, err := clientManager.GetClient(t.Context(), cluster, nil, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
 	assertClientExists(t, clientManager, cluster, true)
@@ -242,10 +242,10 @@ func Test_Close_Multiple(t *testing.T) {
 		100*time.Millisecond,
 	)
 
-	client, err := clientManager.GetClient(t.Context(), cluster, nil)
+	client, err := clientManager.GetClient(t.Context(), cluster, nil, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
-	client, err = clientManager.GetClient(t.Context(), cluster, nil)
+	client, err = clientManager.GetClient(t.Context(), cluster, nil, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -279,7 +279,7 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 		100*time.Millisecond,
 	)
 
-	client, err := clientManager.GetClient(t.Context(), cluster, nil)
+	client, err := clientManager.GetClient(t.Context(), cluster, nil, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -288,7 +288,7 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 
 	// Reuse the client before it's closed
 	time.Sleep(50 * time.Millisecond)
-	client2, err := clientManager.GetClient(t.Context(), cluster, nil)
+	client2, err := clientManager.GetClient(t.Context(), cluster, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, client, client2)
 
