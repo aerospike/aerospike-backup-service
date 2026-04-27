@@ -27,7 +27,7 @@ RUN --mount=type=secret,id=GOPROXY <<-EOF
     if [ -s /run/secrets/GOPROXY ]; then
         export GOPROXY=$(cat /run/secrets/GOPROXY)
     fi
-    OS=${TARGETOS} ARCH=${TARGETARCH} make build BUILD_MODE=${BUILD_MODE}
+    OS="${TARGETOS}" ARCH="${TARGETARCH}" make build BUILD_MODE="${BUILD_MODE}"
     xx-verify /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH}
 EOF
 
