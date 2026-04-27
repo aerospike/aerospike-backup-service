@@ -39,7 +39,11 @@ PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 DESTDIR ?=
 
-BUILD_MODE ?= debug
+BUILD_MODE ?= release
+
+ifeq ($(filter debug release,$(BUILD_MODE)),)
+$(error BUILD_MODE must be 'debug' or 'release', got '$(BUILD_MODE)')
+endif
 
 LDFLAGS_COMMON = \
 -X github.com/aerospike/aerospike-backup-service/v3.CommitHash=$(GIT_COMMIT) \
