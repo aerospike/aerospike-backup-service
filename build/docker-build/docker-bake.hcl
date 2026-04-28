@@ -60,6 +60,10 @@ variable OUTPUT {
   default = "type=image,push=true"
 }
 
+variable BUILD_MODE {
+  default = "release"
+}
+
 function norm {
   params = [value]
 
@@ -92,6 +96,7 @@ target aerospike-backup-service {
   args = {
     GO_VERSION = "${GO_VERSION}"
     REGISTRY = "${REGISTRY}"
+    BUILD_MODE = "${BUILD_MODE}"
   }
 
   secret = [

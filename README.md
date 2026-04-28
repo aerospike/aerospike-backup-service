@@ -885,7 +885,11 @@ The backup service supports the following storage providers:
 The following command generates a binary under the `build/target` directory.
 
 ```bash
+# Build release binary (default)
 make build
+
+# Build debug binary (includes pprof profiler on localhost:6060)
+make build BUILD_MODE=debug
 ```
 
 ### Build Docker image

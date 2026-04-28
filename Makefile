@@ -39,10 +39,20 @@ PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 DESTDIR ?=
 
-GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 $(GO) build \
--trimpath -ldflags="-s -w \
+BUILD_MODE ?= release
+
+ifeq ($(filter debug release,$(BUILD_MODE)),)
+$(error BUILD_MODE must be 'debug' or 'release', got '$(BUILD_MODE)')
+endif
+
+LDFLAGS_COMMON = \
 -X github.com/aerospike/aerospike-backup-service/v3.CommitHash=$(GIT_COMMIT) \
--X github.com/aerospike/aerospike-backup-service/v3.BuildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
+-X github.com/aerospike/aerospike-backup-service/v3.BuildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+GOBUILD_debug   = GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 $(GO) build -tags debug -gcflags "all=-N -l" -ldflags="$(LDFLAGS_COMMON)"
+GOBUILD_release = GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 $(GO) build -trimpath -ldflags="-s -w $(LDFLAGS_COMMON)"
+
+GOBUILD = $(GOBUILD_$(BUILD_MODE))
 GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
@@ -113,6 +123,7 @@ docker-build:
 	--tag $(IMAGE_REPO):$(IMAGE_TAG) \
 	--build-arg GO_VERSION="$$GO_VERSION" \
 	--build-arg REGISTRY=$(REGISTRY) \
+	--build-arg BUILD_MODE=$(BUILD_MODE) \
 	--file $(WORKSPACE)/Dockerfile .
 
 .PHONY: docker-buildx
@@ -124,7 +135,8 @@ docker-buildx:
 	--platforms "$(ARCHS)" \
 	--cache-to "$(IMAGE_CACHE_TO)" \
 	--cache-from "$(IMAGE_CACHE_FROM)" \
-	--output "$(IMAGE_OUTPUT)"
+	--output "$(IMAGE_OUTPUT)" \
+	--build-mode "$(BUILD_MODE)"
 
 .PHONY: test
 test:
