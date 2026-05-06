@@ -22,14 +22,14 @@ func TestNewRunningJob(t *testing.T) {
 		assert.Zero(t, result.DoneRecords)
 		assert.Zero(t, result.TotalRecords)
 		assert.Nil(t, result.EstimatedEndTime)
-		assert.Zero(t, result.PercentageDone)
+		assert.Zero(t, result.Progress)
 	})
 
 	t.Run("zero progress", func(t *testing.T) {
 		result := NewRestoreRunningJob(startTime, nil, 0, 100, nil, jobRunning)
 
 		assert.Zero(t, result.DoneRecords)
-		assert.Zero(t, result.PercentageDone)
+		assert.Zero(t, result.Progress)
 		assert.Equal(t, uint64(100), result.TotalRecords)
 		assert.Nil(t, result.EstimatedEndTime) // too early to estimate
 	})
@@ -39,7 +39,7 @@ func TestNewRunningJob(t *testing.T) {
 
 		assert.Equal(t, uint64(50), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
-		assert.Equal(t, uint(50), result.PercentageDone)
+		assert.InDelta(t, 0.5, result.Progress, 0.01)
 		assert.True(t, result.EstimatedEndTime.After(startTime)) // should be in the future
 	})
 
@@ -48,7 +48,7 @@ func TestNewRunningJob(t *testing.T) {
 
 		assert.Equal(t, uint64(100), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
-		assert.Equal(t, uint(99), result.PercentageDone)
+		assert.InDelta(t, 0.99, result.Progress, 0.01)
 		assert.Equal(t, &finishTime, result.FinishTime)
 	})
 
@@ -57,7 +57,7 @@ func TestNewRunningJob(t *testing.T) {
 
 		assert.Equal(t, uint64(110), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
-		assert.Equal(t, uint(99), result.PercentageDone)
+		assert.InDelta(t, 0.99, result.Progress, 0.01)
 	})
 }
 
@@ -71,6 +71,6 @@ func TestDoneRestoreJobStatus(t *testing.T) {
 
 	require.NoError(t, status.Error)
 	assert.NotNil(t, status.CurrentRestore)
-	assert.Equal(t, uint(100), status.CurrentRestore.PercentageDone)
+	assert.InDelta(t, 1.0, status.CurrentRestore.Progress, 0.01)
 	assert.Equal(t, model.RestoreSuccess, status.Status)
 }

@@ -77,7 +77,7 @@ func (r *RunningJob) fromModel(m *model.RunningJob) {
 	r.DoneRecords = m.DoneRecords
 	r.StartTime = m.StartTime
 	r.FinishTime = m.FinishTime
-	r.PercentageDone = m.PercentageDone
+	r.PercentageDone = uint(m.Progress * 100)
 	r.EstimatedEndTime = m.EstimatedEndTime
 	r.Metrics = NewMetricsFromModel(m.Metrics)
 	if r.FinishTime != nil {
