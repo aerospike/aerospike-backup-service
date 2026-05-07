@@ -22,12 +22,12 @@ func currentBackupStatus(handlers backupexecutor.BackupHandler) *model.RunningJo
 	var done = stats.ReadRecords.Load()
 	var total = stats.TotalRecords.Load()
 
-	percentage := 0.0
+	progress := 0.0
 	if total != 0 {
-		percentage = min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
+		progress = min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
 	}
 
-	endTime := calculateEstimatedEndTime(stats.StartTime, percentage)
+	endTime := calculateEstimatedEndTime(stats.StartTime, progress)
 
 	return &model.RunningJob{
 		StartTime:        stats.StartTime,
@@ -35,7 +35,7 @@ func currentBackupStatus(handlers backupexecutor.BackupHandler) *model.RunningJo
 		DoneRecords:      done,
 		TotalRecords:     total,
 		EstimatedEndTime: endTime,
-		PercentageDone:   uint(percentage * 100),
+		Progress:         progress,
 		Metrics:          handlers.GetMetrics(),
 	}
 }
@@ -56,18 +56,18 @@ func NewRestoreRunningJob(
 	}
 
 	var (
-		percentage       float64
+		progress         float64
 		endTime          *time.Time
 		effectiveMetrics *models.Metrics
 	)
 
 	switch jobStatus {
 	case model.RestoreRunning:
-		percentage = min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
-		endTime = calculateEstimatedEndTime(startTime, percentage)
+		progress = min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
+		endTime = calculateEstimatedEndTime(startTime, progress)
 		effectiveMetrics = metrics
 	case model.RestoreSuccess:
-		percentage = 1.0 // 100% only for successfully finished jobs.
+		progress = 1.0 // 100% only for successfully finished jobs.
 	default:
 	}
 
@@ -77,7 +77,7 @@ func NewRestoreRunningJob(
 		DoneRecords:      done,
 		TotalRecords:     total,
 		EstimatedEndTime: endTime,
-		PercentageDone:   uint(percentage * 100),
+		Progress:         progress,
 		Metrics:          effectiveMetrics,
 	}
 }

@@ -30,9 +30,10 @@ type RunningJob struct {
 	// FinishTime: the time when the operation finished.
 	// nil value indicates that operation is still running.
 	FinishTime *time.Time
-	// PercentageDone is the current progress of the operation as a percentage.
+	// Progress is the estimated fraction of work complete in the range [0, 1].
+	// While running, values are capped below 1 until the job finishes successfully.
 	// This value is not guaranteed to be accurate.
-	PercentageDone uint
+	Progress float64
 	// EstimatedEndTime: the estimated time when the operation will be completed.
 	// A nil value indicates that the estimation is not available yet.
 	// This value is not guaranteed to be accurate.
