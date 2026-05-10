@@ -23,24 +23,30 @@ import (
 const (
 	examplesDir   = "docs/examples"
 	readmeRelPath = "README.md"
+
+	valLocal          = "local"
+	valBackups        = "backups"
+	valAsBackupBucket = "as-backup-bucket"
+	valEuCentral1     = "eu-central-1"
+	valRoutine1       = "routine1"
 )
 
 var allStorageTypes = map[string]dto.Storage{
-	"local": {
+	valLocal: {
 		LocalStorage: &dto.LocalStorage{
-			Path: "backups",
+			Path: valBackups,
 		},
 	},
 	"aws-s3": {
 		S3Storage: &dto.S3Storage{
-			Bucket:   "as-backup-bucket",
-			Path:     "backups",
-			S3Region: "eu-central-1",
+			Bucket:   valAsBackupBucket,
+			Path:     valBackups,
+			S3Region: valEuCentral1,
 		},
 	},
 	"gcp-gcs": {
 		GcpStorage: &dto.GcpStorage{
-			Path:       "backups",
+			Path:       valBackups,
 			KeyFile:    "key-file.json",
 			BucketName: "gcp-backup-bucket",
 			Endpoint:   "http://127.0.0.1:9020",
@@ -48,7 +54,7 @@ var allStorageTypes = map[string]dto.Storage{
 	},
 	"azure-blob-storage": {
 		AzureStorage: &dto.AzureStorage{
-			Path:          "backups",
+			Path:          valBackups,
 			Endpoint:      "http://127.0.0.1:6000/devstoreaccount1",
 			AccountName:   "devstoreaccount1",
 			ContainerName: "testcontainer",
@@ -70,17 +76,17 @@ var cluster = dto.AerospikeCluster{
 var jsonExamples = map[string]any{
 	"ClustersResponse": []dto.AerospikeCluster{cluster},
 	"RoutinesResponse": map[string]dto.BackupRoutine{
-		"routine1": {
+		valRoutine1: {
 			BackupPolicy:  "keepFilesPolicy",
 			SourceCluster: "absDefaultCluster",
-			Storage:       "local",
+			Storage:       valLocal,
 			IntervalCron:  "@yearly",
 			Namespaces:    ptr.Of([]string{"test-namespace"}),
 		},
 		"routine2": {
 			BackupPolicy:     "removeFilesPolicy",
 			SourceCluster:    "absDefaultCluster",
-			Storage:          "local",
+			Storage:          valLocal,
 			IntervalCron:     "@monthly",
 			IncrIntervalCron: "@daily",
 			Namespaces:       ptr.Of([]string{"test-namespace"}),
@@ -90,7 +96,7 @@ var jsonExamples = map[string]any{
 	},
 	"StorageResponse": allStorageTypes,
 	"FullBackupsResponse": map[string][]dto.BackupDetails{
-		"routine1": {{
+		valRoutine1: {{
 			Created:             time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 			Timestamp:           time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC).UnixMilli(),
 			Finished:            time.Date(2024, 01, 01, 12, 5, 0, 0, time.UTC),
@@ -105,9 +111,9 @@ var jsonExamples = map[string]any{
 			Key:                 "routine1/backup/1704110400000/source-ns1",
 			Storage: &dto.Storage{
 				S3Storage: &dto.S3Storage{
-					Bucket:   "as-backup-bucket",
-					Path:     "backups",
-					S3Region: "eu-central-1",
+					Bucket:   valAsBackupBucket,
+					Path:     valBackups,
+					S3Region: valEuCentral1,
 				},
 			},
 			Compression: dto.CompressZSTD,
@@ -127,9 +133,9 @@ var jsonExamples = map[string]any{
 		StorageConfig: dto.StorageConfig{
 			Storage: &dto.Storage{
 				S3Storage: &dto.S3Storage{
-					Bucket:   "as-backup-bucket",
-					Path:     "backups",
-					S3Region: "eu-central-1",
+					Bucket:   valAsBackupBucket,
+					Path:     valBackups,
+					S3Region: valEuCentral1,
 				},
 			},
 		},
@@ -140,7 +146,7 @@ var jsonExamples = map[string]any{
 			Name: "abs-cluster",
 		},
 		Time:    1704110400000,
-		Routine: "routine1",
+		Routine: valRoutine1,
 	},
 	"CurrentBackupResponse": dto.RoutineState{
 		Full: &dto.RunningJob{
@@ -224,8 +230,8 @@ var yamlExamples = map[string]any{
 	"RemoteConfig": dto.Storage{
 		S3Storage: &dto.S3Storage{
 			Path:     "config.yml",
-			Bucket:   "as-backup-bucket",
-			S3Region: "eu-central-1",
+			Bucket:   valAsBackupBucket,
+			S3Region: valEuCentral1,
 		},
 	},
 }

@@ -31,9 +31,9 @@ func ObserveBackupEvent(
 	startTime time.Time,
 ) {
 	labels := prometheus.Labels{
-		"routine": routineName,
-		"type":    string(backupType),
-		"outcome": string(outcome),
+		labelRoutine: routineName,
+		labelType:    string(backupType),
+		labelOutcome: string(outcome),
 	}
 	backupCounter.With(labels).Inc()
 
@@ -45,8 +45,8 @@ func ObserveBackupEvent(
 
 	if duration > 0 {
 		backupDurationHist.With(prometheus.Labels{
-			"routine": routineName,
-			"type":    string(backupType),
+			labelRoutine: routineName,
+			labelType:    string(backupType),
 		}).Observe(duration.Seconds())
 	}
 }

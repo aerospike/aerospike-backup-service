@@ -76,6 +76,39 @@ new-field: value
 	assert.Equal(t, "value", result.NewField)
 }
 
+func TestDeserialize_YAMLEmptyLeavesTargetUnchanged(t *testing.T) {
+	setupTest(t)
+
+	result := TestStruct{ID: 42, Name: "preset"}
+	err := Deserialize(&result, strings.NewReader(""), YAML)
+	require.NoError(t, err)
+	assert.Equal(t, 42, result.ID)
+	assert.Equal(t, "preset", result.Name)
+}
+
+func TestDeserialize_YAMLCommentsOnlyLeavesTargetUnchanged(t *testing.T) {
+	setupTest(t)
+
+	yamlStr := `# top comment
+# another line
+`
+	result := TestStruct{ID: 7, Name: "keep"}
+	err := Deserialize(&result, strings.NewReader(yamlStr), YAML)
+	require.NoError(t, err)
+	assert.Equal(t, 7, result.ID)
+	assert.Equal(t, "keep", result.Name)
+}
+
+func TestDeserialize_JSONEmptyLeavesTargetUnchanged(t *testing.T) {
+	setupTest(t)
+
+	result := TestStruct{ID: 99, Name: "preset"}
+	err := Deserialize(&result, strings.NewReader(""), JSON)
+	require.NoError(t, err)
+	assert.Equal(t, 99, result.ID)
+	assert.Equal(t, "preset", result.Name)
+}
+
 func TestDeserialize_JSONDeprecatedField(t *testing.T) {
 	setupTest(t)
 
