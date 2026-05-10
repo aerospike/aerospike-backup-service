@@ -63,7 +63,7 @@ func NewTLSConfig(t *model.TLS) (*tls.Config, error) {
 		return nil, err
 	}
 
-	tlsConfig := &tls.Config{ //nolint:gosec
+	tlsConfig := &tls.Config{
 		ServerName:   ptr.ValueOrZero(t.Name),
 		Certificates: clientCerts,
 		RootCAs:      rootCAs,

@@ -13,6 +13,10 @@ const (
 	OutcomeCanceled Outcome = "canceled"
 	OutcomeRetry    Outcome = "retry"
 	OutcomeSkip     Outcome = "skip"
+
+	labelRoutine = "routine"
+	labelType    = "type"
+	labelOutcome = "outcome"
 )
 
 var (
@@ -21,7 +25,7 @@ var (
 			Name: "aerospike_backup_service_backup_progress_ratio",
 			Help: "Progress of backup processes as a ratio (0.0 to 1.0)",
 		},
-		[]string{"routine", "type"},
+		[]string{labelRoutine, labelType},
 	)
 
 	backupRunningGauge = prometheus.NewGaugeVec(
@@ -29,7 +33,7 @@ var (
 			Name: "aerospike_backup_service_backup_active",
 			Help: "Number of backups currently running for the given routine and backup type (full/incremental)",
 		},
-		[]string{"routine", "type"},
+		[]string{labelRoutine, labelType},
 	)
 
 	restoreRunningGauge = prometheus.NewGaugeVec(
@@ -45,7 +49,7 @@ var (
 			Name: "aerospike_backup_service_backup_events_total",
 			Help: "Total completed backup runs by routine, type, and outcome (success, failure, canceled, retry, skip)",
 		},
-		[]string{"routine", "type", "outcome"},
+		[]string{labelRoutine, labelType, labelOutcome},
 	)
 
 	restoreCounter = prometheus.NewCounterVec(
@@ -53,7 +57,7 @@ var (
 			Name: "aerospike_backup_service_restore_events_total",
 			Help: "Total completed restore jobs by outcome (success, failure, canceled)",
 		},
-		[]string{"outcome"},
+		[]string{labelOutcome},
 	)
 
 	backupDurationHist = prometheus.NewHistogramVec(
@@ -62,7 +66,7 @@ var (
 			Help:    "Duration in seconds of finished backups by routine and type (full/incremental)",
 			Buckets: prometheus.ExponentialBuckets(60, 1.5, 16), // 1 min to 10 hours
 		},
-		[]string{"routine", "type"},
+		[]string{labelRoutine, labelType},
 	)
 
 	lastBackupTimestampGauge = prometheus.NewGaugeVec(
@@ -70,7 +74,7 @@ var (
 			Name: "aerospike_backup_service_last_successful_backup_timestamp_seconds",
 			Help: "Unix timestamp (seconds) of the last successful backup per routine",
 		},
-		[]string{"routine", "type"},
+		[]string{labelRoutine, labelType},
 	)
 
 	// Deprecated metrics (for backwards compatibility).
@@ -82,7 +86,7 @@ var (
 			Help: "Progress of backup processes in percentage " +
 				"(Deprecated: use aerospike_backup_service_backup_progress_ratio instead.)",
 		},
-		[]string{"routine", "type"},
+		[]string{labelRoutine, labelType},
 	)
 
 	// Deprecated: use aerospike_backup_service_restore_active instead.
@@ -102,7 +106,7 @@ var (
 			Help: "Unix timestamp of the last successful backup per routine " +
 				"(Deprecated: use aerospike_backup_service_last_successful_backup_timestamp_seconds instead.)",
 		},
-		[]string{"routine", "type"},
+		[]string{labelRoutine, labelType},
 	)
 )
 

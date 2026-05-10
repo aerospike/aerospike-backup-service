@@ -65,6 +65,11 @@ func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 // * provide deprecation information
 // * suggest possible replacements.
 func enhanceJSONError(jsonError error) error {
+	if errors.Is(jsonError, io.EOF) {
+		// No JSON value in the stream (empty file / whitespace only).
+		return nil
+	}
+
 	field, err := parseJSONError(jsonError.Error())
 	if err != nil {
 		slog.Warn("Failed to parse JSON error message", attr.Error(err))
@@ -102,6 +107,11 @@ func parseJSONError(errMsg string) (string, error) {
 // * provide deprecation information
 // * suggest possible replacements.
 func enhanceYamlErrors(err error) error {
+	if errors.Is(err, io.EOF) {
+		// No document (empty file, whitespace only, or comments only).
+		return nil
+	}
+
 	var typeErr *yaml.TypeError
 	if !errors.As(err, &typeErr) { // Yaml parser is so nice that it return its own error type.
 		return err

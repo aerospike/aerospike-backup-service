@@ -148,18 +148,18 @@ func (r *RestoreManagerImpl) GetFilteredJobs(
 
 func logAttrs(s *models.RestoreStats) []slog.Attr {
 	return []slog.Attr{
-		slog.Int64("RecordsInserted", int64(s.GetRecordsInserted())),
-		slog.Int64("RecordsExpired", int64(s.GetRecordsExpired())),
-		slog.Int64("RecordsSkipped", int64(s.GetRecordsSkipped())),
-		slog.Int64("RecordsIgnored", int64(s.GetRecordsIgnored())),
-		slog.Int64("RecordsFresher", int64(s.GetRecordsFresher())),
-		slog.Int64("RecordsExisted", int64(s.GetRecordsExisted())),
-		slog.Int64("TotalBytesRead", int64(s.TotalBytesRead.Load())),
-		slog.Int64("ErrorsInDoubt", int64(s.GetErrorsInDoubt())),
-		slog.Int64("ReadRecords", int64(s.ReadRecords.Load())),
-		slog.Int("SecondaryIndexes", int(s.GetSIndexes())),
-		slog.Int("UDFs", int(s.GetUDFs())),
-		slog.Int64("BytesWritten", int64(s.BytesWritten.Load())),
-		slog.Duration("Duration", s.GetDuration()),
+		slog.Int64("recordsInserted", int64(s.GetRecordsInserted())),
+		slog.Int64("recordsExpired", int64(s.GetRecordsExpired())),
+		slog.Int64("recordsSkipped", int64(s.GetRecordsSkipped())),
+		slog.Int64("recordsIgnored", int64(s.GetRecordsIgnored())),
+		slog.Int64("recordsFresher", int64(s.GetRecordsFresher())),
+		slog.Int64("recordsExisted", int64(s.GetRecordsExisted())),
+		slog.Int64("totalBytesRead", int64(s.TotalBytesRead.Load())),
+		slog.Int64("errorsInDoubt", int64(s.GetErrorsInDoubt())),
+		slog.Int64("readRecords", int64(s.ReadRecords.Load())),
+		slog.Int("secondaryIndexes", int(s.GetSIndexes())),
+		slog.Int("udFs", int(s.GetUDFs())),
+		slog.Int64("bytesWritten", int64(s.BytesWritten.Load())),
+		slog.Duration("duration", s.GetDuration()),
 	}
 }
