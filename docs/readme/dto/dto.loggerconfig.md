@@ -5,5 +5,5 @@ LoggerConfig represents the backup service logger configuration.
 |-----------------|--------------------------------------------------------------------------------------------|---------------|------------------------------------------------------|
 | `file-writer`   | File writer logging configuration.<br>See: [dto.FileLoggerConfig](dto.fileloggerconfig.md) |               |                                                      |
 | `format`        | Format is the logger format (PLAIN, JSON).                                                 | `PLAIN`       | `PLAIN`, `JSON`                                      |
-| `level`         | Level is the logger level.                                                                 | `DEBUG`       | `TRACE`, `DEBUG`, `INFO`, `WARN`, `WARNING`, `ERROR` |
+| `level`         | Level is the logger level.                                                                 | `INFO`        | `TRACE`, `DEBUG`, `INFO`, `WARN`, `WARNING`, `ERROR` |
 | `stdout-writer` | Whether to enable logging to the standard output.                                          | `true`        |                                                      |

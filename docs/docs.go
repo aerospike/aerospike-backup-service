@@ -2277,7 +2277,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "compress": {
-                    "description": "Compress determines if the rotated log files should be compressed\nusing gzip. The default is not to perform compression.",
+                    "description": "Determines if the rotated log files should be compressed\nusing gzip. The default is not to perform compression.",
                     "type": "boolean",
                     "default": false
                 },
@@ -2287,18 +2287,21 @@ const docTemplate = `{
                     "example": "log.txt"
                 },
                 "maxage": {
-                    "description": "MaxAge is the maximum number of days to retain old log files based on the\ntimestamp encoded in their filename. The default is not to remove old log files\nbased on age.",
+                    "description": "Maximum number of days to retain old log files based on the\ntimestamp encoded in their filename. The default is not to remove old log files\nbased on age.",
                     "type": "integer",
+                    "default": 7,
                     "x-nullable": true
                 },
                 "maxbackups": {
-                    "description": "MaxBackups is the maximum number of old log files to retain. The default\nis to retain all old log files.",
+                    "description": "Maximum number of old log files to retain. The default\nis to retain all old log files.",
                     "type": "integer",
+                    "default": 3,
                     "x-nullable": true
                 },
                 "maxsize": {
-                    "description": "MaxSize is the maximum size in megabytes of the log file before it gets rotated.",
+                    "description": "Maximum size in megabytes of the log file before it gets rotated.",
                     "type": "integer",
+                    "default": 100,
                     "x-nullable": true,
                     "example": 100
                 }
@@ -2479,7 +2482,7 @@ const docTemplate = `{
                 "level": {
                     "description": "Level is the logger level.",
                     "type": "string",
-                    "default": "DEBUG",
+                    "default": "INFO",
                     "enum": [
                         "TRACE",
                         "DEBUG",

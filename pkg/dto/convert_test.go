@@ -19,7 +19,7 @@ var originalConfig = &Config{
 			Address: ptr.Of("localhost"),
 		},
 		Logger: &LoggerConfig{
-			Level: ptr.Of("DEBUG"),
+			Level: ptr.Of("INFO"),
 			FileWriter: &FileLoggerConfig{
 				Filename: "log",
 			},

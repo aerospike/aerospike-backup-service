@@ -52,7 +52,7 @@ backupServiceConfig: {}
 #       white-list: [ <ips> ] # Optional default: empty list
 #     context-path: <custom-path-for-api-endpoints> # Optional default: "/"
 #   logger:
-#     level: <log-level> # Optional default: DEBUG Valid values: (TRACE,DEBUG,INFO,WARN,WARNING,ERROR)
+#     level: <log-level> # Optional default: INFO Valid values: (TRACE,DEBUG,INFO,WARN,WARNING,ERROR)
 #     format: <format> # Optional default: PLAIN Valid values: (PLAIN,JSON)
 #     stdout-writer: <true/false> # Optional default: true
 #     file-writer:
