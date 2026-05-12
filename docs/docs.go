@@ -1734,7 +1734,7 @@ const docTemplate = `{
                 "min-part-size": {
                     "description": "The minimum size in bytes of individual Azure Blob chunks.",
                     "type": "integer",
-                    "default": 5242880,
+                    "default": 52428800,
                     "minimum": 1048576
                 },
                 "path": {
@@ -2333,7 +2333,7 @@ const docTemplate = `{
                 "min-part-size": {
                     "description": "The minimum size in bytes of individual GCP storage chunks.",
                     "type": "integer",
-                    "default": 5242880,
+                    "default": 52428800,
                     "minimum": 262144
                 },
                 "path": {
@@ -3083,7 +3083,7 @@ const docTemplate = `{
                 "min-part-size": {
                     "description": "The minimum size in bytes of individual S3 UploadParts.",
                     "type": "integer",
-                    "default": 5242880,
+                    "default": 52428800,
                     "minimum": 5242880,
                     "x-nullable": true
                 },
