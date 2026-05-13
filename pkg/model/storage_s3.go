@@ -50,3 +50,7 @@ func (s *S3Storage) GetStorageClass() StorageClass {
 
 	return *s.StorageClass
 }
+
+func (s *S3Storage) GetPartSize() *int {
+	return s.MinPartSize
+}

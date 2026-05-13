@@ -64,3 +64,7 @@ func (s *AzureStorage) GetStorageClass() StorageClass {
 
 	return *s.StorageClass
 }
+
+func (s *AzureStorage) GetPartSize() *int {
+	return s.MinPartSize
+}

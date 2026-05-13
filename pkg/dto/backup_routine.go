@@ -239,6 +239,10 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		return nil, errValidationNotFound("storage", r.Storage)
 	}
 
+	if err = validateFileLimit(policy, storage); err != nil {
+		return nil, err
+	}
+
 	var secretAgent *model.SecretAgent
 	if r.SecretAgent != nil {
 		secretAgent, found = config.SecretAgents[*r.SecretAgent]
@@ -263,6 +267,38 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		NodeList:         r.NodeList,
 		Disabled:         r.Disabled,
 	}, nil
+}
+
+func validateFileLimit(policy *model.BackupPolicy, storage model.Storage) error {
+	if storage == nil || policy == nil {
+		return nil
+	}
+
+	// It is easier to set default values than do a bunch of comparisons.
+	fileLimit := 250 * 1024 * 1024
+	if policy.FileLimit != nil {
+		fileLimit = *policy.FileLimit * 1024 * 1024
+	}
+
+	partSize := 50 * 1024 * 1024
+	if storage.GetPartSize() != nil {
+		partSize = *storage.GetPartSize()
+	}
+
+	const maxChunks = 10_000
+	if partSize > 0 {
+		// integer implementation of ceiling division.
+		chunks := (fileLimit-1)/(partSize) + 1
+		if chunks >= maxChunks {
+			return fmt.Errorf(
+				"file limit %d with chunk size %d requires %d chunks, exceeds maximum of %d: "+
+					"increase chunk size or decrease file limit",
+				fileLimit, partSize, chunks, maxChunks,
+			)
+		}
+	}
+
+	return nil
 }
 
 func resolveBackupPolicy(name string, policies map[string]*model.BackupPolicy) (*model.BackupPolicy, error) {
