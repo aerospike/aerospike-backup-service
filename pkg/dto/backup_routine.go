@@ -274,6 +274,11 @@ func validateFileLimit(policy *model.BackupPolicy, storage model.Storage) error 
 		return nil
 	}
 
+	// Skip this check for the local storage.
+	if strings.Contains(storage.String(), "LocalStorage") {
+		return nil
+	}
+
 	// It is easier to set default values than do a bunch of comparisons.
 	fileLimit := 250 * 1024 * 1024
 	if policy.FileLimit != nil {
