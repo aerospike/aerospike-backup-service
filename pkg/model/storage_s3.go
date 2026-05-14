@@ -51,6 +51,10 @@ func (s *S3Storage) GetStorageClass() StorageClass {
 	return *s.StorageClass
 }
 
-func (s *S3Storage) GetPartSize() *int {
-	return s.MinPartSize
+func (s *S3Storage) GetPartSizeOrDefault() int {
+	if s.MinPartSize != nil {
+		return *s.MinPartSize
+	}
+
+	return DefaultPartSize
 }

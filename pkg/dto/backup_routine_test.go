@@ -302,22 +302,25 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
 	require.Error(t, err)
 }
 
+const defaultPartSize = 50 * 1024 * 1024
+
 type mockStorage struct {
 	partSize *int
 }
 
-func (m *mockStorage) GetPartSize() *int                   { return m.partSize }
 func (m *mockStorage) GetPath() string                     { return "" }
 func (m *mockStorage) GetStorageClass() model.StorageClass { return model.StorageClass{} }
 func (m *mockStorage) String() string                      { return "" }
+func (m *mockStorage) GetPartSizeOrDefault() int {
+	if m.partSize != nil {
+		return *m.partSize
+	}
+
+	return defaultPartSize
+}
 
 func TestValidateFileLimit(t *testing.T) {
 	t.Parallel()
-
-	const (
-		maxChunks       = 10_000
-		defaultPartSize = 50 * 1024 * 1024
-	)
 
 	tests := []struct {
 		name    string

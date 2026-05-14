@@ -14,6 +14,8 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
+const maxChunks = 10_000
+
 // BackupRoutine represents a scheduled backup operation routine.
 // @Description BackupRoutine represents a scheduled backup operation routine.
 //
@@ -275,22 +277,14 @@ func validateFileLimit(policy *model.BackupPolicy, storage model.Storage) error 
 	}
 
 	// Skip this check for the local storage.
-	if strings.Contains(storage.String(), "LocalStorage") {
+	if _, ok := storage.(*model.LocalStorage); ok {
 		return nil
 	}
 
-	// It is easier to set default values than do a bunch of comparisons.
-	fileLimit := 250 * 1024 * 1024
-	if policy.FileLimit != nil {
-		fileLimit = *policy.FileLimit * 1024 * 1024
-	}
+	// Attention! Part szie is in bytes, but file limit is in MB.
+	partSize := storage.GetPartSizeOrDefault()
+	fileLimit := policy.GetFileLimitOrDefault() * 1024 * 1024
 
-	partSize := 50 * 1024 * 1024
-	if storage.GetPartSize() != nil {
-		partSize = *storage.GetPartSize()
-	}
-
-	const maxChunks = 10_000
 	if partSize > 0 {
 		// integer implementation of ceiling division.
 		chunks := (fileLimit-1)/(partSize) + 1
