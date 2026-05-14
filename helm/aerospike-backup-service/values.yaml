@@ -104,7 +104,7 @@ backupServiceConfig: {}
 #     s3-profile: <s3-profile> # Optional. AWS profile name (e.g., default).
 #     s3-endpoint-override: <s3-endpoint> # Optional. Alternative endpoint for the S3 SDK to communicate (e.g., http://host.docker.internal:9000).
 #     s3-log-level: <s3-log-level> # Optional. Log level of the AWS S3 SDK (OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE). Default: FATAL.
-#     min-part-size: <min-part-size> # Optional. Minimum size in bytes of individual S3 UploadParts. Default: 5242880.
+#     min-part-size: <min-part-size> # Optional. Minimum size in bytes of individual S3 UploadParts. Default: 52428800.
 #     max-async-connections: <max-connections> # Optional. Maximum number of simultaneous requests to S3. Default: 16.
 #     access-key-id: <access-key-id> # Optional. Access Key ID for S3 StaticCredentialsProvider.
 #     secret-access-key: <secret-access-key> # Optional. Secret Access Key for S3 StaticCredentialsProvider.
@@ -125,7 +125,7 @@ backupServiceConfig: {}
 #     bucket-name: <bucket-name> # Mandatory. GCP storage bucket name.
 #     path: <root-path> # Optional. Root path for the backup repository. Defaults to the bucket's root.
 #     endpoint: <endpoint> # Optional. Alternative endpoint URL. Not recommended for production environments.
-#     min-part-size: <min-part-size> # Optional. Minimum size in bytes of individual UploadParts. Default: 5242880.
+#     min-part-size: <min-part-size> # Optional. Minimum size in bytes of individual UploadParts. Default: 52428800.
 #     secret-agent-name: <secret-agent-name> # Optional
 #     secret-agent: #Optional
 #       connection-type: <tcp/udp> # required
@@ -140,7 +140,7 @@ backupServiceConfig: {}
 #     endpoint: <endpoint> # Mandatory. Azure Blob service endpoint URL.
 #     container-name: <container-name> # Mandatory. Name of the Azure Blob container.
 #     path: <root-path> # Optional. Root path for the backup repository within the container. Defaults to the container's root.
-#     min-part-size: <min-part-size> # Optional. Minimum size in bytes of individual UploadParts. Default: 5242880.
+#     min-part-size: <min-part-size> # Optional. Minimum size in bytes of individual UploadParts. Default: 52428800.
 #     account-name: <account-name> # Optional. Azure storage account name for Shared Key authentication.
 #     account-key: <account-key> # Optional. Azure storage account key for Shared Key authentication.
 #     tenant-id: <tenant-id> # Optional. Azure Active Directory tenant ID for AAD authentication.

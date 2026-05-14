@@ -11,6 +11,8 @@ type Storage interface {
 	GetStorageClass() StorageClass
 	// String returns a human-readable representation of the storage.
 	String() string
+	// GetPartSizeOrDefault returns the size in bytes of individual storage chunks or default value.
+	GetPartSizeOrDefault() int
 }
 
 // StorageClass defines the storage class of data and metadata.
@@ -40,4 +42,12 @@ func (s *LocalStorage) String() string {
 	}
 
 	return fmt.Sprintf("LocalStorage(Path: %s)", s.Path)
+}
+
+func (s *LocalStorage) GetPartSizeOrDefault() int {
+	if s.MinPartSize != nil {
+		return *s.MinPartSize
+	}
+
+	return DefaultPartSize
 }

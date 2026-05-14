@@ -14,6 +14,8 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
+const maxChunks = 10_000
+
 // BackupRoutine represents a scheduled backup operation routine.
 // @Description BackupRoutine represents a scheduled backup operation routine.
 //
@@ -239,6 +241,10 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		return nil, errValidationNotFound("storage", r.Storage)
 	}
 
+	if err = validateFileLimit(policy, storage); err != nil {
+		return nil, err
+	}
+
 	var secretAgent *model.SecretAgent
 	if r.SecretAgent != nil {
 		secretAgent, found = config.SecretAgents[*r.SecretAgent]
@@ -263,6 +269,35 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		NodeList:         r.NodeList,
 		Disabled:         r.Disabled,
 	}, nil
+}
+
+func validateFileLimit(policy *model.BackupPolicy, storage model.Storage) error {
+	if storage == nil || policy == nil {
+		return nil
+	}
+
+	// Skip this check for the local storage.
+	if _, ok := storage.(*model.LocalStorage); ok {
+		return nil
+	}
+
+	// Attention! Part szie is in bytes, but file limit is in MB.
+	partSize := storage.GetPartSizeOrDefault()
+	fileLimit := policy.GetFileLimitOrDefault() * 1024 * 1024
+
+	if partSize > 0 {
+		// integer implementation of ceiling division.
+		chunks := (fileLimit-1)/(partSize) + 1
+		if chunks >= maxChunks {
+			return fmt.Errorf(
+				"file limit %d with chunk size %d requires %d chunks, exceeds maximum of %d: "+
+					"increase chunk size or decrease file limit",
+				fileLimit, partSize, chunks, maxChunks,
+			)
+		}
+	}
+
+	return nil
 }
 
 func resolveBackupPolicy(name string, policies map[string]*model.BackupPolicy) (*model.BackupPolicy, error) {

@@ -28,7 +28,7 @@ type S3Storage struct {
 	// The log level of the AWS S3 SDK (AWS S3 optional).
 	S3LogLevel *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enums:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
 	// The minimum size in bytes of individual S3 UploadParts.
-	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880" extensions:"x-nullable" minimum:"5242880"`
+	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" extensions:"x-nullable" minimum:"5242880"`
 	// The maximum number of simultaneous requests from S3.
 	MaxConnsPerHost *int `yaml:"max-async-connections,omitempty" json:"max-async-connections,omitempty" example:"16" extensions:"x-nullable"`
 	// Access Key ID for authentication with S3 StaticCredentialsProvider.

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	utptr "github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -299,4 +300,114 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
 
 	_, err := routineDTO.ToModel(config, "r")
 	require.Error(t, err)
+}
+
+const defaultPartSize = 50 * 1024 * 1024
+
+type mockStorage struct {
+	partSize *int
+}
+
+func (m *mockStorage) GetPath() string                     { return "" }
+func (m *mockStorage) GetStorageClass() model.StorageClass { return model.StorageClass{} }
+func (m *mockStorage) String() string                      { return "" }
+func (m *mockStorage) GetPartSizeOrDefault() int {
+	if m.partSize != nil {
+		return *m.partSize
+	}
+
+	return defaultPartSize
+}
+
+func TestValidateFileLimit(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		policy  *model.BackupPolicy
+		storage model.Storage
+		wantErr string
+	}{
+		{
+			name:    "nil storage returns nil",
+			policy:  &model.BackupPolicy{FileLimit: utptr.Of(100 * 1024 * 1024)},
+			storage: nil,
+		},
+		{
+			name:    "nil policy returns nil",
+			policy:  nil,
+			storage: &mockStorage{partSize: utptr.Of(100 * 1024 * 1024)},
+		},
+		{
+			name:    "nil file limit defaults to 250MB, nil part size defaults to 50MB",
+			policy:  &model.BackupPolicy{FileLimit: nil},
+			storage: &mockStorage{partSize: nil},
+			// fileLimit = 250MB, partSize = 50MB, chunks = ceil(250/50) = 5
+		},
+		{
+			name:    "nil file limit defaults to 250MB with explicit part size",
+			policy:  &model.BackupPolicy{FileLimit: nil},
+			storage: &mockStorage{partSize: utptr.Of(100 * 1024 * 1024)},
+			// fileLimit = 250MB, chunks = ceil(250MB/100) = 2621440
+		},
+		{
+			name:    "valid: single chunk",
+			policy:  &model.BackupPolicy{FileLimit: utptr.Of(1)},
+			storage: &mockStorage{partSize: utptr.Of(defaultPartSize)},
+			// fileLimit = 1MB, partSize = 50MB, chunks = 1
+		},
+		{
+			name:    "valid: exact chunk boundary",
+			policy:  &model.BackupPolicy{FileLimit: utptr.Of(500)},
+			storage: &mockStorage{partSize: utptr.Of(defaultPartSize)},
+			// fileLimit = 500MB, partSize = 50MB, chunks = 10
+		},
+		{
+			name:    "valid: non-divisible rounds up",
+			policy:  &model.BackupPolicy{FileLimit: utptr.Of(51)},
+			storage: &mockStorage{partSize: utptr.Of(defaultPartSize)},
+			// fileLimit = 51MB, partSize = 50MB, chunks = ceil(51MB/50MB) = 2
+		},
+		{
+			name:    "valid: just below max chunks",
+			policy:  &model.BackupPolicy{FileLimit: utptr.Of(maxChunks - 1)},
+			storage: &mockStorage{partSize: utptr.Of(1 * 1024 * 1024)},
+			// fileLimit = 9999MB, partSize = 1MB, chunks = 9999
+		},
+		{
+			name:    "invalid: exactly max chunks",
+			policy:  &model.BackupPolicy{FileLimit: utptr.Of(maxChunks)},
+			storage: &mockStorage{partSize: utptr.Of(1 * 1024 * 1024)},
+			// fileLimit = 10000MB, partSize = 1MB, chunks = 10000
+			wantErr: "exceeds maximum of 10000",
+		},
+		{
+			name:    "invalid: exceeds max chunks",
+			policy:  &model.BackupPolicy{FileLimit: utptr.Of(maxChunks + 1)},
+			storage: &mockStorage{partSize: utptr.Of(1 * 1024 * 1024)},
+			// fileLimit = 10001MB, partSize = 1MB, chunks = 10001
+			wantErr: "exceeds maximum of 10000",
+		},
+		{
+			name:    "invalid: nil part size defaults to 50MB, file limit exceeds max chunks",
+			policy:  &model.BackupPolicy{FileLimit: utptr.Of(maxChunks * 50)},
+			storage: &mockStorage{partSize: nil},
+			// fileLimit = 500000MB, partSize = 50MB, chunks = 10000
+			wantErr: "exceeds maximum of 10000",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := validateFileLimit(tt.policy, tt.storage)
+
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }

@@ -8,7 +8,10 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-const DefaultSocketTimeout = 10 * time.Minute
+const (
+	DefaultSocketTimeout = 10 * time.Minute
+	DefaultPartSize      = 50 * 1024 * 1024
+)
 
 // defaultConfig represents default configuration values.
 var defaultConfig = struct {

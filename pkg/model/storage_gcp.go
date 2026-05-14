@@ -38,3 +38,11 @@ func (s *GcpStorage) GetStorageClass() StorageClass {
 
 	return *s.StorageClass
 }
+
+func (s *GcpStorage) GetPartSizeOrDefault() int {
+	if s.MinPartSize != nil {
+		return *s.MinPartSize
+	}
+
+	return DefaultPartSize
+}
