@@ -33,7 +33,7 @@ var defaultConfig = struct {
 		Timeout:     ptr.Of(5 * time.Second),
 	},
 	logger: LoggerConfig{
-		Level:        ptr.Of("DEBUG"),
+		Level:        ptr.Of("INFO"),
 		Format:       ptr.Of("PLAIN"),
 		StdoutWriter: ptr.Of(true),
 		FileWriter: &FileLoggerConfig{
