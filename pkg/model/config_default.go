@@ -99,7 +99,7 @@ var StorageRetryPolicy = struct {
 var ScanRetryPolicy = &models.RetryPolicy{
 	BaseTimeout: 1000 * time.Millisecond,
 	Multiplier:  1.5,
-	MaxRetries:  20,
+	MaxRetries:  10,
 }
 
 var InfoRetryPolicy = &models.RetryPolicy{
