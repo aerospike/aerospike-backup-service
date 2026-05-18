@@ -1852,6 +1852,12 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2023-03-20T14:50:00Z"
                 },
+                "finished-timestamp": {
+                    "description": "The backup finish time in epoch millis.",
+                    "type": "integer",
+                    "format": "int64",
+                    "example": 1685458200000
+                },
                 "from": {
                     "description": "The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).",
                     "type": "string",

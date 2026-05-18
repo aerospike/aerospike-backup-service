@@ -521,6 +521,7 @@ The response is a map of routine names to lists of backups.
       "created": "2024-01-01T12:00:00Z",
       "timestamp": 1704110400000,
       "finished": "2024-01-01T12:05:00Z",
+      "finished-timestamp": 0,
       "duration": 300,
       "namespace": "source-ns1",
       "record-count": 42,
