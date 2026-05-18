@@ -33,11 +33,13 @@ var defaultConfig = struct {
 		Timeout:     ptr.Of(5 * time.Second),
 	},
 	logger: LoggerConfig{
-		Level:        ptr.Of("DEBUG"),
+		Level:        ptr.Of("INFO"),
 		Format:       ptr.Of("PLAIN"),
 		StdoutWriter: ptr.Of(true),
 		FileWriter: &FileLoggerConfig{
-			MaxSize: 0,
+			MaxSize:    100,
+			MaxAge:     7,
+			MaxBackups: 3,
 		},
 	},
 	backupPolicy: BackupPolicy{

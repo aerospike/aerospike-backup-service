@@ -14,7 +14,7 @@ import (
 //nolint:lll
 type LoggerConfig struct {
 	// Level is the logger level.
-	Level *string `yaml:"level,omitempty" json:"level,omitempty" default:"DEBUG" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
+	Level *string `yaml:"level,omitempty" json:"level,omitempty" default:"INFO" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
 	// Format is the logger format (PLAIN, JSON).
 	Format *string `yaml:"format,omitempty" json:"format,omitempty" default:"PLAIN" enums:"PLAIN,JSON"`
 	// Whether to enable logging to the standard output.
@@ -99,16 +99,16 @@ func (l *LoggerConfig) Compare(other *LoggerConfig) error {
 type FileLoggerConfig struct {
 	// Filename is the file to write logs to.
 	Filename string `yaml:"filename" json:"filename" example:"log.txt" validate:"required"`
-	// MaxSize is the maximum size in megabytes of the log file before it gets rotated.
-	MaxSize int `yaml:"maxsize" json:"maxsize" example:"100" extensions:"x-nullable"`
-	// MaxAge is the maximum number of days to retain old log files based on the
+	// Maximum size in megabytes of the log file before it gets rotated.
+	MaxSize int `yaml:"maxsize" json:"maxsize" example:"100" extensions:"x-nullable" default:"100"`
+	// Maximum number of days to retain old log files based on the
 	// timestamp encoded in their filename. The default is not to remove old log files
 	// based on age.
-	MaxAge int `yaml:"maxage" json:"maxage" extensions:"x-nullable"`
-	// MaxBackups is the maximum number of old log files to retain. The default
+	MaxAge int `yaml:"maxage" json:"maxage" extensions:"x-nullable" default:"7"`
+	// Maximum number of old log files to retain. The default
 	// is to retain all old log files.
-	MaxBackups int `yaml:"maxbackups" json:"maxbackups" extensions:"x-nullable"`
-	// Compress determines if the rotated log files should be compressed
+	MaxBackups int `yaml:"maxbackups" json:"maxbackups" extensions:"x-nullable" default:"3"`
+	// Determines if the rotated log files should be compressed
 	// using gzip. The default is not to perform compression.
 	Compress bool `yaml:"compress" json:"compress" default:"false"`
 }
