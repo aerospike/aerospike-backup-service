@@ -33,7 +33,6 @@ storage:
 backup-policies:
     defaultPolicy:
         parallel: 8
-        max-concurrent-nodes:
         retry-policy:
             base-timeout: 3000
             multiplier: 1
