@@ -37,7 +37,9 @@ var defaultConfig = struct {
 		Format:       ptr.Of("PLAIN"),
 		StdoutWriter: ptr.Of(true),
 		FileWriter: &FileLoggerConfig{
-			MaxSize: 0,
+			MaxSize:    100,
+			MaxAge:     7,
+			MaxBackups: 3,
 		},
 	},
 	backupPolicy: BackupPolicy{
