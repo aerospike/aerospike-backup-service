@@ -70,7 +70,7 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 // RestoreByTimeHandler
 // @Summary     Trigger an asynchronous restore operation to specific point in time.
 // @ID 	        restoreTimestamp
-// @Description Restores backup from the given point in time.
+// @Description Restore DB to a specific point in time by applying the latest backup preceding that time.
 // @Tags        Restore
 // @Router      /v1/restore/timestamp [post]
 // @Accept      json
