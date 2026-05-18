@@ -40,11 +40,12 @@ func TestService_GetAllFullBackups(t *testing.T) {
 			expectedBody: map[string][]dto.BackupDetails{
 				"routine1": {
 					{
-						Key:       "backup1",
-						Timestamp: 1000,
-						Created:   time.UnixMilli(1000).In(time.UTC),
-						Finished:  time.UnixMilli(5000).In(time.UTC),
-						Duration:  4,
+						Key:               "backup1",
+						Timestamp:         1000,
+						Created:           time.UnixMilli(1000).In(time.UTC),
+						Finished:          time.UnixMilli(5000).In(time.UTC),
+						FinishedTimestamp: 5000,
+						Duration:          4,
 					},
 				},
 			},
