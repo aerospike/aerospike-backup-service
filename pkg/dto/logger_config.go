@@ -14,7 +14,7 @@ import (
 //nolint:lll
 type LoggerConfig struct {
 	// Level is the logger level.
-	Level *string `yaml:"level,omitempty" json:"level,omitempty" default:"DEBUG" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
+	Level *string `yaml:"level,omitempty" json:"level,omitempty" default:"INFO" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
 	// Format is the logger format (PLAIN, JSON).
 	Format *string `yaml:"format,omitempty" json:"format,omitempty" default:"PLAIN" enums:"PLAIN,JSON"`
 	// Whether to enable logging to the standard output.
