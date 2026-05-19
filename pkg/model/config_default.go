@@ -51,6 +51,7 @@ var defaultConfig = struct {
 		Parallel:              ptr.Of(8),
 		FileLimit:             ptr.Of(250),
 		Sealed:                ptr.Of(false),
+		Compact:               ptr.Of(false),
 		UseCompression:        ptr.Of(false),
 		ConcurrentIncremental: ptr.Of(false),
 	},

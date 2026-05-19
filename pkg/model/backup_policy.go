@@ -48,6 +48,9 @@ type BackupPolicy struct {
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
 	Sealed *bool
+	// Do not apply base-64 encoding to BLOBs: Bytes, HLL, RawMap, RawList.
+	// Results in smaller backup files.
+	Compact *bool
 	// XDR configuration for MRT backups.
 	// Commented out in dto.BackupPolicy, will always be nil.
 	XDRConfig *XDRConfig
@@ -85,6 +88,14 @@ func (p *BackupPolicy) UseCompressionOrDefault() bool {
 	return *defaultConfig.backupPolicy.UseCompression
 }
 
+func (p *BackupPolicy) CompactOrDefault() bool {
+	if p != nil && p.Compact != nil {
+		return *p.Compact
+	}
+
+	return *defaultConfig.backupPolicy.Compact
+}
+
 // CopyWithNoRecords creates a new instance of the BackupPolicy struct with identical field values.
 // New instance has NoRecords set to true.
 func (p *BackupPolicy) CopyWithNoRecords() *BackupPolicy {
@@ -102,6 +113,7 @@ func (p *BackupPolicy) CopyWithNoRecords() *BackupPolicy {
 		RecordsPerSecond: p.RecordsPerSecond,
 		FileLimit:        p.FileLimit,
 		Sealed:           p.Sealed,
+		Compact:          p.Compact,
 	}
 }
 

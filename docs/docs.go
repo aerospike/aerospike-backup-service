@@ -1522,7 +1522,7 @@ const docTemplate = `{
         },
         "/v1/restore/timestamp": {
             "post": {
-                "description": "Restores backup from the given point in time.",
+                "description": "Restore DB to a specific point in time by applying the latest backup preceding that time.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1916,6 +1916,11 @@ const docTemplate = `{
                     "type": "integer",
                     "x-nullable": true,
                     "example": 10000
+                },
+                "compact": {
+                    "description": "Do not apply base-64 encoding to BLOBs: Bytes, HLL, RawMap, RawList.\nResults in smaller backup files.",
+                    "type": "boolean",
+                    "default": false
                 },
                 "compression": {
                     "description": "Compression details (algorithm and mode). Default is no compression.\nEnabling compression reduces storage and network usage, but increases CPU usage during the backup.\nDepending on the system configuration, compression may improve or degrade overall performance.",
@@ -2882,7 +2887,7 @@ const docTemplate = `{
             }
         },
         "dto.RestoreTimestampRequest": {
-            "description": "RestoreTimestampRequest represents a restore by timestamp operation request.",
+            "description": "RestoreTimestampRequest represents a request to restore the database to a specific time.",
             "type": "object",
             "required": [
                 "routine",
