@@ -15,6 +15,8 @@ type BackupDetails struct {
 	Timestamp int64 `yaml:"timestamp" json:"timestamp" example:"1685458200000" format:"int64"`
 	// The time the backup operation completed.
 	Finished time.Time `yaml:"finished" json:"finished" example:"2023-03-20T14:50:00Z"`
+	// The backup finish time in epoch millis.
+	FinishedTimestamp int64 `yaml:"finished-timestamp" json:"finished-timestamp" example:"1685458200000" format:"int64"`
 	// Duration represents the elapsed time taken by the backup process in seconds.
 	Duration uint `yaml:"duration" json:"duration"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).
@@ -58,6 +60,7 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupCo
 	d.Created = m.Created
 	d.Timestamp = m.Created.UnixMilli()
 	d.Finished = m.Finished
+	d.FinishedTimestamp = m.Finished.UnixMilli()
 	d.Duration = uint(m.Finished.Sub(d.Created) / time.Second)
 	d.From = m.From
 	d.Namespace = m.Namespace

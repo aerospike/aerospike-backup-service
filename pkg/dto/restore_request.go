@@ -36,8 +36,8 @@ func NewRestoreRequestFromReader(r io.Reader) (*RestoreRequest, error) {
 	return &req, nil
 }
 
-// RestoreTimestampRequest represents a restore by timestamp operation request.
-// @Description RestoreTimestampRequest represents a restore by timestamp operation request.
+// RestoreTimestampRequest represents a request to restore the Aerospike database to a specific point in time.
+// @Description RestoreTimestampRequest represents a request to restore the database to a specific time.
 type RestoreTimestampRequest struct {
 	DestinationClusterConfig
 	*SecretAgentConfig
