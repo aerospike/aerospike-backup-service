@@ -1,5 +1,5 @@
-# Job for generated-artifact checks (mocks, readme, examples).
-# Fails if they are out of date. Run "make mocks-generate" and "make readme" locally and commit the changes.
+# Job for generated-artifact checks (mocks, OpenAPI, readme, examples).
+# Fails if they are out of date. Run "make mocks-generate", "make openapi", and "make readme" locally and commit.
 name: Generated files up to date
 
 on:
@@ -36,6 +36,10 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: lts/*
 
       - name: Check generated files are up to date
         run: make generated-check
