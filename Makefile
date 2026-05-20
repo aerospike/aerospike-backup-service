@@ -174,11 +174,23 @@ lint:
 lint-fix:
 	golangci-lint run --fix ./...
 
-# openapi: runs swag over handlers/DTOs, then swagger2openapi, producing docs/openapi.json and
-#   docs/config.schema.json. Requires Docker and Node (npx). Used by readme and API docs; not run in CI.
+# openapi: runs swag over handlers/DTOs, then swagger2openapi, producing docs/docs.go,
+#   docs/openapi.json, and docs/config.schema.json. Requires Docker and Node (npx).
 .PHONY: openapi
 openapi:
 	$(WORKSPACE)/build/scripts/generate-openapi.sh
+
+# Ensure committed OpenAPI artifacts match the output of openapi (no hand-edits, no stale docs).
+.PHONY: openapi-check
+openapi-check: openapi
+	@git diff --exit-code -- docs/docs.go docs/openapi.json docs/config.schema.json \
+		|| (echo "OpenAPI artifacts are out of date. Run 'make openapi' and commit the changes." && exit 1)
+	@UNTRACKED=$$(git ls-files --others --exclude-standard docs/docs.go docs/openapi.json docs/config.schema.json); \
+	if [ -n "$$UNTRACKED" ]; then \
+		echo "Untracked OpenAPI artifacts found — these should be committed:"; \
+		echo "$$UNTRACKED"; \
+		exit 1; \
+	fi
 
 # readme: runs build/readme (Go). Reads docs/openapi.json, writes README.md sections, docs/examples/*,
 #   docs/readme/dto/*, and docs/metrics.json. Committed files must match (see readme-check).
@@ -203,7 +215,7 @@ tidy:
 
 # Verify generated artifacts are committed and up to date (for CI).
 .PHONY: generated-check
-generated-check: mocks-check readme-check
+generated-check: mocks-check openapi-check readme-check
 
 # Full local PR checklist.
 .PHONY: pr
