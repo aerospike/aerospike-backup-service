@@ -1,19 +1,21 @@
 #!/bin/bash -e
 WORKSPACE="$(git rev-parse --show-toplevel)"
+DOCKER_USER=(--user "$(id -u):$(id -g)")
 
 # generate swagger documentation using https://github.com/swaggo/swag tool
-docker run --rm --volume "$WORKSPACE":/local davi17g/swag:latest init \
+docker run --rm "${DOCKER_USER[@]}" --volume "$WORKSPACE":/local davi17g/swag:latest init \
 -d /local/internal/server/handlers,/local/pkg/dto -g info.go -o /local/docs
 
+mkdir -p "$WORKSPACE"/tmp
+
 # swag codegen cannot handle int64 format for return values
-cat <<< "$(docker run --rm --volume "$WORKSPACE/docs/swagger.json":/local/docs/swagger.json ghcr.io/jqlang/jq:latest \
+docker run --rm --volume "$WORKSPACE/docs":/local/docs:ro ghcr.io/jqlang/jq:latest \
 '(.paths.[].[].responses
 | select(has("202")).["202"]
 | select(has("schema")).["schema"]
 | select(.type | contains("int64"))) = {type: "integer", format: "int64"}' \
-/local/docs/swagger.json)" > "$WORKSPACE"/docs/swagger.json
-
-mkdir -p "$WORKSPACE"/tmp
+/local/docs/swagger.json > "$WORKSPACE"/tmp/swagger.json
+mv "$WORKSPACE"/tmp/swagger.json "$WORKSPACE"/docs/swagger.json
 
 # convert swagger to open-api using swagger2openapi
 yes | npx swagger2openapi "$WORKSPACE"/docs/swagger.json -o "$WORKSPACE"/docs/openapi.json
