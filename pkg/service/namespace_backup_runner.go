@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -71,13 +72,12 @@ func (e *NamespaceBackupRunnerImpl) Run(
 	scanLimiter *semaphore.Weighted,
 	logger *slog.Logger,
 ) CancelableBackupHandler {
-	backupFolder := e.pathService.GetBackupPath(routine.Name, runSpec.Type, namespace, runSpec.StartTime)
-
 	return newRetryableBackupHandler(
 		ctx,
 		*routine.BackupPolicy.GetRetryPolicyOrDefault(),
 		retryableBackupCallbacks{
 			Start: func(ctx context.Context) (backupexecutor.BackupHandler, error) {
+				backupFolder := e.pathService.GetBackupPath(routine.Name, runSpec.Type, namespace, runSpec.StartTime)
 				return e.backupExecutor.Run(ctx, routine, runSpec.TimeBounds, namespace, backupFolder, scanLimiter, logger)
 			},
 			OnFail: func(ctx context.Context) {
@@ -88,6 +88,7 @@ func (e *NamespaceBackupRunnerImpl) Run(
 				if runSpec.Type == model.BackupTypeIncremental && stats.IsEmpty() {
 					return nil
 				}
+				backupFolder := e.pathService.GetBackupPath(routine.Name, runSpec.Type, namespace, runSpec.StartTime)
 				metadata := model.NewBackupMetadata(
 					stats,
 					namespace,
@@ -100,6 +101,7 @@ func (e *NamespaceBackupRunnerImpl) Run(
 			},
 			OnRetry: func() {
 				prometheus.ObserveBackupEvent(routine.Name, runSpec.Type, prometheus.OutcomeRetry, 0, runSpec.StartTime)
+				runSpec.StartTime = time.Now().Truncate(time.Second)
 			},
 		},
 		logger,
