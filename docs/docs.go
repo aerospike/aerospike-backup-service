@@ -1522,7 +1522,7 @@ const docTemplate = `{
         },
         "/v1/restore/timestamp": {
             "post": {
-                "description": "Restores backup from the given point in time.",
+                "description": "Restore DB to a specific point in time by applying the latest backup preceding that time.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2882,7 +2882,7 @@ const docTemplate = `{
             }
         },
         "dto.RestoreTimestampRequest": {
-            "description": "RestoreTimestampRequest represents a restore by timestamp operation request.",
+            "description": "RestoreTimestampRequest represents a request to restore the database to a specific time.",
             "type": "object",
             "required": [
                 "routine",

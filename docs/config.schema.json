@@ -1249,7 +1249,7 @@
         }
       },
       "dto.RestoreTimestampRequest": {
-        "description": "RestoreTimestampRequest represents a restore by timestamp operation request.",
+        "description": "RestoreTimestampRequest represents a request to restore the database to a specific time.",
         "type": "object",
         "required": [
           "routine",
