@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"golang.org/x/sync/semaphore"
 )
 
 type testMocks struct {
@@ -349,4 +350,76 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 	err := handler.Wait(t.Context())
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "context canceled")
+}
+
+func TestRun_RetryRecalculatesPath(t *testing.T) {
+	startTime1 := time.UnixMilli(123456789000)
+	backupFolder1 := "test-routine/backup/123456789000/data/test-ns"
+	timestampPath1 := "test-routine/backup/123456789000"
+
+	mocks, runner := initMocks(t)
+	defer mocks.ctrl.Finish()
+
+	routine := &model.BackupRoutine{
+		Name:          routineName,
+		SourceCluster: &model.AerospikeCluster{},
+		BackupPolicy: &model.BackupPolicy{
+			RetryPolicy: &model.RetryPolicy{
+				MaxRetries:  optional.Of(1),
+				BaseTimeout: optional.Of(time.Millisecond),
+			},
+		},
+	}
+	timeBounds := model.TimeBounds{}
+
+	// First attempt fails
+	mocks.backupExecutor.EXPECT().
+		Run(gomock.Any(), routine, timeBounds, testNamespace, backupFolder1, gomock.Any(), gomock.Any()).
+		Return(mocks.backupHandler, nil)
+
+	mocks.backupHandler.EXPECT().
+		Wait(gomock.Any()).
+		Return(errors.New("handler error"))
+
+	mocks.backendService.EXPECT().
+		Delete(gomock.Any(), routine, timestampPath1).
+		Return(nil)
+
+	// Second attempt succeeds with new folder
+	// We use DoAndReturn to capture the startTime updated in OnRetry
+	mocks.backupExecutor.EXPECT().
+		Run(gomock.Any(), routine, timeBounds, testNamespace, gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(
+			_ context.Context,
+			_ *model.BackupRoutine,
+			_ model.TimeBounds,
+			_ string,
+			backupFolder string,
+			_ *semaphore.Weighted,
+			_ *slog.Logger,
+		) (backupexecutor.BackupHandler, error) {
+			assert.NotEqual(t, backupFolder1, backupFolder)
+			assert.Contains(t, backupFolder, "test-routine/backup/")
+			return mocks.backupHandler, nil
+		})
+
+	mocks.backupHandler.EXPECT().
+		Wait(gomock.Any()).
+		Return(nil)
+
+	backupStats := models.NewBackupStats()
+	mocks.backupHandler.EXPECT().
+		GetStats().
+		Return(backupStats)
+
+	mocks.backendService.EXPECT().
+		WriteBackupMetadata(gomock.Any(), routine, gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: startTime1, TimeBounds: timeBounds}
+	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+
+	require.NotNil(t, handler)
+	err := handler.Wait(t.Context())
+	require.NoError(t, err)
 }
