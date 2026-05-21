@@ -101,7 +101,7 @@ func (e *NamespaceBackupRunnerImpl) Run(
 			},
 			OnRetry: func() {
 				prometheus.ObserveBackupEvent(routine.Name, runSpec.Type, prometheus.OutcomeRetry, 0, runSpec.StartTime)
-				runSpec.StartTime = time.Now().Truncate(time.Second)
+				runSpec.StartTime = time.Now().Truncate(time.Millisecond)
 			},
 		},
 		logger,
