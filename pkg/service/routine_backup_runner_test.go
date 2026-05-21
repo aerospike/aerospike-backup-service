@@ -389,7 +389,15 @@ func TestRun_RetryRecalculatesPath(t *testing.T) {
 	// We use DoAndReturn to capture the startTime updated in OnRetry
 	mocks.backupExecutor.EXPECT().
 		Run(gomock.Any(), routine, timeBounds, testNamespace, gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ *model.BackupRoutine, _ model.TimeBounds, _ string, backupFolder string, _ *semaphore.Weighted, _ *slog.Logger) (backupexecutor.BackupHandler, error) {
+		DoAndReturn(func(
+			_ context.Context,
+			_ *model.BackupRoutine,
+			_ model.TimeBounds,
+			_ string,
+			backupFolder string,
+			_ *semaphore.Weighted,
+			_ *slog.Logger,
+		) (backupexecutor.BackupHandler, error) {
 			assert.NotEqual(t, backupFolder1, backupFolder)
 			assert.Contains(t, backupFolder, "test-routine/backup/")
 			return mocks.backupHandler, nil
