@@ -80,6 +80,7 @@ func makeBackupConfig(
 
 	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
 	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)
+	config.Compact = backupPolicy.CompactOrDefault()
 	config.SecretAgentConfig = routine.SecretAgent.ToSecretAgentConfig()
 
 	config.MetricsEnabled = true

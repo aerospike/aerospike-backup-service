@@ -34,6 +34,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 				KeySecret: ptr.Of("secret-name"),
 				KeyEnv:    ptr.Of("ENV_VAR"),
 			},
+			Compact: ptr.Of(true),
 		},
 
 		SetList:      []string{"testSet"},
@@ -96,6 +97,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	require.NotNil(t, compressionPolicy)
 	assert.Equal(t, "ZSTD", compressionPolicy.Mode)
 	assert.Equal(t, 3, compressionPolicy.Level)
+	assert.True(t, config.Compact)
 }
 
 func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {

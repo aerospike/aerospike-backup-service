@@ -1917,6 +1917,11 @@ const docTemplate = `{
                     "x-nullable": true,
                     "example": 10000
                 },
+                "compact": {
+                    "description": "Do not apply base-64 encoding to BLOBs: Bytes, HLL, RawMap, RawList.\nResults in smaller backup files.",
+                    "type": "boolean",
+                    "default": false
+                },
                 "compression": {
                     "description": "Compression details (algorithm and mode). Default is no compression.\nEnabling compression reduces storage and network usage, but increases CPU usage during the backup.\nDepending on the system configuration, compression may improve or degrade overall performance.",
                     "allOf": [

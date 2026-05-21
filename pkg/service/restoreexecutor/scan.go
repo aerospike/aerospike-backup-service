@@ -21,8 +21,13 @@ func runScanRestore(
 	request *model.RestoreRequest,
 	operations storageReader,
 ) (RestoreHandler, error) {
-	reader, err := operations.CreateDirReader(ctx,
-		request.SourceStorage, request.BackupDataPath, options.WithValidator(asb.NewValidator()))
+	reader, err := operations.CreateDirReader(
+		ctx,
+		request.SourceStorage,
+		request.BackupDataPath,
+		options.WithValidator(asb.NewValidator()),
+		options.WithCalculateTotalSize(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader: %w", err)
 	}

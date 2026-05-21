@@ -60,6 +60,9 @@ type BackupPolicy struct {
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
 	// This parameter does not affect XDR backups (which always includes all keys).
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty" default:"false"`
+	// Do not apply base-64 encoding to BLOBs: Bytes, HLL, RawMap, RawList.
+	// Results in smaller backup files.
+	Compact *bool `yaml:"compact,omitempty" json:"compact,omitempty" default:"false"`
 	// XDR configuration for MRT backups.
 	// XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
 
@@ -182,6 +185,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		EncryptionPolicy:  p.EncryptionPolicy.ToModel(),
 		CompressionPolicy: p.CompressionPolicy.ToModel(),
 		Sealed:            p.Sealed,
+		Compact:           p.Compact,
 		// XDRConfig:             p.XDRConfig.ToModel(),
 		ConcurrentIncremental: p.ConcurrentIncremental,
 		UseCompression:        p.UseCompression,
@@ -232,6 +236,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.EncryptionPolicy = newEncryptionPolicyFromModel(m.EncryptionPolicy)
 	p.CompressionPolicy = newCompressionPolicyFromModel(m.CompressionPolicy)
 	p.Sealed = m.Sealed
+	p.Compact = m.Compact
 	// p.XDRConfig = newXDRConfigFromModel(m.XDRConfig)
 	p.ConcurrentIncremental = m.ConcurrentIncremental
 	p.UseCompression = m.UseCompression

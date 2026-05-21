@@ -21,6 +21,7 @@ func TestBackupPolicyConversionIsLossless(t *testing.T) {
 	fileLimit := 1024
 	compressionPolicy := &CompressionPolicy{Level: 5}
 	sealed := true
+	compact := true
 
 	original := &BackupPolicy{
 		Parallel:      &parallel,
@@ -41,6 +42,7 @@ func TestBackupPolicyConversionIsLossless(t *testing.T) {
 		EncryptionPolicy:   nil,
 		CompressionPolicy:  compressionPolicy,
 		Sealed:             &sealed,
+		Compact:            &compact,
 		MaxConcurrentNodes: ptr.Of(3),
 		UseCompression:     ptr.Of(true),
 	}
