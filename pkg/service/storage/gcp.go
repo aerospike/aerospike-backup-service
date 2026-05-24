@@ -144,6 +144,7 @@ func checkGcpConnectivity(ctx context.Context, client gcp.Client, bucket string)
 	}
 
 	it := bkt.Objects(ctx, nil)
+	it.PageInfo().MaxSize = 1
 	if _, err = it.Next(); err != nil && !errors.Is(err, iterator.Done) {
 		return fmt.Errorf("gcp storage read permission check failed: %w", err)
 	}
