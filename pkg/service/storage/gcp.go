@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"runtime"
 
 	"cloud.google.com/go/storage"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
@@ -14,6 +16,7 @@ import (
 	gcp "github.com/aerospike/backup-go/io/storage/gcp/storage"
 	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/googleapis/gax-go/v2"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -133,9 +136,33 @@ func checkGcpConnectivity(ctx context.Context, client gcp.Client, bucket string)
 	ctx, cancel := context.WithTimeout(ctx, connectivityTimeout)
 	defer cancel()
 
-	_, err := client.Bucket(bucket).Attrs(ctx)
+	bkt := client.Bucket(bucket)
+
+	_, err := bkt.Attrs(ctx)
 	if err != nil {
 		return fmt.Errorf("gcp storage connectivity check failed: %w", err)
+	}
+
+	it := bkt.Objects(ctx, nil)
+	if _, err = it.Next(); err != nil && !errors.Is(err, iterator.Done) {
+		return fmt.Errorf("gcp storage read permission check failed: %w", err)
+	}
+
+	obj := bkt.Object(connectivityProbeKey)
+	w := obj.NewWriter(ctx)
+	if err = w.Close(); err != nil {
+		slog.Warn("gcp storage upload permission check failed; backup writes may fail at runtime",
+			slog.String("bucket", bucket),
+			attr.Error(err),
+		)
+		return nil
+	}
+
+	if err = obj.Delete(ctx); err != nil {
+		slog.Warn("gcp storage delete permission check failed; backup writes or cleanup may fail at runtime",
+			slog.String("bucket", bucket),
+			attr.Error(err),
+		)
 	}
 
 	return nil

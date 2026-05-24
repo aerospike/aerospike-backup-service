@@ -1,12 +1,15 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
@@ -175,9 +178,41 @@ func checkS3Connectivity(ctx context.Context, client *awsS3.Client, bucket strin
 	_, err := client.HeadBucket(ctx, &awsS3.HeadBucketInput{
 		Bucket: aws.String(bucket),
 	})
-
 	if err != nil {
 		return fmt.Errorf("s3 storage connectivity check failed: %w", err)
+	}
+
+	_, err = client.ListObjectsV2(ctx, &awsS3.ListObjectsV2Input{
+		Bucket:  aws.String(bucket),
+		MaxKeys: aws.Int32(1),
+	})
+	if err != nil {
+		return fmt.Errorf("s3 storage read permission check failed: %w", err)
+	}
+
+	_, err = client.PutObject(ctx, &awsS3.PutObjectInput{
+		Bucket:        aws.String(bucket),
+		Key:           aws.String(connectivityProbeKey),
+		Body:          bytes.NewReader(nil),
+		ContentLength: aws.Int64(0),
+	})
+	if err != nil {
+		slog.Warn("s3 storage upload permission check failed; backup writes may fail at runtime",
+			slog.String("bucket", bucket),
+			attr.Error(err),
+		)
+		return nil
+	}
+
+	_, err = client.DeleteObject(ctx, &awsS3.DeleteObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(connectivityProbeKey),
+	})
+	if err != nil {
+		slog.Warn("s3 storage delete permission check failed; backup writes or cleanup may fail at runtime",
+			slog.String("bucket", bucket),
+			attr.Error(err),
+		)
 	}
 
 	return nil
