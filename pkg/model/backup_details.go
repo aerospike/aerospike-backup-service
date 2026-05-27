@@ -81,8 +81,8 @@ func (m *BackupMetadata) Validate() error {
 	if m.Created.IsZero() {
 		return errors.New("`created` is required")
 	}
-	if m.Finished.IsZero() {
-		return errors.New("`finished` is required")
+	if m.Finished.IsZero() { // finished was introduced in ABS v3.4.0
+		m.Finished = m.Created.Add(1 * time.Millisecond) // set dummy value
 	}
 	if m.Namespace == "" {
 		return errors.New("`namespace` is required")
