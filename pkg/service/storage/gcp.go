@@ -164,9 +164,7 @@ func checkGcpConnectivity(ctx context.Context, client gcp.Client, bucket string)
 	}
 
 	if !slices.Contains(granted, gcpPermissionGet) {
-		slog.Warn("gcp storage read permission check failed; restores may fail at runtime",
-			slog.String("bucket", bucket),
-		)
+		return fmt.Errorf("gcp storage read permission check failed: missing %s", gcpPermissionGet)
 	}
 
 	if !slices.Contains(granted, gcpPermissionCreate) {
