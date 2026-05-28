@@ -47,7 +47,8 @@ var (
 	backupCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_backup_events_total",
-			Help: "Backup service job events by routine, type (full/incremental), and outcome (success, failure, canceled, retry, skip)",
+			Help: "Backup service job events by routine, type (full/incremental)," +
+				" and outcome (success, failure, canceled, retry, skip)",
 		},
 		[]string{labelRoutine, labelType, labelOutcome},
 	)
