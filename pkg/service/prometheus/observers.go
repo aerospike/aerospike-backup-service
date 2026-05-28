@@ -40,7 +40,6 @@ func ObserveBackupEvent(
 	if outcome == OutcomeSuccess {
 		ts := float64(startTime.Unix())
 		lastBackupTimestampGauge.WithLabelValues(routineName, string(backupType)).Set(ts)
-		lastBackupTimestampDeprecated.WithLabelValues(routineName, string(backupType)).Set(ts)
 	}
 
 	if duration > 0 {
@@ -84,11 +83,9 @@ func SetInitialLastBackup(name string, lastRun *model.BackupTime) {
 	if lastRun.FullBackupTime() != nil {
 		t := float64(lastRun.FullBackupTime().Unix())
 		lastBackupTimestampGauge.WithLabelValues(name, string(model.BackupTypeFull)).Set(t)
-		lastBackupTimestampDeprecated.WithLabelValues(name, string(model.BackupTypeFull)).Set(t)
 	}
 	if lastRun.IncrementalBackupTime() != nil {
 		t := float64(lastRun.IncrementalBackupTime().Unix())
 		lastBackupTimestampGauge.WithLabelValues(name, string(model.BackupTypeIncremental)).Set(t)
-		lastBackupTimestampDeprecated.WithLabelValues(name, string(model.BackupTypeIncremental)).Set(t)
 	}
 }
