@@ -18,6 +18,9 @@ import (
 
 var connectivityTimeout = 15 * time.Second
 
+// connectivityProbeKey is used for optional write probes at client init.
+const connectivityProbeKey = ".abs-connectivity-check"
+
 // Operations implements storage operations using registered accessors.
 type Operations struct {
 	accessors []Accessor

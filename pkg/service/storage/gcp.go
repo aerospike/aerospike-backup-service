@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"runtime"
+	"slices"
 
 	"cloud.google.com/go/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -15,6 +17,13 @@ import (
 	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/option"
+)
+
+const (
+	gcpPermissionGet    = "storage.objects.get"
+	gcpPermissionList   = "storage.objects.list"
+	gcpPermissionCreate = "storage.objects.create"
+	gcpPermissionDelete = "storage.objects.delete"
 )
 
 type GcpStorageAccessor struct {
@@ -133,9 +142,41 @@ func checkGcpConnectivity(ctx context.Context, client gcp.Client, bucket string)
 	ctx, cancel := context.WithTimeout(ctx, connectivityTimeout)
 	defer cancel()
 
-	_, err := client.Bucket(bucket).Attrs(ctx)
-	if err != nil {
+	bkt := client.Bucket(bucket)
+
+	if _, err := bkt.Attrs(ctx); err != nil {
 		return fmt.Errorf("gcp storage connectivity check failed: %w", err)
+	}
+
+	granted, err := bkt.IAM().TestPermissions(ctx, []string{
+		gcpPermissionGet,
+		gcpPermissionList,
+		gcpPermissionCreate,
+		gcpPermissionDelete,
+	})
+
+	if err != nil {
+		return fmt.Errorf("gcp storage permission check failed: %w", err)
+	}
+
+	if !slices.Contains(granted, gcpPermissionList) {
+		return fmt.Errorf("gcp storage read permission check failed: missing %s", gcpPermissionList)
+	}
+
+	if !slices.Contains(granted, gcpPermissionGet) {
+		return fmt.Errorf("gcp storage read permission check failed: missing %s", gcpPermissionGet)
+	}
+
+	if !slices.Contains(granted, gcpPermissionCreate) {
+		slog.Warn("gcp storage upload permission check failed; backup writes may fail at runtime",
+			slog.String("bucket", bucket),
+		)
+	}
+
+	if !slices.Contains(granted, gcpPermissionDelete) {
+		slog.Warn("gcp storage delete permission check failed; backup writes or cleanup may fail at runtime",
+			slog.String("bucket", bucket),
+		)
 	}
 
 	return nil

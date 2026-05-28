@@ -3,12 +3,15 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
@@ -69,7 +72,6 @@ func (a *AzureStorageAccessor) createWriter(
 
 func (a *AzureStorageAccessor) getAzureClient(ctx context.Context, s *model.AzureStorage) (*azblob.Client, error) {
 	client, err := a.createAzureClient(ctx, s)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob client: %w", err)
 	}
@@ -180,6 +182,31 @@ func checkAzureConnectivity(ctx context.Context, client *azblob.Client, containe
 	_, err := cc.GetProperties(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("azure blob storage connectivity check failed: %w", err)
+	}
+
+	_, err = cc.NewListBlobsFlatPager(&azblob.ListBlobsFlatOptions{
+		MaxResults: ptr.Of(int32(1)),
+	}).NextPage(ctx)
+	if err != nil {
+		return fmt.Errorf("azure blob storage read permission check failed: %w", err)
+	}
+
+	blob := cc.NewBlockBlobClient(connectivityProbeKey)
+	_, err = blob.UploadBuffer(ctx, []byte{}, nil)
+	if err != nil {
+		slog.Warn("azure blob storage upload permission check failed; backup writes may fail at runtime",
+			slog.String("container", container),
+			attr.Error(err),
+		)
+		return nil
+	}
+
+	_, err = blob.Delete(ctx, nil)
+	if err != nil && !bloberror.HasCode(err, bloberror.BlobNotFound) {
+		slog.Warn("azure blob storage delete permission check failed; backup writes or cleanup may fail at runtime",
+			slog.String("container", container),
+			attr.Error(err),
+		)
 	}
 
 	return nil
