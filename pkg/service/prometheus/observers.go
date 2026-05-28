@@ -40,7 +40,6 @@ func ObserveBackupEvent(
 	if outcome == OutcomeSuccess {
 		ts := float64(startTime.Unix())
 		lastBackupTimestampGauge.WithLabelValues(routineName, string(backupType)).Set(ts)
-		lastBackupTimestampDeprecated.WithLabelValues(routineName, string(backupType)).Set(ts)
 	}
 
 	if duration > 0 {
@@ -49,17 +48,44 @@ func ObserveBackupEvent(
 			labelType:    string(backupType),
 		}).Observe(duration.Seconds())
 	}
+
+	updateDeprecatedBackupCounters(backupType, outcome, duration)
+}
+
+func updateDeprecatedBackupCounters(backupType model.BackupType, outcome Outcome, duration time.Duration) {
+	switch outcome {
+	case OutcomeSuccess:
+		if backupType == model.BackupTypeFull {
+			backupRunsTotalDeprecated.WithLabelValues().Inc()
+			backupDurationMillisDeprecated.WithLabelValues().Set(float64(duration.Milliseconds()))
+		} else {
+			incrBackupRunsTotalDeprecated.WithLabelValues().Inc()
+			incrBackupDurationMillisDeprecated.WithLabelValues().Set(float64(duration.Milliseconds()))
+		}
+	case OutcomeFailure:
+		if backupType == model.BackupTypeFull {
+			backupFailureTotalDeprecated.WithLabelValues().Inc()
+		} else {
+			incrBackupFailureTotalDeprecated.WithLabelValues().Inc()
+		}
+	case OutcomeSkip:
+		if backupType == model.BackupTypeFull {
+			backupSkipTotalDeprecated.WithLabelValues().Inc()
+		} else {
+			incrBackupSkipTotalDeprecated.WithLabelValues().Inc()
+		}
+	case OutcomeRetry, OutcomeCanceled:
+		// No deprecated counters for retry or canceled.
+	}
 }
 
 func SetInitialLastBackup(name string, lastRun *model.BackupTime) {
 	if lastRun.FullBackupTime() != nil {
 		t := float64(lastRun.FullBackupTime().Unix())
 		lastBackupTimestampGauge.WithLabelValues(name, string(model.BackupTypeFull)).Set(t)
-		lastBackupTimestampDeprecated.WithLabelValues(name, string(model.BackupTypeFull)).Set(t)
 	}
 	if lastRun.IncrementalBackupTime() != nil {
 		t := float64(lastRun.IncrementalBackupTime().Unix())
 		lastBackupTimestampGauge.WithLabelValues(name, string(model.BackupTypeIncremental)).Set(t)
-		lastBackupTimestampDeprecated.WithLabelValues(name, string(model.BackupTypeIncremental)).Set(t)
 	}
 }
