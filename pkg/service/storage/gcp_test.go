@@ -65,20 +65,41 @@ func TestGcpStorage_ConnectivityFailure(t *testing.T) {
 }
 
 func gcpConnectivityHandler(denyList, denyWrite bool) http.HandlerFunc {
-	writeObjectResponse := func(w http.ResponseWriter) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"kind": "storage#object",
-			"name": connectivityProbeKey,
-		})
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/b/test-bucket":
 			w.WriteHeader(http.StatusOK)
 			_ = json.NewEncoder(w).Encode(map[string]string{"name": "test-bucket"})
+		case (r.Method == http.MethodPost || r.Method == http.MethodGet) && strings.HasSuffix(r.URL.Path, "/iam/testPermissions"):
+			var requested []string
+			if r.Method == http.MethodPost {
+				var req struct {
+					Permissions []string `json:"permissions"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				requested = req.Permissions
+			} else {
+				requested = r.URL.Query()["permissions"]
+			}
+
+			granted := []string{}
+			for _, p := range requested {
+				if p == "storage.objects.list" && denyList {
+					continue
+				}
+				if (p == "storage.objects.create" || p == "storage.objects.delete") && denyWrite {
+					continue
+				}
+				granted = append(granted, p)
+			}
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"kind":        "storage#testIamPermissionsResponse",
+				"permissions": granted,
+			})
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/b/test-bucket/o"):
 			if denyList {
 				w.WriteHeader(http.StatusForbidden)
@@ -86,16 +107,6 @@ func gcpConnectivityHandler(denyList, denyWrite bool) http.HandlerFunc {
 			}
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"kind":"storage#objects"}`))
-		case (r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch) &&
-			strings.Contains(r.URL.Path, "/upload/") && denyWrite:
-			w.WriteHeader(http.StatusForbidden)
-		case (r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch) &&
-			strings.Contains(r.URL.Path, "/upload/"):
-			writeObjectResponse(w)
-		case r.Method == http.MethodDelete && strings.Contains(r.URL.Path, connectivityProbeKey) && denyWrite:
-			w.WriteHeader(http.StatusForbidden)
-		case r.Method == http.MethodDelete && strings.Contains(r.URL.Path, connectivityProbeKey):
-			w.WriteHeader(http.StatusNoContent)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}

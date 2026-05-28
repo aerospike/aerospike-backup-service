@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime"
+	"slices"
 
 	"cloud.google.com/go/storage"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
@@ -16,8 +16,14 @@ import (
 	gcp "github.com/aerospike/backup-go/io/storage/gcp/storage"
 	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/googleapis/gax-go/v2"
-	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+)
+
+const (
+	gcpPermissionGet    = "storage.objects.get"
+	gcpPermissionList   = "storage.objects.list"
+	gcpPermissionCreate = "storage.objects.create"
+	gcpPermissionDelete = "storage.objects.delete"
 )
 
 type GcpStorageAccessor struct {
@@ -138,31 +144,40 @@ func checkGcpConnectivity(ctx context.Context, client gcp.Client, bucket string)
 
 	bkt := client.Bucket(bucket)
 
-	_, err := bkt.Attrs(ctx)
-	if err != nil {
+	if _, err := bkt.Attrs(ctx); err != nil {
 		return fmt.Errorf("gcp storage connectivity check failed: %w", err)
 	}
 
-	it := bkt.Objects(ctx, nil)
-	it.PageInfo().MaxSize = 1
-	if _, err = it.Next(); err != nil && !errors.Is(err, iterator.Done) {
-		return fmt.Errorf("gcp storage read permission check failed: %w", err)
+	granted, err := bkt.IAM().TestPermissions(ctx, []string{
+		gcpPermissionGet,
+		gcpPermissionList,
+		gcpPermissionCreate,
+		gcpPermissionDelete,
+	})
+
+	if err != nil {
+		return fmt.Errorf("gcp storage permission check failed: %w", err)
 	}
 
-	obj := bkt.Object(connectivityProbeKey)
-	w := obj.NewWriter(ctx)
-	if err = w.Close(); err != nil {
+	if !slices.Contains(granted, gcpPermissionList) {
+		return fmt.Errorf("gcp storage read permission check failed: missing %s", gcpPermissionList)
+	}
+
+	if !slices.Contains(granted, gcpPermissionGet) {
+		slog.Warn("gcp storage read permission check failed; restores may fail at runtime",
+			slog.String("bucket", bucket),
+		)
+	}
+
+	if !slices.Contains(granted, gcpPermissionCreate) {
 		slog.Warn("gcp storage upload permission check failed; backup writes may fail at runtime",
 			slog.String("bucket", bucket),
-			attr.Error(err),
 		)
-		return nil
 	}
 
-	if err = obj.Delete(ctx); err != nil {
+	if !slices.Contains(granted, gcpPermissionDelete) {
 		slog.Warn("gcp storage delete permission check failed; backup writes or cleanup may fail at runtime",
 			slog.String("bucket", bucket),
-			attr.Error(err),
 		)
 	}
 
