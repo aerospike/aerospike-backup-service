@@ -100,6 +100,29 @@ func s3ConnectivityHandler(denyList, denyWrite bool) http.HandlerFunc {
 			}
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"></ListBucketResult>`))
+		case r.Method == http.MethodPut && isProbe && r.URL.Query().Get("uploadId") != "":
+			if denyWrite {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			w.Header().Set("ETag", `"test-etag"`)
+			w.WriteHeader(http.StatusOK)
+		case r.Method == http.MethodPost && isProbe && r.URL.Query().Has("uploads"):
+			if denyWrite {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`<InitiateMultipartUploadResult>` +
+				`<UploadId>test-upload-id</UploadId>` +
+				`</InitiateMultipartUploadResult>`))
+		case r.Method == http.MethodPost && isProbe && r.URL.Query().Get("uploadId") != "":
+			if denyWrite {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`<CompleteMultipartUploadResult><ETag>"test-etag"</ETag></CompleteMultipartUploadResult>`))
 		case r.Method == http.MethodPut && isProbe:
 			if denyWrite {
 				w.WriteHeader(http.StatusForbidden)

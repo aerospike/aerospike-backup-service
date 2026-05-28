@@ -22,6 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 type S3StorageAccessor struct {
@@ -190,21 +191,91 @@ func checkS3Connectivity(ctx context.Context, client *awsS3.Client, bucket strin
 		return fmt.Errorf("s3 storage read permission check failed: %w", err)
 	}
 
-	_, err = client.PutObject(ctx, &awsS3.PutObjectInput{
-		Bucket:        aws.String(bucket),
-		Key:           aws.String(connectivityProbeKey),
-		Body:          bytes.NewReader(nil),
-		ContentLength: aws.Int64(0),
+	checkS3MultipartUpload(ctx, client, bucket)
+
+	return nil
+}
+
+const msg = "s3 storage upload permission check failed; backup writes may fail at runtime"
+
+func checkS3MultipartUpload(ctx context.Context, client *awsS3.Client, bucket string) {
+	createOutput, err := client.CreateMultipartUpload(ctx, &awsS3.CreateMultipartUploadInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(connectivityProbeKey),
 	})
 	if err != nil {
-		slog.Warn("s3 storage upload permission check failed; backup writes may fail at runtime",
-			slog.String("bucket", bucket),
-			attr.Error(err),
-		)
-		return nil
+		slog.Warn(msg, slog.String("bucket", bucket), attr.Error(err))
+		return
 	}
 
-	_, err = client.DeleteObject(ctx, &awsS3.DeleteObjectInput{
+	uploadID := createOutput.UploadId
+	etag, err := uploadS3ProbePart(ctx, client, bucket, uploadID)
+	if err != nil {
+		abortS3MultipartUpload(ctx, client, bucket, uploadID)
+		return
+	}
+
+	if err = completeS3MultipartUpload(ctx, client, bucket, uploadID, etag); err != nil {
+		abortS3MultipartUpload(ctx, client, bucket, uploadID)
+		return
+	}
+
+	deleteS3ProbeObject(ctx, client, bucket)
+}
+
+func uploadS3ProbePart(ctx context.Context, client *awsS3.Client, bucket string, uploadID *string) (string, error) {
+	uploadOutput, err := client.UploadPart(ctx, &awsS3.UploadPartInput{
+		Bucket:     aws.String(bucket),
+		Key:        aws.String(connectivityProbeKey),
+		UploadId:   uploadID,
+		PartNumber: aws.Int32(1),
+		Body:       bytes.NewReader([]byte{}),
+	})
+	if err != nil {
+		slog.Warn(msg, slog.String("bucket", bucket), attr.Error(err))
+		return "", err
+	}
+
+	return *uploadOutput.ETag, nil
+}
+
+func completeS3MultipartUpload(
+	ctx context.Context,
+	client *awsS3.Client,
+	bucket string,
+	uploadID *string,
+	etag string,
+) error {
+	_, err := client.CompleteMultipartUpload(ctx, &awsS3.CompleteMultipartUploadInput{
+		Bucket:   aws.String(bucket),
+		Key:      aws.String(connectivityProbeKey),
+		UploadId: uploadID,
+		MultipartUpload: &types.CompletedMultipartUpload{
+			Parts: []types.CompletedPart{
+				{
+					ETag:       aws.String(etag),
+					PartNumber: aws.Int32(1),
+				},
+			},
+		},
+	})
+	if err != nil {
+		slog.Warn(msg, slog.String("bucket", bucket), attr.Error(err))
+	}
+
+	return err
+}
+
+func abortS3MultipartUpload(ctx context.Context, client *awsS3.Client, bucket string, uploadID *string) {
+	_, _ = client.AbortMultipartUpload(ctx, &awsS3.AbortMultipartUploadInput{
+		Bucket:   aws.String(bucket),
+		Key:      aws.String(connectivityProbeKey),
+		UploadId: uploadID,
+	})
+}
+
+func deleteS3ProbeObject(ctx context.Context, client *awsS3.Client, bucket string) {
+	_, err := client.DeleteObject(ctx, &awsS3.DeleteObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(connectivityProbeKey),
 	})
@@ -214,6 +285,4 @@ func checkS3Connectivity(ctx context.Context, client *awsS3.Client, bucket strin
 			attr.Error(err),
 		)
 	}
-
-	return nil
 }
