@@ -196,7 +196,7 @@ func checkS3Connectivity(ctx context.Context, client *awsS3.Client, bucket strin
 	return nil
 }
 
-const msg = "s3 storage upload permission check failed; backup writes may fail at runtime"
+const s3uploadPermissionWarnMsg = "s3 storage upload permission check failed; backup writes may fail at runtime"
 
 func checkS3MultipartUpload(ctx context.Context, client *awsS3.Client, bucket string) {
 	createOutput, err := client.CreateMultipartUpload(ctx, &awsS3.CreateMultipartUploadInput{
@@ -204,7 +204,7 @@ func checkS3MultipartUpload(ctx context.Context, client *awsS3.Client, bucket st
 		Key:    aws.String(connectivityProbeKey),
 	})
 	if err != nil {
-		slog.Warn(msg, slog.String("bucket", bucket), attr.Error(err))
+		slog.Warn(s3uploadPermissionWarnMsg, slog.String("bucket", bucket), attr.Error(err))
 		return
 	}
 
@@ -232,7 +232,7 @@ func uploadS3ProbePart(ctx context.Context, client *awsS3.Client, bucket string,
 		Body:       bytes.NewReader([]byte{}),
 	})
 	if err != nil {
-		slog.Warn(msg, slog.String("bucket", bucket), attr.Error(err))
+		slog.Warn(s3uploadPermissionWarnMsg, slog.String("bucket", bucket), attr.Error(err))
 		return "", err
 	}
 
@@ -260,7 +260,7 @@ func completeS3MultipartUpload(
 		},
 	})
 	if err != nil {
-		slog.Warn(msg, slog.String("bucket", bucket), attr.Error(err))
+		slog.Warn(s3uploadPermissionWarnMsg, slog.String("bucket", bucket), attr.Error(err))
 	}
 
 	return err
