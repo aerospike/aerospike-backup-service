@@ -79,7 +79,6 @@ var (
 
 	// Deprecated metrics (for backwards compatibility).
 
-	// Deprecated: use aerospike_backup_service_backup_progress_ratio instead.
 	backupProgressDeprecated = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_backup_progress_pct",
@@ -89,7 +88,6 @@ var (
 		[]string{labelRoutine, labelType},
 	)
 
-	// Deprecated: use aerospike_backup_service_restore_active instead.
 	restoreRunningGaugeDeprecated = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_restore_in_progress",
@@ -99,7 +97,6 @@ var (
 		nil,
 	)
 
-	// Deprecated: use aerospike_backup_service_last_successful_backup_timestamp_seconds instead.
 	lastBackupTimestampDeprecated = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_last_successful_backup_timestamp",
@@ -107,6 +104,78 @@ var (
 				"(Deprecated: use aerospike_backup_service_last_successful_backup_timestamp_seconds instead.)",
 		},
 		[]string{labelRoutine, labelType},
+	)
+
+	backupRunsTotalDeprecated = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aerospike_backup_service_runs_total",
+			Help: "Successful backup runs counter " +
+				"(Deprecated: use aerospike_backup_service_backup_events_total instead.)",
+		},
+		nil,
+	)
+
+	incrBackupRunsTotalDeprecated = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aerospike_backup_service_incremental_runs_total",
+			Help: "Successful incremental backup runs counter " +
+				"(Deprecated: use aerospike_backup_service_backup_events_total instead.)",
+		},
+		nil,
+	)
+
+	backupSkipTotalDeprecated = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aerospike_backup_service_skip_total",
+			Help: "Full backup skip counter " +
+				"(Deprecated: use aerospike_backup_service_backup_events_total instead.)",
+		},
+		nil,
+	)
+
+	incrBackupSkipTotalDeprecated = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aerospike_backup_service_incremental_skip_total",
+			Help: "Incremental backup skip counter " +
+				"(Deprecated: use aerospike_backup_service_backup_events_total instead.)",
+		},
+		nil,
+	)
+
+	backupFailureTotalDeprecated = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aerospike_backup_service_failure_total",
+			Help: "Full backup failure counter " +
+				"(Deprecated: use aerospike_backup_service_backup_events_total instead.)",
+		},
+		nil,
+	)
+
+	incrBackupFailureTotalDeprecated = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aerospike_backup_service_incremental_failure_total",
+			Help: "Incremental backup failure counter " +
+				"(Deprecated: use aerospike_backup_service_backup_events_total instead.)",
+		},
+		nil,
+	)
+
+	backupDurationMillisDeprecated = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_duration_millis",
+			Help: "Full backup duration in milliseconds " +
+				"(Deprecated: use aerospike_backup_service_backup_duration_seconds instead.)",
+		},
+		nil,
+	)
+
+	incrBackupDurationMillisDeprecated = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_incremental_duration_millis",
+			Help: "Incremental backup duration in milliseconds " +
+				"(Deprecated: use aerospike_backup_service_backup_duration_seconds instead.)",
+		},
+		nil,
 	)
 )
 
@@ -126,6 +195,14 @@ func init() {
 		backupProgressDeprecated,
 		restoreRunningGaugeDeprecated,
 		lastBackupTimestampDeprecated,
+		backupRunsTotalDeprecated,
+		incrBackupRunsTotalDeprecated,
+		backupSkipTotalDeprecated,
+		incrBackupSkipTotalDeprecated,
+		backupFailureTotalDeprecated,
+		incrBackupFailureTotalDeprecated,
+		backupDurationMillisDeprecated,
+		incrBackupDurationMillisDeprecated,
 	}
 
 	prometheus.MustRegister(AllMetrics...)

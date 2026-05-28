@@ -49,6 +49,35 @@ func ObserveBackupEvent(
 			labelType:    string(backupType),
 		}).Observe(duration.Seconds())
 	}
+
+	updateDeprecatedBackupCounters(backupType, outcome, duration)
+}
+
+func updateDeprecatedBackupCounters(backupType model.BackupType, outcome Outcome, duration time.Duration) {
+	switch outcome {
+	case OutcomeSuccess:
+		if backupType == model.BackupTypeFull {
+			backupRunsTotalDeprecated.WithLabelValues().Inc()
+			backupDurationMillisDeprecated.WithLabelValues().Set(float64(duration.Milliseconds()))
+		} else {
+			incrBackupRunsTotalDeprecated.WithLabelValues().Inc()
+			incrBackupDurationMillisDeprecated.WithLabelValues().Set(float64(duration.Milliseconds()))
+		}
+	case OutcomeFailure:
+		if backupType == model.BackupTypeFull {
+			backupFailureTotalDeprecated.WithLabelValues().Inc()
+		} else {
+			incrBackupFailureTotalDeprecated.WithLabelValues().Inc()
+		}
+	case OutcomeSkip:
+		if backupType == model.BackupTypeFull {
+			backupSkipTotalDeprecated.WithLabelValues().Inc()
+		} else {
+			incrBackupSkipTotalDeprecated.WithLabelValues().Inc()
+		}
+	case OutcomeRetry, OutcomeCanceled:
+		// No deprecated counters for retry or canceled.
+	}
 }
 
 func SetInitialLastBackup(name string, lastRun *model.BackupTime) {
