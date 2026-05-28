@@ -38,7 +38,7 @@ var (
 
 	backupRunningGauge = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_backup_active",
+			Name: "aerospike_backup_service_backup_in_progress",
 			Help: "Number of backups currently running for the given routine and backup type (full/incremental)",
 		},
 		[]string{labelRoutine, labelType},

@@ -1,15 +1,5 @@
 [
   {
-    "name": "aerospike_backup_service_backup_active",
-    "type": "Gauge",
-    "description": "Number of backups currently running for the given routine and backup type (full/incremental)",
-    "labels": [
-      "routine",
-      "type"
-    ],
-    "deprecated": false
-  },
-  {
     "name": "aerospike_backup_service_backup_duration_seconds",
     "type": "Histogram",
     "description": "Duration in seconds of finished backups by routine and type (full/incremental)",
@@ -27,6 +17,16 @@
       "routine",
       "type",
       "outcome"
+    ],
+    "deprecated": false
+  },
+  {
+    "name": "aerospike_backup_service_backup_in_progress",
+    "type": "Gauge",
+    "description": "Number of backups currently running for the given routine and backup type (full/incremental)",
+    "labels": [
+      "routine",
+      "type"
     ],
     "deprecated": false
   },
