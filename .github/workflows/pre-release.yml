@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
 
@@ -64,7 +64,7 @@ jobs:
       package_version: ${{ steps.metadata.outputs.PACKAGE_VERSION }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
 
@@ -80,7 +80,7 @@ jobs:
           go-version: '1.24.x'
 
       - name: setup GPG
-        uses: aerospike/shared-workflows/.github/actions/setup-gpg@f6bb565e7d31fa3013a1a75c5f80aed44c3bde5c # v3.4.1
+        uses: aerospike/shared-workflows/.github/actions/setup-gpg@610a9431704d7d385f0c13243025bcf2ae73e228 # v3.6.0
         with:
           gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
           gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
@@ -337,7 +337,7 @@ jobs:
           echo "Checksum signing process completed successfully."
 
       - name: Upload Assets to GitHub Release
-        uses: step-security/action-gh-release@dc29ef0d1f6f9a032a97ec797d9cb7ea788dde41 # v2.6.1
+        uses: step-security/action-gh-release@277bfa82abcfdb73e5bbb19e213fd76532ee2be5 # v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ github.ref_name }}
@@ -456,7 +456,7 @@ jobs:
       image_version: ${{ steps.metadata.outputs.IMAGE_VERSION }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
 
@@ -526,7 +526,7 @@ jobs:
           JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
 
       - name: Login to JFrog Artifactory
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           registry: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
           username: ${{ secrets.ARTIFACTORY_USER }}
@@ -623,7 +623,7 @@ jobs:
       helm_version: ${{ steps.metadata.outputs.HELM_VERSION }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
 
@@ -669,7 +669,7 @@ jobs:
           echo "Helm chart metadata extraction completed."
 
       - name: setup GPG
-        uses: aerospike/shared-workflows/.github/actions/setup-gpg@f6bb565e7d31fa3013a1a75c5f80aed44c3bde5c # v3.4.1
+        uses: aerospike/shared-workflows/.github/actions/setup-gpg@610a9431704d7d385f0c13243025bcf2ae73e228 # v3.6.0
         with:
           gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
           gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
@@ -750,7 +750,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
 
