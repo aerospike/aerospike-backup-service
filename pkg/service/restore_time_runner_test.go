@@ -8,6 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -269,6 +270,122 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 				assert.Equal(t, model.RestoreFailure, jobStatus.Status)
 				require.Error(t, jobStatus.Error)
 			}
+		})
+	}
+}
+
+func TestRestoreByTime_OrderScenarios(t *testing.T) {
+	tests := []struct {
+		name          string
+		recordCount   int64
+		unique        *bool
+		expectedOrder []string // backup keys in expected order
+	}{
+		{
+			name:          "Scenario 1: Empty namespace -> Reverse order",
+			recordCount:   0,
+			unique:        nil, // unique will be set to true by the code
+			expectedOrder: []string{"incr2/path", "incr1/path", "full/path"},
+		},
+		{
+			name:          "Scenario 2: Non-empty namespace, unique=false -> Chronological order",
+			recordCount:   100,
+			unique:        ptr.Of(false),
+			expectedOrder: []string{"full/path", "incr1/path", "incr2/path"},
+		},
+		{
+			name:          "Scenario 3: Non-empty namespace, unique=true -> Reverse order",
+			recordCount:   100,
+			unique:        ptr.Of(true),
+			expectedOrder: []string{"incr2/path", "incr1/path", "full/path"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := setupTestRestoreEnv(t)
+			defer env.ctrl.Finish()
+
+			now := time.Now()
+			fullCreated := now.Add(-3 * time.Hour)
+			incr1Created := now.Add(-2 * time.Hour)
+			incr2Created := now.Add(-1 * time.Hour)
+			requestTime := now
+
+			routine := &model.BackupRoutine{Name: "test-routine"}
+			request := &model.RestoreTimestampRequest{
+				DestinationCluster: model.AerospikeCluster{},
+				Policy: model.RestorePolicy{
+					Unique: tt.unique,
+				},
+				Routine:           *routine,
+				Time:              requestTime,
+				DisableReordering: false, // Ensure reordering logic is enabled
+			}
+
+			fullBackup := model.BackupDetails{
+				BackupMetadata: model.BackupMetadata{
+					Created:   fullCreated,
+					Namespace: "ns1",
+					FileCount: 1,
+				},
+				Key:     "full/path",
+				Storage: &model.LocalStorage{},
+			}
+			incr1Backup := model.BackupDetails{
+				BackupMetadata: model.BackupMetadata{
+					Created:   incr1Created,
+					Namespace: "ns1",
+					FileCount: 1,
+				},
+				Key:     "incr1/path",
+				Storage: &model.LocalStorage{},
+			}
+			incr2Backup := model.BackupDetails{
+				BackupMetadata: model.BackupMetadata{
+					Created:   incr2Created,
+					Namespace: "ns1",
+					FileCount: 1,
+				},
+				Key:     "incr2/path",
+				Storage: &model.LocalStorage{},
+			}
+
+			env.restoreValidator.EXPECT().
+				ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+			gomock.InOrder(
+				env.mockBackupReader.EXPECT().
+					GetBackups(gomock.Any(), fullBackupFilterMatcher{toTime: requestTime}).
+					Return([]model.BackupDetails{fullBackup}, nil),
+				env.mockBackupReader.EXPECT().
+					GetBackups(gomock.Any(), incrementalFilterMatcher{fromTime: fullCreated, toTime: requestTime}).
+					Return([]model.BackupDetails{incr1Backup, incr2Backup}, nil),
+			)
+
+			client := env.expectSuccessfulClientInteraction(t)
+
+			env.infoGetter.EXPECT().
+				GetRecordCount(mock.Anything, "ns1", mock.Anything).
+				Return(uint64(tt.recordCount), nil)
+
+			call1 := env.mockRestore.EXPECT().
+				Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: tt.expectedOrder[0]}).
+				Return(env.expectDefaultRestoreHandler(), nil)
+			call2 := env.mockRestore.EXPECT().
+				Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: tt.expectedOrder[1]}).
+				Return(env.expectDefaultRestoreHandler(), nil)
+			call3 := env.mockRestore.EXPECT().
+				Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: tt.expectedOrder[2]}).
+				Return(env.expectDefaultRestoreHandler(), nil)
+
+			gomock.InOrder(call1, call2, call3)
+
+			jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
+			require.NoError(t, err)
+			jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+			require.NoError(t, err)
+			assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
 		})
 	}
 }
