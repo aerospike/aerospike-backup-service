@@ -104,7 +104,7 @@ func handleTestPermissions(w http.ResponseWriter, r *http.Request, denyList, den
 		requested = r.URL.Query()["permissions"]
 	}
 
-	granted := []string{}
+	var granted []string
 	for _, p := range requested {
 		if p == "storage.objects.list" && denyList {
 			continue
