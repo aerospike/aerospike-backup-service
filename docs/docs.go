@@ -2827,7 +2827,7 @@ const docTemplate = `{
             }
         },
         "dto.RestoreRequest": {
-            "description": "RestoreRequest represents a restore operation request. ` + "`" + `destination` + "`" + `, ` + "`" + `source` + "`" + `, and ` + "`" + `secret-agent` + "`" + ` are explicit request-time values and are not resolved from routines.",
+            "description": "RestoreRequest represents a restore operation request.",
             "type": "object",
             "required": [
                 "backup-data-path"
@@ -2887,7 +2887,7 @@ const docTemplate = `{
             }
         },
         "dto.RestoreTimestampRequest": {
-            "description": "RestoreTimestampRequest represents a request to restore the database to a specific time. ` + "`" + `destination` + "`" + `, ` + "`" + `source` + "`" + `, and ` + "`" + `secret-agent` + "`" + ` are optional overrides; omitted values are resolved from the referenced routine.",
+            "description": "RestoreTimestampRequest represents a request to restore the database to a specific time.",
             "type": "object",
             "required": [
                 "routine",

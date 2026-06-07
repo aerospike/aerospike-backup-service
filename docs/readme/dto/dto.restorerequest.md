@@ -1,5 +1,5 @@
 ## dto.RestoreRequest
-RestoreRequest represents a restore operation request. `destination`, `source`, and `secret-agent` are explicit request-time values and are not resolved from routines.
+RestoreRequest represents a restore operation request.
 
 | Field                   | Description                                                                                                                                                                             |
 |-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

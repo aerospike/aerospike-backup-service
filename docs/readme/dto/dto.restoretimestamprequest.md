@@ -1,5 +1,5 @@
 ## dto.RestoreTimestampRequest
-RestoreTimestampRequest represents a request to restore the database to a specific time. `destination`, `source`, and `secret-agent` are optional overrides; omitted values are resolved from the referenced routine.
+RestoreTimestampRequest represents a request to restore the database to a specific time.
 
 | Field                | Description                                                                                                                                              | Default Value |
 |----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
