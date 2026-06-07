@@ -38,7 +38,8 @@ func NewRestoreRequestFromReader(r io.Reader) (*RestoreRequest, error) {
 
 // RestoreTimestampRequest represents a request to restore the Aerospike database to a specific point in time.
 // @Description RestoreTimestampRequest represents a request to restore the database to a specific time.
-// `destination`, `source`, and `secret-agent` are optional overrides; omitted values are resolved from the referenced routine.
+// `destination`, `source`, and `secret-agent` are optional overrides;
+// omitted values are resolved from the referenced routine.
 type RestoreTimestampRequest struct {
 	DestinationClusterConfig
 	*SecretAgentConfig
