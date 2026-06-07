@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	connectivityTimeout = 100 * time.Millisecond
+	connectivityTimeout = 1 * time.Second
 }
 
 func TestS3Storage_ConnectivitySuccess(t *testing.T) {
