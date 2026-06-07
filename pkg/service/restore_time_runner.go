@@ -261,6 +261,14 @@ func prepareNamespaceRestore(
 		return effectivePolicy, nil
 	}
 
+	if ptr.ValueOrZero(effectivePolicy.Unique) {
+		logger.Info("Use reverse restore order because unique policy is enabled")
+		// Restore newest backups first so missing records get the latest version as of the target
+		// timestamp; existing records are skipped by the unique (CREATE_ONLY) policy.
+		slices.Reverse(backups)
+		return effectivePolicy, nil
+	}
+
 	counter, err := infoClient.GetRecordCount(ctx, namespace, effectivePolicy.SetList)
 	if err != nil {
 		return model.RestorePolicy{}, fmt.Errorf(
@@ -277,14 +285,6 @@ func prepareNamespaceRestore(
 		// old values are not important, because they qualify how to handle existing data in db.
 		effectivePolicy.Unique = ptr.Of(true)
 		effectivePolicy.Replace = nil
-		return effectivePolicy, nil
-	}
-
-	if ptr.ValueOrZero(effectivePolicy.Unique) {
-		logger.Info("Use reverse restore order because unique policy is enabled")
-		// Restore newest backups first so missing records get the latest version as of the target
-		// timestamp; existing records are skipped by the unique (CREATE_ONLY) policy.
-		slices.Reverse(backups)
 	}
 
 	return effectivePolicy, nil

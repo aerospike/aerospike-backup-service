@@ -42,7 +42,7 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 			Namespace: "ns1",
 			FileCount: 1,
 		},
-		Key:     "full/path",
+		Key:     "full",
 		Storage: &model.LocalStorage{},
 	}
 	incrBackup := model.BackupDetails{
@@ -51,7 +51,7 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 			Namespace: "ns1",
 			FileCount: 1,
 		},
-		Key:     "incr/path",
+		Key:     "incr",
 		Storage: &model.LocalStorage{},
 	}
 
@@ -232,7 +232,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 					Compression: tt.backupCompression,
 					FileCount:   1,
 				},
-				Key:     "backup/path/test",
+				Key:     "backup/test",
 				Storage: &model.LocalStorage{},
 			}
 
@@ -285,19 +285,19 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 			name:          "Scenario 1: Empty namespace -> Reverse order",
 			recordCount:   0,
 			unique:        nil, // unique will be set to true by the code
-			expectedOrder: []string{"incr2/path", "incr1/path", "full/path"},
+			expectedOrder: []string{"incr2", "incr1", "full"},
 		},
 		{
 			name:          "Scenario 2: Non-empty namespace, unique=false -> Chronological order",
 			recordCount:   100,
 			unique:        ptr.Of(false),
-			expectedOrder: []string{"full/path", "incr1/path", "incr2/path"},
+			expectedOrder: []string{"full", "incr1", "incr2"},
 		},
 		{
 			name:          "Scenario 3: Non-empty namespace, unique=true -> Reverse order",
 			recordCount:   100,
 			unique:        ptr.Of(true),
-			expectedOrder: []string{"incr2/path", "incr1/path", "full/path"},
+			expectedOrder: []string{"incr2", "incr1", "full"},
 		},
 	}
 
@@ -329,7 +329,7 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 					Namespace: "ns1",
 					FileCount: 1,
 				},
-				Key:     "full/path",
+				Key:     "full",
 				Storage: &model.LocalStorage{},
 			}
 			incr1Backup := model.BackupDetails{
@@ -338,7 +338,7 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 					Namespace: "ns1",
 					FileCount: 1,
 				},
-				Key:     "incr1/path",
+				Key:     "incr1",
 				Storage: &model.LocalStorage{},
 			}
 			incr2Backup := model.BackupDetails{
@@ -347,7 +347,7 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 					Namespace: "ns1",
 					FileCount: 1,
 				},
-				Key:     "incr2/path",
+				Key:     "incr2",
 				Storage: &model.LocalStorage{},
 			}
 
@@ -365,9 +365,11 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 
 			client := env.expectSuccessfulClientInteraction(t)
 
-			env.infoGetter.EXPECT().
-				GetRecordCount(mock.Anything, "ns1", mock.Anything).
-				Return(uint64(tt.recordCount), nil)
+			if tt.unique == nil || !*tt.unique {
+				env.infoGetter.EXPECT().
+					GetRecordCount(mock.Anything, "ns1", mock.Anything).
+					Return(uint64(tt.recordCount), nil)
+			}
 
 			call1 := env.mockRestore.EXPECT().
 				Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: tt.expectedOrder[0]}).
