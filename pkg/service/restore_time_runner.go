@@ -14,6 +14,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/aerospike/backup-go"
 )
 
 type timeRestoreRunner struct {
@@ -233,28 +234,71 @@ func (r *timeRestoreRunner) restoreNamespace(
 	backups []model.BackupDetails,
 	logger *slog.Logger,
 ) error {
+	policy, err := prepareNamespaceRestore(
+		ctx, client.InfoClient(), namespace, request, backups, logger,
+	)
+	if err != nil {
+		return err
+	}
+
+	return r.executeNamespaceRestore(ctx, client, request, jobID, backups, policy, logger)
+}
+
+// prepareNamespaceRestore determines the effective restore policy and may reorder
+// backups in place via slices.Reverse; the caller passes the same slice to execution.
+func prepareNamespaceRestore(
+	ctx context.Context,
+	infoClient backup.InfoGetter,
+	namespace string,
+	request *model.RestoreTimestampRequest,
+	backups []model.BackupDetails,
+	logger *slog.Logger,
+) (model.RestorePolicy, error) {
 	// Policy is guaranteed non-nil by request validation in the API layer.
 	effectivePolicy := request.Policy // make a thread-safe copy.
 
-	// Restore all backups in order.
-	if !request.DisableReordering {
-		counter, err := client.InfoClient().GetRecordCount(ctx, namespace, effectivePolicy.SetList)
-		if err != nil {
-			return fmt.Errorf("failed to determine if namespace %s is empty: %w", namespace, err)
-		}
-
-		if counter == 0 {
-			logger.Info("Use optimized restore because database is empty")
-			// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
-			// This way we reduce generation noise and unnecessary load.
-			slices.Reverse(backups)
-
-			// old values are not important, because they qualify how to handle existing data in db.
-			effectivePolicy.Unique = ptr.Of(true)
-			effectivePolicy.Replace = nil
-		}
+	if request.DisableReordering {
+		return effectivePolicy, nil
 	}
 
+	if ptr.ValueOrZero(effectivePolicy.Unique) {
+		logger.Info("Use reverse restore order because unique policy is enabled")
+		// Restore newest backups first so missing records get the latest version as of the target
+		// timestamp; existing records are skipped by the unique (CREATE_ONLY) policy.
+		slices.Reverse(backups)
+		return effectivePolicy, nil
+	}
+
+	counter, err := infoClient.GetRecordCount(ctx, namespace, effectivePolicy.SetList)
+	if err != nil {
+		return model.RestorePolicy{}, fmt.Errorf(
+			"failed to determine if namespace %s is empty: %w", namespace, err,
+		)
+	}
+
+	if counter == 0 {
+		logger.Info("Use optimized restore because database is empty")
+		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
+		// This way we reduce generation noise and unnecessary load.
+		slices.Reverse(backups)
+
+		// old values are not important, because they qualify how to handle existing data in db.
+		effectivePolicy.Unique = ptr.Of(true)
+		effectivePolicy.Replace = nil
+	}
+
+	return effectivePolicy, nil
+}
+
+func (r *timeRestoreRunner) executeNamespaceRestore(
+	ctx context.Context,
+	client aerospike.Restorer,
+	request *model.RestoreTimestampRequest,
+	jobID model.RestoreJobID,
+	backups []model.BackupDetails,
+	policy model.RestorePolicy,
+	logger *slog.Logger,
+) error {
 	for _, b := range backups {
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 	}
@@ -268,11 +312,11 @@ func (r *timeRestoreRunner) restoreNamespace(
 		}
 
 		// For restore-by-time we can extract compression from metadata.
-		effectivePolicy.CompressionPolicy = &model.CompressionPolicy{
+		policy.CompressionPolicy = &model.CompressionPolicy{
 			Mode: b.Compression,
 		}
 
-		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage, effectivePolicy)
+		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage, policy)
 		if err != nil {
 			return err
 		}
