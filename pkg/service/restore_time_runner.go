@@ -47,7 +47,7 @@ func (r *timeRestoreRunner) RestoreByTime(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	jobID := r.restoreJobs.newJob(request.Routine.Name, cancel)
+	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore by time job", slog.Any("request", *request))
 
@@ -64,7 +64,7 @@ func (r *timeRestoreRunner) findBackupsToRestore(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (map[string][]model.BackupDetails, error) {
 	fullBackups, err := r.backupReader.GetBackups(ctx, // find all full backups completed by given restore request time.
-		NewFullBackupFilter(&request.Routine).
+		newRoutineBackupFilter(request.RoutineName, request.Storage, model.BackupTypeFull).
 			WithToTime(request.Time),
 	)
 	if err != nil {
@@ -86,7 +86,7 @@ func (r *timeRestoreRunner) findBackupsToRestore(
 	// 3) then filter incrementals per namespace against that namespace's selected full.
 	// This keeps storage reads batched while still producing correct per-namespace chains.
 	incrementalBackups, err := r.backupReader.GetBackups(ctx,
-		NewIncrementalBackupFilter(&request.Routine).
+		newRoutineBackupFilter(request.RoutineName, request.Storage, model.BackupTypeIncremental).
 			WithFromTime(earliestSelectedFull.Created). // lower bound for a single batched incremental scan
 			WithToTime(request.Time))
 	if err != nil {
@@ -160,7 +160,7 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 ) error {
 	// Lock the routine storage from retention manager for the duration of restore.
 	// Restore holds RLock to allow concurrent restores for the same routine.
-	routineStorageLock := r.routineStorage.Get(request.Routine.Name)
+	routineStorageLock := r.routineStorage.Get(request.RoutineName)
 	routineStorageLock.RLock()
 	defer routineStorageLock.RUnlock()
 
@@ -213,7 +213,7 @@ func (r *timeRestoreRunner) restoreAllNamespaces(
 				errMu.Lock()
 				multiError = errors.Join(multiError,
 					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
-						request.Routine.Name, namespace, err))
+						request.RoutineName, namespace, err))
 				errMu.Unlock()
 			}
 		})

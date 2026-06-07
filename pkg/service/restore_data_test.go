@@ -463,11 +463,11 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	requestTime := now.Add(-1 * time.Hour)
 	incrCreated := fullCreated.Add(30 * time.Minute)
 
-	routine := &model.BackupRoutine{Name: "test-routine"}
 	request := &model.RestoreTimestampRequest{
 		DestinationCluster: model.AerospikeCluster{},
 		Policy:             model.RestorePolicy{},
-		Routine:            *routine,
+		RoutineName:        "test-routine",
+		Storage:            &model.LocalStorage{},
 		Time:               requestTime,
 		DisableReordering:  true,
 	}
@@ -530,11 +530,11 @@ func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
 	fullAt12 := now.Add(-1 * time.Hour)
 	requestTime := fullAt12.Add(30 * time.Minute)
 
-	routine := &model.BackupRoutine{Name: "test-routine"}
 	request := &model.RestoreTimestampRequest{
 		DestinationCluster: model.AerospikeCluster{},
 		Policy:             model.RestorePolicy{},
-		Routine:            *routine,
+		RoutineName:        "test-routine",
+		Storage:            &model.LocalStorage{},
 		Time:               requestTime,
 		DisableReordering:  true,
 	}
@@ -655,7 +655,8 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 			request := &model.RestoreTimestampRequest{
 				DestinationCluster: model.AerospikeCluster{},
 				Policy:             tt.policy,
-				Routine:            model.BackupRoutine{Name: "test-routine"},
+				RoutineName:        "test-routine",
+				Storage:            &model.LocalStorage{},
 				Time:               time.Now(),
 				DisableReordering:  true,
 			}

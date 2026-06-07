@@ -2827,7 +2827,7 @@ const docTemplate = `{
             }
         },
         "dto.RestoreRequest": {
-            "description": "RestoreRequest represents a restore operation request.",
+            "description": "RestoreRequest represents a restore operation request. ` + "`" + `destination` + "`" + `, ` + "`" + `source` + "`" + `, and ` + "`" + `secret-agent` + "`" + ` are explicit request-time values and are not resolved from routines.",
             "type": "object",
             "required": [
                 "backup-data-path"
@@ -2887,7 +2887,7 @@ const docTemplate = `{
             }
         },
         "dto.RestoreTimestampRequest": {
-            "description": "RestoreTimestampRequest represents a request to restore the database to a specific time.",
+            "description": "RestoreTimestampRequest represents a request to restore the database to a specific time. ` + "`" + `destination` + "`" + `, ` + "`" + `source` + "`" + `, and ` + "`" + `secret-agent` + "`" + ` are optional overrides; omitted values are resolved from the referenced routine.",
             "type": "object",
             "required": [
                 "routine",
@@ -2935,6 +2935,19 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "source": {
+                    "description": "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.Storage"
+                        }
+                    ]
+                },
+                "source-name": {
+                    "description": "Link to one of preconfigured storages.\nMutually exclusive with 'source'.",
                     "type": "string",
                     "x-nullable": true
                 },

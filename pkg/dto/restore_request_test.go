@@ -241,6 +241,25 @@ func TestRestoreRequest_Validate(t *testing.T) {
 				Policy: validPolicy,
 			},
 		},
+		{
+			name: "invalid secret agent override",
+			request: RestoreRequest{
+				BackupDataPath: "test/path",
+				DestinationClusterConfig: DestinationClusterConfig{
+					Cluster: validCluster,
+				},
+				StorageConfig: StorageConfig{
+					Storage: validStorage,
+				},
+				SecretAgentConfig: &SecretAgentConfig{
+					SecretAgent: &SecretAgent{
+						ConnectionType: "tcp",
+					},
+				},
+				Policy: validPolicy,
+			},
+			err: errEmpty,
+		},
 	}
 
 	for _, tt := range tests {
@@ -330,6 +349,52 @@ func TestRestoreTimestampRequest_Validate(t *testing.T) {
 				Time:    1739538000000,
 				Routine: "daily",
 			},
+		},
+		{
+			name: "storage only without cluster uses standard mode",
+			request: RestoreTimestampRequest{
+				StorageConfig: StorageConfig{
+					Storage: &Storage{
+						LocalStorage: &LocalStorage{Path: "test-path"},
+					},
+				},
+				Policy:  validPolicy,
+				Time:    1739538000000,
+				Routine: "daily",
+			},
+		},
+		{
+			name: "valid runtime overrides",
+			request: RestoreTimestampRequest{
+				DestinationClusterConfig: DestinationClusterConfig{
+					Cluster: validCluster,
+				},
+				StorageConfig: StorageConfig{
+					Storage: &Storage{
+						LocalStorage: &LocalStorage{Path: "test-path"},
+					},
+				},
+				Policy:  validPolicy,
+				Time:    1739538000000,
+				Routine: "daily",
+			},
+		},
+		{
+			name: "invalid secret agent override",
+			request: RestoreTimestampRequest{
+				DestinationClusterConfig: DestinationClusterConfig{
+					Cluster: validCluster,
+				},
+				SecretAgentConfig: &SecretAgentConfig{
+					SecretAgent: &SecretAgent{
+						ConnectionType: "tcp",
+					},
+				},
+				Policy:  validPolicy,
+				Time:    1739538000000,
+				Routine: "daily",
+			},
+			err: errEmpty,
 		},
 	}
 
@@ -455,10 +520,15 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 	config := model.NewConfig()
 	cluster := &model.AerospikeCluster{}
 	_ = config.AddCluster("test-cluster", cluster)
+	routineCluster := &model.AerospikeCluster{ClusterLabel: ptr.Of("routine-cluster")}
+	routineStorage := &model.LocalStorage{Path: "routine-path"}
 	routine := &model.BackupRoutine{
-		Name: "daily",
+		Name:          "daily",
+		SourceCluster: routineCluster,
+		Storage:       routineStorage,
 	}
 	_ = config.AddRoutine(routine)
+	_ = config.AddStorage("test-storage", &model.LocalStorage{Path: "test-path"})
 
 	tests := []struct {
 		name    string
@@ -479,7 +549,8 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 			want: &model.RestoreTimestampRequest{
 				DestinationCluster: *cluster,
 				Time:               time.UnixMilli(1739538000000),
-				Routine:            *routine,
+				RoutineName:        "daily",
+				Storage:            routineStorage,
 				Policy:             model.RestorePolicy{},
 			},
 		},
@@ -505,6 +576,63 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 			},
 			err: errNotFound,
 		},
+		{
+			name: "storage override with routine fallback cluster",
+			request: RestoreTimestampRequest{
+				StorageConfig: StorageConfig{
+					Name: "test-storage",
+				},
+				Time:    1739538000000,
+				Routine: "daily",
+				Policy:  &TimestampRestorePolicy{},
+			},
+			want: &model.RestoreTimestampRequest{
+				DestinationCluster: *routineCluster,
+				Time:               time.UnixMilli(1739538000000),
+				RoutineName:        "daily",
+				Storage:            &model.LocalStorage{Path: "test-path"},
+				Policy:             model.RestorePolicy{},
+			},
+		},
+		{
+			name: "destination override with routine fallback storage",
+			request: RestoreTimestampRequest{
+				DestinationClusterConfig: DestinationClusterConfig{
+					Name: "test-cluster",
+				},
+				Time:    1739538000000,
+				Routine: "daily",
+				Policy:  &TimestampRestorePolicy{},
+			},
+			want: &model.RestoreTimestampRequest{
+				DestinationCluster: *cluster,
+				Time:               time.UnixMilli(1739538000000),
+				RoutineName:        "daily",
+				Storage:            routineStorage,
+				Policy:             model.RestorePolicy{},
+			},
+		},
+		{
+			name: "runtime overrides without local routine",
+			request: RestoreTimestampRequest{
+				DestinationClusterConfig: DestinationClusterConfig{
+					Name: "test-cluster",
+				},
+				StorageConfig: StorageConfig{
+					Name: "test-storage",
+				},
+				Time:    1739538000000,
+				Routine: "cross-region-routine",
+				Policy:  &TimestampRestorePolicy{},
+			},
+			want: &model.RestoreTimestampRequest{
+				DestinationCluster: *cluster,
+				Time:               time.UnixMilli(1739538000000),
+				RoutineName:        "cross-region-routine",
+				Storage:            &model.LocalStorage{Path: "test-path"},
+				Policy:             model.RestorePolicy{},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -517,7 +645,8 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 			require.NoError(t, err)
 			if tt.want != nil {
 				require.Equal(t, tt.want.Time, got.Time)
-				require.Equal(t, tt.want.Routine, got.Routine)
+				require.Equal(t, tt.want.RoutineName, got.RoutineName)
+				require.Equal(t, tt.want.Storage, got.Storage)
 				require.Equal(t, tt.want.DestinationCluster.Hash(), got.DestinationCluster.Hash())
 			}
 		})
