@@ -19,6 +19,7 @@ aerospike-clusters:
             user: tester
             password: psw
         max-parallel-scans: 20
+        use-services-alternate: true
 storage:
     local:
         local-storage:

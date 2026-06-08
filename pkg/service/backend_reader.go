@@ -25,7 +25,7 @@ func newBackupReader(pathService PathService, operations storageOperations) *bac
 }
 
 func (r *backupReader) getRoutineBackups(ctx context.Context, filter *RoutineFilter) ([]model.BackupDetails, error) {
-	backupStorage := filter.routine.Storage
+	backupStorage := filter.storage
 
 	files, err := r.operations.ReadFileNames(ctx, backupStorage, filter.getPath(), metadataFile, filter.FromTime)
 	if err != nil {

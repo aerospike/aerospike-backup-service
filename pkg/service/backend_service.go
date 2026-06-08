@@ -72,7 +72,7 @@ func NewBackupBackendService(
 func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error) {
 	switch f := filter.(type) {
 	case *RoutineFilter:
-		lock := b.locks.Get(f.routine.Name)
+		lock := b.locks.Get(f.routineName)
 		lock.RLock()
 		defer lock.RUnlock()
 		return b.getRoutineBackups(ctx, f)

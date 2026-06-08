@@ -22,25 +22,32 @@ type BaseFilter struct {
 // RoutineFilter for filtering by routine and job type.
 type RoutineFilter struct {
 	BaseFilter
-	routine    *model.BackupRoutine
-	backupType model.BackupType
+	routineName string
+	storage     model.Storage
+	backupType  model.BackupType
 
 	onlyLast bool // return last backup only
 }
 
 // NewFullBackupFilter creates a filter for full backups.
 func NewFullBackupFilter(routine *model.BackupRoutine) *RoutineFilter {
-	return &RoutineFilter{
-		routine:    routine,
-		backupType: model.BackupTypeFull,
-	}
+	return newRoutineBackupFilter(routine.Name, routine.Storage, model.BackupTypeFull)
 }
 
 // NewIncrementalBackupFilter creates a filter for incremental backups.
 func NewIncrementalBackupFilter(routine *model.BackupRoutine) *RoutineFilter {
+	return newRoutineBackupFilter(routine.Name, routine.Storage, model.BackupTypeIncremental)
+}
+
+func newRoutineBackupFilter(
+	routineName string,
+	storage model.Storage,
+	backupType model.BackupType,
+) *RoutineFilter {
 	return &RoutineFilter{
-		routine:    routine,
-		backupType: model.BackupTypeIncremental,
+		routineName: routineName,
+		storage:     storage,
+		backupType:  backupType,
 	}
 }
 
@@ -73,20 +80,20 @@ func (f *RoutineFilter) WithTimeBounds(bounds model.TimeBounds) *RoutineFilter {
 
 // String returns a readable filter representation for logging/debugging.
 func (f *RoutineFilter) String() string {
-	return fmt.Sprintf("routine: %v type: %v last: %v timebounds: %s",
-		f.routine, f.backupType, f.onlyLast, f.timeBounds().String())
+	return fmt.Sprintf("routine: %s storage: %s type: %v last: %v timebounds: %s",
+		f.routineName, f.storage.String(), f.backupType, f.onlyLast, f.timeBounds().String())
 }
 
 // getPath returns the storage root path for this routine and job type.
 func (f *RoutineFilter) getPath() string {
-	return backupRootPath(f.routine.Name, f.backupType)
+	return backupRootPath(f.routineName, f.backupType)
 }
 
 // getUpperBoundary returns the storage path prefix upper bound derived from ToTime.
 // If ToTime is unset, all timestamps are allowed.
 func (f *RoutineFilter) getUpperBoundary(pathService PathService) string {
 	if f.ToTime != nil {
-		return pathService.GetTimestampPath(f.routine.Name, *f.ToTime, f.backupType)
+		return pathService.GetTimestampPath(f.routineName, *f.ToTime, f.backupType)
 	}
 
 	return "\uffff"

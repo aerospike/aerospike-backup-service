@@ -702,6 +702,11 @@ Request is almost identical to [restore by path](#direct-restore-using-a-specifi
 `backup-data-path`
 should provide a pair `time` and `routine`.
 
+Optional overrides:
+- `destination` / `destination-name` overrides destination cluster from routine.
+- `source` / `source-name` overrides storage from routine.
+- Any omitted value falls back to the referenced routine config.
+
 For more details see [fields description](docs/readme/dto/dto.restoretimestamprequest.md)
 </details>
 

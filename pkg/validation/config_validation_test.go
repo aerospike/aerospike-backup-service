@@ -129,3 +129,40 @@ func TestValidateRestoreTimestampRequest(t *testing.T) {
 	err := ValidateRestoreTimestampRequest(request, config)
 	assert.NoError(t, err)
 }
+
+func TestValidateRestoreTimestampRequest_RuntimeOverrides(t *testing.T) {
+	config := &dto.Config{}
+	config.AerospikeClusters = map[string]*dto.AerospikeCluster{
+		"cluster1": {
+			SeedNodes: []dto.SeedNode{
+				{
+					HostName: "localhost",
+					Port:     3000,
+				},
+			},
+		},
+	}
+	config.Storage = map[string]*dto.Storage{
+		"storage1": {
+			S3Storage: &dto.S3Storage{
+				Bucket:   "bucket",
+				S3Region: "us-west-2",
+			},
+		},
+	}
+
+	request := &dto.RestoreTimestampRequest{
+		Time:    time.Now().UnixMilli(),
+		Routine: "source-region-routine",
+		DestinationClusterConfig: dto.DestinationClusterConfig{
+			Name: "cluster1",
+		},
+		StorageConfig: dto.StorageConfig{
+			Name: "storage1",
+		},
+		Policy: &dto.TimestampRestorePolicy{},
+	}
+
+	err := ValidateRestoreTimestampRequest(request, config)
+	assert.NoError(t, err)
+}

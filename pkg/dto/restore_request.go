@@ -38,9 +38,12 @@ func NewRestoreRequestFromReader(r io.Reader) (*RestoreRequest, error) {
 
 // RestoreTimestampRequest represents a request to restore the Aerospike database to a specific point in time.
 // @Description RestoreTimestampRequest represents a request to restore the database to a specific time.
+// `destination`, `source`, and `secret-agent` are optional overrides;
+// omitted values are resolved from the referenced routine.
 type RestoreTimestampRequest struct {
 	DestinationClusterConfig
 	*SecretAgentConfig
+	StorageConfig
 	// Restore policy to use in the operation.
 	Policy *TimestampRestorePolicy `json:"policy,omitempty"`
 	// Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.
@@ -75,14 +78,25 @@ func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
 	if err := r.StorageConfig.Validate(opts...); err != nil {
 		return err
 	}
+	if err := validateOptionalSecretAgentConfig(r.SecretAgentConfig, opts...); err != nil {
+		return err
+	}
 
 	return nil
 }
 
 // Validate validates the restore operation request.
 func (r *RestoreTimestampRequest) Validate(opts ...ValidationOption) error {
-	// If no cluster is specified, routine's cluster will be used.
+	// Storage is an optional override; if omitted, it will be resolved from routine.
+	if err := r.StorageConfig.Validate(append(opts, ValidationAllowEmpty)...); err != nil {
+		return err
+	}
+	// Destination is an optional override; if omitted, it will be resolved from routine.
 	if err := r.DestinationClusterConfig.Validate(append(opts, ValidationAllowEmpty)...); err != nil {
+		return err
+	}
+	// Secret agent is an optional override; if omitted, it will be resolved from routine.
+	if err := validateOptionalSecretAgentConfig(r.SecretAgentConfig, opts...); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
@@ -104,26 +118,47 @@ func (r *RestoreTimestampRequest) Validate(opts ...ValidationOption) error {
 	return nil
 }
 
-func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
-	routine, found := config.Routine(r.Routine)
-	if !found {
-		return nil, errValidationNotFound("routine", r.Routine)
+func validateOptionalSecretAgentConfig(config *SecretAgentConfig, opts ...ValidationOption) error {
+	if config == nil {
+		return nil
 	}
+	return config.validate(opts...)
+}
 
+func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
 	cluster, err := r.DestinationClusterConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid cluster: %w", err)
-	}
-
-	if cluster == nil { // if cluster is not specified, use routine's cluster.
-		cluster = routine.SourceCluster
 	}
 
 	secretAgent, err := r.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid secret agent: %w", err)
 	}
-	if secretAgent == nil {
+
+	routine, found := config.Routine(r.Routine)
+
+	var storage model.Storage
+	if !r.StorageConfig.IsEmpty() {
+		storage, err = r.StorageConfig.ToModel(config)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage: %w", err)
+		}
+	} else {
+		if !found {
+			return nil, errValidationNotFound("routine", r.Routine)
+		}
+		storage = routine.Storage
+	}
+
+	if cluster == nil {
+		if !found {
+			return nil, errValidationNotFound("routine", r.Routine)
+		}
+		cluster = routine.SourceCluster // if cluster is not specified, use routine's cluster.
+	}
+
+	if secretAgent == nil && found {
 		secretAgent = routine.SecretAgent // use routine's secret agent if not specified.
 	}
 
@@ -132,7 +167,8 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 		Policy:             *r.Policy.ToModel(),
 		SecretAgent:        secretAgent,
 		Time:               time.UnixMilli(r.Time),
-		Routine:            *routine.Copy(), // restore will work on it's own copy.
+		RoutineName:        r.Routine,
+		Storage:            storage,
 		DisableReordering:  r.DisableReordering,
 	}, nil
 }
@@ -221,8 +257,12 @@ type StorageConfig struct {
 	Name string `json:"source-name,omitempty" extensions:"x-nullable"`
 }
 
+func (c *StorageConfig) IsEmpty() bool {
+	return c.Name == "" && c.Storage == nil
+}
+
 func (c *StorageConfig) Validate(opts ...ValidationOption) error {
-	if c.Storage == nil && c.Name == "" {
+	if c.Storage == nil && c.Name == "" && !slices.Contains(opts, ValidationAllowEmpty) {
 		return errValidationRequiredEither("source", "source-name")
 	}
 	if c.Storage != nil && c.Name != "" {
