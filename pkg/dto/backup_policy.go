@@ -10,6 +10,11 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 )
 
+const (
+	BackupModeScan   = "scan"
+	BackupModeServer = "server"
+)
+
 // BackupPolicy represents a scheduled backup policy.
 // @Description BackupPolicy represents a scheduled backup policy.
 //
@@ -75,6 +80,9 @@ type BackupPolicy struct {
 	// Maximum number of concurrent requests to server nodes.
 	// Default is to issue requests to all server nodes in parallel.
 	MaxConcurrentNodes *int `yaml:"max-concurrent-nodes,omitempty" json:"max-concurrent-nodes,omitempty" extensions:"x-nullable"`
+	// Backup mode determines how backup data is read from the cluster.
+	// Valid values: scan (default), server.
+	BackupMode *string `yaml:"backup-mode,omitempty" json:"backup-mode,omitempty" enums:"scan,server" default:"scan" extensions:"x-nullable"`
 }
 
 // NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.
@@ -144,6 +152,10 @@ func (p *BackupPolicy) Validate() error {
 	if p.MaxConcurrentNodes != nil && *p.MaxConcurrentNodes < 0 {
 		return errValidationNegative("max-concurrent-nodes", *p.MaxConcurrentNodes)
 	}
+	if p.BackupMode != nil &&
+		*p.BackupMode != BackupModeScan && *p.BackupMode != BackupModeServer {
+		return errValidationInvalidValue("backup-mode", *p.BackupMode, []string{BackupModeScan, BackupModeServer})
+	}
 
 	return nil
 }
@@ -168,6 +180,12 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		return &model.BackupPolicy{}
 	}
 
+	var backupMode *model.BackupMode
+	if p.BackupMode != nil {
+		mode := model.BackupMode(*p.BackupMode)
+		backupMode = &mode
+	}
+
 	return &model.BackupPolicy{
 		Parallel:          p.Parallel,
 		ParallelWrite:     p.ParallelWrite,
@@ -190,6 +208,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		ConcurrentIncremental: p.ConcurrentIncremental,
 		UseCompression:        p.UseCompression,
 		MaxConcurrentNodes:    p.MaxConcurrentNodes,
+		BackupMode:            backupMode,
 	}
 }
 
@@ -241,6 +260,10 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.ConcurrentIncremental = m.ConcurrentIncremental
 	p.UseCompression = m.UseCompression
 	p.MaxConcurrentNodes = m.MaxConcurrentNodes
+	if m.BackupMode != nil {
+		mode := string(*m.BackupMode)
+		p.BackupMode = &mode
+	}
 }
 
 // RetentionPolicy specifies how many full and incremental backups to keep.

@@ -8,6 +8,14 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
+// BackupMode determines how backup data is read from the cluster.
+type BackupMode string
+
+const (
+	BackupModeScan   BackupMode = "scan"
+	BackupModeServer BackupMode = "server"
+)
+
 // BackupPolicy represents a scheduled backup policy.
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel.
@@ -60,6 +68,8 @@ type BackupPolicy struct {
 	UseCompression *bool
 	// Maximum number of concurrent requests to server nodes.
 	MaxConcurrentNodes *int
+	// BackupMode determines how backup data is read from the cluster (scan or server).
+	BackupMode *BackupMode
 }
 
 // IsSealedOrDefault returns the value of the Sealed property.
@@ -96,6 +106,14 @@ func (p *BackupPolicy) CompactOrDefault() bool {
 	return *defaultConfig.backupPolicy.Compact
 }
 
+func (p *BackupPolicy) GetBackupModeOrDefault() BackupMode {
+	if p != nil && p.BackupMode != nil {
+		return *p.BackupMode
+	}
+
+	return BackupModeScan
+}
+
 // CopyWithNoRecords creates a new instance of the BackupPolicy struct with identical field values.
 // New instance has NoRecords set to true.
 func (p *BackupPolicy) CopyWithNoRecords() *BackupPolicy {
@@ -114,6 +132,7 @@ func (p *BackupPolicy) CopyWithNoRecords() *BackupPolicy {
 		FileLimit:        p.FileLimit,
 		Sealed:           p.Sealed,
 		Compact:          p.Compact,
+		BackupMode:       p.BackupMode,
 	}
 }
 

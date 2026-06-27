@@ -1911,6 +1911,16 @@ const docTemplate = `{
             "description": "BackupPolicy represents a scheduled backup policy.",
             "type": "object",
             "properties": {
+                "backup-mode": {
+                    "description": "Backup mode determines how backup data is read from the cluster.\nValid values: scan (default), server.",
+                    "type": "string",
+                    "default": "scan",
+                    "enum": [
+                        "scan",
+                        "server"
+                    ],
+                    "x-nullable": true
+                },
                 "bandwidth": {
                     "description": "Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.\nDefault is no limit.",
                     "type": "integer",
@@ -2005,7 +2015,7 @@ const docTemplate = `{
                     ]
                 },
                 "sealed": {
-                    "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.\nThis parameter does not affect XDR backups (which always includes all keys).",
+                    "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.",
                     "type": "boolean",
                     "default": false
                 },
