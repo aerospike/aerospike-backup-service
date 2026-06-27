@@ -79,14 +79,3 @@ func (p *PortRange) ToModel() *model.PortRange {
 		End:   model.Port(p.End),
 	}
 }
-
-func newPortRangeFromModel(m *model.PortRange) *PortRange {
-	if m == nil {
-		return nil
-	}
-
-	return &PortRange{
-		Start: Port(m.Start),
-		End:   Port(m.End),
-	}
-}

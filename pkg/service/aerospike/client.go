@@ -15,12 +15,6 @@ type Backuper interface {
 		writer backup.Writer,
 		reader backup.StreamingReader,
 	) (*backup.BackupHandler, error)
-	// BackupXDR starts an xdr backup operation that writes data to a provided writer.
-	BackupXDR(
-		ctx context.Context,
-		config *backup.ConfigBackupXDR,
-		writer backup.Writer,
-	) (*backup.HandlerBackupXDR, error)
 	// InfoClient returns the underlying info client.
 	InfoClient() backup.InfoGetter
 }

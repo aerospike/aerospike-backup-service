@@ -19,7 +19,6 @@ var defaultConfig = struct {
 	logger        LoggerConfig
 	backupPolicy  BackupPolicy
 	restorePolicy RestorePolicy
-	xdrConfig     XDRConfig
 }{
 	http: HTTPServerConfig{
 		Address: ptr.Of("0.0.0.0"),
@@ -64,20 +63,6 @@ var defaultConfig = struct {
 		},
 		MaxAsyncBatches: ptr.Of(128),
 		BatchSize:       ptr.Of(128),
-	},
-	xdrConfig: XDRConfig{
-		MaxConns:        ptr.Of(100),
-		ReadTimeout:     ptr.Of(1 * time.Second),
-		WriteTimeout:    ptr.Of(1 * time.Second),
-		StartTimeout:    ptr.Of(30 * time.Second),
-		PollingPeriod:   ptr.Of(1 * time.Second),
-		ResultQueueSize: ptr.Of(256),
-		AckQueueSize:    ptr.Of(256),
-		InfoRetryPolicy: &RetryPolicy{
-			BaseTimeout: optional.Of(2 * time.Second),
-			MaxRetries:  optional.Of(5),
-			Multiplier:  ptr.Of(2.0),
-		},
 	},
 }
 
