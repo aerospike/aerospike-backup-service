@@ -18,11 +18,7 @@ type storageWriter interface {
 	CreateDirWriter(ctx context.Context, storage model.Storage, path string, opts ...options.Opt) (backup.Writer, error)
 }
 
-type credentialsResolver interface {
-	Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error)
-}
-
-// Backup defines the interface for running backups.
+// Backup defines the interface for running scan-based backups.
 type Backup interface {
 	// Run runs the backup and returns a handler for monitoring progress.
 	Run(
@@ -36,40 +32,7 @@ type Backup interface {
 	) (BackupHandler, error)
 }
 
-// BackupExecutor selects scan or server backup execution based on the routine policy.
-type BackupExecutor struct {
-	scan   Backup
-	server Backup
-}
-
-// NewBackupExecutor creates an executor that delegates to scan or server backup based on backup mode.
-func NewBackupExecutor(scan, server Backup) *BackupExecutor {
-	return &BackupExecutor{
-		scan:   scan,
-		server: server,
-	}
-}
-
-// Run delegates to [ScanBackupExecutor] or [ServerBackupExecutor] based on backup mode.
-func (e *BackupExecutor) Run(
-	ctx context.Context,
-	routine *model.BackupRoutine,
-	timeBounds model.TimeBounds,
-	namespace string,
-	path string,
-	scanLimiter *semaphore.Weighted,
-	logger *slog.Logger,
-) (BackupHandler, error) {
-	switch routine.BackupPolicy.GetBackupModeOrDefault() {
-	case model.BackupModeServer:
-		return e.server.Run(ctx, routine, timeBounds, namespace, path, scanLimiter, logger)
-	default:
-		return e.scan.Run(ctx, routine, timeBounds, namespace, path, scanLimiter, logger)
-	}
-}
-
-// closeOnWaitBackupHandler wraps a [BackupHandler] and closes the
-// Aerospike client after [BackupHandler.Wait] completes.
+// closeOnWaitBackupHandler wraps a [BackupHandler] and closes the Aerospike client after Wait completes.
 type closeOnWaitBackupHandler struct {
 	inner         BackupHandler
 	client        aerospike.Client
@@ -77,6 +40,7 @@ type closeOnWaitBackupHandler struct {
 	closeOnce     sync.Once
 }
 
+// newCloseOnWaitBackupHandler wraps handler and ensures the Aerospike client is closed after Wait.
 func newCloseOnWaitBackupHandler(
 	handler BackupHandler,
 	client aerospike.Client,

@@ -8,6 +8,11 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
+const (
+	BackupModeScan   = "scan"
+	BackupModeServer = "server"
+)
+
 // BackupCommonConfig represents service-level backup settings.
 // @Description BackupCommonConfig represents service-level backup settings.
 type BackupCommonConfig struct {
@@ -17,6 +22,8 @@ type BackupCommonConfig struct {
 	// * EU (e.g. 02-Jan-2006-15-04-05)
 	// * US (e.g. Jan-02-2006-15-04-05)
 	TimestampFormat *string `yaml:"timestamp-format,omitempty" json:"timestamp-format,omitempty" enums:"ISO,US,EU" extensions:"x-nullable"` //nolint:lll
+	// Backup mode for the entire service instance: scan (default) or server.
+	BackupMode *string `yaml:"backup-mode,omitempty" json:"backup-mode,omitempty" enums:"scan,server" default:"scan" extensions:"x-nullable"`
 }
 
 // Validate validates the backup subsection configuration.
@@ -33,6 +40,11 @@ func (b *BackupCommonConfig) Validate() error {
 		}
 	}
 
+	if b.BackupMode != nil &&
+		*b.BackupMode != BackupModeScan && *b.BackupMode != BackupModeServer {
+		return errValidationInvalidValue("backup-mode", *b.BackupMode, []string{BackupModeScan, BackupModeServer})
+	}
+
 	return nil
 }
 
@@ -47,13 +59,26 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 		df = &v
 	}
 
-	return &model.BackupCommonConfig{TimestampFormat: df}
+	var backupMode *model.BackupMode
+	if b.BackupMode != nil {
+		mode := model.BackupMode(*b.BackupMode)
+		backupMode = &mode
+	}
+
+	return &model.BackupCommonConfig{
+		TimestampFormat: df,
+		BackupMode:      backupMode,
+	}
 }
 
 func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
 	if m.TimestampFormat != nil {
 		v := string(*m.TimestampFormat)
 		b.TimestampFormat = &v
+	}
+	if m.BackupMode != nil {
+		mode := string(*m.BackupMode)
+		b.BackupMode = &mode
 	}
 }
 
@@ -68,5 +93,10 @@ func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
 	if other == nil {
 		return errors.New("backup removed")
 	}
-	return comparePointers("TimestampFormat", b.TimestampFormat, other.TimestampFormat)
+
+	if err := comparePointers("TimestampFormat", b.TimestampFormat, other.TimestampFormat); err != nil {
+		return err
+	}
+
+	return comparePointers("BackupMode", b.BackupMode, other.BackupMode)
 }

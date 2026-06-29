@@ -145,6 +145,11 @@ func (a *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage)
 	return client, nil
 }
 
+// GetClient returns a cached S3 client for the given storage configuration.
+func (a *S3StorageAccessor) GetClient(ctx context.Context, storage *model.S3Storage) (*awsS3.Client, error) {
+	return a.clientMap.Get(ctx, storage)
+}
+
 func (a *S3StorageAccessor) withCredentialsProvider(
 	ctx context.Context,
 	auth *model.S3Authentication,

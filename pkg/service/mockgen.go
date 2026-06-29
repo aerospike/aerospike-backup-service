@@ -732,10 +732,10 @@ func (m *MockRoutineBackupRunner) EXPECT() *MockRoutineBackupRunnerMockRecorder 
 }
 
 // Run mocks base method.
-func (m *MockRoutineBackupRunner) Run(ctx context.Context, routine *model.BackupRoutine, runSpec model.BackupRunSpec, logger *slog.Logger) (*BackupNamespacesOperation, error) {
+func (m *MockRoutineBackupRunner) Run(ctx context.Context, routine *model.BackupRoutine, runSpec model.BackupRunSpec, logger *slog.Logger) (CancelableBackupHandler, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run", ctx, routine, runSpec, logger)
-	ret0, _ := ret[0].(*BackupNamespacesOperation)
+	ret0, _ := ret[0].(CancelableBackupHandler)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

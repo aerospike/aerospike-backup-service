@@ -85,10 +85,6 @@ func (e *NamespaceBackupRunnerImpl) Run(
 				e.deleteFolder(ctx, routine, path, logger)
 			},
 			OnSuccess: func(ctx context.Context, stats *models.BackupStats) error {
-				if routine.BackupPolicy.GetBackupModeOrDefault() == model.BackupModeServer {
-					return nil // TODO: simplify logic, use other  NamespaceBackupRunnerImpl completely
-				}
-
 				if runSpec.Type == model.BackupTypeIncremental && stats.IsEmpty() {
 					return nil
 				}

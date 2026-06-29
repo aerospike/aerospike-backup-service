@@ -17,7 +17,7 @@ type RoutineBackupRunner interface {
 		routine *model.BackupRoutine,
 		runSpec model.BackupRunSpec,
 		logger *slog.Logger,
-	) (*BackupNamespacesOperation, error)
+	) (CancelableBackupHandler, error)
 }
 
 // RoutineBackupRunnerImpl implements [RoutineBackupRunner] by resolving
@@ -27,7 +27,7 @@ type RoutineBackupRunnerImpl struct {
 	nsRunner NamespaceBackupRunner
 }
 
-// NewRoutineBackupRunner returns an [RoutineBackupRunnerImpl] using the
+// NewRoutineBackupRunner returns a [RoutineBackupRunnerImpl] using the
 // given per-namespace nsRunner and namespace resolver.
 func NewRoutineBackupRunner(
 	nsRunner NamespaceBackupRunner,
@@ -46,7 +46,7 @@ func (r *RoutineBackupRunnerImpl) Run(
 	routine *model.BackupRoutine,
 	runSpec model.BackupRunSpec,
 	logger *slog.Logger,
-) (*BackupNamespacesOperation, error) {
+) (CancelableBackupHandler, error) {
 	namespaces, err := r.resolver.ResolveNamespaces(ctx, routine, logger)
 	if err != nil {
 		return nil, err
