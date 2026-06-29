@@ -34,7 +34,9 @@ type BackupRoutine struct {
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron" example:"0 0 * * * *" validate:"required"`
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string `yaml:"incr-interval-cron,omitempty" json:"incr-interval-cron,omitempty" example:"*/10 * * * * *" extensions:"x-nullable"`
-	// The list of the namespaces to back up (empty list implies backup of the whole cluster).
+	// The list of namespaces to back up.
+	// If empty, the entire cluster is backed up.
+	// The order of namespaces does not determine the backup execution or completion order.
 	Namespaces *[]string `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"[\"source-ns1\"]" validate:"required"`
 	// The list of backup set names (optional, an empty list implies backing up all sets).
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1" extensions:"x-nullable"`
@@ -75,6 +77,13 @@ type BackupRoutine struct {
 	Disabled bool `json:"disabled,omitempty" yaml:"disabled,omitempty" default:"false"`
 }
 
+const (
+	partitionListField = "partition-list"
+	rackListField      = "rack-list"
+	nodeListField      = "node-list"
+	preferRacksField   = "prefer-racks"
+)
+
 // Validate validates the backup routine configuration.
 //
 //nolint:gocognit,funlen
@@ -111,13 +120,13 @@ func (r *BackupRoutine) Validate() error {
 	}
 	// Mutual exclusivity within routine: rack-list, partition-list, node-list
 	if len(r.PartitionList) > 0 && len(r.NodeList) > 0 {
-		return errValidationMutuallyExclusive("partition-list", "node-list")
+		return errValidationMutuallyExclusive(partitionListField, nodeListField)
 	}
 	if len(r.RackList) > 0 && len(r.PartitionList) > 0 {
-		return errValidationMutuallyExclusive("rack-list", "partition-list")
+		return errValidationMutuallyExclusive(rackListField, partitionListField)
 	}
 	if len(r.RackList) > 0 && len(r.NodeList) > 0 {
-		return errValidationMutuallyExclusive("rack-list", "node-list")
+		return errValidationMutuallyExclusive(rackListField, nodeListField)
 	}
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
@@ -148,10 +157,10 @@ func (r *BackupRoutine) Validate() error {
 		}
 	}
 	if duplicates := collections.CheckDuplicates(r.RackList); len(duplicates) > 0 {
-		return errValidationDuplicate("rack-list", duplicates)
+		return errValidationDuplicate(rackListField, duplicates)
 	}
 	if duplicates := collections.CheckDuplicates(r.NodeList); len(duplicates) > 0 {
-		return errValidationDuplicate("node-list", duplicates)
+		return errValidationDuplicate(nodeListField, duplicates)
 	}
 
 	return nil
@@ -226,14 +235,19 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 	// Enforce mutual exclusivity between routine-level selectors and cluster-level prefer-racks
 	if len(cluster.PreferRacks) > 0 {
 		if len(r.RackList) > 0 {
-			return nil, errValidationMutuallyExclusive("rack-list", "prefer-racks")
+			return nil, errValidationMutuallyExclusive(rackListField, preferRacksField)
 		}
 		if len(r.PartitionList) > 0 {
-			return nil, errValidationMutuallyExclusive("partition-list", "prefer-racks")
+			return nil, errValidationMutuallyExclusive(partitionListField, preferRacksField)
 		}
 		if len(r.NodeList) > 0 {
-			return nil, errValidationMutuallyExclusive("node-list", "prefer-racks")
+			return nil, errValidationMutuallyExclusive(nodeListField, preferRacksField)
 		}
+	}
+
+	if cluster.MaxParallelScans != nil && policy.Parallel != nil && *cluster.MaxParallelScans < *policy.Parallel {
+		return nil, fmt.Errorf("backup policy parallelism %d exceeds cluster max parallelism %d",
+			*policy.Parallel, *cluster.MaxParallelScans)
 	}
 
 	storage, found := config.Storage[r.Storage]

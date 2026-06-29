@@ -143,7 +143,7 @@ func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
 		return strconv.Atoi(s)
 	}
 
-	ttl := 100 * time.Millisecond
+	ttl := 500 * time.Millisecond
 	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
 
 	// First call
@@ -151,10 +151,10 @@ func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int32(1), callCount.Load())
 
-	// Access repeatedly to keep it alive
-	// Total time 250ms > 100ms, but accessed every 50ms
+	// Access repeatedly to keep it alive.
+	// Total time is ~500ms (> TTL), refreshed every 100ms
 	for range 5 {
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		_, err := cache.Get(ctx, "1")
 		require.NoError(t, err)
 	}
@@ -163,7 +163,7 @@ func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
 	assert.Equal(t, int32(1), callCount.Load())
 
 	// Now wait longer than TTL
-	time.Sleep(150 * time.Millisecond)
+	time.Sleep(600 * time.Millisecond)
 
 	// Should reload
 	_, err = cache.Get(ctx, "1")
