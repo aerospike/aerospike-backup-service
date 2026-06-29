@@ -1918,7 +1918,7 @@ const docTemplate = `{
                     "example": 10000
                 },
                 "compact": {
-                    "description": "Do not apply base-64 encoding to BLOBs: Bytes, HLL, RawMap, RawList.\nResults in smaller backup files.",
+                    "description": "If set to true, base-64 encoding is not applied to BLOBs (Bytes, HLL, RawMap, RawList), resulting in smaller backup files.",
                     "type": "boolean",
                     "default": false
                 },
