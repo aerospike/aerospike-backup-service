@@ -70,6 +70,9 @@ func newRetryableBackupHandler(
 			return fmt.Errorf("backup failed: %w", err)
 		}
 
+		stats := handler.GetStats()
+		_ = stats
+
 		return retryOnSuccess(handler)
 	}
 

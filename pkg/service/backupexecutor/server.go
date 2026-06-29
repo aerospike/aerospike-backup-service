@@ -10,6 +10,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	"golang.org/x/sync/semaphore"
@@ -31,6 +32,7 @@ type ServerBackupConfig struct {
 	Profile     string
 	AccessKey   string
 	SecretKey   string
+	Endpoint    string
 }
 
 // ServerBackupCredentials holds resolved object-storage credentials for server-side backup.
@@ -127,7 +129,7 @@ func runServerBackup(
 		config.Profile,
 		config.AccessKey,
 		config.SecretKey,
-		"host.docker.internal",
+		config.Endpoint,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start server backup: %w", err)
@@ -135,7 +137,6 @@ func runServerBackup(
 
 	stats := models.NewBackupStats()
 	stats.Start()
-	stats.TotalRecords.Store(serverBackupProgressScale)
 
 	return &ServerBackupHandler{
 		infoClient: infoClient,
@@ -162,6 +163,7 @@ func makeServerBackupConfig(
 		Profile:     s3Storage.S3Profile,
 		AccessKey:   credentials.AccessKey,
 		SecretKey:   credentials.SecretKey,
+		Endpoint:    ptr.ValueOrZero(s3Storage.S3EndpointOverride),
 	}
 
 	return config, nil
