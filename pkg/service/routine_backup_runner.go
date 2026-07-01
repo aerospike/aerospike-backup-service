@@ -52,18 +52,21 @@ func (r *RoutineBackupRunnerImpl) Run(
 		return nil, err
 	}
 
-	// Create a per-routine semaphore to limit concurrent scans across all namespaces.
-	// This ensures fair resource allocation when routines with multiple namespaces
-	// compete with single-namespace routines for the global cluster scan limit.
-	scanLimiter := semaphore.NewWeighted(int64(routine.BackupPolicy.GetParallelOrDefault()))
-
-	op := &BackupNamespacesOperation{
-		handlers: make(map[string]CancelableBackupHandler, len(namespaces)),
+	// Create the per-routine semaphore to limit concurrent scans.
+	// This ensures fair resource allocation between namespaces.
+	routineParallelism := int64(routine.BackupPolicy.GetParallelOrDefault())
+	scanLimiter := semaphore.NewWeighted(routineParallelism)
+	if err = scanLimiter.Acquire(ctx, routineParallelism); err != nil {
+		return nil, err
 	}
+	defer scanLimiter.Release(routineParallelism)
 
+	var handlers = make(map[string]CancelableBackupHandler, len(namespaces))
 	for _, namespace := range namespaces {
-		op.handlers[namespace] = r.nsRunner.Run(ctx, routine, namespace, runSpec, scanLimiter, logger)
+		handlers[namespace] = r.nsRunner.Run(ctx, routine, namespace, runSpec, scanLimiter, logger)
 	}
 
-	return op, nil
+	return &BackupNamespacesOperation{
+		handlers: handlers,
+	}, nil
 }
