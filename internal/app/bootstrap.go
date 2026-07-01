@@ -20,15 +20,18 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/serverbackup"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/serverrestore"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	u "github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/reugn/go-quartz/quartz"
 )
 
-// backupTree holds the backup-mode-specific object graph.
-type backupTree struct {
+// modeTree holds the backup-mode-specific object graph.
+type modeTree struct {
 	registry        service.RunningBackupsRegistry
 	backupScheduler *service.BackupScheduler
+	restoreJobs     *service.RestoreJobsHolder
+	restoreMgr      service.RestoreManager
 }
 
 // InitComponents builds the full object graph and returns scheduler and HTTP service.
@@ -56,21 +59,19 @@ func InitComponents(
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
 	backendService := service.NewBackupBackendService(pathService, operations)
-	var routineStorage u.LockMap
 
-	var tree backupTree
+	var tree modeTree
 	switch config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() {
 	case model.BackupModeServer:
-		tree = newServerBackupTree(scheduler, config, s3Accessor, clientManager, resolver)
+		tree = newServerModeTree(scheduler, config, s3Accessor, clientManager, resolver)
 	default:
-		tree = newScanBackupTree(
+		tree = newScanModeTree(
 			scheduler,
 			config,
 			pathService,
 			backendService,
 			clientManager,
 			operations,
-			&routineStorage,
 		)
 	}
 
@@ -81,19 +82,7 @@ func InitComponents(
 		return nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
 
-	restoreJobs := service.NewRestoreJobsHolder()
-	restoreValidator := service.NewRestoreValidator(tree.registry, config)
-
-	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestore(operations),
-		clientManager,
-		restoreJobs,
-		backendService,
-		&routineStorage,
-		restoreValidator,
-	)
-
-	prometheus.NewMetricsCollector(tree.registry, restoreJobs).Start(ctx, 1*time.Second)
+	prometheus.NewMetricsCollector(tree.registry, tree.restoreJobs).Start(ctx, 1*time.Second)
 
 	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
 	httpService := handlers.NewService(
@@ -101,7 +90,7 @@ func InitComponents(
 		config,
 		configApplier,
 		tree.backupScheduler,
-		restoreMgr,
+		tree.restoreMgr,
 		configRetriever,
 		backendService,
 		tree.registry,
@@ -112,19 +101,20 @@ func InitComponents(
 	return scheduler, httpService, nil
 }
 
-func newScanBackupTree(
+func newScanModeTree(
 	scheduler quartz.Scheduler,
 	config *model.Config,
 	pathService service.PathService,
 	backendService service.BackupReaderWriter,
 	clientManager aerospike.ClientManager,
 	operations *storage.Operations,
-	routineStorage *u.LockMap,
-) backupTree {
+) modeTree {
+	var routineStorage u.LockMap
+
 	history := service.NewHistoryManager(backendService)
 	registry := service.NewRunningBackupsRegistry(history, config)
 
-	retentionManager := service.NewBackupRetentionManager(backendService, routineStorage)
+	retentionManager := service.NewBackupRetentionManager(backendService, &routineStorage)
 	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, operations)
 	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
 
@@ -143,22 +133,37 @@ func newScanBackupTree(
 		routineRunner,
 	)
 
-	return backupTree{
+	restoreJobs := service.NewRestoreJobsHolder()
+	restoreValidator := service.NewRestoreValidator(registry, config)
+	restoreMgr := service.NewRestoreManager(
+		restoreexecutor.NewScanRestore(operations),
+		clientManager,
+		restoreJobs,
+		backendService,
+		&routineStorage,
+		restoreValidator,
+	)
+
+	return modeTree{
 		registry:        registry,
 		backupScheduler: service.NewBackupScheduler(scheduler, backupOrchestrator),
+		restoreJobs:     restoreJobs,
+		restoreMgr:      restoreMgr,
 	}
 }
 
-func newServerBackupTree(
+func newServerModeTree(
 	scheduler quartz.Scheduler,
 	config *model.Config,
 	s3Accessor *storage.S3StorageAccessor,
 	clientManager aerospike.ClientManager,
 	resolver secrets.Resolver,
-) backupTree {
-	history := serverbackup.NewHistoryManager(
-		serverbackup.NewS3ListerFactory(serverbackup.NewS3StorageClientProvider(s3Accessor)),
-	)
+) modeTree {
+	var routineStorage u.LockMap
+
+	listerFactory := serverbackup.NewS3ListerFactory(serverbackup.NewS3StorageClientProvider(s3Accessor))
+
+	history := serverbackup.NewHistoryManager(listerFactory)
 	registry := service.NewRunningBackupsRegistry(history, config)
 
 	completionHandler := service.NewBackupCompletionHandler(
@@ -181,9 +186,22 @@ func newServerBackupTree(
 		routineRunner,
 	)
 
-	return backupTree{
+	restoreJobs := service.NewRestoreJobsHolder()
+	restoreValidator := service.NewRestoreValidator(registry, config)
+	restoreMgr := service.NewRestoreManager(
+		serverrestore.NewRestoreExecutor(resolver),
+		clientManager,
+		restoreJobs,
+		serverrestore.NewBackupReader(listerFactory, config),
+		&routineStorage,
+		restoreValidator,
+	)
+
+	return modeTree{
 		registry:        registry,
 		backupScheduler: service.NewBackupScheduler(scheduler, backupOrchestrator),
+		restoreJobs:     restoreJobs,
+		restoreMgr:      restoreMgr,
 	}
 }
 
