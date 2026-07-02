@@ -32,13 +32,12 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		cluster, err := newCluster.ToModel(config)
-		if err != nil {
-			return fmt.Errorf("invalid cluster %q: %w", name, err)
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+		if _, exists := config.AerospikeClusters[name]; exists {
+			return fmt.Errorf("add Aerospike cluster %q: %w", name, model.ErrAlreadyExists)
 		}
-
-		return config.AddCluster(name, cluster)
+		config.AerospikeClusters[name] = newCluster
+		return nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -114,22 +113,13 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	cluster, err := updatedCluster.ToModel(s.config)
-	if err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-
-	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		err := config.UpdateCluster(clusterName, cluster)
-		if err != nil {
-			return err
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+		if _, exists := config.AerospikeClusters[clusterName]; !exists {
+			return fmt.Errorf("update Aerospike cluster %q: %w", clusterName, model.ErrNotFound)
 		}
-
-		// validate that new cluster has all required NSs (under the lock)
-		s.nsValidator.Validate(r.Context(), config)
+		config.AerospikeClusters[clusterName] = updatedCluster
 		return nil
-	}); err != nil {
+	}, withNamespaceValidation); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -152,8 +142,15 @@ func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err := s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.DeleteCluster(clusterName)
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+		if _, exists := config.AerospikeClusters[clusterName]; !exists {
+			return fmt.Errorf("delete Aerospike cluster %q: %w", clusterName, model.ErrNotFound)
+		}
+		if err := ensureClusterNotInUse(config, clusterName); err != nil {
+			return err
+		}
+		delete(config.AerospikeClusters, clusterName)
+		return nil
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))

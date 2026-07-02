@@ -147,6 +147,20 @@ func (p *BackupPolicy) Validate() error {
 	return nil
 }
 
+// ValidateBackupPolicyParallelism checks that an explicitly set policy parallel value
+// does not exceed the cluster max-parallel-scans limit.
+func ValidateBackupPolicyParallelism(policy *model.BackupPolicy, cluster *model.AerospikeCluster) error {
+	if cluster == nil || policy == nil {
+		return nil
+	}
+	if cluster.MaxParallelScans != nil && policy.Parallel != nil && *cluster.MaxParallelScans < *policy.Parallel {
+		return fmt.Errorf("backup policy parallelism %d exceeds cluster max parallelism %d",
+			*policy.Parallel, *cluster.MaxParallelScans)
+	}
+
+	return nil
+}
+
 func validateBandwidth(bandwidth *int64) error {
 	if bandwidth == nil {
 		return nil

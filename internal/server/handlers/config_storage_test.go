@@ -238,6 +238,20 @@ func TestDeleteStorage(t *testing.T) {
 	}
 }
 
+func TestDeleteStorage_InUseErrorMessage(t *testing.T) {
+	svc := setupTestService()
+	entities := addValidBackupConfig(svc)
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/storage/"+entities.storageName, nil)
+	req.SetPathValue("name", entities.storageName)
+	w := httptest.NewRecorder()
+
+	svc.DeleteStorage(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "delete storage \"storage1\": item is in use: it is used in routine \"routine1\"")
+}
+
 func marshalToString(obj any) string {
 	x, _ := json.Marshal(obj)
 	return string(x)

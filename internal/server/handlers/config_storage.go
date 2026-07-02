@@ -32,12 +32,12 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		storage, err := newStorage.ToModel(config)
-		if err != nil {
-			return fmt.Errorf("failed to convert storage: %w", err)
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+		if _, exists := config.Storage[name]; exists {
+			return fmt.Errorf("add storage %q: %w", name, model.ErrAlreadyExists)
 		}
-		return config.AddStorage(name, storage)
+		config.Storage[name] = newStorage
+		return nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -107,12 +107,12 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		storage, err := updatedStorage.ToModel(config)
-		if err != nil {
-			return fmt.Errorf("failed to convert storage: %w", err)
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+		if _, exists := config.Storage[storageName]; !exists {
+			return fmt.Errorf("update storage %q: %w", storageName, model.ErrNotFound)
 		}
-		return config.UpdateStorage(storageName, storage)
+		config.Storage[storageName] = updatedStorage
+		return nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -136,8 +136,15 @@ func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.DeleteStorage(storageName)
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+		if _, exists := config.Storage[storageName]; !exists {
+			return fmt.Errorf("delete storage %q: %w", storageName, model.ErrNotFound)
+		}
+		if err := ensureStorageNotInUse(config, storageName); err != nil {
+			return err
+		}
+		delete(config.Storage, storageName)
+		return nil
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))
