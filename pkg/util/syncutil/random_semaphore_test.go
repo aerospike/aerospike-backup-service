@@ -35,7 +35,8 @@ func TestRandomSemaphore_Acquire_FastPath(t *testing.T) {
 }
 
 func TestRandomSemaphore_Acquire_BypassWithWaiters(t *testing.T) {
-	s := NewRandomSemaphore(0)
+	s := NewRandomSemaphore(10)
+	require.True(t, s.TryAcquire(10))
 
 	acquired := make(chan struct{})
 	go func() {
@@ -138,7 +139,8 @@ func TestRandomSemaphore_Acquire_ContextCancelAfterPicked(t *testing.T) {
 	const attempts = 200
 
 	for i := range attempts {
-		s := NewRandomSemaphore(0)
+		s := NewRandomSemaphore(1)
+		require.True(t, s.TryAcquire(1))
 
 		ctx, cancel := context.WithCancel(t.Context())
 		errChan := make(chan error, 1)
@@ -164,7 +166,8 @@ func TestRandomSemaphore_Acquire_ContextCancelAfterPicked(t *testing.T) {
 }
 
 func TestRandomSemaphore_Release_UnblocksMultipleWaiters(t *testing.T) {
-	s := NewRandomSemaphore(0)
+	s := NewRandomSemaphore(5)
+	require.True(t, s.TryAcquire(5))
 
 	const waiters = 5
 	var wg sync.WaitGroup
@@ -195,7 +198,8 @@ func TestRandomSemaphore_Release_UnblocksMultipleWaiters(t *testing.T) {
 }
 
 func TestRandomSemaphore_Acquire_DifferentRequestSizes(t *testing.T) {
-	s := NewRandomSemaphore(0)
+	s := NewRandomSemaphore(6)
+	require.True(t, s.TryAcquire(6))
 
 	type result struct {
 		n   int64
@@ -273,4 +277,20 @@ func TestRandomSemaphore_ConcurrentAcquireRelease(t *testing.T) {
 
 func TestRandomSemaphore_ImplementsLimiter(t *testing.T) {
 	var _ Limiter = (*RandomSemaphore)(nil)
+}
+
+func TestRandomSemaphore_Release_PanicsOverCapacity(t *testing.T) {
+	s := NewRandomSemaphore(5)
+
+	require.PanicsWithValue(t, "syncutil: released more than held", func() {
+		s.Release(1)
+	})
+}
+
+func TestRandomSemaphore_Release_PanicsNegative(t *testing.T) {
+	s := NewRandomSemaphore(5)
+
+	require.PanicsWithValue(t, "syncutil: negative release", func() {
+		s.Release(-1)
+	})
 }

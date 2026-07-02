@@ -1,6 +1,7 @@
 package syncutil
 
 import (
+	"container/list"
 	"context"
 	"math/rand/v2"
 	"sync"
@@ -18,140 +19,137 @@ type Limiter interface {
 	TryAcquire(n int64) bool
 }
 
-// waiter represents a blocked Acquire call waiting for n tokens.
-type waiter struct {
-	n     int64
-	ready chan struct{}
+// RandomSemaphore is a weighted semaphore adapted from golang.org/x/sync/semaphore.
+// Waiters are inserted at a random end of the queue (front or back) so wakeups
+// are spread across competing goroutines instead of strict FIFO convoying.
+//
+// Acquire takes available capacity immediately when size-cur >= n, even if other
+// goroutines are already waiting.
+// Everything else is copied from stdlib as is.
+type RandomSemaphore struct {
+	size    int64
+	cur     int64
+	mu      sync.Mutex
+	waiters list.List
 }
 
-// RandomSemaphore is a counting semaphore that wakes blocked waiters in random
-// order rather than FIFO. Random selection spreads wakeups across competing
-// goroutines, which helps avoid convoying when many waiters queue for the same
-// tokens (for example, scan parallelism slots shared across namespaces).
-//
-// Acquire takes available tokens immediately when s.tokens >= n, even if other
-// goroutines are already waiting.
-type RandomSemaphore struct {
-	mu      sync.Mutex
-	tokens  int64
-	waiters []*waiter
+type waiter struct {
+	n     int64
+	ready chan<- struct{}
 }
 
 // NewRandomSemaphore returns a semaphore with the given token capacity.
-func NewRandomSemaphore(capacity int64) *RandomSemaphore {
-	return &RandomSemaphore{
-		tokens: capacity,
-	}
+func NewRandomSemaphore(n int64) *RandomSemaphore {
+	return &RandomSemaphore{size: n}
 }
 
 // TryAcquire takes n tokens immediately. It returns false when fewer than n
 // tokens are available and does not block.
 func (s *RandomSemaphore) TryAcquire(n int64) bool {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.tokens >= n {
-		s.tokens -= n
-		return true
+	success := s.size-s.cur >= n
+	if success {
+		s.cur += n
 	}
-	return false
+	s.mu.Unlock()
+	return success
 }
 
 // Acquire blocks until n tokens are available or ctx is canceled. When enough
-// tokens are already free, they are taken immediately without enqueueing.
+// capacity is already free, it is taken immediately without enqueueing.
 func (s *RandomSemaphore) Acquire(ctx context.Context, n int64) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
+	done := ctx.Done()
 
 	s.mu.Lock()
-	if s.tokens >= n { // Fast path: tokens are available immediately.
-		s.tokens -= n
+	select {
+	case <-done:
+		s.mu.Unlock()
+		return ctx.Err()
+	default:
+	}
+
+	if s.size-s.cur >= n {
+		s.cur += n
 		s.mu.Unlock()
 		return nil
 	}
 
-	w := &waiter{
-		n:     n,
-		ready: make(chan struct{}),
+	if n > s.size {
+		s.mu.Unlock()
+		<-done
+		return ctx.Err()
 	}
-	s.waiters = append(s.waiters, w)
 
+	ready := make(chan struct{})
+	w := waiter{n: n, ready: ready}
+	var elem *list.Element
+	if rand.IntN(2) == 0 { // #nosec G404
+		elem = s.waiters.PushFront(w)
+	} else {
+		elem = s.waiters.PushBack(w)
+	}
 	s.mu.Unlock()
 
 	select {
-	case <-ctx.Done():
+	case <-done:
 		s.mu.Lock()
 		select {
-		case <-w.ready:
-			// Selected by notify but canceled before observing ready.
-			// Return the tokens and try to wake another waiter.
-			s.tokens += n
-			s.notify()
-			s.mu.Unlock()
+		case <-ready:
+			s.cur -= n
+			s.notifyWaiters()
+		default:
+			isFront := s.waiters.Front() == elem
+			s.waiters.Remove(elem)
+			if isFront && s.size > s.cur {
+				s.notifyWaiters()
+			}
+		}
+		s.mu.Unlock()
+
+		return ctx.Err()
+
+	case <-ready:
+		select {
+		case <-done:
+			s.Release(n)
 			return ctx.Err()
 		default:
-			s.removeWaiter(w)
-			s.mu.Unlock()
-			return ctx.Err()
 		}
-	case <-w.ready:
 		return nil
 	}
 }
 
 // Release returns n tokens to the semaphore and wakes waiters that can proceed.
+// It panics on negative n or when more is released than currently held.
 func (s *RandomSemaphore) Release(n int64) {
+	if n < 0 {
+		panic("syncutil: negative release")
+	}
+
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.tokens += n
-	s.notify()
+	s.cur -= n
+	if s.cur < 0 {
+		s.mu.Unlock()
+		panic("syncutil: released more than held")
+	}
+	s.notifyWaiters()
+	s.mu.Unlock()
 }
 
-// notify satisfies as many waiters as possible using the current token balance.
-// Waiters are shuffled, then scanned in that order until tokens are exhausted.
-// Waiters that need more tokens than remain stay queued for a later notify.
-//
-// Must be called with s.mu held.
-func (s *RandomSemaphore) notify() {
-	n := len(s.waiters)
-	if n == 0 || s.tokens == 0 {
-		return
-	}
-
-	rand.Shuffle(n, func(i, j int) {
-		s.waiters[i], s.waiters[j] = s.waiters[j], s.waiters[i]
-	})
-
-	alive := s.waiters[:0]
-	for _, w := range s.waiters[:n] {
-		if s.tokens >= w.n {
-			s.tokens -= w.n
-			close(w.ready)
-			continue
+func (s *RandomSemaphore) notifyWaiters() {
+	for {
+		next := s.waiters.Front()
+		if next == nil {
+			break
 		}
-		alive = append(alive, w)
-	}
 
-	for i := len(alive); i < n; i++ {
-		s.waiters[i] = nil
-	}
-	s.waiters = alive
-}
+		w := next.Value.(waiter)
+		if s.size-s.cur < w.n {
+			break
+		}
 
-// removeWaiter deletes w from the queue. Must be called with s.mu held.
-func (s *RandomSemaphore) removeWaiter(w *waiter) {
-	for i := range s.waiters {
-		if s.waiters[i] != w {
-			continue
-		}
-		lastIdx := len(s.waiters) - 1
-		if i != lastIdx {
-			s.waiters[i] = s.waiters[lastIdx]
-		}
-		s.waiters[lastIdx] = nil
-		s.waiters = s.waiters[:lastIdx]
-		return
+		s.cur += w.n
+		s.waiters.Remove(next)
+		close(w.ready)
 	}
 }
