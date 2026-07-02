@@ -24,7 +24,7 @@ type ClientManager interface {
 	GetClient(
 		ctx context.Context,
 		cluster *model.AerospikeCluster,
-		localLimiter *semaphore.Weighted,
+		localLimiter syncutil.Limiter,
 		logger *slog.Logger,
 	) (Client, error)
 	// Close ensures that the specified backup client is released (ref count decremented).
@@ -56,7 +56,7 @@ type clientInfo struct {
 	// mu protects the fields below (count, closeTimer, aeroClient)
 	mu          sync.RWMutex
 	aeroClient  backup.AerospikeClient
-	scanLimiter *semaphore.Weighted
+	scanLimiter syncutil.Limiter
 
 	count      int
 	closeTimer *time.Timer
@@ -80,7 +80,7 @@ func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Dura
 func (cm *ClientManagerImpl) GetClient(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
-	localLimiter *semaphore.Weighted,
+	localLimiter syncutil.Limiter,
 	logger *slog.Logger,
 ) (Client, error) {
 	if cluster == nil {
@@ -145,7 +145,7 @@ func newInfo(cluster *model.AerospikeCluster) *clientInfo {
 
 func (cm *ClientManagerImpl) createBackupClient(
 	info *clientInfo,
-	localLimiter *semaphore.Weighted,
+	localLimiter syncutil.Limiter,
 	logger *slog.Logger,
 ) (Client, error) {
 	if logger == nil {

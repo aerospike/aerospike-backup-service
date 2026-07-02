@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"golang.org/x/sync/semaphore"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 )
 
 // RoutineBackupRunner coordinates backup runs for every namespace in a routine.
@@ -55,7 +56,7 @@ func (r *RoutineBackupRunnerImpl) Run(
 	// Create the per-routine semaphore to limit concurrent scans.
 	// This ensures fair resource allocation between namespaces.
 	routineParallelism := int64(routine.BackupPolicy.GetParallelOrDefault())
-	scanLimiter := semaphore.NewWeighted(routineParallelism)
+	scanLimiter := syncutil.NewRandomSemaphore(routineParallelism)
 	if err = scanLimiter.Acquire(ctx, routineParallelism); err != nil {
 		return nil, err
 	}
@@ -64,6 +65,16 @@ func (r *RoutineBackupRunnerImpl) Run(
 	var handlers = make(map[string]CancelableBackupHandler, len(namespaces))
 	for _, namespace := range namespaces {
 		handlers[namespace] = r.nsRunner.Run(ctx, routine, namespace, runSpec, scanLimiter, logger)
+	}
+
+	for _, h := range handlers {
+		for h.GetStats() == nil {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(100 * time.Millisecond):
+			}
+		}
 	}
 
 	return &BackupNamespacesOperation{

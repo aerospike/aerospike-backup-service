@@ -12,8 +12,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 	"github.com/aerospike/backup-go/models"
-	"golang.org/x/sync/semaphore"
 )
 
 // NamespaceBackupRunner runs the backup pipeline for one namespace: retries,
@@ -27,7 +27,7 @@ type NamespaceBackupRunner interface {
 		routine *model.BackupRoutine,
 		namespace string,
 		runSpec model.BackupRunSpec,
-		scanLimiter *semaphore.Weighted,
+		scanLimiter syncutil.Limiter,
 		logger *slog.Logger,
 	) CancelableBackupHandler
 }
@@ -69,7 +69,7 @@ func (e *NamespaceBackupRunnerImpl) Run(
 	routine *model.BackupRoutine,
 	namespace string,
 	runSpec model.BackupRunSpec,
-	scanLimiter *semaphore.Weighted,
+	scanLimiter syncutil.Limiter,
 	logger *slog.Logger,
 ) CancelableBackupHandler {
 	return newRetryableBackupHandler(
