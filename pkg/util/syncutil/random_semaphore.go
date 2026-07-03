@@ -19,13 +19,9 @@ type Limiter interface {
 	TryAcquire(n int64) bool
 }
 
-// RandomSemaphore is a weighted semaphore adapted from golang.org/x/sync/semaphore.
-// Waiters are inserted at a random end of the queue (front or back) so wakeups
-// are spread across competing goroutines instead of strict FIFO convoying.
-//
-// Acquire takes available capacity immediately when size-cur >= n, even if other
-// goroutines are already waiting.
-// Everything else is copied from stdlib as is.
+// RandomSemaphore is golang.org/x/sync/semaphore.Weighted with one change:
+// blocked waiters are inserted at a random position in the queue instead of
+// always at the back.
 type RandomSemaphore struct {
 	size    int64
 	cur     int64
@@ -43,11 +39,11 @@ func NewRandomSemaphore(n int64) *RandomSemaphore {
 	return &RandomSemaphore{size: n}
 }
 
-// TryAcquire takes n tokens immediately. It returns false when fewer than n
-// tokens are available and does not block.
+// TryAcquire matches semaphore.Weighted.TryAcquire.
+// It returns false when fewer than n tokens are available and does not block.
 func (s *RandomSemaphore) TryAcquire(n int64) bool {
 	s.mu.Lock()
-	success := s.size-s.cur >= n
+	success := s.size-s.cur >= n && s.waiters.Len() == 0
 	if success {
 		s.cur += n
 	}
@@ -55,7 +51,8 @@ func (s *RandomSemaphore) TryAcquire(n int64) bool {
 	return success
 }
 
-// Acquire blocks until n tokens are available or ctx is canceled. When enough
+// Acquire matches semaphore.Weighted.Acquire except waiters are enqueued randomly.
+// Blocks until n tokens are available or ctx is canceled. When enough
 // capacity is already free, it is taken immediately without enqueueing.
 func (s *RandomSemaphore) Acquire(ctx context.Context, n int64) error {
 	done := ctx.Done()
@@ -67,8 +64,7 @@ func (s *RandomSemaphore) Acquire(ctx context.Context, n int64) error {
 		return ctx.Err()
 	default:
 	}
-
-	if s.size-s.cur >= n {
+	if s.size-s.cur >= n && s.waiters.Len() == 0 {
 		s.cur += n
 		s.mu.Unlock()
 		return nil
@@ -82,12 +78,7 @@ func (s *RandomSemaphore) Acquire(ctx context.Context, n int64) error {
 
 	ready := make(chan struct{})
 	w := waiter{n: n, ready: ready}
-	var elem *list.Element
-	if rand.IntN(2) == 0 { // #nosec G404
-		elem = s.waiters.PushFront(w)
-	} else {
-		elem = s.waiters.PushBack(w)
-	}
+	elem := s.insertWaiter(w)
 	s.mu.Unlock()
 
 	select {
@@ -119,13 +110,8 @@ func (s *RandomSemaphore) Acquire(ctx context.Context, n int64) error {
 	}
 }
 
-// Release returns n tokens to the semaphore and wakes waiters that can proceed.
-// It panics on negative n or when more is released than currently held.
+// Release matches semaphore.Weighted.Release.
 func (s *RandomSemaphore) Release(n int64) {
-	if n < 0 {
-		panic("syncutil: negative release")
-	}
-
 	s.mu.Lock()
 	s.cur -= n
 	if s.cur < 0 {
@@ -152,4 +138,24 @@ func (s *RandomSemaphore) notifyWaiters() {
 		s.waiters.Remove(next)
 		close(w.ready)
 	}
+}
+
+// insertWaiter adds w at a random position in the waiter queue.
+func (s *RandomSemaphore) insertWaiter(w waiter) *list.Element {
+	n := s.waiters.Len()
+	if n == 0 {
+		return s.waiters.PushBack(w)
+	}
+
+	pos := rand.IntN(n + 1) // #nosec G404 — random queue position, not security
+	if pos == n {
+		return s.waiters.PushBack(w)
+	}
+
+	at := s.waiters.Front()
+	for range pos {
+		at = at.Next()
+	}
+
+	return s.waiters.InsertBefore(w, at)
 }
