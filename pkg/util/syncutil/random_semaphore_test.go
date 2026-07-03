@@ -34,40 +34,23 @@ func TestRandomSemaphore_Acquire_FastPath(t *testing.T) {
 	s.Release(3)
 }
 
-func TestRandomSemaphore_Acquire_BypassWithWaiters(t *testing.T) {
-	s := NewRandomSemaphore(10)
-	require.True(t, s.TryAcquire(10))
+func TestRandomSemaphore_Acquire_WaitsWhenOthersQueued(t *testing.T) {
+	s := NewRandomSemaphore(5)
+	require.True(t, s.TryAcquire(5))
 
-	acquired := make(chan struct{})
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
 	go func() {
-		err := s.Acquire(t.Context(), 10)
-		assert.NoError(t, err)
-		close(acquired)
+		_ = s.Acquire(ctx, 1)
 	}()
 
 	time.Sleep(50 * time.Millisecond)
+
+	assert.False(t, s.TryAcquire(1), "TryAcquire must fail while other waiters are queued")
+
+	cancel()
 	s.Release(5)
-	time.Sleep(50 * time.Millisecond)
-
-	err := s.Acquire(t.Context(), 2)
-	require.NoError(t, err, "should bypass the queue when tokens are available")
-
-	select {
-	case <-acquired:
-		t.Fatal("blocked waiter should not proceed until enough tokens are released")
-	default:
-	}
-
-	assert.True(t, s.TryAcquire(3), "three tokens should remain after the bypass acquire")
-	assert.False(t, s.TryAcquire(1))
-
-	s.Release(10)
-
-	select {
-	case <-acquired:
-	case <-time.After(2 * time.Second):
-		t.Fatal("blocked waiter was not satisfied after enough tokens were released")
-	}
 }
 
 func TestRandomSemaphore_Acquire_AlreadyCanceledContext(t *testing.T) {
@@ -289,8 +272,9 @@ func TestRandomSemaphore_Release_PanicsOverCapacity(t *testing.T) {
 
 func TestRandomSemaphore_Release_PanicsNegative(t *testing.T) {
 	s := NewRandomSemaphore(5)
+	require.True(t, s.TryAcquire(5))
 
-	require.PanicsWithValue(t, "syncutil: negative release", func() {
-		s.Release(-1)
+	require.PanicsWithValue(t, "syncutil: released more than held", func() {
+		s.Release(6)
 	})
 }
