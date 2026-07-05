@@ -107,27 +107,6 @@ func (c *Config) routineUsesStorage(s Storage) string {
 	return ""
 }
 
-func (c *Config) UpdateStorage(name string, s Storage) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, exists := c.backupConfig.Storage[name]; !exists {
-		return fmt.Errorf("update storage %q: %w", name, ErrNotFound)
-	}
-
-	oldStorage := c.backupConfig.Storage[name]
-	for _, r := range c.backupConfig.BackupRoutines {
-		if r.Storage == oldStorage {
-			r.Storage = s
-			c.invalidateRoutine(r.Name)
-		}
-	}
-
-	c.backupConfig.Storage[name] = s
-
-	return nil
-}
-
 func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -162,26 +141,6 @@ func (c *Config) routineUsesPolicy(p *BackupPolicy) string {
 		}
 	}
 	return ""
-}
-
-func (c *Config) UpdatePolicy(name string, p *BackupPolicy) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, exists := c.backupConfig.BackupPolicies[name]; !exists {
-		return fmt.Errorf("update backup policy %q: %w", name, ErrNotFound)
-	}
-
-	oldPolicy := c.backupConfig.BackupPolicies[name]
-	for _, r := range c.backupConfig.BackupRoutines {
-		if r.BackupPolicy == oldPolicy {
-			r.BackupPolicy = p
-			c.invalidateRoutine(r.Name)
-		}
-	}
-	c.backupConfig.BackupPolicies[name] = p
-
-	return nil
 }
 
 func (c *Config) Routines() map[string]*BackupRoutine {
@@ -223,32 +182,6 @@ func (c *Config) AddRoutine(r *BackupRoutine) error {
 	return nil
 }
 
-func (c *Config) DeleteRoutine(name string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, exists := c.backupConfig.BackupRoutines[name]; !exists {
-		return fmt.Errorf("delete backup routine %q: %w", name, ErrNotFound)
-	}
-	c.invalidateRoutine(name)
-	delete(c.backupConfig.BackupRoutines, name)
-
-	return nil
-}
-
-func (c *Config) UpdateRoutine(name string, r *BackupRoutine) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, exists := c.backupConfig.BackupRoutines[name]; !exists {
-		return fmt.Errorf("update backup routine %q: %w", name, ErrNotFound)
-	}
-	c.backupConfig.BackupRoutines[name] = r
-	c.invalidateRoutine(r.Name)
-
-	return nil
-}
-
 func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -272,27 +205,6 @@ func (c *Config) DeleteCluster(name string) error {
 		return fmt.Errorf("delete Aerospike cluster %q: %w: it is used in routine %q", name, ErrInUse, routine)
 	}
 	delete(c.backupConfig.AerospikeClusters, name)
-
-	return nil
-}
-
-func (c *Config) UpdateCluster(name string, cluster *AerospikeCluster) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, exists := c.backupConfig.AerospikeClusters[name]; !exists {
-		return fmt.Errorf("update Aerospike cluster %q: %w", name, ErrNotFound)
-	}
-
-	oldCluster := c.backupConfig.AerospikeClusters[name]
-	for _, r := range c.backupConfig.BackupRoutines {
-		if r.SourceCluster == oldCluster {
-			r.SourceCluster = cluster
-			c.invalidateRoutine(r.Name)
-		}
-	}
-
-	c.backupConfig.AerospikeClusters[name] = cluster
 
 	return nil
 }
