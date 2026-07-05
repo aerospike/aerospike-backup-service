@@ -245,9 +245,8 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		}
 	}
 
-	if cluster.MaxParallelScans != nil && policy.Parallel != nil && *cluster.MaxParallelScans < *policy.Parallel {
-		return nil, fmt.Errorf("backup policy parallelism %d exceeds cluster max parallelism %d",
-			*policy.Parallel, *cluster.MaxParallelScans)
+	if err := ValidateBackupPolicyParallelism(policy, cluster); err != nil {
+		return nil, err
 	}
 
 	storage, found := config.Storage[r.Storage]

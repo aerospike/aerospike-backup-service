@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -31,8 +32,12 @@ func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.AddPolicy(name, newPolicy.ToModel())
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+		if _, exists := config.BackupPolicies[name]; exists {
+			return fmt.Errorf("add backup policy %q: %w", name, model.ErrAlreadyExists)
+		}
+		config.BackupPolicies[name] = newPolicy
+		return nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -101,8 +106,12 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.UpdatePolicy(name, updatedPolicy.ToModel())
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+		if _, exists := config.BackupPolicies[name]; !exists {
+			return fmt.Errorf("update backup policy %q: %w", name, model.ErrNotFound)
+		}
+		config.BackupPolicies[name] = updatedPolicy
+		return nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -126,8 +135,15 @@ func (s *Service) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.DeletePolicy(name)
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+		if _, exists := config.BackupPolicies[name]; !exists {
+			return fmt.Errorf("delete backup policy %q: %w", name, model.ErrNotFound)
+		}
+		if err := ensurePolicyNotInUse(config, name); err != nil {
+			return err
+		}
+		delete(config.BackupPolicies, name)
+		return nil
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))
