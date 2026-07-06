@@ -32,12 +32,12 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.AerospikeClusters[name]; exists {
-			return fmt.Errorf("add Aerospike cluster %q: %w", name, model.ErrAlreadyExists)
+			return nil, fmt.Errorf("add Aerospike cluster %q: %w", name, model.ErrAlreadyExists)
 		}
 		config.AerospikeClusters[name] = newCluster
-		return nil
+		return nil, nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -113,12 +113,12 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.AerospikeClusters[clusterName]; !exists {
-			return fmt.Errorf("update Aerospike cluster %q: %w", clusterName, model.ErrNotFound)
+			return nil, fmt.Errorf("update Aerospike cluster %q: %w", clusterName, model.ErrNotFound)
 		}
 		config.AerospikeClusters[clusterName] = updatedCluster
-		return nil
+		return nil, nil
 	}, withNamespaceValidation); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -142,15 +142,15 @@ func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.AerospikeClusters[clusterName]; !exists {
-			return fmt.Errorf("delete Aerospike cluster %q: %w", clusterName, model.ErrNotFound)
+			return nil, fmt.Errorf("delete Aerospike cluster %q: %w", clusterName, model.ErrNotFound)
 		}
 		if err := ensureClusterNotInUse(config, clusterName); err != nil {
-			return err
+			return nil, err
 		}
 		delete(config.AerospikeClusters, clusterName)
-		return nil
+		return nil, nil
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))

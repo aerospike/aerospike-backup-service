@@ -32,12 +32,12 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.BackupRoutines[name]; exists {
-			return fmt.Errorf("add backup routine %q: %w", name, model.ErrAlreadyExists)
+			return nil, fmt.Errorf("add backup routine %q: %w", name, model.ErrAlreadyExists)
 		}
 		config.BackupRoutines[name] = newRoutine
-		return nil
+		return []string{name}, nil
 	}, withNamespaceValidation); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -110,12 +110,12 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.BackupRoutines[name]; !exists {
-			return fmt.Errorf("update backup routine %q: %w", name, model.ErrNotFound)
+			return nil, fmt.Errorf("update backup routine %q: %w", name, model.ErrNotFound)
 		}
 		config.BackupRoutines[name] = updatedRoutine
-		return nil
+		return []string{name}, nil
 	}, withNamespaceValidation); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -139,12 +139,12 @@ func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.BackupRoutines[routineName]; !exists {
-			return fmt.Errorf("delete backup routine %q: %w", routineName, model.ErrNotFound)
+			return nil, fmt.Errorf("delete backup routine %q: %w", routineName, model.ErrNotFound)
 		}
 		delete(config.BackupRoutines, routineName)
-		return nil
+		return []string{routineName}, nil
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))
@@ -169,13 +169,13 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		routine, exists := config.BackupRoutines[routineName]
 		if !exists {
-			return fmt.Errorf("toggle disable for backup routine %q: %w", routineName, model.ErrNotFound)
+			return nil, fmt.Errorf("toggle disable for backup routine %q: %w", routineName, model.ErrNotFound)
 		}
 		routine.Disabled = false
-		return nil
+		return []string{routineName}, nil
 	})
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
@@ -204,13 +204,13 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		routine, exists := config.BackupRoutines[routineName]
 		if !exists {
-			return fmt.Errorf("toggle disable for backup routine %q: %w", routineName, model.ErrNotFound)
+			return nil, fmt.Errorf("toggle disable for backup routine %q: %w", routineName, model.ErrNotFound)
 		}
 		routine.Disabled = true
-		return nil
+		return []string{routineName}, nil
 	})
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
