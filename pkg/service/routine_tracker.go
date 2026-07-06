@@ -112,12 +112,26 @@ func (t *routineTracker) clearFailedBackup(backupType model.BackupType) {
 
 // setLastRun updates the history state.
 // This is called by the HistoryManagerImpl after a scan.
+// It merges rather than replaces, so that a concurrent recordSuccessfulBackup
+// (fired as a goroutine from backup_completion) cannot have its more recent
+// timestamp silently overwritten by a stale storage-scan result.
 func (t *routineTracker) setLastRun(lastRun *model.BackupTime) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	t.lastRun = lastRun
-	t.scanCancel = nil // cannot cancel finished scan
+	if full := lastRun.FullBackupTime(); full != nil {
+		if cur := t.lastRun.FullBackupTime(); cur == nil || full.After(*cur) {
+			t.lastRun.SetFullBackupTime(*full)
+		}
+	}
+
+	if incr := lastRun.IncrementalBackupTime(); incr != nil {
+		if cur := t.lastRun.IncrementalBackupTime(); cur == nil || incr.After(*cur) {
+			t.lastRun.SetIncrementalBackupTime(*incr)
+		}
+	}
+
+	t.scanCancel = nil
 }
 
 // cancel stops all ongoing backups for this routine.
