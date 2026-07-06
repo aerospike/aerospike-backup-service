@@ -42,7 +42,7 @@ func (r *backupReader) getRoutineBackups(ctx context.Context, filter *RoutineFil
 	files = pathsRelativeToStorage(files, storagePrefix)
 	maxPath := filter.getUpperBoundary(r.pathService)
 	eligibleFiles := r.filterEligibleFiles(files, maxPath)
-	slog.Debug("Listed routine backup metadata files",
+	slog.Info("Listed routine backup metadata files",
 		attr.Routine(filter.routineName),
 		slog.String("backupType", string(filter.backupType)),
 		slog.Bool("onlyLast", filter.onlyLast),
@@ -57,13 +57,14 @@ func (r *backupReader) getRoutineBackups(ctx context.Context, filter *RoutineFil
 		if err != nil {
 			return nil, err
 		}
-		slog.Debug("Completed routine backup metadata request",
+		slog.Info("Completed routine backup metadata request",
 			attr.Routine(filter.routineName),
 			slog.String("backupType", string(filter.backupType)),
 			slog.Bool("onlyLast", filter.onlyLast),
 			slog.Int("backups", len(backups)),
 			slog.Duration("duration", time.Since(start)),
 		)
+
 		return backups, nil
 	}
 
@@ -75,7 +76,7 @@ func (r *backupReader) getRoutineBackups(ctx context.Context, filter *RoutineFil
 	readDuration := time.Since(readStart)
 
 	backups = r.filterAndSortBackups(backups, filter.timeBounds())
-	slog.Debug("Completed routine backup metadata request",
+	slog.Info("Completed routine backup metadata request",
 		attr.Routine(filter.routineName),
 		slog.String("backupType", string(filter.backupType)),
 		slog.Bool("onlyLast", filter.onlyLast),
@@ -96,7 +97,7 @@ func (r *backupReader) readLatestBackupDetails(
 ) ([]model.BackupDetails, error) {
 	bounds := filter.timeBounds()
 	pathsByTimestamp := r.groupMetadataPathsByTimestamp(files)
-	slog.Debug("Grouped routine backup metadata files by timestamp",
+	slog.Info("Grouped routine backup metadata files by timestamp",
 		attr.Routine(filter.routineName),
 		slog.String("backupType", string(filter.backupType)),
 		slog.Int("timestamps", len(pathsByTimestamp)),
@@ -121,7 +122,7 @@ func (r *backupReader) readLatestBackupDetails(
 		// in metadata. If this timestamp does not match the full bounds, try the
 		// next newest timestamp.
 		backups = r.filterAndSortBackups(backups, bounds)
-		slog.Debug("Read latest routine backup timestamp metadata",
+		slog.Info("Read latest routine backup timestamp metadata",
 			attr.Routine(filter.routineName),
 			slog.String("backupType", string(filter.backupType)),
 			slog.String("timestamp", timestamp),
@@ -155,7 +156,7 @@ func (r *backupReader) getPathBackups(ctx context.Context, filter *PathFilter) (
 	}
 	readDuration := time.Since(readStart)
 	backups = r.filterAndSortBackups(backups, filter.timeBounds())
-	slog.Debug("Completed path backup metadata request",
+	slog.Info("Completed path backup metadata request",
 		slog.String("path", filter.path),
 		slog.Int("metadataFiles", len(files)),
 		slog.Int("backups", len(backups)),

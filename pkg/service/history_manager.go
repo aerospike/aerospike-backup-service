@@ -41,14 +41,14 @@ func (hm *HistoryManagerImpl) FindLastRun(
 	if err != nil {
 		return nil, fmt.Errorf("read last full backup failed: %w", err)
 	}
-	slog.Debug("Last full backup scan completed",
+	slog.Info("Last full backup scan completed",
 		attr.Routine(routine.Name),
 		slog.Int("backups", len(lastFullBackup)),
 		slog.Duration("duration", time.Since(fullStart)),
 	)
 
 	if len(lastFullBackup) == 0 {
-		slog.Debug("Last backup time scan completed for routine",
+		slog.Info("Last backup time scan completed for routine",
 			attr.Routine(routine.Name),
 			slog.String("lastRun", model.NewNoBackupTime().String()),
 			slog.Duration("duration", time.Since(start)),
@@ -63,7 +63,7 @@ func (hm *HistoryManagerImpl) FindLastRun(
 	if err != nil {
 		return nil, fmt.Errorf("read last incremental backup failed: %w", err)
 	}
-	slog.Debug("Last incremental backup scan completed",
+	slog.Info("Last incremental backup scan completed",
 		attr.Routine(routine.Name),
 		slog.Int("backups", len(lastIncrBackup)),
 		slog.Duration("duration", time.Since(incrementalStart)),
@@ -76,7 +76,7 @@ func (hm *HistoryManagerImpl) FindLastRun(
 		lastRun = model.NewFullBackupTime(lastFullTime)
 	}
 
-	slog.Debug("Last backup time scan completed for routine",
+	slog.Info("Last backup time scan completed for routine",
 		attr.Routine(routine.Name),
 		slog.String("lastRun", lastRun.String()),
 		slog.Duration("duration", time.Since(start)))
