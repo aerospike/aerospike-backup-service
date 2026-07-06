@@ -22,9 +22,9 @@ type RunningBackupsRegistry interface {
 	// clearFailedBackup deletes a backup from the registry.
 	// Should be called for failed backups.
 	clearFailedBackup(routineName string, jt model.BackupType)
-	// recordSuccessfulBackup removes a backup from the registry and updates the last success timestamp.
-	// Should be called after successful backup completion.
-	recordSuccessfulBackup(routineName string, jt model.BackupType, timestamp time.Time)
+	// recordSuccessfulBackup removes a backup from the registry and triggers a storage scan
+	// to update the last backup timestamp. Storage is the single source of truth for history.
+	recordSuccessfulBackup(ctx context.Context, routine *model.BackupRoutine, jt model.BackupType)
 
 	// GetRoutineState returns the current backup statistics for a routine.
 	GetRoutineState(routine *model.BackupRoutine) model.RoutineState
@@ -174,13 +174,15 @@ func (r *RunningBackupsRegistryImpl) register(
 	r.getTracker(routineName).register(backupType, handler)
 }
 
-// recordSuccessfulBackup removes a backup from the registry and updates the last success timestamp.
+// recordSuccessfulBackup removes a backup from the registry and triggers a storage scan
+// to update the last backup timestamp. Storage is the single source of truth for history.
 func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(
-	routineName string,
+	ctx context.Context,
+	routine *model.BackupRoutine,
 	backupType model.BackupType,
-	timestamp time.Time,
 ) {
-	r.getTracker(routineName).recordSuccessfulBackup(routineName, backupType, timestamp)
+	r.getTracker(routine.Name).clearCompletedBackup(backupType)
+	r.scanSingleRoutineHistory(ctx, routine)
 }
 
 // clearFailedBackup deletes a backup from the registry.

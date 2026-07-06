@@ -83,7 +83,7 @@ func TestRegisterAndGetState(t *testing.T) {
 	assert.Equal(t, uint64(50), snapshot.incr.TotalRecords)
 }
 
-func TestRecordSuccessfulBackup(t *testing.T) {
+func TestClearCompletedBackup(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
 	tracker.signalSyncDone()
@@ -93,26 +93,18 @@ func TestRecordSuccessfulBackup(t *testing.T) {
 	handler := NewMockCancelableBackupHandler(ctrl)
 	tracker.register(model.BackupTypeFull, handler)
 
-	// record a successful full backup
-	now := time.Now()
-	tracker.recordSuccessfulBackup(routineName, model.BackupTypeFull, now)
+	tracker.clearCompletedBackup(model.BackupTypeFull)
 
 	snapshot, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)
 	assert.Nil(t, snapshot.full) // handler should be removed
-	assert.Equal(t, now, *snapshot.lastRun.FullBackupTime())
-	assert.Nil(t, snapshot.lastRun.IncrementalBackupTime())
 
-	// record a successful incremental backup
 	tracker.register(model.BackupTypeIncremental, handler)
-	nowIncr := time.Now()
-	tracker.recordSuccessfulBackup(routineName, model.BackupTypeIncremental, nowIncr)
+	tracker.clearCompletedBackup(model.BackupTypeIncremental)
 
 	snapshotIncr, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)
 	assert.Nil(t, snapshotIncr.incr) // handler should be removed
-	assert.Equal(t, now, *snapshotIncr.lastRun.FullBackupTime())
-	assert.Equal(t, nowIncr, *snapshotIncr.lastRun.IncrementalBackupTime())
 }
 
 func TestClearFailedBackup(t *testing.T) {

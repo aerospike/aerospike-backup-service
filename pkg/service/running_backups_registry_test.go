@@ -69,21 +69,26 @@ func TestFinishFull(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	registry := NewRunningBackupsRegistry(nil, nil)
+	now := time.Now()
+	backupTime := model.NewFullBackupTime(now)
+
+	historyMgr := NewMockHistoryManager(ctrl)
+	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(backupTime, nil).Times(1)
+
+	registry := NewRunningBackupsRegistry(historyMgr, nil)
 
 	handler := NewMockCancelableBackupHandler(ctrl)
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
-
-	registry.register(routineName, model.BackupTypeFull, handler)
-	registry.getTracker(routineName).signalSyncDone() // no need to scan history
-
-	now := time.Now()
-	registry.recordSuccessfulBackup(routineName, model.BackupTypeFull, now)
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
 	}
+
+	registry.register(routineName, model.BackupTypeFull, handler)
+	registry.getTracker(routineName).signalSyncDone()
+
+	registry.recordSuccessfulBackup(t.Context(), routine, model.BackupTypeFull)
 
 	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)
@@ -95,22 +100,26 @@ func TestFinishIncremental(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	registry := NewRunningBackupsRegistry(nil, nil)
+	now := time.Now()
+	backupTime := model.NewBackupTime(now.Add(-1*time.Second), now)
+
+	historyMgr := NewMockHistoryManager(ctrl)
+	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(backupTime, nil).Times(1)
+
+	registry := NewRunningBackupsRegistry(historyMgr, nil)
 
 	handler := NewMockCancelableBackupHandler(ctrl)
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
-
-	registry.register(routineName, model.BackupTypeIncremental, handler)
-	registry.getTracker(routineName).signalSyncDone() // no need to scan history
-
-	now := time.Now()
-	registry.recordSuccessfulBackup(routineName, model.BackupTypeFull, now.Add(-1*time.Second))
-	registry.recordSuccessfulBackup(routineName, model.BackupTypeIncremental, now)
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
 	}
+
+	registry.register(routineName, model.BackupTypeIncremental, handler)
+	registry.getTracker(routineName).signalSyncDone()
+
+	registry.recordSuccessfulBackup(t.Context(), routine, model.BackupTypeIncremental)
 
 	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)

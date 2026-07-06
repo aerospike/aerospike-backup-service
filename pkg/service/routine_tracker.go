@@ -2,11 +2,9 @@ package service
 
 import (
 	"context"
-	"log/slog"
 	"sync"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -79,25 +77,13 @@ func (t *routineTracker) register(backupType model.BackupType, handler Cancelabl
 	t.handlers[backupType] = handler
 }
 
-// recordSuccessfulBackup removes a successful backup and updates its last run time.
-func (t *routineTracker) recordSuccessfulBackup(routineName string, backupType model.BackupType, timestamp time.Time) {
+// clearCompletedBackup removes a completed backup handler.
+// It does not update timestamps — that is done by a subsequent storage scan,
+// which is the single source of truth for backup history.
+func (t *routineTracker) clearCompletedBackup(backupType model.BackupType) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	logger := slog.Default().With(attr.Routine(routineName))
-	logger.Info("Set last backup time",
-		slog.String("time", timestamp.String()),
-		slog.String("job", string(backupType)),
-	)
-
-	switch backupType {
-	case model.BackupTypeFull:
-		t.lastRun.SetFullBackupTime(timestamp)
-	case model.BackupTypeIncremental:
-		t.lastRun.SetIncrementalBackupTime(timestamp)
-	}
-
-	// Remove the handler
 	delete(t.handlers, backupType)
 }
 
@@ -110,27 +96,13 @@ func (t *routineTracker) clearFailedBackup(backupType model.BackupType) {
 	delete(t.handlers, backupType)
 }
 
-// setLastRun updates the history state.
-// This is called by the HistoryManagerImpl after a scan.
-// It merges rather than replaces, so that a concurrent recordSuccessfulBackup
-// (fired as a goroutine from backup_completion) cannot have its more recent
-// timestamp silently overwritten by a stale storage-scan result.
+// setLastRun updates the history state from a storage scan result.
+// It replaces the entire lastRun value, making storage the single source of truth.
 func (t *routineTracker) setLastRun(lastRun *model.BackupTime) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if full := lastRun.FullBackupTime(); full != nil {
-		if cur := t.lastRun.FullBackupTime(); cur == nil || full.After(*cur) {
-			t.lastRun.SetFullBackupTime(*full)
-		}
-	}
-
-	if incr := lastRun.IncrementalBackupTime(); incr != nil {
-		if cur := t.lastRun.IncrementalBackupTime(); cur == nil || incr.After(*cur) {
-			t.lastRun.SetIncrementalBackupTime(*incr)
-		}
-	}
-
+	t.lastRun = lastRun
 	t.scanCancel = nil
 }
 
