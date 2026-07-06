@@ -56,7 +56,7 @@ type RunningBackupsRegistryImpl struct {
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
-const getStateTimeout = 5 * time.Second
+const getStateTimeout = 15 * time.Second
 
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
 func NewRunningBackupsRegistry(
