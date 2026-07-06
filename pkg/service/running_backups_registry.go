@@ -151,17 +151,25 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 	defer cancelFunc()
 	tracker.setScanCancel(cancelFunc)
 
-	lastRun, err := r.history.FindLastRun(ctxWithCancel, routine)
+	lastRun, duration, err := timeutil.MeasureDurationWithResult(func() (*model.BackupTime, error) {
+		return r.history.FindLastRun(ctxWithCancel, routine)
+	})
 	if err != nil {
 		if !errors.Is(err, context.Canceled) {
-			slog.Error("Failed to read last backup time during sync", attr.Error(err), attr.Routine(routine.Name))
+			slog.Error("Failed to read last backup time during sync",
+				attr.Error(err), attr.Routine(routine.Name),
+				slog.Duration("duration", duration),
+			)
 		}
 		tracker.setLastRun(model.NewNoBackupTime())
 		return err
 	}
 
-	// On success, update the tracker's history
-	slog.Info("Last existing backup", attr.Routine(routine.Name), slog.Any("time", lastRun))
+	slog.Info("Last existing backup",
+		attr.Routine(routine.Name),
+		slog.Any("time", lastRun),
+		slog.Duration("duration", duration),
+	)
 	tracker.setLastRun(lastRun)
 	prometheus.SetInitialLastBackup(routine.Name, lastRun)
 
