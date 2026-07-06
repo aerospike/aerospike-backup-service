@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -88,7 +89,7 @@ func TestFinishFull(t *testing.T) {
 	registry.register(routineName, model.BackupTypeFull, handler)
 	registry.getTracker(routineName).markScanDone()
 
-	registry.recordSuccessfulBackup(t.Context(), routine, model.BackupTypeFull)
+	registry.recordSuccessfulBackup(routine, model.BackupTypeFull)
 
 	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)
@@ -119,12 +120,35 @@ func TestFinishIncremental(t *testing.T) {
 	registry.register(routineName, model.BackupTypeIncremental, handler)
 	registry.getTracker(routineName).markScanDone()
 
-	registry.recordSuccessfulBackup(t.Context(), routine, model.BackupTypeIncremental)
+	registry.recordSuccessfulBackup(routine, model.BackupTypeIncremental)
 
 	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)
 	assert.Nil(t, stat.Incremental)
 	assert.Equal(t, now, *stat.LastRunTime.IncrementalBackupTime())
+}
+
+func TestCanceledHistoryScanKeepsPreviousLastRun(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	previous := model.NewFullBackupTime(time.Now())
+	historyMgr := NewMockHistoryManager(ctrl)
+	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(nil, context.Canceled).Times(1)
+
+	registry := NewRunningBackupsRegistry(historyMgr, nil)
+	routine := &model.BackupRoutine{
+		Name:         routineName,
+		IntervalCron: "@daily",
+	}
+	registry.getTracker(routineName).setLastRun(previous)
+	registry.getTracker(routineName).markScanDone()
+
+	err := registry.scanSingleRoutineHistory(t.Context(), routine)
+	assert.ErrorIs(t, err, context.Canceled)
+
+	stat := registry.GetRoutineState(routine)
+	assert.Equal(t, previous, stat.LastRunTime)
 }
 
 func TestGetAllCurrentStats(t *testing.T) {

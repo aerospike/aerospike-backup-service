@@ -24,7 +24,7 @@ type RunningBackupsRegistry interface {
 	clearFailedBackup(routineName string, jt model.BackupType)
 	// recordSuccessfulBackup removes a backup from the registry and triggers a storage scan
 	// to update the last backup timestamp. Storage is the single source of truth for history.
-	recordSuccessfulBackup(ctx context.Context, routine *model.BackupRoutine, jt model.BackupType)
+	recordSuccessfulBackup(routine *model.BackupRoutine, jt model.BackupType)
 
 	// GetRoutineState returns the current backup statistics for a routine.
 	GetRoutineState(routine *model.BackupRoutine) model.RoutineState
@@ -155,12 +155,14 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 		return r.history.FindLastRun(ctxWithCancel, routine)
 	})
 	if err != nil {
-		if !errors.Is(err, context.Canceled) {
-			slog.Error("Failed to read last backup time during sync",
-				attr.Error(err), attr.Routine(routine.Name),
-				slog.Duration("duration", duration),
-			)
+		if errors.Is(err, context.Canceled) {
+			return err
 		}
+
+		slog.Error("Failed to read last backup time during sync",
+			attr.Error(err), attr.Routine(routine.Name),
+			slog.Duration("duration", duration),
+		)
 		tracker.setLastRun(model.NewNoBackupTime())
 		return err
 	}
@@ -188,12 +190,11 @@ func (r *RunningBackupsRegistryImpl) register(
 // recordSuccessfulBackup removes a backup from the registry and triggers a storage scan
 // to update the last backup timestamp. Storage is the single source of truth for history.
 func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(
-	ctx context.Context,
 	routine *model.BackupRoutine,
 	backupType model.BackupType,
 ) {
 	r.getTracker(routine.Name).clearBackup(backupType)
-	_ = r.scanSingleRoutineHistory(ctx, routine)
+	_ = r.scanSingleRoutineHistory(context.Background(), routine)
 }
 
 // clearFailedBackup deletes a backup from the registry.
