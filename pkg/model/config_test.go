@@ -55,18 +55,6 @@ func TestInvalidateRoutines(t *testing.T) {
 	assert.Equal(t, []string{"r1"}, invalidated)
 }
 
-func TestInvalidateAllRoutines(t *testing.T) {
-	cfg := NewConfig()
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r2"}))
-	cfg.PopInvalidatedRoutineNames()
-
-	cfg.InvalidateAllRoutines()
-
-	invalidated := cfg.PopInvalidatedRoutineNames()
-	assert.Equal(t, []string{"r1", "r2"}, invalidated)
-}
-
 func TestSetBackupConfig_DoesNotInvalidate(t *testing.T) {
 	cfg := NewConfig()
 	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))

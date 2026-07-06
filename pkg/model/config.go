@@ -233,6 +233,10 @@ func (c *Config) SetBackupConfig(other *BackupConfig) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.backupConfig = *other
+
+	for _, r := range c.backupConfig.BackupRoutines {
+		c.invalidateRoutine(r.Name)
+	}
 }
 
 // InvalidateRoutines marks the given routines as needing reschedule and history rescan.
@@ -250,14 +254,6 @@ func (c *Config) InvalidateRoutines(names []string) {
 }
 
 // InvalidateAllRoutines marks every configured routine as invalidated.
-func (c *Config) InvalidateAllRoutines() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	for _, r := range c.backupConfig.BackupRoutines {
-		c.invalidateRoutine(r.Name)
-	}
-}
 
 // ToggleRoutineDisabled sets the Disabled field of the BackupRoutine based on the provided state.
 func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {

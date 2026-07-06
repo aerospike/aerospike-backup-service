@@ -57,7 +57,6 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
-		config.InvalidateAllRoutines()
 		s.nsValidator.Validate(r.Context(), config) // validate under the lock
 		return nil
 	})
@@ -99,7 +98,6 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.config.SetBackupConfig(config.BackupConfigCopy())
-	s.config.InvalidateAllRoutines()
 	err = s.configApplier.ApplyNewConfig(s.sysCtx)
 
 	if err != nil {
