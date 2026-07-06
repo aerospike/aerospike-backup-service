@@ -4,13 +4,10 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"log/slog"
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -30,61 +27,26 @@ func newBackupReader(pathService PathService, operations storageOperations) *bac
 func (r *backupReader) getRoutineBackups(ctx context.Context, filter *RoutineFilter) ([]model.BackupDetails, error) {
 	backupStorage := filter.storage
 
-	start := time.Now()
-	listStart := time.Now()
 	files, err := r.operations.ReadFileNames(ctx, backupStorage, filter.getPath(), metadataFile, filter.FromTime)
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.getPath(), err)
 	}
-	listDuration := time.Since(listStart)
 
 	storagePrefix := filepath.Clean(backupStorage.GetPath())
 	files = pathsRelativeToStorage(files, storagePrefix)
 	maxPath := filter.getUpperBoundary(r.pathService)
 	eligibleFiles := r.filterEligibleFiles(files, maxPath)
-	slog.Info("Listed routine backup metadata files",
-		attr.Routine(filter.routineName),
-		slog.String("backupType", string(filter.backupType)),
-		slog.Bool("onlyLast", filter.onlyLast),
-		slog.String("path", filter.getPath()),
-		slog.Int("files", len(files)),
-		slog.Int("eligibleFiles", len(eligibleFiles)),
-		slog.Duration("duration", listDuration),
-	)
 
 	if filter.onlyLast {
-		backups, err := r.readLatestBackupDetails(ctx, backupStorage, filter, eligibleFiles)
-		if err != nil {
-			return nil, err
-		}
-		slog.Info("Completed routine backup metadata request",
-			attr.Routine(filter.routineName),
-			slog.String("backupType", string(filter.backupType)),
-			slog.Bool("onlyLast", filter.onlyLast),
-			slog.Int("backups", len(backups)),
-			slog.Duration("duration", time.Since(start)),
-		)
-
-		return backups, nil
+		return r.readLatestBackupDetails(ctx, backupStorage, filter, eligibleFiles)
 	}
 
-	readStart := time.Now()
 	backups, err := r.readBackupDetails(ctx, backupStorage, eligibleFiles)
 	if err != nil {
 		return nil, err
 	}
-	readDuration := time.Since(readStart)
 
 	backups = r.filterAndSortBackups(backups, filter.timeBounds())
-	slog.Info("Completed routine backup metadata request",
-		attr.Routine(filter.routineName),
-		slog.String("backupType", string(filter.backupType)),
-		slog.Bool("onlyLast", filter.onlyLast),
-		slog.Int("metadataFilesRead", len(eligibleFiles)),
-		slog.Int("backups", len(backups)),
-		slog.Duration("readDuration", readDuration),
-		slog.Duration("duration", time.Since(start)),
-	)
 
 	return backups, nil
 }
@@ -97,12 +59,6 @@ func (r *backupReader) readLatestBackupDetails(
 ) ([]model.BackupDetails, error) {
 	bounds := filter.timeBounds()
 	pathsByTimestamp := r.groupMetadataPathsByTimestamp(files)
-	slog.Info("Grouped routine backup metadata files by timestamp",
-		attr.Routine(filter.routineName),
-		slog.String("backupType", string(filter.backupType)),
-		slog.Int("timestamps", len(pathsByTimestamp)),
-		slog.Int("metadataFiles", len(files)),
-	)
 
 	for len(pathsByTimestamp) > 0 {
 		// The storage layout is routine/backup/<timestamp>/data/<namespace>/metadata.yaml,
@@ -111,25 +67,15 @@ func (r *backupReader) readLatestBackupDetails(
 		paths := pathsByTimestamp[timestamp]
 		slices.Sort(paths)
 
-		readStart := time.Now()
 		backups, err := r.readBackupDetails(ctx, storage, paths)
 		if err != nil {
 			return nil, err
 		}
-		readDuration := time.Since(readStart)
 
 		// Created is represented by the timestamp path, but Finished only exists
 		// in metadata. If this timestamp does not match the full bounds, try the
 		// next newest timestamp.
 		backups = r.filterAndSortBackups(backups, bounds)
-		slog.Info("Read latest routine backup timestamp metadata",
-			attr.Routine(filter.routineName),
-			slog.String("backupType", string(filter.backupType)),
-			slog.String("timestamp", timestamp),
-			slog.Int("metadataFilesRead", len(paths)),
-			slog.Int("backups", len(backups)),
-			slog.Duration("duration", readDuration),
-		)
 		if len(backups) > 0 {
 			return backups, nil
 		}
@@ -141,30 +87,16 @@ func (r *backupReader) readLatestBackupDetails(
 }
 
 func (r *backupReader) getPathBackups(ctx context.Context, filter *PathFilter) ([]model.BackupDetails, error) {
-	start := time.Now()
-	listStart := time.Now()
 	files, err := r.operations.ReadFileNames(ctx, filter.storage, filter.path, metadataFile, nil)
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.String(), err)
 	}
-	listDuration := time.Since(listStart)
 	files = pathsRelativeToStorage(files, filepath.Clean(filter.storage.GetPath()))
-	readStart := time.Now()
 	backups, err := r.readBackupDetails(ctx, filter.storage, files)
 	if err != nil {
 		return nil, err
 	}
-	readDuration := time.Since(readStart)
-	backups = r.filterAndSortBackups(backups, filter.timeBounds())
-	slog.Info("Completed path backup metadata request",
-		slog.String("path", filter.path),
-		slog.Int("metadataFiles", len(files)),
-		slog.Int("backups", len(backups)),
-		slog.Duration("listDuration", listDuration),
-		slog.Duration("readDuration", readDuration),
-		slog.Duration("duration", time.Since(start)),
-	)
-	return backups, nil
+	return r.filterAndSortBackups(backups, filter.timeBounds()), nil
 }
 
 // pathsRelativeToStorage normalizes paths from ReadFileNames to be relative to storage root.

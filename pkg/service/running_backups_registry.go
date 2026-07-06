@@ -141,7 +141,7 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 	// Cancel any previous scan that might still be running
 	tracker.cancelScan()
 
-	// beginScan unblocks getState callers waiting on the cancelled scan
+	// beginScan unblocks getState callers waiting on the canceled scan
 	// and installs a new channel. endScan closes it when this scan finishes,
 	// so getState always sees post-scan data.
 	scanCh := tracker.beginScan()
@@ -193,7 +193,7 @@ func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(
 	backupType model.BackupType,
 ) {
 	r.getTracker(routine.Name).clearBackup(backupType)
-	r.scanSingleRoutineHistory(ctx, routine)
+	_ = r.scanSingleRoutineHistory(ctx, routine)
 }
 
 // clearFailedBackup deletes a backup from the registry.

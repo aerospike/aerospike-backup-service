@@ -140,7 +140,7 @@ func (t *routineTracker) cancelScan() {
 }
 
 // beginScan prepares the tracker for a new storage scan.
-// It unblocks any getState callers waiting on a previous (now-cancelled) scan
+// It unblocks any getState callers waiting on a previous (now-canceled) scan
 // and installs a fresh open channel for the new scan.
 // Returns the channel that the caller must pass to endScan when done.
 func (t *routineTracker) beginScan() chan struct{} {
