@@ -16,11 +16,11 @@ func TestNewRoutineTracker(t *testing.T) {
 	tracker := newRoutineTracker()
 	assert.NotNil(t, tracker)
 	assert.NotNil(t, tracker.lastRun)
-	assert.NotNil(t, tracker.initialSyncDone)
-	// initialSyncDone should be open
+	assert.NotNil(t, tracker.scanDone)
+	// scanDone should be open (blocking until first scan)
 	select {
-	case <-tracker.initialSyncDone:
-		t.Fatal("initialSyncDone should be open")
+	case <-tracker.scanDone:
+		t.Fatal("scanDone should be open")
 	default:
 		// success
 	}
@@ -38,7 +38,7 @@ func TestGetState_BlockingAndTimeout(t *testing.T) {
 	// Test blocking and unblocking
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		tracker.signalSyncDone()
+		tracker.markScanDone()
 	}()
 
 	start := time.Now()
@@ -53,7 +53,7 @@ func TestGetState_BlockingAndTimeout(t *testing.T) {
 func TestRegisterAndGetState(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
-	tracker.signalSyncDone() // unblock getState
+	tracker.markScanDone() // unblock getState
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -83,24 +83,24 @@ func TestRegisterAndGetState(t *testing.T) {
 	assert.Equal(t, uint64(50), snapshot.incr.TotalRecords)
 }
 
-func TestClearCompletedBackup(t *testing.T) {
+func TestClearBackup(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
-	tracker.signalSyncDone()
+	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	handler := NewMockCancelableBackupHandler(ctrl)
 	tracker.register(model.BackupTypeFull, handler)
 
-	tracker.clearCompletedBackup(model.BackupTypeFull)
+	tracker.clearBackup(model.BackupTypeFull)
 
 	snapshot, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)
 	assert.Nil(t, snapshot.full) // handler should be removed
 
 	tracker.register(model.BackupTypeIncremental, handler)
-	tracker.clearCompletedBackup(model.BackupTypeIncremental)
+	tracker.clearBackup(model.BackupTypeIncremental)
 
 	snapshotIncr, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)
@@ -110,7 +110,7 @@ func TestClearCompletedBackup(t *testing.T) {
 func TestClearFailedBackup(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
-	tracker.signalSyncDone()
+	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -118,7 +118,7 @@ func TestClearFailedBackup(t *testing.T) {
 	tracker.register(model.BackupTypeFull, handler)
 
 	// clear a failed backup
-	tracker.clearFailedBackup(model.BackupTypeFull)
+	tracker.clearBackup(model.BackupTypeFull)
 
 	snapshot, err := tracker.getState(1 * time.Second)
 	require.NoError(t, err)
@@ -129,7 +129,7 @@ func TestClearFailedBackup(t *testing.T) {
 func TestSetLastRun(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
-	tracker.signalSyncDone()
+	tracker.markScanDone()
 
 	backupTime := model.NewFullBackupTime(time.Now())
 	tracker.setLastRun(backupTime)
@@ -171,19 +171,19 @@ func TestScanCancellation(t *testing.T) {
 	assert.False(t, cancel2Called)
 }
 
-func TestSignalSyncDone_Idempotency(t *testing.T) {
+func TestMarkScanDone_Idempotency(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
 
-	// calling signalSyncDone multiple times should not panic
-	tracker.signalSyncDone()
-	tracker.signalSyncDone()
+	// calling markScanDone multiple times should not panic
+	tracker.markScanDone()
+	tracker.markScanDone()
 
-	// channel should be closed
+	// scanDone should be closed
 	select {
-	case <-tracker.initialSyncDone:
+	case <-tracker.scanDone:
 		// success
 	default:
-		t.Fatal("initialSyncDone should be closed")
+		t.Fatal("scanDone should be closed")
 	}
 }

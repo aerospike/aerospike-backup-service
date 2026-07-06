@@ -25,7 +25,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 
 	// Register a full backup handler
 	registry.register(routineName, model.BackupTypeFull, handler)
-	registry.getTracker(routineName).signalSyncDone() // no need to scan history
+	registry.getTracker(routineName).markScanDone() // no need to scan history
 
 	stat := registry.GetRoutineState(&model.BackupRoutine{
 		Name: routineName,
@@ -86,7 +86,7 @@ func TestFinishFull(t *testing.T) {
 	}
 
 	registry.register(routineName, model.BackupTypeFull, handler)
-	registry.getTracker(routineName).signalSyncDone()
+	registry.getTracker(routineName).markScanDone()
 
 	registry.recordSuccessfulBackup(t.Context(), routine, model.BackupTypeFull)
 
@@ -117,7 +117,7 @@ func TestFinishIncremental(t *testing.T) {
 	}
 
 	registry.register(routineName, model.BackupTypeIncremental, handler)
-	registry.getTracker(routineName).signalSyncDone()
+	registry.getTracker(routineName).markScanDone()
 
 	registry.recordSuccessfulBackup(t.Context(), routine, model.BackupTypeIncremental)
 
@@ -157,9 +157,9 @@ func TestGetAllCurrentStats(t *testing.T) {
 
 	// Register handlers for multiple routines
 	registry.register(routine1, model.BackupTypeFull, handler)
-	registry.getTracker(routine1).signalSyncDone() // no need to scan history
+	registry.getTracker(routine1).markScanDone() // no need to scan history
 	registry.register(routine2, model.BackupTypeIncremental, handler)
-	registry.getTracker(routine2).signalSyncDone() // no need to scan history
+	registry.getTracker(routine2).markScanDone() // no need to scan history
 
 	// Get all current stats
 	stats := registry.GetRunningState()

@@ -141,8 +141,11 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 	// Cancel any previous scan that might still be running
 	tracker.cancelScan()
 
-	// Always signal that the (first) sync is done, even on failure.
-	defer tracker.signalSyncDone()
+	// beginScan unblocks getState callers waiting on the cancelled scan
+	// and installs a new channel. endScan closes it when this scan finishes,
+	// so getState always sees post-scan data.
+	scanCh := tracker.beginScan()
+	defer tracker.endScan(scanCh)
 
 	ctxWithCancel, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
@@ -181,13 +184,13 @@ func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(
 	routine *model.BackupRoutine,
 	backupType model.BackupType,
 ) {
-	r.getTracker(routine.Name).clearCompletedBackup(backupType)
+	r.getTracker(routine.Name).clearBackup(backupType)
 	r.scanSingleRoutineHistory(ctx, routine)
 }
 
 // clearFailedBackup deletes a backup from the registry.
 func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, backupType model.BackupType) {
-	r.getTracker(routineName).clearFailedBackup(backupType)
+	r.getTracker(routineName).clearBackup(backupType)
 }
 
 // GetRoutineState returns the current backup statistics for a routine.
