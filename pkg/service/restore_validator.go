@@ -32,18 +32,18 @@ type RestoreValidator interface {
 }
 
 type restoreValidatorImpl struct {
-	runningBackups RunningBackupsRegistry
-	routines       routineProvider
+	startController StartController
+	routines        routineProvider
 }
 
 // NewRestoreValidator creates a validator for restore operations.
 func NewRestoreValidator(
-	runningBackups RunningBackupsRegistry,
+	startController StartController,
 	routines routineProvider,
 ) RestoreValidator {
 	return &restoreValidatorImpl{
-		runningBackups: runningBackups,
-		routines:       routines,
+		startController: startController,
+		routines:        routines,
 	}
 }
 
@@ -118,9 +118,7 @@ func (r *restoreValidatorImpl) checkRunningBackupsConflict(
 ) error {
 	clusterHash := cluster.Hash()
 	for _, routine := range r.routines.Routines() {
-		state := r.runningBackups.GetRoutineState(routine)
-		if state.Full == nil && state.Incremental == nil {
-			// Skip routines that don't have an active full or incremental backup job.
+		if !r.startController.HasBackupRunning(routine) {
 			continue
 		}
 

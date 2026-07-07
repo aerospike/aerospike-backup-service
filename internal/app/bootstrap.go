@@ -81,7 +81,7 @@ func InitComponents(
 	}
 
 	restoreJobs := service.NewRestoreJobsHolder()
-	restoreValidator := service.NewRestoreValidator(registry, config)
+	restoreValidator := service.NewRestoreValidator(startController, config)
 
 	restoreMgr := service.NewRestoreManager(
 		restoreexecutor.NewRestore(operations),

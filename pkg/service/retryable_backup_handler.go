@@ -96,6 +96,7 @@ func (h *retryableBackupHandler) Wait(ctx context.Context) error {
 	}
 }
 
+// GetStats returns backup statistics from the inner handler, or nil before Start() completes.
 func (h *retryableBackupHandler) GetStats() *models.BackupStats {
 	h.RLock()
 	defer h.RUnlock()

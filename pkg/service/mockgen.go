@@ -692,6 +692,20 @@ func (m *MockStartController) EXPECT() *MockStartControllerMockRecorder {
 	return m.recorder
 }
 
+// HasBackupRunning mocks base method.
+func (m *MockStartController) HasBackupRunning(routine *model.BackupRoutine) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasBackupRunning", routine)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasBackupRunning indicates an expected call of HasBackupRunning.
+func (mr *MockStartControllerMockRecorder) HasBackupRunning(routine any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasBackupRunning", reflect.TypeOf((*MockStartController)(nil).HasBackupRunning), routine)
+}
+
 // TryStart mocks base method.
 func (m *MockStartController) TryStart(routine *model.BackupRoutine, now time.Time, backupType model.BackupType) (func(), error) {
 	m.ctrl.T.Helper()

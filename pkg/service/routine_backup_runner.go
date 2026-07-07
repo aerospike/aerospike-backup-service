@@ -68,16 +68,24 @@ func (r *RoutineBackupRunnerImpl) Run(
 	}
 
 	for _, h := range handlers {
-		for h.GetStats() == nil {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(100 * time.Millisecond):
-			}
+		if err := waitUntilBackupStarted(ctx, h); err != nil {
+			return nil, err
 		}
 	}
 
 	return &BackupNamespacesOperation{
 		handlers: handlers,
 	}, nil
+}
+
+// waitUntilBackupStarted blocks until the namespace backup pipeline has started.
+func waitUntilBackupStarted(ctx context.Context, h CancelableBackupHandler) error {
+	for h.GetStats() == nil {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+	return nil
 }

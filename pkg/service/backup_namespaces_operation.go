@@ -48,8 +48,8 @@ func (op *BackupNamespacesOperation) GetMetrics() *models.Metrics {
 	return models.SumMetrics(metrics...)
 }
 
-// GetStats return aggregated public statistics for all inner handlers.
-// return nil if no handlers are currently running.
+// GetStats returns aggregated statistics across all namespace handlers.
+// Returns nil when no namespace backup has started yet (all inner GetStats are nil).
 func (op *BackupNamespacesOperation) GetStats() *models.BackupStats {
 	activeHandlers := 0
 

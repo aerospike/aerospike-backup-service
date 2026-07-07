@@ -22,7 +22,7 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	registry := NewMockRunningBackupsRegistry(ctrl)
+	startController := NewMockStartController(ctrl)
 	config := NewMockroutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
@@ -35,11 +35,11 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 		},
 	}
 	config.EXPECT().Routines().Return(routines)
-	registry.EXPECT().
-		GetRoutineState(routines["routine-1"]).
-		Return(model.RoutineState{Full: &model.RunningJob{}})
+	startController.EXPECT().
+		HasBackupRunning(routines["routine-1"]).
+		Return(true)
 
-	validator := NewRestoreValidator(registry, config)
+	validator := NewRestoreValidator(startController, config)
 
 	infoGetter := fakeInfoGetter{}
 
@@ -63,7 +63,7 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	registry := NewMockRunningBackupsRegistry(ctrl)
+	startController := NewMockStartController(ctrl)
 	config := NewMockroutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
@@ -76,11 +76,11 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 		},
 	}
 	config.EXPECT().Routines().Return(routines)
-	registry.EXPECT().
-		GetRoutineState(routines["routine-1"]).
-		Return(model.RoutineState{Incremental: &model.RunningJob{}})
+	startController.EXPECT().
+		HasBackupRunning(routines["routine-1"]).
+		Return(true)
 
-	validator := NewRestoreValidator(registry, config)
+	validator := NewRestoreValidator(startController, config)
 
 	infoGetter := fakeInfoGetter{}
 
@@ -90,6 +90,84 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 			DestinationCluster: *cluster,
 		},
 		infoGetter,
+		map[string][]model.BackupDetails{
+			"ns1": {{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}}},
+		},
+	)
+
+	require.ErrorContains(t, err,
+		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
+	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
+}
+
+func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	startController := NewMockStartController(ctrl)
+	config := NewMockroutineProvider(ctrl)
+
+	clusterLabel := "cluster-a"
+	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	routines := map[string]*model.BackupRoutine{
+		"routine-1": {
+			Name:          "routine-1",
+			SourceCluster: cluster,
+			Namespaces:    []string{"ns1"},
+		},
+	}
+	config.EXPECT().Routines().Return(routines)
+	startController.EXPECT().
+		HasBackupRunning(routines["routine-1"]).
+		Return(true)
+
+	validator := NewRestoreValidator(startController, config)
+
+	err := validator.ValidatePath(
+		t.Context(),
+		&model.RestoreRequest{
+			DestinationCluster: *cluster,
+		},
+		fakeInfoGetter{},
+		[]model.BackupDetails{
+			{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}},
+		},
+	)
+
+	require.ErrorContains(t, err,
+		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
+	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
+}
+
+func TestRestoreValidator_BlocksTimeRestoreOnPendingBackupStart(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	startController := NewMockStartController(ctrl)
+	config := NewMockroutineProvider(ctrl)
+
+	clusterLabel := "cluster-a"
+	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	routines := map[string]*model.BackupRoutine{
+		"routine-1": {
+			Name:          "routine-1",
+			SourceCluster: cluster,
+			Namespaces:    []string{"ns1"},
+		},
+	}
+	config.EXPECT().Routines().Return(routines)
+	startController.EXPECT().
+		HasBackupRunning(routines["routine-1"]).
+		Return(true)
+
+	validator := NewRestoreValidator(startController, config)
+
+	err := validator.ValidateTimestamp(
+		t.Context(),
+		&model.RestoreTimestampRequest{
+			DestinationCluster: *cluster,
+		},
+		fakeInfoGetter{},
 		map[string][]model.BackupDetails{
 			"ns1": {{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}}},
 		},
