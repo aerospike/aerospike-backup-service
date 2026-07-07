@@ -8,6 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
@@ -145,7 +146,7 @@ func TestCanceledHistoryScanKeepsPreviousLastRun(t *testing.T) {
 	registry.getTracker(routineName).markScanDone()
 
 	err := registry.scanSingleRoutineHistory(t.Context(), routine)
-	assert.ErrorIs(t, err, context.Canceled)
+	require.ErrorIs(t, err, context.Canceled)
 
 	stat := registry.GetRoutineState(routine)
 	assert.Equal(t, previous, stat.LastRunTime)
