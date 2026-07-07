@@ -144,7 +144,7 @@ func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 			return nil, fmt.Errorf("delete backup routine %q: %w", name, model.ErrNotFound)
 		}
 		delete(config.BackupRoutines, name)
-		return nil, nil
+		return []string{name}, nil
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))
@@ -210,8 +210,8 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 			return nil, fmt.Errorf("toggle disable for backup routine %q: %w", name, model.ErrNotFound)
 		}
 		routine.Disabled = true
-		return nil, nil
-	}) // name -> routineName
+		return []string{name}, nil
+	})
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
 			httpError(w, errRoutineNotFound(name))
