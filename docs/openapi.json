@@ -1856,11 +1856,6 @@
         "description": "OpenAPI",
         "url": "https://swagger.io/resources/open-api/"
     },
-    "servers": [
-        {
-            "url": "//localhost:8080"
-        }
-    ],
     "components": {
         "requestBodies": {
             "dto.Storage": {
