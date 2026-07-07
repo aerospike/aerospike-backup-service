@@ -37,17 +37,53 @@ func (r *backupReader) getRoutineBackups(ctx context.Context, filter *RoutineFil
 	maxPath := filter.getUpperBoundary(r.pathService)
 	eligibleFiles := r.filterEligibleFiles(files, maxPath)
 
+	if filter.onlyLast {
+		return r.readLatestBackupDetails(ctx, backupStorage, filter, eligibleFiles)
+	}
+
 	backups, err := r.readBackupDetails(ctx, backupStorage, eligibleFiles)
 	if err != nil {
 		return nil, err
 	}
 
 	backups = r.filterAndSortBackups(backups, filter.timeBounds())
-	if filter.onlyLast {
-		backups = r.getLastBackupsByCreated(backups)
-	}
 
 	return backups, nil
+}
+
+func (r *backupReader) readLatestBackupDetails(
+	ctx context.Context,
+	storage model.Storage,
+	filter *RoutineFilter,
+	files []string,
+) ([]model.BackupDetails, error) {
+	bounds := filter.timeBounds()
+	pathsByTimestamp := r.groupMetadataPathsByTimestamp(files)
+
+	for len(pathsByTimestamp) > 0 {
+		// The storage layout is routine/backup/<timestamp>/data/<namespace>/metadata.yaml,
+		// so the newest timestamp directory identifies the last backup run.
+		timestamp := maxTimestamp(pathsByTimestamp)
+		paths := pathsByTimestamp[timestamp]
+		slices.Sort(paths)
+
+		backups, err := r.readBackupDetails(ctx, storage, paths)
+		if err != nil {
+			return nil, err
+		}
+
+		// Created is represented by the timestamp path, but Finished only exists
+		// in metadata. If this timestamp does not match the full bounds, try the
+		// next newest timestamp.
+		backups = r.filterAndSortBackups(backups, bounds)
+		if len(backups) > 0 {
+			return backups, nil
+		}
+
+		delete(pathsByTimestamp, timestamp)
+	}
+
+	return nil, nil
 }
 
 func (r *backupReader) getPathBackups(ctx context.Context, filter *PathFilter) ([]model.BackupDetails, error) {
@@ -84,6 +120,26 @@ func (r *backupReader) filterEligibleFiles(files []string, maxPath string) []str
 		}
 	}
 	return out
+}
+
+func (r *backupReader) groupMetadataPathsByTimestamp(files []string) map[string][]string {
+	pathsByTimestamp := make(map[string][]string)
+	for _, file := range files {
+		timestamp := r.pathService.ExtractTimestampFromPath(file)
+		if timestamp != "" {
+			pathsByTimestamp[timestamp] = append(pathsByTimestamp[timestamp], file)
+		}
+	}
+
+	return pathsByTimestamp
+}
+
+func maxTimestamp(pathsByTimestamp map[string][]string) string {
+	var latestTimestamp string
+	for timestamp := range pathsByTimestamp {
+		latestTimestamp = max(latestTimestamp, timestamp)
+	}
+	return latestTimestamp
 }
 
 // readBackupDetails reads and parses metadata for the given metadata file paths.
@@ -136,29 +192,6 @@ func (r *backupReader) filterAndSortBackups(
 
 		return cmp.Compare(a.Key, b.Key)
 	})
-
-	return out
-}
-
-// getLastBackupsByCreated returns only backups whose Created time equals the latest.
-func (r *backupReader) getLastBackupsByCreated(backups []model.BackupDetails) []model.BackupDetails {
-	if len(backups) == 0 {
-		return nil
-	}
-
-	latest := backups[0].Created
-	for _, b := range backups[1:] {
-		if b.Created.After(latest) {
-			latest = b.Created
-		}
-	}
-
-	out := make([]model.BackupDetails, 0, len(backups))
-	for _, b := range backups {
-		if b.Created.Equal(latest) {
-			out = append(out, b)
-		}
-	}
 
 	return out
 }

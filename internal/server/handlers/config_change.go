@@ -14,9 +14,10 @@ type backupConfigChangeOptions struct {
 
 // changeBackupConfig applies a mutation to the backup configuration DTO, validates the
 // full configuration via ToModel, and persists the result.
+// The mutate function returns routine names that should be rescheduled and rescanned.
 func (s *Service) changeBackupConfig(
 	ctx context.Context,
-	mutate func(*dto.Config) error,
+	mutate func(*dto.Config) ([]string, error),
 	opts ...func(*backupConfigChangeOptions),
 ) error {
 	options := backupConfigChangeOptions{}
@@ -28,7 +29,8 @@ func (s *Service) changeBackupConfig(
 	defer s.changeConfigLock.Unlock()
 
 	dtoConfig := dto.NewConfigFromModel(s.config)
-	if err := mutate(dtoConfig); err != nil {
+	routinesToInvalidate, err := mutate(dtoConfig)
+	if err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
@@ -38,6 +40,7 @@ func (s *Service) changeBackupConfig(
 	}
 
 	s.config.SetBackupConfig(modelConfig.BackupConfigCopy())
+	s.config.InvalidateRoutines(routinesToInvalidate)
 
 	if options.validateNamespaces {
 		s.nsValidator.Validate(ctx, s.config)
@@ -56,6 +59,16 @@ func (s *Service) changeBackupConfig(
 
 func withNamespaceValidation(opts *backupConfigChangeOptions) {
 	opts.validateNamespaces = true
+}
+
+func routinesUsingStorage(config *dto.Config, storageName string) []string {
+	var names []string
+	for name, routine := range config.BackupRoutines {
+		if routine != nil && routine.Storage == storageName {
+			names = append(names, name)
+		}
+	}
+	return names
 }
 
 func ensurePolicyNotInUse(config *dto.Config, policyName string) error {

@@ -32,12 +32,12 @@ func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.BackupPolicies[name]; exists {
-			return fmt.Errorf("add backup policy %q: %w", name, model.ErrAlreadyExists)
+			return nil, fmt.Errorf("add backup policy %q: %w", name, model.ErrAlreadyExists)
 		}
 		config.BackupPolicies[name] = newPolicy
-		return nil
+		return nil, nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -106,12 +106,12 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.BackupPolicies[name]; !exists {
-			return fmt.Errorf("update backup policy %q: %w", name, model.ErrNotFound)
+			return nil, fmt.Errorf("update backup policy %q: %w", name, model.ErrNotFound)
 		}
 		config.BackupPolicies[name] = updatedPolicy
-		return nil
+		return nil, nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -135,15 +135,15 @@ func (s *Service) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.BackupPolicies[name]; !exists {
-			return fmt.Errorf("delete backup policy %q: %w", name, model.ErrNotFound)
+			return nil, fmt.Errorf("delete backup policy %q: %w", name, model.ErrNotFound)
 		}
 		if err := ensurePolicyNotInUse(config, name); err != nil {
-			return err
+			return nil, err
 		}
 		delete(config.BackupPolicies, name)
-		return nil
+		return nil, nil
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))
