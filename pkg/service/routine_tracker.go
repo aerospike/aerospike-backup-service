@@ -67,13 +67,14 @@ func (t *routineTracker) getState(timeout time.Duration) (*trackerSnapshot, erro
 		// old channel and installs a new one), loop to wait for the new scan.
 		t.mu.RLock()
 		if t.scanDone == done {
-			defer t.mu.RUnlock()
-
-			return &trackerSnapshot{
+			snapshot := &trackerSnapshot{
 				full:    currentBackupStatus(t.handlers[model.BackupTypeFull]),
 				incr:    currentBackupStatus(t.handlers[model.BackupTypeIncremental]),
 				lastRun: t.lastRun,
-			}, nil
+			}
+			t.mu.RUnlock()
+
+			return snapshot, nil
 		}
 		t.mu.RUnlock()
 	}
