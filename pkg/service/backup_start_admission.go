@@ -22,6 +22,9 @@ type StartController interface {
 		now time.Time,
 		backupType model.BackupType,
 	) (release func(), err error)
+	// HasPendingStart reports whether a backup start was admitted but may not yet be
+	// visible in the running-backups registry (e.g. during namespace resolution).
+	HasPendingStart(routineName string, backupType model.BackupType) bool
 }
 
 // TokenID identifies a single in-flight admission reservation.
@@ -88,6 +91,16 @@ func (a *startControllerImpl) TryStart(
 //
 // This operation is idempotent: unknown or already-released tokens are ignored.
 // Multiple reservations for the same routine/type are tracked by a reference count.
+func (a *startControllerImpl) HasPendingStart(routineName string, backupType model.BackupType) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	return a.activeReservations[reservationKey{
+		routineName: routineName,
+		backupType:  backupType,
+	}] > 0
+}
+
 func (a *startControllerImpl) release(tokenID TokenID) {
 	a.mu.Lock()
 	defer a.mu.Unlock()

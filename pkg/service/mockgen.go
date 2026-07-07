@@ -692,6 +692,20 @@ func (m *MockStartController) EXPECT() *MockStartControllerMockRecorder {
 	return m.recorder
 }
 
+// HasPendingStart mocks base method.
+func (m *MockStartController) HasPendingStart(routineName string, backupType model.BackupType) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasPendingStart", routineName, backupType)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasPendingStart indicates an expected call of HasPendingStart.
+func (mr *MockStartControllerMockRecorder) HasPendingStart(routineName, backupType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPendingStart", reflect.TypeOf((*MockStartController)(nil).HasPendingStart), routineName, backupType)
+}
+
 // TryStart mocks base method.
 func (m *MockStartController) TryStart(routine *model.BackupRoutine, now time.Time, backupType model.BackupType) (func(), error) {
 	m.ctrl.T.Helper()

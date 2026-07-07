@@ -23,6 +23,7 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	defer ctrl.Finish()
 
 	registry := NewMockRunningBackupsRegistry(ctrl)
+	startController := NewMockStartController(ctrl)
 	config := NewMockroutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
@@ -39,7 +40,7 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 		GetRoutineState(routines["routine-1"]).
 		Return(model.RoutineState{Full: &model.RunningJob{}})
 
-	validator := NewRestoreValidator(registry, config)
+	validator := NewRestoreValidator(registry, startController, config)
 
 	infoGetter := fakeInfoGetter{}
 
@@ -64,6 +65,7 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	defer ctrl.Finish()
 
 	registry := NewMockRunningBackupsRegistry(ctrl)
+	startController := NewMockStartController(ctrl)
 	config := NewMockroutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
@@ -80,7 +82,7 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 		GetRoutineState(routines["routine-1"]).
 		Return(model.RoutineState{Incremental: &model.RunningJob{}})
 
-	validator := NewRestoreValidator(registry, config)
+	validator := NewRestoreValidator(registry, startController, config)
 
 	infoGetter := fakeInfoGetter{}
 
@@ -92,6 +94,89 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 		infoGetter,
 		map[string][]model.BackupDetails{
 			"ns1": {{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}}},
+		},
+	)
+
+	require.ErrorContains(t, err,
+		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
+	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
+}
+
+func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	registry := NewMockRunningBackupsRegistry(ctrl)
+	startController := NewMockStartController(ctrl)
+	config := NewMockroutineProvider(ctrl)
+
+	clusterLabel := "cluster-a"
+	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	routines := map[string]*model.BackupRoutine{
+		"routine-1": {
+			Name:          "routine-1",
+			SourceCluster: cluster,
+			Namespaces:    []string{"ns1"},
+		},
+	}
+	config.EXPECT().Routines().Return(routines)
+	registry.EXPECT().
+		GetRoutineState(routines["routine-1"]).
+		Return(model.RoutineState{})
+	startController.EXPECT().
+		HasPendingStart("routine-1", model.BackupTypeFull).
+		Return(true)
+
+	validator := NewRestoreValidator(registry, startController, config)
+
+	err := validator.ValidatePath(
+		t.Context(),
+		&model.RestoreRequest{
+			DestinationCluster: *cluster,
+		},
+		fakeInfoGetter{},
+		[]model.BackupDetails{
+			{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}},
+		},
+	)
+
+	require.ErrorContains(t, err,
+		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
+	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
+}
+
+func TestRestoreValidator_BlocksPathRestoreWhenBackupHandlerHasNoStatsYet(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	registry := NewMockRunningBackupsRegistry(ctrl)
+	startController := NewMockStartController(ctrl)
+	config := NewMockroutineProvider(ctrl)
+
+	clusterLabel := "cluster-a"
+	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	routines := map[string]*model.BackupRoutine{
+		"routine-1": {
+			Name:          "routine-1",
+			SourceCluster: cluster,
+			Namespaces:    []string{"ns1"},
+		},
+	}
+	config.EXPECT().Routines().Return(routines)
+	registry.EXPECT().
+		GetRoutineState(routines["routine-1"]).
+		Return(model.RoutineState{Full: &model.RunningJob{}})
+
+	validator := NewRestoreValidator(registry, startController, config)
+
+	err := validator.ValidatePath(
+		t.Context(),
+		&model.RestoreRequest{
+			DestinationCluster: *cluster,
+		},
+		fakeInfoGetter{},
+		[]model.BackupDetails{
+			{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}},
 		},
 	)
 
