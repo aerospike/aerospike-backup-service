@@ -3593,7 +3593,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "v3.5.0",
-	Host:             "localhost:8080",
+	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},
 	Title:            "Backup Service REST API Specification",
