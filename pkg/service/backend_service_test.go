@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -312,6 +313,78 @@ func TestIncrementalBackup(t *testing.T) {
 	assert.Equal(t, "test-routine/backup/1609459200000/data/test-ns", fullBackups[0].Key)
 }
 
+func TestLastBackupsReadsOnlyLatestTimestampMetadataFiles(t *testing.T) {
+	pathService := NewPathService(nil)
+	operations := &countingStorageOperations{
+		storageOperations: storage.NewOperations(storage.NewLocalStorageAccessor()),
+	}
+	service := NewBackupBackendService(pathService, operations)
+	routine := &model.BackupRoutine{
+		Name: "test-routine",
+		Storage: &model.LocalStorage{
+			Path: t.TempDir(),
+		},
+	}
+
+	fullTimes := []time.Time{
+		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+	for _, tm := range fullTimes {
+		path := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, tm)
+		err := service.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
+			Created:   tm,
+			Finished:  tm,
+			Namespace: testNamespace,
+		})
+		require.NoError(t, err)
+	}
+
+	latestFullTime := fullTimes[1]
+	latestFullOtherNamespacePath := pathService.GetBackupPath(
+		routineName,
+		model.BackupTypeFull,
+		"other-ns",
+		latestFullTime,
+	)
+	err := service.WriteBackupMetadata(t.Context(), routine, latestFullOtherNamespacePath, model.BackupMetadata{
+		Created:   latestFullTime,
+		Finished:  latestFullTime,
+		Namespace: "other-ns",
+	})
+	require.NoError(t, err)
+
+	incrementalTimes := []time.Time{
+		time.Date(2021, 1, 2, 1, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
+	}
+	for _, tm := range incrementalTimes {
+		path := pathService.GetBackupPath(routineName, model.BackupTypeIncremental, testNamespace, tm)
+		err = service.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
+			Created:   tm,
+			Finished:  tm,
+			From:      latestFullTime,
+			Namespace: testNamespace,
+		})
+		require.NoError(t, err)
+	}
+
+	backups, err := service.GetBackups(t.Context(), NewFullBackupFilter(routine).Last())
+	require.NoError(t, err)
+	require.Len(t, backups, 2)
+	assert.Equal(t, latestFullTime, backups[0].Created)
+	assert.Equal(t, latestFullTime, backups[1].Created)
+	assert.ElementsMatch(t, []string{testNamespace, "other-ns"}, []string{backups[0].Namespace, backups[1].Namespace})
+	assert.Equal(t, 2, operations.readFileCount)
+
+	backups, err = service.GetBackups(t.Context(),
+		NewIncrementalBackupFilter(routine).WithFromTime(latestFullTime).Last())
+	require.NoError(t, err)
+	require.Len(t, backups, 1)
+	assert.Equal(t, incrementalTimes[1], backups[0].Created)
+	assert.Equal(t, 3, operations.readFileCount)
+}
+
 func TestReadPath(t *testing.T) {
 	service, pathService, routine := setupLocalBackupBackendService(t)
 
@@ -382,4 +455,18 @@ func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, Pa
 	pathService := NewPathService(nil)
 	return NewBackupBackendService(pathService,
 		storage.NewOperations(storage.NewLocalStorageAccessor())), pathService, routine
+}
+
+type countingStorageOperations struct {
+	storageOperations
+	readFileCount int
+}
+
+func (o *countingStorageOperations) ReadFile(
+	ctx context.Context,
+	storage model.Storage,
+	filePath string,
+) ([]byte, error) {
+	o.readFileCount++
+	return o.storageOperations.ReadFile(ctx, storage, filePath)
 }

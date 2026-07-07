@@ -42,3 +42,38 @@ func TestToggleRoutineDisabled_InvalidatesOnDisableAndEnable(t *testing.T) {
 	invalidated := cfg.PopInvalidatedRoutineNames()
 	assert.Equal(t, []string{"r1"}, invalidated)
 }
+
+func TestInvalidateRoutines(t *testing.T) {
+	cfg := NewConfig()
+	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
+	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r2"}))
+	cfg.PopInvalidatedRoutineNames()
+
+	cfg.InvalidateRoutines([]string{"r1"})
+
+	invalidated := cfg.PopInvalidatedRoutineNames()
+	assert.Equal(t, []string{"r1"}, invalidated)
+}
+
+func TestInvalidateAllRoutines(t *testing.T) {
+	cfg := NewConfig()
+	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
+	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r2"}))
+	cfg.PopInvalidatedRoutineNames()
+
+	cfg.InvalidateAllRoutines()
+
+	invalidated := cfg.PopInvalidatedRoutineNames()
+	assert.Equal(t, []string{"r1", "r2"}, invalidated)
+}
+
+func TestSetBackupConfig_DoesNotInvalidate(t *testing.T) {
+	cfg := NewConfig()
+	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
+	cfg.PopInvalidatedRoutineNames()
+
+	other := cfg.BackupConfigCopy()
+	cfg.SetBackupConfig(other)
+
+	assert.Empty(t, cfg.PopInvalidatedRoutineNames())
+}

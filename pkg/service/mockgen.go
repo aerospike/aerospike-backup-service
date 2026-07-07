@@ -314,15 +314,15 @@ func (mr *MockRunningBackupsRegistryMockRecorder) clearFailedBackup(routineName,
 }
 
 // recordSuccessfulBackup mocks base method.
-func (m *MockRunningBackupsRegistry) recordSuccessfulBackup(routineName string, jt model.BackupType, timestamp time.Time) {
+func (m *MockRunningBackupsRegistry) recordSuccessfulBackup(routine *model.BackupRoutine, jt model.BackupType) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "recordSuccessfulBackup", routineName, jt, timestamp)
+	m.ctrl.Call(m, "recordSuccessfulBackup", routine, jt)
 }
 
 // recordSuccessfulBackup indicates an expected call of recordSuccessfulBackup.
-func (mr *MockRunningBackupsRegistryMockRecorder) recordSuccessfulBackup(routineName, jt, timestamp any) *gomock.Call {
+func (mr *MockRunningBackupsRegistryMockRecorder) recordSuccessfulBackup(routine, jt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "recordSuccessfulBackup", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).recordSuccessfulBackup), routineName, jt, timestamp)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "recordSuccessfulBackup", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).recordSuccessfulBackup), routine, jt)
 }
 
 // register mocks base method.

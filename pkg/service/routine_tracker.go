@@ -2,11 +2,9 @@ package service
 
 import (
 	"context"
-	"log/slog"
 	"sync"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -22,13 +20,12 @@ type routineTracker struct {
 	// --- History State ---
 	lastRun *model.BackupTime
 
-	// --- Sync State ---
-	// initialSyncDone is closed when the *first* history scan is completed.
-	// This ensures getState calls block until history is populated.
-	initialSyncDone chan struct{}
-	syncOnce        sync.Once
-
 	// --- Scan State ---
+	// scanDone is closed when no scan is in progress. getState blocks on it
+	// so that callers always see post-scan data.
+	// Open (blocking) → a scan is pending or in progress.
+	// Closed (non-blocking) → the most recent scan has finished.
+	scanDone chan struct{}
 	// scanCancel is a function to cancel a currently running history scan
 	scanCancel context.CancelFunc
 }
@@ -36,9 +33,9 @@ type routineTracker struct {
 // newRoutineTracker creates a new, initialized tracker.
 func newRoutineTracker() *routineTracker {
 	return &routineTracker{
-		initialSyncDone: make(chan struct{}),
-		handlers:        make(map[model.BackupType]CancelableBackupHandler),
-		lastRun:         model.NewNoBackupTime(), // Start with non-nil empty state
+		scanDone: make(chan struct{}), // open = blocks until first scan completes
+		handlers: make(map[model.BackupType]CancelableBackupHandler),
+		lastRun:  model.NewNoBackupTime(),
 	}
 }
 
@@ -50,24 +47,37 @@ type trackerSnapshot struct {
 }
 
 // getState returns a consistent, point-in-time snapshot of the routine's state.
-// It will block until the initial history synchronization is complete.
+// It blocks until no storage scan is in progress, so that the returned
+// timestamps always reflect completed scan results.
 func (t *routineTracker) getState(timeout time.Duration) (*trackerSnapshot, error) {
-	select {
-	case <-t.initialSyncDone:
-		// Sync is done, proceed
-	case <-time.After(timeout):
-		return nil, context.DeadlineExceeded
+	deadline := time.After(timeout)
+
+	for {
+		t.mu.RLock()
+		done := t.scanDone
+		t.mu.RUnlock()
+
+		select {
+		case <-done:
+		case <-deadline:
+			return nil, context.DeadlineExceeded
+		}
+
+		// If a new scan started while we were waiting (beginScan closes the
+		// old channel and installs a new one), loop to wait for the new scan.
+		t.mu.RLock()
+		if t.scanDone == done {
+			snapshot := &trackerSnapshot{
+				full:    currentBackupStatus(t.handlers[model.BackupTypeFull]),
+				incr:    currentBackupStatus(t.handlers[model.BackupTypeIncremental]),
+				lastRun: t.lastRun,
+			}
+			t.mu.RUnlock()
+
+			return snapshot, nil
+		}
+		t.mu.RUnlock()
 	}
-
-	// Now that sync is done, get a consistent snapshot of the state
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	return &trackerSnapshot{
-		full:    currentBackupStatus(t.handlers[model.BackupTypeFull]),
-		incr:    currentBackupStatus(t.handlers[model.BackupTypeIncremental]),
-		lastRun: t.lastRun,
-	}, nil
 }
 
 // register adds a new running backup handler.
@@ -79,45 +89,22 @@ func (t *routineTracker) register(backupType model.BackupType, handler Cancelabl
 	t.handlers[backupType] = handler
 }
 
-// recordSuccessfulBackup removes a successful backup and updates its last run time.
-func (t *routineTracker) recordSuccessfulBackup(routineName string, backupType model.BackupType, timestamp time.Time) {
+// clearBackup removes a backup handler from the tracker.
+func (t *routineTracker) clearBackup(backupType model.BackupType) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	logger := slog.Default().With(attr.Routine(routineName))
-	logger.Info("Set last backup time",
-		slog.String("time", timestamp.String()),
-		slog.String("job", string(backupType)),
-	)
-
-	switch backupType {
-	case model.BackupTypeFull:
-		t.lastRun.SetFullBackupTime(timestamp)
-	case model.BackupTypeIncremental:
-		t.lastRun.SetIncrementalBackupTime(timestamp)
-	}
-
-	// Remove the handler
 	delete(t.handlers, backupType)
 }
 
-// clearFailedBackup removes a failed backup handler without updating history.
-func (t *routineTracker) clearFailedBackup(backupType model.BackupType) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	// Remove the handler
-	delete(t.handlers, backupType)
-}
-
-// setLastRun updates the history state.
-// This is called by the HistoryManagerImpl after a scan.
+// setLastRun updates the history state from a storage scan result.
+// It replaces the entire lastRun value, making storage the single source of truth.
 func (t *routineTracker) setLastRun(lastRun *model.BackupTime) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	t.lastRun = lastRun
-	t.scanCancel = nil // cannot cancel finished scan
+	t.scanCancel = nil
 }
 
 // cancel stops all ongoing backups for this routine.
@@ -153,9 +140,41 @@ func (t *routineTracker) cancelScan() {
 	}
 }
 
-// signalSyncDone safely closes the initialSyncDone channel.
-func (t *routineTracker) signalSyncDone() {
-	t.syncOnce.Do(func() {
-		close(t.initialSyncDone)
-	})
+// beginScan prepares the tracker for a new storage scan.
+// It unblocks any getState callers waiting on a previous (now-canceled) scan
+// and installs a fresh open channel for the new scan.
+// Returns the channel that the caller must pass to endScan when done.
+func (t *routineTracker) beginScan() chan struct{} {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	closeChan(t.scanDone)
+
+	ch := make(chan struct{})
+	t.scanDone = ch
+
+	return ch
+}
+
+// endScan signals that a specific scan has completed.
+// Safe to call if the channel was already closed (e.g. by a subsequent beginScan).
+func (t *routineTracker) endScan(ch chan struct{}) {
+	closeChan(ch)
+}
+
+// markScanDone closes the current scanDone channel without starting a new scan.
+// Used in tests to skip the scan wait.
+func (t *routineTracker) markScanDone() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	closeChan(t.scanDone)
+}
+
+func closeChan(ch chan struct{}) {
+	select {
+	case <-ch:
+	default:
+		close(ch)
+	}
 }

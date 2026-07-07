@@ -233,6 +233,27 @@ func (c *Config) SetBackupConfig(other *BackupConfig) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.backupConfig = *other
+}
+
+// InvalidateRoutines marks the given routines as needing reschedule and history rescan.
+func (c *Config) InvalidateRoutines(names []string) {
+	if len(names) == 0 {
+		return
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for _, name := range names {
+		c.invalidateRoutine(name)
+	}
+}
+
+// InvalidateAllRoutines marks every configured routine as invalidated.
+func (c *Config) InvalidateAllRoutines() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	for _, r := range c.backupConfig.BackupRoutines {
 		c.invalidateRoutine(r.Name)
 	}
