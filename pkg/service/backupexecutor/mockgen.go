@@ -15,9 +15,9 @@ import (
 	reflect "reflect"
 
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	syncutil "github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 	models "github.com/aerospike/backup-go/models"
 	gomock "go.uber.org/mock/gomock"
-	semaphore "golang.org/x/sync/semaphore"
 )
 
 // MockBackup is a mock of Backup interface.
@@ -45,7 +45,7 @@ func (m *MockBackup) EXPECT() *MockBackupMockRecorder {
 }
 
 // Run mocks base method.
-func (m *MockBackup) Run(ctx context.Context, routine *model.BackupRoutine, timeBounds model.TimeBounds, namespace, path string, scanLimiter *semaphore.Weighted, logger *slog.Logger) (BackupHandler, error) {
+func (m *MockBackup) Run(ctx context.Context, routine *model.BackupRoutine, timeBounds model.TimeBounds, namespace, path string, scanLimiter syncutil.Limiter, logger *slog.Logger) (BackupHandler, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run", ctx, routine, timeBounds, namespace, path, scanLimiter, logger)
 	ret0, _ := ret[0].(BackupHandler)

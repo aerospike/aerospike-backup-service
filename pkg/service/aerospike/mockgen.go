@@ -15,9 +15,9 @@ import (
 	reflect "reflect"
 
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	syncutil "github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 	backup "github.com/aerospike/backup-go"
 	gomock "go.uber.org/mock/gomock"
-	semaphore "golang.org/x/sync/semaphore"
 )
 
 // MockClientManager is a mock of ClientManager interface.
@@ -57,7 +57,7 @@ func (mr *MockClientManagerMockRecorder) Close(arg0 any) *gomock.Call {
 }
 
 // GetClient mocks base method.
-func (m *MockClientManager) GetClient(ctx context.Context, cluster *model.AerospikeCluster, localLimiter *semaphore.Weighted, logger *slog.Logger) (Client, error) {
+func (m *MockClientManager) GetClient(ctx context.Context, cluster *model.AerospikeCluster, localLimiter syncutil.Limiter, logger *slog.Logger) (Client, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClient", ctx, cluster, localLimiter, logger)
 	ret0, _ := ret[0].(Client)
