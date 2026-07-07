@@ -22,7 +22,6 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	registry := NewMockRunningBackupsRegistry(ctrl)
 	startController := NewMockStartController(ctrl)
 	config := NewMockroutineProvider(ctrl)
 
@@ -36,11 +35,11 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 		},
 	}
 	config.EXPECT().Routines().Return(routines)
-	registry.EXPECT().
-		GetRoutineState(routines["routine-1"]).
-		Return(model.RoutineState{Full: &model.RunningJob{}})
+	startController.EXPECT().
+		HasBackupRunning(routines["routine-1"]).
+		Return(true)
 
-	validator := NewRestoreValidator(registry, startController, config)
+	validator := NewRestoreValidator(startController, config)
 
 	infoGetter := fakeInfoGetter{}
 
@@ -64,7 +63,6 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	registry := NewMockRunningBackupsRegistry(ctrl)
 	startController := NewMockStartController(ctrl)
 	config := NewMockroutineProvider(ctrl)
 
@@ -78,11 +76,11 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 		},
 	}
 	config.EXPECT().Routines().Return(routines)
-	registry.EXPECT().
-		GetRoutineState(routines["routine-1"]).
-		Return(model.RoutineState{Incremental: &model.RunningJob{}})
+	startController.EXPECT().
+		HasBackupRunning(routines["routine-1"]).
+		Return(true)
 
-	validator := NewRestoreValidator(registry, startController, config)
+	validator := NewRestoreValidator(startController, config)
 
 	infoGetter := fakeInfoGetter{}
 
@@ -106,7 +104,6 @@ func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	registry := NewMockRunningBackupsRegistry(ctrl)
 	startController := NewMockStartController(ctrl)
 	config := NewMockroutineProvider(ctrl)
 
@@ -120,14 +117,11 @@ func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
 		},
 	}
 	config.EXPECT().Routines().Return(routines)
-	registry.EXPECT().
-		GetRoutineState(routines["routine-1"]).
-		Return(model.RoutineState{})
 	startController.EXPECT().
-		HasPendingStart("routine-1", model.BackupTypeFull).
+		HasBackupRunning(routines["routine-1"]).
 		Return(true)
 
-	validator := NewRestoreValidator(registry, startController, config)
+	validator := NewRestoreValidator(startController, config)
 
 	err := validator.ValidatePath(
 		t.Context(),
@@ -145,11 +139,10 @@ func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
 	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
 }
 
-func TestRestoreValidator_BlocksPathRestoreWhenBackupHandlerHasNoStatsYet(t *testing.T) {
+func TestRestoreValidator_BlocksTimeRestoreOnPendingBackupStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	registry := NewMockRunningBackupsRegistry(ctrl)
 	startController := NewMockStartController(ctrl)
 	config := NewMockroutineProvider(ctrl)
 
@@ -163,20 +156,20 @@ func TestRestoreValidator_BlocksPathRestoreWhenBackupHandlerHasNoStatsYet(t *tes
 		},
 	}
 	config.EXPECT().Routines().Return(routines)
-	registry.EXPECT().
-		GetRoutineState(routines["routine-1"]).
-		Return(model.RoutineState{Full: &model.RunningJob{}})
+	startController.EXPECT().
+		HasBackupRunning(routines["routine-1"]).
+		Return(true)
 
-	validator := NewRestoreValidator(registry, startController, config)
+	validator := NewRestoreValidator(startController, config)
 
-	err := validator.ValidatePath(
+	err := validator.ValidateTimestamp(
 		t.Context(),
-		&model.RestoreRequest{
+		&model.RestoreTimestampRequest{
 			DestinationCluster: *cluster,
 		},
 		fakeInfoGetter{},
-		[]model.BackupDetails{
-			{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}},
+		map[string][]model.BackupDetails{
+			"ns1": {{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}}},
 		},
 	)
 

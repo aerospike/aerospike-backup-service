@@ -32,19 +32,16 @@ type RestoreValidator interface {
 }
 
 type restoreValidatorImpl struct {
-	runningBackups  RunningBackupsRegistry
 	startController StartController
 	routines        routineProvider
 }
 
 // NewRestoreValidator creates a validator for restore operations.
 func NewRestoreValidator(
-	runningBackups RunningBackupsRegistry,
 	startController StartController,
 	routines routineProvider,
 ) RestoreValidator {
 	return &restoreValidatorImpl{
-		runningBackups:  runningBackups,
 		startController: startController,
 		routines:        routines,
 	}
@@ -121,8 +118,7 @@ func (r *restoreValidatorImpl) checkRunningBackupsConflict(
 ) error {
 	clusterHash := cluster.Hash()
 	for _, routine := range r.routines.Routines() {
-		state := r.runningBackups.GetRoutineState(routine)
-		if !r.isBackupActive(routine.Name, state) {
+		if !r.startController.HasBackupRunning(routine) {
 			continue
 		}
 
@@ -140,15 +136,6 @@ func (r *restoreValidatorImpl) checkRunningBackupsConflict(
 	}
 
 	return nil
-}
-
-func (r *restoreValidatorImpl) isBackupActive(routineName string, state model.RoutineState) bool {
-	if state.Full != nil || state.Incremental != nil {
-		return true
-	}
-
-	return r.startController.HasPendingStart(routineName, model.BackupTypeFull) ||
-		r.startController.HasPendingStart(routineName, model.BackupTypeIncremental)
 }
 
 // validateDestinationNamespaces checks destination namespaces existence in destination cluster.

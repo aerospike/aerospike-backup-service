@@ -150,7 +150,7 @@ func TestStartControllerRelease_TracksReservationCountByToken(t *testing.T) {
 	require.Empty(t, impl.tokenToReservation)
 }
 
-func TestStartController_HasPendingStart(t *testing.T) {
+func TestStartController_HasBackupRunning(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -159,17 +159,16 @@ func TestStartController_HasPendingStart(t *testing.T) {
 	registry := NewMockRunningBackupsRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewNoBackupTime()},
-	).Times(1)
+	).AnyTimes()
 
 	controller := NewStartController(registry, NewStartDecider())
 
-	require.False(t, controller.HasPendingStart(routine.Name, model.BackupTypeFull))
+	require.False(t, controller.HasBackupRunning(routine))
 
 	release, err := controller.TryStart(routine, now, model.BackupTypeFull)
 	require.NoError(t, err)
-	require.True(t, controller.HasPendingStart(routine.Name, model.BackupTypeFull))
-	require.False(t, controller.HasPendingStart(routine.Name, model.BackupTypeIncremental))
+	require.True(t, controller.HasBackupRunning(routine))
 
 	release()
-	require.False(t, controller.HasPendingStart(routine.Name, model.BackupTypeFull))
+	require.False(t, controller.HasBackupRunning(routine))
 }
