@@ -152,7 +152,7 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 
 	cancel()
 
-	err := handler.Wait(context.Background())
+	err := handler.Wait(context.WithoutCancel(t.Context())) // need to ensure cancel is coming from handler
 
 	mu.Lock()
 	defer mu.Unlock()
