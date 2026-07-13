@@ -32,6 +32,7 @@ type modeTree struct {
 	backupScheduler *service.BackupScheduler
 	restoreJobs     *service.RestoreJobsHolder
 	restoreMgr      service.RestoreManager
+	backupReader    service.BackupReader
 }
 
 // InitComponents builds the full object graph and returns scheduler and HTTP service.
@@ -92,7 +93,7 @@ func InitComponents(
 		tree.backupScheduler,
 		tree.restoreMgr,
 		configRetriever,
-		backendService,
+		tree.backupReader,
 		tree.registry,
 		configurationManager,
 		nsValidator,
@@ -149,6 +150,7 @@ func newScanModeTree(
 		backupScheduler: service.NewBackupScheduler(scheduler, backupOrchestrator),
 		restoreJobs:     restoreJobs,
 		restoreMgr:      restoreMgr,
+		backupReader:    backendService,
 	}
 }
 
@@ -188,11 +190,12 @@ func newServerModeTree(
 
 	restoreJobs := service.NewRestoreJobsHolder()
 	restoreValidator := service.NewRestoreValidator(registry, config)
+	backupReader := serverrestore.NewBackupReader(listerFactory, config)
 	restoreMgr := service.NewRestoreManager(
 		serverrestore.NewRestoreExecutor(resolver),
 		clientManager,
 		restoreJobs,
-		serverrestore.NewBackupReader(listerFactory, config),
+		backupReader,
 		&routineStorage,
 		restoreValidator,
 	)
@@ -202,6 +205,7 @@ func newServerModeTree(
 		backupScheduler: service.NewBackupScheduler(scheduler, backupOrchestrator),
 		restoreJobs:     restoreJobs,
 		restoreMgr:      restoreMgr,
+		backupReader:    backupReader,
 	}
 }
 
