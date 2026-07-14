@@ -8,6 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
+	"github.com/aerospike/backup-go/pkg/asinfo"
 )
 
 const pollInterval = time.Second
@@ -44,16 +45,23 @@ func (h *Handler) Wait(ctx context.Context) error {
 	defer ticker.Stop()
 
 	for {
-		stable, err := h.infoClient.GetClusterStable(ctx, h.namespace)
+		stable, err := h.infoClient.GetRestoreStatus(ctx, h.namespace)
 		if err != nil {
 			h.waitErr = fmt.Errorf("failed to get cluster stable status: %w", err)
 			h.stats.Stop()
 			return h.waitErr
 		}
 
-		if stable {
+		if stable == asinfo.RestoreStateNone { // restore completed
 			h.stats.Stop()
 			return nil
+		}
+
+		if stable == asinfo.RestoreStateFailed {
+			h.waitErr = fmt.Errorf("restore failed")
+			h.stats.Stop()
+
+			return h.waitErr
 		}
 
 		select {

@@ -3,7 +3,6 @@ package serverrestore
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -11,6 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/serverbackup"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/aerospike/backup-go/pkg/asinfo"
 	infoModels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
@@ -55,7 +55,7 @@ func (r *RestoreExecutor) Run(
 			return nil, fmt.Errorf("failed to get status of server restore: %w", err)
 		}
 
-		if status == "READY" {
+		if status == asinfo.RestoreStateReady {
 			break
 		}
 
@@ -67,16 +67,9 @@ func (r *RestoreExecutor) Run(
 		return nil, err
 	}
 
-	for {
-		time.Sleep(retryDelay)
-		err = infoClient.StartServerRestore(ctx, restoreRequest)
-		if err == nil {
-			break
-		}
-
-		if !strings.Contains(err.Error(), "retry once status reports READY") {
-			return nil, fmt.Errorf("failed to start server restore: %w", err)
-		}
+	err = infoClient.StartServerRestore(ctx, restoreRequest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start server restore: %w", err)
 	}
 
 	return newHandler(infoClient, namespace), nil
