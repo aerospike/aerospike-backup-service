@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
+	infoModels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
 const (
@@ -63,7 +64,7 @@ type backupHandler interface {
 type infoClient interface {
 	StartServerBackup(
 		ctx context.Context,
-		namespace, storage, bucket, region, profile, accessKey, secretKey, endpoint, modifiedBefore, modifiedAfter string,
+		backup *infoModels.RequestBackup,
 	) (string, error)
 	GetBackupStatus(ctx context.Context) (float64, error)
 }
@@ -92,15 +93,24 @@ func Run(
 
 	jobID, err := client.StartServerBackup(
 		ctx,
-		config.Namespace,
-		config.StorageType,
-		config.Bucket,
-		config.Region,
-		config.Profile,
-		config.AccessKey,
-		config.SecretKey,
-		config.Endpoint,
-		to, from,
+		&infoModels.RequestBackup{
+			RequestCommon: infoModels.RequestCommon{
+				Namespace: config.Namespace,
+				Storage:   config.StorageType,
+				Bucket:    config.Bucket,
+				Region:    config.Region,
+				Profile:   config.Profile,
+				AccessKey: config.AccessKey,
+				SecretKey: config.SecretKey,
+				Endpoint:  config.Endpoint,
+			},
+			ModifiedBefore:     to,
+			ModifiedAfter:      from,
+			SetList:            "", // TODO routine.setList
+			NoIndexes:          false,
+			NoUDFs:             false,
+			EnableChangeStream: false,
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start server backup: %w", err)

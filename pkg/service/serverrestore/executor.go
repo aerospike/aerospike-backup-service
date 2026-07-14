@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/serverbackup"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	infoModels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
 const storageTypeS3 = "aws-s3"
@@ -53,19 +54,23 @@ func (r *RestoreExecutor) Run(
 	}
 
 	const retryDelay = 5 * time.Second
-
 	for {
+		time.Sleep(retryDelay)
 		err = infoClient.StartServerRestore(
 			ctx,
-			jobID,
-			namespace,
-			config.StorageType,
-			config.Bucket,
-			config.Region,
-			config.Profile,
-			credentials.AccessKey,
-			credentials.SecretKey,
-			config.Endpoint,
+			&infoModels.RequestRestore{
+				RequestCommon: infoModels.RequestCommon{
+					Namespace: namespace,
+					Storage:   config.StorageType,
+					Bucket:    config.Bucket,
+					Region:    config.Region,
+					Profile:   config.Profile,
+					AccessKey: credentials.AccessKey,
+					SecretKey: credentials.SecretKey,
+					Endpoint:  config.Endpoint,
+				},
+				JobID: jobID,
+			},
 		)
 		if err == nil {
 			break
@@ -74,8 +79,6 @@ func (r *RestoreExecutor) Run(
 		if !strings.Contains(err.Error(), "retry once status reports READY") {
 			return nil, fmt.Errorf("failed to start server restore: %w", err)
 		}
-
-		time.Sleep(retryDelay)
 	}
 
 	return newHandler(infoClient, namespace), nil

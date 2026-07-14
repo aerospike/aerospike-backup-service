@@ -124,24 +124,14 @@ func (r *BackupReader) getPathBackups(
 }
 
 func metadataToDetails(md servermodels.Metadata, storage model.Storage) model.BackupDetails {
-	created, finished, recordCount, fileCount := aggregateNodeStats(md)
-
-	return model.NewBackupDetails(
-		model.BackupMetadata{
-			Created:     created,
-			Finished:    finished,
-			Namespace:   md.Namespace,
-			RecordCount: recordCount,
-			FileCount:   fileCount,
-			Compression: model.CompressNone,
-			Encryption:  model.EncryptNone,
-		},
-		md.BackupID,
-		storage,
+	var (
+		created     time.Time
+		finished    time.Time
+		recordCount uint64
+		byteCount   uint64
+		fileCount   uint64
 	)
-}
 
-func aggregateNodeStats(md servermodels.Metadata) (created, finished time.Time, recordCount, fileCount uint64) {
 	for _, node := range md.Nodes {
 		if created.IsZero() || node.Created.Before(created) {
 			created = node.Created
@@ -150,6 +140,7 @@ func aggregateNodeStats(md servermodels.Metadata) (created, finished time.Time, 
 			finished = node.Finished
 		}
 		recordCount += uint64(node.RecordCount)
+		byteCount += uint64(node.ByteCount)
 		fileCount += uint64(node.SegmentCount)
 	}
 
@@ -160,7 +151,20 @@ func aggregateNodeStats(md servermodels.Metadata) (created, finished time.Time, 
 		finished = created
 	}
 
-	return created, finished, recordCount, fileCount
+	return model.NewBackupDetails(
+		model.BackupMetadata{
+			Created:     created,
+			Finished:    finished,
+			Namespace:   md.Namespace,
+			RecordCount: recordCount,
+			ByteCount:   byteCount,
+			FileCount:   fileCount,
+			Compression: model.CompressNone,
+			Encryption:  model.EncryptNone,
+		},
+		md.BackupID,
+		storage,
+	)
 }
 
 func backupIDToTime(backupID string) time.Time {
