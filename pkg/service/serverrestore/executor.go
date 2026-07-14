@@ -48,12 +48,25 @@ func (r *RestoreExecutor) Run(
 		return nil, fmt.Errorf("failed to prepare server restore: %w", err)
 	}
 
+	const retryDelay = 5 * time.Second
+	for {
+		status, err := infoClient.GetRestoreStatus(ctx, namespace)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get status of server restore: %w", err)
+		}
+
+		if status == "READY" {
+			break
+		}
+
+		time.Sleep(retryDelay)
+	}
+
 	restoreRequest, err := makeRestoreRequest(ctx, r.resolver, request.SourceStorage, namespace, jobID)
 	if err != nil {
 		return nil, err
 	}
 
-	const retryDelay = 5 * time.Second
 	for {
 		time.Sleep(retryDelay)
 		err = infoClient.StartServerRestore(ctx, restoreRequest)
