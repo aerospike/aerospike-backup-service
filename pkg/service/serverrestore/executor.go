@@ -44,34 +44,19 @@ func (r *RestoreExecutor) Run(
 		return nil, fmt.Errorf("backup job id is required for server restore")
 	}
 
-	config, credentials, err := makeRestoreConfig(ctx, r.resolver, request.SourceStorage)
-	if err != nil {
-		return nil, err
-	}
-
 	if err = infoClient.PrepareServerRestore(ctx, jobID, namespace); err != nil {
 		return nil, fmt.Errorf("failed to prepare server restore: %w", err)
+	}
+
+	restoreRequest, err := makeRestoreRequest(ctx, r.resolver, request.SourceStorage, namespace, jobID)
+	if err != nil {
+		return nil, err
 	}
 
 	const retryDelay = 5 * time.Second
 	for {
 		time.Sleep(retryDelay)
-		err = infoClient.StartServerRestore(
-			ctx,
-			&infoModels.RequestRestore{
-				RequestCommon: infoModels.RequestCommon{
-					Namespace: namespace,
-					Storage:   config.StorageType,
-					Bucket:    config.Bucket,
-					Region:    config.Region,
-					Profile:   config.Profile,
-					AccessKey: credentials.AccessKey,
-					SecretKey: credentials.SecretKey,
-					Endpoint:  config.Endpoint,
-				},
-				JobID: jobID,
-			},
-		)
+		err = infoClient.StartServerRestore(ctx, restoreRequest)
 		if err == nil {
 			break
 		}
@@ -100,36 +85,35 @@ func destinationNamespace(request *model.RestoreRequest) (string, error) {
 	return namespace, nil
 }
 
-type restoreConfig struct {
-	StorageType string
-	Bucket      string
-	Region      string
-	Profile     string
-	Endpoint    string
-}
-
-func makeRestoreConfig(
+func makeRestoreRequest(
 	ctx context.Context,
 	resolver serverbackup.CredentialsResolver,
 	storage model.Storage,
-) (*restoreConfig, serverbackup.Credentials, error) {
+	namespace, jobID string,
+) (*infoModels.RequestRestore, error) {
 	s3Storage, ok := storage.(*model.S3Storage)
 	if !ok {
-		return nil, serverbackup.Credentials{}, fmt.Errorf("server restore requires S3 storage, got %T", storage)
+		return nil, fmt.Errorf("server restore requires S3 storage, got %T", storage)
 	}
 
 	credentials, err := serverbackup.ResolveCredentials(ctx, resolver, storage)
 	if err != nil {
-		return nil, serverbackup.Credentials{}, err
+		return nil, err
 	}
 
-	return &restoreConfig{
-		StorageType: storageTypeS3,
-		Bucket:      s3Storage.Bucket,
-		Region:      s3Storage.S3Region,
-		Profile:     s3Storage.S3Profile,
-		Endpoint:    "http://host.docker.internal:9000",
-	}, credentials, nil
+	return &infoModels.RequestRestore{
+		RequestCommon: infoModels.RequestCommon{
+			Namespace: namespace,
+			Storage:   storageTypeS3,
+			Bucket:    s3Storage.Bucket,
+			Region:    s3Storage.S3Region,
+			Profile:   s3Storage.S3Profile,
+			AccessKey: credentials.AccessKey,
+			SecretKey: credentials.SecretKey,
+			Endpoint:  "http://host.docker.internal:9000",
+		},
+		JobID: jobID,
+	}, nil
 }
 
 var _ restoreexecutor.Restore = (*RestoreExecutor)(nil)

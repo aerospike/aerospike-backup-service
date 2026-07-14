@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -20,18 +21,6 @@ const (
 	progressScale = 4096
 	pollInterval  = time.Second
 )
-
-// Config holds parameters for Aerospike server-side backup.
-type Config struct {
-	Namespace   string
-	StorageType string
-	Bucket      string
-	Region      string
-	Profile     string
-	AccessKey   string
-	SecretKey   string
-	Endpoint    string
-}
 
 // Credentials holds resolved object-storage credentials for server-side backup.
 type Credentials struct {
@@ -78,40 +67,12 @@ func Run(
 	credentials Credentials,
 	spec model.BackupRunSpec,
 ) (*Handler, error) {
-	config, err := makeConfig(namespace, routine, credentials)
+	backupRequest, err := makeBackupRequest(namespace, routine, credentials, spec)
 	if err != nil {
-		return nil, fmt.Errorf("failed to make server backup config: %w", err)
+		return nil, fmt.Errorf("failed to make server backup request: %w", err)
 	}
 
-	var from, to string
-	if spec.TimeBounds.FromTime != nil {
-		from = strconv.FormatInt(spec.TimeBounds.FromTime.Unix(), 10)
-	}
-	if spec.TimeBounds.ToTime != nil {
-		to = strconv.FormatInt(spec.TimeBounds.ToTime.Unix(), 10)
-	}
-
-	jobID, err := client.StartServerBackup(
-		ctx,
-		&infoModels.RequestBackup{
-			RequestCommon: infoModels.RequestCommon{
-				Namespace: config.Namespace,
-				Storage:   config.StorageType,
-				Bucket:    config.Bucket,
-				Region:    config.Region,
-				Profile:   config.Profile,
-				AccessKey: config.AccessKey,
-				SecretKey: config.SecretKey,
-				Endpoint:  config.Endpoint,
-			},
-			ModifiedBefore:     to,
-			ModifiedAfter:      from,
-			SetList:            "", // TODO routine.setList
-			NoIndexes:          false,
-			NoUDFs:             false,
-			EnableChangeStream: false,
-		},
-	)
+	jobID, err := client.StartServerBackup(ctx, backupRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start server backup: %w", err)
 	}
@@ -123,25 +84,42 @@ func Run(
 	}, nil
 }
 
-func makeConfig(
+func makeBackupRequest(
 	namespace string,
 	routine *model.BackupRoutine,
 	credentials Credentials,
-) (*Config, error) {
+	spec model.BackupRunSpec,
+) (*infoModels.RequestBackup, error) {
 	s3Storage, ok := routine.Storage.(*model.S3Storage)
 	if !ok {
 		return nil, fmt.Errorf("server backup requires S3 storage, got %T", routine.Storage)
 	}
 
-	return &Config{
-		Namespace:   namespace,
-		StorageType: storageTypeS3,
-		Bucket:      s3Storage.Bucket,
-		Region:      s3Storage.S3Region,
-		Profile:     s3Storage.S3Profile,
-		AccessKey:   credentials.AccessKey,
-		SecretKey:   credentials.SecretKey,
-		Endpoint:    "http://host.docker.internal:9000",
+	var from, to string
+	if spec.TimeBounds.FromTime != nil {
+		from = strconv.FormatInt(spec.TimeBounds.FromTime.Unix(), 10)
+	}
+	if spec.TimeBounds.ToTime != nil {
+		to = strconv.FormatInt(spec.TimeBounds.ToTime.Unix(), 10)
+	}
+
+	return &infoModels.RequestBackup{
+		RequestCommon: infoModels.RequestCommon{
+			Namespace: namespace,
+			Storage:   storageTypeS3,
+			Bucket:    s3Storage.Bucket,
+			Region:    s3Storage.S3Region,
+			Profile:   s3Storage.S3Profile,
+			AccessKey: credentials.AccessKey,
+			SecretKey: credentials.SecretKey,
+			Endpoint:  "http://host.docker.internal:9000",
+		},
+		ModifiedBefore:     to,
+		ModifiedAfter:      from,
+		SetList:            strings.Join(routine.SetList, ","),
+		NoIndexes:          false,
+		NoUDFs:             false,
+		EnableChangeStream: false,
 	}, nil
 }
 
