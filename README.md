@@ -41,6 +41,7 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
     + [Build Linux packages](#build-linux-packages)
     + [Release](#release)
 - [Migration Guide](#migration-guide)
+    * [v3.5 -> v3.6](#v35---v36)
     * [v3.3 -> v3.4](#v33---v34)
     * [v3.2 -> v3.3](#v32---v33)
     * [v3.1 -> v3.2](#v31---v32)
@@ -938,6 +939,38 @@ git push
 ```
 
 # Migration Guide
+
+## v3.5 -> v3.6
+
+This release adds compact backups, more flexible restore-by-timestamp, performance optimizations in the record
+reader/writer, and improved observability.
+
+#### Breaking changes
+
+- Restore job `status` values are now lowercase: `running`, `success`, `failure`, `canceled` (previously `Running`,
+  `Done`, `Failed`, `Canceled`).
+- Default log level changed from `DEBUG` to `INFO`. Set `logger.level: DEBUG` explicitly if you rely on verbose logging.
+- Default cloud storage `min-part-size` increased from ~5 MB to 50 MB (S3, Azure, GCP).
+- Backup scan `parallel` is now enforced per routine instead of per namespace. In routines with multiple namespaces,
+  total concurrent scans across all namespaces are capped at `parallel` (previously each namespace could run up to
+  `parallel` scans independently).
+
+#### New features
+
+- **Compact backups** — A `compact` flag in [backup policy](docs/readme/dto/dto.backuppolicy.md) skips base-64 encoding
+  for BLOB types (Bytes, HLL, RawMap, RawList), producing smaller backup files.
+- **Restore-by-timestamp overrides** — Optional `source` / `source-name` and `destination` / `destination-name` fields
+  in [restore-by-timestamp requests](docs/readme/dto/dto.restoretimestamprequest.md). When both storage and destination
+  are overridden, a routine does not need to be configured.
+- **Restore-by-timestamp with `unique`** — Existing records remain unchanged; only new records are added from the backup.
+
+#### Improvements
+
+- Performance improvements in the record reader/writer.
+- High-precision `aerospike_backup_service_backup_progress_pct` metric (float, no rounding); record-count estimate
+  recalculates every 10 minutes during backup.
+- New metrics: `aerospike_backup_service_backup_in_progress`, `aerospike_backup_service_restore_events_total`.
+
 
 ## v3.3 -> v3.4
 
