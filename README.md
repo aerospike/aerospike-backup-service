@@ -890,7 +890,7 @@ The backup service supports the following storage providers:
 
 ### Prerequisites
 
-- Go 1.24
+- Go 1.25
 
 ### Build the service
 
