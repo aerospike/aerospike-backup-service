@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -69,21 +68,12 @@ func (f *DefaultClientFactory) clientPolicy(ctx context.Context, c *model.Aerosp
 	policy := as.NewClientPolicy()
 	if c.Credentials != nil {
 		policy.User = ptr.ValueOrZero(c.GetUser())
-		password, err := f.passwordResolver.Resolve(ctx, c.Credentials)
+		password, err := f.resolveClusterPassword(ctx, c.Credentials)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve password: %w", err)
+			return nil, err
 		}
 		policy.Password = ptr.ValueOrZero(password)
-		if c.Credentials.AuthMode != nil {
-			switch strings.ToUpper(*c.Credentials.AuthMode) {
-			case "INTERNAL":
-				policy.AuthMode = as.AuthModeInternal
-			case "EXTERNAL":
-				policy.AuthMode = as.AuthModeExternal
-			case "PKI":
-				policy.AuthMode = as.AuthModePKI
-			}
-		}
+		policy.AuthMode = resolveAuth(c.Credentials)
 	}
 	if c.ConnTimeout != nil {
 		policy.Timeout = *c.ConnTimeout
@@ -103,6 +93,39 @@ func (f *DefaultClientFactory) clientPolicy(ctx context.Context, c *model.Aerosp
 	}
 
 	return policy, nil
+}
+
+func (f *DefaultClientFactory) resolveClusterPassword(
+	ctx context.Context,
+	creds *model.Credentials,
+) (*string, error) {
+	if creds == nil || isPKIAuthMode(creds) {
+		return nil, nil
+	}
+
+	password, err := f.passwordResolver.Resolve(ctx, creds)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve password: %w", err)
+	}
+
+	return password, nil
+}
+
+func resolveAuth(creds *model.Credentials) as.AuthMode {
+	switch creds.AuthModeOrDefault() {
+	case model.AuthModeInternal:
+		return as.AuthModeInternal
+	case model.AuthModeExternal:
+		return as.AuthModeExternal
+	case model.AuthModePKI:
+		return as.AuthModePKI
+	default:
+		return as.AuthModeInternal
+	}
+}
+
+func isPKIAuthMode(creds *model.Credentials) bool {
+	return creds.AuthModeOrDefault() == model.AuthModePKI
 }
 
 func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {

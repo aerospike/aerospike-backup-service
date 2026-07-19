@@ -97,14 +97,6 @@ func (c *AerospikeCluster) ToString() string {
 	return ""
 }
 
-// GetAuthMode safely returns the authentication mode.
-func (c *AerospikeCluster) GetAuthMode() *string {
-	if c.Credentials != nil {
-		return c.Credentials.AuthMode
-	}
-	return nil
-}
-
 // Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
 	// The username for the cluster authentication.
@@ -114,10 +106,19 @@ type Credentials struct {
 	Password *string
 	// The file path with the password string, will take precedence over the password field.
 	PasswordPath *string
-	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
-	AuthMode *string
+	// The authentication mode (INTERNAL, EXTERNAL, PKI). Nil means unset.
+	AuthMode *AuthMode
 	// The name of the configured Secret Agent to use for authentication.
 	SecretAgent *SecretAgent
+}
+
+// AuthModeOrDefault returns the configured auth mode, or the default when unset.
+func (c *Credentials) AuthModeOrDefault() AuthMode {
+	if c == nil || c.AuthMode == nil || *c.AuthMode == "" {
+		return *defaultConfig.credentials.AuthMode
+	}
+
+	return *c.AuthMode
 }
 
 // String returns a string representation of the Credentials.
@@ -129,7 +130,7 @@ func (c *Credentials) String() string {
 		ptr.ValueOrZero(c.User),
 		ptr.ValueOrZero(c.Password),
 		ptr.ValueOrZero(c.PasswordPath),
-		ptr.ValueOrZero(c.AuthMode),
+		c.AuthModeOrDefault(),
 		c.SecretAgent.String())
 }
 
