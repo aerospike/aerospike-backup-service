@@ -91,7 +91,7 @@ func (a *AzureStorageAccessor) createAzureClient(ctx context.Context, s *model.A
 	case *model.AzureADAuth:
 		return a.clientFromAD(ctx, s.Endpoint, auth, s.SecretAgent)
 	default:
-		return a.noAuthClient(s)
+		return a.clientFromImplicitAuth(s)
 	}
 }
 
@@ -149,7 +149,7 @@ func (a *AzureStorageAccessor) clientFromAD(
 	return client, nil
 }
 
-func (a *AzureStorageAccessor) noAuthClient(s *model.AzureStorage) (*azblob.Client, error) {
+func (a *AzureStorageAccessor) clientFromImplicitAuth(s *model.AzureStorage) (*azblob.Client, error) {
 	isSas, err := endpointHasEmbeddedSAS(s.Endpoint)
 	if err != nil {
 		return nil, err
