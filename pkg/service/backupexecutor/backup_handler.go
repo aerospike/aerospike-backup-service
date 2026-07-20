@@ -10,7 +10,11 @@ import (
 
 // BackupHandler interface defines the contract for backup operation results.
 type BackupHandler interface {
-	// GetStats returns the statistics of the backup job.
+	// GetStats returns backup job statistics.
+	//
+	// Nil means the job has not started yet. Wrappers (e.g. retryableBackupHandler)
+	// return nil until their inner pipeline is running. backup-go handlers never
+	// return nil once constructed.
 	GetStats() *models.BackupStats
 	// Wait waits for the backup job to complete and returns an error if the job failed.
 	Wait(context.Context) error

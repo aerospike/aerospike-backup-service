@@ -1928,7 +1928,7 @@ const docTemplate = `{
                     "example": 10000
                 },
                 "compact": {
-                    "description": "Do not apply base-64 encoding to BLOBs: Bytes, HLL, RawMap, RawList.\nResults in smaller backup files.",
+                    "description": "If set to true, base-64 encoding is not applied to BLOBs (Bytes, HLL, RawMap, RawList), resulting in smaller backup files.",
                     "type": "boolean",
                     "default": false
                 },
@@ -2084,7 +2084,7 @@ const docTemplate = `{
                     "example": "0 0 * * * *"
                 },
                 "namespaces": {
-                    "description": "The list of the namespaces to back up (empty list implies backup of the whole cluster).",
+                    "description": "The list of namespaces to back up.\nIf empty, the entire cluster is backed up.\nThe order of namespaces does not determine the backup execution or completion order.",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -3602,8 +3602,8 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "v3.5.0",
-	Host:             "localhost:8080",
+	Version:          "v3.6.0",
+	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},
 	Title:            "Backup Service REST API Specification",

@@ -20,6 +20,7 @@ var defaultConfig = struct {
 	backupPolicy  BackupPolicy
 	restorePolicy RestorePolicy
 	xdrConfig     XDRConfig
+	credentials   Credentials
 }{
 	http: HTTPServerConfig{
 		Address: ptr.Of("0.0.0.0"),
@@ -78,6 +79,9 @@ var defaultConfig = struct {
 			MaxRetries:  optional.Of(5),
 			Multiplier:  ptr.Of(2.0),
 		},
+	},
+	credentials: Credentials{
+		AuthMode: ptr.Of(AuthModeInternal),
 	},
 }
 

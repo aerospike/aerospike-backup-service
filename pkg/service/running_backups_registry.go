@@ -22,9 +22,9 @@ type RunningBackupsRegistry interface {
 	// clearFailedBackup deletes a backup from the registry.
 	// Should be called for failed backups.
 	clearFailedBackup(routineName string, jt model.BackupType)
-	// recordSuccessfulBackup removes a backup from the registry and updates the last success timestamp.
-	// Should be called after successful backup completion.
-	recordSuccessfulBackup(routineName string, jt model.BackupType, timestamp time.Time)
+	// recordSuccessfulBackup removes a backup from the registry and triggers a storage scan
+	// to update the last backup timestamp. Storage is the single source of truth for history.
+	recordSuccessfulBackup(routine *model.BackupRoutine, jt model.BackupType)
 
 	// GetRoutineState returns the current backup statistics for a routine.
 	GetRoutineState(routine *model.BackupRoutine) model.RoutineState
@@ -56,7 +56,7 @@ type RunningBackupsRegistryImpl struct {
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
-const getStateTimeout = 5 * time.Second
+const getStateTimeout = 15 * time.Second
 
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
 func NewRunningBackupsRegistry(
@@ -141,24 +141,37 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 	// Cancel any previous scan that might still be running
 	tracker.cancelScan()
 
-	// Always signal that the (first) sync is done, even on failure.
-	defer tracker.signalSyncDone()
+	// beginScan unblocks getState callers waiting on the canceled scan
+	// and installs a new channel. endScan closes it when this scan finishes,
+	// so getState always sees post-scan data.
+	scanCh := tracker.beginScan()
+	defer tracker.endScan(scanCh)
 
 	ctxWithCancel, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 	tracker.setScanCancel(cancelFunc)
 
-	lastRun, err := r.history.FindLastRun(ctxWithCancel, routine)
+	lastRun, duration, err := timeutil.MeasureDurationWithResult(func() (*model.BackupTime, error) {
+		return r.history.FindLastRun(ctxWithCancel, routine)
+	})
 	if err != nil {
-		if !errors.Is(err, context.Canceled) {
-			slog.Error("Failed to read last backup time during sync", attr.Error(err), attr.Routine(routine.Name))
+		if errors.Is(err, context.Canceled) {
+			return err
 		}
+
+		slog.Error("Failed to read last backup time during sync",
+			attr.Error(err), attr.Routine(routine.Name),
+			slog.Duration("duration", duration),
+		)
 		tracker.setLastRun(model.NewNoBackupTime())
 		return err
 	}
 
-	// On success, update the tracker's history
-	slog.Info("Last existing backup", attr.Routine(routine.Name), slog.Any("time", lastRun))
+	slog.Info("Last existing backup",
+		attr.Routine(routine.Name),
+		slog.Any("time", lastRun),
+		slog.Duration("duration", duration),
+	)
 	tracker.setLastRun(lastRun)
 	prometheus.SetInitialLastBackup(routine.Name, lastRun)
 
@@ -174,18 +187,19 @@ func (r *RunningBackupsRegistryImpl) register(
 	r.getTracker(routineName).register(backupType, handler)
 }
 
-// recordSuccessfulBackup removes a backup from the registry and updates the last success timestamp.
+// recordSuccessfulBackup removes a backup from the registry and triggers a storage scan
+// to update the last backup timestamp. Storage is the single source of truth for history.
 func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(
-	routineName string,
+	routine *model.BackupRoutine,
 	backupType model.BackupType,
-	timestamp time.Time,
 ) {
-	r.getTracker(routineName).recordSuccessfulBackup(routineName, backupType, timestamp)
+	r.getTracker(routine.Name).clearBackup(backupType)
+	_ = r.scanSingleRoutineHistory(context.Background(), routine)
 }
 
 // clearFailedBackup deletes a backup from the registry.
 func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, backupType model.BackupType) {
-	r.getTracker(routineName).clearFailedBackup(backupType)
+	r.getTracker(routineName).clearBackup(backupType)
 }
 
 // GetRoutineState returns the current backup statistics for a routine.

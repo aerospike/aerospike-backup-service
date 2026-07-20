@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
@@ -90,7 +91,7 @@ func (a *AzureStorageAccessor) createAzureClient(ctx context.Context, s *model.A
 	case *model.AzureADAuth:
 		return a.clientFromAD(ctx, s.Endpoint, auth, s.SecretAgent)
 	default:
-		return clientWithDefaultCredential(s.Endpoint)
+		return a.clientFromImplicitAuth(s)
 	}
 }
 
@@ -146,6 +147,32 @@ func (a *AzureStorageAccessor) clientFromAD(
 	}
 
 	return client, nil
+}
+
+func (a *AzureStorageAccessor) clientFromImplicitAuth(s *model.AzureStorage) (*azblob.Client, error) {
+	isSas, err := endpointHasEmbeddedSAS(s.Endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	if isSas {
+		client, err := azblob.NewClientWithNoCredential(s.Endpoint, azureOptions())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Azure Blob client with SAS URL: %w", err)
+		}
+		return client, nil
+	}
+
+	return clientWithDefaultCredential(s.Endpoint)
+}
+
+func endpointHasEmbeddedSAS(endpoint string) (bool, error) {
+	parts, err := sas.ParseURL(endpoint)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse URL: %w", err)
+	}
+
+	return parts.SAS.Signature() != "", nil
 }
 
 func clientWithDefaultCredential(endpoint string) (*azblob.Client, error) {

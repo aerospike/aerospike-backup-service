@@ -7,9 +7,9 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
-	"golang.org/x/sync/semaphore"
 )
 
 // ScanBackupExecutor implements [Backup] using backup-go scan, XDR, or combined backup
@@ -39,7 +39,7 @@ func (r *ScanBackupExecutor) Run(
 	timeBounds model.TimeBounds,
 	namespace string,
 	path string,
-	scanLimiter *semaphore.Weighted,
+	scanLimiter syncutil.Limiter,
 	logger *slog.Logger,
 ) (BackupHandler, error) {
 	client, err := r.clientManager.GetClient(ctx, routine.SourceCluster, scanLimiter, logger)

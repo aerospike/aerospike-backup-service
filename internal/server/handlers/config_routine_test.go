@@ -255,13 +255,8 @@ func TestEnableRoutine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
-			routine := &model.BackupRoutine{
-				Disabled: true,
-				Name:     tt.routineName,
-			}
-
 			if tt.addRoutine {
-				_ = svc.config.AddRoutine(routine)
+				addValidBackupRoutine(svc, tt.routineName, true)
 			}
 
 			req := httptest.NewRequestWithContext(
@@ -279,8 +274,9 @@ func TestEnableRoutine(t *testing.T) {
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
 			} else {
-				// Check that the routine is enabled after successful enable operation
-				assert.False(t, routine.Disabled)
+				updated, ok := svc.config.Routine(tt.routineName)
+				require.True(t, ok)
+				assert.False(t, updated.Disabled)
 			}
 		})
 	}
@@ -324,11 +320,7 @@ func TestDisableRoutine(t *testing.T) {
 
 			svc := setupTestService()
 			svc.registry = mockRegistry
-
-			routine := &model.BackupRoutine{
-				Name: "test-routine",
-			}
-			_ = svc.config.AddRoutine(routine)
+			addValidBackupRoutine(svc, "test-routine", false)
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -345,8 +337,9 @@ func TestDisableRoutine(t *testing.T) {
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
 			} else {
-				// Check that the routine is disabled after successful disable operation
-				assert.True(t, routine.Disabled)
+				updated, ok := svc.config.Routine(tt.routineName)
+				require.True(t, ok)
+				assert.True(t, updated.Disabled)
 			}
 		})
 	}

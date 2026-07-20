@@ -135,7 +135,7 @@ func newScanModeTree(
 	)
 
 	restoreJobs := service.NewRestoreJobsHolder()
-	restoreValidator := service.NewRestoreValidator(registry, config)
+	restoreValidator := service.NewRestoreValidator(startController, config)
 	restoreMgr := service.NewRestoreManager(
 		restoreexecutor.NewScanRestore(operations),
 		clientManager,
@@ -189,7 +189,7 @@ func newServerModeTree(
 	)
 
 	restoreJobs := service.NewRestoreJobsHolder()
-	restoreValidator := service.NewRestoreValidator(registry, config)
+	restoreValidator := service.NewRestoreValidator(startController, config)
 	backupReader := serverrestore.NewBackupReader(listerFactory, config)
 	restoreMgr := service.NewRestoreManager(
 		serverrestore.NewRestoreExecutor(resolver),

@@ -82,6 +82,47 @@ func TestAzureStorage_ConnectivityFailure(t *testing.T) {
 	assert.Contains(t, err.Error(), "connectivity check failed")
 }
 
+func TestEndpointHasEmbeddedSAS(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		endpoint string
+		isSAS    bool
+		wantErr  bool
+	}{
+		{
+			name: "service SAS URL",
+			endpoint: "https://account.blob.core.windows.net/" +
+				"?sv=2020-08-04&ss=b&srt=sco&sp=r&se=2026-01-01T00:00:00Z&sig=abc123",
+			isSAS: true,
+		},
+		{
+			name:     "plain service URL",
+			endpoint: "https://account.blob.core.windows.net/",
+			isSAS:    false,
+		},
+		{
+			name:     "invalid URL",
+			endpoint: "://not-a-url",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			sas, err := endpointHasEmbeddedSAS(tt.endpoint)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.isSAS, sas)
+		})
+	}
+}
+
 func azureConnectivityHandler(denyList, denyWrite bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		isAccountCheck := r.URL.Query().Get("comp") == "properties" && r.URL.Query().Get("restype") == "account"

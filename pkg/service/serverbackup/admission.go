@@ -33,3 +33,8 @@ func (c *StartController) TryStart(
 
 	return release, nil
 }
+
+// HasBackupRunning reports whether a server backup is active on the routine's source cluster.
+func (c *StartController) HasBackupRunning(routine *model.BackupRoutine) bool {
+	return c.gate.IsActive(routine.SourceCluster.Hash())
+}

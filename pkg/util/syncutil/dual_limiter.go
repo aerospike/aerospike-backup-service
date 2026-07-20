@@ -4,8 +4,6 @@ import (
 	"context"
 	"math/rand/v2"
 	"time"
-
-	"golang.org/x/sync/semaphore"
 )
 
 // DualLimiter coordinates acquisition across two semaphores.
@@ -13,13 +11,13 @@ import (
 // which is useful for enforcing both a global limit and a per-routine limit.
 // Either semaphore can be nil, in which case only the non-nil one is used.
 type DualLimiter struct {
-	l1 *semaphore.Weighted
-	l2 *semaphore.Weighted
+	l1 Limiter
+	l2 Limiter
 }
 
 // NewDualLimiter creates a new DualLimiter that requires acquiring from both
 // l1 and l2 before proceeding. Either can be nil.
-func NewDualLimiter(l1, l2 *semaphore.Weighted) *DualLimiter {
+func NewDualLimiter(l1, l2 Limiter) *DualLimiter {
 	return &DualLimiter{l1: l1, l2: l2}
 }
 

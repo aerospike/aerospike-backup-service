@@ -52,7 +52,7 @@ func (r *backupReporter) Report(
 		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeSuccess, duration, startTime)
 
 	case errors.Is(err, errBackupSkipped):
-		logger.Debug(operation+" skipped", attr.Error(err))
+		logger.Info(operation+" skipped", attr.Error(err))
 		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeSkip, 0, startTime)
 
 	case errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded):

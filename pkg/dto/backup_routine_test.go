@@ -277,6 +277,126 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithNodeList(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestBackupRoutine_ToModel_ParallelExceedsClusterMax(t *testing.T) {
+	routineDTO := &BackupRoutine{
+		BackupPolicy:  "policy1",
+		SourceCluster: "cluster1",
+		Storage:       "storage1",
+		Namespaces:    &[]string{"ns1"},
+	}
+
+	config := &model.BackupConfig{
+		BackupPolicies: map[string]*model.BackupPolicy{
+			"policy1": {Parallel: utptr.Of(8)},
+		},
+		AerospikeClusters: map[string]*model.AerospikeCluster{
+			"cluster1": {MaxParallelScans: utptr.Of(4)},
+		},
+		Storage: map[string]model.Storage{
+			"storage1": &model.S3Storage{},
+		},
+	}
+
+	_, err := routineDTO.ToModel(config, "r")
+	require.ErrorContains(t, err, "backup policy parallelism 8 exceeds cluster max parallelism 4")
+}
+
+func TestBackupRoutine_ToModel_ParallelWithinClusterMax(t *testing.T) {
+	routineDTO := &BackupRoutine{
+		BackupPolicy:  "policy1",
+		SourceCluster: "cluster1",
+		Storage:       "storage1",
+		Namespaces:    &[]string{"ns1"},
+	}
+
+	config := &model.BackupConfig{
+		BackupPolicies: map[string]*model.BackupPolicy{
+			"policy1": {Parallel: utptr.Of(4)},
+		},
+		AerospikeClusters: map[string]*model.AerospikeCluster{
+			"cluster1": {MaxParallelScans: utptr.Of(8)},
+		},
+		Storage: map[string]model.Storage{
+			"storage1": &model.S3Storage{},
+		},
+	}
+
+	_, err := routineDTO.ToModel(config, "r")
+	require.NoError(t, err)
+}
+
+func TestBackupRoutine_ToModel_ParallelEqualsClusterMax(t *testing.T) {
+	routineDTO := &BackupRoutine{
+		BackupPolicy:  "policy1",
+		SourceCluster: "cluster1",
+		Storage:       "storage1",
+		Namespaces:    &[]string{"ns1"},
+	}
+
+	config := &model.BackupConfig{
+		BackupPolicies: map[string]*model.BackupPolicy{
+			"policy1": {Parallel: utptr.Of(4)},
+		},
+		AerospikeClusters: map[string]*model.AerospikeCluster{
+			"cluster1": {MaxParallelScans: utptr.Of(4)},
+		},
+		Storage: map[string]model.Storage{
+			"storage1": &model.S3Storage{},
+		},
+	}
+
+	_, err := routineDTO.ToModel(config, "r")
+	require.NoError(t, err)
+}
+
+func TestBackupRoutine_ToModel_ParallelUncheckedWhenClusterMaxUnset(t *testing.T) {
+	routineDTO := &BackupRoutine{
+		BackupPolicy:  "policy1",
+		SourceCluster: "cluster1",
+		Storage:       "storage1",
+		Namespaces:    &[]string{"ns1"},
+	}
+
+	config := &model.BackupConfig{
+		BackupPolicies: map[string]*model.BackupPolicy{
+			"policy1": {Parallel: utptr.Of(100)},
+		},
+		AerospikeClusters: map[string]*model.AerospikeCluster{
+			"cluster1": {},
+		},
+		Storage: map[string]model.Storage{
+			"storage1": &model.S3Storage{},
+		},
+	}
+
+	_, err := routineDTO.ToModel(config, "r")
+	require.NoError(t, err)
+}
+
+func TestBackupRoutine_ToModel_ParallelUncheckedWhenPolicyParallelUnset(t *testing.T) {
+	routineDTO := &BackupRoutine{
+		BackupPolicy:  "policy1",
+		SourceCluster: "cluster1",
+		Storage:       "storage1",
+		Namespaces:    &[]string{"ns1"},
+	}
+
+	config := &model.BackupConfig{
+		BackupPolicies: map[string]*model.BackupPolicy{
+			"policy1": {},
+		},
+		AerospikeClusters: map[string]*model.AerospikeCluster{
+			"cluster1": {MaxParallelScans: utptr.Of(4)},
+		},
+		Storage: map[string]model.Storage{
+			"storage1": &model.S3Storage{},
+		},
+	}
+
+	_, err := routineDTO.ToModel(config, "r")
+	require.NoError(t, err)
+}
+
 func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
 	routineDTO := &BackupRoutine{
 		BackupPolicy:  "policy1",

@@ -261,3 +261,18 @@ func TestDeleteAerospikeCluster(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteAerospikeCluster_InUseErrorMessage(t *testing.T) {
+	svc := setupTestService()
+	entities := addValidBackupConfig(svc)
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/clusters/"+entities.clusterName, nil)
+	req.SetPathValue("name", entities.clusterName)
+	w := httptest.NewRecorder()
+
+	svc.DeleteAerospikeCluster(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(),
+		"delete Aerospike cluster \"cluster1\": item is in use: it is used in routine \"routine1\"")
+}

@@ -16,10 +16,10 @@ import (
 	time "time"
 
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	syncutil "github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 	backup "github.com/aerospike/backup-go"
 	models "github.com/aerospike/backup-go/models"
 	gomock "go.uber.org/mock/gomock"
-	semaphore "golang.org/x/sync/semaphore"
 )
 
 // MockRestoreManager is a mock of RestoreManager interface.
@@ -314,15 +314,15 @@ func (mr *MockRunningBackupsRegistryMockRecorder) clearFailedBackup(routineName,
 }
 
 // recordSuccessfulBackup mocks base method.
-func (m *MockRunningBackupsRegistry) recordSuccessfulBackup(routineName string, jt model.BackupType, timestamp time.Time) {
+func (m *MockRunningBackupsRegistry) recordSuccessfulBackup(routine *model.BackupRoutine, jt model.BackupType) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "recordSuccessfulBackup", routineName, jt, timestamp)
+	m.ctrl.Call(m, "recordSuccessfulBackup", routine, jt)
 }
 
 // recordSuccessfulBackup indicates an expected call of recordSuccessfulBackup.
-func (mr *MockRunningBackupsRegistryMockRecorder) recordSuccessfulBackup(routineName, jt, timestamp any) *gomock.Call {
+func (mr *MockRunningBackupsRegistryMockRecorder) recordSuccessfulBackup(routine, jt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "recordSuccessfulBackup", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).recordSuccessfulBackup), routineName, jt, timestamp)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "recordSuccessfulBackup", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).recordSuccessfulBackup), routine, jt)
 }
 
 // register mocks base method.
@@ -692,6 +692,20 @@ func (m *MockStartController) EXPECT() *MockStartControllerMockRecorder {
 	return m.recorder
 }
 
+// HasBackupRunning mocks base method.
+func (m *MockStartController) HasBackupRunning(routine *model.BackupRoutine) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasBackupRunning", routine)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasBackupRunning indicates an expected call of HasBackupRunning.
+func (mr *MockStartControllerMockRecorder) HasBackupRunning(routine any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasBackupRunning", reflect.TypeOf((*MockStartController)(nil).HasBackupRunning), routine)
+}
+
 // TryStart mocks base method.
 func (m *MockStartController) TryStart(routine *model.BackupRoutine, now time.Time, backupType model.BackupType) (func(), error) {
 	m.ctrl.T.Helper()
@@ -771,7 +785,7 @@ func (m *MockNamespaceBackupRunner) EXPECT() *MockNamespaceBackupRunnerMockRecor
 }
 
 // Run mocks base method.
-func (m *MockNamespaceBackupRunner) Run(ctx context.Context, routine *model.BackupRoutine, namespace string, runSpec model.BackupRunSpec, scanLimiter *semaphore.Weighted, logger *slog.Logger) CancelableBackupHandler {
+func (m *MockNamespaceBackupRunner) Run(ctx context.Context, routine *model.BackupRoutine, namespace string, runSpec model.BackupRunSpec, scanLimiter syncutil.Limiter, logger *slog.Logger) CancelableBackupHandler {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run", ctx, routine, namespace, runSpec, scanLimiter, logger)
 	ret0, _ := ret[0].(CancelableBackupHandler)

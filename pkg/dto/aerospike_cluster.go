@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -203,7 +202,7 @@ func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig
 	c.User = m.User
 	c.Password = m.Password
 	c.PasswordPath = m.PasswordPath
-	c.AuthMode = m.AuthMode
+	c.AuthMode = m.AuthMode.String()
 
 	c.SecretAgentConfig = ResolveSecretAgentFromModel(m.SecretAgent, config)
 }
@@ -224,11 +223,8 @@ func (c *Credentials) Validate(opts ...ValidationOption) error {
 		return errValidationMutuallyExclusive("password", "password-path")
 	}
 
-	if c.AuthMode != nil &&
-		(strings.ToUpper(*c.AuthMode) != "INTERNAL" &&
-			strings.ToUpper(*c.AuthMode) != "EXTERNAL" &&
-			strings.ToUpper(*c.AuthMode) != "PKI") {
-		return fmt.Errorf("auth-mode %q incorrect, should be one of: INTERNAL,EXTERNAL,PKI", *c.AuthMode)
+	if _, err := model.ParseAuthMode(c.AuthMode); err != nil {
+		return err
 	}
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 	return c.SecretAgentConfig.validate(opts...)
@@ -244,11 +240,16 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 		return nil, err
 	}
 
+	authMode, err := model.ParseAuthMode(c.AuthMode)
+	if err != nil {
+		return nil, err
+	}
+
 	return &model.Credentials{
 		User:         c.User,
 		Password:     c.Password,
 		PasswordPath: c.PasswordPath,
-		AuthMode:     c.AuthMode,
+		AuthMode:     authMode,
 		SecretAgent:  agent,
 	}, nil
 }

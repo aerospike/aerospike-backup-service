@@ -60,8 +60,7 @@ type BackupPolicy struct {
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
 	// This parameter does not affect XDR backups (which always includes all keys).
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty" default:"false"`
-	// Do not apply base-64 encoding to BLOBs: Bytes, HLL, RawMap, RawList.
-	// Results in smaller backup files.
+	// If set to true, base-64 encoding is not applied to BLOBs (Bytes, HLL, RawMap, RawList), resulting in smaller backup files.
 	Compact *bool `yaml:"compact,omitempty" json:"compact,omitempty" default:"false"`
 	// XDR configuration for MRT backups.
 	// XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
@@ -143,6 +142,20 @@ func (p *BackupPolicy) Validate() error {
 
 	if p.MaxConcurrentNodes != nil && *p.MaxConcurrentNodes < 0 {
 		return errValidationNegative("max-concurrent-nodes", *p.MaxConcurrentNodes)
+	}
+
+	return nil
+}
+
+// ValidateBackupPolicyParallelism checks that an explicitly set policy parallel value
+// does not exceed the cluster max-parallel-scans limit.
+func ValidateBackupPolicyParallelism(policy *model.BackupPolicy, cluster *model.AerospikeCluster) error {
+	if cluster == nil || policy == nil {
+		return nil
+	}
+	if cluster.MaxParallelScans != nil && policy.Parallel != nil && *cluster.MaxParallelScans < *policy.Parallel {
+		return fmt.Errorf("backup policy parallelism %d exceeds cluster max parallelism %d",
+			*policy.Parallel, *cluster.MaxParallelScans)
 	}
 
 	return nil

@@ -32,13 +32,12 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		cluster, err := newCluster.ToModel(config)
-		if err != nil {
-			return fmt.Errorf("invalid cluster %q: %w", name, err)
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+		if _, exists := config.AerospikeClusters[name]; exists {
+			return nil, fmt.Errorf("add Aerospike cluster %q: %w", name, model.ErrAlreadyExists)
 		}
-
-		return config.AddCluster(name, cluster)
+		config.AerospikeClusters[name] = newCluster
+		return nil, nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -76,15 +75,15 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 // @Failure     400 {string} string
 // @Failure     404 {string} string "The specified cluster was not found"
 func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	clusterName := r.PathValue("name")
-	if clusterName == "" {
+	name := r.PathValue("name")
+	if name == "" {
 		httpError(w, errMissingClusterName)
 		return
 	}
 	backupConfig := s.config.BackupConfigCopy()
-	cluster, ok := backupConfig.AerospikeClusters[clusterName]
+	cluster, ok := backupConfig.AerospikeClusters[name]
 	if !ok {
-		httpError(w, errNotFound("cluster", clusterName))
+		httpError(w, errNotFound("cluster", name))
 		return
 	}
 
@@ -102,8 +101,8 @@ func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	clusterName := r.PathValue("name")
-	if clusterName == "" {
+	name := r.PathValue("name")
+	if name == "" {
 		httpError(w, errMissingClusterName)
 		return
 	}
@@ -114,22 +113,13 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	cluster, err := updatedCluster.ToModel(s.config)
-	if err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-
-	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		err := config.UpdateCluster(clusterName, cluster)
-		if err != nil {
-			return err
+	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+		if _, exists := config.AerospikeClusters[name]; !exists {
+			return nil, fmt.Errorf("update Aerospike cluster %q: %w", name, model.ErrNotFound)
 		}
-
-		// validate that new cluster has all required NSs (under the lock)
-		s.nsValidator.Validate(r.Context(), config)
-		return nil
-	}); err != nil {
+		config.AerospikeClusters[name] = updatedCluster
+		return nil, nil
+	}, withNamespaceValidation); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -146,14 +136,21 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 // @Success     204
 // @Failure     400 {string} string
 func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	clusterName := r.PathValue("name")
-	if clusterName == "" {
+	name := r.PathValue("name")
+	if name == "" {
 		httpError(w, errMissingClusterName)
 		return
 	}
 
-	err := s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.DeleteCluster(clusterName)
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+		if _, exists := config.AerospikeClusters[name]; !exists {
+			return nil, fmt.Errorf("delete Aerospike cluster %q: %w", name, model.ErrNotFound)
+		}
+		if err := ensureClusterNotInUse(config, name); err != nil {
+			return nil, err
+		}
+		delete(config.AerospikeClusters, name)
+		return nil, nil
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))

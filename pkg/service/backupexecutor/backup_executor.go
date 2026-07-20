@@ -7,10 +7,10 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/aerospike/backup-go/models"
-	"golang.org/x/sync/semaphore"
 )
 
 type storageWriter interface {
@@ -27,12 +27,13 @@ type Backup interface {
 		timeBounds model.TimeBounds,
 		namespace string,
 		path string,
-		scanLimiter *semaphore.Weighted,
+		scanLimiter syncutil.Limiter,
 		logger *slog.Logger,
 	) (BackupHandler, error)
 }
 
-// closeOnWaitBackupHandler wraps a [BackupHandler] and closes the Aerospike client after Wait completes.
+// closeOnWaitBackupHandler wraps a [BackupHandler] and closes the
+// Aerospike client after [BackupHandler.Wait] completes.
 type closeOnWaitBackupHandler struct {
 	inner         BackupHandler
 	client        aerospike.Client
