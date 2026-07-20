@@ -86,40 +86,19 @@ func (r *BackupReader) getPathBackups(
 	ctx context.Context,
 	filter *service.PathFilter,
 ) ([]model.BackupDetails, error) {
-	routineName, _, _ := strings.Cut(filter.Path(), "/")
-	if routineName == "" {
-		routineName = filter.Path()
-	}
-
-	if _, ok := r.config.Routine(routineName); !ok {
-		return nil, nil
-	}
-
 	lister, err := r.listerFactory.NewLister(ctx, filter.Storage())
 	if err != nil {
 		return nil, err
 	}
 
-	all, err := lister.FetchAllMetadata(ctx)
+	md, err := lister.GetMetadata(ctx, filter.Path())
 	if err != nil {
 		return nil, fmt.Errorf("list server backup metadata failed: %w", err)
 	}
 
-	targetID := pathBackupID(filter.Path())
-	var details []model.BackupDetails
-	for _, md := range all {
-		if md.BackupID != filter.Path() && md.BackupID != targetID {
-			continue
-		}
+	details := metadataToDetails(md, filter.Storage())
 
-		backup := metadataToDetails(md, filter.Storage())
-		if !matchesTimeBounds(backup, filter.TimeBounds()) {
-			continue
-		}
-		details = append(details, backup)
-	}
-
-	return details, nil
+	return []model.BackupDetails{details}, nil
 }
 
 func metadataToDetails(md servermodels.Metadata, storage model.Storage) model.BackupDetails {

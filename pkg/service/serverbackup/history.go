@@ -19,6 +19,7 @@ const citrusleafEpoch = 1262304000
 // MetadataLister reads server backup metadata from object storage.
 type MetadataLister interface {
 	FetchAllMetadata(ctx context.Context) ([]servermodels.Metadata, error)
+	GetMetadata(ctx context.Context, backupID string) (servermodels.Metadata, error)
 }
 
 type listerFactory interface {
