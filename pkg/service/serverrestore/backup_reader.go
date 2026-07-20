@@ -56,7 +56,7 @@ func (r *BackupReader) getRoutineBackups(
 		return nil, fmt.Errorf("routine %q not found", filter.RoutineName())
 	}
 
-	lister, err := r.listerFactory.NewLister(ctx, routine)
+	lister, err := r.listerFactory.NewLister(ctx, routine.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -91,12 +91,11 @@ func (r *BackupReader) getPathBackups(
 		routineName = filter.Path()
 	}
 
-	routine, ok := r.config.Routine(routineName)
-	if !ok {
+	if _, ok := r.config.Routine(routineName); !ok {
 		return nil, nil
 	}
 
-	lister, err := r.listerFactory.NewLister(ctx, routine)
+	lister, err := r.listerFactory.NewLister(ctx, filter.Storage())
 	if err != nil {
 		return nil, err
 	}

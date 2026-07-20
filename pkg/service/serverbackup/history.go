@@ -22,12 +22,12 @@ type MetadataLister interface {
 }
 
 type listerFactory interface {
-	NewLister(ctx context.Context, routine *model.BackupRoutine) (MetadataLister, error)
+	NewLister(ctx context.Context, storage model.Storage) (MetadataLister, error)
 }
 
-// ListerFactory builds metadata listers for backup routines.
+// ListerFactory builds metadata listers for backup storage.
 type ListerFactory interface {
-	NewLister(ctx context.Context, routine *model.BackupRoutine) (MetadataLister, error)
+	NewLister(ctx context.Context, storage model.Storage) (MetadataLister, error)
 }
 
 // HistoryManager reads last-run timestamps from server backup metadata in S3.
@@ -45,7 +45,7 @@ func (hm *HistoryManager) FindLastRun(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 ) (*model.BackupTime, error) {
-	lister, err := hm.listerFactory.NewLister(ctx, routine)
+	lister, err := hm.listerFactory.NewLister(ctx, routine.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -123,11 +123,11 @@ func NewS3ListerFactory(s3Client s3ClientProvider) *s3ListerFactory {
 
 func (f *s3ListerFactory) NewLister(
 	ctx context.Context,
-	routine *model.BackupRoutine,
+	storage model.Storage,
 ) (MetadataLister, error) {
-	s3Storage, ok := routine.Storage.(*model.S3Storage)
+	s3Storage, ok := storage.(*model.S3Storage)
 	if !ok {
-		return nil, fmt.Errorf("server backup history requires S3 storage, got %T", routine.Storage)
+		return nil, fmt.Errorf("server backup history requires S3 storage, got %T", storage)
 	}
 	client, err := f.s3Client.GetS3Client(ctx, s3Storage)
 	if err != nil {
