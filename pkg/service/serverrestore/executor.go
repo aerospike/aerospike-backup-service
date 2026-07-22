@@ -55,6 +55,10 @@ func (r *RestoreExecutor) Run(
 			return nil, fmt.Errorf("failed to get status of server restore: %w", err)
 		}
 
+		if status == asinfo.RestoreStateFailed {
+			return nil, fmt.Errorf("server restore failed")
+		}
+
 		if status == asinfo.RestoreStateReady {
 			break
 		}
