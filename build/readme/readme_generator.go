@@ -441,6 +441,7 @@ func extractRows() []MetricRow {
 	var rows []MetricRow
 	// This regex extracts the name, help text, and variable labels from the
 	// description string of a Prometheus metric.
+	//nolint:lll
 	prometheusRE := regexp.MustCompile(
 		`Desc{fqName:\s*"([^"]+)",\s*help:\s*"([^"]+)",\s*unit:\s*"[^"]*",\s*constLabels:\s*{[^}]*},\s*variableLabels:\s*{([^}]*)}}`)
 
