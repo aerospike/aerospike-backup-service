@@ -12,49 +12,49 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// errorWithCode represents an error with an associated HTTP status code.
-type errorWithCode struct {
+// statusCodeError represents an error with an associated HTTP status code.
+type statusCodeError struct {
 	Err  error
 	Code int
 }
 
-func (e *errorWithCode) Error() string {
+func (e *statusCodeError) Error() string {
 	return e.Err.Error()
 }
 
-// newErrorWithCode creates a new errorWithCode with an associated status code.
-func newErrorWithCode(err error, code int) *errorWithCode {
-	return &errorWithCode{Err: err, Code: code}
+// newStatusCodeError creates a new statusCodeError with an associated status code.
+func newStatusCodeError(err error, code int) *statusCodeError {
+	return &statusCodeError{Err: err, Code: code}
 }
 
 func errInvalidQueryParam(err error, param string) error {
-	return newErrorWithCode(fmt.Errorf("invalid query param %s: %w", param, err), http.StatusBadRequest)
+	return newStatusCodeError(fmt.Errorf("invalid query param %s: %w", param, err), http.StatusBadRequest)
 }
 
 func errInvalidJSONPayload(err error) error {
-	return newErrorWithCode(fmt.Errorf("invalid JSON payload: %w", err), http.StatusBadRequest)
+	return newStatusCodeError(fmt.Errorf("invalid JSON payload: %w", err), http.StatusBadRequest)
 }
 
 func errBadRequest(err error) error {
-	return newErrorWithCode(fmt.Errorf("invalid request: %w", err), http.StatusBadRequest)
+	return newStatusCodeError(fmt.Errorf("invalid request: %w", err), http.StatusBadRequest)
 }
 
-var errMissingRoutineName = newErrorWithCode(errors.New("routine name required"), http.StatusBadRequest)
-var errMissingClusterName = newErrorWithCode(errors.New("cluster name required"), http.StatusBadRequest)
-var errMissingPolicyName = newErrorWithCode(errors.New("policy name required"), http.StatusBadRequest)
-var errMissingStorageName = newErrorWithCode(errors.New("storage name required"), http.StatusBadRequest)
+var errMissingRoutineName = newStatusCodeError(errors.New("routine name required"), http.StatusBadRequest)
+var errMissingClusterName = newStatusCodeError(errors.New("cluster name required"), http.StatusBadRequest)
+var errMissingPolicyName = newStatusCodeError(errors.New("policy name required"), http.StatusBadRequest)
+var errMissingStorageName = newStatusCodeError(errors.New("storage name required"), http.StatusBadRequest)
 
 func errRoutineNotFound(name string) error {
 	return errNotFound("routine", name)
 }
 
 func errNotFound(field string, name any) error {
-	return newErrorWithCode(fmt.Errorf("%s %q not found", field, name), http.StatusNotFound)
+	return newStatusCodeError(fmt.Errorf("%s %q not found", field, name), http.StatusNotFound)
 }
 
 // httpError calls http.Error with the appropriate status code based on the error.
 func httpError(w http.ResponseWriter, err error) {
-	var httpErr *errorWithCode
+	var httpErr *statusCodeError
 
 	switch {
 	case errors.As(err, &httpErr):
