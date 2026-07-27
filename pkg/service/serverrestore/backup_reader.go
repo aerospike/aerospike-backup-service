@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -163,12 +162,4 @@ func matchesTimeBounds(backup model.BackupDetails, bounds model.TimeBounds) bool
 	}
 
 	return true
-}
-
-func pathBackupID(path string) string {
-	if path == "" {
-		return path
-	}
-
-	return path[strings.LastIndex(path, "/")+1:]
 }

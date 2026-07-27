@@ -2,6 +2,7 @@ package serverrestore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -58,7 +59,7 @@ func (h *Handler) Wait(ctx context.Context) error {
 		}
 
 		if stable == asinfo.RestoreStateFailed {
-			h.waitErr = fmt.Errorf("restore failed")
+			h.waitErr = errors.New("restore failed")
 			h.stats.Stop()
 
 			return h.waitErr

@@ -2,6 +2,7 @@ package serverrestore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -41,7 +42,7 @@ func (r *RestoreExecutor) Run(
 
 	jobID := request.BackupDataPath
 	if jobID == "" {
-		return nil, fmt.Errorf("backup job id is required for server restore")
+		return nil, errors.New("backup job id is required for server restore")
 	}
 
 	if err = infoClient.PrepareServerRestore(ctx, jobID, namespace); err != nil {
@@ -56,7 +57,7 @@ func (r *RestoreExecutor) Run(
 		}
 
 		if status == asinfo.RestoreStateFailed {
-			return nil, fmt.Errorf("server restore failed")
+			return nil, errors.New("server restore failed")
 		}
 
 		if status == asinfo.RestoreStateReady {
@@ -89,7 +90,7 @@ func destinationNamespace(request *model.RestoreRequest) (string, error) {
 		namespace = ptr.ValueOrZero(request.Policy.Namespace.Source)
 	}
 	if namespace == "" {
-		return "", fmt.Errorf("destination namespace is required for server restore")
+		return "", errors.New("destination namespace is required for server restore")
 	}
 
 	return namespace, nil
