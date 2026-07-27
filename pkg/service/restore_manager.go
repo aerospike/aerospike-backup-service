@@ -34,16 +34,16 @@ type RestoreManager interface {
 	) map[model.RestoreJobID]*model.RestoreJobStatus
 }
 
-type ErrJobNotFound struct {
+type JobNotFoundError struct {
 	JobID model.RestoreJobID
 }
 
-func (e *ErrJobNotFound) Error() string {
+func (e *JobNotFoundError) Error() string {
 	return fmt.Sprintf("restore job with ID %d not found", e.JobID)
 }
 
-func NewErrJobNotFound(id model.RestoreJobID) *ErrJobNotFound {
-	return &ErrJobNotFound{id}
+func NewJobNotFoundError(id model.RestoreJobID) *JobNotFoundError {
+	return &JobNotFoundError{JobID: id}
 }
 
 // RestoreManagerImpl implements the RestoreManager interface.

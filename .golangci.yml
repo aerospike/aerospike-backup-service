@@ -8,6 +8,7 @@ linters:
     - dogsled
     - dupl
     - errcheck
+    - errname
     - errorlint
     - exhaustive
     - exptostd

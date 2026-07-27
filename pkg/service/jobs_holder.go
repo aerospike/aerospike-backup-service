@@ -198,5 +198,5 @@ func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*restoreJob, error) {
 		return job, nil
 	}
 
-	return nil, NewErrJobNotFound(id)
+	return nil, NewJobNotFoundError(id)
 }
