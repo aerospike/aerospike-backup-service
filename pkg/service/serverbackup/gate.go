@@ -9,7 +9,9 @@ var errAlreadyRunning = errors.New("server backup already running on cluster")
 
 // Gate enforces a single active server-side backup per source cluster.
 type Gate interface {
+	// TryAcquire reserves the cluster for a server backup, or returns errAlreadyRunning.
 	TryAcquire(clusterHash string) (release func(), err error)
+	// IsActive reports whether a server backup is in progress on the cluster.
 	IsActive(clusterHash string) bool
 }
 

@@ -43,7 +43,6 @@ func (r *RoutineRunner) Run(
 	}
 
 	return &sequentialOperation{
-		ctx:        ctx,
 		routine:    routine,
 		runSpec:    runSpec,
 		namespaces: namespaces,
@@ -57,7 +56,6 @@ type sequentialOperation struct {
 
 	current service.CancelableBackupHandler
 
-	ctx        context.Context
 	routine    *model.BackupRoutine
 	runSpec    model.BackupRunSpec
 	namespaces []string
@@ -71,7 +69,7 @@ func (op *sequentialOperation) Wait(ctx context.Context) error {
 	var aggregatedErr error
 
 	for _, namespace := range op.namespaces {
-		handler := op.nsRunner.Run(op.ctx, op.routine, namespace, op.runSpec, op.logger)
+		handler := op.nsRunner.Run(ctx, op.routine, namespace, op.runSpec, op.logger)
 		op.setCurrent(handler)
 
 		if err := handler.Wait(ctx); err != nil {

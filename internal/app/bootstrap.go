@@ -61,20 +61,16 @@ func InitComponents(
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
 	backendService := service.NewBackupBackendService(pathService, operations)
 
-	var tree modeTree
-	switch config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() {
-	case model.BackupModeServer:
-		tree = newServerModeTree(scheduler, config, s3Accessor, clientManager, resolver)
-	default:
-		tree = newScanModeTree(
-			scheduler,
-			config,
-			pathService,
-			backendService,
-			clientManager,
-			operations,
-		)
-	}
+	tree := newModeTree(
+		scheduler,
+		config,
+		s3Accessor,
+		clientManager,
+		resolver,
+		pathService,
+		backendService,
+		operations,
+	)
 
 	configApplier := service.NewDefaultConfigApplier(tree.backupScheduler, tree.registry, config)
 
@@ -100,6 +96,31 @@ func InitComponents(
 	)
 
 	return scheduler, httpService, nil
+}
+
+func newModeTree(
+	scheduler quartz.Scheduler,
+	config *model.Config,
+	s3Accessor *storage.S3StorageAccessor,
+	clientManager aerospike.ClientManager,
+	resolver secrets.Resolver,
+	pathService service.PathService,
+	backendService service.BackupReaderWriter,
+	operations *storage.Operations,
+) modeTree {
+	switch config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() {
+	case model.BackupModeServer:
+		return newServerModeTree(scheduler, config, s3Accessor, clientManager, resolver)
+	default:
+		return newScanModeTree(
+			scheduler,
+			config,
+			pathService,
+			backendService,
+			clientManager,
+			operations,
+		)
+	}
 }
 
 func newScanModeTree(

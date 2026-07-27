@@ -23,7 +23,7 @@ type BackupCommonConfig struct {
 	// * US (e.g. Jan-02-2006-15-04-05)
 	TimestampFormat *string `yaml:"timestamp-format,omitempty" json:"timestamp-format,omitempty" enums:"ISO,US,EU" extensions:"x-nullable"` //nolint:lll
 	// Backup mode for the entire service instance: scan (default) or server.
-	BackupMode *string `yaml:"backup-mode,omitempty" json:"backup-mode,omitempty" enums:"scan,server" default:"scan" extensions:"x-nullable"`
+	BackupMode *string `yaml:"backup-mode,omitempty" json:"backup-mode,omitempty" enums:"scan,server" default:"scan" extensions:"x-nullable"` //nolint:lll
 }
 
 // Validate validates the backup subsection configuration.

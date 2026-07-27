@@ -18,7 +18,9 @@ const citrusleafEpoch = 1262304000
 
 // MetadataLister reads server backup metadata from object storage.
 type MetadataLister interface {
+	// FetchAllMetadata returns metadata for every server backup in the storage backend.
 	FetchAllMetadata(ctx context.Context) ([]servermodels.Metadata, error)
+	// GetMetadata returns metadata for a single backup ID.
 	GetMetadata(ctx context.Context, backupID string) (servermodels.Metadata, error)
 }
 
@@ -28,6 +30,7 @@ type listerFactory interface {
 
 // ListerFactory builds metadata listers for backup storage.
 type ListerFactory interface {
+	// NewLister creates a metadata lister for the given storage configuration.
 	NewLister(ctx context.Context, storage model.Storage) (MetadataLister, error)
 }
 

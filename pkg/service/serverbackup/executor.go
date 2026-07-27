@@ -30,6 +30,7 @@ type Credentials struct {
 
 // CredentialsResolver resolves secret values for server-side backup.
 type CredentialsResolver interface {
+	// Resolve returns the plaintext value for a secret reference.
 	Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error)
 }
 
