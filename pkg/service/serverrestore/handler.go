@@ -16,7 +16,7 @@ const pollInterval = time.Second
 
 // Handler monitors a server-side restore job started via Aerospike info commands.
 type Handler struct {
-	infoClient backup.InfoGetter
+	infoClient backup.ServerBackupInfo
 	namespace  string
 	stats      *models.RestoreStats
 	waitErr    error
@@ -24,7 +24,7 @@ type Handler struct {
 
 var _ restoreexecutor.RestoreHandler = (*Handler)(nil)
 
-func newHandler(infoClient backup.InfoGetter, namespace string) *Handler {
+func newHandler(infoClient backup.ServerBackupInfo, namespace string) *Handler {
 	return &Handler{
 		infoClient: infoClient,
 		namespace:  namespace,

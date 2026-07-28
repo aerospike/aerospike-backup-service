@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/serverbackup"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	infoModels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
@@ -33,7 +34,7 @@ func (r *RestoreExecutor) Run(
 	client aerospike.Restorer,
 	request *model.RestoreRequest,
 ) (restoreexecutor.RestoreHandler, error) {
-	infoClient := client.InfoClient()
+	var infoClient backup.ServerBackupInfo = client.InfoClient()
 
 	namespace, err := destinationNamespace(request)
 	if err != nil {
