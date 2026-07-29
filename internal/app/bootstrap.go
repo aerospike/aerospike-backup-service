@@ -213,7 +213,7 @@ func newServerModeTree(
 	restoreValidator := service.NewRestoreValidator(startController, config)
 	backupReader := serverrestore.NewBackupReader(listerFactory, config)
 	restoreMgr := service.NewRestoreManager(
-		serverrestore.NewRestoreExecutor(resolver),
+		serverrestore.NewFuzzyRestoreExecutor(resolver),
 		clientManager,
 		restoreJobs,
 		backupReader,
