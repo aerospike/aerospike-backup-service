@@ -23,6 +23,8 @@ type RestoreExecutor struct {
 	resolver serverbackup.CredentialsResolver
 }
 
+var _ restoreexecutor.Restore = (*RestoreExecutor)(nil)
+
 // NewRestoreExecutor builds a server-side restore executor.
 func NewRestoreExecutor(resolver serverbackup.CredentialsResolver) *RestoreExecutor {
 	return &RestoreExecutor{resolver: resolver}
@@ -125,7 +127,6 @@ func makeRestoreRequest(
 			Endpoint:  "http://host.docker.internal:9000",
 		},
 		JobID: jobID,
+		//FuzzyRestore: true,
 	}, nil
 }
-
-var _ restoreexecutor.Restore = (*RestoreExecutor)(nil)
