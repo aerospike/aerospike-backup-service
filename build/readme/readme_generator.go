@@ -38,6 +38,10 @@ const (
 // (e.g. docs/security.md) only needs to be added here to opt in.
 var targetFiles = []string{
 	readmeRelPath,
+	"docs/installation.md",
+	"docs/configuration.md",
+	"docs/api-examples.md",
+	"docs/monitoring.md",
 }
 
 var allStorageTypes = map[string]dto.Storage{
