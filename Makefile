@@ -199,7 +199,7 @@ openapi-check: openapi
 readme:
 	$(GO) run ./build/readme
 
-README_GENERATED_TARGETS := README.md docs/installation.md docs/configuration.md docs/api-examples.md docs/monitoring.md
+README_GENERATED_TARGETS := README.md docs/installation.md docs/configuration.md docs/api-examples.md docs/monitoring.md docs/migration.md
 
 .PHONY: readme-check
 readme-check: readme

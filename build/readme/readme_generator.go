@@ -42,6 +42,7 @@ var targetFiles = []string{
 	"docs/configuration.md",
 	"docs/api-examples.md",
 	"docs/monitoring.md",
+	"docs/migration.md",
 }
 
 var allStorageTypes = map[string]dto.Storage{
