@@ -75,6 +75,7 @@ under [releases](https://github.com/aerospike/aerospike-backup-service/releases)
 - [Monitoring](docs/monitoring.md) — Prometheus metrics, alerts, and health/readiness endpoints
 - [Linux packages](build/package/README.md) — installing and managing the DEB/RPM packages
 - [Helm chart](helm/aerospike-backup-service) — deploying to Kubernetes
+- [Changelog](CHANGELOG.md) — notable changes by release
 
 # Migration Guide
 
