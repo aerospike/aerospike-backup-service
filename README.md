@@ -116,7 +116,7 @@ Run the server
 Run in a container with a custom configuration file:
 
 ```bash
-docker run -d -p 8080:8080 -v config.yml:/app/config.yml --name backup-service backup-service
+docker run -d -p 8080:8080 -v $(pwd)/config.yml:/etc/aerospike-backup-service/aerospike-backup-service.yml --name backup-service aerospike/aerospike-backup-service:latest
 ```
 
 #### Service
@@ -229,7 +229,7 @@ backup-routines:
 
 service:
   http:
-    port: 9000
+    port: 8080
   logger:
     level: INFO
     file-writer:

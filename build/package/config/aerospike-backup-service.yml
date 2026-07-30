@@ -46,7 +46,7 @@ backup-routines:
 
 service:
   http:
-    port: 9000
+    port: 8080
   logger:
     level: INFO
     file-writer:
