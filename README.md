@@ -8,7 +8,7 @@ The Aerospike Backup Service provides a set of REST API endpoints to back up and
 You can perform full and incremental backups and set different backup policies and schedules.
 There are also several monitoring endpoints to check backup information.
 
-Use the [OpenAPI generation script](./scripts/generate-openapi.sh) to generate an OpenAPI specification for the service.
+Use the [OpenAPI generation script](build/scripts/generate-openapi.sh) (or `make openapi`) to generate an OpenAPI specification for the service.
 A pre-built OpenAPI specification is available in Swagger
 format [here](https://aerospike.github.io/aerospike-backup-service/).
 
@@ -243,7 +243,7 @@ can have a significant impact on backup throughput.
 We recommend experimenting with different values in your environment to find the optimal balance.
 
 The `service` section configures the operation settings of the Aerospike Backup Service,
-which include logging and HTTP endpoint. See the [`dto.BackupServiceConfig`](docs/readme/dto/dto.backupserviceconfig.md)
+which include logging and HTTP endpoint. See the [`dto.ServiceConfig`](docs/readme/dto/dto.serviceconfig.md)
 for details.
 
 ### Configuration with API
@@ -358,7 +358,7 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
 
 - ⏰ Time since last backup for routine:
 
-  `time() - aerospike_backup_service_last_successful_backup_timestamp_seconds{routine="daily-ns1"}`
+  `time() - aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1"}`
 
 **Example Prometheus Alert**
 
@@ -378,7 +378,7 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
 
 ```yaml
 - alert: BackupTooOld
-  expr: (time() - aerospike_backup_service_last_successful_backup_timestamp_seconds{routine="daily-ns1"}) > 86400
+  expr: (time() - aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1"}) > 86400
   labels:
     severity: critical
   annotations:
@@ -622,7 +622,7 @@ This request restores a backup from a specified path to a designated destination
 
 The `no-generation` parameter allows overwriting of existing keys if set to `true`.
 
-In the `source` section, `path` is the `key` value returned as a response in the [Full Backup List](#full-backup-list)
+In the `source` section, `path` is the `key` value returned as a response in the [Retrieve Backup List](#retrieve-backup-list)
 example. The `type` parameter under `source` denotes S3 storage if set to `1` and local storage if set to `0`.
 
 The `destination` field says where to restore to. It can be any Aerospike cluster.
