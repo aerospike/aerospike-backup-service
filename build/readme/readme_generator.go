@@ -264,7 +264,6 @@ func main() {
 	metricsTable := renderMetricsTable(metricRows)
 
 	for _, path := range targetFiles {
-		//nolint:gosec // G304 targetFiles is a fixed, hardcoded list of project-relative paths.
 		content, err := os.ReadFile(path)
 		if err != nil {
 			panic(fmt.Errorf("failed to read target file %q: %w", path, err))
