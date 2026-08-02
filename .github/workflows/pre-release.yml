@@ -53,6 +53,8 @@ jobs:
           tag: ${{ github.ref_name }}
           draft: true
           prerelease: true
+          body: |
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for details on this release, and [docs/migration.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/migration.md) for upgrade/breaking-change notes.
 
   build-packages:
     permissions:

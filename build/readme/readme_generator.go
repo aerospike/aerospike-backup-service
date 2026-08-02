@@ -31,6 +31,20 @@ const (
 	valRoutine1       = "routine1"
 )
 
+// targetFiles lists every Markdown file that may contain generated sections
+// (DTO examples, the default config block, the metrics table, or the RBAC
+// matrix reserved below). Each file is processed independently and markers
+// that aren't present in a given file are simply left alone, so a new doc
+// (e.g. docs/security.md) only needs to be added here to opt in.
+var targetFiles = []string{
+	readmeRelPath,
+	"docs/installation.md",
+	"docs/configuration.md",
+	"docs/api-examples.md",
+	"docs/monitoring.md",
+	"docs/migration.md",
+}
+
 var allStorageTypes = map[string]dto.Storage{
 	valLocal: {
 		LocalStorage: &dto.LocalStorage{
@@ -242,23 +256,33 @@ func main() {
 	// generate example files from jsonExamples and yamlExamples
 	generateExampleFiles()
 
-	// Update README sections
-	readme, err := os.ReadFile(readmeRelPath)
-	if err != nil {
-		panic(err)
-	}
+	// Compute the Prometheus metrics table once; it's applied to every target
+	// file below, and only files that actually contain the <!-- Metrics -->
+	// marker are changed.
+	metricRows := extractRows()
+	writeMetricsToFile(metricRows)
+	metricsTable := renderMetricsTable(metricRows)
 
-	// replace every <!-- DTONAME --> comment with a real example from jsonExamples and yamlExamples
-	readme = updateDtoExamples(readme)
-	// copy example configuration (with explanatory comments) to a <!-- DefaultConfig --> section
-	readme = updateDefaultConfigSection(readme)
-	// add Prometheus metrics explanation table after <!-- Metrics -->
-	readme = updateMetrics(readme)
+	for _, path := range targetFiles {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			panic(fmt.Errorf("failed to read target file %q: %w", path, err))
+		}
 
-	//nolint:gosec // G703 readmeRelPath is a fixed project path; readme is generated from the same file and templates.
-	err = os.WriteFile(readmeRelPath, readme, 0600)
-	if err != nil {
-		panic(err)
+		// replace every <!-- DTONAME --> comment with a real example from jsonExamples and yamlExamples
+		content = updateDtoExamples(content)
+		// copy example configuration (with explanatory comments) to a <!-- DefaultConfig --> section
+		content = updateDefaultConfigSection(content)
+		// add the Prometheus metrics explanation table after <!-- Metrics -->
+		content = applyMetricsTable(content, metricsTable)
+		// reserved for the security plan: injects an RBAC permissions matrix after <!-- RBACMatrix -->
+		content = updateRBACMatrix(content)
+
+		//nolint:gosec // G306 target markdown files are meant to be readable by anyone building docs.
+		err = os.WriteFile(path, content, 0600)
+		if err != nil {
+			panic(fmt.Errorf("failed to write target file %q: %w", path, err))
+		}
 	}
 }
 
@@ -383,12 +407,8 @@ type MetricRow struct {
 	Deprecated  bool     `json:"deprecated"`
 }
 
-// updateMetrics generates a Markdown table from a list of Prometheus collectors
-// and replaces a placeholder section in a given README file.
-func updateMetrics(readme []byte) []byte {
-	rows := extractRows()
-	writeMetricsToFile(rows)
-
+// renderMetricsTable generates a Markdown table from a list of Prometheus collectors.
+func renderMetricsTable(rows []MetricRow) string {
 	maxName := len("Name")
 	maxType := len("Type")
 	maxHelp := len("Description")
@@ -429,12 +449,26 @@ func updateMetrics(readme []byte) []byte {
 		fmt.Fprintf(&sb, "| %-*s | %-*s | %-*s | %-*s |\n",
 			maxName+quotes, name, maxType, r.Type, maxHelp, r.Description, maxLabels, labelsStr)
 	}
-	table := sb.String()
 
-	// Replace section after <!-- Metrics -->
+	return sb.String()
+}
+
+// applyMetricsTable replaces the placeholder section after <!-- Metrics -->
+// with the rendered table. Files without the marker are returned unchanged.
+func applyMetricsTable(content []byte, table string) []byte {
 	metricsRe := regexp.MustCompile(`(?s)(<!-- Metrics -->\n\n)(\|.*?\|\n)(\n)`)
 
-	return metricsRe.ReplaceAll(readme, []byte("${1}"+table+"${3}"))
+	return metricsRe.ReplaceAll(content, []byte("${1}"+table+"${3}"))
+}
+
+// updateRBACMatrix is a reserved extension point for the security plan's RBAC
+// work: once role/permission definitions exist, this function should replace
+// a <!-- RBACMatrix --> marker the same way applyMetricsTable does for
+// <!-- Metrics -->. It is a no-op today because no target file defines that
+// marker yet; wiring it into main() now means the security plan only needs
+// to fill in the body, not add multi-file plumbing.
+func updateRBACMatrix(content []byte) []byte {
+	return content
 }
 
 func extractRows() []MetricRow {
