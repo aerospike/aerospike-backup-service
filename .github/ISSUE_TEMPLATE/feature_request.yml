@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest an idea or enhancement for Aerospike Backup Service
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Please search [existing issues](../search?q=is%3Aissue&type=issues) first to avoid
+        duplicates.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the situation or limitation you're running into. Concrete backup/restore workflows are
+        especially helpful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to see happen? If it changes the configuration file, REST API, or CLI flags,
+        sketch out the shape you have in mind.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds you're using today, or other approaches you considered.
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Links, screenshots, or anything else that helps explain the request.

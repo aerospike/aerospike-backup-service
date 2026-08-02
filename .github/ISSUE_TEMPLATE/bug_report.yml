@@ -1,0 +1,66 @@
+name: Bug report
+description: Report a problem with Aerospike Backup Service
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please search [existing issues](../search?q=is%3Aissue&type=issues)
+        first to avoid duplicates.
+
+  - type: input
+    id: version
+    attributes:
+      label: Aerospike Backup Service version
+      description: Output of `aerospike-backup-service -v`, or the Docker image tag you are running.
+      placeholder: v3.6.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment method
+      options:
+        - Binary
+        - Docker
+        - systemd (DEB/RPM package)
+        - Kubernetes (Helm chart)
+        - Other (describe below)
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected to happen instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Include the relevant parts of your configuration file (redact secrets), the API request that
+        triggered the issue if applicable, and any error output.
+      placeholder: |
+        1. Configuration used (redacted):
+        2. API request / CLI command:
+        3. Observed behavior:
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Service logs around the time of the issue. This will be automatically formatted as code, so no
+        need for backticks.
+      render: shell
+
+  - type: input
+    id: aerospike-version
+    attributes:
+      label: Aerospike Server version
+      description: Version of the Aerospike cluster being backed up or restored, if relevant.
