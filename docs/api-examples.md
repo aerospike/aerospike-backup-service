@@ -190,7 +190,7 @@ This request restores a backup from a specified path to a designated destination
 The `no-generation` parameter allows overwriting of existing keys if set to `true`.
 
 In the `source` section, `path` is the `key` value returned as a response in the [Retrieve Backup List](#retrieve-backup-list)
-example. The `type` parameter under `source` denotes S3 storage if set to `1` and local storage if set to `0`.
+example.
 
 The `destination` field says where to restore to. It can be any Aerospike cluster.
 
