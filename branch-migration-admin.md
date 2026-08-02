@@ -2,8 +2,8 @@
 
 This document is for repository administrators completing the `v3` → `dev` + `main` Git Flow migration.
 
-Repository file updates (CI workflows, docs, PR template) are committed on **`v3`**. Remaining steps require GitHub
-organization admin access.
+Repository file updates (CI workflows, docs, PR template) are committed on **`v3`**, and `dev` and `main` have been
+brought to the same commit. One step remains and it requires an **organization owner**.
 
 ## Current status
 
@@ -11,74 +11,63 @@ organization admin access.
 |------|--------|
 | `dev` branch created (same tip as `v3`) | Done |
 | CI/docs updated to target `dev` | Done (on `v3`) |
-| `dev` fast-forwarded to `v3` | **Admin required** |
-| Default branch set to `dev` | **Admin required** |
-| `main` fast-forwarded to `dev` | **Admin required** (protected) |
-| `v3` branch retired | **Admin required** |
-| Branch protection on `dev` / `main` | **Admin required** |
+| `dev` fast-forwarded to `v3` | Done |
+| `main` fast-forwarded to `dev` | Done (was v2.0.0) |
+| Branch protection on `dev` / `main` | Done |
+| Default branch set to `dev` | **Org owner required** |
+| `v3` branch retired | Deferred — `v3` is kept as an alias for now |
 
-## 1. Fast-forward `dev` to `v3`
+`dev`, `main`, and `v3` all point at the same commit.
 
-`dev` was branched from `v3` before the CI/docs updates landed, so it is behind by those commits.
-
-```bash
-git fetch origin
-git push origin origin/v3:refs/heads/dev
-```
-
-## 2. Set default branch to `dev`
+## Remaining step: set the default branch to `dev`
 
 **Settings → General → Default branch → Switch to `dev`**
 
-Or via CLI (org admin):
+Or via CLI:
 
 ```bash
 gh api repos/aerospike/aerospike-backup-service -X PATCH -f default_branch=dev
 ```
 
-Retarget any open pull requests from `v3` to `dev` (GitHub does this automatically only when the base branch is
-deleted or renamed).
+Repo-admin permission is **not** sufficient — the enterprise restricts this to organization owners. A repo admin gets:
 
-## 3. Fast-forward `main` to match `dev`
-
-`main` is currently protected and still points at v2.0.0. `main` is an ancestor of `dev`, so this is a fast-forward.
-
-### Option A: PR merge (recommended)
-
-1. Open a PR: base `main`, compare `dev`
-2. Title: `chore: align main with dev for Git Flow release branch`
-3. Merge (admin may need to bypass required reviews; the histories do not diverge)
-
-### Option B: Direct push (requires temporarily relaxing `main` protection)
-
-```bash
-git fetch origin
-git push origin origin/dev:refs/heads/main
+```
+422 Validation Failed: You don't have permission to change the default branch.
 ```
 
-## 4. Retire the `v3` branch
+### Why this step matters
 
-`dev` already exists, so the rename path (`branches/v3/rename`) is unavailable — delete `v3` once `dev` is the default
-branch and open PRs have been retargeted:
+The organization ruleset `protect_default_branch_0001` targets `~DEFAULT_BRANCH`, so it follows whichever branch is
+default. Switching the default moves that ruleset's protection from `v3` onto `dev` automatically — nothing needs to
+be migrated by hand. Until the switch happens, `dev` is covered only by the repo-level branch protection configured
+below, and new clones still land on `v3`.
+
+After the switch, retarget any open pull requests from `v3` to `dev`. GitHub only does this automatically when the
+base branch is deleted or renamed.
+
+## Branch protection (already applied)
+
+Repo-level protection now configured on both `dev` and `main`:
+
+- Require a pull request with 1 approving review; stale reviews dismissed on push
+- Require conversation resolution
+- Require branches to be up to date before merging
+- Required checks: `build (1.25.x)`, `lint`, `generated-check`, `markdown links`
+- No force pushes, no deletions
+- `enforce_admins` is off, so repo admins can still push directly in an emergency
+
+## `v3` branch
+
+`v3` is intentionally kept, pointing at the same commit as `dev`, so existing links and clones keep working. Once the
+default branch is `dev` and open PRs have been retargeted, it can be deleted with:
 
 ```bash
 gh api repos/aerospike/aerospike-backup-service/git/refs/heads/v3 -X DELETE
 ```
 
-`v3` is covered by organization rulesets, so this may require org admin.
+Note that `v3` stops being covered by the organization ruleset as soon as it is no longer the default branch.
 
-## 5. Branch protection
-
-Configure in **Settings → Branches** (or organization rulesets):
-
-| Branch | Rules |
-|--------|-------|
-| `dev` | Require PR before merge; required checks: Build, golangci-lint, Generated files up to date, Link check; no direct pushes |
-| `main` | Require PR before merge; restrict merges to release PRs from `dev` (or release-manager bypass); same required checks |
-
-Migrate any existing `v3` ruleset entries to `dev`.
-
-## 6. Team announcement
+## Team announcement
 
 Post to the team channel / mailing list:
 
@@ -101,13 +90,14 @@ git checkout dev
 git pull
 ```
 
-- Bookmarks to `/tree/v3` should use `/tree/dev` or a release tag.
+- Bookmarks to `/tree/v3` should use `/tree/dev` or a release tag. `v3` still exists and points at the same commit,
+  so nothing breaks immediately.
 - `main` now tracks the v3 release line (no longer v2.0.0). v2 maintenance remains on the `v2` branch.
 - **Release process:** merge `dev` → `main`, tag on `main`, back-merge `main` → `dev` if needed.
 
 ---
 
-## 7. Optional follow-up
+## Optional follow-up
 
 - Set Codecov default branch to `main` on [codecov.io](https://codecov.io)
 - Confirm Dependabot opens PRs against `dev` (automatic once `dev` is default)
