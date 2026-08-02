@@ -142,6 +142,10 @@ docker-buildx:
 test:
 	$(GOTEST) -v ./...
 
+.PHONY: test-integration
+test-integration:
+	$(GOTEST) -tags=integration -count=1 -v ./test/integration/...
+
 # mocks-generate: runs mockgen over pkg/service* interfaces and writes mockgen.go next to each
 #   package. Used by tests; committed mocks must match this output (see mocks-check).
 .PHONY: mocks-generate
