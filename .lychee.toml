@@ -16,6 +16,10 @@ exclude = [
   # Pre-existing broken link in the Helm chart README, owned by the
   # security plan's docs-supporting item.
   "helm/aerospike-backup-service/examples$",
+  # Stable reference docs that time out or redirect heavily from GitHub
+  # Actions runners; not worth failing CI over.
+  "^https://kubernetes\\.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes",
+  "^https://docs\\.aerospike\\.com/cloud/kubernetes/operator",
 ]
 
 max_concurrency = 8
