@@ -12,7 +12,7 @@
 
 ## Checklist
 
-- [ ] Target branch is `v3` (not `main`) unless this is explicitly a `main`-only change.
+- [ ] Target branch is `dev`. Only release PRs and hotfixes target `main`; v2 maintenance targets `v2`.
 - [ ] `make pr` passes locally (tidy, mocks, format, lint, tests, OpenAPI, README generation).
 - [ ] Tests were added or updated for the change.
 - [ ] Generated artifacts are committed and up to date (`make generated-check` passes): mocks, OpenAPI spec, README/docs.

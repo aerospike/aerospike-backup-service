@@ -68,10 +68,27 @@ date` workflows. Running it locally before pushing avoids a slow feedback loop t
 
 See the [pull request template](../.github/pull_request_template.md) for the full submission checklist.
 
-## Which branch to target
+## Branching model
 
-Target pull requests at **`v3`**, the active development branch for the current major version. `main` tracks older
-releases and is not where new work lands.
+The repository follows Git Flow:
+
+| Branch      | Role                                                                            |
+|-------------|---------------------------------------------------------------------------------|
+| `dev`       | Integration branch and the default branch. All pull requests target it.          |
+| `main`      | Latest release. Updated only by a release PR from `dev`, then tagged `v3.x.y`.    |
+| `v2`        | Maintenance for the 2.x line.                                                     |
+| `feature/*`, `bugfix/*` | Short-lived branches off `dev`, merged back via pull request.         |
+| `hotfix/*`  | Branched off `main` for urgent fixes; merged into both `main` and `dev`.          |
+
+Target your pull requests at **`dev`**. Do not open feature pull requests against `main` — it only moves forward
+through releases and hotfixes.
+
+### Cutting a release
+
+1. Open a pull request from `dev` into `main` and merge it.
+2. Tag the release commit on `main`: `git tag v3.x.y && git push origin v3.x.y`. The pre-release workflow runs on the
+   tag push.
+3. If the release added commits that exist only on `main` (for example a hotfix), back-merge `main` into `dev`.
 
 ## Reporting issues
 

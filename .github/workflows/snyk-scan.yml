@@ -2,10 +2,12 @@ name: Snyk scan
 on:
   push:
     branches:
+      - dev
       - main
       - 'v[0-9]+'
   pull_request:
     branches:
+      - dev
       - main
       - 'v[0-9]+'
 
