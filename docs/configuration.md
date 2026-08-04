@@ -171,6 +171,82 @@ update an existing routine.
 :warning: Incremental backups are deleted if they are empty and after each full backup. System metadata is backed up
 only on full backups.
 
+## Partial backup with filter expressions
+
+The `filter-exp` field on a backup routine applies an Aerospike [filter expression](https://aerospike.com/docs/develop/expressions/#record-filtering-with-expressions)
+during scan-based backups. Only records that match the expression are included in the backup.
+
+Filter expressions are **not** plain text (you cannot write `age > 25` directly in YAML). They are a binary format
+serialized as a **base64 string**. Build the expression with an Aerospike client library, then paste the encoded
+value into your routine configuration.
+
+### Generating a filter expression
+
+Use the [Aerospike Expressions guide](https://aerospike.com/docs/develop/expressions/#record-filtering-with-expressions)
+to understand the expression API, then encode the result with your client:
+
+**Go**
+
+```go
+import as "github.com/aerospike/aerospike-client-go/v8"
+
+exp, err := as.ExpGreater(as.ExpIntBin("age"), as.ExpIntVal(25)).Base64()
+// exp == "kwOTUQKjYWdlGQ=="
+```
+
+**Java**
+
+```java
+Expression filter = Exp.build(Exp.gt(Exp.intBin("age"), Exp.val(25)));
+System.out.println(filter.getBase64());
+```
+
+**Python**
+
+```python
+from aerospike_helpers import expressions as exp
+
+encoded = exp.GT(exp.IntBin("age"), 25).compile()
+# Use client.get_expression_base64(encoded) to get the base64 string
+```
+
+If you already have a filter on the cluster (for example an XDR shipping filter or expression secondary index), you can
+reuse its base64 value:
+
+```bash
+asinfo -v "xdr-get-filter:dc=DC1;namespace=test;b64=true"
+```
+
+### Configuration example
+
+`filter-exp` can only be used when backing up a **single set** (or all sets in a namespace with no `set-list`).
+It is mutually exclusive with multi-set backup.
+
+```yaml
+backup-routines:
+  adultsBackup:
+    interval-cron: "@daily"
+    source-cluster: abs-cluster
+    storage: s3
+    backup-policy: dailyBackupPolicy
+    namespaces:
+      - test
+    set-list:
+      - users
+    filter-exp: "kwOTUQKjYWdlGQ=="  # age > 25
+```
+
+### Common examples
+
+| Filter | Base64 value |
+|--------|--------------|
+| `age > 25` | `kwOTUQKjYWdlGQ==` |
+| `country = "US"` | `kwGTUQOnY291bnRyeaMDVVM=` |
+| `age >= 18 AND (country = "US" OR country = "CA")` | `kxCTBJNRAqNhZ2USkxGTAZNRA6djb3VudHJ5owNVU5MBk1EDp2NvdW50cnmjA0NB` |
+
+For more complex logic (metadata filters, list/map operations, geo filters, etc.), see the
+[Aerospike Expressions documentation](https://aerospike.com/docs/develop/expressions/).
+
 ## FAQ
 
 ### What happens when a backup doesn't finish before another starts (for the same routine)?

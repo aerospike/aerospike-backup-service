@@ -236,3 +236,34 @@ func TestMakeBackupConfigWithNodeList(t *testing.T) {
 	assert.Nil(t, config.EncryptionPolicy)
 	assert.Nil(t, config.CompressionPolicy)
 }
+
+func TestMakeBackupConfigWithFilterExpression(t *testing.T) {
+	namespace := "testNamespace"
+	routine := &model.BackupRoutine{
+		BackupPolicy:     &model.BackupPolicy{},
+		IntervalCron:     "@daily",
+		SourceCluster:    &model.AerospikeCluster{},
+		FilterExpression: "k1EDpHRlc3Q=",
+	}
+
+	config, err := makeBackupConfig(namespace, routine, model.TimeBounds{})
+
+	require.NoError(t, err)
+	require.NotNil(t, config.ScanPolicy)
+	require.NotNil(t, config.ScanPolicy.FilterExpression)
+}
+
+func TestMakeBackupConfigWithInvalidFilterExpression(t *testing.T) {
+	namespace := "testNamespace"
+	routine := &model.BackupRoutine{
+		BackupPolicy:     &model.BackupPolicy{},
+		IntervalCron:     "@daily",
+		SourceCluster:    &model.AerospikeCluster{},
+		FilterExpression: "invalid-exp",
+	}
+
+	_, err := makeBackupConfig(namespace, routine, model.TimeBounds{})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse filter expression")
+}

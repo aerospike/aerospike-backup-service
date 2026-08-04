@@ -7,70 +7,76 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 )
 
-func fullBackupsURL(baseURL, routineName string) string {
-	return fmt.Sprintf("%s/v1/backups/full/%s", baseURL, routineName)
+const (
+	// backupTimeout bounds how long a test waits for an ad-hoc backup to appear.
+	backupTimeout = 6 * time.Second
+	// pollInterval is how often the service is asked for the current backup list.
+	pollInterval = 250 * time.Millisecond
+)
+
+// fullBackupsURL is the ad-hoc full backup endpoint of the routine created by baseConfig.
+func (e *env) fullBackupsURL() string {
+	return fmt.Sprintf("%s/v1/backups/full/%s", e.server.URL, routineName)
 }
 
-func triggerFullBackup(t *testing.T, baseURL, routineName string) error {
-	t.Helper()
-
-	req, err := http.NewRequestWithContext(
-		t.Context(),
-		http.MethodPost,
-		fullBackupsURL(baseURL, routineName),
-		nil,
-	)
-	if err != nil {
-		return err
-	}
+// triggerFullBackup asks the service to run a full backup now.
+func (s *Suite) triggerFullBackup(e *env) {
+	req, err := http.NewRequestWithContext(s.T().Context(), http.MethodPost, e.fullBackupsURL(), nil)
+	s.Require().NoError(err)
 
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
+	s.Require().NoError(err)
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("status %d: %s", resp.StatusCode, body)
+		s.Require().Failf("failed to trigger full backup", "status %d: %s", resp.StatusCode, body)
 	}
-
-	return nil
 }
 
-func fetchFullBackupsForRoutine(t *testing.T, baseURL, routineName string) ([]dto.BackupDetails, error) {
-	t.Helper()
-	return fetchFullBackups(t, fullBackupsURL(baseURL, routineName))
+// waitForFullBackup polls the routine until it reports exactly one full backup, and returns it.
+func (s *Suite) waitForFullBackup(e *env) dto.BackupDetails {
+	deadline := time.Now().Add(backupTimeout)
+
+	for {
+		backups := s.getFullBackups(e)
+		if len(backups) == 1 {
+			return backups[0]
+		}
+
+		if time.Now().After(deadline) {
+			s.Require().Failf("timed out waiting for full backup",
+				"routine %q reported %d full backups after %s, want 1",
+				routineName, len(backups), backupTimeout)
+		}
+
+		time.Sleep(pollInterval)
+	}
 }
 
-func fetchFullBackups(t *testing.T, url string) ([]dto.BackupDetails, error) {
-	t.Helper()
-
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
+// getFullBackups returns the full backups the routine currently reports.
+func (s *Suite) getFullBackups(e *env) []dto.BackupDetails {
+	req, err := http.NewRequestWithContext(s.T().Context(), http.MethodGet, e.fullBackupsURL(), nil)
+	s.Require().NoError(err)
 
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
+	s.Require().NoError(err)
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("status %d: %s", resp.StatusCode, body)
+		s.Require().Failf("failed to fetch full backups", "status %d: %s", resp.StatusCode, body)
 	}
 
 	var backups []dto.BackupDetails
-	if err := json.NewDecoder(resp.Body).Decode(&backups); err != nil {
-		return nil, err
-	}
+	s.Require().NoError(json.NewDecoder(resp.Body).Decode(&backups))
 
-	return backups, nil
+	return backups
 }
