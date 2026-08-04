@@ -72,7 +72,12 @@ func makeBackupConfig(
 	config.FileLimit = uint64(backupPolicy.GetFileLimitOrDefault() * megabyte) // lib expects limit in bytes.
 	config.RecordsPerSecond = ptr.ValueOrZero(backupPolicy.RecordsPerSecond)
 	config.Bandwidth = ptr.ValueOrZero(backupPolicy.Bandwidth) * megabyte // lib expects file size in bytes.
-	config.ScanPolicy = scanPolicy(backupPolicy, routine)
+	scanPolicy, err := buildScanPolicy(backupPolicy, routine)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build scan policy: %w", err)
+	}
+
+	config.ScanPolicy = scanPolicy
 	config.RackList = routine.RackList // backup only these racks
 
 	config.ModBefore = timeBounds.ToTime
@@ -88,10 +93,10 @@ func makeBackupConfig(
 	return config, nil
 }
 
-func scanPolicy(
+func buildScanPolicy(
 	backupPolicy *model.BackupPolicy,
 	routine *model.BackupRoutine,
-) *as.ScanPolicy {
+) (*as.ScanPolicy, error) {
 	scanPolicy := as.NewScanPolicy()
 	if backupPolicy.TotalTimeout != nil {
 		scanPolicy.TotalTimeout = *backupPolicy.TotalTimeout
@@ -113,7 +118,16 @@ func scanPolicy(
 		scanPolicy.ReplicaPolicy = as.MASTER
 	}
 
-	return scanPolicy
+	if routine.FilterExpression != "" {
+		exp, err := as.ExpFromBase64(routine.FilterExpression)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse filter expression: %w", err)
+		}
+
+		scanPolicy.FilterExpression = exp
+	}
+
+	return scanPolicy, nil
 }
 
 func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy {

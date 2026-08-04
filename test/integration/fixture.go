@@ -19,15 +19,28 @@ import (
 const (
 	routineName = "integrationRoutine"
 	namespace   = "test"
+	setName     = "filteredSet"
 )
 
 type env struct {
 	backupDir string
 	server    *httptest.Server
+	asHost    string
+	asPort    int
 }
 
-func setupEnv(t *testing.T) *env {
+type envOptions struct {
+	filterExpression string
+	setList          string
+}
+
+func setupEnv(t *testing.T, opts ...envOptions) *env {
 	t.Helper()
+
+	var options envOptions
+	if len(opts) > 0 {
+		options = opts[0]
+	}
 
 	ctx := t.Context()
 
@@ -48,7 +61,7 @@ func setupEnv(t *testing.T) *env {
 	configDir := t.TempDir()
 	backupDir := t.TempDir()
 	cfgPath := filepath.Join(configDir, "config.yml")
-	err = os.WriteFile(cfgPath, []byte(configYAML(host, int(port.Num()), backupDir)), 0o600)
+	err = os.WriteFile(cfgPath, []byte(configYAML(host, int(port.Num()), backupDir, options)), 0o600)
 	require.NoError(t, err)
 
 	scheduler, svc, err := app.InitComponents(ctx, cfgPath, false)
@@ -63,10 +76,22 @@ func setupEnv(t *testing.T) *env {
 	return &env{
 		backupDir: backupDir,
 		server:    srv,
+		asHost:    host,
+		asPort:    int(port.Num()),
 	}
 }
 
-func configYAML(host string, port int, backupDir string) string {
+func configYAML(host string, port int, backupDir string, opts envOptions) string {
+	filterExpLine := ""
+	if opts.filterExpression != "" {
+		filterExpLine = fmt.Sprintf("    filter-exp: %q\n", opts.filterExpression)
+	}
+
+	setListLine := ""
+	if opts.setList != "" {
+		setListLine = fmt.Sprintf("    set-list:\n      - %s\n", opts.setList)
+	}
+
 	return fmt.Sprintf(`
 service:
   logger:
@@ -95,5 +120,5 @@ backup-routines:
     interval-cron: '@yearly'
     namespaces:
       - %s
-`, host, port, backupDir, routineName, namespace)
+%s%s`, host, port, backupDir, routineName, namespace, setListLine, filterExpLine)
 }

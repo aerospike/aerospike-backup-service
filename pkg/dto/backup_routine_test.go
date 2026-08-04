@@ -64,6 +64,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 		RackList:         []int{1},
 		PartitionList:    "0-100",
 		NodeList:         []string{"node1"},
+		FilterExpression: "k1EDpHRlc3Q=",
 		Disabled:         true,
 	}
 
@@ -97,6 +98,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 	assert.Equal(t, []int{1}, m.RackList)
 	assert.Equal(t, "0-100", m.PartitionList)
 	assert.Equal(t, []string{"node1"}, m.NodeList)
+	assert.Equal(t, "k1EDpHRlc3Q=", m.FilterExpression)
 	assert.True(t, m.Disabled)
 }
 
@@ -395,6 +397,35 @@ func TestBackupRoutine_ToModel_ParallelUncheckedWhenPolicyParallelUnset(t *testi
 
 	_, err := routineDTO.ToModel(config, "r")
 	require.NoError(t, err)
+}
+
+func TestBackupRoutine_Validate_InvalidFilterExpression(t *testing.T) {
+	r := &BackupRoutine{
+		SourceCluster:    "cluster1",
+		Storage:            "storage1",
+		IntervalCron:       "0 0 * * * *",
+		Namespaces:         &[]string{"ns1"},
+		FilterExpression:   "invalid-exp",
+	}
+
+	err := r.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse filter expression")
+}
+
+func TestBackupRoutine_Validate_FilterExpressionWithMultipleSets(t *testing.T) {
+	r := &BackupRoutine{
+		SourceCluster:    "cluster1",
+		Storage:            "storage1",
+		IntervalCron:       "0 0 * * * *",
+		Namespaces:         &[]string{"ns1"},
+		SetList:            []string{"set1", "set2"},
+		FilterExpression:   "k1EDpHRlc3Q=",
+	}
+
+	err := r.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "filter-exp cannot be used when backing up multiple sets")
 }
 
 func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {

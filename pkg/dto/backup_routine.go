@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aws/smithy-go/ptr"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -72,6 +73,11 @@ type BackupRoutine struct {
 	// and also mutually exclusive with the cluster's prefer-racks setting.
 	// Parallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.
 	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty" extensions:"x-nullable"`
+
+	// Base64 encoded filter expression. Use the encoded filter expression in each scan call,
+	// which can be used to do a partial backup. The expression to be used can be Base64
+	// encoded through any client. This argument is mutually exclusive with multi-set backup.
+	FilterExpression string `yaml:"filter-exp,omitempty" json:"filter-exp,omitempty" extensions:"x-nullable"`
 
 	// Whether this routine is disabled and should not run. Default: false.
 	Disabled bool `json:"disabled,omitempty" yaml:"disabled,omitempty" default:"false"`
@@ -161,6 +167,14 @@ func (r *BackupRoutine) Validate() error {
 	}
 	if duplicates := collections.CheckDuplicates(r.NodeList); len(duplicates) > 0 {
 		return errValidationDuplicate(nodeListField, duplicates)
+	}
+	if r.FilterExpression != "" {
+		if len(r.SetList) > 1 {
+			return fmt.Errorf("filter-exp cannot be used when backing up multiple sets")
+		}
+		if _, err := as.ExpFromBase64(r.FilterExpression); err != nil {
+			return fmt.Errorf("failed to parse filter expression: %w", err)
+		}
 	}
 
 	return nil
@@ -280,6 +294,7 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		RackList:         r.RackList,
 		PartitionList:    r.PartitionList,
 		NodeList:         r.NodeList,
+		FilterExpression: r.FilterExpression,
 		Disabled:         r.Disabled,
 	}, nil
 }
@@ -365,6 +380,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	r.RackList = m.RackList
 	r.PartitionList = m.PartitionList
 	r.NodeList = m.NodeList
+	r.FilterExpression = m.FilterExpression
 	r.Disabled = m.Disabled
 }
 
