@@ -2062,6 +2062,11 @@ const docTemplate = `{
                     "type": "boolean",
                     "default": false
                 },
+                "filter-exp": {
+                    "description": "Base64 encoded filter expression. Use the encoded filter expression in each scan call,\nwhich can be used to do a partial backup. The expression to be used can be Base64\nencoded through any client. This argument is mutually exclusive with multi-set backup.",
+                    "type": "string",
+                    "x-nullable": true
+                },
                 "incr-interval-cron": {
                     "description": "The interval for incremental backup as a cron expression string (optional).",
                     "type": "string",

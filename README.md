@@ -63,7 +63,7 @@ under [releases](https://github.com/aerospike/aerospike-backup-service/releases)
 # Documentation
 
 - [Installation](docs/installation.md) — binary, Docker, systemd, and building from source
-- [Configuration](docs/configuration.md) — configuration file format, scheduling, the configuration API, and FAQ
+- [Configuration](docs/configuration.md) — configuration file format, scheduling, filter expressions, the configuration API, and FAQ
 - [API examples](docs/api-examples.md) — example backup and restore requests and responses
 - [Monitoring](docs/monitoring.md) — Prometheus metrics, alerts, and health/readiness endpoints
 - [Linux packages](build/package/README.md) — installing and managing the DEB/RPM packages
