@@ -402,10 +402,10 @@ func TestBackupRoutine_ToModel_ParallelUncheckedWhenPolicyParallelUnset(t *testi
 func TestBackupRoutine_Validate_InvalidFilterExpression(t *testing.T) {
 	r := &BackupRoutine{
 		SourceCluster:    "cluster1",
-		Storage:            "storage1",
-		IntervalCron:       "0 0 * * * *",
-		Namespaces:         &[]string{"ns1"},
-		FilterExpression:   "invalid-exp",
+		Storage:          "storage1",
+		IntervalCron:     "0 0 * * * *",
+		Namespaces:       &[]string{"ns1"},
+		FilterExpression: "invalid-exp",
 	}
 
 	err := r.Validate()
@@ -416,11 +416,11 @@ func TestBackupRoutine_Validate_InvalidFilterExpression(t *testing.T) {
 func TestBackupRoutine_Validate_FilterExpressionWithMultipleSets(t *testing.T) {
 	r := &BackupRoutine{
 		SourceCluster:    "cluster1",
-		Storage:            "storage1",
-		IntervalCron:       "0 0 * * * *",
-		Namespaces:         &[]string{"ns1"},
-		SetList:            []string{"set1", "set2"},
-		FilterExpression:   "k1EDpHRlc3Q=",
+		Storage:          "storage1",
+		IntervalCron:     "0 0 * * * *",
+		Namespaces:       &[]string{"ns1"},
+		SetList:          []string{"set1", "set2"},
+		FilterExpression: "k1EDpHRlc3Q=",
 	}
 
 	err := r.Validate()

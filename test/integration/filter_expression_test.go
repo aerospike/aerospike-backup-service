@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
