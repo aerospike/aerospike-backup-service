@@ -6,56 +6,43 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-	"github.com/stretchr/testify/require"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"gopkg.in/yaml.v3"
 )
 
-const (
-	clusterName = "testCluster"
-	storageName = "local"
-	policyName  = "defaultPolicy"
-	routineName = "integrationRoutine"
-	namespace   = "test"
-	setName     = "filteredSet"
-)
-
+// env is a running backup service instance under test.
 type env struct {
 	backupDir string
 	server    *httptest.Server
 }
 
-// setupEnv starts a backup service instance against the Aerospike container shared by the whole
-// package. Each customize function receives the base configuration before it is written to disk,
-// so a test can change any field without the fixture needing to know about it.
-func setupEnv(t *testing.T, customize ...func(*dto.Config)) *env {
-	t.Helper()
-
+// setupEnv starts a backup service against the suite's Aerospike container. Each customize
+// function receives the base configuration before it is written to disk, so a test can change any
+// field without this harness needing to know about it.
+func (s *Suite) setupEnv(customize ...func(*dto.Config)) *env {
+	t := s.T()
 	ctx := t.Context()
-
-	// Every test writes into the same namespace, so they must not call t.Parallel().
-	require.NoError(t, asClient.Truncate(nil, namespace, "", nil))
 
 	backupDir := t.TempDir()
 
-	config := baseConfig(backupDir)
+	config := s.baseConfig(backupDir)
 	for _, fn := range customize {
 		fn(config)
 	}
 
 	configYAML, err := yaml.Marshal(config)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	configPath := filepath.Join(t.TempDir(), "config.yml")
-	require.NoError(t, os.WriteFile(configPath, configYAML, 0o600))
+	s.Require().NoError(os.WriteFile(configPath, configYAML, 0o600))
 
 	scheduler, svc, err := app.InitComponents(ctx, configPath, false)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	scheduler.Start(ctx)
 	t.Cleanup(func() { scheduler.Stop() })
@@ -71,14 +58,14 @@ func setupEnv(t *testing.T, customize ...func(*dto.Config)) *env {
 
 // baseConfig is a minimal working configuration: one cluster, one local storage, one policy and
 // one routine that only runs when triggered explicitly.
-func baseConfig(backupDir string) *dto.Config {
+func (s *Suite) baseConfig(backupDir string) *dto.Config {
 	return &dto.Config{
 		ServiceConfig: dto.ServiceConfig{
 			Logger: &dto.LoggerConfig{Level: ptr.Of("ERROR")},
 		},
 		AerospikeClusters: map[string]*dto.AerospikeCluster{
 			clusterName: {
-				SeedNodes:            []dto.SeedNode{asSeedNode},
+				SeedNodes:            []dto.SeedNode{s.seedNode},
 				UseServicesAlternate: ptr.Of(true),
 			},
 		},
@@ -109,6 +96,14 @@ func baseConfig(backupDir string) *dto.Config {
 }
 
 // testRoutine returns the routine from baseConfig, for use inside setupEnv customize functions.
-func testRoutine(c *dto.Config) *dto.BackupRoutine {
-	return c.BackupRoutines[routineName]
+
+// seedRecords writes one record per age into the set that tests back up.
+func (s *Suite) seedRecords(ages []int) {
+	writePolicy := as.NewWritePolicy(0, 0)
+
+	for i, age := range ages {
+		key, err := as.NewKey(namespace, setName, i)
+		s.Require().NoError(err)
+		s.Require().NoError(s.client.Put(writePolicy, key, as.BinMap{"age": age}))
+	}
 }
