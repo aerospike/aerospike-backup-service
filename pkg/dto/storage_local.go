@@ -2,6 +2,7 @@ package dto
 
 import (
 	"errors"
+	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -19,6 +20,9 @@ type LocalStorage struct {
 func (l *LocalStorage) Validate(_ ...ValidationOption) error {
 	if l.Path == "" {
 		return errors.New("local storage path is not specified")
+	}
+	if !filepath.IsAbs(l.Path) && !filepath.IsLocal(l.Path) {
+		return errors.New("local storage path must not contain traversal")
 	}
 	if l.MinPartSize != nil && *l.MinPartSize <= 0 {
 		return errors.New("min-part-size for local storage must be a positive value")

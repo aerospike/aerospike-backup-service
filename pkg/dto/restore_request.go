@@ -3,6 +3,7 @@ package dto
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -68,6 +69,9 @@ func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest
 func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
 	if len(r.BackupDataPath) == 0 {
 		return errValidationEmptyField("backup-data-path")
+	}
+	if !filepath.IsLocal(r.BackupDataPath) {
+		return fmt.Errorf("%w: backup-data-path must be local", errValidation)
 	}
 	if err := r.DestinationClusterConfig.Validate(opts...); err != nil {
 		return err
