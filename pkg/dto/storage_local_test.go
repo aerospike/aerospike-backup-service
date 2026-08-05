@@ -19,7 +19,7 @@ func TestLocalStorage_ValidatePath(t *testing.T) {
 		{name: "parent directory", path: ".."},
 		{name: "traversal path", path: "../backups"},
 		{name: "embedded traversal", path: "backups/../../outside"},
-		{name: "absolute path", path: "/var/backups", valid: true},
+		{name: "absolute path with traversal", path: "/var/backups/../outside"},
 	}
 
 	for _, tt := range tests {

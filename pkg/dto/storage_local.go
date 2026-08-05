@@ -3,6 +3,8 @@ package dto
 import (
 	"errors"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -21,13 +23,17 @@ func (l *LocalStorage) Validate(_ ...ValidationOption) error {
 	if l.Path == "" {
 		return errors.New("local storage path is not specified")
 	}
-	if !filepath.IsAbs(l.Path) && !filepath.IsLocal(l.Path) {
+	if (!filepath.IsAbs(l.Path) && !filepath.IsLocal(l.Path)) || hasParentPathComponent(l.Path) {
 		return errors.New("local storage path must not contain traversal")
 	}
 	if l.MinPartSize != nil && *l.MinPartSize <= 0 {
 		return errors.New("min-part-size for local storage must be a positive value")
 	}
 	return nil
+}
+
+func hasParentPathComponent(path string) bool {
+	return slices.Contains(strings.Split(path, string(filepath.Separator)), "..")
 }
 
 func (l *LocalStorage) toModel() (model.Storage, error) {
