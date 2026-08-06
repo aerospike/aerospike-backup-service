@@ -142,6 +142,10 @@ docker-buildx:
 test:
 	$(GOTEST) -v ./...
 
+.PHONY: test-integration
+test-integration:
+	$(GOTEST) -tags=integration -count=1 -v -timeout 5m ./test/integration/...
+
 # mocks-generate: runs mockgen over pkg/service* interfaces and writes mockgen.go next to each
 #   package. Used by tests; committed mocks must match this output (see mocks-check).
 .PHONY: mocks-generate
@@ -192,15 +196,18 @@ openapi-check: openapi
 		exit 1; \
 	fi
 
-# readme: runs build/readme (Go). Reads docs/openapi.json, writes README.md sections, docs/examples/*,
+# readme: runs build/readme (Go). Reads docs/openapi.json, writes generated sections in README.md and the
+#   other Markdown files listed in targetFiles (build/readme/readme_generator.go), plus docs/examples/*,
 #   docs/readme/dto/*, and docs/metrics.json. Committed files must match (see readme-check).
 .PHONY: readme
 readme:
 	$(GO) run ./build/readme
 
+README_GENERATED_TARGETS := README.md docs/installation.md docs/configuration.md docs/api-examples.md docs/monitoring.md docs/migration.md
+
 .PHONY: readme-check
 readme-check: readme
-	@git diff --exit-code -- README.md docs/examples/ docs/readme/dto/ docs/metrics.json \
+	@git diff --exit-code -- $(README_GENERATED_TARGETS) docs/examples/ docs/readme/dto/ docs/metrics.json \
 		|| (echo "README / examples / docs are out of date. Run 'make readme' and commit the changes." && exit 1)
 	@UNTRACKED=$$(git ls-files --others --exclude-standard 'docs/examples/' 'docs/readme/dto/' 'docs/metrics.json'); \
 	if [ -n "$$UNTRACKED" ]; then \

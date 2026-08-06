@@ -10,6 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -73,6 +74,11 @@ type BackupRoutine struct {
 	// Parallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.
 	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty" extensions:"x-nullable"`
 
+	// Base64 encoded filter expression. Use the encoded filter expression in each scan call,
+	// which can be used to do a partial backup. The expression to be used can be Base64
+	// encoded through any client. This argument is mutually exclusive with multi-set backup.
+	FilterExpression string `yaml:"filter-exp,omitempty" json:"filter-exp,omitempty" extensions:"x-nullable"`
+
 	// Whether this routine is disabled and should not run. Default: false.
 	Disabled bool `json:"disabled,omitempty" yaml:"disabled,omitempty" default:"false"`
 }
@@ -118,15 +124,8 @@ func (r *BackupRoutine) Validate() error {
 	if err := validatePartitionList(r.PartitionList); err != nil {
 		return fmt.Errorf("invalid partition list: %q", r.PartitionList)
 	}
-	// Mutual exclusivity within routine: rack-list, partition-list, node-list
-	if len(r.PartitionList) > 0 && len(r.NodeList) > 0 {
-		return errValidationMutuallyExclusive(partitionListField, nodeListField)
-	}
-	if len(r.RackList) > 0 && len(r.PartitionList) > 0 {
-		return errValidationMutuallyExclusive(rackListField, partitionListField)
-	}
-	if len(r.RackList) > 0 && len(r.NodeList) > 0 {
-		return errValidationMutuallyExclusive(rackListField, nodeListField)
+	if err := validateRoutineSelectorExclusivity(r.PartitionList, r.RackList, r.NodeList); err != nil {
+		return err
 	}
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
@@ -161,6 +160,37 @@ func (r *BackupRoutine) Validate() error {
 	}
 	if duplicates := collections.CheckDuplicates(r.NodeList); len(duplicates) > 0 {
 		return errValidationDuplicate(nodeListField, duplicates)
+	}
+	if err := validateFilterExpression(r.FilterExpression, r.SetList); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateRoutineSelectorExclusivity(partitionList string, rackList []int, nodeList []string) error {
+	if len(partitionList) > 0 && len(nodeList) > 0 {
+		return errValidationMutuallyExclusive(partitionListField, nodeListField)
+	}
+	if len(rackList) > 0 && len(partitionList) > 0 {
+		return errValidationMutuallyExclusive(rackListField, partitionListField)
+	}
+	if len(rackList) > 0 && len(nodeList) > 0 {
+		return errValidationMutuallyExclusive(rackListField, nodeListField)
+	}
+
+	return nil
+}
+
+func validateFilterExpression(filterExpression string, setList []string) error {
+	if filterExpression == "" {
+		return nil
+	}
+	if len(setList) > 1 {
+		return errors.New("filter-exp cannot be used when backing up multiple sets")
+	}
+	if _, err := as.ExpFromBase64(filterExpression); err != nil {
+		return fmt.Errorf("failed to parse filter expression: %w", err)
 	}
 
 	return nil
@@ -280,6 +310,7 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		RackList:         r.RackList,
 		PartitionList:    r.PartitionList,
 		NodeList:         r.NodeList,
+		FilterExpression: r.FilterExpression,
 		Disabled:         r.Disabled,
 	}, nil
 }
@@ -365,6 +396,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	r.RackList = m.RackList
 	r.PartitionList = m.PartitionList
 	r.NodeList = m.NodeList
+	r.FilterExpression = m.FilterExpression
 	r.Disabled = m.Disabled
 }
 

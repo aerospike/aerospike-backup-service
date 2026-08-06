@@ -1,0 +1,16 @@
+# Code owners for Aerospike Backup Service.
+# See https://docs.github.com/articles/about-code-owners for syntax.
+#
+# Replace the placeholder below with the actual maintainer team or usernames before enabling
+# "Require review from Code Owners" branch protection. The rightmost matching pattern wins, so more
+# specific paths further down override the global default above them.
+
+* @aerospike/aerospike-backup-service-maintainers
+
+# Release and packaging automation.
+/build/scripts/release.sh @aerospike/aerospike-backup-service-maintainers
+/build/package/           @aerospike/aerospike-backup-service-maintainers
+/helm/                    @aerospike/aerospike-backup-service-maintainers
+
+# CI/CD workflows.
+/.github/workflows/       @aerospike/aerospike-backup-service-maintainers

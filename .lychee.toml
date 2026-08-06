@@ -1,0 +1,30 @@
+# Configuration for the lychee link checker (.github/workflows/link-check.yml).
+# https://lychee.cli.rs/usage/config-file/
+
+exclude_path = [
+  # Git submodule; not ours to lint and may not be checked out in CI.
+  "modules",
+  # Generated Swagger UI bundle; its CSS embeds data: URIs that lychee
+  # mis-parses as links.
+  "docs/dist",
+]
+
+exclude = [
+  # Local/example endpoints that are never reachable from CI.
+  "^https?://localhost",
+  "^https?://127\\.0\\.0\\.1",
+  # Pre-existing broken link in the Helm chart README, owned by the
+  # security plan's docs-supporting item.
+  "helm/aerospike-backup-service/examples$",
+  # Stable reference docs that time out or redirect heavily from GitHub
+  # Actions runners; not worth failing CI over.
+  "^https://kubernetes\\.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes",
+  "^https://docs\\.aerospike\\.com/cloud/kubernetes/operator",
+]
+
+max_concurrency = 8
+timeout = 20
+retry_wait_time = 2
+max_retries = 3
+
+accept = [200, 201, 202, 203, 204, 206, 301, 302, 303, 307, 308]
