@@ -52,6 +52,9 @@ func (s *S3Storage) Validate(opts ...ValidationOption) error {
 	if s.S3Region == "" {
 		return errValidationEmptyField("s3-region")
 	}
+	if err := validateObjectStoragePath(s.Path); err != nil {
+		return err
+	}
 
 	if s.AccessKeyID != nil && s.SecretAccessKey == nil {
 		return errors.New("access-key-id is set but secret-access-key is missing")

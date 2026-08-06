@@ -1206,7 +1206,7 @@
         ],
         "properties": {
           "backup-data-path": {
-            "description": "Path to the data from storage root.\nYou can obtain this value by:\n- Browsing the storage UI, or\n- Reading the `key` field in the response from GET `v1/backups/full/{routine}`",
+            "description": "Path to the data from storage root.\nThis path is relative to the storage `path`.\nYou can obtain this value by:\n- Browsing the storage UI, or\n- Reading the `key` field in the response from GET `v1/backups/full/{routine}`",
             "type": "string"
           },
           "destination": {

@@ -39,6 +39,9 @@ func (s *GcpStorage) Validate(opts ...ValidationOption) error {
 	if s.BucketName == "" {
 		return errors.New("GCP bucket name is not specified")
 	}
+	if err := validateObjectStoragePath(s.Path); err != nil {
+		return err
+	}
 	if s.KeyFile != "" && s.Key != "" {
 		return errValidationMutuallyExclusive("key-file-path", "key-json")
 	}

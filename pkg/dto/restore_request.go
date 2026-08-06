@@ -3,6 +3,7 @@ package dto
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -19,6 +20,7 @@ type RestoreRequest struct {
 	// Restore policy to use in the operation.
 	Policy *RestorePolicy `json:"policy"`
 	// Path to the data from storage root.
+	// This path is relative to the storage `path`.
 	// You can obtain this value by:
 	// - Browsing the storage UI, or
 	// - Reading the `key` field in the response from GET `v1/backups/full/{routine}`
@@ -68,6 +70,12 @@ func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest
 func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
 	if len(r.BackupDataPath) == 0 {
 		return errValidationEmptyField("backup-data-path")
+	}
+	if !filepath.IsLocal(r.BackupDataPath) {
+		return fmt.Errorf("%w: backup-data-path must be local", errValidation)
+	}
+	if hasParentPathComponent(r.BackupDataPath) {
+		return fmt.Errorf("%w: backup-data-path must not contain traversal", errValidation)
 	}
 	if err := r.DestinationClusterConfig.Validate(opts...); err != nil {
 		return err

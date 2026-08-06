@@ -39,7 +39,7 @@ func TestValidateConfiguration(t *testing.T) {
 func TestValidateRestoreRequest(t *testing.T) {
 	config := &dto.Config{}
 	request := &dto.RestoreRequest{
-		BackupDataPath: "/path",
+		BackupDataPath: "path",
 		DestinationClusterConfig: dto.DestinationClusterConfig{
 			Cluster: &dto.AerospikeCluster{
 				SeedNodes: []dto.SeedNode{

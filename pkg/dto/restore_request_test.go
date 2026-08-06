@@ -242,6 +242,34 @@ func TestRestoreRequest_Validate(t *testing.T) {
 			},
 		},
 		{
+			name: "non-local backup path",
+			request: RestoreRequest{
+				BackupDataPath: "../../outside",
+				DestinationClusterConfig: DestinationClusterConfig{
+					Cluster: validCluster,
+				},
+				StorageConfig: StorageConfig{
+					Storage: validStorage,
+				},
+				Policy: validPolicy,
+			},
+			err: errValidation,
+		},
+		{
+			name: "absolute backup path",
+			request: RestoreRequest{
+				BackupDataPath: "/outside",
+				DestinationClusterConfig: DestinationClusterConfig{
+					Cluster: validCluster,
+				},
+				StorageConfig: StorageConfig{
+					Storage: validStorage,
+				},
+				Policy: validPolicy,
+			},
+			err: errValidation,
+		},
+		{
 			name: "invalid secret agent override",
 			request: RestoreRequest{
 				BackupDataPath: "test/path",

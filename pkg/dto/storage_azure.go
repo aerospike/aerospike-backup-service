@@ -49,6 +49,9 @@ func (a *AzureStorage) Validate(opts ...ValidationOption) error {
 	if a.ContainerName == "" {
 		return errors.New("azure storage container name is not specified")
 	}
+	if err := validateObjectStoragePath(a.Path); err != nil {
+		return err
+	}
 
 	// Check for valid authentication method.
 	hasSharedKey := a.AccountName != "" && a.AccountKey != ""
