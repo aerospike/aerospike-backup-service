@@ -17,7 +17,6 @@ type S3Storage struct {
 	// The S3 bucket name.
 	Bucket string `yaml:"bucket" json:"bucket" validate:"required"`
 	// The root path for the backup repository within the bucket.
-	// This path is relative to the bucket.
 	// If not specified, backups will be saved in the bucket's root.
 	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
 	// The S3 region string.

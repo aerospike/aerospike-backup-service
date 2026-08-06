@@ -20,7 +20,6 @@ type GcpStorage struct {
 	// GCP storage bucket name.
 	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
 	// The root path for the backup repository.
-	// This path is relative to the bucket.
 	// If not specified, backups will be saved in the bucket's root.
 	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
 	// Alternative url.
