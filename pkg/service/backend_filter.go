@@ -84,6 +84,26 @@ func (f *RoutineFilter) String() string {
 		f.routineName, f.storage.String(), f.backupType, f.onlyLast, f.timeBounds().String())
 }
 
+// RoutineName returns the routine name filter value.
+func (f *RoutineFilter) RoutineName() string {
+	return f.routineName
+}
+
+// BackupType returns the backup type filter value.
+func (f *RoutineFilter) BackupType() model.BackupType {
+	return f.backupType
+}
+
+// OnlyLast reports whether only the latest matching backup should be returned.
+func (f *RoutineFilter) OnlyLast() bool {
+	return f.onlyLast
+}
+
+// TimeBounds returns the time bounds for this filter.
+func (f *RoutineFilter) TimeBounds() model.TimeBounds {
+	return f.timeBounds()
+}
+
 // getPath returns the storage root path for this routine and job type.
 func (f *RoutineFilter) getPath() string {
 	return backupRootPath(f.routineName, f.backupType)
@@ -145,4 +165,19 @@ func (p *PathFilter) WithTimeBounds(bounds model.TimeBounds) *PathFilter {
 func (p *PathFilter) String() string {
 	return fmt.Sprintf("path: %v storage: %s timebounds: %s",
 		p.path, p.storage.String(), p.timeBounds().String())
+}
+
+// Path returns the path filter value.
+func (p *PathFilter) Path() string {
+	return p.path
+}
+
+// Storage returns the storage filter value.
+func (p *PathFilter) Storage() model.Storage {
+	return p.storage
+}
+
+// TimeBounds returns the time bounds for this filter.
+func (p *PathFilter) TimeBounds() model.TimeBounds {
+	return p.timeBounds()
 }
