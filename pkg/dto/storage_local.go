@@ -32,6 +32,7 @@ func (l *LocalStorage) Validate(_ ...ValidationOption) error {
 	if l.MinPartSize != nil && *l.MinPartSize <= 0 {
 		return errors.New("min-part-size for local storage must be a positive value")
 	}
+
 	return nil
 }
 
