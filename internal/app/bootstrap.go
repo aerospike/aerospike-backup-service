@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/audit"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -95,17 +97,32 @@ func InitComponents(
 	prometheus.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
+
+	auditor := audit.NewSimpleAuditor(appLogger)
+
+	configManagerImpl := handlers.NewConfigManagerImpl(
+		ctx,
+		config,
+		&sync.Mutex{},
+		nsValidator,
+		configurationManager,
+		configApplier,
+	)
+
+	auditConfigManager := audit.NewAuditConfigManager(configManagerImpl, auditor)
+
+	auditRestoreManager := audit.NewAuditRestoreManager(restoreMgr, auditor)
+	auditBackupScheduler := audit.NewAuditAdHocScheduler(backupScheduler, auditor)
+
 	httpService := handlers.NewService(
 		ctx,
 		config,
-		configApplier,
-		backupScheduler,
-		restoreMgr,
+		auditConfigManager,
+		auditBackupScheduler,
+		auditRestoreManager,
 		configRetriever,
 		backendService,
 		registry,
-		configurationManager,
-		nsValidator,
 	)
 
 	return scheduler, httpService, nil

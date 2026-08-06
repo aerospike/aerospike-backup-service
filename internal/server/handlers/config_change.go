@@ -3,24 +3,60 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"sync"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/validation"
 )
 
-type backupConfigChangeOptions struct {
+type BackupConfigChangeOptions struct {
 	validateNamespaces bool
 }
 
-// changeBackupConfig applies a mutation to the backup configuration DTO, validates the
+// ConfigManagerImpl applies mutations to the configuration.
+type ConfigManagerImpl struct {
+	config               *model.Config
+	changeConfigLock     *sync.Mutex
+	nsValidator          aerospike.NamespaceValidator
+	configurationManager configuration.Manager
+	configApplier        service.ConfigApplier
+	sysCtx               context.Context //nolint:containedctx
+}
+
+// NewConfigManagerImpl creates a new configuration manager.
+func NewConfigManagerImpl(
+	sysCtx context.Context,
+	config *model.Config,
+	changeConfigLock *sync.Mutex,
+	nsValidator aerospike.NamespaceValidator,
+	configurationManager configuration.Manager,
+	configApplier service.ConfigApplier,
+) *ConfigManagerImpl {
+	return &ConfigManagerImpl{
+		config:               config,
+		changeConfigLock:     changeConfigLock,
+		nsValidator:          nsValidator,
+		configurationManager: configurationManager,
+		configApplier:        configApplier,
+		sysCtx:               sysCtx,
+	}
+}
+
+// ChangeBackupConfig applies a mutation to the backup configuration DTO, validates the
 // full configuration via ToModel, and persists the result.
 // The mutate function returns routine names that should be rescheduled and rescanned.
-func (s *Service) changeBackupConfig(
+func (s *ConfigManagerImpl) ChangeBackupConfig(
 	ctx context.Context,
+	action string,
+	resourceID string,
 	mutate func(*dto.Config) ([]string, error),
-	opts ...func(*backupConfigChangeOptions),
+	opts ...func(*BackupConfigChangeOptions),
 ) error {
-	options := backupConfigChangeOptions{}
+	options := BackupConfigChangeOptions{}
 	for _, opt := range opts {
 		opt(&options)
 	}
@@ -57,7 +93,7 @@ func (s *Service) changeBackupConfig(
 	return nil
 }
 
-func withNamespaceValidation(opts *backupConfigChangeOptions) {
+func WithNamespaceValidation(opts *BackupConfigChangeOptions) {
 	opts.validateNamespaces = true
 }
 
@@ -96,5 +132,71 @@ func ensureStorageNotInUse(config *dto.Config, storageName string) error {
 			return fmt.Errorf("delete storage %q: %w: it is used in routine %q", storageName, model.ErrInUse, routineName)
 		}
 	}
+	return nil
+}
+
+// UpdateConfig updates the configuration for the service.
+func (s *ConfigManagerImpl) UpdateConfig(ctx context.Context, newConfig *dto.Config) error {
+	// validate static fields.
+	oldConfig := dto.NewConfigFromModel(s.config)
+	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
+		return fmt.Errorf("static configuration has changed: %w", err)
+	}
+
+	newConfigModel, err := newConfig.ToModel(dto.ValidationSkipTLSFiles) // matching what UpdateConfig did
+	if err != nil {
+		return err
+	}
+
+	return s.changeConfig(ctx, func(config *model.Config) error {
+		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
+		config.InvalidateAllRoutines()
+		s.nsValidator.Validate(ctx, config) // validate under the lock
+		return nil
+	})
+}
+
+// ApplyConfig reloads the configuration from the config file.
+func (s *ConfigManagerImpl) ApplyConfig(ctx context.Context) error {
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+
+	config, err := s.configurationManager.Read(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to read configuration: %w", err)
+	}
+
+	newConfig := dto.NewConfigFromModel(s.config)
+	oldConfig := dto.NewConfigFromModel(config)
+	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
+		return fmt.Errorf("static configuration has changed: %w", err)
+	}
+
+	s.config.SetBackupConfig(config.BackupConfigCopy())
+	s.config.InvalidateAllRoutines()
+	err = s.configApplier.ApplyNewConfig(s.sysCtx)
+
+	return err
+}
+
+func (s *ConfigManagerImpl) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+
+	err := updateFunc(s.config)
+	if err != nil {
+		return fmt.Errorf("failed to update configuration: %w", err)
+	}
+
+	err = s.configurationManager.Write(ctx, s.config)
+	if err != nil {
+		return fmt.Errorf("failed to write configuration: %w", err)
+	}
+
+	err = s.configApplier.ApplyNewConfig(s.sysCtx)
+	if err != nil {
+		return fmt.Errorf("failed to apply new configuration: %w", err)
+	}
+
 	return nil
 }

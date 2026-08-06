@@ -1,0 +1,50 @@
+package audit
+
+import (
+	"context"
+	"log/slog"
+	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+)
+
+type auditAdHocScheduler struct {
+	underlying service.AdHocScheduler
+	auditor    Auditor
+}
+
+var _ service.AdHocScheduler = (*auditAdHocScheduler)(nil)
+
+// NewAuditAdHocScheduler wraps an existing AdHocScheduler with audit logging.
+func NewAuditAdHocScheduler(underlying service.AdHocScheduler, auditor Auditor) service.AdHocScheduler {
+	return &auditAdHocScheduler{
+		underlying: underlying,
+		auditor:    auditor,
+	}
+}
+
+func (a *auditAdHocScheduler) TriggerAdHocFullBackup(routine *model.BackupRoutine, delay time.Duration) error {
+	err := a.underlying.TriggerAdHocFullBackup(routine, delay)
+
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(context.Background(), "TriggerAdHocFullBackup", status, slog.String("routine", routine.Name))
+
+	return err
+}
+
+func (a *auditAdHocScheduler) TriggerAdHocIncrementalBackup(routine *model.BackupRoutine, delay time.Duration) error {
+	err := a.underlying.TriggerAdHocIncrementalBackup(routine, delay)
+
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(context.Background(), "TriggerAdHocIncrementalBackup", status,
+		slog.String("routine", routine.Name))
+
+	return err
+}

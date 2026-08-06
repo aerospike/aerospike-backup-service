@@ -186,9 +186,8 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			svc := setupTestService()
 			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-			svc.nsValidator = mockNsValidator
+			svc := setupTestService(mockNsValidator)
 
 			if tt.runValidation {
 				mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Eq(svc.config))

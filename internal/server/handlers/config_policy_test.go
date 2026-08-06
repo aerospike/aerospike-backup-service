@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -280,9 +281,8 @@ func TestUpdatePolicy_Case2_ClusterMaxSetBeforeParallelIncrease(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	svc := setupTestService()
 	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	svc.nsValidator = mockNsValidator
+	svc := setupTestService(mockNsValidator)
 	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).Times(1)
 
 	entities := addValidBackupConfig(svc)
@@ -319,20 +319,33 @@ func TestUpdatePolicy_Case2_ClusterMaxSetBeforeParallelIncrease(t *testing.T) {
 }
 
 // Helper function to setup test service with mocked dependencies.
-func setupTestService() *Service {
+func setupTestService(nsValidator ...aerospike.NamespaceValidator) *Service {
 	mockConfigApplier := &MockConfigApplier{}
 	mockConfigurationManager := &configurationManagerMock{}
 
+	config := model.NewConfig()
+	var validator aerospike.NamespaceValidator
+	if len(nsValidator) > 0 {
+		validator = nsValidator[0]
+	}
+
+	configManager := NewConfigManagerImpl(
+		context.Background(),
+		config,
+		&sync.Mutex{},
+		validator,
+		mockConfigurationManager,
+		mockConfigApplier,
+	)
+
 	return NewService(
 		context.Background(),
-		model.NewConfig(),
-		mockConfigApplier,
+		config,
+		configManager,
 		nil,
 		nil,
 		nil,
 		nil,
-		nil,
-		mockConfigurationManager,
 		nil,
 	)
 }
