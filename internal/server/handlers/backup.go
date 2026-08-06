@@ -29,8 +29,8 @@ func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := s.readAllBackups(r.Context(), func(routine *model.BackupRoutine) service.BackupFilter {
-		return service.NewFullBackupFilter(routine).WithTimeBounds(timeBounds)
+	result, err := s.readAllBackups(r.Context(), func(routine string) service.BackupFilter {
+		return service.NewFullBackupFilter(&model.BackupRoutine{Name: routine}).WithTimeBounds(timeBounds)
 	})
 	if err != nil {
 		httpError(w, err)
@@ -64,13 +64,13 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
+	_, found := s.configManager.ReadRoutine(r.Context(), routineName)
+	if found != nil {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
 
-	filter := service.NewFullBackupFilter(routine).WithTimeBounds(timeBounds)
+	filter := service.NewFullBackupFilter(&model.BackupRoutine{Name: routineName}).WithTimeBounds(timeBounds)
 	result, err := s.readBackupsForRoutine(r.Context(), filter)
 	if err != nil {
 		httpError(w, err)
@@ -97,8 +97,8 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	result, err := s.readAllBackups(r.Context(), func(routine *model.BackupRoutine) service.BackupFilter {
-		return service.NewIncrementalBackupFilter(routine).WithTimeBounds(timeBounds)
+	result, err := s.readAllBackups(r.Context(), func(routine string) service.BackupFilter {
+		return service.NewIncrementalBackupFilter(&model.BackupRoutine{Name: routine}).WithTimeBounds(timeBounds)
 	})
 	if err != nil {
 		httpError(w, err)
@@ -132,13 +132,13 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
+	_, found := s.configManager.ReadRoutine(r.Context(), routineName)
+	if found != nil {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
 
-	filter := service.NewIncrementalBackupFilter(routine).WithTimeBounds(timeBounds)
+	filter := service.NewIncrementalBackupFilter(&model.BackupRoutine{Name: routineName}).WithTimeBounds(timeBounds)
 	result, err := s.readBackupsForRoutine(r.Context(), filter)
 	if err != nil {
 		httpError(w, err)
@@ -150,16 +150,16 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 
 func (s *Service) readAllBackups(
 	ctx context.Context,
-	filter func(routine *model.BackupRoutine) service.BackupFilter,
+	filter func(routine string) service.BackupFilter,
 ) (map[string][]*dto.BackupDetails, error) {
 	result := make(map[string][]*dto.BackupDetails)
-	for _, routine := range s.config.Routines() {
-		routineBackups, err := s.readBackupsForRoutine(ctx, filter(routine))
+	for name := range s.configManager.ReadRoutines(ctx) {
+		routineBackups, err := s.readBackupsForRoutine(ctx, filter(name))
 		if err != nil {
 			return nil, err
 		}
 
-		result[routine.Name] = routineBackups
+		result[name] = routineBackups
 	}
 
 	return result, nil
@@ -174,10 +174,18 @@ func (s *Service) readBackupsForRoutine(
 		return nil, err
 	}
 
-	backupConfig := s.config.BackupConfigCopy()
-	backupDetails := dto.ConvertModelsToDTO(backupList, func(m *model.BackupDetails) *dto.BackupDetails {
-		return dto.NewBackupDetailsFromModel(m, backupConfig)
-	})
+	backupConfig := s.configManager.ReadConfig(ctx)
+	// Fallback mechanism to parse it into model just to get the properties for the DTO
+	backupConfigModel, err := backupConfig.ToModel(dto.ValidationSkipTLSFiles)
+	if err != nil {
+		backupConfigModel = model.NewConfig()
+	}
+
+	backupDetails := make([]*dto.BackupDetails, 0, len(backupList))
+	for i := range backupList {
+		backupDetails = append(
+			backupDetails, dto.NewBackupDetailsFromModel(&backupList[i], backupConfigModel.BackupConfigCopy()))
+	}
 
 	return backupDetails, nil
 }
@@ -237,11 +245,12 @@ func (s *Service) scheduleBackup(
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
+	_, err := s.configManager.ReadRoutine(r.Context(), routineName)
+	if err != nil {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
+	routineModel := &model.BackupRoutine{Name: routineName}
 
 	delayMillis, err := parseDelay(r.URL.Query().Get("delay"))
 	if err != nil {
@@ -249,7 +258,7 @@ func (s *Service) scheduleBackup(
 		return
 	}
 
-	err = triggerBackup(routine, time.Duration(delayMillis)*time.Millisecond)
+	err = triggerBackup(routineModel, time.Duration(delayMillis)*time.Millisecond)
 	if err != nil {
 		httpError(w, errors.New("failed to schedule job"))
 		return
@@ -288,13 +297,13 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
+	_, err := s.configManager.ReadRoutine(r.Context(), routineName)
+	if err != nil {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
 
-	currentBackups := dto.NewRoutineStateFromModel(s.registry.GetRoutineState(routine))
+	currentBackups := dto.NewRoutineStateFromModel(s.registry.GetRoutineState(&model.BackupRoutine{Name: routineName}))
 	httpOK(w, currentBackups)
 }
 
@@ -313,7 +322,7 @@ func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, found := s.config.Routine(routineName); !found {
+	if _, err := s.configManager.ReadRoutine(r.Context(), routineName); err != nil {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}

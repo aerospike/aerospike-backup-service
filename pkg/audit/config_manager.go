@@ -23,7 +23,21 @@ func NewAuditConfigManager(underlying handlers.ConfigManager, auditor Auditor) h
 	}
 }
 
-func (a *auditConfigManager) AddAerospikeCluster(ctx context.Context, name string, cluster *dto.AerospikeCluster) error {
+func (a *auditConfigManager) ReadConfig(ctx context.Context) *dto.Config {
+	return a.underlying.ReadConfig(ctx)
+}
+
+func (a *auditConfigManager) ReadAerospikeClusters(ctx context.Context) map[string]*dto.AerospikeCluster {
+	return a.underlying.ReadAerospikeClusters(ctx)
+}
+
+func (a *auditConfigManager) ReadAerospikeCluster(ctx context.Context, name string) (*dto.AerospikeCluster, error) {
+	return a.underlying.ReadAerospikeCluster(ctx, name)
+}
+
+func (a *auditConfigManager) AddAerospikeCluster(
+	ctx context.Context, name string, cluster *dto.AerospikeCluster,
+) error {
 	err := a.underlying.AddAerospikeCluster(ctx, name, cluster)
 	status := StatusSuccess
 	if err != nil {
@@ -33,7 +47,9 @@ func (a *auditConfigManager) AddAerospikeCluster(ctx context.Context, name strin
 	return err
 }
 
-func (a *auditConfigManager) UpdateAerospikeCluster(ctx context.Context, name string, cluster *dto.AerospikeCluster) error {
+func (a *auditConfigManager) UpdateAerospikeCluster(
+	ctx context.Context, name string, cluster *dto.AerospikeCluster,
+) error {
 	err := a.underlying.UpdateAerospikeCluster(ctx, name, cluster)
 	status := StatusSuccess
 	if err != nil {
@@ -51,6 +67,14 @@ func (a *auditConfigManager) DeleteAerospikeCluster(ctx context.Context, name st
 	}
 	a.auditor.WriteEvent(ctx, "DeleteAerospikeCluster", status, slog.String("resource", name))
 	return err
+}
+
+func (a *auditConfigManager) ReadPolicies(ctx context.Context) map[string]*dto.BackupPolicy {
+	return a.underlying.ReadPolicies(ctx)
+}
+
+func (a *auditConfigManager) ReadPolicy(ctx context.Context, name string) (*dto.BackupPolicy, error) {
+	return a.underlying.ReadPolicy(ctx, name)
 }
 
 func (a *auditConfigManager) AddPolicy(ctx context.Context, name string, policy *dto.BackupPolicy) error {
@@ -81,6 +105,14 @@ func (a *auditConfigManager) DeletePolicy(ctx context.Context, name string) erro
 	}
 	a.auditor.WriteEvent(ctx, "DeletePolicy", status, slog.String("resource", name))
 	return err
+}
+
+func (a *auditConfigManager) ReadRoutines(ctx context.Context) map[string]*dto.BackupRoutine {
+	return a.underlying.ReadRoutines(ctx)
+}
+
+func (a *auditConfigManager) ReadRoutine(ctx context.Context, name string) (*dto.BackupRoutine, error) {
+	return a.underlying.ReadRoutine(ctx, name)
 }
 
 func (a *auditConfigManager) AddRoutine(ctx context.Context, name string, routine *dto.BackupRoutine) error {
@@ -131,6 +163,14 @@ func (a *auditConfigManager) DisableRoutine(ctx context.Context, name string) er
 	}
 	a.auditor.WriteEvent(ctx, "DisableRoutine", status, slog.String("resource", name))
 	return err
+}
+
+func (a *auditConfigManager) ReadAllStorage(ctx context.Context) map[string]*dto.Storage {
+	return a.underlying.ReadAllStorage(ctx)
+}
+
+func (a *auditConfigManager) ReadStorage(ctx context.Context, name string) (*dto.Storage, error) {
+	return a.underlying.ReadStorage(ctx, name)
 }
 
 func (a *auditConfigManager) AddStorage(ctx context.Context, name string, storage *dto.Storage) error {

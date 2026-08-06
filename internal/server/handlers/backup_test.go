@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -67,11 +68,13 @@ func TestService_GetAllFullBackups(t *testing.T) {
 			cfg := model.NewConfig()
 			_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 
+			configManager := NewConfigManagerImpl(t.Context(), cfg, &sync.Mutex{}, nil, nil, nil)
+
 			tt.setupMock(mockBackends)
 
 			svc := &Service{
-				config:       cfg,
-				backupReader: mockBackends,
+				configManager: configManager,
+				backupReader:  mockBackends,
 			}
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/backups/full", nil)
@@ -130,8 +133,10 @@ func TestService_ScheduleBackupHappyPath(t *testing.T) {
 	config := model.NewConfig()
 	_ = config.AddRoutine(&model.BackupRoutine{Name: "test-routine"})
 
+	configManager := NewConfigManagerImpl(t.Context(), config, &sync.Mutex{}, nil, nil, nil)
+
 	svc := &Service{
-		config: config,
+		configManager: configManager,
 	}
 
 	const incrementalURL = "/v1/backups/incremental/test-routine?delay=1000"
@@ -190,11 +195,15 @@ func testScheduleBackupValidation(
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := model.NewConfig()
-			_ = config.AddRoutine(&model.BackupRoutine{Name: tt.routineName})
+			if tt.routineName != "missing-routine" {
+				_ = config.AddRoutine(&model.BackupRoutine{Name: tt.routineName})
+			}
+
+			configManager := NewConfigManagerImpl(t.Context(), config, &sync.Mutex{}, nil, nil, nil)
 
 			svc := &Service{
 				backupScheduler: service.NewBackupScheduler(nil, nil),
-				config:          config,
+				configManager:   configManager,
 			}
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, pathPrefix+tt.routineName, nil)

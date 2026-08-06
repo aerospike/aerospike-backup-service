@@ -5,7 +5,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // AddAerospikeCluster
@@ -46,15 +45,8 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/clusters [get]
 // @Produce     json
 // @Success  	200 {object} map[string]dto.AerospikeCluster
-func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
-	backupConfig := s.config.BackupConfigCopy()
-	clusters := dto.ConvertModelMapToDTO(
-		backupConfig.AerospikeClusters,
-		func(m *model.AerospikeCluster) *dto.AerospikeCluster {
-			return dto.NewClusterFromModel(m, backupConfig)
-		})
-
-	httpOK(w, clusters)
+func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, r *http.Request) {
+	httpOK(w, s.configManager.ReadAerospikeClusters(r.Context()))
 }
 
 // ReadAerospikeCluster reads a specific Aerospike cluster from the configuration given its name.
@@ -73,14 +65,14 @@ func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingClusterName)
 		return
 	}
-	backupConfig := s.config.BackupConfigCopy()
-	cluster, ok := backupConfig.AerospikeClusters[name]
-	if !ok {
+
+	cluster, err := s.configManager.ReadAerospikeCluster(r.Context(), name)
+	if err != nil {
 		httpError(w, errNotFound("cluster", name))
 		return
 	}
 
-	httpOK(w, dto.NewClusterFromModel(cluster, backupConfig))
+	httpOK(w, cluster)
 }
 
 // UpdateAerospikeCluster updates an existing Aerospike cluster in the configuration.

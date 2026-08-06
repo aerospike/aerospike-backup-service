@@ -18,8 +18,8 @@ func (s *Service) ConfigActionHandler(_ http.ResponseWriter, _ *http.Request) {
 // @Router      /v1/config [get]
 // @Produce     json
 // @Success     200 {object} dto.Config
-func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
-	httpOK(w, dto.NewConfigFromModel(s.config))
+func (s *Service) ReadConfig(w http.ResponseWriter, r *http.Request) {
+	httpOK(w, s.configManager.ReadConfig(r.Context()))
 }
 
 // UpdateConfig

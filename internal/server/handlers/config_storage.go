@@ -45,9 +45,8 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/storage [get]
 // @Produce     json
 // @Success  	200 {object} map[string]dto.Storage
-func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
-	backupConfig := s.config.BackupConfigCopy()
-	httpOK(w, dto.ConvertStorageMapToDTO(backupConfig.Storage, backupConfig))
+func (s *Service) ReadAllStorage(w http.ResponseWriter, r *http.Request) {
+	httpOK(w, s.configManager.ReadAllStorage(r.Context()))
 }
 
 // ReadStorage  reads a specific storage from the configuration given its name.
@@ -66,14 +65,14 @@ func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingStorageName)
 		return
 	}
-	backupConfig := s.config.BackupConfigCopy()
-	storage, ok := backupConfig.Storage[name]
-	if !ok {
+
+	storage, err := s.configManager.ReadStorage(r.Context(), name)
+	if err != nil {
 		httpError(w, errNotFound("storage", name))
 		return
 	}
 
-	httpOK(w, dto.NewStorageFromModel(storage, backupConfig))
+	httpOK(w, storage)
 }
 
 // UpdateStorage updates an existing storage in the configuration.

@@ -114,15 +114,18 @@ func InitComponents(
 	auditRestoreManager := audit.NewAuditRestoreManager(restoreMgr, auditor)
 	auditBackupScheduler := audit.NewAuditAdHocScheduler(backupScheduler, auditor)
 
+	auditConfigRetriever := audit.NewAuditConfigRetriever(configRetriever)
+	auditBackupReader := audit.NewAuditBackupReader(backendService)
+	auditRegistry := audit.NewAuditRunningBackupsRegistry(registry, auditor)
+
 	httpService := handlers.NewService(
 		ctx,
-		config,
 		auditConfigManager,
 		auditBackupScheduler,
 		auditRestoreManager,
-		configRetriever,
-		backendService,
-		registry,
+		auditConfigRetriever,
+		auditBackupReader,
+		auditRegistry,
 	)
 
 	return scheduler, httpService, nil

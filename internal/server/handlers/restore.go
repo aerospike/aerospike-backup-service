@@ -52,7 +52,13 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	restoreRequest, err := request.ToModel(s.config)
+	configModel, err := s.configManager.ReadConfig(r.Context()).ToModel(dto.ValidationSkipTLSFiles)
+	if err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
+
+	restoreRequest, err := request.ToModel(configModel)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -90,7 +96,13 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	restoreRequest, err := request.ToModel(s.config)
+	configModel, err := s.configManager.ReadConfig(r.Context()).ToModel(dto.ValidationSkipTLSFiles)
+	if err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
+
+	restoreRequest, err := request.ToModel(configModel)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -212,9 +224,21 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
+	routineDto, err := s.configManager.ReadRoutine(r.Context(), routineName)
+	if err != nil {
 		httpError(w, errRoutineNotFound(routineName))
+		return
+	}
+
+	configModel, err := s.configManager.ReadConfig(r.Context()).ToModel(dto.ValidationSkipTLSFiles)
+	if err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
+
+	routine, err := routineDto.ToModel(configModel.BackupConfigCopy(), routineName)
+	if err != nil {
+		httpError(w, errBadRequest(err))
 		return
 	}
 

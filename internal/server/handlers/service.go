@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 )
@@ -10,7 +11,6 @@ import (
 // Service holds all dependencies required to access business logic from endpoints.
 type Service struct {
 	sysCtx          context.Context //nolint:containedctx
-	config          *model.Config
 	configManager   ConfigManager
 	backupScheduler service.AdHocScheduler
 	restoreManager  service.RestoreManager
@@ -21,7 +21,6 @@ type Service struct {
 
 func NewService(
 	ctx context.Context,
-	config *model.Config,
 	configManager ConfigManager,
 	backupScheduler service.AdHocScheduler,
 	restoreManager service.RestoreManager,
@@ -31,7 +30,6 @@ func NewService(
 ) *Service {
 	return &Service{
 		sysCtx:          ctx,
-		config:          config,
 		configManager:   configManager,
 		backupScheduler: backupScheduler,
 		restoreManager:  restoreManager,
@@ -43,7 +41,8 @@ func NewService(
 
 // HTTPServerConfig returns the HTTP server config.
 func (s *Service) HTTPServerConfig() *model.HTTPServerConfig {
-	return s.config.ServiceConfig.GetHTTPServerOrDefault()
+	modelConfig, _ := s.configManager.ReadConfig(s.sysCtx).ToModel(dto.ValidationSkipTLSFiles)
+	return modelConfig.ServiceConfig.GetHTTPServerOrDefault()
 }
 
 // RunningBackupsRegistry defines the interface for managing running backups and their statuses.

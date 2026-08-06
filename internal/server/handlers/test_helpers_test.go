@@ -32,9 +32,10 @@ func addValidBackupRoutine(svc *Service, routineName string, disabled bool) vali
 		storage: &model.LocalStorage{Path: "/tmp/backup"},
 	}
 
-	_ = svc.config.AddPolicy(entities.policyName, entities.policy)
-	_ = svc.config.AddCluster(entities.clusterName, entities.cluster)
-	_ = svc.config.AddStorage(entities.storageName, entities.storage)
+	configManager := svc.configManager.(*ConfigManagerImpl)
+	_ = configManager.config.AddPolicy(entities.policyName, entities.policy)
+	_ = configManager.config.AddCluster(entities.clusterName, entities.cluster)
+	_ = configManager.config.AddStorage(entities.storageName, entities.storage)
 
 	routine := &model.BackupRoutine{
 		Name:          routineName,
@@ -45,7 +46,7 @@ func addValidBackupRoutine(svc *Service, routineName string, disabled bool) vali
 		Namespaces:    []string{},
 		Disabled:      disabled,
 	}
-	_ = svc.config.AddRoutine(routine)
+	_ = configManager.config.AddRoutine(routine)
 
 	return entities
 }

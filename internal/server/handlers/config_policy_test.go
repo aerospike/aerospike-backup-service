@@ -73,9 +73,9 @@ func TestAddPolicy(t *testing.T) {
 
 func TestReadPolicies(t *testing.T) {
 	svc := setupTestService()
-	svc.config = model.NewConfig()
-	_ = svc.config.AddPolicy("policy1", &model.BackupPolicy{})
-	_ = svc.config.AddPolicy("policy2", &model.BackupPolicy{})
+	configManager := svc.configManager.(*ConfigManagerImpl)
+	_ = configManager.config.AddPolicy("policy1", &model.BackupPolicy{})
+	_ = configManager.config.AddPolicy("policy2", &model.BackupPolicy{})
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/policies", nil)
 	w := httptest.NewRecorder()
@@ -124,8 +124,9 @@ func TestReadPolicy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
+			configManager := svc.configManager.(*ConfigManagerImpl)
 			if tt.policy != nil {
-				_ = svc.config.AddPolicy(tt.policyName, tt.policy)
+				_ = configManager.config.AddPolicy(tt.policyName, tt.policy)
 			}
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/policies/"+tt.policyName, nil)
@@ -245,7 +246,8 @@ func TestDeletePolicy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
-			_ = svc.config.AddPolicy("test-policy", &model.BackupPolicy{})
+			configManager := svc.configManager.(*ConfigManagerImpl)
+			_ = configManager.config.AddPolicy("test-policy", &model.BackupPolicy{})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/policies/"+tt.policyName, nil)
 			req.SetPathValue("name", tt.policyName)
@@ -340,7 +342,6 @@ func setupTestService(nsValidator ...aerospike.NamespaceValidator) *Service {
 
 	return NewService(
 		context.Background(),
-		config,
 		configManager,
 		nil,
 		nil,

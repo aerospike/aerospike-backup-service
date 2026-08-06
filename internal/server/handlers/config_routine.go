@@ -47,12 +47,8 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 // @Produce     json
 // @Success  	200 {object} map[string]dto.BackupRoutine
 // @Failure     400 {string} string
-func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
-	routines := dto.ConvertModelMapToDTO(s.config.Routines(), func(m *model.BackupRoutine) *dto.BackupRoutine {
-		return dto.NewRoutineFromModel(m, s.config)
-	})
-
-	httpOK(w, routines)
+func (s *Service) ReadRoutines(w http.ResponseWriter, r *http.Request) {
+	httpOK(w, s.configManager.ReadRoutines(r.Context()))
 }
 
 // ReadRoutine reads a specific routine from the configuration given its name.
@@ -71,13 +67,14 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	routine, found := s.config.Routine(name)
-	if !found {
+
+	routine, err := s.configManager.ReadRoutine(r.Context(), name)
+	if err != nil {
 		httpError(w, errRoutineNotFound(name))
 		return
 	}
 
-	httpOK(w, dto.NewRoutineFromModel(routine, s.config))
+	httpOK(w, routine)
 }
 
 // UpdateRoutine updates an existing backup routine in the configuration.

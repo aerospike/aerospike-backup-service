@@ -68,10 +68,10 @@ func TestAddStorage(t *testing.T) {
 
 func TestReadAllStorage(t *testing.T) {
 	svc := setupTestService()
-	svc.config = model.NewConfig()
+	configManager := svc.configManager.(*ConfigManagerImpl)
 
-	_ = svc.config.AddStorage("storage1", &model.LocalStorage{})
-	_ = svc.config.AddStorage("storage2", &model.LocalStorage{})
+	_ = configManager.config.AddStorage("storage1", &model.LocalStorage{})
+	_ = configManager.config.AddStorage("storage2", &model.LocalStorage{})
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/storage", nil)
 	w := httptest.NewRecorder()
@@ -119,8 +119,9 @@ func TestReadStorage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
+			configManager := svc.configManager.(*ConfigManagerImpl)
 			if tt.storage != nil {
-				_ = svc.config.AddStorage(tt.storageName, tt.storage)
+				_ = configManager.config.AddStorage(tt.storageName, tt.storage)
 			}
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/storage/"+tt.storageName, nil)
@@ -171,7 +172,8 @@ func TestUpdateStorage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
 			initialStorage := &model.LocalStorage{Path: "/"}
-			_ = svc.config.AddStorage("test-storage", initialStorage)
+			configManager := svc.configManager.(*ConfigManagerImpl)
+			_ = configManager.config.AddStorage("test-storage", initialStorage)
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -222,7 +224,8 @@ func TestDeleteStorage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
-			_ = svc.config.AddStorage("test-storage", &model.LocalStorage{})
+			configManager := svc.configManager.(*ConfigManagerImpl)
+			_ = configManager.config.AddStorage("test-storage", &model.LocalStorage{})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/storage/"+tt.storageName, nil)
 			req.SetPathValue("name", tt.storageName)

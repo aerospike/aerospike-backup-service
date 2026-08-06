@@ -41,7 +41,8 @@ func TestAddRoutine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
-			_ = svc.config.AddPolicy("test-policy", &model.BackupPolicy{})
+			configManager := svc.configManager.(*ConfigManagerImpl)
+			_ = configManager.config.AddPolicy("test-policy", &model.BackupPolicy{})
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -64,9 +65,9 @@ func TestAddRoutine(t *testing.T) {
 
 func TestReadRoutines(t *testing.T) {
 	svc := setupTestService()
-	svc.config = model.NewConfig()
-	_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
-	_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "routine2"})
+	configManager := svc.configManager.(*ConfigManagerImpl)
+	_ = configManager.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
+	_ = configManager.config.AddRoutine(&model.BackupRoutine{Name: "routine2"})
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/routines", nil)
 	w := httptest.NewRecorder()
@@ -113,8 +114,9 @@ func TestReadRoutine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
+			configManager := svc.configManager.(*ConfigManagerImpl)
 			if tt.routine != nil {
-				_ = svc.config.AddRoutine(tt.routine)
+				_ = configManager.config.AddRoutine(tt.routine)
 			}
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/routines/"+tt.routineName, nil)
@@ -207,7 +209,8 @@ func TestDeleteRoutine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
-			_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "test-routine"})
+			configManager := svc.configManager.(*ConfigManagerImpl)
+			_ = configManager.config.AddRoutine(&model.BackupRoutine{Name: "test-routine"})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/routines/"+tt.routineName, nil)
 			req.SetPathValue("name", tt.routineName)
@@ -274,7 +277,8 @@ func TestEnableRoutine(t *testing.T) {
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
 			} else {
-				updated, ok := svc.config.Routine(tt.routineName)
+				configManager := svc.configManager.(*ConfigManagerImpl)
+				updated, ok := configManager.config.Routine(tt.routineName)
 				require.True(t, ok)
 				assert.False(t, updated.Disabled)
 			}
@@ -337,7 +341,8 @@ func TestDisableRoutine(t *testing.T) {
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
 			} else {
-				updated, ok := svc.config.Routine(tt.routineName)
+				configManager := svc.configManager.(*ConfigManagerImpl)
+				updated, ok := configManager.config.Routine(tt.routineName)
 				require.True(t, ok)
 				assert.True(t, updated.Disabled)
 			}

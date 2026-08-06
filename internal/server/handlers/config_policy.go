@@ -45,9 +45,8 @@ func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/policies [get]
 // @Produce     json
 // @Success  	200 {object} map[string]dto.BackupPolicy
-func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
-	policies := dto.ConvertModelMapToDTO(s.config.BackupConfigCopy().BackupPolicies, dto.NewBackupPolicyFromModel)
-	httpOK(w, policies)
+func (s *Service) ReadPolicies(w http.ResponseWriter, r *http.Request) {
+	httpOK(w, s.configManager.ReadPolicies(r.Context()))
 }
 
 // ReadPolicy reads a specific backup policy from the configuration given its name.
@@ -66,13 +65,14 @@ func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingPolicyName)
 		return
 	}
-	policy, ok := s.config.BackupConfigCopy().BackupPolicies[name]
-	if !ok {
+
+	policy, err := s.configManager.ReadPolicy(r.Context(), name)
+	if err != nil {
 		httpError(w, errNotFound("policy", name))
 		return
 	}
 
-	httpOK(w, dto.NewBackupPolicyFromModel(policy))
+	httpOK(w, policy)
 }
 
 // UpdatePolicy updates an existing policy in the configuration.

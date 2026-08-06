@@ -13,10 +13,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/validation"
 )
 
-type BackupConfigChangeOptions struct {
-	validateNamespaces bool
-}
-
 // ConfigManagerImpl applies mutations to the configuration.
 type ConfigManagerImpl struct {
 	config               *model.Config
@@ -46,7 +42,89 @@ func NewConfigManagerImpl(
 	}
 }
 
-func (s *ConfigManagerImpl) AddAerospikeCluster(ctx context.Context, name string, newCluster *dto.AerospikeCluster) error {
+func (s *ConfigManagerImpl) ReadConfig(_ context.Context) *dto.Config {
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+	return dto.NewConfigFromModel(s.config)
+}
+
+func (s *ConfigManagerImpl) ReadAerospikeClusters(_ context.Context) map[string]*dto.AerospikeCluster {
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+	backupConfig := s.config.BackupConfigCopy()
+	return dto.ConvertModelMapToDTO(
+		backupConfig.AerospikeClusters,
+		func(m *model.AerospikeCluster) *dto.AerospikeCluster {
+			return dto.NewClusterFromModel(m, backupConfig)
+		})
+}
+
+func (s *ConfigManagerImpl) ReadAerospikeCluster(_ context.Context, name string) (*dto.AerospikeCluster, error) {
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+	backupConfig := s.config.BackupConfigCopy()
+	cluster, ok := backupConfig.AerospikeClusters[name]
+	if !ok {
+		return nil, fmt.Errorf("read Aerospike cluster %q: %w", name, model.ErrNotFound)
+	}
+	return dto.NewClusterFromModel(cluster, backupConfig), nil
+}
+
+func (s *ConfigManagerImpl) ReadPolicies(_ context.Context) map[string]*dto.BackupPolicy {
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+	return dto.ConvertModelMapToDTO(s.config.BackupConfigCopy().BackupPolicies, dto.NewBackupPolicyFromModel)
+}
+
+func (s *ConfigManagerImpl) ReadPolicy(_ context.Context, name string) (*dto.BackupPolicy, error) {
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+	policy, ok := s.config.BackupConfigCopy().BackupPolicies[name]
+	if !ok {
+		return nil, fmt.Errorf("read backup policy %q: %w", name, model.ErrNotFound)
+	}
+	return dto.NewBackupPolicyFromModel(policy), nil
+}
+
+func (s *ConfigManagerImpl) ReadRoutines(_ context.Context) map[string]*dto.BackupRoutine {
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+	return dto.ConvertModelMapToDTO(s.config.Routines(), func(m *model.BackupRoutine) *dto.BackupRoutine {
+		return dto.NewRoutineFromModel(m, s.config)
+	})
+}
+
+func (s *ConfigManagerImpl) ReadRoutine(_ context.Context, name string) (*dto.BackupRoutine, error) {
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+	routine, found := s.config.Routine(name)
+	if !found {
+		return nil, fmt.Errorf("read backup routine %q: %w", name, model.ErrNotFound)
+	}
+	return dto.NewRoutineFromModel(routine, s.config), nil
+}
+
+func (s *ConfigManagerImpl) ReadAllStorage(_ context.Context) map[string]*dto.Storage {
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+	backupConfig := s.config.BackupConfigCopy()
+	return dto.ConvertStorageMapToDTO(backupConfig.Storage, backupConfig)
+}
+
+func (s *ConfigManagerImpl) ReadStorage(_ context.Context, name string) (*dto.Storage, error) {
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+	backupConfig := s.config.BackupConfigCopy()
+	storage, ok := backupConfig.Storage[name]
+	if !ok {
+		return nil, fmt.Errorf("read storage %q: %w", name, model.ErrNotFound)
+	}
+	return dto.NewStorageFromModel(storage, backupConfig), nil
+}
+
+func (s *ConfigManagerImpl) AddAerospikeCluster(
+	ctx context.Context, name string, newCluster *dto.AerospikeCluster,
+) error {
 	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
 		if _, exists := config.AerospikeClusters[name]; exists {
 			return nil, fmt.Errorf("add Aerospike cluster %q: %w", name, model.ErrAlreadyExists)
@@ -56,7 +134,9 @@ func (s *ConfigManagerImpl) AddAerospikeCluster(ctx context.Context, name string
 	})
 }
 
-func (s *ConfigManagerImpl) UpdateAerospikeCluster(ctx context.Context, name string, updatedCluster *dto.AerospikeCluster) error {
+func (s *ConfigManagerImpl) UpdateAerospikeCluster(
+	ctx context.Context, name string, updatedCluster *dto.AerospikeCluster,
+) error {
 	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
 		if _, exists := config.AerospikeClusters[name]; !exists {
 			return nil, fmt.Errorf("update Aerospike cluster %q: %w", name, model.ErrNotFound)

@@ -79,10 +79,10 @@ func TestAddAerospikeCluster(t *testing.T) {
 
 func TestReadAerospikeClusters(t *testing.T) {
 	svc := setupTestService()
-	svc.config = model.NewConfig()
+	configManager := svc.configManager.(*ConfigManagerImpl)
 
-	_ = svc.config.AddCluster("cluster1", &model.AerospikeCluster{})
-	_ = svc.config.AddCluster("cluster2", &model.AerospikeCluster{})
+	_ = configManager.config.AddCluster("cluster1", &model.AerospikeCluster{})
+	_ = configManager.config.AddCluster("cluster2", &model.AerospikeCluster{})
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/clusters", nil)
 	w := httptest.NewRecorder()
@@ -131,8 +131,9 @@ func TestReadAerospikeCluster(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
+			configManager := svc.configManager.(*ConfigManagerImpl)
 			if tt.cluster != nil {
-				_ = svc.config.AddCluster(tt.clusterName, tt.cluster)
+				_ = configManager.config.AddCluster(tt.clusterName, tt.cluster)
 			}
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/clusters/"+tt.clusterName, nil)
@@ -188,13 +189,14 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 
 			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 			svc := setupTestService(mockNsValidator)
+			configManager := svc.configManager.(*ConfigManagerImpl)
 
 			if tt.runValidation {
-				mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Eq(svc.config))
+				mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Eq(configManager.config))
 			}
 
 			initialCluster := &model.AerospikeCluster{}
-			_ = svc.config.AddCluster("test-cluster", initialCluster)
+			_ = configManager.config.AddCluster("test-cluster", initialCluster)
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -245,7 +247,8 @@ func TestDeleteAerospikeCluster(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
-			_ = svc.config.AddCluster("test-cluster", &model.AerospikeCluster{})
+			configManager := svc.configManager.(*ConfigManagerImpl)
+			_ = configManager.config.AddCluster("test-cluster", &model.AerospikeCluster{})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/clusters/"+tt.clusterName, nil)
 			req.SetPathValue("name", tt.clusterName)
