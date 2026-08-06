@@ -9,7 +9,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
-	"github.com/aerospike/backup-go/pkg/asinfo"
+	infoModels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
 const pollInterval = time.Second
@@ -53,12 +53,12 @@ func (h *Handler) Wait(ctx context.Context) error {
 			return h.waitErr
 		}
 
-		if stable == asinfo.RestoreStateNone { // restore completed
+		if stable == infoModels.RestoreStateNone { // restore completed
 			h.stats.Stop()
 			return nil
 		}
 
-		if stable == asinfo.RestoreStateFailed {
+		if stable == infoModels.RestoreStateFailed {
 			h.waitErr = errors.New("restore failed")
 			h.stats.Stop()
 

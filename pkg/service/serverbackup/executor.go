@@ -56,7 +56,7 @@ type infoClient interface {
 		ctx context.Context,
 		backup *infoModels.RequestBackup,
 	) (string, error)
-	GetBackupStatus(ctx context.Context) (float64, error)
+	GetBackupStatus(ctx context.Context, jobId string) (*infoModels.ResponseBackupState, error)
 }
 
 // Run starts a server-side backup and returns a handler for monitoring progress.
@@ -165,7 +165,7 @@ func (h *Handler) Wait(ctx context.Context) error {
 	defer ticker.Stop()
 
 	for {
-		status, err := h.infoClient.GetBackupStatus(ctx)
+		status, err := h.infoClient.GetBackupStatus(ctx, h.jobID)
 		if err != nil && !errors.Is(err, asinfo.ErrNotFound) {
 			h.waitErr = fmt.Errorf("failed to get server backup status: %w", err)
 			h.stats.Stop()
@@ -174,7 +174,7 @@ func (h *Handler) Wait(ctx context.Context) error {
 
 		if err == nil {
 			h.updateProgress(status)
-			if status >= 1.0 {
+			if status.ProgressPct >= 1.0 {
 				h.stats.Stop()
 				return nil
 			}
@@ -190,13 +190,13 @@ func (h *Handler) Wait(ctx context.Context) error {
 	}
 }
 
-func (h *Handler) updateProgress(status float64) {
+func (h *Handler) updateProgress(status *infoModels.ResponseBackupState) {
 	if h.stats.StartTime.IsZero() {
 		h.stats.Start()
 	}
 	h.stats.TotalRecords.Store(progressScale)
 
-	done := uint64(status * progressScale)
+	done := uint64(status.ProgressPct * progressScale)
 	h.progress.Store(done)
 	h.stats.ReadRecords.Store(done)
 }

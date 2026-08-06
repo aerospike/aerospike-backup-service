@@ -46,9 +46,6 @@ func (r *BackupReader) getRoutineBackups(
 	ctx context.Context,
 	filter *service.RoutineFilter,
 ) ([]model.BackupDetails, error) {
-	if filter.BackupType() == model.BackupTypeIncremental {
-		return nil, nil
-	}
 
 	routine, ok := r.config.Routine(filter.RoutineName())
 	if !ok {
@@ -71,7 +68,14 @@ func (r *BackupReader) getRoutineBackups(
 		if !matchesTimeBounds(backup, filter.TimeBounds()) {
 			continue
 		}
-		details = append(details, backup)
+		if filter.BackupType() == model.BackupTypeIncremental {
+			isIncremental := backup.From != time.Time{}
+			if isIncremental {
+				details = append(details, backup)
+			}
+		} else {
+			details = append(details, backup)
+		}
 	}
 
 	if filter.OnlyLast() && len(details) > 0 {
@@ -128,6 +132,10 @@ func metadataToDetails(md servermodels.Metadata, storage model.Storage) model.Ba
 		finished = created
 	}
 
+	atoi, err := strconv.Atoi(md.ModAfter)
+	if err != nil {
+		panic(err)
+	}
 	return model.NewBackupDetails(
 		model.BackupMetadata{
 			Created:     created,
@@ -138,6 +146,7 @@ func metadataToDetails(md servermodels.Metadata, storage model.Storage) model.Ba
 			FileCount:   fileCount,
 			Compression: model.CompressNone,
 			Encryption:  model.EncryptNone,
+			From:        time.Unix(int64(atoi), 0).UTC(),
 		},
 		md.BackupID,
 		storage,

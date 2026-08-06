@@ -12,7 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/serverbackup"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/pkg/asinfo"
 	infoModels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
@@ -59,11 +58,11 @@ func (r *RestoreExecutor) Run(
 			return nil, fmt.Errorf("failed to get status of server restore: %w", err)
 		}
 
-		if status == asinfo.RestoreStateFailed {
+		if status == infoModels.RestoreStateFailed {
 			return nil, errors.New("server restore failed")
 		}
 
-		if status == asinfo.RestoreStateReady {
+		if status == infoModels.RestoreStateReady {
 			break
 		}
 
