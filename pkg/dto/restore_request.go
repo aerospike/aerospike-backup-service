@@ -73,6 +73,9 @@ func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
 	if !filepath.IsLocal(r.BackupDataPath) {
 		return fmt.Errorf("%w: backup-data-path must be local", errValidation)
 	}
+	if hasParentPathComponent(r.BackupDataPath) {
+		return fmt.Errorf("%w: backup-data-path must not contain traversal", errValidation)
+	}
 	if err := r.DestinationClusterConfig.Validate(opts...); err != nil {
 		return err
 	}

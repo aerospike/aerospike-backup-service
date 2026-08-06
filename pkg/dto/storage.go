@@ -24,8 +24,13 @@ type Storage struct {
 }
 
 func validateObjectStoragePath(path string) error {
-	if path != "" && !filepath.IsLocal(path) {
-		return fmt.Errorf("storage path must be local: %q", path)
+	if path != "" {
+		if !filepath.IsLocal(path) {
+			return fmt.Errorf("storage path must be local: %q", path)
+		}
+		if hasParentPathComponent(path) {
+			return fmt.Errorf("storage path must not contain traversal: %q", path)
+		}
 	}
 	return nil
 }

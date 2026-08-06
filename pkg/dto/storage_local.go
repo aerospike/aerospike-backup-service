@@ -23,7 +23,10 @@ func (l *LocalStorage) Validate(_ ...ValidationOption) error {
 	if l.Path == "" {
 		return errors.New("local storage path is not specified")
 	}
-	if (!filepath.IsAbs(l.Path) && !filepath.IsLocal(l.Path)) || hasParentPathComponent(l.Path) {
+	if !filepath.IsAbs(l.Path) && !filepath.IsLocal(l.Path) {
+		return errors.New("local storage path must be absolute or local")
+	}
+	if hasParentPathComponent(l.Path) {
 		return errors.New("local storage path must not contain traversal")
 	}
 	if l.MinPartSize != nil && *l.MinPartSize <= 0 {
