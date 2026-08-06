@@ -23,23 +23,143 @@ func NewAuditConfigManager(underlying handlers.ConfigManager, auditor Auditor) h
 	}
 }
 
-// ChangeBackupConfig delegates to the underlying manager and audits the operation.
-func (a *auditConfigManager) ChangeBackupConfig(
-	ctx context.Context,
-	action string,
-	resourceID string,
-	mutate func(*dto.Config) ([]string, error),
-	opts ...func(*handlers.BackupConfigChangeOptions),
-) error {
-	err := a.underlying.ChangeBackupConfig(ctx, action, resourceID, mutate, opts...)
-
+func (a *auditConfigManager) AddAerospikeCluster(ctx context.Context, name string, cluster *dto.AerospikeCluster) error {
+	err := a.underlying.AddAerospikeCluster(ctx, name, cluster)
 	status := StatusSuccess
 	if err != nil {
 		status = StatusFailed
 	}
+	a.auditor.WriteEvent(ctx, "AddAerospikeCluster", status, slog.String("resource", name))
+	return err
+}
 
-	a.auditor.WriteEvent(ctx, action, status, slog.String("resource", resourceID))
+func (a *auditConfigManager) UpdateAerospikeCluster(ctx context.Context, name string, cluster *dto.AerospikeCluster) error {
+	err := a.underlying.UpdateAerospikeCluster(ctx, name, cluster)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "UpdateAerospikeCluster", status, slog.String("resource", name))
+	return err
+}
 
+func (a *auditConfigManager) DeleteAerospikeCluster(ctx context.Context, name string) error {
+	err := a.underlying.DeleteAerospikeCluster(ctx, name)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "DeleteAerospikeCluster", status, slog.String("resource", name))
+	return err
+}
+
+func (a *auditConfigManager) AddPolicy(ctx context.Context, name string, policy *dto.BackupPolicy) error {
+	err := a.underlying.AddPolicy(ctx, name, policy)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "AddPolicy", status, slog.String("resource", name))
+	return err
+}
+
+func (a *auditConfigManager) UpdatePolicy(ctx context.Context, name string, policy *dto.BackupPolicy) error {
+	err := a.underlying.UpdatePolicy(ctx, name, policy)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "UpdatePolicy", status, slog.String("resource", name))
+	return err
+}
+
+func (a *auditConfigManager) DeletePolicy(ctx context.Context, name string) error {
+	err := a.underlying.DeletePolicy(ctx, name)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "DeletePolicy", status, slog.String("resource", name))
+	return err
+}
+
+func (a *auditConfigManager) AddRoutine(ctx context.Context, name string, routine *dto.BackupRoutine) error {
+	err := a.underlying.AddRoutine(ctx, name, routine)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "AddRoutine", status, slog.String("resource", name))
+	return err
+}
+
+func (a *auditConfigManager) UpdateRoutine(ctx context.Context, name string, routine *dto.BackupRoutine) error {
+	err := a.underlying.UpdateRoutine(ctx, name, routine)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "UpdateRoutine", status, slog.String("resource", name))
+	return err
+}
+
+func (a *auditConfigManager) DeleteRoutine(ctx context.Context, name string) error {
+	err := a.underlying.DeleteRoutine(ctx, name)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "DeleteRoutine", status, slog.String("resource", name))
+	return err
+}
+
+func (a *auditConfigManager) EnableRoutine(ctx context.Context, name string) error {
+	err := a.underlying.EnableRoutine(ctx, name)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "EnableRoutine", status, slog.String("resource", name))
+	return err
+}
+
+func (a *auditConfigManager) DisableRoutine(ctx context.Context, name string) error {
+	err := a.underlying.DisableRoutine(ctx, name)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "DisableRoutine", status, slog.String("resource", name))
+	return err
+}
+
+func (a *auditConfigManager) AddStorage(ctx context.Context, name string, storage *dto.Storage) error {
+	err := a.underlying.AddStorage(ctx, name, storage)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "AddStorage", status, slog.String("resource", name))
+	return err
+}
+
+func (a *auditConfigManager) UpdateStorage(ctx context.Context, name string, storage *dto.Storage) error {
+	err := a.underlying.UpdateStorage(ctx, name, storage)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "UpdateStorage", status, slog.String("resource", name))
+	return err
+}
+
+func (a *auditConfigManager) DeleteStorage(ctx context.Context, name string) error {
+	err := a.underlying.DeleteStorage(ctx, name)
+	status := StatusSuccess
+	if err != nil {
+		status = StatusFailed
+	}
+	a.auditor.WriteEvent(ctx, "DeleteStorage", status, slog.String("resource", name))
 	return err
 }
 

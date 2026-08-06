@@ -1,12 +1,10 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // AddPolicy
@@ -32,14 +30,7 @@ func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.configManager.ChangeBackupConfig(r.Context(), "AddPolicy", name,
-		func(config *dto.Config) ([]string, error) {
-			if _, exists := config.BackupPolicies[name]; exists {
-				return nil, fmt.Errorf("add backup policy %q: %w", name, model.ErrAlreadyExists)
-			}
-			config.BackupPolicies[name] = newPolicy
-			return nil, nil
-		}); err != nil {
+	if err = s.configManager.AddPolicy(r.Context(), name, newPolicy); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -107,14 +98,7 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.configManager.ChangeBackupConfig(r.Context(), "UpdatePolicy", name,
-		func(config *dto.Config) ([]string, error) {
-			if _, exists := config.BackupPolicies[name]; !exists {
-				return nil, fmt.Errorf("update backup policy %q: %w", name, model.ErrNotFound)
-			}
-			config.BackupPolicies[name] = updatedPolicy
-			return nil, nil
-		}); err != nil {
+	if err = s.configManager.UpdatePolicy(r.Context(), name, updatedPolicy); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -137,17 +121,7 @@ func (s *Service) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.configManager.ChangeBackupConfig(r.Context(), "DeletePolicy", name,
-		func(config *dto.Config) ([]string, error) {
-			if _, exists := config.BackupPolicies[name]; !exists {
-				return nil, fmt.Errorf("delete backup policy %q: %w", name, model.ErrNotFound)
-			}
-			if err := ensurePolicyNotInUse(config, name); err != nil {
-				return nil, err
-			}
-			delete(config.BackupPolicies, name)
-			return nil, nil
-		})
+	err := s.configManager.DeletePolicy(r.Context(), name)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return

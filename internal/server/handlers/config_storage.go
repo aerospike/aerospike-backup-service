@@ -1,12 +1,10 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // AddStorage
@@ -32,14 +30,7 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.configManager.ChangeBackupConfig(r.Context(), "AddStorage", name,
-		func(config *dto.Config) ([]string, error) {
-			if _, exists := config.Storage[name]; exists {
-				return nil, fmt.Errorf("add storage %q: %w", name, model.ErrAlreadyExists)
-			}
-			config.Storage[name] = newStorage
-			return nil, nil
-		}); err != nil {
+	if err = s.configManager.AddStorage(r.Context(), name, newStorage); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -108,14 +99,7 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.configManager.ChangeBackupConfig(r.Context(), "UpdateStorage", name,
-		func(config *dto.Config) ([]string, error) {
-			if _, exists := config.Storage[name]; !exists {
-				return nil, fmt.Errorf("update storage %q: %w", name, model.ErrNotFound)
-			}
-			config.Storage[name] = updatedStorage
-			return routinesUsingStorage(config, name), nil
-		}); err != nil {
+	if err = s.configManager.UpdateStorage(r.Context(), name, updatedStorage); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -138,17 +122,7 @@ func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.configManager.ChangeBackupConfig(r.Context(), "DeleteStorage", name,
-		func(config *dto.Config) ([]string, error) {
-			if _, exists := config.Storage[name]; !exists {
-				return nil, fmt.Errorf("delete storage %q: %w", name, model.ErrNotFound)
-			}
-			if err := ensureStorageNotInUse(config, name); err != nil {
-				return nil, err
-			}
-			delete(config.Storage, name)
-			return nil, nil
-		})
+	err := s.configManager.DeleteStorage(r.Context(), name)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return

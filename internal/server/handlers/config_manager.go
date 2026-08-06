@@ -10,21 +10,24 @@ import (
 // By isolating this in an interface, we guarantee that all config changes
 // can be intercepted for Auditing and future RBAC validation.
 type ConfigManager interface {
-	// ChangeBackupConfig applies a mutation to the backup configuration DTO,
-	// validates the full configuration via ToModel, and persists the result.
-	// action: e.g. "AddAerospikeCluster"
-	// resourceID: e.g. cluster name
-	ChangeBackupConfig(
-		ctx context.Context,
-		action string,
-		resourceID string,
-		mutate func(*dto.Config) ([]string, error),
-		opts ...func(*BackupConfigChangeOptions),
-	) error
-
-	// UpdateConfig updates the configuration for the service.
 	UpdateConfig(ctx context.Context, newConfig *dto.Config) error
-
-	// ApplyConfig reloads the configuration from the config file.
 	ApplyConfig(ctx context.Context) error
+
+	AddAerospikeCluster(ctx context.Context, name string, cluster *dto.AerospikeCluster) error
+	UpdateAerospikeCluster(ctx context.Context, name string, cluster *dto.AerospikeCluster) error
+	DeleteAerospikeCluster(ctx context.Context, name string) error
+
+	AddPolicy(ctx context.Context, name string, policy *dto.BackupPolicy) error
+	UpdatePolicy(ctx context.Context, name string, policy *dto.BackupPolicy) error
+	DeletePolicy(ctx context.Context, name string) error
+
+	AddRoutine(ctx context.Context, name string, routine *dto.BackupRoutine) error
+	UpdateRoutine(ctx context.Context, name string, routine *dto.BackupRoutine) error
+	DeleteRoutine(ctx context.Context, name string) error
+	EnableRoutine(ctx context.Context, name string) error
+	DisableRoutine(ctx context.Context, name string) error
+
+	AddStorage(ctx context.Context, name string, storage *dto.Storage) error
+	UpdateStorage(ctx context.Context, name string, storage *dto.Storage) error
+	DeleteStorage(ctx context.Context, name string) error
 }

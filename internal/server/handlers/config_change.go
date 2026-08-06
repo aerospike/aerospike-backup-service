@@ -46,13 +46,159 @@ func NewConfigManagerImpl(
 	}
 }
 
-// ChangeBackupConfig applies a mutation to the backup configuration DTO, validates the
-// full configuration via ToModel, and persists the result.
-// The mutate function returns routine names that should be rescheduled and rescanned.
-func (s *ConfigManagerImpl) ChangeBackupConfig(
+func (s *ConfigManagerImpl) AddAerospikeCluster(ctx context.Context, name string, newCluster *dto.AerospikeCluster) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.AerospikeClusters[name]; exists {
+			return nil, fmt.Errorf("add Aerospike cluster %q: %w", name, model.ErrAlreadyExists)
+		}
+		config.AerospikeClusters[name] = newCluster
+		return nil, nil
+	})
+}
+
+func (s *ConfigManagerImpl) UpdateAerospikeCluster(ctx context.Context, name string, updatedCluster *dto.AerospikeCluster) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.AerospikeClusters[name]; !exists {
+			return nil, fmt.Errorf("update Aerospike cluster %q: %w", name, model.ErrNotFound)
+		}
+		config.AerospikeClusters[name] = updatedCluster
+		return nil, nil
+	}, WithNamespaceValidation)
+}
+
+func (s *ConfigManagerImpl) DeleteAerospikeCluster(ctx context.Context, name string) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.AerospikeClusters[name]; !exists {
+			return nil, fmt.Errorf("delete Aerospike cluster %q: %w", name, model.ErrNotFound)
+		}
+		if err := ensureClusterNotInUse(config, name); err != nil {
+			return nil, err
+		}
+		delete(config.AerospikeClusters, name)
+		return nil, nil
+	})
+}
+
+func (s *ConfigManagerImpl) AddPolicy(ctx context.Context, name string, newPolicy *dto.BackupPolicy) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.BackupPolicies[name]; exists {
+			return nil, fmt.Errorf("add backup policy %q: %w", name, model.ErrAlreadyExists)
+		}
+		config.BackupPolicies[name] = newPolicy
+		return nil, nil
+	})
+}
+
+func (s *ConfigManagerImpl) UpdatePolicy(ctx context.Context, name string, updatedPolicy *dto.BackupPolicy) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.BackupPolicies[name]; !exists {
+			return nil, fmt.Errorf("update backup policy %q: %w", name, model.ErrNotFound)
+		}
+		config.BackupPolicies[name] = updatedPolicy
+		return nil, nil
+	})
+}
+
+func (s *ConfigManagerImpl) DeletePolicy(ctx context.Context, name string) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.BackupPolicies[name]; !exists {
+			return nil, fmt.Errorf("delete backup policy %q: %w", name, model.ErrNotFound)
+		}
+		if err := ensurePolicyNotInUse(config, name); err != nil {
+			return nil, err
+		}
+		delete(config.BackupPolicies, name)
+		return nil, nil
+	})
+}
+
+func (s *ConfigManagerImpl) AddRoutine(ctx context.Context, name string, newRoutine *dto.BackupRoutine) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.BackupRoutines[name]; exists {
+			return nil, fmt.Errorf("add backup routine %q: %w", name, model.ErrAlreadyExists)
+		}
+		config.BackupRoutines[name] = newRoutine
+		return []string{name}, nil
+	}, WithNamespaceValidation)
+}
+
+func (s *ConfigManagerImpl) UpdateRoutine(ctx context.Context, name string, updatedRoutine *dto.BackupRoutine) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.BackupRoutines[name]; !exists {
+			return nil, fmt.Errorf("update backup routine %q: %w", name, model.ErrNotFound)
+		}
+		config.BackupRoutines[name] = updatedRoutine
+		return []string{name}, nil
+	}, WithNamespaceValidation)
+}
+
+func (s *ConfigManagerImpl) DeleteRoutine(ctx context.Context, name string) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.BackupRoutines[name]; !exists {
+			return nil, fmt.Errorf("delete backup routine %q: %w", name, model.ErrNotFound)
+		}
+		delete(config.BackupRoutines, name)
+		return []string{name}, nil
+	})
+}
+
+func (s *ConfigManagerImpl) EnableRoutine(ctx context.Context, name string) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		routine, exists := config.BackupRoutines[name]
+		if !exists {
+			return nil, fmt.Errorf("toggle disable for backup routine %q: %w", name, model.ErrNotFound)
+		}
+		routine.Disabled = false
+		return []string{name}, nil
+	})
+}
+
+func (s *ConfigManagerImpl) DisableRoutine(ctx context.Context, name string) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		routine, exists := config.BackupRoutines[name]
+		if !exists {
+			return nil, fmt.Errorf("toggle disable for backup routine %q: %w", name, model.ErrNotFound)
+		}
+		routine.Disabled = true
+		return []string{name}, nil
+	})
+}
+
+func (s *ConfigManagerImpl) AddStorage(ctx context.Context, name string, newStorage *dto.Storage) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.Storage[name]; exists {
+			return nil, fmt.Errorf("add storage %q: %w", name, model.ErrAlreadyExists)
+		}
+		config.Storage[name] = newStorage
+		return nil, nil
+	})
+}
+
+func (s *ConfigManagerImpl) UpdateStorage(ctx context.Context, name string, updatedStorage *dto.Storage) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.Storage[name]; !exists {
+			return nil, fmt.Errorf("update storage %q: %w", name, model.ErrNotFound)
+		}
+		config.Storage[name] = updatedStorage
+		return routinesUsingStorage(config, name), nil
+	})
+}
+
+func (s *ConfigManagerImpl) DeleteStorage(ctx context.Context, name string) error {
+	return s.changeConfigInternal(ctx, func(config *dto.Config) ([]string, error) {
+		if _, exists := config.Storage[name]; !exists {
+			return nil, fmt.Errorf("delete storage %q: %w", name, model.ErrNotFound)
+		}
+		if err := ensureStorageNotInUse(config, name); err != nil {
+			return nil, err
+		}
+		delete(config.Storage, name)
+		return nil, nil
+	})
+}
+
+func (s *ConfigManagerImpl) changeConfigInternal(
 	ctx context.Context,
-	action string,
-	resourceID string,
 	mutate func(*dto.Config) ([]string, error),
 	opts ...func(*BackupConfigChangeOptions),
 ) error {
