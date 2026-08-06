@@ -20,6 +20,7 @@ type RestoreRequest struct {
 	// Restore policy to use in the operation.
 	Policy *RestorePolicy `json:"policy"`
 	// Path to the data from storage root.
+	// This path is relative to the storage `path`.
 	// You can obtain this value by:
 	// - Browsing the storage UI, or
 	// - Reading the `key` field in the response from GET `v1/backups/full/{routine}`

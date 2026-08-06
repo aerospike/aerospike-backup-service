@@ -17,6 +17,7 @@ type AzureStorage struct {
 	// ContainerName is the name of the Azure Blob container.
 	ContainerName string `yaml:"container-name" json:"container-name" validate:"required"`
 	// Path is the root path for the backup repository within the container.
+	// This path is relative to the container.
 	// If not specified, backups will be saved in the container's root.
 	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
 	// AccountName is the Azure storage account name for Shared Key authentication.

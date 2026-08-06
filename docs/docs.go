@@ -1738,7 +1738,7 @@ const docTemplate = `{
                     "minimum": 1048576
                 },
                 "path": {
-                    "description": "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
+                    "description": "Path is the root path for the backup repository within the container.\nThis path is relative to the container.\nIf not specified, backups will be saved in the container's root.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "backups"
@@ -2356,7 +2356,7 @@ const docTemplate = `{
                     "minimum": 262144
                 },
                 "path": {
-                    "description": "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
+                    "description": "The root path for the backup repository.\nThis path is relative to the bucket.\nIf not specified, backups will be saved in the bucket's root.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "backups"
@@ -2839,7 +2839,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "backup-data-path": {
-                    "description": "Path to the data from storage root.\nYou can obtain this value by:\n- Browsing the storage UI, or\n- Reading the ` + "`" + `key` + "`" + ` field in the response from GET ` + "`" + `v1/backups/full/{routine}` + "`" + `",
+                    "description": "Path to the data from storage root.\nThis path is relative to the storage ` + "`" + `path` + "`" + `.\nYou can obtain this value by:\n- Browsing the storage UI, or\n- Reading the ` + "`" + `key` + "`" + ` field in the response from GET ` + "`" + `v1/backups/full/{routine}` + "`" + `",
                     "type": "string"
                 },
                 "destination": {
@@ -3120,7 +3120,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "path": {
-                    "description": "The root path for the backup repository within the bucket.\nIf not specified, backups will be saved in the bucket's root.",
+                    "description": "The root path for the backup repository within the bucket.\nThis path is relative to the bucket.\nIf not specified, backups will be saved in the bucket's root.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "backups"
