@@ -2356,7 +2356,7 @@ const docTemplate = `{
                     "minimum": 262144
                 },
                 "path": {
-                    "description": "The root path for the backup repository.\nIf not specified, backups will be saved in the bucket's root.",
+                    "description": "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "backups"
