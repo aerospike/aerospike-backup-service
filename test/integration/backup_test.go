@@ -23,4 +23,6 @@ func (s *Suite) TestFullBackupEmptyNamespaceToLocalStorage() {
 	metadataPath := filepath.Join(e.backupDir, backup.Key, "metadata.yaml")
 	_, err := os.Stat(metadataPath)
 	s.Require().NoError(err, "metadata.yaml should exist at %s", metadataPath)
+
+	s.assertLastSuccessfulBackupMetric(e, "full", backup.Created)
 }
