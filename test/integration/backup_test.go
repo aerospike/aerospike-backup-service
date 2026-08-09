@@ -12,16 +12,22 @@ import (
 func (s *Suite) TestBackup() {
 	e := s.setupEnv()
 
-	var fullBackup dto.BackupDetails
+	var fullBackup, incrBackup dto.BackupDetails
 
 	s.Run("full", func() {
+		successCount := s.metricBackupSuccessEventCount(e, model.BackupTypeFull)
+
 		s.triggerFullBackup(e)
+
+		s.waitForMetricBackupSuccessEvent(e, model.BackupTypeFull, successCount)
 
 		fullBackup = s.waitForFullBackup(e)
 
 		s.assertBackupDetails(fullBackup, 0)
-		s.assertBackupMetadataOnDisk(e, fullBackup)
-		s.assertLastSuccessfulBackupMetric(e, model.BackupTypeFull, fullBackup.Created)
+		s.assertBackupListed(e, fullBackup)
+
+		s.assertMetricBackupSuccessEventCount(e, model.BackupTypeFull, successCount+1)
+		s.assertMetricLastSuccessfulBackup(e, model.BackupTypeFull, fullBackup.Created)
 	})
 
 	s.Run("incremental", func() {
@@ -29,11 +35,25 @@ func (s *Suite) TestBackup() {
 
 		s.triggerIncrementalBackup(e)
 
-		incrBackup := s.waitForIncrementalBackup(e, 1)
+		incrBackup = s.waitForIncrementalBackup(e, 1)
 
 		s.assertBackupDetails(incrBackup, 1)
-		s.assertBackupMetadataOnDisk(e, incrBackup)
+		s.assertIncrementalBackupListed(e, incrBackup)
 		s.GreaterOrEqual(incrBackup.Created.Unix(), fullBackup.Created.Unix())
-		s.assertLastSuccessfulBackupMetric(e, model.BackupTypeIncremental, incrBackup.Created)
+
+		s.assertMetricLastSuccessfulBackup(e, model.BackupTypeIncremental, incrBackup.Created)
+	})
+
+	s.Run("empty_incremental", func() {
+		successCount := s.metricBackupSuccessEventCount(e, model.BackupTypeIncremental)
+
+		s.triggerIncrementalBackup(e)
+
+		s.waitForMetricBackupSuccessEvent(e, model.BackupTypeIncremental, successCount)
+
+		s.assertIncrementalBackupCount(e, 1)
+
+		s.assertMetricBackupSuccessEventCount(e, model.BackupTypeIncremental, successCount+1)
+		s.assertMetricLastSuccessfulBackup(e, model.BackupTypeIncremental, incrBackup.Created)
 	})
 }

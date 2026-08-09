@@ -14,7 +14,10 @@ import (
 	prommodel "github.com/prometheus/common/model"
 )
 
-const lastSuccessfulBackupTimestampMetric = "aerospike_backup_service_last_successful_backup_timestamp"
+const (
+	lastSuccessfulBackupTimestampMetric = "aerospike_backup_service_last_successful_backup_timestamp"
+	backupEventsTotalMetric             = "aerospike_backup_service_backup_events_total"
+)
 
 func (e *env) metricsURL() string {
 	return e.server.URL + "/metrics"
@@ -60,6 +63,25 @@ func gaugeValue(families map[string]*dto.MetricFamily, name string, labels promm
 	return 0, false
 }
 
+func counterValue(families map[string]*dto.MetricFamily, name string, labels prommodel.LabelSet) (float64, bool) {
+	mf := families[name]
+	if mf == nil {
+		return 0, false
+	}
+
+	for _, metric := range mf.GetMetric() {
+		if !labelsMatch(metric.GetLabel(), labels) {
+			continue
+		}
+
+		if counter := metric.GetCounter(); counter != nil {
+			return counter.GetValue(), true
+		}
+	}
+
+	return 0, false
+}
+
 func labelsMatch(metricLabels []*dto.LabelPair, want prommodel.LabelSet) bool {
 	if len(metricLabels) != len(want) {
 		return false
@@ -83,6 +105,21 @@ func (e *env) lastSuccessfulBackupTimestamp(ctx context.Context, backupType mode
 	value, ok := gaugeValue(families, lastSuccessfulBackupTimestampMetric, prommodel.LabelSet{
 		"routine": prommodel.LabelValue(routineName),
 		"type":    prommodel.LabelValue(backupType),
+	})
+
+	return value, ok, nil
+}
+
+func (e *env) backupSuccessEventCount(ctx context.Context, backupType model.BackupType) (float64, bool, error) {
+	families, err := e.fetchMetricFamilies(ctx)
+	if err != nil {
+		return 0, false, err
+	}
+
+	value, ok := counterValue(families, backupEventsTotalMetric, prommodel.LabelSet{
+		"routine": prommodel.LabelValue(routineName),
+		"type":    prommodel.LabelValue(backupType),
+		"outcome": "success",
 	})
 
 	return value, ok, nil
