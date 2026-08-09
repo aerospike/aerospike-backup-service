@@ -26,25 +26,12 @@ func NewAuditAdHocScheduler(underlying service.AdHocScheduler, auditor Auditor) 
 
 func (a *auditAdHocScheduler) TriggerAdHocFullBackup(routine *model.BackupRoutine, delay time.Duration) error {
 	err := a.underlying.TriggerAdHocFullBackup(routine, delay)
-
-	status := StatusSuccess
-	if err != nil {
-		status = StatusFailed
-	}
-	a.auditor.WriteEvent(context.Background(), "TriggerAdHocFullBackup", status, slog.String("routine", routine.Name))
-
+	a.auditor.WriteEvent(context.Background(), "TriggerAdHocFullBackup", EventStatusFromError(err), slog.String("routine", routine.Name))
 	return err
 }
 
 func (a *auditAdHocScheduler) TriggerAdHocIncrementalBackup(routine *model.BackupRoutine, delay time.Duration) error {
 	err := a.underlying.TriggerAdHocIncrementalBackup(routine, delay)
-
-	status := StatusSuccess
-	if err != nil {
-		status = StatusFailed
-	}
-	a.auditor.WriteEvent(context.Background(), "TriggerAdHocIncrementalBackup", status,
-		slog.String("routine", routine.Name))
-
+	a.auditor.WriteEvent(context.Background(), "TriggerAdHocIncrementalBackup", EventStatusFromError(err), slog.String("routine", routine.Name))
 	return err
 }

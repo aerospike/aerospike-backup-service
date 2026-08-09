@@ -26,11 +26,7 @@ func NewAuditRestoreManager(underlying service.RestoreManager, auditor Auditor) 
 func (a *auditRestoreManager) Restore(ctx context.Context, request *model.RestoreRequest) (model.RestoreJobID, error) {
 	jobID, err := a.underlying.Restore(ctx, request)
 
-	status := StatusSuccess
-	if err != nil {
-		status = StatusFailed
-	}
-	a.auditor.WriteEvent(ctx, "RestoreStarted", status, slog.Int64("jobId", int64(jobID)))
+	a.auditor.WriteEvent(ctx, "RestoreStarted", EventStatusFromError(err), slog.Int64("jobId", int64(jobID)))
 
 	return jobID, err
 }
@@ -40,11 +36,7 @@ func (a *auditRestoreManager) RestoreByTime(
 ) (model.RestoreJobID, error) {
 	jobID, err := a.underlying.RestoreByTime(ctx, request)
 
-	status := StatusSuccess
-	if err != nil {
-		status = StatusFailed
-	}
-	a.auditor.WriteEvent(ctx, "RestoreByTimeStarted", status, slog.Int64("jobId", int64(jobID)))
+	a.auditor.WriteEvent(ctx, "RestoreByTimeStarted", EventStatusFromError(err), slog.Int64("jobId", int64(jobID)))
 
 	return jobID, err
 }
@@ -56,11 +48,7 @@ func (a *auditRestoreManager) JobStatus(jobID model.RestoreJobID) (*model.Restor
 func (a *auditRestoreManager) CancelRestore(jobID model.RestoreJobID) error {
 	err := a.underlying.CancelRestore(jobID)
 
-	status := StatusSuccess
-	if err != nil {
-		status = StatusFailed
-	}
-	a.auditor.WriteEvent(context.Background(), "CancelRestore", status, slog.Int64("jobId", int64(jobID)))
+	a.auditor.WriteEvent(context.Background(), "CancelRestore", EventStatusFromError(err), slog.Int64("jobId", int64(jobID)))
 
 	return err
 }
