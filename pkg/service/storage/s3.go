@@ -26,18 +26,17 @@ import (
 )
 
 type S3StorageAccessor struct {
-	clientMap *collections.LoadingCacheContext[*model.S3Storage, *awsS3.Client]
+	clientMap collections.Cache[*model.S3Storage, *awsS3.Client]
 	resolver  secrets.Resolver
 }
 
-func NewS3StorageAccessor(ctx context.Context, resolver secrets.Resolver) *S3StorageAccessor {
+func NewS3StorageAccessor(resolver secrets.Resolver) *S3StorageAccessor {
 	accessor := &S3StorageAccessor{
 		resolver: resolver,
 	}
-	accessor.clientMap = collections.NewLoadingCacheContext[*model.S3Storage, *awsS3.Client](
-		ctx,
+	accessor.clientMap = collections.NewLoadingCache[*model.S3Storage, *awsS3.Client](
 		accessor.getS3Client,
-		nil,
+		clientCacheTTLPtr,
 	)
 	return accessor
 }

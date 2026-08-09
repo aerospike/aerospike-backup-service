@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	connectivityTimeout = 1 * time.Second
+	connectivityTimeout = 100 * time.Millisecond
 }
 
 func TestS3Storage_ConnectivitySuccess(t *testing.T) {
@@ -35,7 +35,7 @@ func TestS3Storage_ConnectivitySuccess(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	accessor := NewS3StorageAccessor(ctx, secrets.NewResolver())
+	accessor := NewS3StorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getS3Client(ctx, s3Config)
 	require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestS3Storage_ConnectivityReadOnly(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ctx := t.Context()
-	accessor := NewS3StorageAccessor(ctx, secrets.NewResolver())
+	accessor := NewS3StorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getS3Client(ctx, &model.S3Storage{
 		Bucket:             "test-bucket",
@@ -71,7 +71,7 @@ func TestS3Storage_ConnectivityFailure(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ctx := t.Context()
-	accessor := NewS3StorageAccessor(ctx, secrets.NewResolver())
+	accessor := NewS3StorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getS3Client(ctx, &model.S3Storage{
 		Bucket:             "test-bucket",

@@ -146,23 +146,6 @@ under `/config/storage` for detailed information.
 
 :warning: ABS currently supports AWS S3, GCP, and Microsoft Azure cloud storage.
 
-#### Credential resolution and rotation
-
-Secret values (storage credentials, cluster passwords) are resolved when clients are constructed, not at every operation.
-
-**Secret Agent failures and fallback:**
-When a Secret Agent is configured, failed resolution immediately fails client construction without falling back to a previously cached value. This fail-closed approach prevents silent degradation during Secret Agent outages.
-
-**Storage credentials (S3, GCP, Azure):**
-Storage client credentials are resolved during client construction and then embedded in the constructed client:
-- **S3 and GCP clients** are cached for the process lifetime (nil TTL), so rotated storage credentials require restarting the Aerospike Backup Service.
-- **Azure clients** are cached with a one-hour sliding TTL; however, under steady backup traffic, the client can remain effectively permanent. Rotated Azure storage credentials also require a service restart in practice.
-
-This change does not enable live storage credential rotation; it only removes an internal caching layer. The real binding constraint is the per-storage-type client cache, which bakes resolved credentials into the constructed client for its lifetime.
-
-**Cluster passwords:**
-Unlike storage credentials, cluster passwords are re-resolved when idle Aerospike clients are closed and recreated. The Aerospike client manager closes idle clients on a timer (default 10 seconds after becoming idle), allowing cluster password rotations to take effect after the idle timeout without requiring a full service restart. However, busy clients remain indefinitely and will not pick up rotated passwords until they become idle.
-
 #### Backup policy
 
 A backup policy is a set of rules that defines how backups should be performed.

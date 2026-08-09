@@ -27,7 +27,7 @@ const (
 )
 
 type GcpStorageAccessor struct {
-	clientMap *collections.LoadingCacheContext[*model.GcpStorage, gcp.Client]
+	clientMap collections.Cache[*model.GcpStorage, gcp.Client]
 	resolver  secrets.Resolver
 }
 
@@ -42,14 +42,13 @@ func (w *clientWrapper) Bucket(name string) *storage.BucketHandle {
 
 var _ gcp.Client = (*clientWrapper)(nil)
 
-func NewGcpStorageAccessor(ctx context.Context, resolver secrets.Resolver) *GcpStorageAccessor {
+func NewGcpStorageAccessor(resolver secrets.Resolver) *GcpStorageAccessor {
 	accessor := &GcpStorageAccessor{
 		resolver: resolver,
 	}
-	accessor.clientMap = collections.NewLoadingCacheContext[*model.GcpStorage, gcp.Client](
-		ctx,
+	accessor.clientMap = collections.NewLoadingCache[*model.GcpStorage, gcp.Client](
 		accessor.getGcpClient,
-		nil,
+		clientCacheTTLPtr,
 	)
 	return accessor
 }

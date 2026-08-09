@@ -11,15 +11,23 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/aerospike/backup-go/models"
 )
 
-var connectivityTimeout = 15 * time.Second
+var (
+	connectivityTimeout = 15 * time.Second
+	// clientCacheTTL is how long cloud storage clients are cached after creation.
+	// Entries are not extended on access; a new client is created after expiry.
+	connectivityProbeKey = ".abs-connectivity-check"
+
+	clientCacheTTL    = time.Hour
+	clientCacheTTLPtr = ptr.Of(clientCacheTTL)
+)
 
 // connectivityProbeKey is used for optional write probes at client init.
-const connectivityProbeKey = ".abs-connectivity-check"
 
 // Operations implements storage operations using registered accessors.
 type Operations struct {
