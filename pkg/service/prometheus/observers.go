@@ -35,6 +35,9 @@ func ObserveBackupEvent(
 	}
 	backupCounter.With(labels).Inc()
 
+	// last_successful_backup_timestamp is not set here. On success, recordSuccessfulBackup
+	// triggers an async storage scan that updates the gauge via SetLastBackupTimestamp.
+
 	if duration > 0 {
 		backupDurationHist.With(prometheus.Labels{
 			labelRoutine: routineName,
@@ -72,7 +75,7 @@ func updateDeprecatedBackupCounters(backupType model.BackupType, outcome Outcome
 	}
 }
 
-func SetInitialLastBackup(name string, lastRun *model.BackupTime) {
+func SetLastBackupTimestamp(name string, lastRun *model.BackupTime) {
 	if lastRun.FullBackupTime() != nil {
 		t := float64(lastRun.FullBackupTime().Unix())
 		lastBackupTimestampGauge.WithLabelValues(name, string(model.BackupTypeFull)).Set(t)
