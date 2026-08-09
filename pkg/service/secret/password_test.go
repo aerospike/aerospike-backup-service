@@ -106,9 +106,6 @@ func TestResolve(t *testing.T) {
 	}
 }
 
-// Note: Logic for checking file caching was removed because Resolver is stateless regarding files.
-// Logic for Secret Agent caching is tested in secret_agent_test.go (if we create it).
-
 func createFile(content string) {
 	text := []byte(content)
 	_ = os.MkdirAll(testdataFolder, 0744)
