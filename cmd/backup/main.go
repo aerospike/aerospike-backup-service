@@ -86,7 +86,7 @@ func systemCtx() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 }
 
-func runHTTPServer(ctx context.Context, service *handlers.Service, auditor *audit.SimpleAuditor) error {
+func runHTTPServer(ctx context.Context, service *handlers.Service, auditor audit.Auditor) error {
 	httpServer := server.NewHTTPServer(service)
 
 	// Channel to capture server startup errors
