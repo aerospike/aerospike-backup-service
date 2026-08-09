@@ -16,7 +16,7 @@ const (
 )
 
 func TestResolve(t *testing.T) {
-	resolver := NewPasswordResolver(NewResolver(t.Context()))
+	resolver := NewPasswordResolver(NewResolver())
 
 	tests := []struct {
 		name             string

@@ -32,7 +32,7 @@ func InitComponents(
 	configFile string,
 	remote bool,
 ) (quartz.Scheduler, *handlers.Service, error) {
-	resolver := secrets.NewResolver(ctx)
+	resolver := secrets.NewResolver()
 	operations := newStorageOperations(ctx, resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 

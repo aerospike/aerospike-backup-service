@@ -20,7 +20,7 @@ func TestGcpStorage_ConnectivitySuccess(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ctx := t.Context()
-	accessor := NewGcpStorageAccessor(ctx, secrets.NewResolver(ctx))
+	accessor := NewGcpStorageAccessor(ctx, secrets.NewResolver())
 
 	_, err := accessor.getGcpClient(ctx, &model.GcpStorage{
 		BucketName: "test-bucket",
@@ -36,7 +36,7 @@ func TestGcpStorage_ConnectivityReadOnly(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ctx := t.Context()
-	accessor := NewGcpStorageAccessor(ctx, secrets.NewResolver(ctx))
+	accessor := NewGcpStorageAccessor(ctx, secrets.NewResolver())
 
 	_, err := accessor.getGcpClient(ctx, &model.GcpStorage{
 		BucketName: "test-bucket",
@@ -54,7 +54,7 @@ func TestGcpStorage_ConnectivityFailure(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ctx := t.Context()
-	accessor := NewGcpStorageAccessor(ctx, secrets.NewResolver(ctx))
+	accessor := NewGcpStorageAccessor(ctx, secrets.NewResolver())
 
 	_, err := accessor.getGcpClient(ctx, &model.GcpStorage{
 		BucketName: "test-bucket",
