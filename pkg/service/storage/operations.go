@@ -23,7 +23,7 @@ var (
 	// Entries are not extended on access; a new client is created after expiry.
 	connectivityProbeKey = ".abs-connectivity-check"
 
-	clientCacheTTL    = time.Hour
+	clientCacheTTL    = 10 * time.Minute
 	clientCacheTTLPtr = ptr.Of(clientCacheTTL)
 )
 
