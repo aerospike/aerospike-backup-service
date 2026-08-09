@@ -2,9 +2,9 @@
 
 // Package integration holds the end-to-end tests for the backup service.
 //
-// Files without a _test.go suffix are the harness: the suite, the service fixture and the API
-// client. The _test.go files hold the tests themselves. To add a test, write a method on
-// Suite in a _test.go file; it will pick up the shared container automatically.
+// Files without a _test.go suffix are the harness: the suite, the service fixture, the API
+// client, and shared assertions. The _test.go files hold the tests themselves. To add a test,
+// write a method on Suite in a _test.go file; it will pick up the shared container automatically.
 package integration
 
 import (

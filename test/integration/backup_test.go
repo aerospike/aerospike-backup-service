@@ -3,26 +3,37 @@
 package integration
 
 import (
-	"os"
-	"path/filepath"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-func (s *Suite) TestFullBackupEmptyNamespaceToLocalStorage() {
+// TestBackup runs one full and one incremental backup against a single service instance.
+// Subtests share env and Aerospike state.
+func (s *Suite) TestBackup() {
 	e := s.setupEnv()
 
-	s.triggerFullBackup(e)
+	var fullBackup dto.BackupDetails
 
-	backup := s.waitForFullBackup(e)
+	s.Run("full", func() {
+		s.triggerFullBackup(e)
 
-	s.Equal(namespace, backup.Namespace)
-	s.Equal(uint64(0), backup.RecordCount)
-	s.False(backup.Created.IsZero())
-	s.False(backup.Finished.IsZero())
-	s.NotEmpty(backup.Key)
+		fullBackup = s.waitForFullBackup(e)
 
-	metadataPath := filepath.Join(e.backupDir, backup.Key, "metadata.yaml")
-	_, err := os.Stat(metadataPath)
-	s.Require().NoError(err, "metadata.yaml should exist at %s", metadataPath)
+		s.assertBackupDetails(fullBackup, 0)
+		s.assertBackupMetadataOnDisk(e, fullBackup)
+		s.assertLastSuccessfulBackupMetric(e, model.BackupTypeFull, fullBackup.Created)
+	})
 
-	s.assertLastSuccessfulBackupMetric(e, "full", backup.Created)
+	s.Run("incremental", func() {
+		s.seedRecords([]int{1})
+
+		s.triggerIncrementalBackup(e)
+
+		incrBackup := s.waitForIncrementalBackup(e, 1)
+
+		s.assertBackupDetails(incrBackup, 1)
+		s.assertBackupMetadataOnDisk(e, incrBackup)
+		s.GreaterOrEqual(incrBackup.Created.Unix(), fullBackup.Created.Unix())
+		s.assertLastSuccessfulBackupMetric(e, model.BackupTypeIncremental, incrBackup.Created)
+	})
 }

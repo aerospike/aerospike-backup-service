@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
-	"github.com/prometheus/common/model"
+	prommodel "github.com/prometheus/common/model"
 )
 
 const lastSuccessfulBackupTimestampMetric = "aerospike_backup_service_last_successful_backup_timestamp"
@@ -37,11 +37,11 @@ func (e *env) fetchMetricFamilies(ctx context.Context) (map[string]*dto.MetricFa
 		return nil, fmt.Errorf("fetch metrics: status %d: %s", resp.StatusCode, body)
 	}
 
-	var parser = expfmt.NewTextParser(model.UTF8Validation)
+	var parser = expfmt.NewTextParser(prommodel.UTF8Validation)
 	return parser.TextToMetricFamilies(resp.Body)
 }
 
-func gaugeValue(families map[string]*dto.MetricFamily, name string, labels model.LabelSet) (float64, bool) {
+func gaugeValue(families map[string]*dto.MetricFamily, name string, labels prommodel.LabelSet) (float64, bool) {
 	mf := families[name]
 	if mf == nil {
 		return 0, false
@@ -60,13 +60,13 @@ func gaugeValue(families map[string]*dto.MetricFamily, name string, labels model
 	return 0, false
 }
 
-func labelsMatch(metricLabels []*dto.LabelPair, want model.LabelSet) bool {
+func labelsMatch(metricLabels []*dto.LabelPair, want prommodel.LabelSet) bool {
 	if len(metricLabels) != len(want) {
 		return false
 	}
 
 	for _, label := range metricLabels {
-		if want[model.LabelName(label.GetName())] != model.LabelValue(label.GetValue()) {
+		if want[prommodel.LabelName(label.GetName())] != prommodel.LabelValue(label.GetValue()) {
 			return false
 		}
 	}
@@ -74,47 +74,16 @@ func labelsMatch(metricLabels []*dto.LabelPair, want model.LabelSet) bool {
 	return true
 }
 
-func (e *env) lastSuccessfulBackupTimestamp(ctx context.Context, backupType string) (float64, bool, error) {
+func (e *env) lastSuccessfulBackupTimestamp(ctx context.Context, backupType model.BackupType) (float64, bool, error) {
 	families, err := e.fetchMetricFamilies(ctx)
 	if err != nil {
 		return 0, false, err
 	}
 
-	value, ok := gaugeValue(families, lastSuccessfulBackupTimestampMetric, model.LabelSet{
-		"routine": model.LabelValue(routineName),
-		"type":    model.LabelValue(backupType),
+	value, ok := gaugeValue(families, lastSuccessfulBackupTimestampMetric, prommodel.LabelSet{
+		"routine": prommodel.LabelValue(routineName),
+		"type":    prommodel.LabelValue(backupType),
 	})
 
 	return value, ok, nil
-}
-
-// assertLastSuccessfulBackupMetric polls /metrics until the gauge matches the backup Created time.
-func (s *Suite) assertLastSuccessfulBackupMetric(e *env, backupType string, want time.Time) {
-	s.T().Helper()
-
-	wantUnix := want.Unix()
-	deadline := time.Now().Add(backupTimeout)
-
-	for {
-		value, ok, err := e.lastSuccessfulBackupTimestamp(s.T().Context(), backupType)
-		s.Require().NoError(err)
-
-		if ok && int64(value) == wantUnix {
-			return
-		}
-
-		if time.Now().After(deadline) {
-			if !ok {
-				s.Require().Failf("timed out waiting for last successful backup metric",
-					"metric %q with routine=%q type=%q not found after %s",
-					lastSuccessfulBackupTimestampMetric, routineName, backupType, backupTimeout)
-			}
-
-			s.Require().Failf("timed out waiting for last successful backup metric",
-				"metric %q with routine=%q type=%q: got %d, want %d after %s",
-				lastSuccessfulBackupTimestampMetric, routineName, backupType, int64(value), wantUnix, backupTimeout)
-		}
-
-		time.Sleep(pollInterval)
-	}
 }
