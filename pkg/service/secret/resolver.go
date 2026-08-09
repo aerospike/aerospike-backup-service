@@ -2,43 +2,28 @@ package secrets
 
 import (
 	"context"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 )
 
-type cacheKey struct {
-	agent *model.SecretAgent
-	value string
-}
-
 // Resolver resolves values that may reference secrets.
 //
-// Implementations may cache resolved secrets to avoid repeated calls
-// to external secret backends.
+// Resolution is a direct pass-through to backup.ParseSecret; no caching is performed.
+// Each resolution constructs a new Secret Agent client (backup.NewSecretAgentClient).
+// Where TLS to the agent is configured, that is a TLS handshake per resolution.
 type Resolver interface {
 	// Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
+	// If the secret agent is nil, the value is returned as is.
+	// If resolution fails, the error is returned immediately without fallback; this is fail-closed behavior
+	// to prevent silent degradation during Secret Agent outages.
 	Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error)
 }
 
-type resolverImpl struct {
-	cache collections.CacheContext[cacheKey, string]
-}
-
-const storageDuration = 24 * time.Hour // defines how long to store cached secrets before re-reading.
+type resolverImpl struct{}
 
 func NewResolver(ctx context.Context) Resolver {
-	load := func(ctx context.Context, key cacheKey) (string, error) {
-		agentConfig := key.agent.ToSecretAgentConfig()
-		return backup.ParseSecret(ctx, agentConfig, key.value)
-	}
-
-	return &resolverImpl{
-		cache: collections.NewLoadingCacheContext(ctx, load, ptr.Of(storageDuration)),
-	}
+	return &resolverImpl{}
 }
 
 // Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
@@ -47,8 +32,6 @@ func (m *resolverImpl) Resolve(ctx context.Context, agent *model.SecretAgent, va
 		return value, nil
 	}
 
-	return m.cache.Get(ctx, cacheKey{
-		agent: agent,
-		value: value,
-	})
+	agentConfig := agent.ToSecretAgentConfig()
+	return backup.ParseSecret(ctx, agentConfig, value)
 }
