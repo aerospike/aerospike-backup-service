@@ -98,7 +98,7 @@ func InitComponents(
 
 	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
 
-	auditor := audit.NewSimpleAuditor(appLogger)
+	auditor := audit.NewLoggerAuditor(appLogger)
 
 	configManagerImpl := handlers.NewConfigManagerImpl(
 		ctx,

@@ -23,28 +23,25 @@ type Auditor interface {
 	WriteEvent(ctx context.Context, action string, status EventStatus, attrs ...slog.Attr)
 }
 
-// SimpleAuditor is a basic implementation of Auditor that writes to a slog.Logger.
-type SimpleAuditor struct {
+// LoggerAuditor is a basic implementation of Auditor that writes to a slog.Logger.
+type LoggerAuditor struct {
 	logger *slog.Logger
 }
 
-// NewSimpleAuditor creates a new SimpleAuditor.
-func NewSimpleAuditor(logger *slog.Logger) *SimpleAuditor {
-	if logger == nil {
-		logger = slog.Default()
-	}
-	return &SimpleAuditor{
-		logger: logger,
+// NewLoggerAuditor creates a new LoggerAuditor.
+func NewLoggerAuditor(logger *slog.Logger) *LoggerAuditor {
+	return &LoggerAuditor{
+		logger: logger.WithGroup("audit"),
 	}
 }
 
 // WriteEvent records an audit log entry using the underlying logger.
-func (a *SimpleAuditor) WriteEvent(ctx context.Context, action string, status EventStatus, attrs ...slog.Attr) {
-	allAttrs := make([]any, 0, len(attrs)+2)
-	allAttrs = append(allAttrs, slog.String("action", action), slog.String("status", string(status)))
+func (a *LoggerAuditor) WriteEvent(ctx context.Context, action string, status EventStatus, attrs ...slog.Attr) {
+	allAttrs := make([]any, 0, len(attrs)+1)
+	allAttrs = append(allAttrs, slog.String("status", string(status)))
 	for _, attr := range attrs {
 		allAttrs = append(allAttrs, attr)
 	}
 
-	a.logger.InfoContext(ctx, "Audit Event", allAttrs...)
+	a.logger.InfoContext(ctx, action, allAttrs...)
 }
