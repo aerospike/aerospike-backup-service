@@ -14,7 +14,6 @@ const (
 	StatusDenied  EventStatus = "Denied" // For future RBAC
 )
 
-// Auditor provides an interface for emitting structured audit events.
 // EventStatusFromError returns StatusSuccess if err is nil, StatusFailed otherwise.
 func EventStatusFromError(err error) EventStatus {
 	if err != nil {
@@ -23,6 +22,7 @@ func EventStatusFromError(err error) EventStatus {
 	return StatusSuccess
 }
 
+// Auditor provides an interface for emitting structured audit events.
 type Auditor interface {
 	// WriteEvent records an audit log entry.
 	// action: The logical operation (e.g., "AddAerospikeCluster")

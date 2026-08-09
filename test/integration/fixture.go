@@ -41,7 +41,7 @@ func (s *Suite) setupEnv(customize ...func(*dto.Config)) *env {
 	configPath := filepath.Join(t.TempDir(), "config.yml")
 	s.Require().NoError(os.WriteFile(configPath, configYAML, 0o600))
 
-	scheduler, svc, err := app.InitComponents(ctx, configPath, false)
+	scheduler, svc, _, err := app.InitComponents(ctx, configPath, false)
 	s.Require().NoError(err)
 
 	scheduler.Start(ctx)

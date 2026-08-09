@@ -48,7 +48,12 @@ func (a *auditRestoreManager) JobStatus(jobID model.RestoreJobID) (*model.Restor
 func (a *auditRestoreManager) CancelRestore(jobID model.RestoreJobID) error {
 	err := a.underlying.CancelRestore(jobID)
 
-	a.auditor.WriteEvent(context.Background(), "CancelRestore", EventStatusFromError(err), slog.Int64("jobId", int64(jobID)))
+	a.auditor.WriteEvent(
+		context.Background(),
+		"CancelRestore",
+		EventStatusFromError(err),
+		slog.Int64("jobId", int64(jobID)),
+	)
 
 	return err
 }

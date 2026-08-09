@@ -10,6 +10,7 @@ import (
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/audit"
@@ -33,7 +34,7 @@ func InitComponents(
 	ctx context.Context,
 	configFile string,
 	remote bool,
-) (quartz.Scheduler, *handlers.Service, audit.Auditor, error) {
+) (quartz.Scheduler, *handlers.Service, server.Server, error) {
 	resolver := secrets.NewResolver(ctx)
 	operations := newStorageOperations(ctx, resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
@@ -128,7 +129,10 @@ func InitComponents(
 		auditRegistry,
 	)
 
-	return scheduler, httpService, auditor, nil
+	httpServer := server.NewHTTPServer(httpService)
+	auditServer := audit.NewAuditServer(httpServer, auditor)
+
+	return scheduler, httpService, auditServer, nil
 }
 
 func newStorageOperations(ctx context.Context, resolver secrets.Resolver) *storage.Operations {

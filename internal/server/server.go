@@ -18,13 +18,21 @@ const (
 	shutdownTimeout = 30 * time.Second
 )
 
+// Server represents an HTTP server that can be started and gracefully shut down.
+type Server interface {
+	// Start starts the server.
+	Start() error
+	// Shutdown gracefully shuts down the server.
+	Shutdown() error
+}
+
 // HTTPServer is the backup service HTTP server wrapper.
 type HTTPServer struct {
 	server *http.Server
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(service *handlers.Service) *HTTPServer {
+func NewHTTPServer(service *handlers.Service) Server {
 	serverConfig := service.HTTPServerConfig()
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
