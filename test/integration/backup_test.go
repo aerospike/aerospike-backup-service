@@ -3,24 +3,57 @@
 package integration
 
 import (
-	"os"
-	"path/filepath"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-func (s *Suite) TestFullBackupEmptyNamespaceToLocalStorage() {
+// TestBackup runs one full and one incremental backup against a single service instance.
+// Subtests share env and Aerospike state.
+func (s *Suite) TestBackup() {
 	e := s.setupEnv()
 
-	s.triggerFullBackup(e)
+	var fullBackup, incrBackup dto.BackupDetails
 
-	backup := s.waitForFullBackup(e)
+	s.Run("full", func() {
+		successCount := s.metricBackupSuccessEventCount(e, model.BackupTypeFull)
 
-	s.Equal(namespace, backup.Namespace)
-	s.Equal(uint64(0), backup.RecordCount)
-	s.False(backup.Created.IsZero())
-	s.False(backup.Finished.IsZero())
-	s.NotEmpty(backup.Key)
+		s.triggerFullBackup(e)
 
-	metadataPath := filepath.Join(e.backupDir, backup.Key, "metadata.yaml")
-	_, err := os.Stat(metadataPath)
-	s.Require().NoError(err, "metadata.yaml should exist at %s", metadataPath)
+		s.waitForMetricBackupSuccessEvent(e, model.BackupTypeFull, successCount)
+
+		fullBackup = s.waitForFullBackup(e)
+
+		s.assertBackupDetails(fullBackup, 0)
+		s.assertBackupListed(e, fullBackup)
+
+		s.assertMetricBackupSuccessEventCount(e, model.BackupTypeFull, successCount+1)
+		s.assertMetricLastSuccessfulBackup(e, model.BackupTypeFull, fullBackup.Created)
+	})
+
+	s.Run("incremental", func() {
+		s.seedRecords([]int{1})
+
+		s.triggerIncrementalBackup(e)
+
+		incrBackup = s.waitForIncrementalBackup(e, 1)
+
+		s.assertBackupDetails(incrBackup, 1)
+		s.assertIncrementalBackupListed(e, incrBackup)
+		s.GreaterOrEqual(incrBackup.Created.Unix(), fullBackup.Created.Unix())
+
+		s.assertMetricLastSuccessfulBackup(e, model.BackupTypeIncremental, incrBackup.Created)
+	})
+
+	s.Run("empty_incremental", func() {
+		successCount := s.metricBackupSuccessEventCount(e, model.BackupTypeIncremental)
+
+		s.triggerIncrementalBackup(e)
+
+		s.waitForMetricBackupSuccessEvent(e, model.BackupTypeIncremental, successCount)
+
+		s.assertIncrementalBackupCount(e, 1)
+
+		s.assertMetricBackupSuccessEventCount(e, model.BackupTypeIncremental, successCount+1)
+		s.assertMetricLastSuccessfulBackup(e, model.BackupTypeIncremental, incrBackup.Created)
+	})
 }

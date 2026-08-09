@@ -173,7 +173,7 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 		slog.Duration("duration", duration),
 	)
 	tracker.setLastRun(lastRun)
-	prometheus.SetInitialLastBackup(routine.Name, lastRun)
+	prometheus.SetLastBackupTimestamp(routine.Name, lastRun)
 
 	return nil
 }
