@@ -8,6 +8,7 @@ package integration
 
 import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
 func (s *Suite) assertBackupDetails(backup dto.BackupDetails, recordCount uint64) {
@@ -57,4 +58,20 @@ func (s *Suite) assertIncrementalBackupListed(e *env, want dto.BackupDetails) {
 	}
 
 	s.Require().FailNow("backup %q not found in incremental backup list", want.Key)
+}
+
+// assertRecordsRestored verifies that a record with the given age exists (in setName) for each
+// entry, keyed by its position in ages, matching the layout written by seedRecords.
+func (s *Suite) assertRecordsRestored(ages []int) {
+	s.T().Helper()
+
+	for i, age := range ages {
+		key, err := as.NewKey(namespace, setName, i)
+		s.Require().NoError(err)
+
+		record, err := s.client.Get(nil, key)
+		s.Require().NoError(err)
+		s.Require().NotNil(record)
+		s.Equal(age, record.Bins["age"])
+	}
 }

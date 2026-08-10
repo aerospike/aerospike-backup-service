@@ -52,6 +52,30 @@ func (s *Suite) assertMetricBackupSuccessEventCount(e *env, backupType model.Bac
 	s.Equal(want, count)
 }
 
+// metricRestoreSuccessEventCount returns restore_events_total{outcome="success"}.
+// Prometheus omits counters until the first event, so a missing series is treated as zero.
+func (s *Suite) metricRestoreSuccessEventCount(e *env) float64 {
+	s.T().Helper()
+
+	count, ok, err := e.restoreSuccessEventCount(s.T().Context())
+	s.Require().NoError(err)
+	if !ok {
+		return 0
+	}
+
+	return count
+}
+
+// assertMetricRestoreSuccessEventCount asserts restore_events_total{outcome="success"} equals want.
+func (s *Suite) assertMetricRestoreSuccessEventCount(e *env, want float64) {
+	s.T().Helper()
+
+	count, ok, err := e.restoreSuccessEventCount(s.T().Context())
+	s.Require().NoError(err)
+	s.Require().True(ok, "restore success event counter not found")
+	s.Equal(want, count)
+}
+
 // assertMetricLastSuccessfulBackup polls /metrics until last_successful_backup_timestamp matches want.
 func (s *Suite) assertMetricLastSuccessfulBackup(e *env, backupType model.BackupType, want time.Time) {
 	s.T().Helper()
