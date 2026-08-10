@@ -45,6 +45,7 @@ func (r *pathRestoreRunner) Restore(ctx context.Context, request *model.RestoreR
 
 	jobID := r.restoreJobs.newJob(request.BackupDataPath, cancel)
 	logger := slog.With(slog.Any("jobId", jobID))
+	logger.Info("New restore job", slog.Any("request", *request))
 	go func() {
 		err := r.executeRestore(ctx, request, jobID, logger)
 		if err != nil { // if some of the restore sub-operations failed, we need to cancel the rest.

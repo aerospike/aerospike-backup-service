@@ -3,7 +3,6 @@ package handlers
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -65,8 +64,6 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info("New restore job", slog.Any("jobId", jobID), slog.Any("request", request))
-
 	httpAcceptedWithJobID(w, jobID)
 }
 
@@ -104,8 +101,6 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
-
-	slog.Info("New restore by time job", slog.Any("jobId", jobID), slog.Any("request", request))
 
 	httpAcceptedWithJobID(w, jobID)
 }

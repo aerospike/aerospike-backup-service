@@ -22,7 +22,7 @@ type TLS struct {
 	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA" extensions:"x-nullable"`
 
 	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
-	KeyfilePassword *SecretString `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" swaggertype:"string" example:"file:/path/to/password" extensions:"x-nullable"`
+	KeyfilePassword *string `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" example:"file:/path/to/password" extensions:"x-nullable"`
 }
 
 func (t *TLS) Validate(opts ...ValidationOption) error {
@@ -56,7 +56,7 @@ func (t *TLS) validateCACertificates() error {
 
 // validateKeyfilePassword ensures keyfile password is only set when keyfile is present.
 func (t *TLS) validateKeyfilePassword() error {
-	if hasSecretText(t.KeyfilePassword) && !hasText(t.Keyfile) {
+	if hasText(t.KeyfilePassword) && !hasText(t.Keyfile) {
 		return errValidationRequires("key-file-password", "key-file")
 	}
 
@@ -83,7 +83,7 @@ func (t *TLS) fromModel(m *model.TLS) {
 	t.Protocols = m.Protocols
 	t.CipherSuite = m.CipherSuite
 	t.Keyfile = m.Keyfile
-	t.KeyfilePassword = secretStringFromModelPtr(m.KeyfilePassword)
+	t.KeyfilePassword = m.KeyfilePassword
 	t.Certfile = m.Certfile
 }
 
@@ -97,6 +97,6 @@ func (t *TLS) toModel() *model.TLS {
 		CAPath:          t.CAPath,
 		Protocols:       t.Protocols,
 		CipherSuite:     t.CipherSuite,
-		KeyfilePassword: secretStringToModelPtr(t.KeyfilePassword),
+		KeyfilePassword: t.KeyfilePassword,
 	}
 }
