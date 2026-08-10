@@ -3,6 +3,7 @@ package dto
 import (
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -191,4 +192,31 @@ func (c *Config) ToModel(opts ...ValidationOption) (*model.Config, error) {
 	}
 
 	return modelConfig, nil
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+// Required at the config root: without it slog reflects the struct and does not call
+// LogValue on nested map entries (credentials, storage keys, etc.).
+func (c *Config) LogValue() slog.Value {
+	if c == nil {
+		return slog.Value{}
+	}
+
+	var attrs []slog.Attr
+	attrs = append(attrs, slog.Any("service", c.ServiceConfig))
+	attrs = appendNamedLogGroup(attrs, "aerospike-clusters", slogAnyMap(c.AerospikeClusters))
+	attrs = appendNamedLogGroup(attrs, "storage", slogAnyMap(c.Storage))
+	attrs = appendNamedLogGroup(attrs, "backup-policies", slogAnyMap(c.BackupPolicies))
+	attrs = appendNamedLogGroup(attrs, "secret-agents", slogAnyMap(c.SecretAgents))
+	if len(c.BackupRoutines) > 0 {
+		var routineAttrs []slog.Attr
+		for name, routine := range c.BackupRoutines {
+			if routine != nil {
+				routineAttrs = append(routineAttrs, slog.Any(name, routine))
+			}
+		}
+		attrs = appendNamedLogGroup(attrs, "backup-routines", routineAttrs)
+	}
+
+	return slog.GroupValue(attrs...)
 }

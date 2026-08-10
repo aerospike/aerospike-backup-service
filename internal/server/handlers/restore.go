@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -52,6 +53,8 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.Info("New restore request", slog.Any("request", request))
+
 	restoreRequest, err := request.ToModel(s.config)
 	if err != nil {
 		httpError(w, errBadRequest(err))
@@ -89,6 +92,8 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
+
+	slog.Info("New restore by time request", slog.Any("request", request))
 
 	restoreRequest, err := request.ToModel(s.config)
 	if err != nil {

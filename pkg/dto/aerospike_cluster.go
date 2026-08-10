@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -181,6 +182,37 @@ func (a *AerospikeCluster) seedNodesToModel() []model.SeedNode {
 	return nodes
 }
 
+// LogValue implements slog.LogValuer for structured logging.
+// When adding fields to AerospikeCluster, update this method: log safe values explicitly;
+// delegate secrets to nested types that implement LogValue (see log_value.go).
+//
+//nolint:sloglint // keys match config JSON field names (kebab-case)
+func (a *AerospikeCluster) LogValue() slog.Value {
+	if a == nil {
+		return slog.Value{}
+	}
+
+	var attrs []slog.Attr
+	attrs = appendStringPtr(attrs, "label", a.ClusterLabel)
+	if len(a.SeedNodes) > 0 {
+		attrs = append(attrs, slog.Any("seed-nodes", a.SeedNodes))
+	}
+	attrs = appendInt64Ptr(attrs, "conn-timeout", a.ConnTimeout)
+	attrs = appendBoolPtr(attrs, "use-services-alternate", a.UseServicesAlternate)
+	if a.Credentials != nil {
+		attrs = append(attrs, slog.Any("credentials", a.Credentials))
+	}
+	if a.TLS != nil {
+		attrs = append(attrs, slog.Any("tls", a.TLS))
+	}
+	attrs = appendIntPtr(attrs, "max-parallel-scans", a.MaxParallelScans)
+	if len(a.PreferRacks) > 0 {
+		attrs = append(attrs, slog.Any("prefer-racks", a.PreferRacks))
+	}
+
+	return slog.GroupValue(attrs...)
+}
+
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 //
@@ -252,6 +284,23 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 		AuthMode:     authMode,
 		SecretAgent:  agent,
 	}, nil
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+// When adding fields to Credentials, update this method: log safe values explicitly;
+// redact secrets and credential paths with appendRedactedTextPtr (see log_value.go).
+func (c *Credentials) LogValue() slog.Value {
+	if c == nil {
+		return slog.Value{}
+	}
+
+	attrs := secretAgentConfigLogAttrs(c.SecretAgentConfig)
+	attrs = appendStringPtr(attrs, "user", c.User)
+	attrs = appendRedactedTextPtr(attrs, "password", c.Password)
+	attrs = appendRedactedTextPtr(attrs, "password-path", c.PasswordPath)
+	attrs = appendStringPtr(attrs, "auth-mode", c.AuthMode)
+
+	return slog.GroupValue(attrs...)
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.

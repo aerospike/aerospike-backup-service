@@ -2,6 +2,7 @@ package dto
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
@@ -49,6 +50,37 @@ func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, e
 	return nil, nil
 }
 
+//nolint:sloglint // keys match config JSON field names (kebab-case)
+func secretAgentConfigLogAttrs(config SecretAgentConfig) []slog.Attr {
+	var attrs []slog.Attr
+	attrs = appendString(attrs, "secret-agent-name", config.SecretAgentName)
+	if config.SecretAgent != nil {
+		attrs = append(attrs, slog.Attr{
+			Key:   "secret-agent",
+			Value: slog.GroupValue(secretAgentLogAttrs(nil, config.SecretAgent)...),
+		})
+	}
+
+	return attrs
+}
+
+func secretAgentLogAttrs(attrs []slog.Attr, s *SecretAgent) []slog.Attr {
+	if s == nil {
+		return attrs
+	}
+
+	attrs = appendClientTLSAttrs(attrs, s.ClientTLS)
+	attrs = appendString(attrs, "connection-type", s.ConnectionType)
+	attrs = appendString(attrs, "address", s.Address)
+	if s.Port != nil {
+		attrs = append(attrs, slog.Any("port", s.Port))
+	}
+	attrs = appendIntPtr(attrs, "timeout", s.Timeout)
+	attrs = appendBoolPtr(attrs, "is-base64", s.IsBase64)
+
+	return attrs
+}
+
 // SecretAgent represents the configuration of an Aerospike Secret Agent
 // for a backup/restore operation.
 // Aerospike Secret Agent acts as a proxy layer between Aerospike server and one or more
@@ -70,6 +102,15 @@ type SecretAgent struct {
 	Timeout *int `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"1000"`
 	// Flag that shows if secret agent responses are encrypted with base64.
 	IsBase64 *bool `yaml:"is-base64,omitempty" json:"is-base64,omitempty" default:"false"`
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+func (s *SecretAgent) LogValue() slog.Value {
+	if s == nil {
+		return slog.Value{}
+	}
+
+	return slog.GroupValue(secretAgentLogAttrs(nil, s)...)
 }
 
 func (s *SecretAgent) ToModel() *model.SecretAgent {

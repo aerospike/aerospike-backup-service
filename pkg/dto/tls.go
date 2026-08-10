@@ -2,6 +2,7 @@ package dto
 
 import (
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -99,4 +100,21 @@ func (t *TLS) toModel() *model.TLS {
 		CipherSuite:     t.CipherSuite,
 		KeyfilePassword: t.KeyfilePassword,
 	}
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+// When adding fields to TLS, update this method: log safe values explicitly;
+// redact secrets and key paths with appendRedactedTextPtr (see log_value.go).
+func (t *TLS) LogValue() slog.Value {
+	if t == nil {
+		return slog.Value{}
+	}
+
+	attrs := appendClientTLSAttrs(nil, t.ClientTLS)
+	attrs = appendStringPtr(attrs, "ca-path", t.CAPath)
+	attrs = appendStringPtr(attrs, "protocols", t.Protocols)
+	attrs = appendStringPtr(attrs, "cipher-suite", t.CipherSuite)
+	attrs = appendRedactedTextPtr(attrs, "key-file-password", t.KeyfilePassword)
+
+	return slog.GroupValue(attrs...)
 }

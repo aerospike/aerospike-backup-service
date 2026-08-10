@@ -19,7 +19,7 @@ func init() {
 // NewHandler returns the application log handler with the configured level.
 func NewHandler(config *model.LoggerConfig) slog.Handler {
 	const addSource = true
-	writer := newRedactingWriter(logWriter(config))
+	writer := logWriter(config)
 	switch strings.ToUpper(config.GetFormatOrDefault()) {
 	case "PLAIN":
 		return slog.NewTextHandler(writer, &slog.HandlerOptions{
@@ -38,10 +38,8 @@ func NewHandler(config *model.LoggerConfig) slog.Handler {
 	}
 }
 
-// handlerReplaceAttr redacts secrets and customizes the TRACE level string
-// representation in logs. Redaction runs first so the level rewrite operates on
-// already-safe values.
-var handlerReplaceAttr = func(groups []string, a slog.Attr) slog.Attr {
+// handlerReplaceAttr customizes the TRACE level string representation in logs.
+var handlerReplaceAttr = func(_ []string, a slog.Attr) slog.Attr {
 	if a.Key == slog.LevelKey {
 		level := a.Value.Any().(slog.Level)
 		if level == slog.Level(logger.LevelTrace) {

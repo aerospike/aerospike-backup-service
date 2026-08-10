@@ -1,6 +1,8 @@
 package dto
 
 import (
+	"log/slog"
+
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -95,4 +97,20 @@ func (p *EncryptionPolicy) fromModel(m *model.EncryptionPolicy) {
 	p.KeyFile = m.KeyFile
 	p.KeyEnv = m.KeyEnv
 	p.KeySecret = m.KeySecret
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+// When adding fields to EncryptionPolicy, update this method: log safe values explicitly;
+// redact key material with appendRedactedTextPtr (see log_value.go).
+func (p *EncryptionPolicy) LogValue() slog.Value {
+	if p == nil {
+		return slog.Value{}
+	}
+
+	attrs := []slog.Attr{slog.String("mode", p.Mode)}
+	attrs = appendRedactedTextPtr(attrs, "key-file", p.KeyFile)
+	attrs = appendStringPtr(attrs, "key-env", p.KeyEnv)
+	attrs = appendRedactedTextPtr(attrs, "key-secret", p.KeySecret)
+
+	return slog.GroupValue(attrs...)
 }

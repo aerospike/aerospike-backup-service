@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"log/slog"
 	"os"
 	"slices"
 
@@ -97,4 +98,13 @@ func verifyFilesExist(c *ClientTLS) error {
 	}
 
 	return nil
+}
+
+func appendClientTLSAttrs(attrs []slog.Attr, tls ClientTLS) []slog.Attr {
+	attrs = appendStringPtr(attrs, "ca-file", tls.CAFile)
+	attrs = appendStringPtr(attrs, "name", tls.Name)
+	attrs = appendStringPtr(attrs, "cert-file", tls.Certfile)
+	attrs = appendRedactedTextPtr(attrs, "key-file", tls.Keyfile)
+
+	return attrs
 }

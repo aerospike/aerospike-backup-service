@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -130,6 +131,33 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 	}
 
 	return azureStorage
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+// When adding fields to AzureStorage, update this method: log safe values explicitly;
+// redact secrets with appendRedactedText (see log_value.go).
+//
+//nolint:sloglint // keys match config JSON field names (kebab-case)
+func (a *AzureStorage) LogValue() slog.Value {
+	if a == nil {
+		return slog.Value{}
+	}
+
+	attrs := secretAgentConfigLogAttrs(a.SecretAgentConfig)
+	attrs = append(attrs, slog.String("endpoint", a.Endpoint))
+	attrs = append(attrs, slog.String("container-name", a.ContainerName))
+	attrs = appendString(attrs, "path", a.Path)
+	attrs = appendString(attrs, "account-name", a.AccountName)
+	attrs = appendRedactedText(attrs, "account-key", a.AccountKey)
+	attrs = appendString(attrs, "tenant-id", a.TenantID)
+	attrs = appendString(attrs, "client-id", a.ClientID)
+	attrs = appendRedactedText(attrs, "client-secret", a.ClientSecret)
+	attrs = appendIntPtr(attrs, "min-part-size", a.MinPartSize)
+	if a.StorageClass != nil {
+		attrs = append(attrs, slog.Any("storage-class", a.StorageClass))
+	}
+
+	return slog.GroupValue(attrs...)
 }
 
 // Azure Storage Tiers

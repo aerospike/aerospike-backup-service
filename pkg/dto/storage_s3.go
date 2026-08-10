@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -124,6 +125,34 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 	}
 
 	return result
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+// When adding fields to S3Storage, update this method: log safe values explicitly;
+// redact secrets with appendRedactedTextPtr (see log_value.go).
+//
+//nolint:sloglint // keys match config JSON field names (kebab-case)
+func (s *S3Storage) LogValue() slog.Value {
+	if s == nil {
+		return slog.Value{}
+	}
+
+	attrs := secretAgentConfigLogAttrs(s.SecretAgentConfig)
+	attrs = append(attrs, slog.String("bucket", s.Bucket))
+	attrs = appendString(attrs, "path", s.Path)
+	attrs = append(attrs, slog.String("s3-region", s.S3Region))
+	attrs = appendString(attrs, "s3-profile", s.S3Profile)
+	attrs = appendStringPtr(attrs, "s3-endpoint-override", s.S3EndpointOverride)
+	attrs = appendStringPtr(attrs, "s3-log-level", s.S3LogLevel)
+	attrs = appendIntPtr(attrs, "min-part-size", s.MinPartSize)
+	attrs = appendIntPtr(attrs, "max-async-connections", s.MaxConnsPerHost)
+	attrs = appendRedactedTextPtr(attrs, "access-key-id", s.AccessKeyID)
+	attrs = appendRedactedTextPtr(attrs, "secret-access-key", s.SecretAccessKey)
+	if s.StorageClass != nil {
+		attrs = append(attrs, slog.Any("storage-class", s.StorageClass))
+	}
+
+	return slog.GroupValue(attrs...)
 }
 
 // Storage classes represents the different types of storage classes available on Amazon S3.

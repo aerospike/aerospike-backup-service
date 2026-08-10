@@ -3,6 +3,7 @@ package dto
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
@@ -74,6 +75,21 @@ type BackupPolicy struct {
 	// Maximum number of concurrent requests to server nodes.
 	// Default is to issue requests to all server nodes in parallel.
 	MaxConcurrentNodes *int `yaml:"max-concurrent-nodes,omitempty" json:"max-concurrent-nodes,omitempty" extensions:"x-nullable"`
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+func (p *BackupPolicy) LogValue() slog.Value {
+	if p == nil {
+		return slog.Value{}
+	}
+
+	var attrs []slog.Attr
+	attrs = appendIntPtr(attrs, "parallel", p.Parallel)
+	if p.EncryptionPolicy != nil {
+		attrs = append(attrs, slog.Any("encryption", p.EncryptionPolicy))
+	}
+
+	return slog.GroupValue(attrs...)
 }
 
 // NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.

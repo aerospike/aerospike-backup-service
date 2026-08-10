@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -85,6 +86,30 @@ func newGcpStorageFromModel(s *model.GcpStorage, config *model.BackupConfig) *Gc
 		SecretAgentConfig: ResolveSecretAgentFromModel(s.SecretAgent, config),
 		StorageClass:      newGcpStorageClassFromModel(s.StorageClass),
 	}
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+// When adding fields to GcpStorage, update this method: log safe values explicitly;
+// redact secrets and key paths with appendRedactedText (see log_value.go).
+//
+//nolint:sloglint // keys match config JSON field names (kebab-case)
+func (s *GcpStorage) LogValue() slog.Value {
+	if s == nil {
+		return slog.Value{}
+	}
+
+	attrs := secretAgentConfigLogAttrs(s.SecretAgentConfig)
+	attrs = appendRedactedText(attrs, "key-file-path", s.KeyFile)
+	attrs = appendRedactedText(attrs, "key", s.Key)
+	attrs = append(attrs, slog.String("bucket-name", s.BucketName))
+	attrs = appendString(attrs, "path", s.Path)
+	attrs = appendString(attrs, "endpoint", s.Endpoint)
+	attrs = appendIntPtr(attrs, "min-part-size", s.MinPartSize)
+	if s.StorageClass != nil {
+		attrs = append(attrs, slog.Any("storage-class", s.StorageClass))
+	}
+
+	return slog.GroupValue(attrs...)
 }
 
 // GCP Storage Classes

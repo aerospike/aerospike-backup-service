@@ -3,6 +3,7 @@ package dto
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"slices"
 	"time"
@@ -295,4 +296,68 @@ func (c *StorageConfig) ToModel(config *model.Config) (model.Storage, error) {
 		return nil, errValidationNotFound("storage", c.Name)
 	}
 	return configStorage, nil
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+// When adding fields to RestoreRequest, update this method: log safe values explicitly;
+// delegate secrets to nested types that implement LogValue (see log_value.go).
+//
+//nolint:sloglint // keys match config JSON field names (kebab-case)
+func (r *RestoreRequest) LogValue() slog.Value {
+	if r == nil {
+		return slog.Value{}
+	}
+
+	var attrs []slog.Attr
+	if r.Cluster != nil {
+		attrs = append(attrs, slog.Any("destination", r.Cluster))
+	}
+	attrs = appendString(attrs, "destination-name", r.DestinationClusterConfig.Name)
+	if r.SecretAgentConfig != nil {
+		attrs = append(attrs, secretAgentConfigLogAttrs(*r.SecretAgentConfig)...)
+	}
+	if r.Storage != nil {
+		attrs = append(attrs, slog.Any("source", r.Storage))
+	}
+	attrs = appendString(attrs, "source-name", r.StorageConfig.Name)
+	if r.Policy != nil && r.Policy.EncryptionPolicy != nil {
+		attrs = append(attrs, slog.Any("encryption", r.Policy.EncryptionPolicy))
+	}
+	attrs = append(attrs, slog.String("backup-data-path", r.BackupDataPath))
+
+	return slog.GroupValue(attrs...)
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+// When adding fields to RestoreTimestampRequest, update this method: log safe values explicitly;
+// delegate secrets to nested types that implement LogValue (see log_value.go).
+//
+//nolint:sloglint // keys match config JSON field names (kebab-case)
+func (r *RestoreTimestampRequest) LogValue() slog.Value {
+	if r == nil {
+		return slog.Value{}
+	}
+
+	var attrs []slog.Attr
+	if r.Cluster != nil {
+		attrs = append(attrs, slog.Any("destination", r.Cluster))
+	}
+	attrs = appendString(attrs, "destination-name", r.DestinationClusterConfig.Name)
+	if r.SecretAgentConfig != nil {
+		attrs = append(attrs, secretAgentConfigLogAttrs(*r.SecretAgentConfig)...)
+	}
+	if r.Storage != nil {
+		attrs = append(attrs, slog.Any("source", r.Storage))
+	}
+	attrs = appendString(attrs, "source-name", r.StorageConfig.Name)
+	if r.Policy != nil && r.Policy.EncryptionPolicy != nil {
+		attrs = append(attrs, slog.Any("encryption", r.Policy.EncryptionPolicy))
+	}
+	attrs = append(attrs, slog.Int64("time", r.Time))
+	attrs = append(attrs, slog.String("routine", r.Routine))
+	if r.DisableReordering {
+		attrs = append(attrs, slog.Bool("disable-reordering", r.DisableReordering))
+	}
+
+	return slog.GroupValue(attrs...)
 }

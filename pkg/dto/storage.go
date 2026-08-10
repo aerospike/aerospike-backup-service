@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
@@ -124,4 +125,29 @@ func NewStorageFromReader(r io.Reader, format decoder.SerializationFormat) (*Sto
 	}
 
 	return s, nil
+}
+
+// LogValue implements slog.LogValuer for structured logging.
+func (s *Storage) LogValue() slog.Value {
+	if s == nil {
+		return slog.Value{}
+	}
+
+	if s.LocalStorage != nil {
+		attrs := []slog.Attr{slog.String("path", s.LocalStorage.Path)}
+		attrs = appendIntPtr(attrs, "min-part-size", s.LocalStorage.MinPartSize)
+
+		return slog.GroupValue(attrs...)
+	}
+	if s.S3Storage != nil {
+		return s.S3Storage.LogValue()
+	}
+	if s.GcpStorage != nil {
+		return s.GcpStorage.LogValue()
+	}
+	if s.AzureStorage != nil {
+		return s.AzureStorage.LogValue()
+	}
+
+	return slog.Value{}
 }
