@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	connectivityTimeout  = 15 * time.Second
-	connectivityProbeKey = ".abs-connectivity-check"
+	// connectivityTimeout defines the maximum duration for connectivity validation before timing out.
+	connectivityTimeout = 15 * time.Second
 
 	// clientCacheTTL is how long cloud storage clients are cached after creation.
 	// Entries are not extended on access; a new client is created after expiry.
@@ -27,6 +27,7 @@ var (
 )
 
 // connectivityProbeKey is used for optional write probes at client init.
+const connectivityProbeKey = ".abs-connectivity-check"
 
 // Operations implements storage operations using registered accessors.
 type Operations struct {
