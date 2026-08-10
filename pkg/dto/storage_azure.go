@@ -23,14 +23,14 @@ type AzureStorage struct {
 	AccountName string `yaml:"account-name,omitempty" json:"account-name,omitempty" extensions:"x-nullable"`
 	// AccountKey is the Azure storage account key for Shared Key authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	AccountKey string `yaml:"account-key,omitempty" json:"account-key,omitempty" extensions:"x-nullable"`
+	AccountKey *SecretString `yaml:"account-key,omitempty" json:"account-key,omitempty" swaggertype:"string" extensions:"x-nullable"` //nolint:lll
 	// TenantID is the Azure Active Directory tenant ID for AAD authentication.
 	TenantID string `yaml:"tenant-id,omitempty" json:"tenant-id,omitempty" extensions:"x-nullable"`
 	// ClientID is the Azure Active Directory client ID for AAD authentication.
 	ClientID string `yaml:"client-id,omitempty" json:"client-id,omitempty" extensions:"x-nullable"`
 	// ClientSecret is the Azure Active Directory client secret for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty" extensions:"x-nullable"`
+	ClientSecret *SecretString `yaml:"client-secret,omitempty" json:"client-secret,omitempty" swaggertype:"string" extensions:"x-nullable"` //nolint:lll
 	// The minimum size in bytes of individual Azure Blob chunks.
 	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" minimum:"1048576"`
 	// StorageClass defines the storage tier for data and metadata objects.
@@ -54,8 +54,8 @@ func (a *AzureStorage) Validate(opts ...ValidationOption) error {
 	}
 
 	// Check for valid authentication method.
-	hasSharedKey := a.AccountName != "" && a.AccountKey != ""
-	hasAAD := a.TenantID != "" && a.ClientID != "" && a.ClientSecret != ""
+	hasSharedKey := a.AccountName != "" && SecretStringIsSet(a.AccountKey)
+	hasAAD := a.TenantID != "" && a.ClientID != "" && SecretStringIsSet(a.ClientSecret)
 
 	if hasSharedKey && hasAAD {
 		return errors.New(`azure storage authentication method is ambiguous:
@@ -91,18 +91,18 @@ func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
 }
 
 func getAzureAuth(a *AzureStorage) model.AzureAuth {
-	if a.AccountName != "" && a.AccountKey != "" {
+	if a.AccountName != "" && SecretStringIsSet(a.AccountKey) {
 		return &model.AzureSharedKeyAuth{
 			AccountName: a.AccountName,
-			AccountKey:  a.AccountKey,
+			AccountKey:  SecretStringValue(a.AccountKey),
 		}
 	}
 
-	if a.TenantID != "" && a.ClientID != "" && a.ClientSecret != "" {
+	if a.TenantID != "" && a.ClientID != "" && SecretStringIsSet(a.ClientSecret) {
 		return &model.AzureADAuth{
 			TenantID:     a.TenantID,
 			ClientID:     a.ClientID,
-			ClientSecret: a.ClientSecret,
+			ClientSecret: SecretStringValue(a.ClientSecret),
 		}
 	}
 
@@ -122,11 +122,11 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 	switch auth := s.Auth.(type) {
 	case *model.AzureSharedKeyAuth:
 		azureStorage.AccountName = auth.AccountName
-		azureStorage.AccountKey = auth.AccountKey
+		azureStorage.AccountKey = secretStringFromModelPtr(&auth.AccountKey)
 	case *model.AzureADAuth:
 		azureStorage.TenantID = auth.TenantID
 		azureStorage.ClientID = auth.ClientID
-		azureStorage.ClientSecret = auth.ClientSecret
+		azureStorage.ClientSecret = secretStringFromModelPtr(&auth.ClientSecret)
 	}
 
 	return azureStorage
