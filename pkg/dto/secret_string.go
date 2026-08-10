@@ -3,6 +3,7 @@ package dto
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"gopkg.in/yaml.v3"
 )
@@ -72,6 +73,15 @@ func secretStringToModelPtr(s *SecretString) *string {
 
 	value := s.value
 	return &value
+}
+
+// LogValue implements slog.LogValuer so structured logs redact secrets.
+func (s *SecretString) LogValue() slog.Value {
+	if s == nil {
+		return slog.StringValue("")
+	}
+
+	return slog.StringValue(s.String())
 }
 
 func (s SecretString) MarshalJSON() ([]byte, error) {
