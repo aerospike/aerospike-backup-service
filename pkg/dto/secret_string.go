@@ -25,11 +25,6 @@ func SecretStringPtr(s string) *SecretString {
 	return &SecretString{value: s}
 }
 
-// Value returns the underlying secret value.
-func (s SecretString) Value() string {
-	return s.value
-}
-
 // String redacts the secret for logging.
 func (s SecretString) String() string {
 	if s.value == "" {
@@ -37,11 +32,6 @@ func (s SecretString) String() string {
 	}
 
 	return secretRedactedPlaceholder
-}
-
-// IsSet reports whether the secret has a non-empty value.
-func (s SecretString) IsSet() bool {
-	return s.value != ""
 }
 
 // SecretStringValue returns the underlying value from a pointer, or "" if nil.
@@ -84,6 +74,9 @@ func (s *SecretString) LogValue() slog.Value {
 	return slog.StringValue(s.String())
 }
 
+// MarshalJSON preserves the real value for API and config serialization.
+// Redaction is a logging concern handled by the log handler's ReplaceAttr, not
+// by serialization. Do not use encoding/json to emit secrets into logs.
 func (s SecretString) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.value)
 }

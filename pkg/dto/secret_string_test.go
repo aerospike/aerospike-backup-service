@@ -34,6 +34,14 @@ func TestSecretString_JSONRoundTrip(t *testing.T) {
 	assert.Equal(t, "plain-password", SecretStringValue(decoded.Password))
 }
 
+func TestSecretString_JSONMarshalIsForWireFormatNotLogging(t *testing.T) {
+	t.Parallel()
+
+	data, err := json.Marshal(SecretStringPtr("plain-password"))
+	require.NoError(t, err)
+	assert.Equal(t, `"plain-password"`, string(data))
+}
+
 func TestSecretString_YAMLRoundTrip(t *testing.T) {
 	t.Parallel()
 

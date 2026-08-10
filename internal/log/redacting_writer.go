@@ -27,5 +27,13 @@ func (rw *redactingWriter) Write(p []byte) (int, error) {
 	for _, re := range patterns {
 		output = re.ReplaceAll(output, []byte(redactedPlaceholder))
 	}
-	return rw.underlying.Write(output)
+
+	// The redacted output may differ in length from p, but io.Writer callers
+	// expect the returned count to refer to the original slice. Report len(p)
+	// on a full underlying write so slog does not treat it as a short write.
+	if _, err := rw.underlying.Write(output); err != nil {
+		return 0, err
+	}
+
+	return len(p), nil
 }
