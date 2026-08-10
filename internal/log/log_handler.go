@@ -42,7 +42,6 @@ func NewHandler(config *model.LoggerConfig) slog.Handler {
 // representation in logs. Redaction runs first so the level rewrite operates on
 // already-safe values.
 var handlerReplaceAttr = func(groups []string, a slog.Attr) slog.Attr {
-	a = RedactSecretsAttr(groups, a)
 	if a.Key == slog.LevelKey {
 		level := a.Value.Any().(slog.Level)
 		if level == slog.Level(logger.LevelTrace) {
