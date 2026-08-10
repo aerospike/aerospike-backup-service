@@ -170,3 +170,33 @@ func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int32(2), callCount.Load())
 }
+
+func TestBaseCache_deleteExpired(t *testing.T) {
+	ctx := t.Context()
+	ttl := time.Minute
+	cache := newBaseCache[string, int](ctx, &ttl)
+
+	past := time.Now().Add(-time.Hour)
+	item := &cacheItem[int]{
+		value:     42,
+		loaded:    true,
+		expiresAt: &past,
+	}
+	cache.data.Store("expired", item)
+
+	future := time.Now().Add(time.Hour)
+	active := &cacheItem[int]{
+		value:     7,
+		loaded:    true,
+		expiresAt: &future,
+	}
+	cache.data.Store("active", active)
+
+	cache.deleteExpired()
+
+	_, expiredOK := cache.data.Load("expired")
+	assert.False(t, expiredOK)
+
+	_, activeOK := cache.data.Load("active")
+	assert.True(t, activeOK)
+}

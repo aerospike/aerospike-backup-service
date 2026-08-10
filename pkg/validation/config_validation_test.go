@@ -9,6 +9,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestValidateStaticFieldChanges(t *testing.T) {
+	base := &dto.Config{
+		ServiceConfig: dto.ServiceConfig{
+			HTTPServer: &dto.HTTPServerConfig{
+				Address: ptr.Of("localhost"),
+			},
+		},
+	}
+
+	unchanged := &dto.Config{
+		ServiceConfig: dto.ServiceConfig{
+			HTTPServer: &dto.HTTPServerConfig{
+				Address: ptr.Of("localhost"),
+			},
+		},
+	}
+	assert.NoError(t, ValidateStaticFieldChanges(base, unchanged))
+
+	changed := &dto.Config{
+		ServiceConfig: dto.ServiceConfig{
+			HTTPServer: &dto.HTTPServerConfig{
+				Address: ptr.Of("0.0.0.0"),
+			},
+		},
+	}
+	assert.Error(t, ValidateStaticFieldChanges(base, changed))
+}
+
 func TestValidateConfiguration(t *testing.T) {
 	config := &dto.Config{
 		AerospikeClusters: map[string]*dto.AerospikeCluster{
