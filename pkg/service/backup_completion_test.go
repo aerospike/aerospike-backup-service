@@ -194,7 +194,7 @@ func (h *slogCaptureHandler) Handle(_ context.Context, r slog.Record) error {
 }
 
 func (h *slogCaptureHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
-func (h *slogCaptureHandler) WithGroup(_ string) slog.Handler    { return h }
+func (h *slogCaptureHandler) WithGroup(_ string) slog.Handler      { return h }
 
 func (h *slogCaptureHandler) containsMessage(msg string) bool {
 	h.mu.Lock()
