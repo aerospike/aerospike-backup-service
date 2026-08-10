@@ -44,7 +44,8 @@ func NewHandler(config *model.LoggerConfig) slog.Handler {
 var handlerReplaceAttr = func(groups []string, a slog.Attr) slog.Attr {
 	a = RedactSecretsAttr(groups, a)
 	if a.Key == slog.LevelKey {
-		if level, ok := a.Value.Any().(slog.Level); ok && level == slog.Level(logger.LevelTrace) {
+		level := a.Value.Any().(slog.Level)
+		if level == slog.Level(logger.LevelTrace) {
 			a.Value = slog.StringValue("TRACE")
 		}
 	}
