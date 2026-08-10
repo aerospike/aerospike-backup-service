@@ -8,6 +8,10 @@ import (
 )
 
 // Resolver resolves values that may reference secrets.
+//
+// The resolver is a stateless pass-through to backup.ParseSecret with no internal caching.
+// A Secret Agent outage during resolution fails the call (fail-closed; no stale-secret fallback).
+// Each resolution creates a new Secret Agent client inside ParseSecret.
 type Resolver interface {
 	// Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
 	// If the secret agent is nil, the value is returned as is.

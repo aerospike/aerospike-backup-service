@@ -133,7 +133,7 @@ See [`POST: /config/clusters`](https://aerospike.github.io/aerospike-backup-serv
 full specification.
 
 :warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/tools/backup#secret-agent-options) to avoid
-including secrets in your configuration.
+including secrets in your configuration. See [Security](security.md) for how secrets are resolved, cached, and rotated.
 
 #### Storage connection
 
