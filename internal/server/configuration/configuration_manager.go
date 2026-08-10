@@ -61,7 +61,6 @@ func readConfig(
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration content: %w", err)
 	}
-	slog.Info("Service configuration:\n" + string(configBytes))
 
 	config := &dto.Config{}
 	if err := decoder.Deserialize(config, bytes.NewReader(configBytes), decoder.YAML); err != nil {
@@ -116,7 +115,7 @@ func readStorage(ctx context.Context, configURI string) (model.Storage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load file content: %w", err)
 	}
-	slog.Info("Configuration storage:\n" + string(content))
+
 	configStorage := &dto.Storage{}
 	if err = decoder.Deserialize(configStorage, bytes.NewReader(content), decoder.YAML); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal storage configuration: %w", err)
