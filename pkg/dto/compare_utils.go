@@ -47,3 +47,7 @@ func compareSlices[T comparable](fieldName string, oldSlice []T, newSlice []T) e
 func hasText(s *string) bool {
 	return s != nil && *s != ""
 }
+
+func hasSecretText(s *SecretString) bool {
+	return SecretStringIsSet(s)
+}

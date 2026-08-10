@@ -38,8 +38,11 @@ func NewHandler(config *model.LoggerConfig) slog.Handler {
 	}
 }
 
-// handlerReplaceAttr customizes the TRACE level string representation in logs.
-var handlerReplaceAttr = func(_ []string, a slog.Attr) slog.Attr {
+// handlerReplaceAttr redacts secrets and customizes the TRACE level string
+// representation in logs. Redaction runs first so the level rewrite operates on
+// already-safe values.
+var handlerReplaceAttr = func(groups []string, a slog.Attr) slog.Attr {
+	a = RedactSecretsAttr(groups, a)
 	if a.Key == slog.LevelKey {
 		if level, ok := a.Value.Any().(slog.Level); ok && level == slog.Level(logger.LevelTrace) {
 			a.Value = slog.StringValue("TRACE")

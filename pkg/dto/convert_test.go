@@ -30,7 +30,7 @@ var originalConfig = &Config{
 			SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 			Credentials: &Credentials{
 				User:              ptr.Of("tester"),
-				Password:          ptr.Of("psw"),
+				Password:          SecretStringPtr("psw"),
 				SecretAgentConfig: secretAgentConfig,
 			},
 		},
@@ -38,7 +38,7 @@ var originalConfig = &Config{
 			SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 			Credentials: &Credentials{
 				User:     ptr.Of("tester"),
-				Password: ptr.Of("psw"),
+				Password: SecretStringPtr("psw"),
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host2",
@@ -57,16 +57,16 @@ var originalConfig = &Config{
 			S3Storage: &S3Storage{
 				Bucket:          "bucket",
 				S3Region:        "region",
-				AccessKeyID:     ptr.Of("id"),
-				SecretAccessKey: ptr.Of("key"),
+				AccessKeyID:     SecretStringPtr("id"),
+				SecretAccessKey: SecretStringPtr("key"),
 			},
 		},
 		"aws 1": { // secret agent by name
 			S3Storage: &S3Storage{
 				Bucket:            "bucket",
 				S3Region:          "region",
-				AccessKeyID:       ptr.Of("id"),
-				SecretAccessKey:   ptr.Of("key"),
+				AccessKeyID:       SecretStringPtr("id"),
+				SecretAccessKey:   SecretStringPtr("key"),
 				SecretAgentConfig: secretAgentConfig,
 			},
 		},
@@ -74,8 +74,8 @@ var originalConfig = &Config{
 			S3Storage: &S3Storage{
 				Bucket:          "bucket2",
 				S3Region:        "region2",
-				AccessKeyID:     ptr.Of("id2"),
-				SecretAccessKey: ptr.Of("key2"),
+				AccessKeyID:     SecretStringPtr("id2"),
+				SecretAccessKey: SecretStringPtr("key2"),
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host3",
@@ -95,7 +95,7 @@ var originalConfig = &Config{
 		},
 		"gcp2": {
 			GcpStorage: &GcpStorage{
-				Key:        "key-json",
+				Key:        SecretStringPtr("key-json"),
 				BucketName: "bucket",
 				Path:       "path",
 				Endpoint:   "http://localhost",
@@ -114,10 +114,10 @@ var originalConfig = &Config{
 				ContainerName:     "container",
 				Path:              "backup",
 				AccountName:       "hello",
-				AccountKey:        "world",
+				AccountKey:        SecretStringPtr("world"),
 				TenantID:          "",
 				ClientID:          "",
-				ClientSecret:      "",
+				ClientSecret:      (*SecretString)(nil),
 			},
 		},
 		"azure 2": {
@@ -132,10 +132,10 @@ var originalConfig = &Config{
 				ContainerName: "container",
 				Path:          "backup",
 				AccountName:   "",
-				AccountKey:    "",
+				AccountKey:    (*SecretString)(nil),
 				TenantID:      "1",
 				ClientID:      "2",
-				ClientSecret:  "3",
+				ClientSecret:  SecretStringPtr("3"),
 			},
 		},
 	},

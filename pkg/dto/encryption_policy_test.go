@@ -22,7 +22,7 @@ func TestEncryptionPolicy_Validate_Success(t *testing.T) {
 		},
 		"AES256 with key secret": {
 			Mode:      EncryptAES256,
-			KeySecret: ptr.Of("path"),
+			KeySecret: SecretStringPtr("path"),
 		},
 	}
 
@@ -65,7 +65,7 @@ func TestEncryptionPolicy_Validate_Invalid(t *testing.T) {
 			policy: EncryptionPolicy{
 				Mode:      EncryptAES256,
 				KeyEnv:    ptr.Of("path"),
-				KeySecret: ptr.Of("path"),
+				KeySecret: SecretStringPtr("path"),
 			},
 			wantIsErr: errMutuallyExclusive,
 		},
@@ -74,7 +74,7 @@ func TestEncryptionPolicy_Validate_Invalid(t *testing.T) {
 				Mode:      EncryptAES256,
 				KeyEnv:    ptr.Of("path"),
 				KeyFile:   ptr.Of("path"),
-				KeySecret: ptr.Of("path"),
+				KeySecret: SecretStringPtr("path"),
 			},
 			wantIsErr: errMutuallyExclusive,
 		},

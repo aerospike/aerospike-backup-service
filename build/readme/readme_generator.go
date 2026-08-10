@@ -29,6 +29,8 @@ const (
 	valAsBackupBucket = "as-backup-bucket"
 	valEuCentral1     = "eu-central-1"
 	valRoutine1       = "routine1"
+
+	azureDevAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
 )
 
 // targetFiles lists every Markdown file that may contain generated sections
@@ -72,7 +74,7 @@ var allStorageTypes = map[string]dto.Storage{
 			Endpoint:      "http://127.0.0.1:6000/devstoreaccount1",
 			AccountName:   "devstoreaccount1",
 			ContainerName: "testcontainer",
-			AccountKey:    "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+			AccountKey:    dto.SecretStringPtr(azureDevAccountKey),
 		},
 	},
 }
@@ -83,7 +85,7 @@ var cluster = dto.AerospikeCluster{
 	},
 	Credentials: &dto.Credentials{
 		User:     ptr.Of("user"),
-		Password: ptr.Of("password"),
+		Password: dto.SecretStringPtr("password"),
 	},
 }
 
