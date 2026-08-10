@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -106,6 +107,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		httpError(w, err)
 		return
 	}
+	slog.Info("New config applied", slog.Any("config", newConfig))
 
 	w.WriteHeader(http.StatusOK)
 }

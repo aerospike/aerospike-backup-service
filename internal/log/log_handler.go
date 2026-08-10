@@ -41,8 +41,7 @@ func NewHandler(config *model.LoggerConfig) slog.Handler {
 // handlerReplaceAttr customizes the TRACE level string representation in logs.
 var handlerReplaceAttr = func(_ []string, a slog.Attr) slog.Attr {
 	if a.Key == slog.LevelKey {
-		level := a.Value.Any().(slog.Level)
-		if level == slog.Level(logger.LevelTrace) {
+		if level, ok := a.Value.Any().(slog.Level); ok && level == slog.Level(logger.LevelTrace) {
 			a.Value = slog.StringValue("TRACE")
 		}
 	}
