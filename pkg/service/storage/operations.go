@@ -18,13 +18,12 @@ import (
 )
 
 var (
-	connectivityTimeout = 15 * time.Second
-	// clientCacheTTL is how long cloud storage clients are cached after creation.
-	// Entries are not extended on access; a new client is created after expiry.
+	connectivityTimeout  = 15 * time.Second
 	connectivityProbeKey = ".abs-connectivity-check"
 
-	clientCacheTTL    = 10 * time.Minute
-	clientCacheTTLPtr = ptr.Of(clientCacheTTL)
+	// clientCacheTTL is how long cloud storage clients are cached after creation.
+	// Entries are not extended on access; a new client is created after expiry.
+	clientCacheTTL = ptr.Of(10 * time.Minute)
 )
 
 // connectivityProbeKey is used for optional write probes at client init.

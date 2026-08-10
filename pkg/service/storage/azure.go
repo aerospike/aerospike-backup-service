@@ -32,7 +32,7 @@ func NewAzureStorageAccessor(resolver secrets.Resolver) *AzureStorageAccessor {
 	}
 	accessor.clientMap = collections.NewLoadingCache[*model.AzureStorage, *azblob.Client](
 		accessor.getAzureClient,
-		clientCacheTTLPtr,
+		clientCacheTTL,
 	)
 	return accessor
 }

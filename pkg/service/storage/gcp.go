@@ -48,7 +48,7 @@ func NewGcpStorageAccessor(resolver secrets.Resolver) *GcpStorageAccessor {
 	}
 	accessor.clientMap = collections.NewLoadingCache[*model.GcpStorage, gcp.Client](
 		accessor.getGcpClient,
-		clientCacheTTLPtr,
+		clientCacheTTL,
 	)
 	return accessor
 }

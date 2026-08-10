@@ -36,7 +36,7 @@ func NewS3StorageAccessor(resolver secrets.Resolver) *S3StorageAccessor {
 	}
 	accessor.clientMap = collections.NewLoadingCache[*model.S3Storage, *awsS3.Client](
 		accessor.getS3Client,
-		clientCacheTTLPtr,
+		clientCacheTTL,
 	)
 	return accessor
 }
