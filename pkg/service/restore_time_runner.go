@@ -50,7 +50,9 @@ func (r *timeRestoreRunner) RestoreByTime(
 	ctx, cancel := context.WithCancel(ctx)
 	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
 	logger := slog.With(slog.Any("jobId", jobID))
-	logger.Info("New restore by time job", slog.Any("request", *request))
+	logger.Info("New restore by time job",
+		slog.String("routine", request.RoutineName),
+		slog.Any("timestamp", request.Time))
 
 	go func() {
 		err := r.restoreByTimeSync(ctx, request, jobID, logger)
