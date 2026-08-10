@@ -2,6 +2,7 @@ package restoreexecutor
 
 import (
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
@@ -91,6 +92,23 @@ func TestMakeRestoreConfig(t *testing.T) {
 	assert.Equal(t, 2000, *config.SecretAgentConfig.TimeoutMillisecond)
 	assert.Equal(t, "ca-cert", *config.SecretAgentConfig.CaFile)
 	assert.True(t, *config.SecretAgentConfig.IsBase64)
+}
+
+func TestMakeWritePolicy(t *testing.T) {
+	noGeneration := true
+	totalTimeout := 30 * time.Second
+	restoreRequest := &model.RestoreRequest{
+		Policy: model.RestorePolicy{
+			NoGeneration: &noGeneration,
+			TotalTimeout: &totalTimeout,
+		},
+	}
+
+	writePolicy := makeWritePolicy(restoreRequest)
+
+	require.NotNil(t, writePolicy)
+	assert.Equal(t, as.NONE, writePolicy.GenerationPolicy)
+	assert.Equal(t, totalTimeout, writePolicy.TotalTimeout)
 }
 
 func TestRecordExistsAction(t *testing.T) {
