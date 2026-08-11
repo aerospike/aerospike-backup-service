@@ -2550,7 +2550,7 @@ const docTemplate = `{
                     "example": 1024
                 },
                 "white-list": {
-                    "description": "The list of ips to whitelist in rate limiting (optional).\nDefault: allow all.",
+                    "description": "The list of ips to exempt from rate limiting (optional).\nDefault: empty list, so rate limiting applies to all clients.\nUse \"0.0.0.0/0\" to exempt all clients and effectively disable rate limiting.",
                     "type": "array",
                     "items": {
                         "type": "string"

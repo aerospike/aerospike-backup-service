@@ -109,6 +109,10 @@ We recommend experimenting with different values in your environment to find the
 The `service` section configures the operation settings of the Aerospike Backup Service,
 which include logging and HTTP endpoint. See the [`dto.ServiceConfig`](readme/dto/dto.serviceconfig.md)
 for details.
+HTTP rate limiter behavior:
+- Rate limiting applies to all clients by default.
+- Entries in `service.http.rate.white-list` are exempt from rate limiting.
+- If `white-list` contains `0.0.0.0/0`, all clients are exempt and rate limiting is effectively disabled.
 
 ## Configuration with API
 

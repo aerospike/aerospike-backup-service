@@ -5,12 +5,19 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
-	"strings"
 	"sync"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"golang.org/x/time/rate"
 )
+
+const (
+	defaultLimiterIdleTTL         = 10 * time.Minute
+	defaultLimiterCleanupInterval = 1 * time.Minute
+)
+
+var allowAnyPrefix = netip.MustParsePrefix("0.0.0.0/0")
 
 func RateLimiter(config *model.RateLimiterConfig) Middleware {
 	limiters := NewIPRateLimiter(
@@ -55,20 +62,24 @@ func newIPWhiteList(ipList []string) *IPWhiteList {
 	var allowAny bool
 
 	for _, ip := range ipList {
-		if strings.HasPrefix(ip, "0.0.0.0") {
-			allowAny = true
+		network, err := netip.ParsePrefix(ip)
+		if err == nil {
+			if network == allowAnyPrefix {
+				allowAny = true
+				continue
+			}
+			networks = append(networks, &network)
 			continue
 		}
-		network, err := netip.ParsePrefix(ip)
+
+		ipAddr, err := netip.ParseAddr(ip)
 		if err != nil {
-			ipAddr, err := netip.ParseAddr(ip)
-			if err != nil {
-				panic("invalid ip configuration: " + ip)
-			}
-			addresses[ip] = &ipAddr
-		} else {
-			networks = append(networks, &network)
+			// Config validation should catch malformed entries.
+			// Keep runtime safe in case config arrives from another source.
+			slog.Warn("Ignoring invalid whitelist entry", slog.String("entry", ip))
+			continue
 		}
+		addresses[ip] = &ipAddr
 	}
 
 	return &IPWhiteList{
@@ -104,20 +115,70 @@ func (wl *IPWhiteList) isAllowed(ip string) bool {
 // IPAddress represents an IP address string.
 type IPAddress string
 
+type ipLimiterEntry struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
+type ticker interface {
+	C() <-chan time.Time
+	Stop()
+}
+
+type realTicker struct {
+	*time.Ticker
+}
+
+func (t *realTicker) C() <-chan time.Time {
+	return t.Ticker.C
+}
+
 // IPRateLimiter represents a rate limiter based on an IP address.
 type IPRateLimiter struct {
 	sync.Mutex
-	limiters        map[IPAddress]*rate.Limiter
+	limiters        map[IPAddress]*ipLimiterEntry
 	tokensPerSecond rate.Limit
 	tokenBucketSize int
+	now             func() time.Time
+	idleTTL         time.Duration
+	cleanupTicker   ticker
+	stopCh          chan struct{}
 }
 
 // NewIPRateLimiter returns a new IPRateLimiter.
 func NewIPRateLimiter(tps rate.Limit, size int) *IPRateLimiter {
+	return newIPRateLimiter(
+		tps,
+		size,
+		defaultLimiterIdleTTL,
+		defaultLimiterCleanupInterval,
+		time.Now,
+		func(d time.Duration) ticker {
+			return &realTicker{Ticker: time.NewTicker(d)}
+		},
+	)
+}
+
+func newIPRateLimiter(
+	tps rate.Limit,
+	size int,
+	idleTTL time.Duration,
+	cleanupInterval time.Duration,
+	now func() time.Time,
+	newTicker func(time.Duration) ticker,
+) *IPRateLimiter {
 	ipLimiter := &IPRateLimiter{
-		limiters:        make(map[IPAddress]*rate.Limiter),
+		limiters:        make(map[IPAddress]*ipLimiterEntry),
 		tokensPerSecond: tps,
 		tokenBucketSize: size,
+		now:             now,
+		idleTTL:         idleTTL,
+		stopCh:          make(chan struct{}),
+	}
+
+	if cleanupInterval > 0 {
+		ipLimiter.cleanupTicker = newTicker(cleanupInterval)
+		go ipLimiter.cleanupLoop()
 	}
 
 	return ipLimiter
@@ -131,7 +192,10 @@ func (ipLimiter *IPRateLimiter) AddLimiter(ipAddr string) *rate.Limiter {
 
 	limiter := rate.NewLimiter(ipLimiter.tokensPerSecond, ipLimiter.tokenBucketSize)
 
-	ipLimiter.limiters[IPAddress(ipAddr)] = limiter
+	ipLimiter.limiters[IPAddress(ipAddr)] = &ipLimiterEntry{
+		limiter:  limiter,
+		lastSeen: ipLimiter.now(),
+	}
 
 	return limiter
 }
@@ -140,14 +204,49 @@ func (ipLimiter *IPRateLimiter) AddLimiter(ipAddr string) *rate.Limiter {
 // Otherwise calls AddLimiter to add a new limiter to the map.
 func (ipLimiter *IPRateLimiter) GetLimiter(ipAddr string) *rate.Limiter {
 	ipLimiter.Lock()
-	limiter, exists := ipLimiter.limiters[IPAddress(ipAddr)]
+	entry, exists := ipLimiter.limiters[IPAddress(ipAddr)]
 
 	if !exists {
 		ipLimiter.Unlock()
 		return ipLimiter.AddLimiter(ipAddr)
 	}
+	entry.lastSeen = ipLimiter.now()
 
 	ipLimiter.Unlock()
 
-	return limiter
+	return entry.limiter
+}
+
+func (ipLimiter *IPRateLimiter) cleanupLoop() {
+	for {
+		select {
+		case now := <-ipLimiter.cleanupTicker.C():
+			ipLimiter.evictIdle(now)
+		case <-ipLimiter.stopCh:
+			return
+		}
+	}
+}
+
+func (ipLimiter *IPRateLimiter) evictIdle(now time.Time) {
+	ipLimiter.Lock()
+	defer ipLimiter.Unlock()
+
+	for ip, entry := range ipLimiter.limiters {
+		if now.Sub(entry.lastSeen) >= ipLimiter.idleTTL {
+			delete(ipLimiter.limiters, ip)
+		}
+	}
+}
+
+func (ipLimiter *IPRateLimiter) stop() {
+	select {
+	case <-ipLimiter.stopCh:
+		return
+	default:
+		close(ipLimiter.stopCh)
+	}
+	if ipLimiter.cleanupTicker != nil {
+		ipLimiter.cleanupTicker.Stop()
+	}
 }

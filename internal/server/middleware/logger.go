@@ -11,7 +11,10 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 )
 
-const maxLogSize = 10_000 // Maximum size of request body to log in bytes.
+const (
+	maxLogSize         = 10_000          // Maximum size of request body to log in bytes.
+	maxRequestBodySize = 1 * 1024 * 1024 // Hard cap for request body reads in logger middleware.
+)
 
 // RequestLogger returns a middleware that logs request details using provided logger.
 func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
@@ -78,12 +81,13 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 
 // readRequestBody reads the request body and resets is, so it can be used by subsequent handlers.
 func readRequestBody(r *http.Request) ([]byte, error) {
-	bodyBytes, err := io.ReadAll(r.Body)
+	limitedBody := http.MaxBytesReader(nil, r.Body, int64(maxRequestBodySize))
+	bodyBytes, err := io.ReadAll(limitedBody)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = r.Body.Close(); err != nil {
+	if err = limitedBody.Close(); err != nil {
 		return nil, err
 	}
 
