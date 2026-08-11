@@ -6,11 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type testLogger struct {
@@ -124,21 +122,4 @@ func TestRequestLogger(t *testing.T) {
 			assert.Equal(t, tt.wantErrorMsg, gotErrorMsg)
 		})
 	}
-}
-
-func TestRequestLogger_RequestBodyTooLarge(t *testing.T) {
-	logger := &testLogger{}
-	handler := RequestLogger(slog.New(logger), nil)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	body := strings.NewReader(strings.Repeat("a", maxRequestBodySize+1))
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/test", body)
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusInternalServerError, rec.Code)
-	require.Equal(t, slog.LevelError, logger.level)
-	require.Equal(t, "Failed to read request body", logger.msg)
 }
