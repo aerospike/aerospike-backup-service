@@ -186,7 +186,7 @@ func TestTLS_Validate(t *testing.T) {
 					Keyfile:  &certs.keyFile,
 					Certfile: &certs.certFile,
 				},
-				KeyfilePassword: ptr.Of(""), // Empty password for unencrypted key
+				KeyfilePassword: "", // Empty password for unencrypted key
 			},
 			wantErr: false,
 		},
@@ -226,7 +226,7 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "keyfile password without keyfile",
 			tls: &TLS{
-				KeyfilePassword: ptr.Of("password"),
+				KeyfilePassword: "password",
 			},
 			wantErr: true,
 			errType: errMissingDependency,

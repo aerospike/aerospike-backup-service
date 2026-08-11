@@ -17,11 +17,11 @@ type EncryptionPolicy struct {
 	// The encryption mode to be used (NONE, AES128, AES256)
 	Mode string `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE" enums:"NONE,AES128,AES256"`
 	// The path to the file containing the encryption key.
-	KeyFile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" extensions:"x-nullable"`
+	KeyFile string `yaml:"key-file,omitempty" json:"key-file,omitempty" extensions:"x-nullable" masq:"secret"`
 	// The name of the environment variable containing the encryption key.
-	KeyEnv *string `yaml:"key-env,omitempty" json:"key-env,omitempty" extensions:"x-nullable"`
+	KeyEnv string `yaml:"key-env,omitempty" json:"key-env,omitempty" extensions:"x-nullable" masq:"secret"`
 	// The secret keyword in Aerospike Secret Agent containing the encryption key.
-	KeySecret *string `yaml:"key-secret,omitempty" json:"key-secret,omitempty" extensions:"x-nullable"`
+	KeySecret string `yaml:"key-secret,omitempty" json:"key-secret,omitempty" extensions:"x-nullable" masq:"secret"`
 }
 
 // Validate validates the encryption policy.
@@ -37,31 +37,31 @@ func (p *EncryptionPolicy) Validate() error {
 	}
 
 	if p.Mode == EncryptNone {
-		if p.KeyFile != nil {
+		if p.KeyFile != "" {
 			return errValidationMutuallyExclusive("key-file", "mode = NONE")
 		}
-		if p.KeyEnv != nil {
+		if p.KeyEnv != "" {
 			return errValidationMutuallyExclusive("key-env", "mode = NONE")
 		}
-		if p.KeySecret != nil {
+		if p.KeySecret != "" {
 			return errValidationMutuallyExclusive("key-secret", "mode = NONE")
 		}
 
 		return nil // no more validation for mode = NONE
 	}
 
-	if p.KeyFile == nil && p.KeyEnv == nil && p.KeySecret == nil {
+	if p.KeyFile == "" && p.KeyEnv == "" && p.KeySecret == "" {
 		return errValidationRequiredEither("key-file", "key-env", "key-secret")
 	}
 
 	// Only one parameter allowed to be set.
-	if p.KeyFile != nil && p.KeyEnv != nil {
+	if p.KeyFile != "" && p.KeyEnv != "" {
 		return errValidationMutuallyExclusive("key-file", "key-env")
 	}
-	if p.KeyFile != nil && p.KeySecret != nil {
+	if p.KeyFile != "" && p.KeySecret != "" {
 		return errValidationMutuallyExclusive("key-file", "key-secret")
 	}
-	if p.KeyEnv != nil && p.KeySecret != nil {
+	if p.KeyEnv != "" && p.KeySecret != "" {
 		return errValidationMutuallyExclusive("key-env", "key-secret")
 	}
 

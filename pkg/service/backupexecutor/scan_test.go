@@ -30,9 +30,9 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 			},
 			EncryptionPolicy: &model.EncryptionPolicy{
 				Mode:      "aes-256",
-				KeyFile:   ptr.Of("path/to/key"),
-				KeySecret: ptr.Of("secret-name"),
-				KeyEnv:    ptr.Of("ENV_VAR"),
+				KeyFile:   "path/to/key",
+				KeySecret: "secret-name",
+				KeyEnv:    "ENV_VAR",
 			},
 			Compact: ptr.Of(true),
 		},

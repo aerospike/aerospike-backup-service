@@ -72,9 +72,9 @@ func makeXdrRestoreConfig(restoreRequest *model.RestoreRequest,
 	if restoreRequest.Policy.EncryptionPolicy != nil {
 		config.EncryptionPolicy = &backup.EncryptionPolicy{
 			Mode:      restoreRequest.Policy.EncryptionPolicy.Mode,
-			KeyFile:   restoreRequest.Policy.EncryptionPolicy.KeyFile,
-			KeySecret: restoreRequest.Policy.EncryptionPolicy.KeySecret,
-			KeyEnv:    restoreRequest.Policy.EncryptionPolicy.KeyEnv,
+			KeyFile:   ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyFile),
+			KeySecret: ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeySecret),
+			KeyEnv:    ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyEnv),
 		}
 	}
 

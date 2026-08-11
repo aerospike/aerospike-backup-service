@@ -16,7 +16,7 @@ type GcpStorage struct {
 	KeyFile string `yaml:"key-file-path,omitempty" json:"key-file-path,omitempty" extensions:"x-nullable"`
 	// Key is the service account key in JSON format.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	Key string `yaml:"key,omitempty" json:"key,omitempty" extensions:"x-nullable"`
+	Key string `yaml:"key,omitempty" json:"key,omitempty" extensions:"x-nullable" masq:"secret"`
 	// GCP storage bucket name.
 	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
 	// The root path for the backup repository. If not specified, backups will be saved in the bucket's root.

@@ -196,7 +196,7 @@ func TestNewTLSConfig(t *testing.T) {
 					Certfile: &serverCertFile,
 					Keyfile:  &encKeyFile,
 				},
-				KeyfilePassword: &encKeyPassword,
+				KeyfilePassword: encKeyPassword,
 			})
 			require.NoError(t, err)
 			assert.Len(t, cfg.Certificates, 1, "Certificate should be loaded with correct password")
@@ -209,7 +209,7 @@ func TestNewTLSConfig(t *testing.T) {
 					Certfile: &serverCertFile,
 					Keyfile:  &encKeyFile,
 				},
-				KeyfilePassword: &wrongPass,
+				KeyfilePassword: wrongPass,
 			})
 			require.Error(t, err, "Should fail with wrong password")
 		})

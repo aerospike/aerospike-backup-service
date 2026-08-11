@@ -16,7 +16,7 @@ type TLS struct {
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
 	CipherSuite *string
 	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
-	KeyfilePassword *string
+	KeyfilePassword string
 }
 
 // String returns a string representation of the TLS.
@@ -30,6 +30,6 @@ func (tls *TLS) String() string {
 		ptr.ValueOrZero(tls.CAPath),
 		ptr.ValueOrZero(tls.Protocols),
 		ptr.ValueOrZero(tls.CipherSuite),
-		ptr.ValueOrZero(tls.KeyfilePassword),
+		tls.KeyfilePassword,
 	)
 }

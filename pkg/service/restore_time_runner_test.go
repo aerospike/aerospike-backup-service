@@ -201,7 +201,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 			policy: model.RestorePolicy{
 				EncryptionPolicy: &model.EncryptionPolicy{
 					Mode:   "AES128",
-					KeyEnv: ptr.Of("AES_KEY"),
+					KeyEnv: "AES_KEY",
 				},
 			},
 			backupEncryption: "AES128",

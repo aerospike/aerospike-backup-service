@@ -57,16 +57,16 @@ var originalConfig = &Config{
 			S3Storage: &S3Storage{
 				Bucket:          "bucket",
 				S3Region:        "region",
-				AccessKeyID:     ptr.Of("id"),
-				SecretAccessKey: ptr.Of("key"),
+				AccessKeyID:     "id",
+				SecretAccessKey: "key",
 			},
 		},
 		"aws 1": { // secret agent by name
 			S3Storage: &S3Storage{
 				Bucket:            "bucket",
 				S3Region:          "region",
-				AccessKeyID:       ptr.Of("id"),
-				SecretAccessKey:   ptr.Of("key"),
+				AccessKeyID:       "id",
+				SecretAccessKey:   "key",
 				SecretAgentConfig: secretAgentConfig,
 			},
 		},
@@ -74,8 +74,8 @@ var originalConfig = &Config{
 			S3Storage: &S3Storage{
 				Bucket:          "bucket2",
 				S3Region:        "region2",
-				AccessKeyID:     ptr.Of("id2"),
-				SecretAccessKey: ptr.Of("key2"),
+				AccessKeyID:     "id2",
+				SecretAccessKey: "key2",
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host3",

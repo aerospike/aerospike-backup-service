@@ -38,9 +38,9 @@ func TestMakeRestoreConfig(t *testing.T) {
 
 			EncryptionPolicy: &model.EncryptionPolicy{
 				Mode:      "aes-128",
-				KeyFile:   ptr.Of("key/file/path"),
-				KeySecret: ptr.Of("key-secret"),
-				KeyEnv:    ptr.Of("KEY_ENV_VAR"),
+				KeyFile:   "key/file/path",
+				KeySecret: "key-secret",
+				KeyEnv:    "KEY_ENV_VAR",
 			},
 		},
 		SecretAgent: &model.SecretAgent{

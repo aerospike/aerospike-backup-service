@@ -193,7 +193,7 @@ type Credentials struct {
 	// It can be either plain text or path into the secret agent.
 	Password string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"  extensions:"x-nullable" masq:"secret"`
 	// The file path with the password string.
-	PasswordPath string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
+	PasswordPath string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable" masq:"secret"`
 	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
 	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL"`
 }
