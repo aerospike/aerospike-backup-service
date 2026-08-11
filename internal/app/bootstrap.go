@@ -32,8 +32,8 @@ func InitComponents(
 	configFile string,
 	remote bool,
 ) (quartz.Scheduler, *handlers.Service, error) {
-	resolver := secrets.NewResolver(ctx)
-	operations := newStorageOperations(ctx, resolver)
+	resolver := secrets.NewResolver()
+	operations := newStorageOperations(resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations)
@@ -111,11 +111,11 @@ func InitComponents(
 	return scheduler, httpService, nil
 }
 
-func newStorageOperations(ctx context.Context, resolver secrets.Resolver) *storage.Operations {
+func newStorageOperations(resolver secrets.Resolver) *storage.Operations {
 	return storage.NewOperations(
-		storage.NewS3StorageAccessor(ctx, resolver),
-		storage.NewGcpStorageAccessor(ctx, resolver),
-		storage.NewAzureStorageAccessor(ctx, resolver),
+		storage.NewS3StorageAccessor(resolver),
+		storage.NewGcpStorageAccessor(resolver),
+		storage.NewAzureStorageAccessor(resolver),
 		storage.NewLocalStorageAccessor(),
 	)
 }
