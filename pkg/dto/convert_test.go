@@ -29,16 +29,16 @@ var originalConfig = &Config{
 		"cluster1": {
 			SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 			Credentials: &Credentials{
-				User:              ptr.Of("tester"),
-				Password:          ptr.Of("psw"),
+				User:              "tester",
+				Password:          "psw",
 				SecretAgentConfig: secretAgentConfig,
 			},
 		},
 		"cluster2": {
 			SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 			Credentials: &Credentials{
-				User:     ptr.Of("tester"),
-				Password: ptr.Of("psw"),
+				User:     "tester",
+				Password: "psw",
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host2",

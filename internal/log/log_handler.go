@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/m-mizutani/masq"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -38,8 +39,11 @@ func NewHandler(config *model.LoggerConfig) slog.Handler {
 	}
 }
 
-// handlerReplaceAttr customizes the TRACE level string representation in logs.
-var handlerReplaceAttr = func(_ []string, a slog.Attr) slog.Attr {
+var masqReplaceAttr = masq.New(masq.WithTag("secret"))
+
+// handlerReplaceAttr redacts sensitive fields and customizes the TRACE level string representation in logs.
+var handlerReplaceAttr = func(groups []string, a slog.Attr) slog.Attr {
+	a = masqReplaceAttr(groups, a)
 	if a.Key == slog.LevelKey {
 		level := a.Value.Any().(slog.Level)
 		if level == slog.Level(logger.LevelTrace) {

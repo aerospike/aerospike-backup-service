@@ -46,7 +46,7 @@ func validConfig() *Config {
 func NewLocalAerospikeCluster() *AerospikeCluster {
 	return &AerospikeCluster{
 		SeedNodes:   []SeedNode{{HostName: "localhost", Port: 3000}},
-		Credentials: &Credentials{User: ptr.Of("tester"), Password: ptr.Of("psw")},
+		Credentials: &Credentials{User: "tester", Password: "psw"},
 	}
 }
 

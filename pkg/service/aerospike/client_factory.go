@@ -67,7 +67,7 @@ func clientHosts(c *model.AerospikeCluster) []*as.Host {
 func (f *DefaultClientFactory) clientPolicy(ctx context.Context, c *model.AerospikeCluster) (*as.ClientPolicy, error) {
 	policy := as.NewClientPolicy()
 	if c.Credentials != nil {
-		policy.User = ptr.ValueOrZero(c.GetUser())
+		policy.User = c.GetUser()
 		password, err := f.resolveClusterPassword(ctx, c.Credentials)
 		if err != nil {
 			return nil, err

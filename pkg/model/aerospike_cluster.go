@@ -31,19 +31,19 @@ type AerospikeCluster struct {
 }
 
 // GetUser safely returns the username.
-func (c *AerospikeCluster) GetUser() *string {
+func (c *AerospikeCluster) GetUser() string {
 	if c.Credentials != nil {
 		return c.Credentials.User
 	}
-	return nil
+	return ""
 }
 
 // GetPassword returns the configured password.
 // Note: This returns the raw password configuration. If using Secret Agent or file path,
 // this needs to be resolved by the service layer.
-func (c *AerospikeCluster) GetPassword() *string {
+func (c *AerospikeCluster) GetPassword() string {
 	if c.Credentials == nil {
-		return nil
+		return ""
 	}
 	return c.Credentials.Password
 }
@@ -100,12 +100,12 @@ func (c *AerospikeCluster) ToString() string {
 // Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
 	// The username for the cluster authentication.
-	User *string
+	User string
 	// The password for the cluster authentication.
 	// It can be either plain text or path into the secret agent.
-	Password *string
+	Password string
 	// The file path with the password string, will take precedence over the password field.
-	PasswordPath *string
+	PasswordPath string
 	// The authentication mode (INTERNAL, EXTERNAL, PKI). Nil means unset.
 	AuthMode *AuthMode
 	// The name of the configured Secret Agent to use for authentication.
@@ -127,9 +127,9 @@ func (c *Credentials) String() string {
 		return ""
 	}
 	return fmt.Sprintf("%v:%v:%v:%v:%v",
-		ptr.ValueOrZero(c.User),
-		ptr.ValueOrZero(c.Password),
-		ptr.ValueOrZero(c.PasswordPath),
+		c.User,
+		c.Password,
+		c.PasswordPath,
 		c.AuthModeOrDefault(),
 		c.SecretAgent.String())
 }

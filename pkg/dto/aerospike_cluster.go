@@ -188,12 +188,12 @@ func (a *AerospikeCluster) seedNodesToModel() []model.SeedNode {
 type Credentials struct {
 	SecretAgentConfig `yaml:",inline"`
 	// The username for the cluster authentication.
-	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"  extensions:"x-nullable"`
+	User string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"  extensions:"x-nullable"`
 	// The password for the cluster authentication.
 	// It can be either plain text or path into the secret agent.
-	Password *string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"  extensions:"x-nullable"`
+	Password string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"  extensions:"x-nullable" masq:"secret"`
 	// The file path with the password string.
-	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
+	PasswordPath string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
 	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
 	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL"`
 }
@@ -213,13 +213,13 @@ func (c *Credentials) Validate(opts ...ValidationOption) error {
 		return nil
 	}
 
-	hasAuth := c.Password != nil || c.PasswordPath != nil
+	hasAuth := c.Password != "" || c.PasswordPath != ""
 
-	if hasAuth && c.User == nil {
+	if hasAuth && c.User == "" {
 		return errors.New("username is required when using authentication")
 	}
 
-	if c.Password != nil && c.PasswordPath != nil {
+	if c.Password != "" && c.PasswordPath != "" {
 		return errValidationMutuallyExclusive("password", "password-path")
 	}
 
