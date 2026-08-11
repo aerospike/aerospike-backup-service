@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -23,18 +22,17 @@ import (
 )
 
 type AzureStorageAccessor struct {
-	clientMap collections.CacheContext[*model.AzureStorage, *azblob.Client]
+	clientMap collections.Cache[*model.AzureStorage, *azblob.Client]
 	resolver  secrets.Resolver
 }
 
-func NewAzureStorageAccessor(ctx context.Context, resolver secrets.Resolver) *AzureStorageAccessor {
+func NewAzureStorageAccessor(resolver secrets.Resolver) *AzureStorageAccessor {
 	accessor := &AzureStorageAccessor{
 		resolver: resolver,
 	}
-	accessor.clientMap = collections.NewLoadingCacheContext[*model.AzureStorage, *azblob.Client](
-		ctx,
+	accessor.clientMap = collections.NewLoadingCache[*model.AzureStorage, *azblob.Client](
 		accessor.getAzureClient,
-		ptr.Of(time.Hour),
+		clientCacheTTL,
 	)
 	return accessor
 }

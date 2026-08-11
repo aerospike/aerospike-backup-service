@@ -16,7 +16,7 @@ const (
 )
 
 func TestResolve(t *testing.T) {
-	resolver := NewPasswordResolver(NewResolver(t.Context()))
+	resolver := NewPasswordResolver(NewResolver())
 
 	tests := []struct {
 		name             string
@@ -105,9 +105,6 @@ func TestResolve(t *testing.T) {
 		})
 	}
 }
-
-// Note: Logic for checking file caching was removed because Resolver is stateless regarding files.
-// Logic for Secret Agent caching is tested in secret_agent_test.go (if we create it).
 
 func createFile(content string) {
 	text := []byte(content)
