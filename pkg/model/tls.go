@@ -1,20 +1,16 @@
 package model
 
-import (
-	"fmt"
-
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-)
+import "fmt"
 
 // TLS represents the Aerospike cluster TLS configuration options.
 type TLS struct {
 	ClientTLS
 	// Path to a directory of trusted CA certificates.
-	CAPath *string
+	CAPath string
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
-	Protocols *string
+	Protocols string
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
-	CipherSuite *string
+	CipherSuite string
 	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
 	KeyfilePassword string
 }
@@ -25,11 +21,11 @@ func (tls *TLS) String() string {
 		return ""
 	}
 	return fmt.Sprintf(
-		"%s:%v:%v:%v:%v",
+		"%s:%s:%s:%s:%s",
 		tls.ClientTLS.String(),
-		ptr.ValueOrZero(tls.CAPath),
-		ptr.ValueOrZero(tls.Protocols),
-		ptr.ValueOrZero(tls.CipherSuite),
+		tls.CAPath,
+		tls.Protocols,
+		tls.CipherSuite,
 		tls.KeyfilePassword,
 	)
 }

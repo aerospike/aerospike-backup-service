@@ -13,13 +13,13 @@ import (
 // @Description HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
 	// The address to listen on.
-	Address *string `yaml:"address,omitempty" json:"address,omitempty" default:"0.0.0.0" example:"0.0.0.0"`
+	Address string `yaml:"address,omitempty" json:"address,omitempty" default:"0.0.0.0" example:"0.0.0.0"`
 	// The port to listen on.
 	Port *Port `yaml:"port,omitempty" json:"port,omitempty" default:"8080" example:"8080"`
 	// HTTP rate limiter configuration.
 	Rate *RateLimiterConfig `yaml:"rate,omitempty" json:"rate,omitempty"`
 	// ContextPath customizes path for the API endpoints.
-	ContextPath *string `yaml:"context-path,omitempty" json:"context-path,omitempty" default:"/"`
+	ContextPath string `yaml:"context-path,omitempty" json:"context-path,omitempty" default:"/"`
 	// Timeout for http server operations in milliseconds.
 	Timeout *int64 `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"5000"`
 }
@@ -30,8 +30,8 @@ func (s *HTTPServerConfig) Validate() error {
 		return nil
 	}
 
-	if s.ContextPath != nil && !strings.HasPrefix(*s.ContextPath, "/") {
-		return fmt.Errorf("context-path must start with a slash: %s", *s.ContextPath)
+	if s.ContextPath != "" && !strings.HasPrefix(s.ContextPath, "/") {
+		return fmt.Errorf("context-path must start with a slash: %s", s.ContextPath)
 	}
 	if s.Timeout != nil && *s.Timeout < 0 {
 		return errValidationNegative("timeout", *s.Timeout)
@@ -85,9 +85,9 @@ func (s *HTTPServerConfig) Compare(other *HTTPServerConfig) error {
 	}
 
 	var err = errors.Join(
-		comparePointers("Address", s.Address, other.Address),
+		compareValues("Address", s.Address, other.Address),
 		comparePointers("Port", s.Port, other.Port),
-		comparePointers("ContextPath", s.ContextPath, other.ContextPath),
+		compareValues("ContextPath", s.ContextPath, other.ContextPath),
 		comparePointers("Timeout", s.Timeout, other.Timeout),
 	)
 

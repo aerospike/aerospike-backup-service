@@ -13,7 +13,7 @@ import (
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 type AerospikeCluster struct {
 	// The cluster name.
-	ClusterLabel *string
+	ClusterLabel string
 	// The seed nodes details.
 	SeedNodes []SeedNode
 	// The connection timeout.
@@ -58,7 +58,7 @@ func (c *AerospikeCluster) Hash() string {
 
 	// Build a slice of all fields to be hashed.
 	hashData := []any{
-		ptr.ValueOrZero(c.ClusterLabel),
+		c.ClusterLabel,
 		nodeStrings,
 		ptr.ValueOrZero(c.ConnTimeout).String(),
 		ptr.ValueOrZero(c.UseServicesAlternate),
@@ -81,7 +81,7 @@ func (c *AerospikeCluster) ToString() string {
 		return ""
 	}
 
-	if label := ptr.ValueOrZero(c.ClusterLabel); label != "" {
+	if label := c.ClusterLabel; label != "" {
 		return label
 	}
 

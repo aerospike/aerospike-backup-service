@@ -132,7 +132,7 @@ func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
 	if !anySeedNodeHasTLSName(c) {
 		if c.TLS != nil {
 			slog.Warn("A TLS configuration is provided, but no seed nodes have TLS names. Ignoring TLS settings.",
-				slog.String("cluster", ptr.ValueOrZero(c.ClusterLabel)))
+				slog.String("cluster", c.ClusterLabel))
 		}
 
 		return // no TLS configuration needed for this cluster
@@ -149,7 +149,7 @@ func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
 	policy.TlsConfig, err = NewTLSConfig(tlsToApply)
 	if err != nil {
 		slog.Error("Failed to initialize TLS config",
-			slog.String("cluster", ptr.ValueOrZero(c.ClusterLabel)),
+			slog.String("cluster", c.ClusterLabel),
 			attr.Error(err))
 	}
 }

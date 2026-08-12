@@ -52,8 +52,8 @@ func makeXdrRestoreConfig(restoreRequest *model.RestoreRequest,
 
 	if restoreRequest.Policy.Namespace != nil {
 		config.Namespace = &backup.RestoreNamespaceConfig{
-			Source:      restoreRequest.Policy.Namespace.Source,
-			Destination: restoreRequest.Policy.Namespace.Destination,
+			Source:      ptr.StringOrNil(restoreRequest.Policy.Namespace.Source),
+			Destination: ptr.StringOrNil(restoreRequest.Policy.Namespace.Destination),
 		}
 	}
 

@@ -46,7 +46,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 			Address:        "localhost",
 			Port:           ptr.Of(model.Port(9000)),
 			Timeout:        ptr.Of(1000),
-			ClientTLS:      model.ClientTLS{CAFile: ptr.Of("ca-string")},
+			ClientTLS:      model.ClientTLS{CAFile: "ca-string"},
 			IsBase64:       ptr.Of(true),
 		},
 		SourceCluster: &model.AerospikeCluster{},

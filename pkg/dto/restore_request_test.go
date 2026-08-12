@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -135,11 +134,11 @@ func TestDestinationClusterConfig_ToModel(t *testing.T) {
 			name: "convert from cluster config",
 			dstCluster: DestinationClusterConfig{
 				Cluster: &AerospikeCluster{
-					ClusterLabel: ptr.Of("new cluster"),
+					ClusterLabel: "new cluster",
 				},
 			},
 			want: &model.AerospikeCluster{
-				ClusterLabel: ptr.Of("new cluster"),
+				ClusterLabel: "new cluster",
 			},
 		},
 		{
@@ -442,7 +441,7 @@ func TestRestoreTimestampRequest_Validate(t *testing.T) {
 func TestRestoreRequest_ToModel(t *testing.T) {
 	config := model.NewConfig()
 	cluster := &model.AerospikeCluster{
-		ClusterLabel: ptr.Of("new cluster"),
+		ClusterLabel: "new cluster",
 	}
 	storage := &model.LocalStorage{Path: "test-path"}
 	secretAgent := &model.SecretAgent{
@@ -548,7 +547,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 	config := model.NewConfig()
 	cluster := &model.AerospikeCluster{}
 	_ = config.AddCluster("test-cluster", cluster)
-	routineCluster := &model.AerospikeCluster{ClusterLabel: ptr.Of("routine-cluster")}
+	routineCluster := &model.AerospikeCluster{ClusterLabel: "routine-cluster"}
 	routineStorage := &model.LocalStorage{Path: "routine-path"}
 	routine := &model.BackupRoutine{
 		Name:          "daily",

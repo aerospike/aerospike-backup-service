@@ -16,10 +16,10 @@ var secretAgentConfig = SecretAgentConfig{
 var originalConfig = &Config{
 	ServiceConfig: ServiceConfig{
 		HTTPServer: &HTTPServerConfig{
-			Address: ptr.Of("localhost"),
+			Address: "localhost",
 		},
 		Logger: &LoggerConfig{
-			Level: ptr.Of("INFO"),
+			Level: "INFO",
 			FileWriter: &FileLoggerConfig{
 				Filename: "log",
 			},
@@ -48,7 +48,7 @@ var originalConfig = &Config{
 			},
 		},
 		"cluster3": {
-			ClusterLabel: ptr.Of("No credentials"),
+			ClusterLabel: "No credentials",
 			SeedNodes:    []SeedNode{{HostName: "host", Port: 80}},
 		},
 	},

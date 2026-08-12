@@ -9,7 +9,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +26,7 @@ func TestS3Storage_ConnectivitySuccess(t *testing.T) {
 	s3Config := &model.S3Storage{
 		Bucket:             "test-bucket",
 		S3Region:           "us-east-1",
-		S3EndpointOverride: ptr.Of(ts.URL),
+		S3EndpointOverride: ts.URL,
 		Auth: &model.S3Authentication{
 			KeyIDSecret:     "key",
 			AccessKeySecret: "secret",
@@ -53,7 +52,7 @@ func TestS3Storage_ConnectivityReadOnly(t *testing.T) {
 	_, err := accessor.getS3Client(ctx, &model.S3Storage{
 		Bucket:             "test-bucket",
 		S3Region:           "us-east-1",
-		S3EndpointOverride: ptr.Of(ts.URL),
+		S3EndpointOverride: ts.URL,
 		Auth: &model.S3Authentication{
 			KeyIDSecret:     "key",
 			AccessKeySecret: "secret",
@@ -76,7 +75,7 @@ func TestS3Storage_ConnectivityFailure(t *testing.T) {
 	_, err := accessor.getS3Client(ctx, &model.S3Storage{
 		Bucket:             "test-bucket",
 		S3Region:           "us-east-1",
-		S3EndpointOverride: ptr.Of(ts.URL),
+		S3EndpointOverride: ts.URL,
 		Auth: &model.S3Authentication{
 			KeyIDSecret:     "key",
 			AccessKeySecret: "secret",

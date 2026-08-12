@@ -16,7 +16,7 @@ import (
 //nolint:lll
 type AerospikeCluster struct {
 	// The cluster name. Optional: used only in logs and error messages.
-	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster" extensions:"x-nullable"`
+	ClusterLabel string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster" extensions:"x-nullable"`
 	// The seed nodes details.
 	SeedNodes []SeedNode `yaml:"seed-nodes,omitempty" json:"seed-nodes,omitempty" validate:"required"`
 	// The connection timeout in milliseconds.
@@ -195,7 +195,7 @@ type Credentials struct {
 	// The file path with the password string.
 	PasswordPath string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable" masq:"secret"`
 	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
-	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL"`
+	AuthMode string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {

@@ -111,10 +111,10 @@ func TestInvalidTlsFile(t *testing.T) {
 	cluster.SeedNodes[0].TLSName = "tls name"
 	cluster.TLS = &TLS{
 		ClientTLS: ClientTLS{
-			Name:     ptr.Of("tls name"),
-			Keyfile:  ptr.Of("path to key file"),
-			Certfile: ptr.Of("path to cert file"),
-			CAFile:   ptr.Of("path to ca file"),
+			Name:     "tls name",
+			Keyfile:  "path to key file",
+			Certfile: "path to cert file",
+			CAFile:   "path to ca file",
 		},
 	}
 

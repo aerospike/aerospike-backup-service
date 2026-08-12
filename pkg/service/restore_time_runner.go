@@ -173,7 +173,7 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
-			ptr.ValueOrZero(request.DestinationCluster.ClusterLabel), err)
+			request.DestinationCluster.ClusterLabel, err)
 	}
 	defer r.clientManager.Close(client)
 

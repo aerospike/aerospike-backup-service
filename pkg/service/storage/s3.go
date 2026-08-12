@@ -106,8 +106,8 @@ func (a *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage)
 	}
 
 	client := awsS3.NewFromConfig(cfg, func(o *awsS3.Options) {
-		if s.S3EndpointOverride != nil && *s.S3EndpointOverride != "" {
-			o.BaseEndpoint = s.S3EndpointOverride
+		if s.S3EndpointOverride != "" {
+			o.BaseEndpoint = aws.String(s.S3EndpointOverride)
 		}
 
 		o.UsePathStyle = true

@@ -24,9 +24,9 @@ type S3Storage struct {
 	// The S3 profile name (AWS S3 optional).
 	S3Profile string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty" example:"default" extensions:"x-nullable"`
 	// An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).
-	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000" extensions:"x-nullable"`
+	S3EndpointOverride string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000" extensions:"x-nullable"`
 	// The log level of the AWS S3 SDK (AWS S3 optional).
-	S3LogLevel *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enums:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
+	S3LogLevel string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enums:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
 	// The minimum size in bytes of individual S3 UploadParts.
 	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" extensions:"x-nullable" minimum:"5242880"`
 	// The maximum number of simultaneous requests from S3.

@@ -203,8 +203,8 @@ func validateBackupsEncryption(backups []model.BackupDetails, policy *model.Encr
 
 // destinationNamespacesForRestore resolves effective destination namespaces for a restore request.
 func destinationNamespacesForRestore(remapping *model.RestoreNamespace, sourceNamespaces []string) []string {
-	if remapping != nil && remapping.Destination != nil {
-		return []string{*remapping.Destination}
+	if remapping != nil && remapping.Destination != "" {
+		return []string{remapping.Destination}
 	}
 
 	return sourceNamespaces

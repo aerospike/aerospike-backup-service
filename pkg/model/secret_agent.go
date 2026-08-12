@@ -35,10 +35,10 @@ func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
 		Address:            &s.Address,
 		Port:               (*int)(s.Port),
 		TimeoutMillisecond: s.Timeout,
-		CaFile:             s.CAFile,
-		TLSName:            s.Name,
-		CertFile:           s.Certfile,
-		KeyFile:            s.Keyfile,
+		CaFile:             ptr.StringOrNil(s.CAFile),
+		TLSName:            ptr.StringOrNil(s.Name),
+		CertFile:           ptr.StringOrNil(s.Certfile),
+		KeyFile:            ptr.StringOrNil(s.Keyfile),
 		IsBase64:           s.IsBase64,
 	}
 }
