@@ -22,7 +22,7 @@ func TestAzureStorage_ConnectivitySuccess(t *testing.T) {
 	key := base64.StdEncoding.EncodeToString([]byte("dummy-key"))
 
 	ctx := t.Context()
-	accessor := NewAzureStorageAccessor(ctx, secrets.NewResolver(ctx))
+	accessor := NewAzureStorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getAzureClient(ctx, &model.AzureStorage{
 		Endpoint:      ts.URL,
@@ -44,7 +44,7 @@ func TestAzureStorage_ConnectivityReadOnly(t *testing.T) {
 	key := base64.StdEncoding.EncodeToString([]byte("dummy-key"))
 
 	ctx := t.Context()
-	accessor := NewAzureStorageAccessor(ctx, secrets.NewResolver(ctx))
+	accessor := NewAzureStorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getAzureClient(ctx, &model.AzureStorage{
 		Endpoint:      ts.URL,
@@ -68,7 +68,7 @@ func TestAzureStorage_ConnectivityFailure(t *testing.T) {
 	key := base64.StdEncoding.EncodeToString([]byte("dummy-key"))
 
 	ctx := t.Context()
-	accessor := NewAzureStorageAccessor(ctx, secrets.NewResolver(ctx))
+	accessor := NewAzureStorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getAzureClient(ctx, &model.AzureStorage{
 		Endpoint:      ts.URL,

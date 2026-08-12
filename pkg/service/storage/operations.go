@@ -11,12 +11,20 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/aerospike/backup-go/models"
 )
 
-var connectivityTimeout = 15 * time.Second
+var (
+	// connectivityTimeout defines the maximum duration for connectivity validation before timing out.
+	connectivityTimeout = 15 * time.Second
+
+	// clientCacheTTL is how long cloud storage clients are cached after creation.
+	// Entries are not extended on access; a new client is created after expiry.
+	clientCacheTTL = ptr.Of(10 * time.Minute)
+)
 
 // connectivityProbeKey is used for optional write probes at client init.
 const connectivityProbeKey = ".abs-connectivity-check"
