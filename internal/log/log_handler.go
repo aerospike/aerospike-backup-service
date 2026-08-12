@@ -21,7 +21,8 @@ func init() {
 func NewHandler(config *model.LoggerConfig) slog.Handler {
 	const addSource = true
 	writer := newRedactingWriter(logWriter(config))
-	switch strings.ToUpper(config.GetFormatOrDefault()) {
+	logFormat := config.GetFormatOrDefault()
+	switch strings.ToUpper(logFormat) {
 	case "PLAIN":
 		return slog.NewTextHandler(writer, &slog.HandlerOptions{
 			Level:       logLevel(config.GetLevelOrDefault()),
@@ -35,7 +36,7 @@ func NewHandler(config *model.LoggerConfig) slog.Handler {
 			ReplaceAttr: handlerReplaceAttr,
 		})
 	default:
-		panic("unsupported log format: " + *config.Format)
+		panic("unsupported log format: " + logFormat)
 	}
 }
 
