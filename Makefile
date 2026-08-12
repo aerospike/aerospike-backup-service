@@ -146,6 +146,16 @@ test:
 test-integration:
 	$(GOTEST) -tags=integration -count=1 -v -timeout 5m ./test/integration/...
 
+.PHONY: test-cover
+test-cover:
+	$(GOTEST) -race -tags=ci ./... -coverprofile=coverage.out -covermode=atomic
+	grep -v -E -f .covignore coverage.out > coverage.filtered.out
+	$(GO) tool cover -func=coverage.filtered.out | tail -1
+
+.PHONY: test-cover-html
+test-cover-html: test-cover
+	$(GO) tool cover -html=coverage.filtered.out -o coverage.html
+
 # mocks-generate: runs mockgen over pkg/service* interfaces and writes mockgen.go next to each
 #   package. Used by tests; committed mocks must match this output (see mocks-check).
 .PHONY: mocks-generate
