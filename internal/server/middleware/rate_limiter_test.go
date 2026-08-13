@@ -38,7 +38,7 @@ func TestIPRateLimiter_EvictsIdleEntriesOnTick(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	limiter := newIPRateLimiter(ctx, rate.Limit(1), 1, idleTTL, cleanupInterval)
+	limiter := NewIPRateLimiter(ctx, rate.Limit(1), 1, idleTTL, cleanupInterval)
 
 	limiter.getOrCreateEntry(netip.MustParseAddr("10.0.0.1"))
 	limiter.getOrCreateEntry(netip.MustParseAddr("10.0.0.2"))

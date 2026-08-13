@@ -25,6 +25,8 @@ func RateLimiter(ctx context.Context, config *model.RateLimiterConfig) Middlewar
 		ctx,
 		rate.Limit(config.GetTpsOrDefault()),
 		config.GetSizeOrDefault(),
+		defaultLimiterIdleTTL,
+		defaultLimiterCleanupInterval,
 	)
 	whitelist := newIPWhiteList(config.GetWhiteListOrDefault())
 
@@ -126,23 +128,7 @@ type IPRateLimiter struct {
 }
 
 // NewIPRateLimiter returns a new IPRateLimiter.
-func NewIPRateLimiter(ctx context.Context, tps rate.Limit, size int) *IPRateLimiter {
-	return newIPRateLimiter(
-		ctx,
-		tps,
-		size,
-		defaultLimiterIdleTTL,
-		defaultLimiterCleanupInterval,
-	)
-}
-
-func newIPRateLimiter(
-	ctx context.Context,
-	tps rate.Limit,
-	size int,
-	idleTTL time.Duration,
-	cleanupInterval time.Duration,
-) *IPRateLimiter {
+func NewIPRateLimiter(ctx context.Context, tps rate.Limit, size int, idleTTL, cleanup time.Duration) *IPRateLimiter {
 	ipLimiter := &IPRateLimiter{
 		limiters:        make(map[netip.Addr]*ipLimiterEntry),
 		tokensPerSecond: tps,
@@ -150,8 +136,8 @@ func newIPRateLimiter(
 		idleTTL:         idleTTL,
 	}
 
-	if cleanupInterval > 0 {
-		ipLimiter.cleanupTicker = time.NewTicker(cleanupInterval)
+	if cleanup > 0 {
+		ipLimiter.cleanupTicker = time.NewTicker(cleanup)
 		go ipLimiter.cleanupLoop(ctx)
 	}
 
