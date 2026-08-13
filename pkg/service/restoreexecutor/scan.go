@@ -17,7 +17,7 @@ const megabyte = 1_048_576
 
 func runScanRestore(
 	ctx context.Context,
-	client aerospike.Restorer,
+	client aerospike.Client,
 	request *model.RestoreRequest,
 	operations storageReader,
 ) (RestoreHandler, error) {

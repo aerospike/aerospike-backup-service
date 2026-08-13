@@ -14,7 +14,7 @@ import (
 // runScanBackup performs a regular scan-based backup.
 func runScanBackup(
 	ctx context.Context,
-	client aerospike.Backuper,
+	client aerospike.Client,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,
@@ -59,7 +59,7 @@ func makeBackupConfig(
 
 	backupPolicy := routine.BackupPolicy
 	config.NoRecords = ptr.ValueOrZero(backupPolicy.NoRecords)
-	if isFullBackup(timeBounds) {
+	if timeBounds.IsFullBackup() {
 		config.NoIndexes = ptr.ValueOrZero(backupPolicy.NoIndexes)
 		config.NoUDFs = ptr.ValueOrZero(backupPolicy.NoUdfs)
 	} else { // incremental backup don't include indexes or UDFs

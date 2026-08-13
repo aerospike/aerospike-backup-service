@@ -229,7 +229,7 @@ func (r *timeRestoreRunner) restoreAllNamespaces(
 
 func (r *timeRestoreRunner) restoreNamespace(
 	ctx context.Context,
-	client aerospike.Restorer,
+	client aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
 	namespace string,
@@ -294,7 +294,7 @@ func prepareNamespaceRestore(
 
 func (r *timeRestoreRunner) executeNamespaceRestore(
 	ctx context.Context,
-	client aerospike.Restorer,
+	client aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
 	backups []model.BackupDetails,
@@ -336,7 +336,7 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 
 func (r *timeRestoreRunner) restoreFromPath(
 	ctx context.Context,
-	client aerospike.Restorer,
+	client aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	backupPath string,
 	storage model.Storage,

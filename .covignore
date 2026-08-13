@@ -1,7 +1,7 @@
-/internal/
 /cmd/
 /docs/
 /modules/
+/build/
 /pkg/model/
 /pkg/stdio/
 /pkg/service/aerospike/

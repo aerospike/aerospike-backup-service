@@ -55,7 +55,7 @@ func InitComponents(
 	retentionManager := service.NewBackupRetentionManager(backendService, &routineStorage)
 	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, operations)
 	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
-	backupExecutor := backupexecutor.NewDefaultBackupExecutor(clientManager, operations)
+	backupExecutor := backupexecutor.NewBackupExecutor(clientManager, operations)
 	startController := service.NewStartController(registry, service.NewStartDecider())
 	namespaceRunner := service.NewNamespaceBackupRunner(backupExecutor, backendService, pathService)
 	namespaceResolver := aerospike.NewNamespaceResolver(clientManager)
@@ -83,7 +83,7 @@ func InitComponents(
 	restoreValidator := service.NewRestoreValidator(startController, config)
 
 	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestore(operations),
+		restoreexecutor.NewRestoreExecutor(operations),
 		clientManager,
 		restoreJobs,
 		backendService,
