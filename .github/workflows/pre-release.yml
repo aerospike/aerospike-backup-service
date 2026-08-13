@@ -365,6 +365,12 @@ jobs:
     with:
       jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
       jf-registry: ${{ vars.ARTIFACTORY_REGISTRY_URL }}/${{ vars.ARTIFACTORY_CONTAINER_DEV }}
+      # repo-scope defaults to "-docker-dev-local", but our actual repo naming convention
+      # (ARTIFACTORY_CONTAINER_DEV) uses "-container-dev-local". Without this override, the
+      # image gets pushed to .../container-dev-local correctly, but the build-info creation
+      # step searches for it under .../docker-dev-local and fails with "Could not find docker
+      # image in Artifactory" since that's a different (likely nonexistent) repo.
+      repo-scope: -container-dev-local
       jf-build-name: aerospike-backup-service-container
       image-name: aerospike-backup-service
       app-name: Aerospike Backup Service
