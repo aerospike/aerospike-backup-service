@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -41,7 +42,11 @@ func TestIPRateLimiter_EvictsIdleEntriesOnTick(t *testing.T) {
 	current := time.Unix(0, 0)
 	manualTick := &manualTicker{ch: make(chan time.Time, 1)}
 
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
 	limiter := newIPRateLimiter(
+		ctx,
 		rate.Limit(1),
 		1,
 		time.Minute,
@@ -49,13 +54,12 @@ func TestIPRateLimiter_EvictsIdleEntriesOnTick(t *testing.T) {
 		func() time.Time { return current },
 		func(time.Duration) ticker { return manualTick },
 	)
-	defer limiter.stop()
 
-	limiter.GetLimiter("10.0.0.1")
-	limiter.GetLimiter("10.0.0.2")
+	limiter.getOrCreateEntry("10.0.0.1")
+	limiter.getOrCreateEntry("10.0.0.2")
 
 	current = current.Add(30 * time.Second)
-	limiter.GetLimiter("10.0.0.1")
+	limiter.getOrCreateEntry("10.0.0.1")
 
 	current = current.Add(45 * time.Second)
 	manualTick.ch <- current
@@ -87,7 +91,7 @@ func TestRateLimiter_RunsBeforeBodyReaderMiddleware(t *testing.T) {
 	size := 1
 	handler := Wrap(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}), bodyReader, RateLimiter(&model.RateLimiterConfig{
+	}), bodyReader, RateLimiter(t.Context(), &model.RateLimiterConfig{
 		Tps:       &tps,
 		Size:      &size,
 		WhiteList: []string{},

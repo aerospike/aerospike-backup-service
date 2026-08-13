@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"log/slog"
 	"net"
 	"net/http"
@@ -19,8 +20,9 @@ const (
 
 var allowAnyPrefix = netip.MustParsePrefix("0.0.0.0/0")
 
-func RateLimiter(config *model.RateLimiterConfig) Middleware {
+func RateLimiter(ctx context.Context, config *model.RateLimiterConfig) Middleware {
 	limiters := NewIPRateLimiter(
+		ctx,
 		rate.Limit(config.GetTpsOrDefault()),
 		config.GetSizeOrDefault(),
 	)
@@ -39,8 +41,7 @@ func RateLimiter(config *model.RateLimiterConfig) Middleware {
 				return
 			}
 
-			limiter := limiters.GetLimiter(ip)
-			if !limiter.Allow() {
+			if !limiters.Allow(ip) {
 				http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
 				return
 			}
@@ -142,12 +143,12 @@ type IPRateLimiter struct {
 	now             func() time.Time
 	idleTTL         time.Duration
 	cleanupTicker   ticker
-	stopCh          chan struct{}
 }
 
 // NewIPRateLimiter returns a new IPRateLimiter.
-func NewIPRateLimiter(tps rate.Limit, size int) *IPRateLimiter {
+func NewIPRateLimiter(ctx context.Context, tps rate.Limit, size int) *IPRateLimiter {
 	return newIPRateLimiter(
+		ctx,
 		tps,
 		size,
 		defaultLimiterIdleTTL,
@@ -160,6 +161,7 @@ func NewIPRateLimiter(tps rate.Limit, size int) *IPRateLimiter {
 }
 
 func newIPRateLimiter(
+	ctx context.Context,
 	tps rate.Limit,
 	size int,
 	idleTTL time.Duration,
@@ -173,56 +175,49 @@ func newIPRateLimiter(
 		tokenBucketSize: size,
 		now:             now,
 		idleTTL:         idleTTL,
-		stopCh:          make(chan struct{}),
 	}
 
 	if cleanupInterval > 0 {
 		ipLimiter.cleanupTicker = newTicker(cleanupInterval)
-		go ipLimiter.cleanupLoop()
+		go ipLimiter.cleanupLoop(ctx)
 	}
 
 	return ipLimiter
 }
 
-// AddLimiter creates a new rate limiter and adds it to the limiters map,
-// using the IP address as the key.
-func (ipLimiter *IPRateLimiter) AddLimiter(ipAddr string) *rate.Limiter {
+// Allow reports whether a request from ipAddr may proceed at the current time.
+func (ipLimiter *IPRateLimiter) Allow(ipAddr string) bool {
+	entry := ipLimiter.getOrCreateEntry(ipAddr)
+	return entry.limiter.Allow()
+}
+
+func (ipLimiter *IPRateLimiter) getOrCreateEntry(ipAddr string) *ipLimiterEntry {
 	ipLimiter.Lock()
 	defer ipLimiter.Unlock()
 
-	limiter := rate.NewLimiter(ipLimiter.tokensPerSecond, ipLimiter.tokenBucketSize)
-
-	ipLimiter.limiters[IPAddress(ipAddr)] = &ipLimiterEntry{
-		limiter:  limiter,
-		lastSeen: ipLimiter.now(),
-	}
-
-	return limiter
-}
-
-// GetLimiter returns the rate limiter for the provided IP address if it exists.
-// Otherwise calls AddLimiter to add a new limiter to the map.
-func (ipLimiter *IPRateLimiter) GetLimiter(ipAddr string) *rate.Limiter {
-	ipLimiter.Lock()
-	entry, exists := ipLimiter.limiters[IPAddress(ipAddr)]
-
+	key := IPAddress(ipAddr)
+	entry, exists := ipLimiter.limiters[key]
 	if !exists {
-		ipLimiter.Unlock()
-		return ipLimiter.AddLimiter(ipAddr)
+		limiter := rate.NewLimiter(ipLimiter.tokensPerSecond, ipLimiter.tokenBucketSize)
+		entry = &ipLimiterEntry{
+			limiter:  limiter,
+			lastSeen: ipLimiter.now(),
+		}
+		ipLimiter.limiters[key] = entry
+	} else {
+		entry.lastSeen = ipLimiter.now()
 	}
-	entry.lastSeen = ipLimiter.now()
 
-	ipLimiter.Unlock()
-
-	return entry.limiter
+	return entry
 }
 
-func (ipLimiter *IPRateLimiter) cleanupLoop() {
+func (ipLimiter *IPRateLimiter) cleanupLoop(ctx context.Context) {
 	for {
 		select {
 		case now := <-ipLimiter.cleanupTicker.C():
 			ipLimiter.evictIdle(now)
-		case <-ipLimiter.stopCh:
+		case <-ctx.Done():
+			ipLimiter.cleanupTicker.Stop()
 			return
 		}
 	}
@@ -236,17 +231,5 @@ func (ipLimiter *IPRateLimiter) evictIdle(now time.Time) {
 		if now.Sub(entry.lastSeen) >= ipLimiter.idleTTL {
 			delete(ipLimiter.limiters, ip)
 		}
-	}
-}
-
-func (ipLimiter *IPRateLimiter) stop() {
-	select {
-	case <-ipLimiter.stopCh:
-		return
-	default:
-		close(ipLimiter.stopCh)
-	}
-	if ipLimiter.cleanupTicker != nil {
-		ipLimiter.cleanupTicker.Stop()
 	}
 }
