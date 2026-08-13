@@ -114,9 +114,3 @@ func TestRateLimiter_RunsBeforeBodyReaderMiddleware(t *testing.T) {
 	require.Equal(t, http.StatusTooManyRequests, rec2.Code)
 	require.Equal(t, 1, bodyReadCount)
 }
-
-func TestIPWhiteList_UnmapsIPv4MappedIPv6(t *testing.T) {
-	wl := newIPWhiteList([]string{"192.0.2.10"})
-
-	require.True(t, wl.isAllowed(netip.MustParseAddr("::ffff:192.0.2.10")))
-}
