@@ -47,7 +47,7 @@ services:
       retries: 3
 
   aerospike-backup-service:
-    image: aerospike/aerospike-backup-service:3.6.1
+    image: aerospike/aerospike-backup-service:0.0.0-test-dgerchikov
     container_name: "aerospike-backup-service"
     ports:
       - "8080:8080"
