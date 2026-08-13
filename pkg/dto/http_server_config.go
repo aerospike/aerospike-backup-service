@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -105,8 +106,9 @@ type RateLimiterConfig struct {
 	Tps *int `yaml:"tps,omitempty" json:"tps,omitempty" default:"1024" example:"1024"`
 	// Rate limiter token bucket size (bursts threshold).
 	Size *int `yaml:"size,omitempty" json:"size,omitempty" default:"1024" example:"1024"`
-	// The list of ips to whitelist in rate limiting (optional).
-	// Default: allow all.
+	// The list of ips to exempt from rate limiting (optional).
+	// Default: empty list, so rate limiting applies to all clients.
+	// Use "0.0.0.0/0" to exempt all clients and effectively disable rate limiting.
 	WhiteList []string `yaml:"white-list,omitempty" json:"white-list,omitempty" extensions:"x-nullable"`
 }
 
@@ -117,6 +119,15 @@ func (r *RateLimiterConfig) Validate() error {
 	}
 	if duplicates := collections.CheckDuplicates(r.WhiteList); len(duplicates) > 0 {
 		return errValidationDuplicate("white-list", duplicates)
+	}
+	for _, entry := range r.WhiteList {
+		if _, err := netip.ParsePrefix(entry); err == nil {
+			continue
+		}
+		if _, err := netip.ParseAddr(entry); err == nil {
+			continue
+		}
+		return fmt.Errorf("white-list contains invalid ip or cidr: %s", entry)
 	}
 
 	return nil
