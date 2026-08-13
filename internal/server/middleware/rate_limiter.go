@@ -30,36 +30,37 @@ func RateLimiter(ctx context.Context, config *model.RateLimiterConfig) Middlewar
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			ipStr, _, err := net.SplitHostPort(r.RemoteAddr)
 			if err != nil {
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
 			}
+			ipAddr, err := netip.ParseAddr(ipStr)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+			ipAddr = ipAddr.Unmap()
 
-			if whitelist.isAllowed(ip) {
+			if whitelist.isAllowed(ipAddr) || limiters.Allow(ipAddr) {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			if !limiters.Allow(ip) {
-				http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
-				return
-			}
-
-			next.ServeHTTP(w, r)
+			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
 		})
 	}
 }
 
 type IPWhiteList struct {
-	addresses map[string]*netip.Addr
-	networks  []*netip.Prefix
+	addresses map[netip.Addr]struct{}
+	networks  []netip.Prefix
 	allowAny  bool
 }
 
 func newIPWhiteList(ipList []string) *IPWhiteList {
-	addresses := make(map[string]*netip.Addr)
-	networks := make([]*netip.Prefix, 0)
+	addresses := make(map[netip.Addr]struct{})
+	networks := make([]netip.Prefix, 0)
 	var allowAny bool
 
 	for _, ip := range ipList {
@@ -69,7 +70,7 @@ func newIPWhiteList(ipList []string) *IPWhiteList {
 				allowAny = true
 				continue
 			}
-			networks = append(networks, &network)
+			networks = append(networks, network)
 			continue
 		}
 
@@ -80,7 +81,7 @@ func newIPWhiteList(ipList []string) *IPWhiteList {
 			slog.Warn("Ignoring invalid whitelist entry", slog.String("entry", ip))
 			continue
 		}
-		addresses[ip] = &ipAddr
+		addresses[ipAddr.Unmap()] = struct{}{}
 	}
 
 	return &IPWhiteList{
@@ -90,31 +91,24 @@ func newIPWhiteList(ipList []string) *IPWhiteList {
 	}
 }
 
-func (wl *IPWhiteList) isAllowed(ip string) bool {
+func (wl *IPWhiteList) isAllowed(ip netip.Addr) bool {
 	if wl.allowAny {
 		return true
 	}
-	ipAddr, err := netip.ParseAddr(ip)
-	if err != nil {
-		slog.Warn("Invalid client IP")
-		return false
-	}
+
 	_, ok := wl.addresses[ip]
 	if ok {
 		return true
 	}
 
 	for _, network := range wl.networks {
-		if network.Contains(ipAddr) {
+		if network.Contains(ip) {
 			return true
 		}
 	}
 
 	return false
 }
-
-// IPAddress represents an IP address string.
-type IPAddress string
 
 type ipLimiterEntry struct {
 	limiter  *rate.Limiter
@@ -137,7 +131,7 @@ func (t *realTicker) C() <-chan time.Time {
 // IPRateLimiter represents a rate limiter based on an IP address.
 type IPRateLimiter struct {
 	sync.Mutex
-	limiters        map[IPAddress]*ipLimiterEntry
+	limiters        map[netip.Addr]*ipLimiterEntry
 	tokensPerSecond rate.Limit
 	tokenBucketSize int
 	now             func() time.Time
@@ -170,7 +164,7 @@ func newIPRateLimiter(
 	newTicker func(time.Duration) ticker,
 ) *IPRateLimiter {
 	ipLimiter := &IPRateLimiter{
-		limiters:        make(map[IPAddress]*ipLimiterEntry),
+		limiters:        make(map[netip.Addr]*ipLimiterEntry),
 		tokensPerSecond: tps,
 		tokenBucketSize: size,
 		now:             now,
@@ -186,24 +180,22 @@ func newIPRateLimiter(
 }
 
 // Allow reports whether a request from ipAddr may proceed at the current time.
-func (ipLimiter *IPRateLimiter) Allow(ipAddr string) bool {
-	entry := ipLimiter.getOrCreateEntry(ipAddr)
-	return entry.limiter.Allow()
+func (ipLimiter *IPRateLimiter) Allow(ipAddr netip.Addr) bool {
+	return ipLimiter.getOrCreateEntry(ipAddr).limiter.Allow()
 }
 
-func (ipLimiter *IPRateLimiter) getOrCreateEntry(ipAddr string) *ipLimiterEntry {
+func (ipLimiter *IPRateLimiter) getOrCreateEntry(ipAddr netip.Addr) *ipLimiterEntry {
 	ipLimiter.Lock()
 	defer ipLimiter.Unlock()
 
-	key := IPAddress(ipAddr)
-	entry, exists := ipLimiter.limiters[key]
+	entry, exists := ipLimiter.limiters[ipAddr]
 	if !exists {
 		limiter := rate.NewLimiter(ipLimiter.tokensPerSecond, ipLimiter.tokenBucketSize)
 		entry = &ipLimiterEntry{
 			limiter:  limiter,
 			lastSeen: ipLimiter.now(),
 		}
-		ipLimiter.limiters[key] = entry
+		ipLimiter.limiters[ipAddr] = entry
 	} else {
 		entry.lastSeen = ipLimiter.now()
 	}

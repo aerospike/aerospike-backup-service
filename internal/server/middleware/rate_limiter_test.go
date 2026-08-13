@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"testing"
 	"time"
 
@@ -28,13 +29,13 @@ func (t *manualTicker) Stop() {}
 func TestIPWhiteList_AllowAnyRequiresExplicitCIDR(t *testing.T) {
 	t.Run("exact allow any cidr", func(t *testing.T) {
 		wl := newIPWhiteList([]string{"0.0.0.0/0"})
-		require.True(t, wl.isAllowed("203.0.113.77"))
+		require.True(t, wl.isAllowed(netip.MustParseAddr("203.0.113.77")))
 	})
 
 	t.Run("single 0.0.0.0 is not global bypass", func(t *testing.T) {
 		wl := newIPWhiteList([]string{"0.0.0.0"})
-		require.True(t, wl.isAllowed("0.0.0.0"))
-		require.False(t, wl.isAllowed("203.0.113.77"))
+		require.True(t, wl.isAllowed(netip.MustParseAddr("0.0.0.0")))
+		require.False(t, wl.isAllowed(netip.MustParseAddr("203.0.113.77")))
 	})
 }
 
@@ -55,11 +56,11 @@ func TestIPRateLimiter_EvictsIdleEntriesOnTick(t *testing.T) {
 		func(time.Duration) ticker { return manualTick },
 	)
 
-	limiter.getOrCreateEntry("10.0.0.1")
-	limiter.getOrCreateEntry("10.0.0.2")
+	limiter.getOrCreateEntry(netip.MustParseAddr("10.0.0.1"))
+	limiter.getOrCreateEntry(netip.MustParseAddr("10.0.0.2"))
 
 	current = current.Add(30 * time.Second)
-	limiter.getOrCreateEntry("10.0.0.1")
+	limiter.getOrCreateEntry(netip.MustParseAddr("10.0.0.1"))
 
 	current = current.Add(45 * time.Second)
 	manualTick.ch <- current
@@ -68,8 +69,8 @@ func TestIPRateLimiter_EvictsIdleEntriesOnTick(t *testing.T) {
 		limiter.Lock()
 		defer limiter.Unlock()
 
-		_, firstExists := limiter.limiters[IPAddress("10.0.0.1")]
-		_, secondExists := limiter.limiters[IPAddress("10.0.0.2")]
+		_, firstExists := limiter.limiters[netip.MustParseAddr("10.0.0.1")]
+		_, secondExists := limiter.limiters[netip.MustParseAddr("10.0.0.2")]
 		return firstExists && !secondExists
 	}, time.Second, 10*time.Millisecond)
 }
@@ -112,4 +113,10 @@ func TestRateLimiter_RunsBeforeBodyReaderMiddleware(t *testing.T) {
 	handler.ServeHTTP(rec2, req2)
 	require.Equal(t, http.StatusTooManyRequests, rec2.Code)
 	require.Equal(t, 1, bodyReadCount)
+}
+
+func TestIPWhiteList_UnmapsIPv4MappedIPv6(t *testing.T) {
+	wl := newIPWhiteList([]string{"192.0.2.10"})
+
+	require.True(t, wl.isAllowed(netip.MustParseAddr("::ffff:192.0.2.10")))
 }
