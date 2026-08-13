@@ -148,6 +148,9 @@ jobs:
       jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
       jf-build-name: aerospike-backup-service-packages
       jf-build-id: ${{ needs.prepare.outputs.packages_build_id }}
+      # reusable_execute-build.yaml checks the source repo out under gh-source-path
+      # (default: local), not at the workspace root, so build-script must cd there.
+      working-directory: local
       build-script: |
         # Pin nfpm to a known version and verify it against nfpm's published checksums
         # instead of trusting `go install ...@latest` (an unreviewed, unpinned moving target).
@@ -217,6 +220,8 @@ jobs:
       jf-build-name: aerospike-backup-service-helm
       jf-build-id: ${{ needs.prepare.outputs.helm_build_id }}
       setup-helm: true
+      # See note on build-packages: source is checked out under local/, not workspace root.
+      working-directory: local
       build-env: "HELM_VERSION=${{ needs.prepare.outputs.helm_version }};APP_VERSION=${{ needs.prepare.outputs.package_version }}"
       build-script: |
         mkdir -p dist
