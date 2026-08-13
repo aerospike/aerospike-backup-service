@@ -19,6 +19,20 @@ type storageWriter interface {
 	CreateDirWriter(ctx context.Context, storage model.Storage, path string, opts ...options.Opt) (backup.Writer, error)
 }
 
+// BackupHandler defines the contract for backup operation results.
+type BackupHandler interface {
+	// GetStats returns backup job statistics.
+	//
+	// Nil means the job has not started yet. Wrappers (e.g. retryableBackupHandler)
+	// return nil until their inner pipeline is running. backup-go handlers never
+	// return nil once constructed.
+	GetStats() *models.BackupStats
+	// Wait waits for the backup job to complete and returns an error if the job failed.
+	Wait(context.Context) error
+	// GetMetrics returns the performance metrics of the backup job.
+	GetMetrics() *models.Metrics
+}
+
 // Backup defines the interface for running backups.
 type Backup interface {
 	// Run runs the backup and returns a handler for monitoring progress.
@@ -33,28 +47,25 @@ type Backup interface {
 	) (BackupHandler, error)
 }
 
-// DefaultBackupExecutor implements [Backup] using backup-go (scan, XDR, or combined) against Aerospike
+// BackupExecutor implements [Backup] using backup-go scan backup against Aerospike
 // and writes backup data via the storage operations facade.
-type DefaultBackupExecutor struct {
+type BackupExecutor struct {
 	clientManager aerospike.ClientManager
 	operations    storageWriter
 }
 
-// NewDefaultBackupExecutor creates an executor that acquires clients through clientManager and writes via operations.
-func NewDefaultBackupExecutor(clientManager aerospike.ClientManager, operations storageWriter) *DefaultBackupExecutor {
-	return &DefaultBackupExecutor{
+// NewBackupExecutor creates an executor that acquires clients through clientManager and writes via operations.
+func NewBackupExecutor(clientManager aerospike.ClientManager, operations storageWriter) *BackupExecutor {
+	return &BackupExecutor{
 		clientManager: clientManager,
 		operations:    operations,
 	}
 }
 
-// Run implements the backup logic.
-// - For regular backups without XDR config, it uses scan-based backup (both full and incremental)
-// - For full backups with XDR config, it combines XDR for records and scan for UDFs/indexes
-// - For incremental backups with XDR config, it uses XDR-only backup.
+// Run implements the backup logic using scan-based backup.
 // scanLimiter is an optional per-routine scan limiter that limits parallel scans
 // within a single routine run, providing fair resource allocation across routines.
-func (r *DefaultBackupExecutor) Run(
+func (r *BackupExecutor) Run(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
@@ -68,7 +79,6 @@ func (r *DefaultBackupExecutor) Run(
 		return nil, fmt.Errorf("failed to get backup client: %w", err)
 	}
 
-	xdrEnabled := routine.BackupPolicy.XDRConfig != nil
 	withStorageClass := options.WithStorageClass(routine.Storage.GetStorageClass().DataClass)
 	writer, err := r.operations.CreateDirWriter(ctx, routine.Storage, path, withStorageClass)
 	if err != nil {
@@ -76,18 +86,7 @@ func (r *DefaultBackupExecutor) Run(
 		return nil, fmt.Errorf("failed to create backup writer: %w", err)
 	}
 
-	var handler BackupHandler
-	switch {
-	case !xdrEnabled:
-		// Regular scan backup
-		handler, err = runScanBackup(ctx, client, routine, timeBounds, namespace, writer)
-	case isFullBackup(timeBounds):
-		// Full backup with XDR - combine XDR for records and scan for UDFs/indexes
-		handler, err = runCombinedBackup(ctx, client, routine, timeBounds, namespace, writer)
-	default:
-		// Incremental backup with XDR
-		handler, err = runXDRBackup(ctx, client, routine, timeBounds, namespace, writer)
-	}
+	handler, err := runScanBackup(ctx, client, routine, timeBounds, namespace, writer)
 	if err != nil {
 		r.clientManager.Close(client)
 		return nil, err
@@ -123,37 +122,4 @@ func (h *closeOnWaitBackupHandler) GetMetrics() *models.Metrics {
 // GetStats returns stats from the inner backup handler.
 func (h *closeOnWaitBackupHandler) GetStats() *models.BackupStats {
 	return h.inner.GetStats()
-}
-
-func isFullBackup(timeBounds model.TimeBounds) bool {
-	return timeBounds.FromTime == nil
-}
-
-// runCombinedBackup performs both XDR backup for records and scan backup for UDFs/indexes.
-func runCombinedBackup(
-	ctx context.Context,
-	client aerospike.Backuper,
-	routine *model.BackupRoutine,
-	timeBounds model.TimeBounds,
-	namespace string,
-	writer backup.Writer,
-) (BackupHandler, error) {
-	xdrHandler, err := runXDRBackup(ctx, client, routine, timeBounds, namespace, writer)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start XDR backup: %w", err)
-	}
-
-	// For scan backup, create a copy of routine with NoRecords set to true.
-	scanRoutine := *routine
-	scanRoutine.BackupPolicy = routine.BackupPolicy.CopyWithNoRecords()
-
-	scanHandler, err := runScanBackup(ctx, client, &scanRoutine, timeBounds, namespace, writer)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start scan backup: %w", err)
-	}
-
-	return &CombinedBackupHandler{
-		xdrHandler:  xdrHandler,
-		scanHandler: scanHandler,
-	}, nil
 }
