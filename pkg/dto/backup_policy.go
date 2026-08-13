@@ -58,13 +58,9 @@ type BackupPolicy struct {
 	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
-	// This parameter does not affect XDR backups (which always includes all keys).
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty" default:"false"`
 	// If set to true, base-64 encoding is not applied to BLOBs (Bytes, HLL, RawMap, RawList), resulting in smaller backup files.
 	Compact *bool `yaml:"compact,omitempty" json:"compact,omitempty" default:"false"`
-	// XDR configuration for MRT backups.
-	// XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
-
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
 	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty" extensions:"x-nullable"`
@@ -136,9 +132,6 @@ func (p *BackupPolicy) Validate() error {
 	if err := p.CompressionPolicy.Validate(); err != nil {
 		return err
 	}
-	// if err := p.XDRConfig.Validate(); err != nil {
-	//	return fmt.Errorf("invalid xdr config: %w", err)
-	// }
 
 	if p.MaxConcurrentNodes != nil && *p.MaxConcurrentNodes < 0 {
 		return errValidationNegative("max-concurrent-nodes", *p.MaxConcurrentNodes)
@@ -182,24 +175,23 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 	}
 
 	return &model.BackupPolicy{
-		Parallel:          p.Parallel,
-		ParallelWrite:     p.ParallelWrite,
-		SocketTimeout:     millisToDuration(p.SocketTimeout),
-		TotalTimeout:      millisToDuration(p.TotalTimeout),
-		RetryPolicy:       p.RetryPolicy.ToModel(),
-		RetentionPolicy:   p.RetentionPolicy.toModel(),
-		NoRecords:         p.NoRecords,
-		NoIndexes:         p.NoIndexes,
-		NoUdfs:            p.NoUdfs,
-		WithClusterConfig: p.WithClusterConfig,
-		Bandwidth:         p.Bandwidth,
-		RecordsPerSecond:  p.RecordsPerSecond,
-		FileLimit:         p.FileLimit,
-		EncryptionPolicy:  p.EncryptionPolicy.ToModel(),
-		CompressionPolicy: p.CompressionPolicy.ToModel(),
-		Sealed:            p.Sealed,
-		Compact:           p.Compact,
-		// XDRConfig:             p.XDRConfig.ToModel(),
+		Parallel:              p.Parallel,
+		ParallelWrite:         p.ParallelWrite,
+		SocketTimeout:         millisToDuration(p.SocketTimeout),
+		TotalTimeout:          millisToDuration(p.TotalTimeout),
+		RetryPolicy:           p.RetryPolicy.ToModel(),
+		RetentionPolicy:       p.RetentionPolicy.toModel(),
+		NoRecords:             p.NoRecords,
+		NoIndexes:             p.NoIndexes,
+		NoUdfs:                p.NoUdfs,
+		WithClusterConfig:     p.WithClusterConfig,
+		Bandwidth:             p.Bandwidth,
+		RecordsPerSecond:      p.RecordsPerSecond,
+		FileLimit:             p.FileLimit,
+		EncryptionPolicy:      p.EncryptionPolicy.ToModel(),
+		CompressionPolicy:     p.CompressionPolicy.ToModel(),
+		Sealed:                p.Sealed,
+		Compact:               p.Compact,
 		ConcurrentIncremental: p.ConcurrentIncremental,
 		UseCompression:        p.UseCompression,
 		MaxConcurrentNodes:    p.MaxConcurrentNodes,
@@ -250,7 +242,6 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.CompressionPolicy = newCompressionPolicyFromModel(m.CompressionPolicy)
 	p.Sealed = m.Sealed
 	p.Compact = m.Compact
-	// p.XDRConfig = newXDRConfigFromModel(m.XDRConfig)
 	p.ConcurrentIncremental = m.ConcurrentIncremental
 	p.UseCompression = m.UseCompression
 	p.MaxConcurrentNodes = m.MaxConcurrentNodes

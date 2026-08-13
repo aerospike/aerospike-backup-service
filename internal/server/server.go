@@ -24,7 +24,7 @@ type HTTPServer struct {
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(service *handlers.Service) *HTTPServer {
+func NewHTTPServer(ctx context.Context, service *handlers.Service) *HTTPServer {
 	serverConfig := service.HTTPServerConfig()
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
@@ -36,8 +36,8 @@ func NewHTTPServer(service *handlers.Service) *HTTPServer {
 	)
 
 	handler := middleware.Wrap(mux,
-		middleware.RateLimiter(serverConfig.GetRateOrDefault()),
 		middleware.RequestLogger(slog.Default(), []string{"health", "ready", "metrics"}),
+		middleware.RateLimiter(ctx, serverConfig.GetRateOrDefault()),
 	)
 
 	return &HTTPServer{

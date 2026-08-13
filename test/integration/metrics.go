@@ -124,3 +124,18 @@ func (e *env) backupSuccessEventCount(ctx context.Context, backupType model.Back
 
 	return value, ok, nil
 }
+
+func (e *env) backupFailureEventCount(ctx context.Context, backupType model.BackupType) (float64, bool, error) {
+	families, err := e.fetchMetricFamilies(ctx)
+	if err != nil {
+		return 0, false, err
+	}
+
+	value, ok := counterValue(families, backupEventsTotalMetric, prommodel.LabelSet{
+		"routine": prommodel.LabelValue(routineName),
+		"type":    prommodel.LabelValue(backupType),
+		"outcome": "failure",
+	})
+
+	return value, ok, nil
+}

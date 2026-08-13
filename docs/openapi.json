@@ -2288,7 +2288,7 @@
                         ]
                     },
                     "sealed": {
-                        "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.\nThis parameter does not affect XDR backups (which always includes all keys).",
+                        "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.",
                         "type": "boolean",
                         "default": false
                     },
@@ -2833,7 +2833,7 @@
                         "example": 1024
                     },
                     "white-list": {
-                        "description": "The list of ips to whitelist in rate limiting (optional).\nDefault: allow all.",
+                        "description": "The list of ips to exempt from rate limiting (optional).\nDefault: empty list, so rate limiting applies to all clients.\nUse \"0.0.0.0/0\" to exempt all clients and effectively disable rate limiting.",
                         "type": "array",
                         "items": {
                             "type": "string"
