@@ -104,6 +104,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		httpError(w, err)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)

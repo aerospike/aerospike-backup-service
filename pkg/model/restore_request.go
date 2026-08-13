@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"time"
 )
 
@@ -38,24 +37,6 @@ type RestoreTimestampRequest struct {
 	Storage Storage
 	// Disable reverse order of incremental backups optimization.
 	DisableReordering bool
-}
-
-// String satisfies the fmt.Stringer interface.
-func (r RestoreRequest) String() string {
-	request, err := json.Marshal(r)
-	if err != nil {
-		return err.Error()
-	}
-	return string(request)
-}
-
-// String satisfies the fmt.Stringer interface.
-func (r RestoreTimestampRequest) String() string {
-	request, err := json.Marshal(r)
-	if err != nil {
-		return err.Error()
-	}
-	return string(request)
 }
 
 // NewRestoreRequest creates a new RestoreRequest.
