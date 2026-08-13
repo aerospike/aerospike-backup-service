@@ -86,7 +86,7 @@ func systemCtx() (context.Context, context.CancelFunc) {
 }
 
 func runHTTPServer(ctx context.Context, service *handlers.Service) error {
-	httpServer := server.NewHTTPServer(service)
+	httpServer := server.NewHTTPServer(ctx, service)
 
 	// Channel to capture server startup errors
 	errCh := make(chan error, 1)
