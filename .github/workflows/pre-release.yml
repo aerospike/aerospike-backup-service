@@ -345,7 +345,9 @@ jobs:
       version: ${{ needs.prepare.outputs.package_version }}
       # single unbroken line: a YAML folded/quoted scalar wrapped across lines here would inject
       # a stray space after each comma, which a naive `IFS=','` split downstream would not trim.
-      jf-build-names: aerospike-backup-service-packages:${{ needs.prepare.outputs.package_version }},aerospike-backup-service-helm:${{ needs.prepare.outputs.helm_version }},aerospike-backup-service-container:${{ needs.prepare.outputs.package_version }}
+      # NOTE: the container build's JFrog build-NUMBER is github.run_number (the setup-jfrog-cli
+      # default), not app-version — reusable_docker-build-deploy.yaml has no jf-build-id input.
+      jf-build-names: aerospike-backup-service-packages:${{ needs.prepare.outputs.package_version }},aerospike-backup-service-helm:${{ needs.prepare.outputs.helm_version }},aerospike-backup-service-container:${{ github.run_number }}
 
   # ---------------------------------------------------------------------------
   # GitHub Release assets (no shared-workflow equivalent)
