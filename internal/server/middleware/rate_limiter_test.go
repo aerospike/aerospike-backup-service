@@ -16,16 +16,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-type manualTicker struct {
-	ch chan time.Time
-}
-
-func (t *manualTicker) C() <-chan time.Time {
-	return t.ch
-}
-
-func (t *manualTicker) Stop() {}
-
 func TestIPWhiteList_AllowAnyRequiresExplicitCIDR(t *testing.T) {
 	t.Run("exact allow any cidr", func(t *testing.T) {
 		wl := newIPWhiteList([]string{"0.0.0.0/0"})
@@ -40,30 +30,21 @@ func TestIPWhiteList_AllowAnyRequiresExplicitCIDR(t *testing.T) {
 }
 
 func TestIPRateLimiter_EvictsIdleEntriesOnTick(t *testing.T) {
-	current := time.Unix(0, 0)
-	manualTick := &manualTicker{ch: make(chan time.Time, 1)}
+	const (
+		idleTTL         = 150 * time.Millisecond
+		cleanupInterval = 50 * time.Millisecond
+	)
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	limiter := newIPRateLimiter(
-		ctx,
-		rate.Limit(1),
-		1,
-		time.Minute,
-		time.Minute,
-		func() time.Time { return current },
-		func(time.Duration) ticker { return manualTick },
-	)
+	limiter := newIPRateLimiter(ctx, rate.Limit(1), 1, idleTTL, cleanupInterval)
 
 	limiter.getOrCreateEntry(netip.MustParseAddr("10.0.0.1"))
 	limiter.getOrCreateEntry(netip.MustParseAddr("10.0.0.2"))
 
-	current = current.Add(30 * time.Second)
+	time.Sleep(80 * time.Millisecond)
 	limiter.getOrCreateEntry(netip.MustParseAddr("10.0.0.1"))
-
-	current = current.Add(45 * time.Second)
-	manualTick.ch <- current
 
 	require.Eventually(t, func() bool {
 		limiter.Lock()
@@ -72,7 +53,7 @@ func TestIPRateLimiter_EvictsIdleEntriesOnTick(t *testing.T) {
 		_, firstExists := limiter.limiters[netip.MustParseAddr("10.0.0.1")]
 		_, secondExists := limiter.limiters[netip.MustParseAddr("10.0.0.2")]
 		return firstExists && !secondExists
-	}, time.Second, 10*time.Millisecond)
+	}, 2*time.Second, 10*time.Millisecond)
 }
 
 func TestRateLimiter_RunsBeforeBodyReaderMiddleware(t *testing.T) {

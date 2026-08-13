@@ -115,28 +115,14 @@ type ipLimiterEntry struct {
 	lastSeen time.Time
 }
 
-type ticker interface {
-	C() <-chan time.Time
-	Stop()
-}
-
-type realTicker struct {
-	*time.Ticker
-}
-
-func (t *realTicker) C() <-chan time.Time {
-	return t.Ticker.C
-}
-
 // IPRateLimiter represents a rate limiter based on an IP address.
 type IPRateLimiter struct {
 	sync.Mutex
 	limiters        map[netip.Addr]*ipLimiterEntry
 	tokensPerSecond rate.Limit
 	tokenBucketSize int
-	now             func() time.Time
 	idleTTL         time.Duration
-	cleanupTicker   ticker
+	cleanupTicker   *time.Ticker
 }
 
 // NewIPRateLimiter returns a new IPRateLimiter.
@@ -147,10 +133,6 @@ func NewIPRateLimiter(ctx context.Context, tps rate.Limit, size int) *IPRateLimi
 		size,
 		defaultLimiterIdleTTL,
 		defaultLimiterCleanupInterval,
-		time.Now,
-		func(d time.Duration) ticker {
-			return &realTicker{Ticker: time.NewTicker(d)}
-		},
 	)
 }
 
@@ -160,19 +142,16 @@ func newIPRateLimiter(
 	size int,
 	idleTTL time.Duration,
 	cleanupInterval time.Duration,
-	now func() time.Time,
-	newTicker func(time.Duration) ticker,
 ) *IPRateLimiter {
 	ipLimiter := &IPRateLimiter{
 		limiters:        make(map[netip.Addr]*ipLimiterEntry),
 		tokensPerSecond: tps,
 		tokenBucketSize: size,
-		now:             now,
 		idleTTL:         idleTTL,
 	}
 
 	if cleanupInterval > 0 {
-		ipLimiter.cleanupTicker = newTicker(cleanupInterval)
+		ipLimiter.cleanupTicker = time.NewTicker(cleanupInterval)
 		go ipLimiter.cleanupLoop(ctx)
 	}
 
@@ -190,15 +169,12 @@ func (ipLimiter *IPRateLimiter) getOrCreateEntry(ipAddr netip.Addr) *ipLimiterEn
 
 	entry, exists := ipLimiter.limiters[ipAddr]
 	if !exists {
-		limiter := rate.NewLimiter(ipLimiter.tokensPerSecond, ipLimiter.tokenBucketSize)
 		entry = &ipLimiterEntry{
-			limiter:  limiter,
-			lastSeen: ipLimiter.now(),
+			limiter: rate.NewLimiter(ipLimiter.tokensPerSecond, ipLimiter.tokenBucketSize),
 		}
 		ipLimiter.limiters[ipAddr] = entry
-	} else {
-		entry.lastSeen = ipLimiter.now()
 	}
+	entry.lastSeen = time.Now()
 
 	return entry
 }
@@ -206,7 +182,7 @@ func (ipLimiter *IPRateLimiter) getOrCreateEntry(ipAddr netip.Addr) *ipLimiterEn
 func (ipLimiter *IPRateLimiter) cleanupLoop(ctx context.Context) {
 	for {
 		select {
-		case now := <-ipLimiter.cleanupTicker.C():
+		case now := <-ipLimiter.cleanupTicker.C:
 			ipLimiter.evictIdle(now)
 		case <-ctx.Done():
 			ipLimiter.cleanupTicker.Stop()
