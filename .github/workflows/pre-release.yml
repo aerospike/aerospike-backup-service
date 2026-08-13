@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+# NOTE: every aerospike/shared-workflows `uses: ...@<sha>` below is pinned to v4.0.0.
+# The `env` context isn't available in `with:` for reusable-workflow-call jobs, so gh-workflows-ref
+# can't be centralized here — bump the sha and the "v4.0.0" gh-workflows-ref value together by hand.
+
 jobs:
   create-release:
     permissions:
@@ -56,14 +60,14 @@ jobs:
           body: |
             See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for details on this release, and [docs/migration.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/migration.md) for upgrade/breaking-change notes.
 
-  build-packages:
-    permissions:
-      contents: write
-    needs:
-      - create-release
-    runs-on: ubuntu-22.04
+  prepare:
+    runs-on: ubuntu-24.04
     outputs:
       package_version: ${{ steps.metadata.outputs.PACKAGE_VERSION }}
+      helm_version: ${{ steps.metadata.outputs.HELM_VERSION }}
+      go_version: ${{ steps.metadata.outputs.GO_VERSION }}
+      packages_build_id: ${{ steps.metadata.outputs.PACKAGES_BUILD_ID }}
+      helm_build_id: ${{ steps.metadata.outputs.HELM_BUILD_ID }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -81,6 +85,242 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
+      - name: Get Metadata
+        id: metadata
+        run: |
+          echo "Reading package version from VERSION file..."
+          if [ ! -f VERSION ]; then
+            echo "VERSION file not found." >&2
+            exit 1
+          fi
+          PACKAGE_VERSION=$(cat VERSION)
+
+          echo "Reading Helm chart version from Chart.yaml..."
+          CHART_FILE="helm/aerospike-backup-service/Chart.yaml"
+          if [ ! -f "$CHART_FILE" ]; then
+            echo "Chart file not found at $CHART_FILE" >&2
+            exit 1
+          fi
+          HELM_VERSION=$(yq '.version' "$CHART_FILE" | tr -d '\n')
+          if [ -z "$HELM_VERSION" ]; then
+            echo "Failed to extract Helm chart version." >&2
+            exit 1
+          fi
+
+          echo "Resolving Go toolchain version for Docker build-args..."
+          GO_VERSION="$( curl -s 'https://go.dev/dl/?mode=json&include=all' | \
+          jq -r --arg ver "go$(go mod edit -json | \
+          jq -r '.Go' | cut -d. -f1-2)" '.[] | select(.version | startswith($ver)) | .version' | \
+          sort -V | tail -n1 | cut -c3- | tr -d '\n')"
+          if [ -z "$GO_VERSION" ]; then
+            echo "Failed to resolve Go version." >&2
+            exit 1
+          fi
+
+          BUILD_ID_BASE="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+          echo "Resolved metadata:"
+          echo "  PACKAGE_VERSION: $PACKAGE_VERSION"
+          echo "  HELM_VERSION: $HELM_VERSION"
+          echo "  GO_VERSION: $GO_VERSION"
+          echo "  BUILD_ID_BASE: $BUILD_ID_BASE"
+
+          {
+            echo "PACKAGE_VERSION=$PACKAGE_VERSION"
+            echo "HELM_VERSION=$HELM_VERSION"
+            echo "GO_VERSION=$GO_VERSION"
+            echo "PACKAGES_BUILD_ID=${BUILD_ID_BASE}-packages"
+            echo "HELM_BUILD_ID=${BUILD_ID_BASE}-helm"
+          } >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------------
+  # DEB/RPM packages: build -> sign -> deploy
+  # ---------------------------------------------------------------------------
+
+  build-packages:
+    needs: [prepare]
+    permissions:
+      contents: read
+      id-token: write
+    uses: aerospike/shared-workflows/.github/workflows/reusable_execute-build.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+    with:
+      gh-workflows-ref: v4.0.0
+      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+      jf-build-name: aerospike-backup-service-packages
+      jf-build-id: ${{ needs.prepare.outputs.packages_build_id }}
+      build-script: |
+        # Pin nfpm to a known version and verify it against nfpm's published checksums
+        # instead of trusting `go install ...@latest` (an unreviewed, unpinned moving target).
+        NFPM_VERSION="2.47.0"
+        NFPM_DEB="nfpm_${NFPM_VERSION}_amd64.deb"
+        curl -sSLO "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/${NFPM_DEB}"
+        curl -sSLO "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/checksums.txt"
+        grep " ${NFPM_DEB}\$" checksums.txt | sha256sum -c -
+        sudo apt-get install -y "./${NFPM_DEB}"
+        make packages BUILD_MODE=release
+        mkdir -p dist-packages
+        find build/target -maxdepth 1 -type f \( -name '*.deb' -o -name '*.rpm' \) -exec cp {} dist-packages/ \;
+      gh-artifact-directory: dist-packages
+      gh-artifact-name: packages-unsigned
+      gh-retention-days: 1
+
+  sign-packages:
+    needs: [build-packages]
+    permissions:
+      contents: read
+    uses: aerospike/shared-workflows/.github/workflows/reusable_sign-artifacts.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+    with:
+      gh-workflows-ref: v4.0.0
+      gh-unsigned-artifacts: packages-unsigned
+      gh-artifact-name: packages-signed
+      gh-retention-days: 7
+    secrets:
+      gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
+      gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
+      gpg-key-pass: ${{ secrets.GPG_PASS }}
+
+  deploy-packages:
+    needs: [prepare, sign-packages]
+    permissions:
+      contents: read
+      id-token: write
+    uses: aerospike/shared-workflows/.github/workflows/reusable_deploy-artifacts.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+    with:
+      gh-workflows-ref: v4.0.0
+      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+      jf-build-name: aerospike-backup-service-packages
+      jf-build-id: ${{ needs.prepare.outputs.packages_build_id }}
+      version: ${{ needs.prepare.outputs.package_version }}
+      gh-artifact-name: packages-signed
+
+  # ---------------------------------------------------------------------------
+  # Helm chart: build -> sign -> deploy
+  # ---------------------------------------------------------------------------
+
+  build-helm:
+    needs: [prepare]
+    permissions:
+      contents: read
+      id-token: write
+    uses: aerospike/shared-workflows/.github/workflows/reusable_execute-build.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+    with:
+      gh-workflows-ref: v4.0.0
+      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+      jf-build-name: aerospike-backup-service-helm
+      jf-build-id: ${{ needs.prepare.outputs.helm_build_id }}
+      setup-helm: true
+      build-env: "HELM_VERSION=${{ needs.prepare.outputs.helm_version }};APP_VERSION=${{ needs.prepare.outputs.package_version }}"
+      build-script: |
+        mkdir -p dist
+        helm package helm/aerospike-backup-service \
+          --version "$HELM_VERSION" --app-version "$APP_VERSION" \
+          -d dist
+      gh-artifact-directory: dist
+      gh-artifact-name: helm-unsigned
+      gh-retention-days: 1
+
+  sign-helm:
+    needs: [build-helm]
+    permissions:
+      contents: read
+    uses: aerospike/shared-workflows/.github/workflows/reusable_sign-artifacts.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+    with:
+      gh-workflows-ref: v4.0.0
+      gh-unsigned-artifacts: helm-unsigned
+      gh-artifact-name: helm-signed
+      gh-retention-days: 7
+    secrets:
+      gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
+      gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
+      gpg-key-pass: ${{ secrets.GPG_PASS }}
+
+  deploy-helm:
+    needs: [prepare, sign-helm]
+    permissions:
+      contents: read
+      id-token: write
+    uses: aerospike/shared-workflows/.github/workflows/reusable_deploy-artifacts.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+    with:
+      gh-workflows-ref: v4.0.0
+      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+      jf-build-name: aerospike-backup-service-helm
+      jf-build-id: ${{ needs.prepare.outputs.helm_build_id }}
+      version: ${{ needs.prepare.outputs.helm_version }}
+      gh-artifact-name: helm-signed
+
+  # ---------------------------------------------------------------------------
+  # Docker image: build, attest, and push to JFrog in one call
+  # ---------------------------------------------------------------------------
+
+  build-docker-image:
+    needs: [prepare]
+    permissions:
+      contents: read
+      id-token: write
+    uses: aerospike/shared-workflows/.github/workflows/reusable_docker-build-deploy.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+    with:
+      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+      jf-registry: ${{ vars.ARTIFACTORY_REGISTRY_URL }}/${{ vars.ARTIFACTORY_CONTAINER_DEV }}
+      jf-build-name: aerospike-backup-service-container
+      image-name: aerospike-backup-service
+      app-name: Aerospike Backup Service
+      app-version: ${{ needs.prepare.outputs.package_version }}
+      context: .
+      file: Dockerfile
+      build-args-json: >-
+        {"GO_VERSION":"${{ needs.prepare.outputs.go_version }}","REGISTRY":"docker.io","BUILD_MODE":"release"}
+      labels-json: >-
+        {"org.opencontainers.image.title":"Aerospike Backup Service",
+        "org.opencontainers.image.description":"Aerospike Backup Service provides a set of REST APIs to schedule full and incremental backups. Additionally, these APIs can be used to restore data from a backup to a cluster",
+        "org.opencontainers.image.documentation":"https://github.com/aerospike/aerospike-backup-service?tab=readme-ov-file#aerospike-backup-service",
+        "org.opencontainers.image.base.name":"registry.access.redhat.com/ubi9/ubi-minimal",
+        "org.opencontainers.image.vendor":"Aerospike",
+        "org.opencontainers.image.licenses":"Apache-2.0"}
+
+  # ---------------------------------------------------------------------------
+  # Unified release bundle
+  # ---------------------------------------------------------------------------
+
+  create-release-bundle:
+    needs: [prepare, deploy-packages, deploy-helm, build-docker-image]
+    permissions:
+      contents: read
+      id-token: write
+    uses: aerospike/shared-workflows/.github/workflows/reusable_create-release-bundle.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+    with:
+      gh-workflows-ref: v4.0.0
+      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+      jf-bundle-name: aerospike-backup-service
+      version: ${{ needs.prepare.outputs.package_version }}
+      # single unbroken line: a YAML folded/quoted scalar wrapped across lines here would inject
+      # a stray space after each comma, which a naive `IFS=','` split downstream would not trim.
+      jf-build-names: aerospike-backup-service-packages:${{ needs.prepare.outputs.package_version }},aerospike-backup-service-helm:${{ needs.prepare.outputs.helm_version }},aerospike-backup-service-container:${{ needs.prepare.outputs.package_version }}
+
+  # ---------------------------------------------------------------------------
+  # GitHub Release assets (no shared-workflow equivalent)
+  # ---------------------------------------------------------------------------
+
+  publish-release-assets:
+    # create-release must land first: it creates the draft/prerelease GitHub Release
+    # with the intended body. Without this dependency, action-gh-release below could
+    # race ahead and create a live, non-draft release with no body instead.
+    needs: [create-release, sign-packages]
+    permissions:
+      contents: write
+    # aerospike/shared-workflows setup-gpg (used below) hard-fails on anything but 22.04.
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Download signed packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: packages-signed
+          path: signed-packages
+
       - name: setup GPG
         uses: aerospike/shared-workflows/.github/actions/setup-gpg@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
         with:
@@ -88,255 +328,27 @@ jobs:
           gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
           gpg-key-pass: ${{ secrets.GPG_PASS }}
 
-      - name: Install Dependencies
-        env:
-          GOTOOLCHAIN: auto
-        run: |
-          echo "Installing nfpm..."
-          go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
-          if [ $? -eq 0 ]; then
-            echo "nfpm installed successfully."
-          else
-            echo "Failed to install nfpm." >&2
-            exit 1
-          fi
-          
-          echo "Updating apt repositories..."
-          sudo apt-get update
-          if [ $? -eq 0 ]; then
-            echo "apt update completed."
-          else
-            echo "apt update failed." >&2
-            exit 1
-          fi
-          
-          echo "Installing dpkg-dev and dpkg-sig..."
-          sudo apt-get install -y dpkg-dev dpkg-sig
-          if [ $? -eq 0 ]; then
-            echo "dpkg-dev and dpkg-sig installed."
-          else
-            echo "Failed to install dpkg dependencies." >&2
-            exit 1
-          fi
-
-      - name: Get Metadata
-        id: metadata
-        run: |
-          echo "Starting metadata extraction..."
-          
-          if [ ! -f VERSION ]; then
-            echo "VERSION file not found. Exiting." >&2
-            exit 1
-          fi
-          
-          PACKAGE_VERSION=$(cat VERSION)
-          PACKAGE_NAME="${GITHUB_REPOSITORY##*/}"
-          
-          echo "Read VERSION: $PACKAGE_VERSION"
-          echo "Determined package name: $PACKAGE_NAME"
-          
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
-          echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
-          
-          echo "Metadata extraction completed successfully."
-
-      - name: Login to JFrog
-        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
-        env:
-          JF_URL: ${{ vars.ARTIFACTORY_URL }}
-          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
-
-      - name: Build Packages
-        run: |
-          echo "Starting package build using 'make packages'..."
-          
-          if [ ! -f Makefile ]; then
-            echo "Makefile not found. Cannot run 'make packages'." >&2
-            exit 1
-          fi
-          
-          make packages BUILD_MODE=release
-          BUILD_RESULT=$?
-          
-          if [ $BUILD_RESULT -eq 0 ]; then
-            echo "Package build completed successfully."
-          else
-            echo "Package build failed with exit code $BUILD_RESULT." >&2
-            exit $BUILD_RESULT
-          fi
-
-      - name: Find files matching "*.rpm" "*.deb"
-        run: |
-          echo "Searching for .rpm and .deb package files..."
-          
-          RPM_ASSET_LIST=$(find . -type f \( -name "*.rpm" \) | tr '\n' ',')
-          DEB_ASSET_LIST=$(find . -type f \( -name "*.deb" \) | tr '\n' ',')
-          
-          echo "RPM files found:"
-          echo "$RPM_ASSET_LIST" | tr ',' '\n'
-          
-          echo "DEB files found:"
-          echo "$DEB_ASSET_LIST" | tr ',' '\n'
-          
-          echo "RPM_ASSET_LIST=$RPM_ASSET_LIST" >> $GITHUB_ENV
-          echo "DEB_ASSET_LIST=$DEB_ASSET_LIST" >> $GITHUB_ENV
-          
-          if [ -z "$RPM_ASSET_LIST" ] && [ -z "$DEB_ASSET_LIST" ]; then
-            echo "No .rpm or .deb files found." >&2
-          else
-            echo "File discovery completed."
-          fi
-
-      - name: Sign RPM Packages
-        env:
-          GPG_TTY: no-tty
-        run: |
-          echo "Starting GPG signing process for RPM packages..."
-          
-          if [ -z "$RPM_ASSET_LIST" ]; then
-            echo "RPM_ASSET_LIST is empty. No RPM packages to sign." >&2
-            exit 1
-          fi
-          
-          IFS=',' read -r -a asset_array <<< "$RPM_ASSET_LIST"
-          for file in "${asset_array[@]}"; do
-            if [ -z "$file" ]; then
-              continue
-            fi
-          
-            echo "Signing file: ${file}"
-            rpm --addsign "${file}"
-            if [ $? -ne 0 ]; then
-              echo "Failed to sign ${file} with rpm --addsign." >&2
-              exit 1
-            fi
-          
-            OUTPUT=$(rpm --checksig "${file}")
-            echo "Signature check output: $OUTPUT"
-          
-            if [[ "$OUTPUT" =~ 'digests signatures OK' ]]; then
-              echo "Successfully GPG Signed: $file"
-            else
-              echo "GPG Signing failed verification for: $file" >&2
-              exit 1
-            fi
-          done
-          
-          echo "All RPM packages signed and verified successfully."
-
-
-      - name: Sign DEB Packages
-        env:
-          GPG_TTY: no-tty
-        run: |
-          echo "Starting GPG signing process for DEB packages..."
-          
-          if [ -z "$DEB_ASSET_LIST" ]; then
-            echo "DEB_ASSET_LIST is empty. No DEB packages to sign." >&2
-            exit 1
-          fi
-          
-          IFS=',' read -r -a asset_array <<< "$DEB_ASSET_LIST"
-          for file in "${asset_array[@]}"; do
-            if [ -z "$file" ]; then
-              continue
-            fi
-          
-            echo "Signing file: ${file}"
-            dpkg-sig --sign builder "${file}"
-            if [ $? -ne 0 ]; then
-              echo "Failed to sign ${file} with dpkg-sig." >&2
-              exit 1
-            fi
-          
-            OUTPUT=$(dpkg-sig --verify "${file}")
-            echo "Signature check output for ${file}:"
-            echo "$OUTPUT"
-          
-            if [[ "$OUTPUT" =~ 'GOODSIG _gpgbuilder' ]]; then
-              echo "Successfully GPG Signed: $file"
-            else
-              echo "GPG Signing failed verification for: $file" >&2
-              exit 1
-            fi
-          done
-          
-          echo "All DEB packages signed and verified successfully."
-
-      - name: Create checksums
-        run: |
-          echo "Starting checksum generation with 'make checksums'..."
-          
-          make checksums
-          if [ $? -ne 0 ]; then
-            echo "Checksum generation failed during 'make checksums'." >&2
-            exit 1
-          fi
-          
-          echo "Searching for .sha256 files..."
-          CHECKSUMS_ASSET_LIST=$(find . -type f \( -name "*.sha256" \) | tr '\n' ',')
-          
-          if [ -z "$CHECKSUMS_ASSET_LIST" ]; then
-            echo "No .sha256 checksum files found." >&2
-            exit 1
-          else
-            echo "Found checksum files:"
-            echo "$CHECKSUMS_ASSET_LIST" | tr ',' '\n'
-          fi
-          
-          echo "CHECKSUMS_ASSET_LIST=$CHECKSUMS_ASSET_LIST" >> $GITHUB_ENV
-          
-          echo "Checksum creation and discovery completed."
-
-      - name: Sign checksums
+      - name: Create and sign checksums
         env:
           GPG_TTY: no-tty
           GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
         run: |
-          echo "Starting GPG signing process for checksum files."
-          
-          if [ -z "$CHECKSUMS_ASSET_LIST" ]; then
-            echo "CHECKSUMS_ASSET_LIST is empty. No checksum files to sign."
+          echo "Generating checksums for signed .deb/.rpm packages..."
+          find signed-packages -type f \( -name '*.deb' -o -name '*.rpm' \) \
+            -exec sh -c 'sha256sum "$1" | cut -d" " -f1 > "$1.sha256"' _ {} \;
+
+          CHECKSUM_COUNT=$(find signed-packages -type f -name '*.sha256' | wc -l)
+          if [ "$CHECKSUM_COUNT" -eq 0 ]; then
+            echo "No checksum files were generated." >&2
             exit 1
           fi
-          
-          IFS=',' read -r -a asset_array <<< "$CHECKSUMS_ASSET_LIST"
-          for file in "${asset_array[@]}"; do
-            if [ -z "$file" ]; then
-              continue
-            fi
-          
-            echo "Signing file: ${file}"
+
+          echo "Signing checksum files..."
+          find signed-packages -type f -name '*.sha256' | while read -r file; do
             gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
-            if [ $? -ne 0 ]; then
-              echo "Failed to sign ${file}"
-              exit 1
-            fi
-          
             gpg --verify "${file}.asc" "${file}" &>/dev/null
-            RETURN_CODE=$?
-            if [ "$RETURN_CODE" -ne 0 ]; then
-              echo "Signature verification failed for ${file}"
-              exit 1
-            else
-              echo "Successfully signed and verified ${file}"
-            fi
+            echo "Signed and verified ${file}"
           done
-          
-          echo "Searching for .asc signature files..."
-          ASC_ASSET_LIST=$(find . -type f \( -name "*.asc" \) | tr '\n' ',')
-          if [ -z "$ASC_ASSET_LIST" ]; then
-            echo "No .asc files found after signing."
-            exit 1
-          fi
-          
-          echo "Found the following signature files:"
-          echo "$ASC_ASSET_LIST" | tr ',' '\n'
-          
-          echo "ASC_ASSET_LIST=$ASC_ASSET_LIST" >> $GITHUB_ENV
-          echo "Checksum signing process completed successfully."
 
       - name: Upload Assets to GitHub Release
         uses: step-security/action-gh-release@d2093dbdaf0c6507874908247e14bbc4dee6a72d # v3.0.1
@@ -344,495 +356,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ github.ref_name }}
           files: |
-            **/*.rpm 
-            **/*.deb 
-            **/*.sha256 
-            **/*.asc
-
-      - name: Upload RPM Packages to Jfrog
-        env:
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
-          ARTIFACTORY_RPM_DEV: ${{ vars.ARTIFACTORY_RPM_DEV }}
-        run: |
-          echo "Starting upload of RPM packages to JFrog."
-          
-          if [ -z "$RPM_ASSET_LIST" ]; then
-            echo "RPM_ASSET_LIST is empty. No RPM packages to upload."
-            exit 1
-          fi
-          
-          IFS=',' read -r -a asset_array <<< "$RPM_ASSET_LIST"
-          for file in "${asset_array[@]}"; do
-            if [ -z "$file" ] || [ ! -f "$file" ]; then
-              echo "File not found or empty entry: $file"
-              exit 1
-            fi
-          
-            arch=$(rpm -q --qf "%{ARCH}" -p "$file")
-            target_path="$ARTIFACTORY_RPM_DEV/$PACKAGE_NAME/$PACKAGE_VERSION/$(basename $file)"
-          
-            echo "Uploading RPM: $file"
-            echo "Target path: $target_path"
-            echo "Architecture: $arch"
-          
-            jfrog rt upload "$file" "$target_path" \
-              --build-name=$PACKAGE_NAME-rpm \
-              --build-number=$PACKAGE_VERSION \
-              --target-props "rpm.distribution=stable;rpm.component=main;rpm.architecture=$arch"
-          
-            if [ $? -ne 0 ]; then
-              echo "Failed to upload $file to JFrog."
-              exit 1
-            else
-              echo "Successfully uploaded $file to JFrog."
-            fi
-          done
-          
-          echo "Collecting environment variables for build info."
-          jfrog rt build-collect-env "$PACKAGE_NAME-rpm" "$PACKAGE_VERSION"
-          
-          echo "Adding Git metadata to build info."
-          jfrog rt build-add-git "$PACKAGE_NAME-rpm" "$PACKAGE_VERSION"
-          
-          echo "Publishing RPM build info to JFrog."
-          jfrog rt build-publish "$PACKAGE_NAME-rpm" "$PACKAGE_VERSION"
-          
-          echo "RPM package upload and build info publication completed."
-
-      - name: Upload DEB Packages to Jfrog
-        env:
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
-          ARTIFACTORY_DEB_DEV: ${{ vars.ARTIFACTORY_DEB_DEV }}
-        run: |
-          echo "Starting upload of DEB packages to JFrog."
-          
-          if [ -z "$DEB_ASSET_LIST" ]; then
-            echo "DEB_ASSET_LIST is empty. No DEB packages to upload."
-            exit 1
-          fi
-          
-          IFS=',' read -r -a asset_array <<< "$DEB_ASSET_LIST"
-          for file in "${asset_array[@]}"; do
-            if [ -z "$file" ] || [ ! -f "$file" ]; then
-              echo "File not found or empty entry: $file"
-              exit 1
-            fi
-          
-            arch=$(dpkg --info "$file" | grep 'Architecture' | awk '{print $2}')
-            target_path="$ARTIFACTORY_DEB_DEV/$PACKAGE_NAME/$PACKAGE_VERSION/$(basename $file)"
-          
-            echo "Uploading DEB: $file"
-            echo "Target path: $target_path"
-            echo "Architecture: $arch"
-          
-            jfrog rt upload "$file" "$target_path" \
-              --build-name=$PACKAGE_NAME-deb \
-              --build-number=$PACKAGE_VERSION \
-              --target-props "deb.distribution=stable;deb.component=main;deb.architecture=${arch}" \
-              --deb "stable/main/${arch}"
-          
-            if [ $? -ne 0 ]; then
-              echo "Failed to upload $file to JFrog."
-              exit 1
-            else
-              echo "Successfully uploaded $file to JFrog."
-            fi
-          done
-          
-          echo "Collecting environment variables for DEB build info."
-          jfrog rt build-collect-env "$PACKAGE_NAME-deb" "$PACKAGE_VERSION"
-          
-          echo "Adding Git metadata to DEB build info."
-          jfrog rt build-add-git "$PACKAGE_NAME-deb" "$PACKAGE_VERSION"
-          
-          echo "Publishing DEB build info to JFrog."
-          jfrog rt build-publish "$PACKAGE_NAME-deb" "$PACKAGE_VERSION"
-          
-          echo "DEB package upload and build info publication completed."
-
-  build-docker-image:
-    needs:
-      - create-release
-    runs-on: ubuntu-24.04
-    outputs:
-      image_version: ${{ steps.metadata.outputs.IMAGE_VERSION }}
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
-        with:
-          egress-policy: audit
-
-      - name: Set up Docker Buildx
-        uses: step-security/setup-buildx-action@a4709e2865773e1792246433e8eb922f9743a875 # v4.2.0
-      - name: Checkout Code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 1
-          ref: ${{ github.ref }}
-
-      - name: Get Metadata
-        id: metadata
-        run: |
-          echo "Starting metadata extraction for Docker image build."
-          
-          if [ ! -f VERSION ]; then
-            echo "VERSION file not found."
-            exit 1
-          fi
-          
-          if [ ! -f go.mod ]; then
-            echo "go.mod file not found. Cannot determine Go version."
-            exit 1
-          fi
-          
-          echo "Reading version from VERSION file."
-          IMAGE_VERSION=$(cat VERSION | cut -c 2-)
-          RAW_VERSION=$(cat VERSION)
-          
-          echo "Determining appropriate Go version based on go.mod."
-          GO_VERSION="$( curl -s 'https://go.dev/dl/?mode=json&include=all' | \
-          jq -r --arg ver "go$(go mod edit -json | \
-          jq -r '.Go' | cut -d. -f1-2)" '.[] | select(.version | startswith($ver)) | .version' | \
-          sort -V | tail -n1 | cut -c3- | tr -d '\n')"
-          
-          if [ -z "$GO_VERSION" ]; then
-            echo "Failed to resolve Go version."
-            exit 1
-          fi
-          
-          ISO8601=$(LC_TIME=en_US.UTF-8 date "+%Y-%m-%dT%H:%M:%S%z")
-          IMAGE_NAME="${GITHUB_REPOSITORY##*/}"
-          
-          echo "Resolved metadata values:"
-          echo "  VERSION: $RAW_VERSION"
-          echo "  IMAGE_VERSION: $IMAGE_VERSION"
-          echo "  GO_VERSION: $GO_VERSION"
-          echo "  ISO8601: $ISO8601"
-          echo "  IMAGE_NAME: $IMAGE_NAME"
-          
-          echo "IMAGE_VERSION=$IMAGE_VERSION" >> $GITHUB_ENV
-          echo "IMAGE_VERSION=$IMAGE_VERSION" >> $GITHUB_OUTPUT
-          echo "GO_VERSION=$GO_VERSION" >> "$GITHUB_ENV"
-          echo "VERSION=$RAW_VERSION" >> $GITHUB_ENV
-          echo "ISO8601=$ISO8601" >> $GITHUB_ENV
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
-          
-          echo "Metadata extraction completed."
-
-      - name: Login to JFrog
-        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
-        env:
-          JF_URL: ${{ vars.ARTIFACTORY_URL }}
-          JF_USER: ${{ secrets.ARTIFACTORY_USER }}
-          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
-
-      - name: Login to JFrog Artifactory
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          registry: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
-          username: ${{ secrets.ARTIFACTORY_USER }}
-          password: ${{ secrets.ARTIFACTORY_TOKEN }}
-
-      - name: Build and Push Docker Image
-        env:
-          CONTEXT: ${{ github.workspace }}
-          LATEST: false
-          TAG: ${{env.IMAGE_VERSION}}
-          GIT_BRANCH: ${{ github.ref }}
-          GIT_COMMIT_SHA: ${{ github.sha }}
-          VERSION: ${{env.VERSION}}
-          ISO8601: ${{env.ISO8601}}
-          IMAGE_NAME: ${{env.IMAGE_NAME}}
-          GO_VERSION: ${{env.GO_VERSION}}
-          OUTPUT: "type=image,push=true type=oci,dest=./abs-image.tar"
-          REPO: ${{ vars.ARTIFACTORY_REGISTRY_URL }}/${{ vars.ARTIFACTORY_CONTAINER_DEV }}
-          ARTIFACTORY_REGISTRY_URL: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
-          ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
-        run: |
-          echo "Starting Docker image build and push process."
-          echo "Image Name: $IMAGE_NAME"
-          echo "Image Tag: $TAG"
-          echo "Go Version: $GO_VERSION"
-          echo "Git Commit SHA: $GIT_COMMIT_SHA"
-          echo "Git Branch: $GIT_BRANCH"
-          echo "Context Directory: $CONTEXT"
-          
-          echo "Building Docker image with buildx bake."
-          docker buildx bake \
-            --file ${{ github.workspace }}/build/docker-build/docker-bake.hcl \
-            --metadata-file=build-metadata \
-            --progress plain \
-            --no-cache \
-            --push
-          
-          if [ $? -ne 0 ]; then
-            echo "Docker image build failed."
-            exit 1
-          fi
-          
-          echo "Parsing build metadata to extract image digest."
-          jq -r '
-            .[] |
-            {
-              digest: .["containerimage.digest"],
-              names: (.["image.name"] | split(","))
-            } |
-            .digest
-          ' build-metadata > sha
-          
-          if [ ! -s sha ]; then
-            echo "Failed to extract image digest. File 'sha' is empty or missing."
-            exit 1
-          fi
-          
-          FULL_IMAGE_REFERENCE="$ARTIFACTORY_REGISTRY_URL/$ARTIFACTORY_CONTAINER_DEV/$IMAGE_NAME:$TAG@$(cat sha)"
-          echo "Resolved full image reference:"
-          echo "$FULL_IMAGE_REFERENCE"
-          echo "$FULL_IMAGE_REFERENCE" > meta-info
-          
-          echo "Creating Docker build info in JFrog."
-          jfrog rt build-docker-create \
-            --build-name=$IMAGE_NAME-container \
-            --build-number=$TAG \
-            --image-file ./meta-info \
-            $ARTIFACTORY_CONTAINER_DEV
-          
-          echo "Collecting environment data for Docker build."
-          jfrog rt build-collect-env $IMAGE_NAME-container $TAG
-          
-          echo "Adding Git metadata to Docker build info."
-          jfrog rt build-add-git $IMAGE_NAME-container $TAG
-          
-          echo "Publishing Docker build info to JFrog."
-          jfrog rt build-publish --detailed-summary $IMAGE_NAME-container $TAG
-          
-          echo "Docker image build and publication completed."
-
-      - name: Upload tarball to GitHub Artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: abs-image
-          path: ./abs-image.tar
-          retention-days: 2
-          overwrite: true
-
-  build-helm-chart:
-    needs:
-      - create-release
-    runs-on: ubuntu-22.04
-    outputs:
-      helm_version: ${{ steps.metadata.outputs.HELM_VERSION }}
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
-        with:
-          egress-policy: audit
-
-      - name: Checkout Code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.ref }}
-          fetch-depth: 0
-          sparse-checkout: |
-            helm/aerospike-backup-service
-          sparse-checkout-cone-mode: true
-
-      - name: Get Metadata
-        id: metadata
-        run: |
-          echo "Starting Helm chart metadata extraction."
-          
-          CHART_FILE="helm/aerospike-backup-service/Chart.yaml"
-          
-          if [ ! -f "$CHART_FILE" ]; then
-            echo "Chart file not found at $CHART_FILE"
-            exit 1
-          fi
-          
-          echo "Reading Helm chart version from $CHART_FILE"
-          HELM_VERSION=$(yq '.version' "$CHART_FILE" | tr -d '\n')
-          
-          if [ -z "$HELM_VERSION" ]; then
-            echo "Failed to extract Helm chart version."
-            exit 1
-          fi
-          
-          HELM_CHART_NAME="${GITHUB_REPOSITORY##*/}"
-          
-          echo "Extracted metadata:"
-          echo "  HELM_VERSION: $HELM_VERSION"
-          echo "  HELM_CHART_NAME: $HELM_CHART_NAME"
-          
-          echo "HELM_VERSION=$HELM_VERSION" >> $GITHUB_OUTPUT
-          echo "HELM_CHART_VERSION=$HELM_VERSION" >> $GITHUB_ENV
-          echo "HELM_CHART_NAME=$HELM_CHART_NAME" >> $GITHUB_ENV
-          
-          echo "Helm chart metadata extraction completed."
-
-      - name: setup GPG
-        uses: aerospike/shared-workflows/.github/actions/setup-gpg@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
-        with:
-          gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
-          gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
-          gpg-key-pass: ${{ secrets.GPG_PASS }}
-
-      - name: Login to JFrog
-        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
-        env:
-          JF_URL: ${{ vars.ARTIFACTORY_URL }}
-          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
-
-      - name: Sign and Push Helm Charts to JFrog
-        env:
-          GPG_TTY: no-tty
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
-          ARTIFACTORY_HELM_DEV: ${{ vars.ARTIFACTORY_HELM_DEV }}
-        working-directory: helm
-        run: |
-          echo "Preparing to sign and push Helm chart."
-          
-          if [ -z "$HELM_CHART_NAME" ] || [ -z "$HELM_CHART_VERSION" ]; then
-            echo "HELM_CHART_NAME or HELM_CHART_VERSION is not set."
-            exit 1
-          fi
-          
-          echo "Exporting GPG public and private keys."
-          gpg --export --no-tty --passphrase "$GPG_PASSPHRASE" > $HOME/.gnupg/pubring.gpg
-          gpg --export-secret-keys --no-tty --passphrase "$GPG_PASSPHRASE" > $HOME/.gnupg/secring.gpg
-          echo "$GPG_PASSPHRASE" > passphrase.txt
-          
-          echo "Signing and packaging Helm chart: $HELM_CHART_NAME"
-          helm \
-            --sign \
-            --key=aerospike-inc \
-            --keyring=$HOME/.gnupg/secring.gpg \
-            --passphrase-file passphrase.txt \
-            package "$HELM_CHART_NAME"
-          
-          PACKAGE_FILE="$HELM_CHART_NAME-$HELM_CHART_VERSION.tgz"
-          if [ ! -f "$PACKAGE_FILE" ]; then
-            echo "Helm chart package not found: $PACKAGE_FILE"
-            exit 1
-          fi
-          
-          echo "Uploading Helm chart package and signature to JFrog:"
-          echo "  Package: $PACKAGE_FILE"
-          echo "  Destination: $ARTIFACTORY_HELM_DEV/$HELM_CHART_NAME/$HELM_CHART_VERSION/"
-          
-          jfrog rt upload \
-            "$PACKAGE_FILE*" \
-            "$ARTIFACTORY_HELM_DEV/$HELM_CHART_NAME/$HELM_CHART_VERSION/" \
-            --build-name="$HELM_CHART_NAME-helm" \
-            --build-number="$HELM_CHART_VERSION"
-          
-          if [ $? -ne 0 ]; then
-            echo "Failed to upload Helm chart to JFrog."
-            exit 1
-          fi
-          
-          echo "Collecting environment information for Helm chart build."
-          jfrog rt build-collect-env "$HELM_CHART_NAME-helm" "$HELM_CHART_VERSION"
-          
-          echo "Adding Git metadata to Helm chart build."
-          jfrog rt build-add-git "$HELM_CHART_NAME-helm" "$HELM_CHART_VERSION"
-          
-          echo "Publishing Helm chart build information to JFrog."
-          jfrog rt build-publish "$HELM_CHART_NAME-helm" "$HELM_CHART_VERSION"
-          
-          echo "Helm chart signing and publishing process completed."
-
-  create-release-bundle:
-    needs:
-      - create-release
-      - build-packages
-      - build-docker-image
-      - build-helm-chart
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
-        with:
-          egress-policy: audit
-
-      - name: Login to JFrog
-        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
-        env:
-          JF_URL: ${{ vars.ARTIFACTORY_URL }}
-          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
-
-      - name: Get Metadata
-        run: |
-          echo "Starting metadata extraction for release bundle."
-          
-          BUNDLE_NAME="${GITHUB_REPOSITORY##*/}"
-          
-          if [ -z "$BUNDLE_NAME" ]; then
-            echo "Failed to determine BUNDLE_NAME from GITHUB_REPOSITORY."
-            exit 1
-          fi
-          
-          echo "BUNDLE_NAME resolved as: $BUNDLE_NAME"
-          echo "BUNDLE_NAME=$BUNDLE_NAME" >> $GITHUB_ENV
-          
-          echo "Metadata extraction for release bundle completed."
-
-      - name: Create release bundle
-        env:
-          BUNDLE_NAME: ${{ env.BUNDLE_NAME }}
-          BUNDLE_VERSION: ${{ needs.build-packages.outputs.package_version }}
-          PACKAGE_VERSION: ${{ needs.build-packages.outputs.package_version }}
-          HELM_VERSION: ${{ needs.build-helm-chart.outputs.helm_version }}
-          IMAGE_VERSION: ${{ needs.build-docker-image.outputs.image_version }}
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
-        run: |
-          echo "Preparing release bundle specification."
-          echo "Bundle Name: $BUNDLE_NAME"
-          echo "Bundle Version: $BUNDLE_VERSION"
-          echo "Package Version: $PACKAGE_VERSION"
-          echo "Helm Chart Version: $HELM_VERSION"
-          echo "Docker Image Version: $IMAGE_VERSION"
-          echo "JFrog Project: $JF_PROJECT"
-          
-          cat <<EOF > release-bundle-spec.json
-          {
-            "name": "$BUNDLE_NAME",
-            "version": "$BUNDLE_VERSION",
-            "files": [
-              {
-                "project": "$JF_PROJECT",
-                "build": "$BUNDLE_NAME-container/$IMAGE_VERSION"
-              },
-              {
-                "project": "$JF_PROJECT",
-                "build": "$BUNDLE_NAME-helm/$HELM_VERSION"
-              },
-              {
-                "project": "$JF_PROJECT",
-                "build": "$BUNDLE_NAME-rpm/$PACKAGE_VERSION"
-              },
-              {
-                "project": "$JF_PROJECT",
-                "build": "$BUNDLE_NAME-deb/$PACKAGE_VERSION"
-              }
-            ]
-          }
-          EOF
-          
-          echo "Generated release bundle specification:"
-          cat release-bundle-spec.json
-          
-          echo "Creating release bundle in JFrog..."
-          jfrog release-bundle-create "$BUNDLE_NAME" "$BUNDLE_VERSION" \
-          --spec release-bundle-spec.json \
-          --project="$JF_PROJECT" \
-          --signing-key="aerospike"
-          
-          if [ $? -ne 0 ]; then
-          echo "Release bundle creation failed."
-          exit 1
-          fi
-          
-          echo "Release bundle created successfully."
+            signed-packages/**/*.rpm
+            signed-packages/**/*.deb
+            signed-packages/**/*.sha256
+            signed-packages/**/*.sha256.asc
