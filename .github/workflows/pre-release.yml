@@ -408,9 +408,13 @@ jobs:
       version: ${{ needs.prepare.outputs.package_version }}
       # single unbroken line: a YAML folded/quoted scalar wrapped across lines here would inject
       # a stray space after each comma, which a naive `IFS=','` split downstream would not trim.
-      # NOTE: the container build's JFrog build-NUMBER is github.run_number (the setup-jfrog-cli
-      # default), not app-version — reusable_docker-build-deploy.yaml has no jf-build-id input.
-      jf-build-names: aerospike-backup-service-packages:${{ needs.prepare.outputs.package_version }},aerospike-backup-service-helm:${{ needs.prepare.outputs.helm_version }},aerospike-backup-service-container:${{ github.run_number }}
+      # NOTE: each build-name here must reference the JFrog build-info's actual build NUMBER,
+      # not the app/chart version. packages/helm publish build-info under jf-build-id
+      # (packages_build_id/helm_build_id, e.g. "<run>-<attempt>-packages"), matching what
+      # build-packages/deploy-packages and build-helm/deploy-helm were given as jf-build-id.
+      # The container build's build-NUMBER is github.run_number (the setup-jfrog-cli default),
+      # since reusable_docker-build-deploy.yaml has no jf-build-id input at all.
+      jf-build-names: aerospike-backup-service-packages:${{ needs.prepare.outputs.packages_build_id }},aerospike-backup-service-helm:${{ needs.prepare.outputs.helm_build_id }},aerospike-backup-service-container:${{ github.run_number }}
 
   # ---------------------------------------------------------------------------
   # GitHub Release assets (no shared-workflow equivalent)
