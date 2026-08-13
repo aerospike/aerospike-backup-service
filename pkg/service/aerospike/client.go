@@ -6,8 +6,8 @@ import (
 	"github.com/aerospike/backup-go"
 )
 
-// Backuper exposes only backup-related methods.
-type Backuper interface {
+// Client interface for backup.Client's public API.
+type Client interface {
 	// Backup starts a backup operation that writes data to a provided writer.
 	Backup(
 		ctx context.Context,
@@ -15,18 +15,6 @@ type Backuper interface {
 		writer backup.Writer,
 		reader backup.StreamingReader,
 	) (*backup.BackupHandler, error)
-	// BackupXDR starts an xdr backup operation that writes data to a provided writer.
-	BackupXDR(
-		ctx context.Context,
-		config *backup.ConfigBackupXDR,
-		writer backup.Writer,
-	) (*backup.HandlerBackupXDR, error)
-	// InfoClient returns the underlying info client.
-	InfoClient() backup.InfoGetter
-}
-
-// Restorer exposes only restore-related methods.
-type Restorer interface {
 	// Restore starts a restore operation that reads data from given readers.
 	Restore(
 		ctx context.Context,
@@ -35,13 +23,6 @@ type Restorer interface {
 	) (backup.Restorer, error)
 	// InfoClient returns the underlying info client.
 	InfoClient() backup.InfoGetter
-}
-
-// Client interface for backup.Client's public API.
-type Client interface {
-	Backuper
-	Restorer
-
 	// AerospikeClient returns the underlying Aerospike client.
 	AerospikeClient() backup.AerospikeClient
 }

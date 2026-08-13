@@ -41,6 +41,32 @@ CI additionally runs tests with the race detector and the `ci` build tag:
 go test -race -tags=ci ./... -coverprofile=coverage.out -covermode=atomic
 ```
 
+### Coverage
+
+Run the same filtered coverage total that CI and Codecov use:
+
+```bash
+make test-cover          # prints filtered total (last line)
+make test-cover-html     # also writes coverage.html from the filtered profile
+```
+
+[`.covignore`](../.covignore) removes lines from the uploaded profile before the total is computed. It excludes
+generated mocks, entrypoints, and packages that are thin wrappers or hard to unit-test in isolation:
+
+| Excluded path | Reason |
+|---------------|--------|
+| `/cmd/` | CLI entrypoint |
+| `/docs/`, `/modules/` | Non-Go assets |
+| `/pkg/model/` | Data structs with no logic |
+| `/pkg/stdio/` | I/O wrapper |
+| `/pkg/service/aerospike/` | Live Aerospike client |
+| `configuration_manager*.go`, `estimates.go` | Integration-heavy service code |
+| `/*/mockgen.go` | Generated mocks |
+
+`internal/` (HTTP handlers, server wiring) **is** measured. CI fails if filtered coverage drops below the threshold
+configured in [`.github/workflows/build.yml`](../.github/workflows/build.yml) (currently 53%, matching the
+~53.5% filtered baseline after including `internal/`). That threshold ratchets up as test coverage improves across follow-up PRs.
+
 ## Generated artifacts
 
 Three sets of files are generated from source and checked into the repository. Each has a `make <x>` target to
