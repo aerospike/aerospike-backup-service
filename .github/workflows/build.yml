@@ -43,6 +43,13 @@ jobs:
           grep -v -E -f .covignore coverage.out > coverage.filtered.out
           mv coverage.filtered.out coverage.out
 
+      - name: Check coverage threshold
+        run: |
+          TOTAL=$(go tool cover -func=coverage.out | awk '/total:/ {gsub(/%/,"",$3); print $3}')
+          THRESHOLD=53
+          awk -v t="$TOTAL" -v min="$THRESHOLD" 'BEGIN { exit (t+0 >= min+0 ? 0 : 1) }' || \
+            (echo "Coverage $TOTAL% below threshold $THRESHOLD%" && exit 1)
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
