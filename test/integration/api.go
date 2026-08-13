@@ -17,7 +17,7 @@ import (
 
 const (
 	// backupTimeout bounds how long a test waits for an ad-hoc backup to appear.
-	backupTimeout = 300 * time.Second
+	backupTimeout = 5 * time.Second
 	// pollInterval is how often the service is asked for the current backup list.
 	pollInterval = 250 * time.Millisecond
 )
