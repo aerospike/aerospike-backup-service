@@ -109,12 +109,34 @@ jobs:
           fi
 
           echo "Resolving Go toolchain version for Docker build-args..."
-          GO_VERSION="$( curl -s 'https://go.dev/dl/?mode=json&include=all' | \
-          jq -r --arg ver "go$(go mod edit -json | \
-          jq -r '.Go' | cut -d. -f1-2)" '.[] | select(.version | startswith($ver)) | .version' | \
-          sort -V | tail -n1 | cut -c3- | tr -d '\n')"
+          GO_MINOR="go$(go mod edit -json | jq -r '.Go' | cut -d. -f1-2)"
+          GO_CANDIDATES="$(curl -s 'https://go.dev/dl/?mode=json&include=all' | \
+            jq -r --arg ver "$GO_MINOR" '.[] | select(.version | startswith($ver)) | .version' | \
+            sort -rV)"
+          if [ -z "$GO_CANDIDATES" ]; then
+            echo "Failed to resolve any Go version candidates for $GO_MINOR." >&2
+            exit 1
+          fi
+
+          # go.dev lists a new patch release before the official `golang` Docker image is
+          # published for it (real-world lag of hours to days), so the newest go.dev version
+          # doesn't always have a matching docker.io/library/golang tag yet. Walk candidates
+          # newest-first and use the first one that's actually published, instead of trusting
+          # go.dev's list blindly (which previously caused `golang:X.Y.Z: not found` build failures).
+          GO_VERSION=""
+          while IFS= read -r candidate; do
+            candidate_version="${candidate#go}"
+            status="$(curl -s -o /dev/null -w '%{http_code}' \
+              "https://hub.docker.com/v2/repositories/library/golang/tags/${candidate_version}")"
+            if [ "$status" = "200" ]; then
+              GO_VERSION="$candidate_version"
+              break
+            fi
+            echo "  golang:${candidate_version} not published on Docker Hub yet (HTTP $status), trying older patch..."
+          done <<< "$GO_CANDIDATES"
+
           if [ -z "$GO_VERSION" ]; then
-            echo "Failed to resolve Go version." >&2
+            echo "Failed to resolve a Go version with a published Docker Hub image." >&2
             exit 1
           fi
 
@@ -178,6 +200,41 @@ jobs:
         make packages BUILD_MODE=release
         mkdir -p dist-packages
         find build/target -maxdepth 1 -type f \( -name '*.deb' -o -name '*.rpm' \) -exec cp {} dist-packages/ \;
+
+        # shared-workflows classifies a .deb into a distro pool (jammy/noble/bookworm/...)
+        # by pattern-matching a token like "ubuntu22.04"/"debian12" in the FILENAME itself
+        # (see get_codename_for_deb in deploy-artifacts/package_utils.sh) -- it assumes
+        # distro-specific builds. Our binary is a statically-linked Go build (CGO_ENABLED=0)
+        # with no distro-specific dependencies, so the same .deb is valid everywhere. Publish
+        # one renamed copy per Linux target officially listed at
+        # https://aerospike.com/download/tools/ so the codename match succeeds and
+        # `apt-get install` works regardless of the reader's distro.
+        for deb in dist-packages/*.deb; do
+          [ -e "$deb" ] || continue
+          base="${deb%.deb}"
+          for dist_tag in ubuntu22.04 ubuntu24.04 ubuntu26.04 debian11 debian12 debian13; do
+            cp -v "$deb" "${base}_${dist_tag}.deb"
+          done
+          rm -v "$deb"
+        done
+
+        # Same problem for RPM: get_rpm_metadata parses the distribution from the filename's
+        # second-to-last dot-separated component (the standard rpmbuild %{?dist} convention,
+        # e.g. name-version-release.el9.x86_64.rpm). nfpm doesn't embed a dist tag by default,
+        # so it parses to garbage (e.g. "1-1"). Insert a real dist tag before the arch component,
+        # publishing under every RPM-family target officially listed at
+        # https://aerospike.com/download/tools/ (Red Hat 8/9/10, Amazon 2023).
+        for rpm in dist-packages/*.rpm; do
+          [ -e "$rpm" ] || continue
+          noext="${rpm%.rpm}"
+          arch="${noext##*.}"
+          base="${noext%.*}"
+          for dist_tag in el8 el9 el10 amzn2023; do
+            cp -v "$rpm" "${base}.${dist_tag}.${arch}.rpm"
+          done
+          rm -v "$rpm"
+        done
+
         echo "Packaged artifacts:"
         ls -la dist-packages
       gh-artifact-directory: dist-packages
