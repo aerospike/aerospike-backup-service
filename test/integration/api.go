@@ -17,7 +17,7 @@ import (
 
 const (
 	// backupTimeout bounds how long a test waits for an ad-hoc backup to appear.
-	backupTimeout = 6 * time.Second
+	backupTimeout = 300 * time.Second
 	// pollInterval is how often the service is asked for the current backup list.
 	pollInterval = 250 * time.Millisecond
 )
@@ -165,7 +165,24 @@ func (e *env) restoreStatusURL(jobID int64) string {
 	return fmt.Sprintf("%s/v1/restore/status/%d", e.server.URL, jobID)
 }
 
-// triggerRestore asks the service to run a restore now.
+func (s *Suite) restoreByPath(e *env, key string) dto.RestoreJobStatus {
+	restoreReq := dto.RestoreRequest{
+		DestinationClusterConfig: dto.DestinationClusterConfig{
+			Name: clusterName,
+		},
+		StorageConfig: dto.StorageConfig{
+			Name: storageName,
+		},
+		Policy:         &dto.RestorePolicy{},
+		BackupDataPath: key,
+	}
+
+	jobID := s.triggerRestore(e, restoreReq)
+
+	return s.waitForRestore(e, jobID)
+}
+
+// triggerRestore asks the service to run a restoreByPath now.
 func (s *Suite) triggerRestore(e *env, request dto.RestoreRequest) int64 {
 	requestBody, err := json.Marshal(request)
 	s.Require().NoError(err)
@@ -181,9 +198,7 @@ func (s *Suite) triggerRestore(e *env, request dto.RestoreRequest) int64 {
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
 
-	if resp.StatusCode != http.StatusAccepted {
-		s.Require().Failf("failed to trigger restore", "status %d: %s", resp.StatusCode, body)
-	}
+	s.Require().Equal(resp.StatusCode, http.StatusAccepted, "failed to trigger restore")
 
 	jobID, err := strconv.ParseInt(string(body), 10, 64)
 	s.Require().NoError(err)

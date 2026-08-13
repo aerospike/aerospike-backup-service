@@ -61,7 +61,7 @@ func (s *Suite) setupEnv(customize ...func(*dto.Config)) *env {
 func (s *Suite) baseConfig(backupDir string) *dto.Config {
 	return &dto.Config{
 		ServiceConfig: dto.ServiceConfig{
-			Logger: &dto.LoggerConfig{Level: ptr.Of("ERROR")},
+			Logger: &dto.LoggerConfig{Level: ptr.Of("INFO")},
 		},
 		AerospikeClusters: map[string]*dto.AerospikeCluster{
 			clusterName: {
