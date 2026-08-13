@@ -166,8 +166,12 @@ jobs:
 
   sign-packages:
     needs: [build-packages]
+    # reusable_sign-artifacts.yaml declares id-token: write at its own workflow level;
+    # GitHub requires the caller to grant at least that, even though this job's steps
+    # don't use OIDC themselves (see: https://aerospike.atlassian.net/wiki/spaces/DevOps/pages/5060460576).
     permissions:
       contents: read
+      id-token: write
     uses: aerospike/shared-workflows/.github/workflows/reusable_sign-artifacts.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
       gh-workflows-ref: v4.0.0
@@ -221,8 +225,11 @@ jobs:
 
   sign-helm:
     needs: [build-helm]
+    # See note on sign-packages: reusable_sign-artifacts.yaml requires id-token: write
+    # to be granted by the caller, even though it isn't used by this job's steps.
     permissions:
       contents: read
+      id-token: write
     uses: aerospike/shared-workflows/.github/workflows/reusable_sign-artifacts.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
       gh-workflows-ref: v4.0.0
