@@ -1,14 +1,14 @@
 name: Link Check
 
 on:
-  push:
-    branches:
-      - '**'
   pull_request:
     branches:
       - dev
       - main
       - 'v[0-9]+'
+    paths:
+      - '**/*.md'
+      - '**/*.mdx'
 
 permissions:
   contents: read

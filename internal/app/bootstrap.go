@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -131,11 +132,12 @@ func newAerospikeLayer(resolver secrets.Resolver) (aerospike.ClientManager, aero
 func initLogger(config *model.Config) *slog.Logger {
 	logger := slog.New(log.NewHandler(config.ServiceConfig.GetLoggerOrDefault()))
 	slog.SetDefault(logger)
+	configStr, _ := json.Marshal(dto.NewConfigFromModel(config))
 	slog.Info("Aerospike Backup Service",
 		slog.String("version", backup.Version),
 		slog.String("commit", backup.CommitHash),
 		slog.String("buildTime", backup.BuildTime),
-		slog.Any("config", dto.NewConfigFromModel(config)))
+		slog.String("config", string(configStr)))
 
 	return logger
 }
