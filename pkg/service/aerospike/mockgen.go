@@ -160,21 +160,6 @@ func (mr *MockClientMockRecorder) Backup(ctx, config, writer, reader any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Backup", reflect.TypeOf((*MockClient)(nil).Backup), ctx, config, writer, reader)
 }
 
-// BackupXDR mocks base method.
-func (m *MockClient) BackupXDR(ctx context.Context, config *backup.ConfigBackupXDR, writer backup.Writer) (*backup.HandlerBackupXDR, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BackupXDR", ctx, config, writer)
-	ret0, _ := ret[0].(*backup.HandlerBackupXDR)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// BackupXDR indicates an expected call of BackupXDR.
-func (mr *MockClientMockRecorder) BackupXDR(ctx, config, writer any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackupXDR", reflect.TypeOf((*MockClient)(nil).BackupXDR), ctx, config, writer)
-}
-
 // InfoClient mocks base method.
 func (m *MockClient) InfoClient() backup.InfoGetter {
 	m.ctrl.T.Helper()
