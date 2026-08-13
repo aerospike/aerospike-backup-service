@@ -29,6 +29,15 @@ jobs:
         with:
           egress-policy: audit
 
+      - name: Log trigger context
+        run: |
+          set -x
+          echo "Event name: ${{ github.event_name }}"
+          echo "BUNDLE_NAME: ${BUNDLE_NAME}"
+          echo "BUNDLE_VERSION: ${BUNDLE_VERSION}"
+          echo "Release tag_name (if release event): ${{ github.event.release.tag_name }}"
+          echo "workflow_dispatch bundle_version input (if dispatched): ${{ github.event.inputs.bundle_version }}"
+
       - name: Login to JFrog
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
@@ -43,16 +52,20 @@ jobs:
         env:
           JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           if [ -z "${BUNDLE_VERSION}" ]; then
             echo "::error::Bundle version is required (release tag or workflow_dispatch input)."
             exit 1
           fi
 
-          echo "Checking if release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} exists in JFrog..."
+          echo "Checking if release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} exists in JFrog (project: ${JF_PROJECT})..."
 
           # Same lookup pattern used by shared-workflows' promote-release-bundle action.
-          MATCH_COUNT=$(jf release-bundle-search versions "$BUNDLE_NAME" --project="$JF_PROJECT" --format=json | \
+          BUNDLE_VERSIONS_JSON=$(jf release-bundle-search versions "$BUNDLE_NAME" --project="$JF_PROJECT" --format=json)
+          echo "All known versions for ${BUNDLE_NAME}:"
+          echo "$BUNDLE_VERSIONS_JSON" | jq -r '.release_bundles[].release_bundle_version'
+
+          MATCH_COUNT=$(echo "$BUNDLE_VERSIONS_JSON" | \
             jq --arg v "$BUNDLE_VERSION" '[.release_bundles[] | select(.release_bundle_version == $v)] | length')
 
           if [ "$MATCH_COUNT" -ge 1 ]; then
@@ -72,8 +85,17 @@ jobs:
           jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
 
       - name: Summarize external publication
+        if: always()
         run: |
           {
+            echo "### PROD promotion summary"
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Triggered by | \`${{ github.event_name }}\` |"
+            echo "| Bundle name | \`${BUNDLE_NAME}\` |"
+            echo "| Bundle version | \`${BUNDLE_VERSION}\` |"
+            echo "| JFrog project | \`${{ vars.JFROG_CLI_BUILD_PROJECT }}\` |"
+            echo ""
             echo "Promoted **${BUNDLE_NAME}:${BUNDLE_VERSION}** to JFrog PROD."
             echo ""
             echo "Docker Hub mirroring is handled by [artifact-publisher](https://github.com/citrusleaf/artifact-publisher/actions)"

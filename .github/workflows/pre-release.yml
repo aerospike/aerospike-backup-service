@@ -88,6 +88,7 @@ jobs:
       - name: Get Metadata
         id: metadata
         run: |
+          set -x
           echo "Reading package version from VERSION file..."
           if [ ! -f VERSION ]; then
             echo "VERSION file not found." >&2
@@ -133,6 +134,17 @@ jobs:
             echo "HELM_BUILD_ID=${BUILD_ID_BASE}-helm"
           } >> "$GITHUB_OUTPUT"
 
+          {
+            echo "### Resolved release metadata"
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Package version | \`$PACKAGE_VERSION\` |"
+            echo "| Helm chart version | \`$HELM_VERSION\` |"
+            echo "| Go toolchain version | \`$GO_VERSION\` |"
+            echo "| Packages build ID | \`${BUILD_ID_BASE}-packages\` |"
+            echo "| Helm build ID | \`${BUILD_ID_BASE}-helm\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # ---------------------------------------------------------------------------
   # DEB/RPM packages: build -> sign -> deploy
   # ---------------------------------------------------------------------------
@@ -152,6 +164,9 @@ jobs:
       # (default: local), not at the workspace root, so build-script must cd there.
       working-directory: local
       build-script: |
+        set -x
+        echo "Working directory: $(pwd)"
+        ls -la
         # Pin nfpm to a known version and verify it against nfpm's published checksums
         # instead of trusting `go install ...@latest` (an unreviewed, unpinned moving target).
         NFPM_VERSION="2.47.0"
@@ -163,6 +178,8 @@ jobs:
         make packages BUILD_MODE=release
         mkdir -p dist-packages
         find build/target -maxdepth 1 -type f \( -name '*.deb' -o -name '*.rpm' \) -exec cp {} dist-packages/ \;
+        echo "Packaged artifacts:"
+        ls -la dist-packages
       gh-artifact-directory: dist-packages
       gh-artifact-name: packages-unsigned
       gh-retention-days: 1
@@ -224,10 +241,16 @@ jobs:
       working-directory: local
       build-env: "HELM_VERSION=${{ needs.prepare.outputs.helm_version }};APP_VERSION=${{ needs.prepare.outputs.package_version }}"
       build-script: |
+        set -x
+        echo "Working directory: $(pwd)"
+        ls -la
+        echo "HELM_VERSION=$HELM_VERSION APP_VERSION=$APP_VERSION"
         mkdir -p dist
         helm package helm/aerospike-backup-service \
           --version "$HELM_VERSION" --app-version "$APP_VERSION" \
           -d dist
+        echo "Packaged chart:"
+        ls -la dist
       gh-artifact-directory: dist
       gh-artifact-name: helm-unsigned
       gh-retention-days: 1
@@ -349,6 +372,12 @@ jobs:
           name: packages-signed
           path: signed-packages
 
+      - name: List downloaded packages
+        run: |
+          set -x
+          echo "Downloaded signed-packages contents:"
+          find signed-packages -type f -exec ls -la {} \;
+
       - name: setup GPG
         uses: aerospike/shared-workflows/.github/actions/setup-gpg@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
         with:
@@ -361,11 +390,13 @@ jobs:
           GPG_TTY: no-tty
           GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
         run: |
+          set -x
           echo "Generating checksums for signed .deb/.rpm packages..."
           find signed-packages -type f \( -name '*.deb' -o -name '*.rpm' \) \
             -exec sh -c 'sha256sum "$1" | cut -d" " -f1 > "$1.sha256"' _ {} \;
 
           CHECKSUM_COUNT=$(find signed-packages -type f -name '*.sha256' | wc -l)
+          echo "Generated $CHECKSUM_COUNT checksum file(s)."
           if [ "$CHECKSUM_COUNT" -eq 0 ]; then
             echo "No checksum files were generated." >&2
             exit 1
@@ -378,6 +409,9 @@ jobs:
             echo "Signed and verified ${file}"
           done
 
+          echo "Final signed-packages tree:"
+          find signed-packages -type f | sort
+
       - name: Upload Assets to GitHub Release
         uses: step-security/action-gh-release@d2093dbdaf0c6507874908247e14bbc4dee6a72d # v3.0.1
         with:
@@ -388,3 +422,15 @@ jobs:
             signed-packages/**/*.deb
             signed-packages/**/*.sha256
             signed-packages/**/*.sha256.asc
+
+      - name: Summarize published assets
+        if: always()
+        run: |
+          {
+            echo "### Published GitHub Release assets"
+            echo "Tag: \`${{ github.ref_name }}\`"
+            echo ""
+            echo '```'
+            find signed-packages -type f | sort
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
