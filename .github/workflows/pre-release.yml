@@ -185,9 +185,13 @@ jobs:
 
   deploy-packages:
     needs: [prepare, sign-packages]
+    # reusable_deploy-artifacts.yaml's nested `deploy` job declares actions: write at job
+    # scope (for the optional Maven bundle-metadata upload, unused here). GitHub's static
+    # validation requires it to be granted by the caller even though it's never exercised.
     permissions:
       contents: read
       id-token: write
+      actions: write
     uses: aerospike/shared-workflows/.github/workflows/reusable_deploy-artifacts.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
       gh-workflows-ref: v4.0.0
@@ -243,9 +247,12 @@ jobs:
 
   deploy-helm:
     needs: [prepare, sign-helm]
+    # See note on deploy-packages: reusable_deploy-artifacts.yaml's nested `deploy` job
+    # requires actions: write to be granted by the caller, even though it's unused here.
     permissions:
       contents: read
       id-token: write
+      actions: write
     uses: aerospike/shared-workflows/.github/workflows/reusable_deploy-artifacts.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
       gh-workflows-ref: v4.0.0
@@ -261,9 +268,14 @@ jobs:
 
   build-docker-image:
     needs: [prepare]
+    # reusable_docker-build-deploy.yaml declares no top-level permissions, but its nested
+    # `build` and `merge` jobs request packages: write (build+merge) and attestations: write
+    # (merge, for SLSA provenance) at job scope. GitHub validates these nested requests too.
     permissions:
       contents: read
       id-token: write
+      packages: write
+      attestations: write
     uses: aerospike/shared-workflows/.github/workflows/reusable_docker-build-deploy.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
       jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
@@ -290,9 +302,13 @@ jobs:
 
   create-release-bundle:
     needs: [prepare, deploy-packages, deploy-helm, build-docker-image]
+    # reusable_create-release-bundle.yaml's nested job declares actions: read at job scope
+    # (for the optional Maven bundle-metadata download, unused here). Same static-validation
+    # requirement as the id-token/actions: write cases above.
     permissions:
       contents: read
       id-token: write
+      actions: read
     uses: aerospike/shared-workflows/.github/workflows/reusable_create-release-bundle.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
       gh-workflows-ref: v4.0.0
