@@ -1,42 +1,39 @@
-name: Promote Release Bundle to PROD
+name: Publish Aerospike Backup Service Release
 
 on:
-  release:
-    types:
-      - released
   workflow_dispatch:
     inputs:
-      bundle_version:
-        description: Release bundle version (must match the git tag, e.g. v3.6.1)
+      version:
+        description: Release version to publish (must match a release bundle already promoted to PROD, e.g. v3.7.0)
         required: true
         type: string
 
 permissions:
   contents: read
 
+# This workflow is run manually, once the release bundle has already been promoted all the way to
+# JFrog PROD via the JFrog UI by a PM/EM (see docs/development.md "Cutting a release" -- gates past
+# TEST are product-owned and intentionally not automated in CI). It never promotes anything itself;
+# it only verifies the PROD promotion happened, then republishes the already-signed artifacts as an
+# immutable GitHub Release. Nothing is rebuilt, re-signed, or re-checksummed here -- JFrog is the
+# source of truth. Docker Hub mirroring is handled entirely externally by artifact-publisher
+# (https://aerospike.atlassian.net/wiki/spaces/DevOps/pages/4648566799), triggered by JFrog's own
+# promotion webhook -- no job for it lives in this workflow.
+
 jobs:
-  promote-to-prod:
+  verify-prod-promotion:
     permissions:
       contents: read
       id-token: write
     runs-on: ubuntu-24.04
     env:
       BUNDLE_NAME: ${{ github.event.repository.name }}
-      BUNDLE_VERSION: ${{ github.event.release.tag_name || github.event.inputs.bundle_version }}
+      BUNDLE_VERSION: ${{ github.event.inputs.version }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
-
-      - name: Log trigger context
-        run: |
-          set -x
-          echo "Event name: ${{ github.event_name }}"
-          echo "BUNDLE_NAME: ${BUNDLE_NAME}"
-          echo "BUNDLE_VERSION: ${BUNDLE_VERSION}"
-          echo "Release tag_name (if release event): ${{ github.event.release.tag_name }}"
-          echo "workflow_dispatch bundle_version input (if dispatched): ${{ github.event.inputs.bundle_version }}"
 
       - name: Login to JFrog
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
@@ -47,59 +44,126 @@ jobs:
           oidc-provider-name: gh-aerospike
           oidc-audience: aerospike
 
-      - name: Check release bundle exists in JFrog
-        id: check-bundle
+      - name: Check release bundle is promoted to PROD
         env:
           JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
         run: |
           set -euxo pipefail
           if [ -z "${BUNDLE_VERSION}" ]; then
-            echo "::error::Bundle version is required (release tag or workflow_dispatch input)."
+            echo "::error::version input is required (e.g. v3.7.0)."
             exit 1
           fi
 
-          echo "Checking if release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} exists in JFrog (project: ${JF_PROJECT})..."
+          echo "Checking promotion history for ${BUNDLE_NAME}:${BUNDLE_VERSION} (project: ${JF_PROJECT})..."
+          RESPONSE=$(jf rt curl -s "/lifecycle/api/v2/promotion/records/${BUNDLE_NAME}/${BUNDLE_VERSION}?project=${JF_PROJECT}")
+          echo "$RESPONSE" | jq .
 
-          # Same lookup pattern used by shared-workflows' promote-release-bundle action.
-          BUNDLE_VERSIONS_JSON=$(jf release-bundle-search versions "$BUNDLE_NAME" --project="$JF_PROJECT" --format=json)
-          echo "All known versions for ${BUNDLE_NAME}:"
-          echo "$BUNDLE_VERSIONS_JSON" | jq -r '.release_bundles[].release_bundle_version'
-
-          MATCH_COUNT=$(echo "$BUNDLE_VERSIONS_JSON" | \
-            jq --arg v "$BUNDLE_VERSION" '[.release_bundles[] | select(.release_bundle_version == $v)] | length')
-
-          if [ "$MATCH_COUNT" -ge 1 ]; then
-            echo "Release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} exists in JFrog"
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::error::Release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} not found in JFrog"
+          COMPLETED_PROD=$(echo "$RESPONSE" | jq '[.promotions[]? | select(.environment == "PROD" and .status == "COMPLETED")] | length')
+          if [ "$COMPLETED_PROD" -lt 1 ]; then
+            echo "::error::Release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} has no COMPLETED promotion to PROD. Have a PM/EM promote it via the JFrog UI, then re-run this workflow."
             exit 1
           fi
 
-      - name: Promote to JFrog PROD
-        uses: aerospike/shared-workflows/.github/actions/promote-release-bundle@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
-        with:
-          bundle-name: ${{ env.BUNDLE_NAME }}
-          version: ${{ env.BUNDLE_VERSION }}
-          environment: PROD
-          jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+          echo "Confirmed: ${BUNDLE_NAME}:${BUNDLE_VERSION} is promoted to PROD."
 
-      - name: Summarize external publication
+      - name: Summarize verification
         if: always()
         run: |
           {
-            echo "### PROD promotion summary"
+            echo "### PROD promotion check"
             echo "| Field | Value |"
             echo "| --- | --- |"
-            echo "| Triggered by | \`${{ github.event_name }}\` |"
             echo "| Bundle name | \`${BUNDLE_NAME}\` |"
             echo "| Bundle version | \`${BUNDLE_VERSION}\` |"
             echo "| JFrog project | \`${{ vars.JFROG_CLI_BUILD_PROJECT }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-github-release:
+    needs: [verify-prod-promotion]
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-24.04
+    env:
+      BUNDLE_NAME: ${{ github.event.repository.name }}
+      BUNDLE_VERSION: ${{ github.event.inputs.version }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Login to JFrog
+        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        env:
+          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+        with:
+          oidc-provider-name: gh-aerospike
+          oidc-audience: aerospike
+
+      - name: Download signed artifacts from the release bundle
+        run: |
+          set -euxo pipefail
+          echo "Listing artifacts in release bundle ${BUNDLE_NAME}/${BUNDLE_VERSION}..."
+          # jf rt search --bundle lists every artifact that is a member of this exact, immutable
+          # release bundle version, regardless of which promoted repo it currently lives in --
+          # the same technique citrusleaf/artifact-publisher uses to fetch bundle contents. This
+          # avoids having to guess the PROD-public repos' internal pool/path layout per artifact type.
+          jf rt search --bundle="${BUNDLE_NAME}/${BUNDLE_VERSION}" > bundle-artifacts.json
+          cat bundle-artifacts.json
+
+          mkdir -p release-assets
+          jq -r '.[] | select(.path | test("\\.(deb|rpm|deb\\.asc|rpm\\.asc|tgz|tgz\\.prov)$")) | .path' bundle-artifacts.json > artifact-paths.txt
+
+          if [ ! -s artifact-paths.txt ]; then
+            echo "::error::No .deb/.rpm/.tgz artifacts found in release bundle ${BUNDLE_NAME}/${BUNDLE_VERSION}. Check bundle-artifacts.json above." >&2
+            exit 1
+          fi
+
+          echo "Artifacts to download:"
+          cat artifact-paths.txt
+
+          while IFS= read -r artifact_path; do
+            jf rt download "${artifact_path}" release-assets/ --flat=true
+          done < artifact-paths.txt
+
+      - name: Generate checksums for downloaded packages
+        run: |
+          set -x
+          # Records the checksum of each already-immutable, already-signed downloaded artifact;
+          # does not rebuild or re-sign anything (per PR review: JFrog is the source of truth).
+          find release-assets -type f \( -name '*.deb' -o -name '*.rpm' \) \
+            -exec sh -c 'sha256sum "$1" | cut -d" " -f1 > "$1.sha256"' _ {} \;
+          echo "Final release-assets tree:"
+          find release-assets -type f | sort
+
+      - name: Publish GitHub Release
+        uses: step-security/action-gh-release@d2093dbdaf0c6507874908247e14bbc4dee6a72d # v3.0.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ env.BUNDLE_VERSION }}
+          draft: false
+          prerelease: false
+          body: |
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ env.BUNDLE_VERSION }}/CHANGELOG.md) for details on this release, and [docs/migration.md](https://github.com/${{ github.repository }}/blob/${{ env.BUNDLE_VERSION }}/docs/migration.md) for upgrade/breaking-change notes.
+          files: |
+            release-assets/**/*.rpm
+            release-assets/**/*.deb
+            release-assets/**/*.deb.asc
+            release-assets/**/*.rpm.asc
+            release-assets/**/*.sha256
+            release-assets/**/*.tgz
+            release-assets/**/*.tgz.prov
+
+      - name: Summarize published release
+        if: always()
+        run: |
+          {
+            echo "### Published GitHub Release"
+            echo "Tag: \`${BUNDLE_VERSION}\`"
             echo ""
-            echo "Promoted **${BUNDLE_NAME}:${BUNDLE_VERSION}** to JFrog PROD."
-            echo ""
-            echo "Docker Hub mirroring is handled by [artifact-publisher](https://github.com/citrusleaf/artifact-publisher/actions)"
-            echo "after the PROD promotion webhook fires."
-            echo ""
-            echo "Expected image: \`aerospike/${BUNDLE_NAME}:${BUNDLE_VERSION#v}\`"
+            echo '```'
+            find release-assets -type f | sort
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

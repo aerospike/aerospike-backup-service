@@ -12,54 +12,6 @@ permissions:
 # can't be centralized here — bump the sha and the "v4.0.0" gh-workflows-ref value together by hand.
 
 jobs:
-  create-release:
-    permissions:
-      contents: write
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
-        with:
-          egress-policy: audit
-
-      - name: Check if release exists
-        id: check-release
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          script: |
-            const tag = process.env.GITHUB_REF_NAME;
-            core.info(`Checking if release exists for tag: ${tag}`);
-            try {
-              const release = await github.rest.repos.getReleaseByTag({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag: tag
-              });
-              core.setOutput('release-exists', 'true');
-              core.notice("Release already exists.");
-            } catch (error) {
-              if (error.status === 404) {
-                core.setOutput('release-exists', 'false');
-                core.notice("Release not found. Will create a new one.");
-              } else {
-                core.setFailed(`Unexpected error while checking release: ${error.message}`);
-                throw error;
-              }
-            }
-
-      - name: Create new release if it does not exist
-        if: ${{ steps.check-release.outputs.release-exists == 'false' }}
-        id: create-release
-        uses: step-security/release-action@a0d8e0f90f554c15366ca2c9046bf4090d24adbe # v1.21.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag: ${{ github.ref_name }}
-          draft: true
-          prerelease: true
-          body: |
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for details on this release, and [docs/migration.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/migration.md) for upgrade/breaking-change notes.
-
   prepare:
     runs-on: ubuntu-24.04
     outputs:
@@ -417,89 +369,57 @@ jobs:
       jf-build-names: aerospike-backup-service-packages:${{ needs.prepare.outputs.packages_build_id }},aerospike-backup-service-helm:${{ needs.prepare.outputs.helm_build_id }},aerospike-backup-service-container:${{ github.run_number }}
 
   # ---------------------------------------------------------------------------
-  # GitHub Release assets (no shared-workflow equivalent)
+  # Promote to TEST (Gate 1: DEV -> TEST, developer-owned)
   # ---------------------------------------------------------------------------
+  #
+  # Per DevOps policy (https://aerospike.atlassian.net/wiki/spaces/DevOps/pages/4577493063),
+  # automated promotion stops here. TEST -> STAGE and STAGE -> PROD are manual steps done
+  # via the JFrog UI by QE and a PM/EM respectively -- see docs/development.md.
 
-  publish-release-assets:
-    # create-release must land first: it creates the draft/prerelease GitHub Release
-    # with the intended body. Without this dependency, action-gh-release below could
-    # race ahead and create a live, non-draft release with no body instead.
-    needs: [create-release, sign-packages]
+  promote-bundle-to-test:
+    needs: [prepare, create-release-bundle]
+    # reusable-action equivalent of the id-token: write note on sign-packages/sign-helm
+    # above: promote-release-bundle needs OIDC to authenticate to JFrog.
     permissions:
-      contents: write
-    # aerospike/shared-workflows setup-gpg (used below) hard-fails on anything but 22.04.
-    runs-on: ubuntu-22.04
+      contents: read
+      id-token: write
+    runs-on: ubuntu-24.04
+    env:
+      BUNDLE_NAME: aerospike-backup-service
+      BUNDLE_VERSION: ${{ needs.prepare.outputs.package_version }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
 
-      - name: Download signed packages
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: packages-signed
-          path: signed-packages
-
-      - name: List downloaded packages
-        run: |
-          set -x
-          echo "Downloaded signed-packages contents:"
-          find signed-packages -type f -exec ls -la {} \;
-
-      - name: setup GPG
-        uses: aerospike/shared-workflows/.github/actions/setup-gpg@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
-        with:
-          gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
-          gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
-          gpg-key-pass: ${{ secrets.GPG_PASS }}
-
-      - name: Create and sign checksums
+      - name: Login to JFrog
+        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
-          GPG_TTY: no-tty
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
-        run: |
-          set -x
-          echo "Generating checksums for signed .deb/.rpm packages..."
-          find signed-packages -type f \( -name '*.deb' -o -name '*.rpm' \) \
-            -exec sh -c 'sha256sum "$1" | cut -d" " -f1 > "$1.sha256"' _ {} \;
-
-          CHECKSUM_COUNT=$(find signed-packages -type f -name '*.sha256' | wc -l)
-          echo "Generated $CHECKSUM_COUNT checksum file(s)."
-          if [ "$CHECKSUM_COUNT" -eq 0 ]; then
-            echo "No checksum files were generated." >&2
-            exit 1
-          fi
-
-          echo "Signing checksum files..."
-          find signed-packages -type f -name '*.sha256' | while read -r file; do
-            gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
-            gpg --verify "${file}.asc" "${file}" &>/dev/null
-            echo "Signed and verified ${file}"
-          done
-
-          echo "Final signed-packages tree:"
-          find signed-packages -type f | sort
-
-      - name: Upload Assets to GitHub Release
-        uses: step-security/action-gh-release@d2093dbdaf0c6507874908247e14bbc4dee6a72d # v3.0.1
+          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: ${{ github.ref_name }}
-          files: |
-            signed-packages/**/*.rpm
-            signed-packages/**/*.deb
-            signed-packages/**/*.sha256
-            signed-packages/**/*.sha256.asc
+          oidc-provider-name: gh-aerospike
+          oidc-audience: aerospike
 
-      - name: Summarize published assets
+      - name: Promote release bundle to TEST
+        uses: aerospike/shared-workflows/.github/actions/promote-release-bundle@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+        with:
+          bundle-name: ${{ env.BUNDLE_NAME }}
+          version: ${{ env.BUNDLE_VERSION }}
+          environment: TEST
+          jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+
+      - name: Summarize promotion
         if: always()
         run: |
           {
-            echo "### Published GitHub Release assets"
-            echo "Tag: \`${{ github.ref_name }}\`"
+            echo "### Promoted to JFrog TEST"
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Bundle name | \`${BUNDLE_NAME}\` |"
+            echo "| Bundle version | \`${BUNDLE_VERSION}\` |"
+            echo "| JFrog project | \`${{ vars.JFROG_CLI_BUILD_PROJECT }}\` |"
             echo ""
-            echo '```'
-            find signed-packages -type f | sort
-            echo '```'
+            echo "Next: QE validates the artifacts from JFrog TEST, then promotes to STAGE via the JFrog UI."
           } >> "$GITHUB_STEP_SUMMARY"

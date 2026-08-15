@@ -85,10 +85,29 @@ through releases and hotfixes.
 
 ### Cutting a release
 
+Releases move through JFrog's promotion stages (`DEV -> TEST -> STAGE -> PROD`) before anything is made public. The
+GitHub Actions side is split into two workflows: [`pre-release.yml`](../.github/workflows/pre-release.yml) (developer
+owned, builds and promotes up to `TEST`) and [`release.yml`](../.github/workflows/release.yml) (run once the release
+is fully approved, publishes it).
+
 1. Open a pull request from `dev` into `main` and merge it.
-2. Tag the release commit on `main`: `git tag v3.x.y && git push origin v3.x.y`. The pre-release workflow runs on the
-   tag push.
-3. If the release added commits that exist only on `main` (for example a hotfix), back-merge `main` into `dev`.
+2. Tag the release commit on `main`: `git tag v3.x.y && git push origin v3.x.y`. This triggers `pre-release.yml`,
+   which:
+   1. Builds the DEB/RPM packages, Helm chart, and Docker image.
+   2. Signs the packages and Helm chart, and deploys everything to JFrog `DEV`.
+   3. Creates a unified release bundle and automatically promotes it from `DEV` to `TEST`.
+3. QE/developers pull the artifacts from JFrog `TEST` and validate them. Once they pass, the release bundle is
+   promoted from `TEST` to `STAGE` (manually, via the JFrog UI — not automated).
+4. A PM or EM reviews the release and promotes the release bundle from `STAGE` to `PROD` via the JFrog UI. This is
+   the gate that makes a release public; automation intentionally stops before this step.
+5. Once the bundle is on `PROD`:
+   - Docker Hub mirroring happens automatically and externally (JFrog's existing promotion webhook feeds
+     `artifact-publisher`) — nothing to trigger here.
+   - Someone with repo access (not necessarily the same PM/EM from step 4) manually runs `release.yml`
+     (`workflow_dispatch`, with the release version as input). It verifies the bundle was actually promoted to
+     `PROD`, then downloads the already-signed artifacts straight from JFrog's `PROD`-public repos and publishes
+     them as a new, immutable GitHub Release — nothing is rebuilt, re-signed, or re-checksummed at this point.
+6. If the release added commits that exist only on `main` (for example a hotfix), back-merge `main` into `dev`.
 
 ## Reporting issues
 
