@@ -2,6 +2,7 @@ package restoreexecutor
 
 import (
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
@@ -91,6 +92,82 @@ func TestMakeRestoreConfig(t *testing.T) {
 	assert.Equal(t, 2000, *config.SecretAgentConfig.TimeoutMillisecond)
 	assert.Equal(t, "ca-cert", *config.SecretAgentConfig.CaFile)
 	assert.True(t, *config.SecretAgentConfig.IsBase64)
+}
+
+func TestMakeWritePolicy(t *testing.T) {
+	trueVal := true
+	falseVal := false
+	socketTimeout := 5 * time.Minute
+	totalTimeout := 30 * time.Second
+
+	tests := []struct {
+		name   string
+		policy model.RestorePolicy
+		assert func(t *testing.T, writePolicy *as.WritePolicy)
+	}{
+		{
+			name:   "defaults",
+			policy: model.RestorePolicy{},
+			assert: func(t *testing.T, writePolicy *as.WritePolicy) {
+				t.Helper()
+				assert.True(t, writePolicy.SendKey)
+				assert.Equal(t, as.EXPECT_GEN_GT, writePolicy.GenerationPolicy)
+				assert.Equal(t, as.UPDATE, writePolicy.RecordExistsAction)
+				assert.Equal(t, model.DefaultSocketTimeout, writePolicy.SocketTimeout)
+			},
+		},
+		{
+			name: "no generation and total timeout",
+			policy: model.RestorePolicy{
+				NoGeneration: &trueVal,
+				TotalTimeout: &totalTimeout,
+			},
+			assert: func(t *testing.T, writePolicy *as.WritePolicy) {
+				t.Helper()
+				assert.Equal(t, as.NONE, writePolicy.GenerationPolicy)
+				assert.Equal(t, totalTimeout, writePolicy.TotalTimeout)
+			},
+		},
+		{
+			name: "replace sets record exists action",
+			policy: model.RestorePolicy{
+				Replace: &trueVal,
+			},
+			assert: func(t *testing.T, writePolicy *as.WritePolicy) {
+				t.Helper()
+				assert.Equal(t, as.REPLACE, writePolicy.RecordExistsAction)
+			},
+		},
+		{
+			name: "unique sets record exists action",
+			policy: model.RestorePolicy{
+				Replace: &falseVal,
+				Unique:  &trueVal,
+			},
+			assert: func(t *testing.T, writePolicy *as.WritePolicy) {
+				t.Helper()
+				assert.Equal(t, as.CREATE_ONLY, writePolicy.RecordExistsAction)
+			},
+		},
+		{
+			name: "custom socket timeout",
+			policy: model.RestorePolicy{
+				SocketTimeout: &socketTimeout,
+			},
+			assert: func(t *testing.T, writePolicy *as.WritePolicy) {
+				t.Helper()
+				assert.Equal(t, socketTimeout, writePolicy.SocketTimeout)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			writePolicy := makeWritePolicy(&model.RestoreRequest{Policy: tt.policy})
+			require.NotNil(t, writePolicy)
+			tt.assert(t, writePolicy)
+		})
+	}
 }
 
 func TestRecordExistsAction(t *testing.T) {
