@@ -3415,10 +3415,10 @@ const docTemplate = `{
                     "example": "/path/to/key.pem"
                 },
                 "key-file-password": {
-                    "description": "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
+                    "description": "Passphrase for an encrypted TLS key file. The value is used verbatim as the decryption password.",
                     "type": "string",
                     "x-nullable": true,
-                    "example": "file:/path/to/password"
+                    "example": "my-secret-passphrase"
                 },
                 "name": {
                     "description": "TLSName used for server certificate verification (ServerName for SNI).",
