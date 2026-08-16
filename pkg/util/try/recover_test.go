@@ -1,7 +1,6 @@
 package try
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,5 +38,5 @@ func TestRecoverError_Panic(t *testing.T) {
 	})
 	assert.Equal(t, 0, value)
 	require.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), "recovered from panic"))
+	assert.Contains(t, err.Error(), "recovered from panic")
 }

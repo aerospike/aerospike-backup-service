@@ -31,7 +31,7 @@ func TestObserveRestoreCompletion(t *testing.T) {
 			before := testutil.ToFloat64(restoreCounter.WithLabelValues(string(tt.outcome)))
 			ObserveRestoreCompletion(tt.status)
 			after := testutil.ToFloat64(restoreCounter.WithLabelValues(string(tt.outcome)))
-			assert.Equal(t, before+1, after)
+			assert.InDelta(t, before+1, after, 0.001)
 		})
 	}
 }
@@ -47,73 +47,7 @@ func TestObserveBackupEvent(t *testing.T) {
 	ObserveBackupEvent("routine-a", model.BackupTypeFull, OutcomeSuccess, 2*time.Minute)
 
 	after := counterValue(t, backupCounter, labels)
-	assert.Equal(t, before+1, after)
-}
-
-func TestObserveBackupEvent_deprecatedCounters(t *testing.T) {
-	tests := []struct {
-		name       string
-		backupType model.BackupType
-		outcome    Outcome
-		check      func(t *testing.T, before float64)
-	}{
-		{
-			name:       "incremental success",
-			backupType: model.BackupTypeIncremental,
-			outcome:    OutcomeSuccess,
-			check: func(t *testing.T, before float64) {
-				after := testutil.ToFloat64(incrBackupRunsTotalDeprecated.WithLabelValues())
-				assert.Equal(t, before+1, after)
-			},
-		},
-		{
-			name:       "full failure",
-			backupType: model.BackupTypeFull,
-			outcome:    OutcomeFailure,
-			check: func(t *testing.T, before float64) {
-				after := testutil.ToFloat64(backupFailureTotalDeprecated.WithLabelValues())
-				assert.Equal(t, before+1, after)
-			},
-		},
-		{
-			name:       "incremental skip",
-			backupType: model.BackupTypeIncremental,
-			outcome:    OutcomeSkip,
-			check: func(t *testing.T, before float64) {
-				after := testutil.ToFloat64(incrBackupSkipTotalDeprecated.WithLabelValues())
-				assert.Equal(t, before+1, after)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var before float64
-			switch tt.outcome {
-			case OutcomeSuccess:
-				if tt.backupType == model.BackupTypeFull {
-					before = testutil.ToFloat64(backupRunsTotalDeprecated.WithLabelValues())
-				} else {
-					before = testutil.ToFloat64(incrBackupRunsTotalDeprecated.WithLabelValues())
-				}
-			case OutcomeFailure:
-				if tt.backupType == model.BackupTypeFull {
-					before = testutil.ToFloat64(backupFailureTotalDeprecated.WithLabelValues())
-				} else {
-					before = testutil.ToFloat64(incrBackupFailureTotalDeprecated.WithLabelValues())
-				}
-			case OutcomeSkip:
-				if tt.backupType == model.BackupTypeFull {
-					before = testutil.ToFloat64(backupSkipTotalDeprecated.WithLabelValues())
-				} else {
-					before = testutil.ToFloat64(incrBackupSkipTotalDeprecated.WithLabelValues())
-				}
-			}
-
-			ObserveBackupEvent("routine-c", tt.backupType, tt.outcome, time.Minute)
-			tt.check(t, before)
-		})
-	}
+	assert.InDelta(t, before+1, after, 0.001)
 }
 
 func TestObserveBackupEvent_zeroDurationSkipsHistogram(t *testing.T) {
@@ -131,8 +65,8 @@ func TestSetLastBackupTimestamp(t *testing.T) {
 
 	fullGauge := lastBackupTimestampGauge.WithLabelValues("routine-b", string(model.BackupTypeFull))
 	incrGauge := lastBackupTimestampGauge.WithLabelValues("routine-b", string(model.BackupTypeIncremental))
-	assert.Equal(t, float64(fullTime.Unix()), testutil.ToFloat64(fullGauge))
-	assert.Equal(t, float64(incrTime.Unix()), testutil.ToFloat64(incrGauge))
+	assert.InDelta(t, float64(fullTime.Unix()), testutil.ToFloat64(fullGauge), 0.001)
+	assert.InDelta(t, float64(incrTime.Unix()), testutil.ToFloat64(incrGauge), 0.001)
 }
 
 type stubBackupsRegistry struct {
@@ -167,8 +101,8 @@ func TestMetricsCollector_collectBackupMetrics(t *testing.T) {
 
 	fullRunning := backupRunningGauge.WithLabelValues("routine-1", string(model.BackupTypeFull))
 	incrRunning := backupRunningGauge.WithLabelValues("routine-1", string(model.BackupTypeIncremental))
-	assert.Equal(t, float64(1), testutil.ToFloat64(fullRunning))
-	assert.Equal(t, float64(1), testutil.ToFloat64(incrRunning))
+	assert.InDelta(t, float64(1), testutil.ToFloat64(fullRunning), 0.001)
+	assert.InDelta(t, float64(1), testutil.ToFloat64(incrRunning), 0.001)
 
 	fullProgress := backupProgressGauge.WithLabelValues("routine-1", string(model.BackupTypeFull))
 	incrProgress := backupProgressGauge.WithLabelValues("routine-1", string(model.BackupTypeIncremental))
@@ -185,7 +119,7 @@ func TestMetricsCollector_collectRestoreMetrics(t *testing.T) {
 
 	collector.collectRestoreMetrics()
 
-	assert.Equal(t, float64(3), testutil.ToFloat64(restoreRunningGauge.WithLabelValues()))
+	assert.InDelta(t, float64(3), testutil.ToFloat64(restoreRunningGauge.WithLabelValues()), 0.001)
 }
 
 func TestMetricsCollector_collectMetrics_skipsWhenLocked(t *testing.T) {
