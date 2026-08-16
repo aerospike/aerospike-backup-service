@@ -18,17 +18,6 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestService_ConfigActionHandler(t *testing.T) {
-	svc := &Service{}
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/config/action", nil)
-	w := httptest.NewRecorder()
-
-	svc.ConfigActionHandler(w, req)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Empty(t, w.Body.String())
-}
-
 func TestService_ReadConfig(t *testing.T) {
 	svc := &Service{config: model.NewConfig()}
 	_ = svc.config.AddCluster("cluster1", &model.AerospikeCluster{})

@@ -11,10 +11,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/validation"
 )
 
-func (s *Service) ConfigActionHandler(_ http.ResponseWriter, _ *http.Request) {
-
-}
-
 // ReadConfig
 // @Summary     Returns the configuration for the service.
 // @ID	        readConfig
