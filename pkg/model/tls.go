@@ -9,7 +9,7 @@ type TLS struct {
 	Protocols string
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
 	CipherSuite string
-	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
+	// Passphrase for an encrypted TLS key file. The value is used verbatim as the decryption password.
 	KeyfilePassword string
 }
 
