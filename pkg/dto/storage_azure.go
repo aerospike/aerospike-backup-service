@@ -79,6 +79,20 @@ func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if err := validateSecretRef(a.AccountKey, agent); err != nil {
+		return nil, fmt.Errorf("account-key: %w", err)
+	}
+	if err := validateSecretRef(a.TenantID, agent); err != nil {
+		return nil, fmt.Errorf("tenant-id: %w", err)
+	}
+	if err := validateSecretRef(a.ClientID, agent); err != nil {
+		return nil, fmt.Errorf("client-id: %w", err)
+	}
+	if err := validateSecretRef(a.ClientSecret, agent); err != nil {
+		return nil, fmt.Errorf("client-secret: %w", err)
+	}
+
 	return &model.AzureStorage{
 		Endpoint:      a.Endpoint,
 		ContainerName: a.ContainerName,

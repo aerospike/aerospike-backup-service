@@ -62,6 +62,10 @@ func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
 		return nil, err
 	}
 
+	if err := validateSecretRef(s.Key, agent); err != nil {
+		return nil, fmt.Errorf("key-json: %w", err)
+	}
+
 	return &model.GcpStorage{
 		KeyFile:      s.KeyFile,
 		BucketName:   s.BucketName,
