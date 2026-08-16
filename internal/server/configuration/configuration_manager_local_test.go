@@ -82,6 +82,7 @@ func TestFileConfigurationManager_Read_ContextCanceled(t *testing.T) {
 
 	_, err := manager.Read(ctx)
 	require.Error(t, err)
+	require.ErrorIs(t, err, context.Canceled)
 }
 
 func TestFileConfigurationManager_Write(t *testing.T) {
@@ -145,6 +146,7 @@ func TestFileConfigurationManager_Write_ContextCanceled(t *testing.T) {
 
 	err := manager.Write(ctx, model.NewConfig())
 	require.Error(t, err)
+	require.ErrorIs(t, err, context.Canceled)
 }
 
 func TestFileConfigurationManager_WriteThenRead_RoundTrip(t *testing.T) {

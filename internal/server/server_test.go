@@ -1,6 +1,8 @@
 package server
 
 import (
+	"net"
+	"net/http"
 	"testing"
 	"time"
 
@@ -28,23 +30,51 @@ func newTestHTTPServer(t *testing.T) *HTTPServer {
 	return NewHTTPServer(t.Context(), svc)
 }
 
+func waitForHTTPServerReady(t *testing.T, healthURL string) {
+	t.Helper()
+
+	client := &http.Client{Timeout: 100 * time.Millisecond}
+	deadline := time.Now().Add(5 * time.Second)
+
+	for time.Now().Before(deadline) {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, healthURL, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		resp, err := client.Do(req)
+		if err == nil {
+			_ = resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				return
+			}
+		}
+
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	t.Fatal("timed out waiting for server to start")
+}
+
 func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
 	srv := newTestHTTPServer(t)
 	require.NotNil(t, srv.server)
 
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- srv.Start()
+		errCh <- srv.server.Serve(ln)
 	}()
 
-	// Give the server a brief moment to start listening.
-	time.Sleep(50 * time.Millisecond)
+	waitForHTTPServerReady(t, "http://"+ln.Addr().String()+"/health")
 
 	require.NoError(t, srv.Shutdown())
 
 	select {
 	case err := <-errCh:
-		require.NoError(t, err)
+		require.ErrorIs(t, err, http.ErrServerClosed)
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for server to stop")
 	}

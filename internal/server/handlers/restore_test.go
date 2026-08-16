@@ -51,6 +51,7 @@ func TestService_RestoreHandlers(t *testing.T) {
 			mockManager.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(tt.jobID, nil)
 
 			svc := &Service{
+				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
 			}
@@ -143,6 +144,7 @@ func TestService_restoreByPath(t *testing.T) {
 			tt.setupMock(mockManager)
 
 			svc := &Service{
+				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
 			}
@@ -237,6 +239,7 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 			tt.setupMock(mockManager)
 
 			svc := &Service{
+				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
 			}

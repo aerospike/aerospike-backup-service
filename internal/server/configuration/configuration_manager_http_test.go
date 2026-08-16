@@ -99,6 +99,7 @@ func TestHTTPConfigurationManager_Read_ContextCanceled(t *testing.T) {
 
 	_, err := manager.Read(ctx)
 	require.Error(t, err)
+	require.ErrorIs(t, err, context.Canceled)
 }
 
 func TestHTTPConfigurationManager_Write(t *testing.T) {
