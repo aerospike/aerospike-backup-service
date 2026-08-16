@@ -1,7 +1,5 @@
 package model
 
-import "fmt"
-
 // ClientTLS represents the TLS configuration options relevant for client-side connections.
 type ClientTLS struct {
 	// Path to a trusted CA certificate file in PEM format.
@@ -14,16 +12,7 @@ type ClientTLS struct {
 	Keyfile string
 }
 
-// String returns a string representation of the ClientTLS.
-func (c *ClientTLS) String() string {
-	if c == nil {
-		return ""
-	}
-	return fmt.Sprintf(
-		"%s:%s:%s:%s",
-		c.CAFile,
-		c.Name,
-		c.Certfile,
-		c.Keyfile,
-	)
+// Hash returns a unique identifier for the ClientTLS configuration.
+func (c ClientTLS) Hash() uint64 {
+	return hashValues(c.CAFile, c.Name, c.Certfile, c.Keyfile)
 }

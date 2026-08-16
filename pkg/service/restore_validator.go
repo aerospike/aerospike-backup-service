@@ -130,8 +130,13 @@ func (r *restoreValidatorImpl) checkRunningBackupsConflict(
 		// Block if there is any overlap between the destination namespaces of the restore
 		// and the source namespaces of the running backup.
 		if overlappingNS := namespacesOverlap(destinationNamespaces, routine.Namespaces); overlappingNS != "" {
+			clusterLabel := cluster.ClusterLabel
+			if clusterLabel == "" && len(cluster.SeedNodes) > 0 {
+				clusterLabel = cluster.SeedNodes[0].String()
+			}
+
 			return fmt.Errorf("restore not allowed during backups on routine %s (cluster %s, namespace %q). "+
-				"Please cancel existing backups jobs to perform restore", routine.Name, cluster.ToString(), overlappingNS)
+				"Please cancel existing backups jobs to perform restore", routine.Name, clusterLabel, overlappingNS)
 		}
 	}
 

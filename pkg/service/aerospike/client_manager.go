@@ -43,7 +43,7 @@ type Cluster interface {
 // the client is actually closed when the counter reaches zero.
 type ClientManagerImpl struct {
 	// clients holds the state for each cluster.
-	clients       *collections.SafeMap[string, *clientInfo]
+	clients       *collections.SafeMap[uint64, *clientInfo]
 	clientFactory ClientFactory
 	closeDelay    time.Duration
 }
@@ -66,7 +66,7 @@ type clientInfo struct {
 // closeDelay specifies how long to wait before actually closing the client after the last user releases it.
 func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Duration) *ClientManagerImpl {
 	return &ClientManagerImpl{
-		clients:       collections.NewSafeMap[string, *clientInfo](),
+		clients:       collections.NewSafeMap[uint64, *clientInfo](),
 		clientFactory: aerospikeClientFactory,
 		closeDelay:    closeDelay,
 	}
@@ -164,13 +164,13 @@ func (cm *ClientManagerImpl) createBackupClient(
 func (cm *ClientManagerImpl) Close(client Client) {
 	var (
 		targetInfo *clientInfo
-		targetKey  string
+		targetKey  uint64
 	)
 
 	// We need to find which info struct owns this client.
 	// Since Client interface wraps the underlying AerospikeClient, we compare pointers.
 	found := false
-	cm.clients.Iterate(func(key string, info *clientInfo) {
+	cm.clients.Iterate(func(key uint64, info *clientInfo) {
 		if found {
 			return // Optimization: stop if already found
 		}
@@ -197,7 +197,7 @@ func (cm *ClientManagerImpl) Close(client Client) {
 }
 
 // decrementRef decreases the reference count and schedules closing if count reaches zero.
-func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey string) {
+func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey uint64) {
 	info.mu.Lock()
 	defer info.mu.Unlock()
 
@@ -212,7 +212,7 @@ func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey string) {
 }
 
 // scheduleClosing schedules client closing after the configured delay.
-func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
+func (cm *ClientManagerImpl) scheduleClosing(clusterKey uint64) *time.Timer {
 	return time.AfterFunc(cm.closeDelay, func() {
 		// 1. Retrieve the info struct
 		info, exists := cm.clients.Load(clusterKey)

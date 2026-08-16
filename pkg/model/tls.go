@@ -1,7 +1,5 @@
 package model
 
-import "fmt"
-
 // TLS represents the Aerospike cluster TLS configuration options.
 type TLS struct {
 	ClientTLS
@@ -15,14 +13,14 @@ type TLS struct {
 	KeyfilePassword string
 }
 
-// String returns a string representation of the TLS.
-func (tls *TLS) String() string {
+// Hash returns a unique identifier for the TLS configuration.
+func (tls *TLS) Hash() uint64 {
 	if tls == nil {
-		return ""
+		return 0
 	}
-	return fmt.Sprintf(
-		"%s:%s:%s:%s:%s",
-		tls.ClientTLS.String(),
+
+	return hashValues(
+		tls.ClientTLS.Hash(),
 		tls.CAPath,
 		tls.Protocols,
 		tls.CipherSuite,
