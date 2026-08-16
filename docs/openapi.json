@@ -3698,9 +3698,9 @@
                         "nullable": true
                     },
                     "key-file-password": {
-                        "description": "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
+                        "description": "Passphrase for an encrypted TLS key file. The value is used verbatim as the decryption password.",
                         "type": "string",
-                        "example": "file:/path/to/password",
+                        "example": "my-secret-passphrase",
                         "nullable": true
                     },
                     "name": {
