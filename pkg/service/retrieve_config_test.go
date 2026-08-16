@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -59,14 +60,16 @@ func TestConfigRetriever_RetrieveConfiguration_Success(t *testing.T) {
 	require.Len(t, zr.File, 2)
 
 	var allContent string
+	var allContentSb62 strings.Builder
 	for _, f := range zr.File {
 		rc, err := f.Open()
 		require.NoError(t, err)
 		b, err := io.ReadAll(rc)
 		require.NoError(t, err)
 		require.NoError(t, rc.Close())
-		allContent += string(b)
+		allContentSb62.WriteString(string(b))
 	}
+	allContent += allContentSb62.String()
 	assert.Contains(t, allContent, "config-a")
 	assert.Contains(t, allContent, "config-b")
 }

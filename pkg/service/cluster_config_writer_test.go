@@ -43,7 +43,7 @@ func TestClusterConfigWriter_Write_GetClientError(t *testing.T) {
 		Return(nil, clientErr)
 
 	writer := NewClusterConfigWriter(clientManager, NewPathService(nil), &fakeStorageDataWriter{})
-	err := writer.Write(context.Background(), routine, time.Now())
+	err := writer.Write(t.Context(), routine, time.Now())
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, clientErr)

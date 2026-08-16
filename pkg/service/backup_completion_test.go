@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -41,7 +42,7 @@ func TestBackupCompletionHandler_OnSuccess_Incremental(t *testing.T) {
 
 	handler := NewBackupCompletionHandler(registry, retention, clusterWriter)
 	handler.OnSuccess(
-		context.Background(),
+		t.Context(),
 		routine,
 		model.BackupTypeIncremental,
 		time.Now(),
@@ -62,7 +63,7 @@ func TestBackupCompletionHandler_OnSuccess_FullRunsRetentionAndClusterConfig(t *
 		},
 	}
 	timestamp := time.Now()
-	ctx := context.Background()
+	ctx := t.Context()
 	logger := slog.New(slog.DiscardHandler)
 
 	registry := NewMockRunningBackupsRegistry(ctrl)
@@ -111,7 +112,7 @@ func TestBackupCompletionHandler_OnSuccess_FullSkipsClusterConfigWhenDisabled(t 
 		Name:         "routine-1",
 		BackupPolicy: &model.BackupPolicy{WithClusterConfig: ptr.Of(false)},
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	registry := NewMockRunningBackupsRegistry(ctrl)
 	retention := NewMockRetentionManager(ctrl)
@@ -152,7 +153,7 @@ func TestBackupCompletionHandler_OnSuccess_LogsRetentionFailure(t *testing.T) {
 		Name:         "routine-1",
 		BackupPolicy: &model.BackupPolicy{},
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 	capture := &slogCaptureHandler{}
 	logger := slog.New(capture)
 
@@ -199,10 +200,5 @@ func (h *slogCaptureHandler) WithGroup(_ string) slog.Handler      { return h }
 func (h *slogCaptureHandler) containsMessage(msg string) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	for _, m := range h.messages {
-		if m == msg {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(h.messages, msg)
 }

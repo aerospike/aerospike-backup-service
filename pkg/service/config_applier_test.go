@@ -21,7 +21,7 @@ func TestDefaultConfigApplier_ApplyNewConfig_NoInvalidations(t *testing.T) {
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig(context.Background()))
+	require.NoError(t, applier.ApplyNewConfig(t.Context()))
 	scheduler.AssertNotCalled(t, "DeleteJob", mock.Anything)
 	scheduler.AssertNotCalled(t, "ScheduleJob", mock.Anything, mock.Anything)
 }
@@ -54,7 +54,7 @@ func TestDefaultConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *te
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig(context.Background()))
+	require.NoError(t, applier.ApplyNewConfig(t.Context()))
 	scheduler.AssertNumberOfCalls(t, "DeleteJob", 2)
 	scheduler.AssertNumberOfCalls(t, "ScheduleJob", 1)
 	<-syncDone
@@ -82,7 +82,7 @@ func TestDefaultConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig(context.Background()))
+	require.NoError(t, applier.ApplyNewConfig(t.Context()))
 	scheduler.AssertNotCalled(t, "ScheduleJob", mock.Anything, mock.Anything)
 	<-syncDone
 }
@@ -105,7 +105,7 @@ func TestDefaultConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
 		cfg,
 	)
 
-	err := applier.ApplyNewConfig(context.Background())
+	err := applier.ApplyNewConfig(t.Context())
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed to schedule periodic backups")
 }
@@ -130,7 +130,7 @@ func TestDefaultConfigApplier_ApplyNewConfig_ScheduleJobError(t *testing.T) {
 		cfg,
 	)
 
-	err := applier.ApplyNewConfig(context.Background())
+	err := applier.ApplyNewConfig(t.Context())
 	require.Error(t, err)
 	require.ErrorIs(t, err, scheduleErr)
 }
