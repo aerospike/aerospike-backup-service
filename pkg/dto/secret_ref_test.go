@@ -28,6 +28,7 @@ func testConfigWithSecretAgent(t *testing.T) *model.Config {
 func TestValidateSecretRef_NilAgentWithPrefix(t *testing.T) {
 	err := validateSecretRef("secrets:asbackup:psw", nil)
 	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "secrets:asbackup:psw")
 	require.ErrorContains(t, err, "secret agent")
 }
@@ -37,6 +38,7 @@ func TestValidateSecretRef_MalformedReference(t *testing.T) {
 
 	err := validateSecretRef("secrets:foo", agent)
 	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "secrets:foo")
 	require.ErrorContains(t, err, "secrets:<resource>:<secret>")
 }
@@ -64,6 +66,7 @@ func TestCredentialsToModel_SecretRefWithoutAgent(t *testing.T) {
 
 	_, err := cluster.ToModel(model.NewConfig())
 	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "password")
 	require.ErrorContains(t, err, "secret agent")
 }
@@ -80,6 +83,7 @@ func TestCredentialsToModel_MalformedSecretRef(t *testing.T) {
 
 	_, err := cluster.ToModel(testConfigWithSecretAgent(t))
 	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "password")
 	require.ErrorContains(t, err, "secrets:<resource>:<secret>")
 }
@@ -96,6 +100,7 @@ func TestS3StorageToModel_SecretRefWithoutAgent(t *testing.T) {
 
 	_, err := storage.ToModel(model.NewConfig())
 	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "access-key-id")
 	require.ErrorContains(t, err, "secret agent")
 }
@@ -113,6 +118,7 @@ func TestAzureStorageToModel_MalformedSecretRef(t *testing.T) {
 
 	_, err := storage.ToModel(testConfigWithSecretAgent(t))
 	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "account-key")
 	require.ErrorContains(t, err, "secrets:<resource>:<secret>")
 }
@@ -127,6 +133,7 @@ func TestGcpStorageToModel_SecretRefWithoutAgent(t *testing.T) {
 
 	_, err := storage.ToModel(model.NewConfig())
 	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "key-json")
 	require.ErrorContains(t, err, "secret agent")
 }
@@ -146,6 +153,7 @@ func TestConfigToModel_SecretRefWithoutAgent(t *testing.T) {
 
 	_, err := config.ToModel(ValidationSkipTLSFiles)
 	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "secret agent")
 }
 
@@ -171,5 +179,6 @@ func TestRestoreRequestToModel_SecretRefWithoutAgent(t *testing.T) {
 
 	_, err := request.ToModel(config)
 	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "secret agent")
 }
