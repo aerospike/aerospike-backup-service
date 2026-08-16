@@ -42,7 +42,7 @@ func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credenti
 		if err != nil {
 			return nil, fmt.Errorf("failed to read password from password-path %s: %w", creds.PasswordPath, err)
 		}
-		slog.Debug("Successfully read password", slog.String("path", creds.PasswordPath))
+		slog.Debug("Successfully read password from password-path")
 
 		// Strip only line-ending characters to preserve meaningful spaces.
 		password := strings.TrimRight(string(data), "\r\n")
