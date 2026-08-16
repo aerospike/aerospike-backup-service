@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -17,7 +18,7 @@ type Service struct {
 	configApplier        service.ConfigApplier
 	backupScheduler      service.AdHocScheduler
 	restoreManager       service.RestoreManager
-	configRetriever      service.ConfigRetriever
+	configRetriever      ConfigRetriever
 	backupReader         service.BackupReader
 	registry             RunningBackupsRegistry
 	configurationManager configuration.Manager
@@ -32,7 +33,7 @@ func NewService(
 	configApplier service.ConfigApplier,
 	backupScheduler service.AdHocScheduler,
 	restoreManager service.RestoreManager,
-	configRetriever service.ConfigRetriever,
+	configRetriever ConfigRetriever,
 	backupReader service.BackupReader,
 	registry RunningBackupsRegistry,
 	configurationManager configuration.Manager,
@@ -66,4 +67,10 @@ type RunningBackupsRegistry interface {
 	GetRunningState() map[string]model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.
 	Cancel(routineName string)
+}
+
+// ConfigRetriever reads backed-up Aerospike configuration from storage.
+type ConfigRetriever interface {
+	// RetrieveConfiguration returns backed up Aerospike configuration.
+	RetrieveConfiguration(ctx context.Context, routine *model.BackupRoutine, t time.Time) ([]byte, error)
 }

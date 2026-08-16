@@ -14,7 +14,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -458,8 +457,9 @@ func TestService_RetrieveConfig(t *testing.T) {
 				_ = s.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 			},
 			setupMock: func(m *MockConfigRetriever) {
-				m.On("RetrieveConfiguration", mock.Anything, mock.Anything, mock.Anything).
-					Return([]byte(nil), errors.New("boom"))
+				m.EXPECT().
+					RetrieveConfiguration(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("boom"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedError:  "boom",
@@ -472,7 +472,8 @@ func TestService_RetrieveConfig(t *testing.T) {
 				_ = s.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 			},
 			setupMock: func(m *MockConfigRetriever) {
-				m.On("RetrieveConfiguration", mock.Anything, mock.Anything, mock.Anything).
+				m.EXPECT().
+					RetrieveConfiguration(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return([]byte("zip-content"), nil)
 			},
 			expectedStatus: http.StatusOK,
@@ -481,7 +482,10 @@ func TestService_RetrieveConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRetriever := &MockConfigRetriever{}
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRetriever := NewMockConfigRetriever(ctrl)
 			tt.setupMock(mockRetriever)
 
 			svc := &Service{

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -35,20 +34,6 @@ func (m *MockBackupBackendService) WriteBackupMetadata(
 func (m *MockBackupBackendService) Delete(ctx context.Context, routineName *model.BackupRoutine, path string) error {
 	args := m.Called(ctx, routineName, path)
 	return args.Error(0)
-}
-
-// MockConfigRetriever is a mock implementation of service.ConfigRetriever.
-type MockConfigRetriever struct {
-	mock.Mock
-}
-
-// RetrieveConfiguration returns backed up Aerospike configuration.
-func (m *MockConfigRetriever) RetrieveConfiguration(
-	ctx context.Context, routine *model.BackupRoutine, timestamp time.Time,
-) ([]byte, error) {
-	args := m.Called(ctx, routine, timestamp)
-	buf, _ := args.Get(0).([]byte)
-	return buf, args.Error(1)
 }
 
 type configurationManagerMock struct{}
