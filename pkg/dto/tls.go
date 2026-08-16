@@ -55,7 +55,7 @@ func (t *TLS) validateCACertificates() error {
 
 // validateKeyfilePassword ensures keyfile password is only set when keyfile is present.
 func (t *TLS) validateKeyfilePassword() error {
-	if t.KeyfilePassword != "" && (t.Keyfile == "") {
+	if t.KeyfilePassword != "" && t.Keyfile == "" {
 		return errValidationRequires("key-file-password", "key-file")
 	}
 
