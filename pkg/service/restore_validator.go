@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -97,7 +98,7 @@ func (r *restoreValidatorImpl) ValidateTimestamp(
 		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
 	}
 
-	sourceNamespaces := collections.Keys(backupsByNamespace)
+	sourceNamespaces := slices.Collect(maps.Keys(backupsByNamespace))
 	destinationNamespaces := destinationNamespacesForRestore(request.Policy.Namespace, sourceNamespaces)
 	if err := validateDestinationNamespaces(ctx, destinationNamespaces, infoGetter); err != nil {
 		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)

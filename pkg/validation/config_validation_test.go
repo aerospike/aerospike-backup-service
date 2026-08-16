@@ -7,7 +7,36 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestValidateStaticFieldChanges(t *testing.T) {
+	base := &dto.Config{
+		ServiceConfig: dto.ServiceConfig{
+			HTTPServer: &dto.HTTPServerConfig{
+				Address: ptr.Of("localhost"),
+			},
+		},
+	}
+
+	unchanged := &dto.Config{
+		ServiceConfig: dto.ServiceConfig{
+			HTTPServer: &dto.HTTPServerConfig{
+				Address: ptr.Of("localhost"),
+			},
+		},
+	}
+	require.NoError(t, ValidateStaticFieldChanges(base, unchanged))
+
+	changed := &dto.Config{
+		ServiceConfig: dto.ServiceConfig{
+			HTTPServer: &dto.HTTPServerConfig{
+				Address: ptr.Of("0.0.0.0"),
+			},
+		},
+	}
+	require.Error(t, ValidateStaticFieldChanges(base, changed))
+}
 
 func TestValidateConfiguration(t *testing.T) {
 	config := &dto.Config{
