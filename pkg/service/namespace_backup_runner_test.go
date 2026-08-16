@@ -31,14 +31,13 @@ func TestNamespaceBackupRunnerImpl_DeleteFolder_ContextCanceled(t *testing.T) {
 	require.True(t, ok)
 
 	routine := &model.BackupRoutine{Name: routineName}
-	capture := &slogCaptureHandler{}
-	logger := slog.New(capture)
+	logger, logBuf := newTestLogger(t)
 
 	mocks.backendService.EXPECT().Delete(t.Context(), routine, "some/path").Return(context.Canceled)
 
 	impl.deleteFolder(t.Context(), routine, "some/path", logger)
 
-	require.True(t, capture.containsMessage("Delete folder context canceled"))
+	require.Contains(t, logBuf.String(), "Delete folder context canceled")
 }
 
 func TestNamespaceBackupRunnerImpl_DeleteFolder_Error(t *testing.T) {
@@ -49,13 +48,12 @@ func TestNamespaceBackupRunnerImpl_DeleteFolder_Error(t *testing.T) {
 	require.True(t, ok)
 
 	routine := &model.BackupRoutine{Name: routineName}
-	capture := &slogCaptureHandler{}
-	logger := slog.New(capture)
+	logger, logBuf := newTestLogger(t)
 	deleteErr := errors.New("delete failed")
 
 	mocks.backendService.EXPECT().Delete(t.Context(), routine, "some/path").Return(deleteErr)
 
 	impl.deleteFolder(t.Context(), routine, "some/path", logger)
 
-	require.True(t, capture.containsMessage("Failed to delete folder"))
+	require.Contains(t, logBuf.String(), "Failed to delete folder")
 }

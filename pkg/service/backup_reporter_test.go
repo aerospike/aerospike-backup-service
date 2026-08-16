@@ -80,8 +80,7 @@ func TestBackupReporter_Report_DeadlineExceeded(t *testing.T) {
 
 func TestBackupReporter_Report_GenericFailure(t *testing.T) {
 	reporter := NewBackupReporter()
-	capture := &slogCaptureHandler{}
-	logger := slog.New(capture)
+	logger, logBuf := newTestLogger(t)
 
 	before := backupEventCount(t)
 	reporter.Report(
@@ -93,15 +92,12 @@ func TestBackupReporter_Report_GenericFailure(t *testing.T) {
 		logger,
 	)
 	require.Equal(t, before+1, backupEventCount(t))
-	require.Eventually(t, func() bool {
-		return capture.containsMessage("full backup failed")
-	}, time.Second, 10*time.Millisecond)
+	require.Contains(t, logBuf.String(), "full backup failed")
 }
 
 func TestBackupReporter_Report_AerospikeFailure(t *testing.T) {
 	reporter := NewBackupReporter()
-	capture := &slogCaptureHandler{}
-	logger := slog.New(capture)
+	logger, logBuf := newTestLogger(t)
 
 	aerr := &as.AerospikeError{ResultCode: astypes.KEY_NOT_FOUND_ERROR}
 	before := backupEventCount(t)
@@ -114,9 +110,7 @@ func TestBackupReporter_Report_AerospikeFailure(t *testing.T) {
 		logger,
 	)
 	require.Equal(t, before+1, backupEventCount(t))
-	require.Eventually(t, func() bool {
-		return capture.containsMessage("incremental backup failed due to Aerospike error")
-	}, time.Second, 10*time.Millisecond)
+	require.Contains(t, logBuf.String(), "incremental backup failed due to Aerospike error")
 }
 
 func backupEventCount(t *testing.T) int {

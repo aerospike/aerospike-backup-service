@@ -43,8 +43,8 @@ func TestDefaultConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *te
 	scheduler.On("DeleteJob", jobKey("routine-1", model.BackupTypeIncremental)).Return(nil)
 	scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
 
-	registry := NewMockRunningBackupsRegistry(ctrl)
 	syncDone := make(chan struct{})
+	registry := NewMockRunningBackupsRegistry(ctrl)
 	registry.EXPECT().SynchroniseBackupHistory(gomock.Any(), gomock.Any()).
 		Do(func(context.Context, []*model.BackupRoutine) { close(syncDone) })
 
@@ -57,7 +57,7 @@ func TestDefaultConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *te
 	require.NoError(t, applier.ApplyNewConfig(t.Context()))
 	scheduler.AssertNumberOfCalls(t, "DeleteJob", 2)
 	scheduler.AssertNumberOfCalls(t, "ScheduleJob", 1)
-	<-syncDone
+	waitAsyncDone(t, syncDone, "backup history sync")
 }
 
 func TestDefaultConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
@@ -71,8 +71,8 @@ func TestDefaultConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 	scheduler.On("DeleteJob", jobKey("removed-routine", model.BackupTypeFull)).Return(nil)
 	scheduler.On("DeleteJob", jobKey("removed-routine", model.BackupTypeIncremental)).Return(nil)
 
-	registry := NewMockRunningBackupsRegistry(ctrl)
 	syncDone := make(chan struct{})
+	registry := NewMockRunningBackupsRegistry(ctrl)
 	registry.EXPECT().SynchroniseBackupHistory(gomock.Any(), gomock.Len(0)).
 		Do(func(context.Context, []*model.BackupRoutine) { close(syncDone) })
 
@@ -84,7 +84,7 @@ func TestDefaultConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 
 	require.NoError(t, applier.ApplyNewConfig(t.Context()))
 	scheduler.AssertNotCalled(t, "ScheduleJob", mock.Anything, mock.Anything)
-	<-syncDone
+	waitAsyncDone(t, syncDone, "backup history sync")
 }
 
 func TestDefaultConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {

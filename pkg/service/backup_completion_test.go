@@ -4,8 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"slices"
-	"sync"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,14 +32,15 @@ func TestBackupCompletionHandler_OnSuccess_Incremental(t *testing.T) {
 
 	routine := &model.BackupRoutine{Name: "routine-1"}
 	registry := NewMockRunningBackupsRegistry(ctrl)
-	retention := NewMockRetentionManager(ctrl)
-	clusterWriter := NewMockClusterConfigWriter(ctrl)
-
 	recorded := make(chan struct{})
 	registry.EXPECT().recordSuccessfulBackup(routine, model.BackupTypeIncremental).
 		Do(func(*model.BackupRoutine, model.BackupType) { close(recorded) })
 
-	handler := NewBackupCompletionHandler(registry, retention, clusterWriter)
+	handler := NewBackupCompletionHandler(
+		registry,
+		NewMockRetentionManager(ctrl),
+		NewMockClusterConfigWriter(ctrl),
+	)
 	handler.OnSuccess(
 		t.Context(),
 		routine,
@@ -49,7 +49,7 @@ func TestBackupCompletionHandler_OnSuccess_Incremental(t *testing.T) {
 		slog.New(slog.DiscardHandler),
 	)
 
-	<-recorded
+	waitAsyncDone(t, recorded, "successful incremental backup recorded")
 }
 
 func TestBackupCompletionHandler_OnSuccess_FullRunsRetentionAndClusterConfig(t *testing.T) {
@@ -64,44 +64,34 @@ func TestBackupCompletionHandler_OnSuccess_FullRunsRetentionAndClusterConfig(t *
 	}
 	timestamp := time.Now()
 	ctx := t.Context()
-	logger := slog.New(slog.DiscardHandler)
 
 	registry := NewMockRunningBackupsRegistry(ctrl)
 	retention := NewMockRetentionManager(ctrl)
 	clusterWriter := NewMockClusterConfigWriter(ctrl)
 
-	var wg sync.WaitGroup
-	wg.Add(3)
+	recorded := make(chan struct{})
+	retentionDone := make(chan struct{})
+	clusterConfigDone := make(chan struct{})
 
 	registry.EXPECT().recordSuccessfulBackup(routine, model.BackupTypeFull).
-		Do(func(*model.BackupRoutine, model.BackupType) { wg.Done() })
-	retention.EXPECT().deleteOldBackups(ctx, routine).DoAndReturn(
-		func(context.Context, *model.BackupRoutine) error {
-			wg.Done()
+		Do(func(*model.BackupRoutine, model.BackupType) { close(recorded) })
+	retention.EXPECT().deleteOldBackups(ctx, routine).
+		DoAndReturn(func(context.Context, *model.BackupRoutine) error {
+			close(retentionDone)
 			return nil
-		},
-	)
-	clusterWriter.EXPECT().Write(ctx, routine, timestamp).DoAndReturn(
-		func(context.Context, *model.BackupRoutine, time.Time) error {
-			wg.Done()
+		})
+	clusterWriter.EXPECT().Write(ctx, routine, timestamp).
+		DoAndReturn(func(context.Context, *model.BackupRoutine, time.Time) error {
+			close(clusterConfigDone)
 			return nil
-		},
-	)
+		})
 
 	handler := NewBackupCompletionHandler(registry, retention, clusterWriter)
-	handler.OnSuccess(ctx, routine, model.BackupTypeFull, timestamp, logger)
+	handler.OnSuccess(ctx, routine, model.BackupTypeFull, timestamp, slog.New(slog.DiscardHandler))
 
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("timed out waiting for full backup completion side effects")
-	}
+	waitAsyncDone(t, recorded, "successful full backup recorded")
+	waitAsyncDone(t, retentionDone, "retention cleanup")
+	waitAsyncDone(t, clusterConfigDone, "cluster config backup")
 }
 
 func TestBackupCompletionHandler_OnSuccess_FullSkipsClusterConfigWhenDisabled(t *testing.T) {
@@ -117,32 +107,22 @@ func TestBackupCompletionHandler_OnSuccess_FullSkipsClusterConfigWhenDisabled(t 
 	registry := NewMockRunningBackupsRegistry(ctrl)
 	retention := NewMockRetentionManager(ctrl)
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	recorded := make(chan struct{})
+	retentionDone := make(chan struct{})
 
 	registry.EXPECT().recordSuccessfulBackup(routine, model.BackupTypeFull).
-		Do(func(*model.BackupRoutine, model.BackupType) { wg.Done() })
-	retention.EXPECT().deleteOldBackups(ctx, routine).DoAndReturn(
-		func(context.Context, *model.BackupRoutine) error {
-			wg.Done()
+		Do(func(*model.BackupRoutine, model.BackupType) { close(recorded) })
+	retention.EXPECT().deleteOldBackups(ctx, routine).
+		DoAndReturn(func(context.Context, *model.BackupRoutine) error {
+			close(retentionDone)
 			return nil
-		},
-	)
+		})
 
 	handler := NewBackupCompletionHandler(registry, retention, NewMockClusterConfigWriter(ctrl))
 	handler.OnSuccess(ctx, routine, model.BackupTypeFull, time.Now(), slog.New(slog.DiscardHandler))
 
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("timed out waiting for retention cleanup")
-	}
+	waitAsyncDone(t, recorded, "successful full backup recorded")
+	waitAsyncDone(t, retentionDone, "retention cleanup")
 }
 
 func TestBackupCompletionHandler_OnSuccess_LogsRetentionFailure(t *testing.T) {
@@ -154,51 +134,19 @@ func TestBackupCompletionHandler_OnSuccess_LogsRetentionFailure(t *testing.T) {
 		BackupPolicy: &model.BackupPolicy{},
 	}
 	ctx := t.Context()
-	capture := &slogCaptureHandler{}
-	logger := slog.New(capture)
+	logger, logBuf := newTestLogger(t)
 
 	registry := NewMockRunningBackupsRegistry(ctrl)
 	retention := NewMockRetentionManager(ctrl)
 
 	retentionErr := errors.New("retention failed")
-	retentionDone := make(chan struct{})
-
 	registry.EXPECT().recordSuccessfulBackup(routine, model.BackupTypeFull).AnyTimes()
-	retention.EXPECT().deleteOldBackups(ctx, routine).DoAndReturn(
-		func(context.Context, *model.BackupRoutine) error {
-			close(retentionDone)
-			return retentionErr
-		},
-	)
+	retention.EXPECT().deleteOldBackups(ctx, routine).Return(retentionErr)
 
 	handler := NewBackupCompletionHandler(registry, retention, nil)
 	handler.OnSuccess(ctx, routine, model.BackupTypeFull, time.Now(), logger)
 
-	<-retentionDone
 	require.Eventually(t, func() bool {
-		return capture.containsMessage("Failed to clean up old backups")
-	}, time.Second, 10*time.Millisecond)
-}
-
-type slogCaptureHandler struct {
-	mu       sync.Mutex
-	messages []string
-}
-
-func (h *slogCaptureHandler) Enabled(_ context.Context, _ slog.Level) bool { return true }
-
-func (h *slogCaptureHandler) Handle(_ context.Context, r slog.Record) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.messages = append(h.messages, r.Message)
-	return nil
-}
-
-func (h *slogCaptureHandler) WithAttrs(_ []slog.Attr) slog.Handler { return h }
-func (h *slogCaptureHandler) WithGroup(_ string) slog.Handler      { return h }
-
-func (h *slogCaptureHandler) containsMessage(msg string) bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	return slices.Contains(h.messages, msg)
+		return strings.Contains(logBuf.String(), "Failed to clean up old backups")
+	}, asyncWaitTimeout, 10*time.Millisecond)
 }
