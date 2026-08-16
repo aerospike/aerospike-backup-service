@@ -19,6 +19,7 @@ import (
 type mockStorageWriter struct {
 	writer backup.Writer
 	err    error
+	calls  int
 }
 
 func (m *mockStorageWriter) CreateDirWriter(
@@ -27,6 +28,7 @@ func (m *mockStorageWriter) CreateDirWriter(
 	_ string,
 	_ ...options.Opt,
 ) (backup.Writer, error) {
+	m.calls++
 	return m.writer, m.err
 }
 
@@ -83,7 +85,7 @@ func TestBackupExecutor_Run_CreateWriterError(t *testing.T) {
 	assert.ErrorContains(t, err, "failed to create backup writer")
 }
 
-func TestBackupExecutor_Run_ScanBackupUsesScanPath(t *testing.T) {
+func TestBackupExecutor_Run_BackupStartError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	writer := bgmocks.NewMockWriter(t)
@@ -115,8 +117,44 @@ func TestBackupExecutor_Run_ScanBackupUsesScanPath(t *testing.T) {
 	assert.ErrorContains(t, err, "failed to start scan backup")
 }
 
-func TestRunScanBackup_ConfigError(t *testing.T) {
-	client := aerospike.NewMockClient(gomock.NewController(t))
+func TestBackupExecutor_Run_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	writer := bgmocks.NewMockWriter(t)
+	client := aerospike.NewMockClient(ctrl)
+	clientManager := aerospike.NewMockClientManager(ctrl)
+
+	clientManager.EXPECT().
+		GetClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(client, nil)
+
+	client.EXPECT().
+		Backup(gomock.Any(), gomock.Any(), writer, gomock.Nil()).
+		Return(nil, nil)
+
+	operations := &mockStorageWriter{writer: writer}
+	executor := NewBackupExecutor(clientManager, operations)
+
+	handler, err := executor.Run(
+		t.Context(),
+		testBackupRoutine(),
+		model.TimeBounds{},
+		"test-ns",
+		"/backup/path",
+		nil,
+		slog.Default(),
+	)
+	require.NoError(t, err)
+
+	wrapped, ok := handler.(*closeOnWaitBackupHandler)
+	require.True(t, ok)
+	assert.Equal(t, client, wrapped.client)
+	assert.Equal(t, 1, operations.calls)
+}
+
+func TestRunBackup_ConfigError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := aerospike.NewMockClient(ctrl)
 
 	_, err := runScanBackup(
 		t.Context(),
@@ -135,7 +173,7 @@ func TestRunScanBackup_ConfigError(t *testing.T) {
 	assert.ErrorContains(t, err, "failed to make backup config")
 }
 
-func TestRunScanBackup_BackupError(t *testing.T) {
+func TestRunBackup_BackupStartError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	client := aerospike.NewMockClient(ctrl)
 

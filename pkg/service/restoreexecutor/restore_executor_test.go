@@ -32,7 +32,7 @@ func (m *mockStorageReader) CreateDirReader(
 	return m.reader, m.err
 }
 
-func TestRestoreExecutor_Run_ScanSuccess(t *testing.T) {
+func TestRestoreExecutor_Run_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	reader := bgmocks.NewMockStreamingReader(t)
@@ -49,10 +49,11 @@ func TestRestoreExecutor_Run_ScanSuccess(t *testing.T) {
 	handler, err := executor.Run(t.Context(), client, testRestoreRequest())
 	require.NoError(t, err)
 	require.NotNil(t, handler)
+	assert.Same(t, restoreHandler, handler)
 	assert.Equal(t, 1, operations.calls)
 }
 
-func TestRestoreExecutor_Run_FatalError(t *testing.T) {
+func TestRestoreExecutor_Run_RestoreStartError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	reader := bgmocks.NewMockStreamingReader(t)
@@ -70,10 +71,12 @@ func TestRestoreExecutor_Run_FatalError(t *testing.T) {
 }
 
 func TestRestoreExecutor_Run_EmptyStorage(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
 	operations := &mockStorageReader{err: common.ErrEmptyStorage}
 	executor := NewRestoreExecutor(operations)
 
-	client := aerospike.NewMockClient(gomock.NewController(t))
+	client := aerospike.NewMockClient(ctrl)
 
 	_, err := executor.Run(t.Context(), client, testRestoreRequest())
 	require.Error(t, err)
@@ -81,8 +84,9 @@ func TestRestoreExecutor_Run_EmptyStorage(t *testing.T) {
 	assert.Equal(t, 1, operations.calls)
 }
 
-func TestRunScanRestore_CreateReaderError(t *testing.T) {
-	client := aerospike.NewMockClient(gomock.NewController(t))
+func TestRunRestore_CreateReaderError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := aerospike.NewMockClient(ctrl)
 	operations := &mockStorageReader{err: errors.New("reader failed")}
 
 	_, err := runScanRestore(t.Context(), client, testRestoreRequest(), operations)
@@ -90,7 +94,7 @@ func TestRunScanRestore_CreateReaderError(t *testing.T) {
 	assert.ErrorContains(t, err, "failed to create backup reader")
 }
 
-func TestRunScanRestore_RestoreError(t *testing.T) {
+func TestRunRestore_RestoreStartError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	reader := bgmocks.NewMockStreamingReader(t)

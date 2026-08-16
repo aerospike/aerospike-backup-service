@@ -1,6 +1,7 @@
 package backupexecutor
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -38,4 +39,24 @@ func TestCloseOnWaitBackupHandler(t *testing.T) {
 	// Close is invoked exactly once even if Wait is called again.
 	inner.EXPECT().Wait(gomock.Any()).Return(nil)
 	require.NoError(t, handler.Wait(t.Context()))
+}
+
+func TestCloseOnWaitBackupHandler_WaitErrorStillClosesClient(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	inner := NewMockBackupHandler(ctrl)
+	client := aerospike.NewMockClient(ctrl)
+	clientManager := aerospike.NewMockClientManager(ctrl)
+
+	waitErr := errors.New("backup wait failed")
+	inner.EXPECT().Wait(gomock.Any()).Return(waitErr)
+	clientManager.EXPECT().Close(client).Times(1)
+
+	handler := &closeOnWaitBackupHandler{
+		inner:         inner,
+		client:        client,
+		clientManager: clientManager,
+	}
+
+	require.ErrorIs(t, handler.Wait(t.Context()), waitErr)
 }
