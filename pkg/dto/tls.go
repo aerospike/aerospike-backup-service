@@ -15,13 +15,14 @@ import (
 type TLS struct {
 	ClientTLS `yaml:",inline"`
 	// Path to a directory of trusted CA certificates.
-	CAPath *string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
+	CAPath string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
-	Protocols *string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
+	Protocols string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
-	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA" extensions:"x-nullable"`
-	// Passphrase for an encrypted TLS key file. The value is used verbatim as the decryption password.
-	KeyfilePassword *string `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" example:"my-secret-passphrase" extensions:"x-nullable"`
+	CipherSuite string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA" extensions:"x-nullable"`
+
+	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
+	KeyfilePassword string `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" example:"file:/path/to/password" extensions:"x-nullable"`
 }
 
 func (t *TLS) Validate(opts ...ValidationOption) error {
@@ -46,7 +47,7 @@ func (t *TLS) Validate(opts ...ValidationOption) error {
 
 // validateCACertificates ensures CA file and path are mutually exclusive.
 func (t *TLS) validateCACertificates() error {
-	if hasText(t.CAFile) && hasText(t.CAPath) {
+	if t.CAFile != "" && t.CAPath != "" {
 		return errValidationMutuallyExclusive("ca-file", "ca-path")
 	}
 
@@ -55,7 +56,7 @@ func (t *TLS) validateCACertificates() error {
 
 // validateKeyfilePassword ensures keyfile password is only set when keyfile is present.
 func (t *TLS) validateKeyfilePassword() error {
-	if hasText(t.KeyfilePassword) && !hasText(t.Keyfile) {
+	if t.KeyfilePassword != "" && (t.Keyfile == "") {
 		return errValidationRequires("key-file-password", "key-file")
 	}
 

@@ -5,7 +5,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	utptr "github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +54,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 		BackupPolicy:     "policy1",
 		SourceCluster:    "cluster1",
 		Storage:          "storage1",
-		SecretAgent:      ptr.String("agent1"),
+		SecretAgent:      "agent1",
 		IntervalCron:     "cron",
 		IncrIntervalCron: "inc_cron",
 		Namespaces:       &[]string{"ns1"},
@@ -172,7 +171,7 @@ func TestBackupRoutine_ToModel_SecretAgentNotFound(t *testing.T) {
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
-		SecretAgent:   ptr.String("agent1"),
+		SecretAgent:   "agent1",
 		Namespaces:    &[]string{"ns1"},
 	}
 

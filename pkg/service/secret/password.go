@@ -37,12 +37,12 @@ func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credenti
 	}
 
 	// 1) Resolve Path (file)
-	if creds.PasswordPath != nil {
-		data, err := os.ReadFile(*creds.PasswordPath)
+	if creds.PasswordPath != "" {
+		data, err := os.ReadFile(creds.PasswordPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read password from password-path %s: %w", *creds.PasswordPath, err)
+			return nil, fmt.Errorf("failed to read password from password-path %s: %w", creds.PasswordPath, err)
 		}
-		slog.Debug("Successfully read password", slog.String("path", *creds.PasswordPath))
+		slog.Debug("Successfully read password", slog.String("path", creds.PasswordPath))
 
 		// Strip only line-ending characters to preserve meaningful spaces.
 		password := strings.TrimRight(string(data), "\r\n")
@@ -51,8 +51,8 @@ func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credenti
 	}
 
 	// 2) Resolve (literal or secret-agent reference)
-	if creds.Password != nil {
-		password, err := r.resolver.Resolve(ctx, creds.SecretAgent, *creds.Password)
+	if creds.Password != "" {
+		password, err := r.resolver.Resolve(ctx, creds.SecretAgent, creds.Password)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read password from secret agent: %w", err)
 		}

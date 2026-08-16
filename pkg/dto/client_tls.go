@@ -13,13 +13,13 @@ import (
 //nolint:lll
 type ClientTLS struct {
 	// Path to a trusted CA certificate file in PEM format.
-	CAFile *string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/ca.pem" extensions:"x-nullable"`
+	CAFile string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/ca.pem" extensions:"x-nullable"`
 	// TLSName used for server certificate verification (ServerName for SNI).
-	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"example.com" extensions:"x-nullable"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty" example:"example.com" extensions:"x-nullable"`
 	// Path to a client certificate file for mutual TLS authentication.
-	Certfile *string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/cert.pem" extensions:"x-nullable"`
+	Certfile string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/cert.pem" extensions:"x-nullable"`
 	// Path to a client private key file for mutual TLS authentication.
-	Keyfile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/key.pem" extensions:"x-nullable"`
+	Keyfile string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/key.pem" extensions:"x-nullable"`
 }
 
 // Validate validates the ClientTLS configuration.
@@ -34,29 +34,29 @@ func (c *ClientTLS) Validate(opts ...ValidationOption) error {
 		}
 	}
 
-	if c.Certfile != nil {
-		if c.Keyfile == nil {
+	if c.Certfile != "" {
+		if c.Keyfile == "" {
 			return errValidationRequires("cert-file", "key-file")
 		}
-		if c.Name == nil {
+		if c.Name == "" {
 			return errValidationRequires("cert-file", "name")
 		}
 	}
 
-	if c.Keyfile != nil {
-		if c.Certfile == nil {
+	if c.Keyfile != "" {
+		if c.Certfile == "" {
 			return errValidationRequires("key-file", "cert-file")
 		}
-		if c.Name == nil {
+		if c.Name == "" {
 			return errValidationRequires("key-file", "name")
 		}
 	}
 
-	if c.Name != nil {
-		if c.Certfile == nil {
+	if c.Name != "" {
+		if c.Certfile == "" {
 			return errValidationRequires("name", "cert-file")
 		}
-		if c.Keyfile == nil {
+		if c.Keyfile == "" {
 			return errValidationRequires("name", "key-file")
 		}
 	}
@@ -78,21 +78,21 @@ func (c *ClientTLS) ToModel() model.ClientTLS {
 }
 
 func verifyFilesExist(c *ClientTLS) error {
-	if c.CAFile != nil {
-		if _, err := os.Stat(*c.CAFile); err != nil {
-			return errValidationNotFound("ca-file", *c.CAFile)
+	if c.CAFile != "" {
+		if _, err := os.Stat(c.CAFile); err != nil {
+			return errValidationNotFound("ca-file", c.CAFile)
 		}
 	}
 
-	if c.Certfile != nil {
-		if _, err := os.Stat(*c.Certfile); err != nil {
-			return errValidationNotFound("cert-file", *c.Certfile)
+	if c.Certfile != "" {
+		if _, err := os.Stat(c.Certfile); err != nil {
+			return errValidationNotFound("cert-file", c.Certfile)
 		}
 	}
 
-	if c.Keyfile != nil {
-		if _, err := os.Stat(*c.Keyfile); err != nil {
-			return errValidationNotFound("key-file", *c.Keyfile)
+	if c.Keyfile != "" {
+		if _, err := os.Stat(c.Keyfile); err != nil {
+			return errValidationNotFound("key-file", c.Keyfile)
 		}
 	}
 

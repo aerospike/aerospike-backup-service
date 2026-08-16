@@ -6,7 +6,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go/mocks"
-	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -131,8 +130,8 @@ func TestFindMissingByRoutine_TwoClusters_OK(t *testing.T) {
 	defer ctrl.Finish()
 
 	mgr := NewMockClientManager(ctrl)
-	a := &model.AerospikeCluster{ClusterLabel: ptr.String("A")}
-	b := &model.AerospikeCluster{ClusterLabel: ptr.String("B")}
+	a := &model.AerospikeCluster{ClusterLabel: "A"}
+	b := &model.AerospikeCluster{ClusterLabel: "B"}
 
 	routines := map[string]*model.BackupRoutine{
 		"r1": {SourceCluster: a, Namespaces: []string{"ns1"}},
@@ -153,8 +152,8 @@ func TestFindMissingByRoutine_TwoClusters_Fail(t *testing.T) {
 	defer ctrl.Finish()
 
 	mgr := NewMockClientManager(ctrl)
-	a := &model.AerospikeCluster{ClusterLabel: ptr.String("A")}
-	b := &model.AerospikeCluster{ClusterLabel: ptr.String("B")}
+	a := &model.AerospikeCluster{ClusterLabel: "A"}
+	b := &model.AerospikeCluster{ClusterLabel: "B"}
 
 	routines := map[string]*model.BackupRoutine{
 		"r1": {SourceCluster: a, Namespaces: []string{"ns2"}},

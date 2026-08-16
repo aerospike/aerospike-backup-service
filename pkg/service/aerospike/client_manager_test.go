@@ -11,7 +11,6 @@ import (
 	"github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/mocks"
-	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -19,11 +18,11 @@ import (
 )
 
 var cluster = &model.AerospikeCluster{
-	ClusterLabel: ptr.String("test"),
+	ClusterLabel: "test",
 }
 
 var cluster2 = &model.AerospikeCluster{
-	ClusterLabel: ptr.String("test2"),
+	ClusterLabel: "test2",
 }
 
 func Test_GetClient(t *testing.T) {
