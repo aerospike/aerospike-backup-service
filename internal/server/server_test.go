@@ -17,7 +17,7 @@ func newTestHTTPServer(t *testing.T) *HTTPServer {
 
 	cfg := model.NewConfig()
 	cfg.ServiceConfig.HTTPServer = &model.HTTPServerConfig{
-		Address: ptr.Of("127.0.0.1"),
+		Address: "127.0.0.1",
 		Port:    ptr.Of(model.Port(0)), // let the OS choose a free port
 	}
 
