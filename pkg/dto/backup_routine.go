@@ -11,7 +11,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	as "github.com/aerospike/aerospike-client-go/v8"
-	"github.com/aws/smithy-go/ptr"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -29,7 +28,7 @@ type BackupRoutine struct {
 	// The name of the corresponding storage provider configuration.
 	Storage string `yaml:"storage,omitempty" json:"storage,omitempty" validate:"required"`
 	// The name of a Secret Agent to read secrets from (optional).
-	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty" extensions:"x-nullable"`
+	SecretAgent string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty" extensions:"x-nullable"`
 	// The interval for full backup as a cron expression string.
 	// Cron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron" example:"0 0 * * * *" validate:"required"`
@@ -114,11 +113,6 @@ func (r *BackupRoutine) Validate() error {
 		}
 		if rack > maxRack {
 			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)
-		}
-	}
-	if r.SecretAgent != nil {
-		if *r.SecretAgent == "" {
-			return errValidationEmptyField("secret-agent")
 		}
 	}
 	if err := validatePartitionList(r.PartitionList); err != nil {
@@ -289,10 +283,10 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 	}
 
 	var secretAgent *model.SecretAgent
-	if r.SecretAgent != nil {
-		secretAgent, found = config.SecretAgents[*r.SecretAgent]
+	if r.SecretAgent != "" {
+		secretAgent, found = config.SecretAgents[r.SecretAgent]
 		if !found {
-			return nil, errValidationNotFound("secret agent", *r.SecretAgent)
+			return nil, errValidationNotFound("secret agent", r.SecretAgent)
 		}
 	}
 
@@ -386,7 +380,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	r.SourceCluster = findKeyByValue(config.AerospikeClusters, m.SourceCluster)
 	r.Storage = findStorageKey(config.Storage, m.Storage)
 	if m.SecretAgent != nil {
-		r.SecretAgent = ptr.String(findKeyByValue(config.SecretAgents, m.SecretAgent))
+		r.SecretAgent = findKeyByValue(config.SecretAgents, m.SecretAgent)
 	}
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron

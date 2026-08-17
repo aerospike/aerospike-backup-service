@@ -26,7 +26,7 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
 	routines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",
@@ -67,7 +67,7 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
 	routines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",
@@ -108,7 +108,7 @@ func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
 	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
 	routines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",
@@ -147,7 +147,7 @@ func TestRestoreValidator_BlocksTimeRestoreOnPendingBackupStart(t *testing.T) {
 	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
 	routines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",

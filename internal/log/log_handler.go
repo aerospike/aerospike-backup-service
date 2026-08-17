@@ -34,7 +34,7 @@ func NewHandler(config *model.LoggerConfig) slog.Handler {
 			ReplaceAttr: handlerReplaceAttr,
 		})
 	default:
-		panic("unsupported log format: " + *config.Format)
+		panic("unsupported log format: " + config.GetFormatOrDefault())
 	}
 }
 

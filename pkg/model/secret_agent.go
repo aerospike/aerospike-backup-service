@@ -1,8 +1,6 @@
 package model
 
 import (
-	"fmt"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 )
@@ -35,24 +33,26 @@ func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
 		Address:            &s.Address,
 		Port:               (*int)(s.Port),
 		TimeoutMillisecond: s.Timeout,
-		CaFile:             s.CAFile,
-		TLSName:            s.Name,
-		CertFile:           s.Certfile,
-		KeyFile:            s.Keyfile,
+		CaFile:             ptr.StringOrNil(s.CAFile),
+		TLSName:            ptr.StringOrNil(s.Name),
+		CertFile:           ptr.StringOrNil(s.Certfile),
+		KeyFile:            ptr.StringOrNil(s.Keyfile),
 		IsBase64:           s.IsBase64,
 	}
 }
 
-// String returns a string representation of the SecretAgent.
-func (s *SecretAgent) String() string {
+// Hash returns a unique identifier for the SecretAgent configuration.
+func (s *SecretAgent) Hash() uint64 {
 	if s == nil {
-		return ""
+		return 0
 	}
-	return fmt.Sprintf("%v:%v:%v:%v:%v:%v",
+
+	return hashValues(
 		s.ConnectionType,
 		s.Address,
-		ptr.ValueOrZero(s.Port),
-		ptr.ValueOrZero(s.Timeout),
-		s.ClientTLS.String(),
-		ptr.ValueOrZero(s.IsBase64))
+		s.Port,
+		s.Timeout,
+		s.ClientTLS.Hash(),
+		s.IsBase64,
+	)
 }

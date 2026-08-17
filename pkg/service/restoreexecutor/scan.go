@@ -56,8 +56,8 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 
 	if restoreRequest.Policy.Namespace != nil {
 		config.Namespace = &backup.RestoreNamespaceConfig{
-			Source:      restoreRequest.Policy.Namespace.Source,
-			Destination: restoreRequest.Policy.Namespace.Destination,
+			Source:      ptr.StringOrNil(restoreRequest.Policy.Namespace.Source),
+			Destination: ptr.StringOrNil(restoreRequest.Policy.Namespace.Destination),
 		}
 	}
 
@@ -77,9 +77,9 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 	if restoreRequest.Policy.EncryptionPolicy != nil {
 		config.EncryptionPolicy = &backup.EncryptionPolicy{
 			Mode:      restoreRequest.Policy.EncryptionPolicy.Mode,
-			KeyFile:   restoreRequest.Policy.EncryptionPolicy.KeyFile,
-			KeySecret: restoreRequest.Policy.EncryptionPolicy.KeySecret,
-			KeyEnv:    restoreRequest.Policy.EncryptionPolicy.KeyEnv,
+			KeyFile:   ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyFile),
+			KeySecret: ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeySecret),
+			KeyEnv:    ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyEnv),
 		}
 	}
 

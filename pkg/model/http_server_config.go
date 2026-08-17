@@ -5,13 +5,13 @@ import "time"
 // HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
 	// The address to listen on.
-	Address *string
+	Address string
 	// The port to listen on.
 	Port *Port
 	// HTTP rate limiter configuration.
 	Rate *RateLimiterConfig
 	// ContextPath customizes path for the API endpoints.
-	ContextPath *string
+	ContextPath string
 	// Timeout for http server operations.
 	Timeout *time.Duration
 }
@@ -19,10 +19,10 @@ type HTTPServerConfig struct {
 // GetAddressOrDefault returns the value of the Address property.
 // If the property is not set, it returns the default value.
 func (s *HTTPServerConfig) GetAddressOrDefault() string {
-	if s.Address != nil {
-		return *s.Address
+	if s.Address != "" {
+		return s.Address
 	}
-	return *defaultConfig.http.Address
+	return defaultConfig.http.Address
 }
 
 // GetPortOrDefault returns the value of the Port property.
@@ -55,10 +55,10 @@ func (s *HTTPServerConfig) GetRateOrDefault() *RateLimiterConfig {
 // GetContextPathOrDefault returns the value of the ContextPath property.
 // If the property is not set, it returns the default value.
 func (s *HTTPServerConfig) GetContextPathOrDefault() string {
-	if s.ContextPath != nil {
-		return *s.ContextPath
+	if s.ContextPath != "" {
+		return s.ContextPath
 	}
-	return *defaultConfig.http.ContextPath
+	return defaultConfig.http.ContextPath
 }
 
 // RateLimiterConfig represents the service's HTTP server rate limiter configuration.

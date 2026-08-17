@@ -19,25 +19,23 @@ const (
 	AuthModePKI AuthMode = "PKI"
 )
 
-// String returns a string representation of AuthMode. A nil receiver yields nil.
-func (m *AuthMode) String() *string {
+// String returns a string representation of AuthMode. A nil receiver yields empty string.
+func (m *AuthMode) String() string {
 	if m == nil {
-		return nil
+		return ""
 	}
 
-	s := string(*m)
-
-	return &s
+	return string(*m)
 }
 
 // ParseAuthMode parses a configured auth-mode value.
-// A nil value is valid and yields a nil auth mode.
-func ParseAuthMode(value *string) (*AuthMode, error) {
-	if value == nil {
+// An empty value is valid and yields a nil auth mode.
+func ParseAuthMode(value string) (*AuthMode, error) {
+	if value == "" {
 		return nil, nil
 	}
 
-	switch strings.ToUpper(strings.TrimSpace(*value)) {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case string(AuthModeInternal):
 		return ptr.Of(AuthModeInternal), nil
 	case string(AuthModeExternal):
@@ -47,7 +45,7 @@ func ParseAuthMode(value *string) (*AuthMode, error) {
 	default:
 		return nil, fmt.Errorf(
 			"auth-mode %q incorrect, should be one of: %s,%s,%s",
-			*value,
+			value,
 			AuthModeInternal,
 			AuthModeExternal,
 			AuthModePKI,

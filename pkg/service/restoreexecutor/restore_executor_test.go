@@ -111,13 +111,11 @@ func TestRunRestore_RestoreStartError(t *testing.T) {
 }
 
 func testRestoreRequest() *model.RestoreRequest {
-	source := "source-ns"
-	dest := "dest-ns"
 	return &model.RestoreRequest{
 		Policy: model.RestorePolicy{
 			Namespace: &model.RestoreNamespace{
-				Source:      &source,
-				Destination: &dest,
+				Source:      "source-ns",
+				Destination: "dest-ns",
 			},
 		},
 		SourceStorage: &model.LocalStorage{Path: "/tmp/backups"},
