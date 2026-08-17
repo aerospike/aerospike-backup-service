@@ -15,19 +15,6 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-type fakeNamespaceResolver struct {
-	namespaces []string
-	err        error
-}
-
-func (f *fakeNamespaceResolver) ResolveNamespaces(
-	_ context.Context, _ *model.BackupRoutine, _ *slog.Logger,
-) ([]string, error) {
-	return f.namespaces, f.err
-}
-
-var _ aerospike.NamespaceResolver = (*fakeNamespaceResolver)(nil)
-
 func TestRoutineBackupRunner_Run_Success(t *testing.T) {
 	t.Parallel()
 
@@ -35,7 +22,10 @@ func TestRoutineBackupRunner_Run_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	nsRunner := NewMockNamespaceBackupRunner(ctrl)
-	resolver := &fakeNamespaceResolver{namespaces: []string{"ns1", "ns2"}}
+	resolver := aerospike.NewMockNamespaceResolver(ctrl)
+	resolver.EXPECT().
+		ResolveNamespaces(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]string{"ns1", "ns2"}, nil)
 
 	handler1 := NewMockCancelableBackupHandler(ctrl)
 	handler1.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
@@ -68,7 +58,10 @@ func TestRoutineBackupRunner_Run_ResolverError(t *testing.T) {
 	defer ctrl.Finish()
 
 	nsRunner := NewMockNamespaceBackupRunner(ctrl)
-	resolver := &fakeNamespaceResolver{err: errors.New("resolve failed")}
+	resolver := aerospike.NewMockNamespaceResolver(ctrl)
+	resolver.EXPECT().
+		ResolveNamespaces(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("resolve failed"))
 
 	runner := NewRoutineBackupRunner(nsRunner, resolver)
 	routine := &model.BackupRoutine{Name: "daily", BackupPolicy: &model.BackupPolicy{}}
@@ -86,7 +79,10 @@ func TestRoutineBackupRunner_Run_WaitUntilStartedTimesOut(t *testing.T) {
 	defer ctrl.Finish()
 
 	nsRunner := NewMockNamespaceBackupRunner(ctrl)
-	resolver := &fakeNamespaceResolver{namespaces: []string{"ns1"}}
+	resolver := aerospike.NewMockNamespaceResolver(ctrl)
+	resolver.EXPECT().
+		ResolveNamespaces(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]string{"ns1"}, nil)
 
 	handler := NewMockCancelableBackupHandler(ctrl)
 	handler.EXPECT().GetStats().Return(nil).AnyTimes()

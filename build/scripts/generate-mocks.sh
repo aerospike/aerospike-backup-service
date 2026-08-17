@@ -167,7 +167,7 @@ generate_mocks \
 
 generate_mocks \
     "pkg/service/aerospike" \
-    "ClientManager,NamespaceValidator,Client,ClientFactory"
+    "ClientManager,NamespaceResolver,NamespaceValidator,Client,ClientFactory"
 
 generate_mocks \
     "internal/server/handlers" \
