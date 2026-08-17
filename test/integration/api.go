@@ -4,7 +4,6 @@ package integration
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -106,7 +106,7 @@ func (s *Suite) getIncrementalBackups(e *env) []dto.BackupDetails {
 	}
 
 	var backups []dto.BackupDetails
-	s.Require().NoError(json.NewDecoder(resp.Body).Decode(&backups))
+	s.Require().NoError(decoder.Deserialize(&backups, resp.Body, decoder.JSON))
 
 	return backups
 }
@@ -150,7 +150,7 @@ func (s *Suite) getFullBackups(e *env) []dto.BackupDetails {
 	}
 
 	var backups []dto.BackupDetails
-	s.Require().NoError(json.NewDecoder(resp.Body).Decode(&backups))
+	s.Require().NoError(decoder.Deserialize(&backups, resp.Body, decoder.JSON))
 
 	return backups
 }
@@ -204,7 +204,7 @@ func (s *Suite) restoreByPath(e *env, key string) dto.RestoreJobStatus {
 
 // triggerRestoreByTimestamp asks the service to run a restore-by-timestamp job.
 func (s *Suite) triggerRestoreByTimestamp(e *env, request dto.RestoreTimestampRequest) int64 {
-	requestBody, err := json.Marshal(request)
+	requestBody, err := decoder.Marshal(request, decoder.JSON, false)
 	s.Require().NoError(err)
 
 	req, err := http.NewRequestWithContext(
@@ -230,7 +230,7 @@ func (s *Suite) triggerRestoreByTimestamp(e *env, request dto.RestoreTimestampRe
 
 // triggerRestore asks the service to run a restoreByPath now.
 func (s *Suite) triggerRestore(e *env, request dto.RestoreRequest) int64 {
-	requestBody, err := json.Marshal(request)
+	requestBody, err := decoder.Marshal(request, decoder.JSON, false)
 	s.Require().NoError(err)
 
 	req, err := http.NewRequestWithContext(s.T().Context(), http.MethodPost, e.restoreURL(), bytes.NewReader(requestBody))
@@ -271,7 +271,7 @@ func (s *Suite) waitForRestore(e *env, jobID int64) dto.RestoreJobStatus {
 		}
 
 		var status dto.RestoreJobStatus
-		s.Require().NoError(json.NewDecoder(resp.Body).Decode(&status))
+		s.Require().NoError(decoder.Deserialize(&status, resp.Body, decoder.JSON))
 
 		if status.Status != dto.RestoreRunning {
 			s.Require().Equal(dto.RestoreSuccess, status.Status, "restore job failed with error: %s", status.Error)

@@ -10,9 +10,9 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
-	"gopkg.in/yaml.v3"
 )
 
 // env is a running backup service instance under test.
@@ -35,7 +35,7 @@ func (s *Suite) setupEnv(customize ...func(*dto.Config)) *env {
 		fn(config)
 	}
 
-	configYAML, err := yaml.Marshal(config)
+	configYAML, err := decoder.Marshal(config, decoder.YAML, false)
 	s.Require().NoError(err)
 
 	configPath := filepath.Join(t.TempDir(), "config.yml")

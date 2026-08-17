@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -132,7 +132,7 @@ func newAerospikeLayer(resolver secrets.Resolver) (aerospike.ClientManager, aero
 func initLogger(config *model.Config) *slog.Logger {
 	logger := slog.New(log.NewHandler(config.ServiceConfig.GetLoggerOrDefault()))
 	slog.SetDefault(logger)
-	configStr, _ := json.Marshal(dto.NewConfigFromModel(config))
+	configStr, _ := decoder.Marshal(dto.NewConfigFromModel(config), decoder.JSON, true)
 	slog.Info("Aerospike Backup Service",
 		slog.String("version", backup.Version),
 		slog.String("commit", backup.CommitHash),

@@ -191,7 +191,7 @@ type Credentials struct {
 	User string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"  extensions:"x-nullable"`
 	// The password for the cluster authentication.
 	// It can be either plain text or path into the secret agent.
-	Password string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"  extensions:"x-nullable"`
+	Password decoder.Secret `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"  extensions:"x-nullable"`
 	// The file path with the password string.
 	PasswordPath string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
 	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
@@ -200,7 +200,7 @@ type Credentials struct {
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
 	c.User = m.User
-	c.Password = m.Password
+	c.Password = decoder.Secret(m.Password)
 	c.PasswordPath = m.PasswordPath
 	c.AuthMode = m.AuthMode.String()
 
@@ -241,7 +241,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 	}
 
 	if c.Password != "" {
-		if err := validateSecretRef(c.Password, agent); err != nil {
+		if err := validateSecretRef(string(c.Password), agent); err != nil {
 			return nil, fmt.Errorf("password: %w", err)
 		}
 	}
@@ -253,7 +253,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 
 	return &model.Credentials{
 		User:         c.User,
-		Password:     c.Password,
+		Password:     string(c.Password),
 		PasswordPath: c.PasswordPath,
 		AuthMode:     authMode,
 		SecretAgent:  agent,

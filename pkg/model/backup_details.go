@@ -1,12 +1,13 @@
 package model
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/backup-go/models"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -64,13 +65,11 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 		return nil, errors.New("empty metadata file")
 	}
 	var metadata BackupMetadata
-	err := yaml.Unmarshal(data, &metadata)
-	if err != nil {
+	if err := decoder.Deserialize(&metadata, bytes.NewReader(data), decoder.YAML); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
-	err = metadata.Validate()
-	if err != nil {
+	if err := metadata.Validate(); err != nil {
 		return nil, fmt.Errorf("corrupted metadata: %w", err)
 	}
 

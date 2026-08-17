@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"gopkg.in/yaml.v3"
 )
 
 // storageOperations abstracts storage I/O for backup metadata.
@@ -89,7 +89,7 @@ func (b *BackupBackendServiceImpl) WriteBackupMetadata(
 	path string,
 	metadata model.BackupMetadata,
 ) error {
-	dataYaml, err := yaml.Marshal(metadata)
+	dataYaml, err := decoder.Marshal(metadata, decoder.YAML, false)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}

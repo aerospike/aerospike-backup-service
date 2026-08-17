@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"mime"
@@ -9,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -71,7 +71,7 @@ func httpOK(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	_ = json.NewEncoder(w).Encode(data)
+	_ = decoder.Serialize(w, data, decoder.JSON, true)
 }
 
 // httpAcceptedWithJobID responds with a job ID and 202 status.
