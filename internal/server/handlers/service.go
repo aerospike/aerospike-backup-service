@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -21,7 +20,7 @@ type Service struct {
 	configRetriever      ConfigRetriever
 	backupReader         service.BackupReader
 	registry             RunningBackupsRegistry
-	configurationManager configuration.Manager
+	configurationManager Manager
 	nsValidator          aerospike.NamespaceValidator
 
 	changeConfigLock sync.Mutex
@@ -36,7 +35,7 @@ func NewService(
 	configRetriever ConfigRetriever,
 	backupReader service.BackupReader,
 	registry RunningBackupsRegistry,
-	configurationManager configuration.Manager,
+	configurationManager Manager,
 	nsValidator aerospike.NamespaceValidator,
 ) *Service {
 	return &Service{
@@ -67,6 +66,14 @@ type RunningBackupsRegistry interface {
 	GetRunningState() map[string]model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.
 	Cancel(routineName string)
+}
+
+// Manager reads and writes service configuration.
+type Manager interface {
+	// Read reads the configuration from the source.
+	Read(ctx context.Context) (*model.Config, error)
+	// Write writes the configuration to the source.
+	Write(ctx context.Context, config *model.Config) error
 }
 
 // ConfigRetriever reads backed-up Aerospike configuration from storage.

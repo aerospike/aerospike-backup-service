@@ -36,19 +36,6 @@ func (m *MockBackupBackendService) Delete(ctx context.Context, routineName *mode
 	return args.Error(0)
 }
 
-type configurationManagerMock struct{}
-
-func (mock configurationManagerMock) Read(_ context.Context) (*model.Config, error) {
-	return nil, nil
-}
-
-func (mock configurationManagerMock) Write(_ context.Context, config *model.Config) error {
-	if config == nil {
-		return nil
-	}
-	return nil
-}
-
 // MockConfigApplier is a configurable no-op ConfigApplier; set Err to simulate a failure.
 type MockConfigApplier struct {
 	Err error
@@ -56,22 +43,4 @@ type MockConfigApplier struct {
 
 func (a *MockConfigApplier) ApplyNewConfig(_ context.Context) error {
 	return a.Err
-}
-
-// MockConfigurationManager is a configurable mock implementation of configuration.Manager.
-type MockConfigurationManager struct {
-	mock.Mock
-}
-
-// Read reads the configuration from the source.
-func (m *MockConfigurationManager) Read(ctx context.Context) (*model.Config, error) {
-	args := m.Called(ctx)
-	cfg, _ := args.Get(0).(*model.Config)
-	return cfg, args.Error(1)
-}
-
-// Write writes the configuration to the source.
-func (m *MockConfigurationManager) Write(ctx context.Context, config *model.Config) error {
-	args := m.Called(ctx, config)
-	return args.Error(0)
 }

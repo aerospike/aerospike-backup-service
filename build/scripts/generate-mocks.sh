@@ -52,6 +52,10 @@ generate_mocks \
 
 generate_mocks \
     "internal/server/handlers" \
-    "RunningBackupsRegistry,ConfigRetriever"
+    "RunningBackupsRegistry,ConfigRetriever,Manager"
+
+generate_mocks \
+    "internal/server/configuration" \
+    "storageReaderWriter"
 
 echo "All mocks generated successfully."

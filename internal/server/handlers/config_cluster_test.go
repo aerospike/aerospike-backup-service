@@ -56,7 +56,7 @@ func TestAddAerospikeCluster(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -78,7 +78,7 @@ func TestAddAerospikeCluster(t *testing.T) {
 }
 
 func TestReadAerospikeClusters(t *testing.T) {
-	svc := setupTestService()
+	svc := setupTestService(t)
 	svc.config = model.NewConfig()
 
 	_ = svc.config.AddCluster("cluster1", &model.AerospikeCluster{})
@@ -130,7 +130,7 @@ func TestReadAerospikeCluster(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			if tt.cluster != nil {
 				_ = svc.config.AddCluster(tt.clusterName, tt.cluster)
 			}
@@ -186,7 +186,7 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			svc := setupTestService()
+			svc := setupTestService(t)
 			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 			svc.nsValidator = mockNsValidator
 
@@ -245,7 +245,7 @@ func TestDeleteAerospikeCluster(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			_ = svc.config.AddCluster("test-cluster", &model.AerospikeCluster{})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/clusters/"+tt.clusterName, nil)
@@ -263,7 +263,7 @@ func TestDeleteAerospikeCluster(t *testing.T) {
 }
 
 func TestDeleteAerospikeCluster_InUseErrorMessage(t *testing.T) {
-	svc := setupTestService()
+	svc := setupTestService(t)
 	entities := addValidBackupConfig(svc)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/clusters/"+entities.clusterName, nil)

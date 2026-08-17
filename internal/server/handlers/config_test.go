@@ -13,7 +13,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -94,8 +93,10 @@ func TestService_UpdateConfig(t *testing.T) {
 			svc, ctrl := newConfigTestService(t)
 			defer ctrl.Finish()
 
-			mockConfigurationManager := &MockConfigurationManager{}
-			mockConfigurationManager.On("Write", mock.Anything, mock.Anything).Return(tt.writeErr)
+			mockConfigurationManager := NewMockManager(ctrl)
+			if tt.expectedStatus != http.StatusBadRequest {
+				mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(tt.writeErr)
+			}
 			svc.configurationManager = mockConfigurationManager
 			svc.configApplier = &MockConfigApplier{Err: tt.configApplierErr}
 
@@ -158,8 +159,8 @@ func TestService_ApplyConfig(t *testing.T) {
 			svc, ctrl := newConfigTestService(t)
 			defer ctrl.Finish()
 
-			mockConfigurationManager := &MockConfigurationManager{}
-			mockConfigurationManager.On("Read", mock.Anything).Return(tt.readConfig, tt.readErr)
+			mockConfigurationManager := NewMockManager(ctrl)
+			mockConfigurationManager.EXPECT().Read(gomock.Any()).Return(tt.readConfig, tt.readErr)
 			svc.configurationManager = mockConfigurationManager
 			svc.configApplier = &MockConfigApplier{Err: tt.configApplierErr}
 
@@ -180,8 +181,8 @@ func TestService_changeConfig(t *testing.T) {
 	svc, ctrl := newConfigTestService(t)
 	defer ctrl.Finish()
 
-	mockConfigurationManager := &MockConfigurationManager{}
-	mockConfigurationManager.On("Write", mock.Anything, mock.Anything).Return(nil)
+	mockConfigurationManager := NewMockManager(ctrl)
+	mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil)
 	svc.configurationManager = mockConfigurationManager
 	svc.configApplier = &MockConfigApplier{}
 
