@@ -33,7 +33,6 @@ func (f *fakeStorageDataWriter) WriteDataFile(
 
 func TestClusterConfigWriter_Write_GetClientError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1", SourceCluster: &model.AerospikeCluster{}}
 	clientManager := aerospike.NewMockClientManager(ctrl)

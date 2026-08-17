@@ -184,7 +184,6 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			svc := setupTestService(t)
 			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)

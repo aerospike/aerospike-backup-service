@@ -15,7 +15,6 @@ import (
 // tests that only full backups are deleted when only a full backup retention policy is set.
 func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	backendService := NewMockBackupReaderWriter(ctrl)
 
@@ -63,7 +62,6 @@ func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 // (even without incremental retention policy).
 func TestRetentionManager_FullAndIncremental(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	backendService := NewMockBackupReaderWriter(ctrl)
 
@@ -112,7 +110,6 @@ func TestRetentionManager_FullAndIncremental(t *testing.T) {
 // TestRetentionManager_IncrementalPolicy tests the incremental retention policy.
 func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: optional.Of(2),
@@ -157,7 +154,6 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 // TestRetentionManager_NoPolicy tests the case where no retention policy is defined.
 func TestRetentionManager_NoPolicy(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
 
@@ -173,7 +169,6 @@ func TestRetentionManager_NoPolicy(t *testing.T) {
 // is less than or equal to the retention count.
 func TestRetentionManager_NoneToDelete(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	backendService := NewMockBackupReaderWriter(ctrl)
 
@@ -201,7 +196,6 @@ func TestRetentionManager_NoneToDelete(t *testing.T) {
 // tests the case where the retention count for incremental backups is 0.
 func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		IncrBackups: optional.Of(0),
@@ -226,7 +220,6 @@ func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 // tests that the concurrency lock prevents multiple retention jobs from running for the same routine.
 func TestRetentionManager_ConcurrencyLock(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: optional.Of(1),
@@ -251,7 +244,6 @@ func TestRetentionManager_ConcurrencyLock(t *testing.T) {
 // tests the case where the retention policy is defined but both FullBackups and IncrBackups are nil.
 func TestRetentionManager_PolicyWithNilCounts(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
 

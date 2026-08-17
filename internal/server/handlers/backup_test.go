@@ -238,7 +238,6 @@ func TestService_CancelCurrentBackup_RoutineNotFound(t *testing.T) {
 
 func TestService_CancelCurrentBackup_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	cfg := model.NewConfig()
 	_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
@@ -294,7 +293,6 @@ func TestService_GetCurrentBackupInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			svc := &Service{config: model.NewConfig()}
 			tt.setupSvc(svc, ctrl)

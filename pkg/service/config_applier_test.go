@@ -28,7 +28,6 @@ func TestDefaultConfigApplier_ApplyNewConfig_NoInvalidations(t *testing.T) {
 
 func TestDefaultConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	cfg := model.NewConfig()
 	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
@@ -62,7 +61,6 @@ func TestDefaultConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *te
 
 func TestDefaultConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	cfg := model.NewConfig()
 	cfg.InvalidateRoutines([]string{"removed-routine"})

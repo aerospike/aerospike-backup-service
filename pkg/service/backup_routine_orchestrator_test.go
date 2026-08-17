@@ -63,7 +63,6 @@ func newBackupNamespacesOperation(
 
 func TestRunFullBackupInternal_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := testRoutine()
 	now := time.Now()
@@ -95,7 +94,6 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 
 func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := testRoutine()
 	now := time.Now()
@@ -119,7 +117,6 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 
 func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := testRoutine()
 	now := time.Now()
@@ -145,7 +142,6 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 
 func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := testRoutine()
 	now := time.Now()
@@ -179,7 +175,6 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 
 func TestRunIncrementalBackup_Skip(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := testRoutine()
 	now := time.Now()
@@ -202,7 +197,6 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 
 func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := testRoutine()
 	now := time.Now()
@@ -259,7 +253,6 @@ func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
 func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine *model.BackupRoutine) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Now()
 	fromTime := *state.LastRunTime.LatestRun()

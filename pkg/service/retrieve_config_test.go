@@ -32,7 +32,6 @@ func (f *fakeStorageFileReader) ReadFiles(
 
 func TestConfigRetriever_RetrieveConfiguration_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{
 		Name:    "test-routine",
@@ -76,7 +75,6 @@ func TestConfigRetriever_RetrieveConfiguration_Success(t *testing.T) {
 
 func TestConfigRetriever_RetrieveConfiguration_GetBackupsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
 	backupReader := NewMockBackupReaderWriter(ctrl)
@@ -92,7 +90,6 @@ func TestConfigRetriever_RetrieveConfiguration_GetBackupsError(t *testing.T) {
 
 func TestConfigRetriever_RetrieveConfiguration_NoFullBackups(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
 	backupReader := NewMockBackupReaderWriter(ctrl)
@@ -107,7 +104,6 @@ func TestConfigRetriever_RetrieveConfiguration_NoFullBackups(t *testing.T) {
 
 func TestConfigRetriever_RetrieveConfiguration_ReadFilesError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
 	backupReader := NewMockBackupReaderWriter(ctrl)
@@ -124,7 +120,6 @@ func TestConfigRetriever_RetrieveConfiguration_ReadFilesError(t *testing.T) {
 
 func TestConfigRetriever_RetrieveConfiguration_NoConfigFiles(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
 	backupReader := NewMockBackupReaderWriter(ctrl)
