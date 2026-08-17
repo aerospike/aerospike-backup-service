@@ -2,6 +2,7 @@ package syncutil
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -77,7 +78,7 @@ func TestRandomSemaphore_Acquire_BlockingUntilRelease(t *testing.T) {
 
 	select {
 	case <-done:
-		t.Fatal("Acquire should block until tokens are released")
+		require.FailNow(t, "Acquire should block until tokens are released")
 	case <-time.After(50 * time.Millisecond):
 	}
 
@@ -86,7 +87,7 @@ func TestRandomSemaphore_Acquire_BlockingUntilRelease(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(1 * time.Second):
-		t.Fatal("Acquire did not unblock after Release")
+		require.FailNow(t, "Acquire did not unblock after Release")
 	}
 }
 
@@ -108,7 +109,7 @@ func TestRandomSemaphore_Acquire_ContextCancelWhileWaiting(t *testing.T) {
 	case err := <-errChan:
 		require.ErrorIs(t, err, context.Canceled)
 	case <-time.After(1 * time.Second):
-		t.Fatal("Acquire did not respect context cancellation")
+		require.FailNow(t, "Acquire did not respect context cancellation")
 	}
 
 	// Token should still be held by the initial TryAcquire.
@@ -140,7 +141,7 @@ func TestRandomSemaphore_Acquire_ContextCancelAfterPicked(t *testing.T) {
 		case err := <-errChan:
 			require.ErrorIs(t, err, context.Canceled)
 		case <-time.After(1 * time.Second):
-			t.Fatal("Acquire did not return after cancel and release")
+			require.FailNow(t, "Acquire did not return after cancel and release")
 		}
 
 		// Tokens from a canceled-but-picked waiter must be returned for others.
@@ -176,7 +177,7 @@ func TestRandomSemaphore_Release_UnblocksMultipleWaiters(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(2 * time.Second):
-		t.Fatal("not all waiters were unblocked")
+		require.FailNow(t, "not all waiters were unblocked")
 	}
 }
 
@@ -204,7 +205,7 @@ func TestRandomSemaphore_Acquire_DifferentRequestSizes(t *testing.T) {
 		case r := <-results:
 			got[r.n] = r.err
 		case <-deadline:
-			t.Fatal("timed out waiting for differently-sized acquires")
+			require.FailNow(t, "timed out waiting for differently-sized acquires")
 		}
 	}
 
@@ -252,7 +253,7 @@ func TestRandomSemaphore_ConcurrentAcquireRelease(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(10 * time.Second):
-		t.Fatalf("concurrent test timed out after %d completions", completed.Load())
+		require.FailNow(t, fmt.Sprintf("concurrent test timed out after %d completions", completed.Load()))
 	}
 
 	assert.Equal(t, int64(workers*loops), completed.Load())

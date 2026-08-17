@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -115,7 +116,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	case <-waitReturned:
 		// Success
 	case <-time.After(2 * time.Second):
-		t.Fatal("Restore handler Wait() did not return after cancellation")
+		require.FailNow(t, "Restore handler Wait() did not return after cancellation")
 	}
 
 	// Check final status reflects cancellation
@@ -324,7 +325,10 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 		// If we timed out, it means Run was never called.
 		// Check the job status to see if it failed early.
 		status, _ := env.restoreManager.JobStatus(jobID)
-		t.Fatalf("Timed out waiting for Run() to start. Job status: %v, Error: %v", status.Status, status.Error)
+		require.FailNow(t, fmt.Sprintf(
+			"Timed out waiting for Run() to start. Job status: %v, Error: %v",
+			status.Status, status.Error,
+		))
 	}
 
 	// 3. Cancel the job while the Run() method is still "executing".

@@ -50,7 +50,7 @@ func TestSafeMap_Apply(t *testing.T) {
 	assert.True(t, called)
 
 	m.Apply("missing", func(int) {
-		t.Fatal("callback should not run for missing key")
+		require.FailNow(t, "callback should not run for missing key")
 	})
 }
 
@@ -65,7 +65,7 @@ func TestSafeMap_ApplyOrCreate(t *testing.T) {
 	assert.Equal(t, 5, seen)
 
 	m.ApplyOrCreate("new", func(int) {
-		t.Fatal("callback should not run when key is created")
+		require.FailNow(t, "callback should not run when key is created")
 	}, 7)
 	val, ok := m.Load("new")
 	require.True(t, ok)

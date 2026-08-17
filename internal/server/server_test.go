@@ -51,7 +51,7 @@ func waitForHTTPServerReady(t *testing.T, healthURL string) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	t.Fatal("timed out waiting for server to start")
+	require.FailNow(t, "timed out waiting for server to start")
 }
 
 func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
@@ -74,6 +74,6 @@ func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
 	case err := <-errCh:
 		require.ErrorIs(t, err, http.ErrServerClosed)
 	case <-time.After(5 * time.Second):
-		t.Fatal("timed out waiting for server to stop")
+		require.FailNow(t, "timed out waiting for server to stop")
 	}
 }

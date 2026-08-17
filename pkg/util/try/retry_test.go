@@ -36,9 +36,7 @@ func Test_timer(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	counterLock.Lock()
 	defer counterLock.Unlock()
-	if retryCounter != 0 {
-		t.Errorf("Expected retryCounter 0, got %d", retryCounter)
-	}
+	require.Equal(t, 0, retryCounter)
 }
 
 func Test_timer_expires(t *testing.T) {
@@ -55,9 +53,7 @@ func Test_timer_expires(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	counterLock.Lock()
 	defer counterLock.Unlock()
-	if retryCounter != attempts {
-		t.Errorf("Expected retryCounter %d, got %d", attempts, retryCounter)
-	}
+	require.Equal(t, attempts, retryCounter)
 }
 
 func Test_timerRunTwice(t *testing.T) {
@@ -78,9 +74,7 @@ func Test_timerRunTwice(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	counterLock.Lock()
 	defer counterLock.Unlock()
-	if retryCounter != 0 {
-		t.Errorf("Expected retryCounter 0, got %d", retryCounter)
-	}
+	require.Equal(t, 0, retryCounter)
 }
 
 func Test_retry_attempts_expected_count(t *testing.T) {

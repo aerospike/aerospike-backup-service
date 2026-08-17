@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 const asyncWaitTimeout = time.Second
@@ -16,7 +18,7 @@ func waitAsyncDone(t *testing.T, done <-chan struct{}, description string) {
 	select {
 	case <-done:
 	case <-time.After(asyncWaitTimeout):
-		t.Fatalf("timed out waiting for %s", description)
+		require.FailNowf(t, "timed out waiting for %s", description)
 	}
 }
 

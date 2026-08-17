@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"strings"
 	"testing"
 
@@ -55,9 +54,7 @@ func NewLocalAerospikeCluster() *AerospikeCluster {
 func TestValidConfigValidation(t *testing.T) {
 	config := validConfig()
 
-	if err := config.Validate(); err != nil {
-		t.Errorf("Expected no validation error, but got: %v", err)
-	}
+	require.NoError(t, config.Validate())
 }
 
 func TestInvalidClusterReference(t *testing.T) {
@@ -67,13 +64,9 @@ func TestInvalidClusterReference(t *testing.T) {
 
 	_, err := config.ToModel()
 
-	if err == nil {
-		t.Fatalf("Expected validation error, but got none.")
-	}
-	expectedError := errValidationNotFound("routine1", "nonExistentCluster")
-	if errors.Is(err, expectedError) {
-		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
-	}
+	require.Error(t, err)
+	require.ErrorIs(t, err, errNotFound)
+	require.ErrorContains(t, err, "nonExistentCluster")
 }
 
 func TestInvalidBackupPolicyReference(t *testing.T) {
@@ -82,13 +75,9 @@ func TestInvalidBackupPolicyReference(t *testing.T) {
 	routine.BackupPolicy = "nonExistentPolicy"
 
 	_, err := config.ToModel()
-	if err == nil {
-		t.Fatalf("Expected validation error, but got none.")
-	}
-	expectedError := errValidationNotFound("routine1", "nonExistentPolicy")
-	if errors.Is(err, expectedError) {
-		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
-	}
+	require.Error(t, err)
+	require.ErrorIs(t, err, errNotFound)
+	require.ErrorContains(t, err, "nonExistentPolicy")
 }
 
 func TestInvalidStorageReference(t *testing.T) {
@@ -97,13 +86,9 @@ func TestInvalidStorageReference(t *testing.T) {
 	routine.Storage = "nonExistentStorage"
 
 	_, err := config.ToModel()
-	if err == nil {
-		t.Fatalf("Expected validation error, but got none.")
-	}
-	expectedError := errValidationNotFound("routine1", "nonExistentStorage")
-	if errors.Is(err, expectedError) {
-		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
-	}
+	require.Error(t, err)
+	require.ErrorIs(t, err, errNotFound)
+	require.ErrorContains(t, err, "nonExistentStorage")
 }
 
 func TestInvalidTlsFile(t *testing.T) {

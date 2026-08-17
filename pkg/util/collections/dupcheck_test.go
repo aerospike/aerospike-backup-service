@@ -16,6 +16,8 @@ package collections
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestCheckDuplicates_Ints(t *testing.T) {
@@ -36,12 +38,11 @@ func TestCheckDuplicates_Ints(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := CheckDuplicates(tt.in)
-			if tt.wantErr && err == nil {
-				t.Fatalf("expected error, got nil")
-			}
-			if !tt.wantErr && len(err) > 0 {
-				t.Fatalf("unexpected error: %v", err)
+			dupes := CheckDuplicates(tt.in)
+			if tt.wantErr {
+				require.NotEmpty(t, dupes)
+			} else {
+				require.Empty(t, dupes)
 			}
 		})
 	}
@@ -65,12 +66,11 @@ func TestCheckDuplicates_Strings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := CheckDuplicates(tt.in)
-			if tt.wantErr && err == nil {
-				t.Fatalf("expected error, got nil")
-			}
-			if !tt.wantErr && len(err) > 0 {
-				t.Fatalf("unexpected error: %v", err)
+			dupes := CheckDuplicates(tt.in)
+			if tt.wantErr {
+				require.NotEmpty(t, dupes)
+			} else {
+				require.Empty(t, dupes)
 			}
 		})
 	}
