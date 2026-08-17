@@ -15,8 +15,6 @@ func TestBackupNamespacesOperation_Wait_Success(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	h1 := NewMockCancelableBackupHandler(ctrl)
 	h1.EXPECT().Wait(gomock.Any()).Return(nil)
 	h2 := NewMockCancelableBackupHandler(ctrl)
@@ -30,8 +28,6 @@ func TestBackupNamespacesOperation_Wait_AggregatesErrors(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	h1 := NewMockCancelableBackupHandler(ctrl)
 	h1.EXPECT().Wait(gomock.Any()).Return(errors.New("ns1 failed"))
 	h2 := NewMockCancelableBackupHandler(ctrl)
@@ -48,8 +44,6 @@ func TestBackupNamespacesOperation_Cancel(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	h1 := NewMockCancelableBackupHandler(ctrl)
 	h1.EXPECT().Cancel()
 	h2 := NewMockCancelableBackupHandler(ctrl)
@@ -63,8 +57,6 @@ func TestBackupNamespacesOperation_GetMetrics(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	h1 := NewMockCancelableBackupHandler(ctrl)
 	h1.EXPECT().GetMetrics().Return(&models.Metrics{RecordsPerSecond: 10})
 	h2 := NewMockCancelableBackupHandler(ctrl)
@@ -80,8 +72,6 @@ func TestBackupNamespacesOperation_GetStats_NoneStarted(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	h1 := NewMockCancelableBackupHandler(ctrl)
 	h1.EXPECT().GetStats().Return(nil)
 
@@ -93,8 +83,6 @@ func TestBackupNamespacesOperation_GetStats_Aggregated(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	start := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	stats1 := models.NewBackupStats()
