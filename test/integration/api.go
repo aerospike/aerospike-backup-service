@@ -160,9 +160,29 @@ func (e *env) restoreURL() string {
 	return fmt.Sprintf("%s/v1/restore/full", e.server.URL)
 }
 
+// restoreTimestampURL returns the restore-by-timestamp endpoint.
+func (e *env) restoreTimestampURL() string {
+	return fmt.Sprintf("%s/v1/restore/timestamp", e.server.URL)
+}
+
 // restoreStatusURL returns the restore status endpoint.
 func (e *env) restoreStatusURL(jobID int64) string {
 	return fmt.Sprintf("%s/v1/restore/status/%d", e.server.URL, jobID)
+}
+
+func (s *Suite) restoreByTimestamp(e *env, timestamp time.Time) dto.RestoreJobStatus {
+	restoreReq := dto.RestoreTimestampRequest{
+		DestinationClusterConfig: dto.DestinationClusterConfig{
+			Name: clusterName,
+		},
+		Policy:  &dto.TimestampRestorePolicy{},
+		Time:    timestamp.UnixMilli(),
+		Routine: routineName,
+	}
+
+	jobID := s.triggerRestoreByTimestamp(e, restoreReq)
+
+	return s.waitForRestore(e, jobID)
 }
 
 func (s *Suite) restoreByPath(e *env, key string) dto.RestoreJobStatus {
@@ -180,6 +200,32 @@ func (s *Suite) restoreByPath(e *env, key string) dto.RestoreJobStatus {
 	jobID := s.triggerRestore(e, restoreReq)
 
 	return s.waitForRestore(e, jobID)
+}
+
+// triggerRestoreByTimestamp asks the service to run a restore-by-timestamp job.
+func (s *Suite) triggerRestoreByTimestamp(e *env, request dto.RestoreTimestampRequest) int64 {
+	requestBody, err := json.Marshal(request)
+	s.Require().NoError(err)
+
+	req, err := http.NewRequestWithContext(
+		s.T().Context(), http.MethodPost, e.restoreTimestampURL(), bytes.NewReader(requestBody),
+	)
+	s.Require().NoError(err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	s.Require().NoError(err)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+
+	s.Require().Equal(resp.StatusCode, http.StatusAccepted, "failed to trigger restore by timestamp: %s", body)
+
+	jobID, err := strconv.ParseInt(string(body), 10, 64)
+	s.Require().NoError(err)
+
+	return jobID
 }
 
 // triggerRestore asks the service to run a restoreByPath now.
