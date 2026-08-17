@@ -22,7 +22,7 @@ require (
 	github.com/prometheus/common v0.70.1
 	github.com/reugn/go-quartz v0.15.2
 	github.com/spf13/cobra v1.10.2
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.0
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.6
 	github.com/testcontainers/testcontainers-go v0.43.0
