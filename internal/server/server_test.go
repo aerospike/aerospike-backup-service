@@ -38,9 +38,7 @@ func waitForHTTPServerReady(t *testing.T, healthURL string) {
 
 	for time.Now().Before(deadline) {
 		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, healthURL, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		resp, err := client.Do(req)
 		if err == nil {
