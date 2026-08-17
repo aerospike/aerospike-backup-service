@@ -315,7 +315,7 @@ func TestDisableRoutine(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockRegistry := NewMockRunningBackupsRegistry(ctrl)
+			mockRegistry := NewmockRunningBackupsRegistry(ctrl)
 			mockRegistry.EXPECT().Cancel(tt.routineName).Times(tt.expectedCancelRuns)
 
 			svc := setupTestService(t)

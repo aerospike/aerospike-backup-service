@@ -38,7 +38,7 @@ func TestStorageManager_Read(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
-			mockOps := NewMockstorageReaderWriter(ctrl)
+			mockOps := NewmockStorageReaderWriter(ctrl)
 			mockOps.EXPECT().ReadFile(gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.content, tt.readErr)
 
 			manager := newTestStorageManager(ctrl, mockOps)
@@ -76,7 +76,7 @@ func TestStorageManager_Write(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
 			var written []byte
-			mockOps := NewMockstorageReaderWriter(ctrl)
+			mockOps := NewmockStorageReaderWriter(ctrl)
 			call := mockOps.EXPECT().WriteDataFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 			if tt.writeErr != nil {
 				call.Return(tt.writeErr)
@@ -103,7 +103,7 @@ func TestStorageManager_WriteThenRead_RoundTrip(t *testing.T) {
 
 	var stored []byte
 
-	mockOps := NewMockstorageReaderWriter(ctrl)
+	mockOps := NewmockStorageReaderWriter(ctrl)
 	mockOps.EXPECT().WriteDataFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Do(func(_ context.Context, _ model.Storage, _ string, content []byte) { stored = content }).Return(nil)
 	mockOps.EXPECT().ReadFile(gomock.Any(), gomock.Any(), gomock.Any()).

@@ -93,13 +93,13 @@ func TestService_UpdateConfig(t *testing.T) {
 			svc, ctrl := newConfigTestService(t)
 			defer ctrl.Finish()
 
-			mockConfigurationManager := NewMockManager(ctrl)
+			mockConfigurationManager := NewmockManager(ctrl)
 			if tt.expectedStatus != http.StatusBadRequest {
 				mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(tt.writeErr)
 			}
 			svc.configurationManager = mockConfigurationManager
 
-			mockConfigApplier := NewMockConfigApplier(ctrl)
+			mockConfigApplier := NewmockConfigApplier(ctrl)
 			if tt.expectedStatus == http.StatusOK || tt.configApplierErr != nil {
 				mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(tt.configApplierErr)
 			}
@@ -164,11 +164,11 @@ func TestService_ApplyConfig(t *testing.T) {
 			svc, ctrl := newConfigTestService(t)
 			defer ctrl.Finish()
 
-			mockConfigurationManager := NewMockManager(ctrl)
+			mockConfigurationManager := NewmockManager(ctrl)
 			mockConfigurationManager.EXPECT().Read(gomock.Any()).Return(tt.readConfig, tt.readErr)
 			svc.configurationManager = mockConfigurationManager
 
-			mockConfigApplier := NewMockConfigApplier(ctrl)
+			mockConfigApplier := NewmockConfigApplier(ctrl)
 			if tt.expectedStatus == http.StatusOK || tt.configApplierErr != nil {
 				mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(tt.configApplierErr)
 			}
@@ -191,11 +191,11 @@ func TestService_changeConfig(t *testing.T) {
 	svc, ctrl := newConfigTestService(t)
 	defer ctrl.Finish()
 
-	mockConfigurationManager := NewMockManager(ctrl)
+	mockConfigurationManager := NewmockManager(ctrl)
 	mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil)
 	svc.configurationManager = mockConfigurationManager
 
-	mockConfigApplier := NewMockConfigApplier(ctrl)
+	mockConfigApplier := NewmockConfigApplier(ctrl)
 	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil)
 	svc.configApplier = mockConfigApplier
 

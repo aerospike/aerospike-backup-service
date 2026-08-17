@@ -14,13 +14,13 @@ import (
 type Service struct {
 	sysCtx               context.Context //nolint:containedctx
 	config               *model.Config
-	configApplier        ConfigApplier
+	configApplier        configApplier
 	backupScheduler      service.AdHocScheduler
 	restoreManager       service.RestoreManager
-	configRetriever      ConfigRetriever
+	configRetriever      configRetriever
 	backupReader         service.BackupReader
-	registry             RunningBackupsRegistry
-	configurationManager Manager
+	registry             runningBackupsRegistry
+	configurationManager manager
 	nsValidator          aerospike.NamespaceValidator
 
 	changeConfigLock sync.Mutex
@@ -29,13 +29,13 @@ type Service struct {
 func NewService(
 	ctx context.Context,
 	config *model.Config,
-	configApplier ConfigApplier,
+	configApplier configApplier,
 	backupScheduler service.AdHocScheduler,
 	restoreManager service.RestoreManager,
-	configRetriever ConfigRetriever,
+	configRetriever configRetriever,
 	backupReader service.BackupReader,
-	registry RunningBackupsRegistry,
-	configurationManager Manager,
+	registry runningBackupsRegistry,
+	configurationManager manager,
 	nsValidator aerospike.NamespaceValidator,
 ) *Service {
 	return &Service{
@@ -57,9 +57,9 @@ func (s *Service) HTTPServerConfig() *model.HTTPServerConfig {
 	return s.config.ServiceConfig.GetHTTPServerOrDefault()
 }
 
-// RunningBackupsRegistry defines the interface for managing running backups and their statuses.
+// runningBackupsRegistry defines the interface for managing running backups and their statuses.
 // this is public version of service.RunningBackupsRegistry.
-type RunningBackupsRegistry interface {
+type runningBackupsRegistry interface {
 	// GetRoutineState returns the current backup statistics for a routine.
 	GetRoutineState(routine *model.BackupRoutine) model.RoutineState
 	// GetRunningState returns statistics for all current backups.
@@ -68,22 +68,22 @@ type RunningBackupsRegistry interface {
 	Cancel(routineName string)
 }
 
-// Manager reads and writes service configuration.
-type Manager interface {
+// manager reads and writes service configuration.
+type manager interface {
 	// Read reads the configuration from the source.
 	Read(ctx context.Context) (*model.Config, error)
 	// Write writes the configuration to the source.
 	Write(ctx context.Context, config *model.Config) error
 }
 
-// ConfigApplier applies new configuration to the service.
-type ConfigApplier interface {
+// configApplier applies new configuration to the service.
+type configApplier interface {
 	// ApplyNewConfig applies new configuration to the service.
 	ApplyNewConfig(ctx context.Context) error
 }
 
-// ConfigRetriever reads backed-up Aerospike configuration from storage.
-type ConfigRetriever interface {
+// configRetriever reads backed-up Aerospike configuration from storage.
+type configRetriever interface {
 	// RetrieveConfiguration returns backed up Aerospike configuration.
 	RetrieveConfiguration(ctx context.Context, routine *model.BackupRoutine, t time.Time) ([]byte, error)
 }
