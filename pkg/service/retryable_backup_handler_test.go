@@ -23,8 +23,6 @@ var retry = models.RetryPolicy{
 
 func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	stats := models.NewBackupStats()
 	mockHandler.EXPECT().Wait(gomock.Any()).Return(nil)
@@ -64,8 +62,6 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 
 func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	failedHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	successHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	stats := models.NewBackupStats()
@@ -114,8 +110,6 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 
 	waitCalled := make(chan struct{})
@@ -164,8 +158,6 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 
 func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	mockHandler.EXPECT().Wait(gomock.Any()).Return(errors.New("wait failed")).Times(3)
 
@@ -227,8 +219,6 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 
 func TestStartRetryableBackup_Cancel(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 
 	// The handler should wait until context is done, then return context.Canceled
@@ -278,8 +268,6 @@ func TestRetryableBackupHandler_GetStats_GetMetrics(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	stats := models.NewBackupStats()
 	metrics := &models.Metrics{RecordsPerSecond: 42}
