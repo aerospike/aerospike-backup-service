@@ -16,8 +16,6 @@ func TestBackupJob_Execute_Success(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	routine := &model.BackupRoutine{Name: "daily"}
 	runTime := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixNano()
 	expectedNow := time.Unix(0, runTime).Truncate(time.Millisecond)
@@ -38,8 +36,6 @@ func TestBackupJob_Execute_MissingMetadata(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	orchestrator := NewMockBackupOrchestrator(ctrl)
 	routine := &model.BackupRoutine{Name: "daily"}
 	job := newBackupJob(orchestrator, routine, model.BackupTypeFull)
@@ -53,8 +49,6 @@ func TestBackupJob_Description(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	orchestrator := NewMockBackupOrchestrator(ctrl)
 	routine := &model.BackupRoutine{Name: "daily"}
 	job := newBackupJob(orchestrator, routine, model.BackupTypeIncremental)

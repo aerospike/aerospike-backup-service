@@ -52,8 +52,6 @@ func TestRun_SuccessfulFullBackup(t *testing.T) {
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 
 	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
 	routine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
 	timeBounds := model.TimeBounds{}
 	backupStats := models.NewBackupStats()
@@ -97,8 +95,6 @@ func TestSuccessfulIncrementalBackup(t *testing.T) {
 	backupFolder := "test-routine/incremental/123456789000/data/test-ns"
 
 	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
 	routine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
 	timeBounds := model.TimeBounds{
 		FromTime: &fromTime,
@@ -144,8 +140,6 @@ func TestEmptyIncrementalBackup(t *testing.T) {
 	backupFolder := "test-routine/incremental/123456789000/data/test-ns"
 
 	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
 	routine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
 	timeBounds := model.TimeBounds{
 		FromTime: &fromTime,
@@ -180,8 +174,6 @@ func TestBackupExecutorError(t *testing.T) {
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 
 	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
 	routine := &model.BackupRoutine{
 		Name:          routineName,
 		SourceCluster: &model.AerospikeCluster{},
@@ -213,8 +205,6 @@ func TestBackupHandlerError(t *testing.T) {
 	timestampPath := "test-routine/backup/123456789000"
 
 	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
 	routine := &model.BackupRoutine{
 		Name:          routineName,
 		SourceCluster: &model.AerospikeCluster{},
@@ -253,8 +243,6 @@ func TestMetadataWriteError(t *testing.T) {
 	timestampPath := "test-routine/backup/123456789000"
 
 	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
 	routine := &model.BackupRoutine{
 		Name:          routineName,
 		SourceCluster: &model.AerospikeCluster{},
@@ -304,8 +292,6 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 	timestampPath := "test-routine/backup/123456789000"
 
 	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
 	routine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
 	timeBounds := model.TimeBounds{}
 
@@ -358,8 +344,6 @@ func TestRun_RetryRecalculatesPath(t *testing.T) {
 	timestampPath1 := "test-routine/backup/123456789000"
 
 	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
 	routine := &model.BackupRoutine{
 		Name:          routineName,
 		SourceCluster: &model.AerospikeCluster{},
@@ -426,8 +410,6 @@ func TestRun_RetryRecalculatesPath(t *testing.T) {
 
 func TestNamespaceBackupRunnerImpl_DeleteFolder_Success(t *testing.T) {
 	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
 	impl, ok := runner.(*NamespaceBackupRunnerImpl)
 	require.True(t, ok)
 
@@ -439,8 +421,6 @@ func TestNamespaceBackupRunnerImpl_DeleteFolder_Success(t *testing.T) {
 
 func TestNamespaceBackupRunnerImpl_DeleteFolder_ContextCanceled(t *testing.T) {
 	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
 	impl, ok := runner.(*NamespaceBackupRunnerImpl)
 	require.True(t, ok)
 
@@ -456,8 +436,6 @@ func TestNamespaceBackupRunnerImpl_DeleteFolder_ContextCanceled(t *testing.T) {
 
 func TestNamespaceBackupRunnerImpl_DeleteFolder_Error(t *testing.T) {
 	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
 	impl, ok := runner.(*NamespaceBackupRunnerImpl)
 	require.True(t, ok)
 

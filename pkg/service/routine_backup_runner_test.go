@@ -19,8 +19,6 @@ func TestRoutineBackupRunner_Run_Success(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	nsRunner := NewMockNamespaceBackupRunner(ctrl)
 	resolver := aerospike.NewMockNamespaceResolver(ctrl)
 	resolver.EXPECT().
@@ -55,7 +53,6 @@ func TestRoutineBackupRunner_Run_ResolverError(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	nsRunner := NewMockNamespaceBackupRunner(ctrl)
 	resolver := aerospike.NewMockNamespaceResolver(ctrl)
@@ -76,8 +73,6 @@ func TestRoutineBackupRunner_Run_WaitUntilStartedTimesOut(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	nsRunner := NewMockNamespaceBackupRunner(ctrl)
 	resolver := aerospike.NewMockNamespaceResolver(ctrl)
 	resolver.EXPECT().
