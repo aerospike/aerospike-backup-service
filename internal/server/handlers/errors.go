@@ -102,6 +102,5 @@ func httpContent(w http.ResponseWriter, buf []byte, filename string) {
 
 	w.WriteHeader(http.StatusOK)
 
-	//nolint:gosec // G705 attachment with explicit Content-Type and nosniff; body is file bytes, not HTML document.
 	_, _ = w.Write(buf)
 }
