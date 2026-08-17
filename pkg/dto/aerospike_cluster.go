@@ -240,8 +240,8 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 		return nil, err
 	}
 
-	if c.Password != nil {
-		if err := validateSecretRef(*c.Password, agent); err != nil {
+	if c.Password != "" {
+		if err := validateSecretRef(c.Password, agent); err != nil {
 			return nil, fmt.Errorf("password: %w", err)
 		}
 	}

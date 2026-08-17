@@ -59,8 +59,8 @@ func TestCredentialsToModel_SecretRefWithoutAgent(t *testing.T) {
 	cluster := &AerospikeCluster{
 		SeedNodes: []SeedNode{{HostName: "localhost", Port: 3000}},
 		Credentials: &Credentials{
-			User:     ptr.Of("user"),
-			Password: ptr.Of("secrets:asbackup:psw"),
+			User:     "user",
+			Password: "secrets:asbackup:psw",
 		},
 	}
 
@@ -75,8 +75,8 @@ func TestCredentialsToModel_MalformedSecretRef(t *testing.T) {
 	cluster := &AerospikeCluster{
 		SeedNodes: []SeedNode{{HostName: "localhost", Port: 3000}},
 		Credentials: &Credentials{
-			User:              ptr.Of("user"),
-			Password:          ptr.Of("secrets:foo"),
+			User:              "user",
+			Password:          "secrets:foo",
 			SecretAgentConfig: testSecretAgentConfig(),
 		},
 	}
@@ -93,8 +93,8 @@ func TestS3StorageToModel_SecretRefWithoutAgent(t *testing.T) {
 		S3Storage: &S3Storage{
 			Bucket:          "bucket",
 			S3Region:        "us-east-1",
-			AccessKeyID:     ptr.Of("secrets:resource:key-id"),
-			SecretAccessKey: ptr.Of("plain-key"),
+			AccessKeyID:     "secrets:resource:key-id",
+			SecretAccessKey: "plain-key",
 		},
 	}
 
@@ -144,8 +144,8 @@ func TestConfigToModel_SecretRefWithoutAgent(t *testing.T) {
 			"cluster1": {
 				SeedNodes: []SeedNode{{HostName: "localhost", Port: 3000}},
 				Credentials: &Credentials{
-					User:     ptr.Of("user"),
-					Password: ptr.Of("secrets:asbackup:psw"),
+					User:     "user",
+					Password: "secrets:asbackup:psw",
 				},
 			},
 		},
@@ -164,8 +164,8 @@ func TestRestoreRequestToModel_SecretRefWithoutAgent(t *testing.T) {
 			Cluster: &AerospikeCluster{
 				SeedNodes: []SeedNode{{HostName: "localhost", Port: 3000}},
 				Credentials: &Credentials{
-					User:     ptr.Of("user"),
-					Password: ptr.Of("secrets:asbackup:psw"),
+					User:     "user",
+					Password: "secrets:asbackup:psw",
 				},
 			},
 		},

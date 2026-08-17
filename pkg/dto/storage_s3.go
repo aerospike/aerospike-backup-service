@@ -84,10 +84,10 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 			return nil, err
 		}
 
-		if err := validateSecretRef(*s.AccessKeyID, agent); err != nil {
+		if err := validateSecretRef(s.AccessKeyID, agent); err != nil {
 			return nil, fmt.Errorf("access-key-id: %w", err)
 		}
-		if err := validateSecretRef(*s.SecretAccessKey, agent); err != nil {
+		if err := validateSecretRef(s.SecretAccessKey, agent); err != nil {
 			return nil, fmt.Errorf("secret-access-key: %w", err)
 		}
 
