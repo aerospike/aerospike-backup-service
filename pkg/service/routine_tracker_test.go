@@ -20,7 +20,7 @@ func TestNewRoutineTracker(t *testing.T) {
 	// scanDone should be open (blocking until first scan)
 	select {
 	case <-tracker.scanDone:
-		require.FailNow(t, "scanDone should be open")
+		t.Fatal("scanDone should be open")
 	default:
 		// success
 	}
@@ -181,6 +181,6 @@ func TestMarkScanDone_Idempotency(t *testing.T) {
 	case <-tracker.scanDone:
 		// success
 	default:
-		require.FailNow(t, "scanDone should be closed")
+		t.Fatal("scanDone should be closed")
 	}
 }

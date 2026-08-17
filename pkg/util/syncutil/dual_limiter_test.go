@@ -99,7 +99,7 @@ func TestDualLimiter_Acquire_ContextCancel(t *testing.T) {
 	case err := <-errChan:
 		require.ErrorIs(t, err, context.Canceled)
 	case <-time.After(1 * time.Second):
-		require.FailNow(t, "Acquire did not respect context cancellation in time")
+		t.Fatal("Acquire did not respect context cancellation in time")
 	}
 }
 
