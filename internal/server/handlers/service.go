@@ -14,7 +14,7 @@ import (
 type Service struct {
 	sysCtx               context.Context //nolint:containedctx
 	config               *model.Config
-	configApplier        service.ConfigApplier
+	configApplier        ConfigApplier
 	backupScheduler      service.AdHocScheduler
 	restoreManager       service.RestoreManager
 	configRetriever      ConfigRetriever
@@ -29,7 +29,7 @@ type Service struct {
 func NewService(
 	ctx context.Context,
 	config *model.Config,
-	configApplier service.ConfigApplier,
+	configApplier ConfigApplier,
 	backupScheduler service.AdHocScheduler,
 	restoreManager service.RestoreManager,
 	configRetriever ConfigRetriever,
@@ -74,6 +74,12 @@ type Manager interface {
 	Read(ctx context.Context) (*model.Config, error)
 	// Write writes the configuration to the source.
 	Write(ctx context.Context, config *model.Config) error
+}
+
+// ConfigApplier applies new configuration to the service.
+type ConfigApplier interface {
+	// ApplyNewConfig applies new configuration to the service.
+	ApplyNewConfig(ctx context.Context) error
 }
 
 // ConfigRetriever reads backed-up Aerospike configuration from storage.

@@ -52,7 +52,7 @@ generate_mocks \
 
 generate_mocks \
     "internal/server/handlers" \
-    "RunningBackupsRegistry,ConfigRetriever,Manager"
+    "RunningBackupsRegistry,ConfigRetriever,Manager,ConfigApplier"
 
 generate_mocks \
     "internal/server/configuration" \

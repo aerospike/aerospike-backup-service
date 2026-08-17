@@ -35,12 +35,3 @@ func (m *MockBackupBackendService) Delete(ctx context.Context, routineName *mode
 	args := m.Called(ctx, routineName, path)
 	return args.Error(0)
 }
-
-// MockConfigApplier is a configurable no-op ConfigApplier; set Err to simulate a failure.
-type MockConfigApplier struct {
-	Err error
-}
-
-func (a *MockConfigApplier) ApplyNewConfig(_ context.Context) error {
-	return a.Err
-}

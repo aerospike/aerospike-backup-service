@@ -325,10 +325,13 @@ func setupTestService(t *testing.T) *Service {
 	mockManager := NewMockManager(ctrl)
 	mockManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
+	mockConfigApplier := NewMockConfigApplier(ctrl)
+	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil).AnyTimes()
+
 	return NewService(
 		t.Context(),
 		model.NewConfig(),
-		&MockConfigApplier{},
+		mockConfigApplier,
 		nil,
 		nil,
 		nil,
