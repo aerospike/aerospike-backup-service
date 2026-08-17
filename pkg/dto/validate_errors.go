@@ -7,16 +7,18 @@ import (
 )
 
 var (
-	errValidation        = errors.New("validation error")
-	errRequiredEither    = fmt.Errorf("required fields %w", errValidation)
-	errMutuallyExclusive = fmt.Errorf("mutually exclusive fields %w", errValidation)
-	errEmpty             = fmt.Errorf("empty field %w", errValidation)
-	errNotFound          = fmt.Errorf("not found %w", errValidation)
-	errNonPositive       = fmt.Errorf("non-positive value %w", errValidation)
-	errNegative          = fmt.Errorf("negative value %w", errValidation)
-	errInvalidValue      = fmt.Errorf("invalid value %w", errValidation)
-	errMissingDependency = fmt.Errorf("missing dependent field %w", errValidation)
-	errDuplicate         = fmt.Errorf("duplicate value %w", errValidation)
+	errValidation         = errors.New("validation error")
+	errRequiredEither     = fmt.Errorf("required fields %w", errValidation)
+	errMutuallyExclusive  = fmt.Errorf("mutually exclusive fields %w", errValidation)
+	errEmpty              = fmt.Errorf("empty field %w", errValidation)
+	errNotFound           = fmt.Errorf("not found %w", errValidation)
+	errNonPositive        = fmt.Errorf("non-positive value %w", errValidation)
+	errNegative           = fmt.Errorf("negative value %w", errValidation)
+	errInvalidValue       = fmt.Errorf("invalid value %w", errValidation)
+	errMissingDependency  = fmt.Errorf("missing dependent field %w", errValidation)
+	errDuplicate          = fmt.Errorf("duplicate value %w", errValidation)
+	errSecretRefNoAgent   = fmt.Errorf("secret reference without agent %w", errValidation)
+	errSecretRefMalformed = fmt.Errorf("malformed secret reference %w", errValidation)
 )
 
 func errValidationRequiredEither(fields ...string) error {
@@ -59,4 +61,13 @@ func errValidationRequires(setField, requiredField string) error {
 
 func errValidationDuplicate[T any](field string, value T) error {
 	return fmt.Errorf("%w: %s contains duplicate value: %v", errDuplicate, field, value)
+}
+
+func errValidationSecretRefNoAgent(value string) error {
+	return fmt.Errorf("%w: %q requires secret agent configuration (secret-agent or secret-agent-name)",
+		errSecretRefNoAgent, value)
+}
+
+func errValidationSecretRefMalformed(value string) error {
+	return fmt.Errorf("%w: %q must be secrets:<resource>:<secret>", errSecretRefMalformed, value)
 }
