@@ -2,8 +2,10 @@ package dto
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
@@ -123,4 +125,22 @@ func TestInvalidTlsFile(t *testing.T) {
 
 	_, err = config.ToModel(ValidationSkipTLSFiles)
 	require.NoError(t, err)
+}
+
+func TestNewConfigFromReader(t *testing.T) {
+	t.Parallel()
+
+	yamlConfig := `
+service:
+`
+	cfg, err := NewConfigFromReader(strings.NewReader(yamlConfig), decoder.YAML)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+}
+
+func TestNewConfigFromReader_InvalidYAML(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewConfigFromReader(strings.NewReader("service: [1,2"), decoder.YAML)
+	require.Error(t, err)
 }

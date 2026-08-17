@@ -1,10 +1,12 @@
 package dto
 
 import (
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -541,6 +543,39 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewRestoreRequestFromReader(t *testing.T) {
+	t.Parallel()
+
+	jsonReq := `{"backup-data-path": "daily/backup/data"}`
+	req, err := NewRestoreRequestFromReader(strings.NewReader(jsonReq))
+	require.NoError(t, err)
+	assert.Equal(t, "daily/backup/data", req.BackupDataPath)
+}
+
+func TestNewRestoreRequestFromReader_InvalidJSON(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewRestoreRequestFromReader(strings.NewReader(`{"unknown-field": 1}`))
+	require.Error(t, err)
+}
+
+func TestNewRestoreTimestampRequestFromReader(t *testing.T) {
+	t.Parallel()
+
+	jsonReq := `{"time": 1739538000000, "routine": "daily"}`
+	req, err := NewRestoreTimestampRequestFromReader(strings.NewReader(jsonReq))
+	require.NoError(t, err)
+	assert.Equal(t, int64(1739538000000), req.Time)
+	assert.Equal(t, "daily", req.Routine)
+}
+
+func TestNewRestoreTimestampRequestFromReader_InvalidJSON(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewRestoreTimestampRequestFromReader(strings.NewReader(`{"unknown-field": 1}`))
+	require.Error(t, err)
 }
 
 func TestRestoreTimestampRequest_ToModel(t *testing.T) {
