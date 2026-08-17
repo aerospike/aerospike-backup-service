@@ -3,6 +3,7 @@ package decoder
 import (
 	"log/slog"
 	"reflect"
+	"time"
 )
 
 const RedactedSecret = "[secret]"
@@ -10,7 +11,10 @@ const RedactedSecret = "[secret]"
 // Secret marks a string field as sensitive for redaction during API responses and logging.
 type Secret string
 
-var secretType = reflect.TypeFor[Secret]()
+var (
+	secretType = reflect.TypeFor[Secret]()
+	timeType   = reflect.TypeFor[time.Time]()
+)
 
 // RedactSecrets returns a deep copy of v with all Secret-typed values replaced by RedactedSecret.
 func RedactSecrets(v any) any {
@@ -36,6 +40,10 @@ func redactValue(v reflect.Value) reflect.Value {
 
 	if v.Type() == secretType {
 		return reflect.ValueOf(Secret(RedactedSecret))
+	}
+
+	if v.Type() == timeType {
+		return v
 	}
 
 	switch v.Kind() {

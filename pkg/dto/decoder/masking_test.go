@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
@@ -78,4 +79,26 @@ func TestPasswordMasking(t *testing.T) {
 		output := string(data)
 		assert.Contains(t, output, "superSecretPassword")
 	})
+}
+
+func TestRedactSecrets_PreservesTime(t *testing.T) {
+	created := time.UnixMilli(1000).UTC()
+	finished := time.UnixMilli(5000).UTC()
+
+	original := map[string][]dto.BackupDetails{
+		"routine1": {
+			{
+				Key:       "backup1",
+				Created:   created,
+				Timestamp: 1000,
+				Finished:  finished,
+			},
+		},
+	}
+
+	redacted := decoder.RedactSecrets(original).(map[string][]dto.BackupDetails)
+	require.Len(t, redacted["routine1"], 1)
+	assert.Equal(t, created, redacted["routine1"][0].Created)
+	assert.Equal(t, finished, redacted["routine1"][0].Finished)
+	assert.Equal(t, int64(1000), redacted["routine1"][0].Timestamp)
 }

@@ -67,6 +67,7 @@ func httpError(w http.ResponseWriter, err error) {
 }
 
 // httpOK responds with a JSON-encoded success message and 200 status.
+// Secret fields are redacted in the response body.
 func httpOK(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
