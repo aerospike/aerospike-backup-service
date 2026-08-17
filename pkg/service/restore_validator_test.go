@@ -23,7 +23,7 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
-	config := NewMockroutineProvider(ctrl)
+	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
 	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
@@ -64,7 +64,7 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
-	config := NewMockroutineProvider(ctrl)
+	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
 	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
@@ -105,7 +105,7 @@ func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
 	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
-	config := NewMockroutineProvider(ctrl)
+	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
 	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
@@ -144,7 +144,7 @@ func TestRestoreValidator_BlocksTimeRestoreOnPendingBackupStart(t *testing.T) {
 	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
-	config := NewMockroutineProvider(ctrl)
+	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
 	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}

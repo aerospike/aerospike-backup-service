@@ -159,7 +159,7 @@ func TestGetAllCurrentStats(t *testing.T) {
 	routine1 := "routine1"
 	routine2 := "routine2"
 
-	mockReader := NewMockroutineProvider(ctrl)
+	mockReader := NewmockRoutineProvider(ctrl)
 	mockReader.EXPECT().Routines().Return(map[string]*model.BackupRoutine{
 		routine1: {
 			Name:         routine1,

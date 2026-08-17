@@ -35,22 +35,3 @@ func (m *MockBackupBackendService) Delete(ctx context.Context, routineName *mode
 	args := m.Called(ctx, routineName, path)
 	return args.Error(0)
 }
-
-type configurationManagerMock struct{}
-
-func (mock configurationManagerMock) Read(_ context.Context) (*model.Config, error) {
-	return nil, nil
-}
-
-func (mock configurationManagerMock) Write(_ context.Context, config *model.Config) error {
-	if config == nil {
-		return nil
-	}
-	return nil
-}
-
-type MockConfigApplier struct{}
-
-func (a *MockConfigApplier) ApplyNewConfig(_ context.Context) error {
-	return nil
-}
