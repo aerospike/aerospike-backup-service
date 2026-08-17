@@ -33,7 +33,6 @@ func Test_timer(t *testing.T) {
 	}, func() {})
 	require.NoError(t, err)
 
-	time.Sleep(1 * time.Second)
 	counterLock.Lock()
 	defer counterLock.Unlock()
 	require.Equal(t, 0, retryCounter)
@@ -50,7 +49,6 @@ func Test_timer_expires(t *testing.T) {
 		return errors.New("mock error")
 	}, func() {})
 
-	time.Sleep(1 * time.Second)
 	counterLock.Lock()
 	defer counterLock.Unlock()
 	require.Equal(t, attempts, retryCounter)
@@ -71,7 +69,6 @@ func Test_timerRunTwice(t *testing.T) {
 	_ = Retry(testRetryPolicy, slog.Default(), f, func() {})
 	_ = Retry(testRetryPolicy, slog.Default(), f, func() {})
 
-	time.Sleep(1 * time.Second)
 	counterLock.Lock()
 	defer counterLock.Unlock()
 	require.Equal(t, 0, retryCounter)
