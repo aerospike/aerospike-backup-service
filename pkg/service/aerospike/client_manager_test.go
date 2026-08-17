@@ -12,7 +12,7 @@ import (
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/mocks"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/mock" // backup-go mocks are mockery/testify-generated
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
