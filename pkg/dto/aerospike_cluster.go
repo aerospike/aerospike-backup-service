@@ -191,16 +191,18 @@ type Credentials struct {
 	User string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"  extensions:"x-nullable"`
 	// The password for the cluster authentication.
 	// It can be either plain text or path into the secret agent.
-	Password decoder.Secret `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"  extensions:"x-nullable"`
+	Password secret `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"  extensions:"x-nullable"`
 	// The file path with the password string.
 	PasswordPath string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
 	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
 	AuthMode string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL"`
 }
 
+type secret = decoder.Secret
+
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
 	c.User = m.User
-	c.Password = decoder.Secret(m.Password)
+	c.Password = secret(m.Password)
 	c.PasswordPath = m.PasswordPath
 	c.AuthMode = m.AuthMode.String()
 
