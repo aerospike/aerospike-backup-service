@@ -16,10 +16,10 @@ var secretAgentConfig = SecretAgentConfig{
 var originalConfig = &Config{
 	ServiceConfig: ServiceConfig{
 		HTTPServer: &HTTPServerConfig{
-			Address: ptr.Of("localhost"),
+			Address: "localhost",
 		},
 		Logger: &LoggerConfig{
-			Level: ptr.Of("INFO"),
+			Level: "INFO",
 			FileWriter: &FileLoggerConfig{
 				Filename: "log",
 			},
@@ -29,16 +29,16 @@ var originalConfig = &Config{
 		"cluster1": {
 			SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 			Credentials: &Credentials{
-				User:              ptr.Of("tester"),
-				Password:          ptr.Of("psw"),
+				User:              "tester",
+				Password:          "psw",
 				SecretAgentConfig: secretAgentConfig,
 			},
 		},
 		"cluster2": {
 			SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 			Credentials: &Credentials{
-				User:     ptr.Of("tester"),
-				Password: ptr.Of("psw"),
+				User:     "tester",
+				Password: "psw",
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host2",
@@ -48,7 +48,7 @@ var originalConfig = &Config{
 			},
 		},
 		"cluster3": {
-			ClusterLabel: ptr.Of("No credentials"),
+			ClusterLabel: "No credentials",
 			SeedNodes:    []SeedNode{{HostName: "host", Port: 80}},
 		},
 	},
@@ -57,16 +57,16 @@ var originalConfig = &Config{
 			S3Storage: &S3Storage{
 				Bucket:          "bucket",
 				S3Region:        "region",
-				AccessKeyID:     ptr.Of("id"),
-				SecretAccessKey: ptr.Of("key"),
+				AccessKeyID:     "id",
+				SecretAccessKey: "key",
 			},
 		},
 		"aws 1": { // secret agent by name
 			S3Storage: &S3Storage{
 				Bucket:            "bucket",
 				S3Region:          "region",
-				AccessKeyID:       ptr.Of("id"),
-				SecretAccessKey:   ptr.Of("key"),
+				AccessKeyID:       "id",
+				SecretAccessKey:   "key",
 				SecretAgentConfig: secretAgentConfig,
 			},
 		},
@@ -74,8 +74,8 @@ var originalConfig = &Config{
 			S3Storage: &S3Storage{
 				Bucket:          "bucket2",
 				S3Region:        "region2",
-				AccessKeyID:     ptr.Of("id2"),
-				SecretAccessKey: ptr.Of("key2"),
+				AccessKeyID:     "id2",
+				SecretAccessKey: "key2",
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host3",

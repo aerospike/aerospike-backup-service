@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -114,7 +113,7 @@ func TestNewTLSConfig(t *testing.T) {
 
 	t.Run("With Server Name", func(t *testing.T) {
 		serverName := "my.test.server"
-		cfg, err := NewTLSConfig(&model.TLS{ClientTLS: model.ClientTLS{Name: &serverName}})
+		cfg, err := NewTLSConfig(&model.TLS{ClientTLS: model.ClientTLS{Name: serverName}})
 		require.NoError(t, err)
 		assert.Equal(t, serverName, cfg.ServerName)
 	})
@@ -125,8 +124,8 @@ func TestNewTLSConfig(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(caSubDir, "ca.crt"), caCertPEM, 0600))
 
 		cfg, err := NewTLSConfig(&model.TLS{
-			ClientTLS: model.ClientTLS{CAFile: &caCertFile},
-			CAPath:    &caSubDir,
+			ClientTLS: model.ClientTLS{CAFile: caCertFile},
+			CAPath:    caSubDir,
 		})
 		require.NoError(t, err)
 		//noinspection GoDeprecation
@@ -165,7 +164,7 @@ func TestNewTLSConfig(t *testing.T) {
 		// - `..2025_10_27_12_34_56_789` (dir, skipped)
 		// - `..data` (symlink to dir, skipped)
 		// - `cert1.pem` (symlink to file, loaded)
-		cfg, err := NewTLSConfig(&model.TLS{CAPath: &caPathK8s})
+		cfg, err := NewTLSConfig(&model.TLS{CAPath: caPathK8s})
 		require.NoError(t, err)
 		require.NotNil(t, cfg.RootCAs, "RootCAs should be populated")
 
@@ -181,8 +180,8 @@ func TestNewTLSConfig(t *testing.T) {
 	t.Run("With Client Certs", func(t *testing.T) {
 		cfg, err := NewTLSConfig(&model.TLS{
 			ClientTLS: model.ClientTLS{
-				Certfile: &serverCertFile,
-				Keyfile:  &serverKeyFile,
+				Certfile: serverCertFile,
+				Keyfile:  serverKeyFile,
 			},
 		})
 		require.NoError(t, err)
@@ -193,10 +192,10 @@ func TestNewTLSConfig(t *testing.T) {
 		t.Run("Correct Password", func(t *testing.T) {
 			cfg, err := NewTLSConfig(&model.TLS{
 				ClientTLS: model.ClientTLS{
-					Certfile: &serverCertFile,
-					Keyfile:  &encKeyFile,
+					Certfile: serverCertFile,
+					Keyfile:  encKeyFile,
 				},
-				KeyfilePassword: &encKeyPassword,
+				KeyfilePassword: encKeyPassword,
 			})
 			require.NoError(t, err)
 			assert.Len(t, cfg.Certificates, 1, "Certificate should be loaded with correct password")
@@ -206,10 +205,10 @@ func TestNewTLSConfig(t *testing.T) {
 			wrongPass := "wrong"
 			_, err := NewTLSConfig(&model.TLS{
 				ClientTLS: model.ClientTLS{
-					Certfile: &serverCertFile,
-					Keyfile:  &encKeyFile,
+					Certfile: serverCertFile,
+					Keyfile:  encKeyFile,
 				},
-				KeyfilePassword: &wrongPass,
+				KeyfilePassword: wrongPass,
 			})
 			require.Error(t, err, "Should fail with wrong password")
 		})
@@ -217,8 +216,8 @@ func TestNewTLSConfig(t *testing.T) {
 		t.Run("No Password", func(t *testing.T) {
 			_, err := NewTLSConfig(&model.TLS{
 				ClientTLS: model.ClientTLS{
-					Certfile: &serverCertFile,
-					Keyfile:  &encKeyFile,
+					Certfile: serverCertFile,
+					Keyfile:  encKeyFile,
 				},
 			})
 			require.Error(t, err, "Should fail when no password is provided for an encrypted key")
@@ -230,16 +229,15 @@ func TestNewTLSConfig(t *testing.T) {
 func TestParseProtocols(t *testing.T) {
 	testCases := []struct {
 		name        string
-		protocolStr *string
+		protocolStr string
 		wantMin     uint16
 		wantMax     uint16
 		expectErr   bool
 	}{
-		{"NilInput", nil, tls.VersionTLS12, 0, false},
-		{"EmptyInput", ptr.Of(""), tls.VersionTLS12, 0, false},
-		{"WithSpaces", ptr.Of("  TLSv1.2  "), tls.VersionTLS12, tls.VersionTLS12, false},
-		{"InvalidVersion", ptr.Of("TLSv1.9"), 0, 0, true},
-		{"MixedValidity", ptr.Of("TLSv1.2 BOGUS"), 0, 0, true},
+		{"EmptyInput", "", tls.VersionTLS12, 0, false},
+		{"WithSpaces", "  TLSv1.2  ", tls.VersionTLS12, tls.VersionTLS12, false},
+		{"InvalidVersion", "TLSv1.9", 0, 0, true},
+		{"MixedValidity", "TLSv1.2 BOGUS", 0, 0, true},
 	}
 
 	for _, tc := range testCases {
@@ -265,24 +263,23 @@ func TestParseCipherSuites(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		ciphersStr *string
+		ciphersStr string
 		wantSuites []uint16
 		expectErr  bool
 	}{
-		{"NilInput", nil, nil, false},
-		{"EmptyInput", ptr.Of(""), nil, false},
-		{"SingleSuite", ptr.Of(validSuite1), []uint16{validSuiteID1}, false},
+		{"EmptyInput", "", nil, false},
+		{"SingleSuite", validSuite1, []uint16{validSuiteID1}, false},
 		{"MultipleSuites",
-			ptr.Of(fmt.Sprintf("%s:%s", validSuite1, validSuite2)),
+			fmt.Sprintf("%s:%s", validSuite1, validSuite2),
 			[]uint16{validSuiteID1, validSuiteID2}, false},
 		{"WithWhitespace",
-			ptr.Of(fmt.Sprintf(" %s : %s ", validSuite1, validSuite2)),
+			fmt.Sprintf(" %s : %s ", validSuite1, validSuite2),
 			[]uint16{validSuiteID1, validSuiteID2}, false},
-		{"InvalidSuiteName", ptr.Of("TLS_BOGUS_SUITE"), nil, true},
+		{"InvalidSuiteName", "TLS_BOGUS_SUITE", nil, true},
 		{"MixedValidity",
-			ptr.Of(validSuite1 + ":TLS_BOGUS_SUITE"), nil, true},
+			validSuite1 + ":TLS_BOGUS_SUITE", nil, true},
 		{"EmptyStringBetweenColons",
-			ptr.Of(fmt.Sprintf("%s::%s", validSuite1, validSuite2)),
+			fmt.Sprintf("%s::%s", validSuite1, validSuite2),
 			[]uint16{validSuiteID1, validSuiteID2}, false},
 	}
 

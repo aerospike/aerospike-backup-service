@@ -10,19 +10,18 @@ import (
 
 // LoggerConfig represents the backup service logger configuration.
 // @Description LoggerConfig represents the backup service logger configuration.
-//
-//nolint:lll
 type LoggerConfig struct {
 	// Level is the logger level.
-	Level *string `yaml:"level,omitempty" json:"level,omitempty" default:"INFO" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
+	Level string `yaml:"level,omitempty" json:"level,omitempty" default:"INFO" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
 	// Format is the logger format (PLAIN, JSON).
-	Format *string `yaml:"format,omitempty" json:"format,omitempty" default:"PLAIN" enums:"PLAIN,JSON"`
+	Format string `yaml:"format,omitempty" json:"format,omitempty" default:"PLAIN" enums:"PLAIN,JSON"`
 	// Whether to enable logging to the standard output.
 	StdoutWriter *bool `yaml:"stdout-writer,omitempty" json:"stdout-writer,omitempty" default:"true"`
 	// File writer logging configuration.
 	FileWriter *FileLoggerConfig `yaml:"file-writer,omitempty" json:"file-writer,omitempty" default:""`
 }
 
+//nolint:goconst
 var (
 	validLoggerLevels      = []string{"TRACE", "DEBUG", "INFO", "WARN", "WARNING", "ERROR"}
 	supportedLoggerFormats = []string{"PLAIN", "JSON"}
@@ -33,11 +32,11 @@ func (l *LoggerConfig) Validate() error {
 	if l == nil {
 		return nil
 	}
-	if l.Level != nil && !slices.Contains(validLoggerLevels, *l.Level) {
-		return fmt.Errorf("invalid logger level: %s", *l.Level)
+	if l.Level != "" && !slices.Contains(validLoggerLevels, l.Level) {
+		return fmt.Errorf("invalid logger level: %s", l.Level)
 	}
-	if l.Format != nil && !slices.Contains(supportedLoggerFormats, *l.Format) {
-		return fmt.Errorf("invalid logger format: %s", *l.Format)
+	if l.Format != "" && !slices.Contains(supportedLoggerFormats, l.Format) {
+		return fmt.Errorf("invalid logger format: %s", l.Format)
 	}
 	if err := l.FileWriter.Validate(); err != nil {
 		return err
@@ -82,8 +81,8 @@ func (l *LoggerConfig) Compare(other *LoggerConfig) error {
 	}
 
 	var err = errors.Join(
-		comparePointers("Level", l.Level, other.Level),
-		comparePointers("Format", l.Format, other.Format),
+		compareValues("Level", l.Level, other.Level),
+		compareValues("Format", l.Format, other.Format),
 		comparePointers("StdoutWriter", l.StdoutWriter, other.StdoutWriter),
 	)
 

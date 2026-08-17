@@ -3,7 +3,6 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,15 +13,15 @@ func TestEncryptionPolicy_Validate_Success(t *testing.T) {
 		},
 		"AES128 with key file": {
 			Mode:    EncryptAES128,
-			KeyFile: ptr.Of("path"),
+			KeyFile: "path",
 		},
 		"AES256 with key env": {
 			Mode:   EncryptAES256,
-			KeyEnv: ptr.Of("path"),
+			KeyEnv: "path",
 		},
 		"AES256 with key secret": {
 			Mode:      EncryptAES256,
-			KeySecret: ptr.Of("path"),
+			KeySecret: "path",
 		},
 	}
 
@@ -53,7 +52,7 @@ func TestEncryptionPolicy_Validate_Invalid(t *testing.T) {
 		"NONE with a key set": {
 			policy: EncryptionPolicy{
 				Mode:    EncryptNone,
-				KeyFile: ptr.Of("path"),
+				KeyFile: "path",
 			},
 			wantIsErr: errMutuallyExclusive,
 		},
@@ -64,17 +63,17 @@ func TestEncryptionPolicy_Validate_Invalid(t *testing.T) {
 		"AES256 with two keys set": {
 			policy: EncryptionPolicy{
 				Mode:      EncryptAES256,
-				KeyEnv:    ptr.Of("path"),
-				KeySecret: ptr.Of("path"),
+				KeyEnv:    "path",
+				KeySecret: "path",
 			},
 			wantIsErr: errMutuallyExclusive,
 		},
 		"AES256 with three keys set": {
 			policy: EncryptionPolicy{
 				Mode:      EncryptAES256,
-				KeyEnv:    ptr.Of("path"),
-				KeyFile:   ptr.Of("path"),
-				KeySecret: ptr.Of("path"),
+				KeyEnv:    "path",
+				KeyFile:   "path",
+				KeySecret: "path",
 			},
 			wantIsErr: errMutuallyExclusive,
 		},

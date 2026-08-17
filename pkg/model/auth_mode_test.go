@@ -21,23 +21,23 @@ func TestCredentialsAuthModeOrDefault(t *testing.T) {
 
 func TestAuthModeString(t *testing.T) {
 	var unset *AuthMode
-	assert.Nil(t, unset.String())
-	assert.Equal(t, ptr.Of("PKI"), ptr.Of(AuthModePKI).String())
+	assert.Empty(t, unset.String())
+	assert.Equal(t, "PKI", ptr.Of(AuthModePKI).String())
 }
 
 func TestParseAuthMode(t *testing.T) {
 	tests := []struct {
 		name        string
-		value       *string
+		value       string
 		expected    *AuthMode
 		expectError bool
 	}{
-		{name: "nil", value: nil, expected: nil},
-		{name: "internal", value: ptr.Of("INTERNAL"), expected: ptr.Of(AuthModeInternal)},
-		{name: "internal lowercase", value: ptr.Of("internal"), expected: ptr.Of(AuthModeInternal)},
-		{name: "external", value: ptr.Of("EXTERNAL"), expected: ptr.Of(AuthModeExternal)},
-		{name: "pki", value: ptr.Of("PKI"), expected: ptr.Of(AuthModePKI)},
-		{name: "invalid", value: ptr.Of("LDAP"), expectError: true},
+		{name: "empty", value: "", expected: nil},
+		{name: "internal", value: "INTERNAL", expected: ptr.Of(AuthModeInternal)},
+		{name: "internal lowercase", value: "internal", expected: ptr.Of(AuthModeInternal)},
+		{name: "external", value: "EXTERNAL", expected: ptr.Of(AuthModeExternal)},
+		{name: "pki", value: "PKI", expected: ptr.Of(AuthModePKI)},
+		{name: "invalid", value: "LDAP", expectError: true},
 	}
 
 	for _, test := range tests {

@@ -161,7 +161,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	destinationNS := "test-ns"
 	policy := model.RestorePolicy{
 		Namespace: &model.RestoreNamespace{
-			Destination: &destinationNS,
+			Destination: destinationNS,
 		},
 	}
 	storage := &model.LocalStorage{Path: "/backup/path"}
