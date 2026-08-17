@@ -82,8 +82,8 @@ var cluster = dto.AerospikeCluster{
 		HostName: "host.docker.internal", Port: 3000},
 	},
 	Credentials: &dto.Credentials{
-		User:     ptr.Of("user"),
-		Password: ptr.Of("password"),
+		User:     "user",
+		Password: "password",
 	},
 }
 

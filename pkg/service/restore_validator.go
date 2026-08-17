@@ -131,8 +131,13 @@ func (r *restoreValidatorImpl) checkRunningBackupsConflict(
 		// Block if there is any overlap between the destination namespaces of the restore
 		// and the source namespaces of the running backup.
 		if overlappingNS := namespacesOverlap(destinationNamespaces, routine.Namespaces); overlappingNS != "" {
+			clusterLabel := cluster.ClusterLabel
+			if clusterLabel == "" && len(cluster.SeedNodes) > 0 {
+				clusterLabel = cluster.SeedNodes[0].String()
+			}
+
 			return fmt.Errorf("restore not allowed during backups on routine %s (cluster %s, namespace %q). "+
-				"Please cancel existing backups jobs to perform restore", routine.Name, cluster.ToString(), overlappingNS)
+				"Please cancel existing backups jobs to perform restore", routine.Name, clusterLabel, overlappingNS)
 		}
 	}
 
@@ -191,9 +196,9 @@ func validateBackupsEncryption(backups []model.BackupDetails, policy *model.Encr
 			return fmt.Errorf("backup is encrypted with mode '%s', "+
 				"but the provided encryption policy specifies mode '%s'", b.Encryption, policy.Mode)
 		}
-		if policy.KeyFile == nil &&
-			policy.KeyEnv == nil &&
-			policy.KeySecret == nil {
+		if policy.KeyFile == "" &&
+			policy.KeyEnv == "" &&
+			policy.KeySecret == "" {
 			return errors.New("backup is encrypted, " +
 				"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
 		}
@@ -204,8 +209,8 @@ func validateBackupsEncryption(backups []model.BackupDetails, policy *model.Encr
 
 // destinationNamespacesForRestore resolves effective destination namespaces for a restore request.
 func destinationNamespacesForRestore(remapping *model.RestoreNamespace, sourceNamespaces []string) []string {
-	if remapping != nil && remapping.Destination != nil {
-		return []string{*remapping.Destination}
+	if remapping != nil && remapping.Destination != "" {
+		return []string{remapping.Destination}
 	}
 
 	return sourceNamespaces

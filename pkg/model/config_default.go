@@ -22,19 +22,19 @@ var defaultConfig = struct {
 	credentials   Credentials
 }{
 	http: HTTPServerConfig{
-		Address: ptr.Of("0.0.0.0"),
+		Address: "0.0.0.0",
 		Port:    NewPort(8080),
 		Rate: &RateLimiterConfig{
 			Tps:       ptr.Of(1024),
 			Size:      ptr.Of(1024),
 			WhiteList: []string{},
 		},
-		ContextPath: ptr.Of("/"),
+		ContextPath: "/",
 		Timeout:     ptr.Of(5 * time.Second),
 	},
 	logger: LoggerConfig{
-		Level:        ptr.Of("INFO"),
-		Format:       ptr.Of("PLAIN"),
+		Level:        "INFO",
+		Format:       "PLAIN",
 		StdoutWriter: ptr.Of(true),
 		FileWriter: &FileLoggerConfig{
 			MaxSize:    100,

@@ -148,8 +148,8 @@ func makeEncryptionPolicy(policy *model.BackupPolicy) *backup.EncryptionPolicy {
 
 	return &backup.EncryptionPolicy{
 		Mode:      policy.EncryptionPolicy.Mode,
-		KeyFile:   policy.EncryptionPolicy.KeyFile,
-		KeySecret: policy.EncryptionPolicy.KeySecret,
-		KeyEnv:    policy.EncryptionPolicy.KeyEnv,
+		KeyFile:   ptr.StringOrNil(policy.EncryptionPolicy.KeyFile),
+		KeySecret: ptr.StringOrNil(policy.EncryptionPolicy.KeySecret),
+		KeyEnv:    ptr.StringOrNil(policy.EncryptionPolicy.KeyEnv),
 	}
 }

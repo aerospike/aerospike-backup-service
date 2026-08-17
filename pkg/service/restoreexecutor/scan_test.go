@@ -28,8 +28,8 @@ func TestMakeRestoreConfig(t *testing.T) {
 			DisableBatchWrites: ptr.Of(true),
 
 			Namespace: &model.RestoreNamespace{
-				Source:      ptr.Of("ns_source"),
-				Destination: ptr.Of("ns_dest"),
+				Source:      "ns_source",
+				Destination: "ns_dest",
 			},
 
 			CompressionPolicy: &model.CompressionPolicy{
@@ -39,9 +39,9 @@ func TestMakeRestoreConfig(t *testing.T) {
 
 			EncryptionPolicy: &model.EncryptionPolicy{
 				Mode:      "aes-128",
-				KeyFile:   ptr.Of("key/file/path"),
-				KeySecret: ptr.Of("key-secret"),
-				KeyEnv:    ptr.Of("KEY_ENV_VAR"),
+				KeyFile:   "key/file/path",
+				KeySecret: "key-secret",
+				KeyEnv:    "KEY_ENV_VAR",
 			},
 		},
 		SecretAgent: &model.SecretAgent{
@@ -49,7 +49,7 @@ func TestMakeRestoreConfig(t *testing.T) {
 			Address:        "127.0.0.1",
 			Port:           ptr.Of(model.Port(1234)),
 			Timeout:        ptr.Of(2000),
-			ClientTLS:      model.ClientTLS{CAFile: ptr.Of("ca-cert")},
+			ClientTLS:      model.ClientTLS{CAFile: "ca-cert"},
 			IsBase64:       ptr.Of(true),
 		},
 	}

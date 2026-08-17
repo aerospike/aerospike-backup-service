@@ -20,22 +20,22 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			name: "identical configs",
 			current: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: ptr.Of("localhost"),
+					Address: "localhost",
 					Port:    ptr.Of(Port(8080)),
 				},
 				Logger: &LoggerConfig{
-					Level:  ptr.Of("INFO"),
-					Format: ptr.Of("JSON"),
+					Level:  "INFO",
+					Format: "JSON",
 				},
 			},
 			other: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: ptr.Of("localhost"),
+					Address: "localhost",
 					Port:    ptr.Of(Port(8080)),
 				},
 				Logger: &LoggerConfig{
-					Level:  ptr.Of("INFO"),
-					Format: ptr.Of("JSON"),
+					Level:  "INFO",
+					Format: "JSON",
 				},
 			},
 			errors: nil,
@@ -44,13 +44,13 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			name: "changed http server config",
 			current: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: ptr.Of("localhost"),
+					Address: "localhost",
 					Port:    ptr.Of(Port(8080)),
 				},
 			},
 			other: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: ptr.Of("0.0.0.0"),
+					Address: "0.0.0.0",
 					Port:    ptr.Of(Port(9090)),
 				},
 			},
@@ -63,15 +63,15 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			name: "changed logger config",
 			current: ServiceConfig{
 				Logger: &LoggerConfig{
-					Level:        ptr.Of("INFO"),
-					Format:       ptr.Of("JSON"),
+					Level:        "INFO",
+					Format:       "JSON",
 					StdoutWriter: ptr.Of(true),
 				},
 			},
 			other: ServiceConfig{
 				Logger: &LoggerConfig{
-					Level:        ptr.Of("DEBUG"),
-					Format:       ptr.Of("PLAIN"),
+					Level:        "DEBUG",
+					Format:       "PLAIN",
 					StdoutWriter: ptr.Of(false),
 				},
 			},
@@ -248,15 +248,15 @@ func TestHTTPServerConfig_Compare(t *testing.T) {
 		{
 			name: "identical configs",
 			current: &HTTPServerConfig{
-				Address:     ptr.Of("localhost"),
+				Address:     "localhost",
 				Port:        ptr.Of(Port(8080)),
-				ContextPath: ptr.Of("/api"),
+				ContextPath: "/api",
 				Timeout:     ptr.Of(int64(5000)),
 			},
 			other: &HTTPServerConfig{
-				Address:     ptr.Of("localhost"),
+				Address:     "localhost",
 				Port:        ptr.Of(Port(8080)),
-				ContextPath: ptr.Of("/api"),
+				ContextPath: "/api",
 				Timeout:     ptr.Of(int64(5000)),
 			},
 			errors: nil,
@@ -264,15 +264,15 @@ func TestHTTPServerConfig_Compare(t *testing.T) {
 		{
 			name: "all fields changed",
 			current: &HTTPServerConfig{
-				Address:     ptr.Of("localhost"),
+				Address:     "localhost",
 				Port:        ptr.Of(Port(8080)),
-				ContextPath: ptr.Of("/api"),
+				ContextPath: "/api",
 				Timeout:     ptr.Of(int64(5000)),
 			},
 			other: &HTTPServerConfig{
-				Address:     ptr.Of("0.0.0.0"),
+				Address:     "0.0.0.0",
 				Port:        ptr.Of(Port(9090)),
-				ContextPath: ptr.Of("/v1/api"),
+				ContextPath: "/v1/api",
 				Timeout:     ptr.Of(int64(10000)),
 			},
 			errors: []string{
@@ -315,8 +315,8 @@ func TestLoggerConfig_Compare(t *testing.T) {
 		{
 			name: "identical configs",
 			current: &LoggerConfig{
-				Level:        ptr.Of("INFO"),
-				Format:       ptr.Of("JSON"),
+				Level:        "INFO",
+				Format:       "JSON",
 				StdoutWriter: ptr.Of(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
@@ -324,8 +324,8 @@ func TestLoggerConfig_Compare(t *testing.T) {
 				},
 			},
 			other: &LoggerConfig{
-				Level:        ptr.Of("INFO"),
-				Format:       ptr.Of("JSON"),
+				Level:        "INFO",
+				Format:       "JSON",
 				StdoutWriter: ptr.Of(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
@@ -337,16 +337,16 @@ func TestLoggerConfig_Compare(t *testing.T) {
 		{
 			name: "all fields changed",
 			current: &LoggerConfig{
-				Level:        ptr.Of("INFO"),
-				Format:       ptr.Of("JSON"),
+				Level:        "INFO",
+				Format:       "JSON",
 				StdoutWriter: ptr.Of(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
 				},
 			},
 			other: &LoggerConfig{
-				Level:        ptr.Of("DEBUG"),
-				Format:       ptr.Of("PLAIN"),
+				Level:        "DEBUG",
+				Format:       "PLAIN",
 				StdoutWriter: ptr.Of(false),
 				FileWriter: &FileLoggerConfig{
 					Filename: "new.log",

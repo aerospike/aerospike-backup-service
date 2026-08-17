@@ -24,19 +24,19 @@ type S3Storage struct {
 	// The S3 profile name (AWS S3 optional).
 	S3Profile string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty" example:"default" extensions:"x-nullable"`
 	// An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).
-	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000" extensions:"x-nullable"`
+	S3EndpointOverride string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000" extensions:"x-nullable"`
 	// The log level of the AWS S3 SDK (AWS S3 optional).
-	S3LogLevel *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enums:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
+	S3LogLevel string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enums:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
 	// The minimum size in bytes of individual S3 UploadParts.
 	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" extensions:"x-nullable" minimum:"5242880"`
 	// The maximum number of simultaneous requests from S3.
 	MaxConnsPerHost *int `yaml:"max-async-connections,omitempty" json:"max-async-connections,omitempty" example:"16" extensions:"x-nullable"`
 	// Access Key ID for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	AccessKeyID *string `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty" extensions:"x-nullable"`
+	AccessKeyID string `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty" extensions:"x-nullable"`
 	// Secret Access Key for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	SecretAccessKey *string `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty" extensions:"x-nullable"`
+	SecretAccessKey string `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty" extensions:"x-nullable"`
 	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *S3StorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
@@ -56,10 +56,10 @@ func (s *S3Storage) Validate(opts ...ValidationOption) error {
 		return err
 	}
 
-	if s.AccessKeyID != nil && s.SecretAccessKey == nil {
+	if s.AccessKeyID != "" && s.SecretAccessKey == "" {
 		return errors.New("access-key-id is set but secret-access-key is missing")
 	}
-	if s.AccessKeyID == nil && s.SecretAccessKey != nil {
+	if s.AccessKeyID == "" && s.SecretAccessKey != "" {
 		return errors.New("secret-access-key is set but access-key-id is missing")
 	}
 	if s.MinPartSize != nil && *s.MinPartSize < s3MinUploadPartSize {
@@ -77,7 +77,7 @@ func (s *S3Storage) Validate(opts ...ValidationOption) error {
 
 func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 	var auth *model.S3Authentication
-	if s.AccessKeyID != nil {
+	if s.AccessKeyID != "" {
 		//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 		agent, err := s.SecretAgentConfig.ToModel(config)
 		if err != nil {
@@ -92,8 +92,8 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 		}
 
 		auth = &model.S3Authentication{
-			KeyIDSecret:     *s.AccessKeyID,
-			AccessKeySecret: *s.SecretAccessKey,
+			KeyIDSecret:     s.AccessKeyID,
+			AccessKeySecret: s.SecretAccessKey,
 			SecretAgent:     agent,
 		}
 	}
@@ -126,8 +126,8 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 	}
 	if s.Auth != nil {
 		result.SecretAgentConfig = ResolveSecretAgentFromModel(s.Auth.SecretAgent, config)
-		result.AccessKeyID = &s.Auth.KeyIDSecret
-		result.SecretAccessKey = &s.Auth.AccessKeySecret
+		result.AccessKeyID = s.Auth.KeyIDSecret
+		result.SecretAccessKey = s.Auth.AccessKeySecret
 	}
 
 	return result

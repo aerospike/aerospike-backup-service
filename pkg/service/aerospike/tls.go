@@ -14,7 +14,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 var protocolMap = map[string]uint16{
@@ -64,7 +63,7 @@ func NewTLSConfig(t *model.TLS) (*tls.Config, error) {
 	}
 
 	tlsConfig := &tls.Config{
-		ServerName:   ptr.ValueOrZero(t.Name),
+		ServerName:   t.Name,
 		Certificates: clientCerts,
 		RootCAs:      rootCAs,
 		MinVersion:   minVersion,
@@ -76,7 +75,7 @@ func NewTLSConfig(t *model.TLS) (*tls.Config, error) {
 }
 
 // loadCertPool creates a new x509.CertPool and populates it from a file and a directory.
-func loadCertPool(caFile, caPath *string) (*x509.CertPool, error) {
+func loadCertPool(caFile, caPath string) (*x509.CertPool, error) {
 	// Try to load system CA certs, otherwise just make an empty pool
 	pool, err := x509.SystemCertPool()
 	if pool == nil || err != nil {
@@ -85,21 +84,21 @@ func loadCertPool(caFile, caPath *string) (*x509.CertPool, error) {
 	}
 
 	// Load from CAFile if provided.
-	if caFile != nil && *caFile != "" {
-		if err := appendCertFile(pool, *caFile); err != nil {
+	if caFile != "" {
+		if err := appendCertFile(pool, caFile); err != nil {
 			return nil, err
 		}
 	}
 
 	// Load from CAPath if provided.
-	if caPath != nil && *caPath != "" {
-		files, err := os.ReadDir(*caPath)
+	if caPath != "" {
+		files, err := os.ReadDir(caPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read CA path directory %s: %w", *caPath, err)
+			return nil, fmt.Errorf("failed to read CA path directory %s: %w", caPath, err)
 		}
 
 		for _, file := range files {
-			path := filepath.Join(*caPath, file.Name())
+			path := filepath.Join(caPath, file.Name())
 			fileInfo, err := os.Stat(path)
 			if err != nil {
 				slog.Warn("Failed to stat file, skipping",
@@ -135,8 +134,8 @@ func appendCertFile(pool *x509.CertPool, path string) error {
 
 // loadClientCerts loads the client certificate and key.
 func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
-	certFile := ptr.ValueOrZero(t.Certfile)
-	keyFile := ptr.ValueOrZero(t.Keyfile)
+	certFile := t.Certfile
+	keyFile := t.Keyfile
 
 	if certFile == "" || keyFile == "" {
 		return nil, nil // Not an error, just no client certs provided.
@@ -162,8 +161,8 @@ func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 
 	// Check and Decrypt the Key Block using passphrase
 	//noinspection GoDeprecation
-	if t.KeyfilePassword != nil && x509.IsEncryptedPEMBlock(keyBlock) { //nolint:staticcheck
-		decryptedDERBytes, err := x509.DecryptPEMBlock(keyBlock, []byte(*t.KeyfilePassword)) //nolint:staticcheck
+	if t.KeyfilePassword != "" && x509.IsEncryptedPEMBlock(keyBlock) { //nolint:staticcheck
+		decryptedDERBytes, err := x509.DecryptPEMBlock(keyBlock, []byte(t.KeyfilePassword)) //nolint:staticcheck
 		if err != nil {
 			return nil, fmt.Errorf("failed to decrypt client key file %s: %w", keyFile, err)
 		}
@@ -182,18 +181,18 @@ func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 }
 
 // parseProtocols parses a space-separated string of TLS protocol versions.
-func parseProtocols(protocols *string) (minVersion, maxVersion uint16, err error) {
+func parseProtocols(protocols string) (minVersion, maxVersion uint16, err error) {
 	// Default to TLS 1.2 as the minimum if nothing is specified.
 	// A maxVersion of 0 means "use the highest supported version".
 	minVersion, maxVersion = tls.VersionTLS12, 0
-	if protocols == nil || *protocols == "" {
+	if protocols == "" {
 		return minVersion, maxVersion, nil
 	}
 
 	minVersion = 0xFFFF // Set to maxVersion value to find the true minimum.
 	maxVersion = 0
 
-	versionStrs := strings.Fields(*protocols)
+	versionStrs := strings.Fields(protocols)
 	if len(versionStrs) == 0 {
 		return tls.VersionTLS12, 0, nil
 	}
@@ -220,12 +219,12 @@ func parseProtocols(protocols *string) (minVersion, maxVersion uint16, err error
 }
 
 // parseCipherSuites parses a colon-separated string of IANA cipher suite names.
-func parseCipherSuites(cipherSuiteStr *string) ([]uint16, error) {
-	if cipherSuiteStr == nil || *cipherSuiteStr == "" {
+func parseCipherSuites(cipherSuiteStr string) ([]uint16, error) {
+	if cipherSuiteStr == "" {
 		return nil, nil // Use default cipher suites.
 	}
 
-	names := strings.Split(*cipherSuiteStr, ":")
+	names := strings.Split(cipherSuiteStr, ":")
 	suites := make([]uint16, 0, len(names))
 
 	for _, name := range names {

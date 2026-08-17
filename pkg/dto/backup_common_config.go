@@ -16,7 +16,7 @@ type BackupCommonConfig struct {
 	// * ISO (e.g. 2006-01-02T15-04-05)
 	// * EU (e.g. 02-Jan-2006-15-04-05)
 	// * US (e.g. Jan-02-2006-15-04-05)
-	TimestampFormat *string `yaml:"timestamp-format,omitempty" json:"timestamp-format,omitempty" enums:"ISO,US,EU" extensions:"x-nullable"` //nolint:lll
+	TimestampFormat string `yaml:"timestamp-format,omitempty" json:"timestamp-format,omitempty" enums:"ISO,US,EU" extensions:"x-nullable"` //nolint:lll
 }
 
 // Validate validates the backup subsection configuration.
@@ -25,11 +25,11 @@ func (b *BackupCommonConfig) Validate() error {
 		return nil
 	}
 
-	if b.TimestampFormat != nil {
-		format := model.TimestampFormatFromString(*b.TimestampFormat)
+	if b.TimestampFormat != "" {
+		format := model.TimestampFormatFromString(b.TimestampFormat)
 		if _, ok := model.TimestampFormatPresets[format]; !ok {
 			allowed := slices.Collect(maps.Keys(model.TimestampFormatPresets))
-			return errValidationInvalidValue("timestamp-format", *b.TimestampFormat, allowed)
+			return errValidationInvalidValue("timestamp-format", b.TimestampFormat, allowed)
 		}
 	}
 
@@ -42,8 +42,8 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 	}
 
 	var df *model.TimestampFormat
-	if b.TimestampFormat != nil {
-		v := model.TimestampFormatFromString(*b.TimestampFormat)
+	if b.TimestampFormat != "" {
+		v := model.TimestampFormatFromString(b.TimestampFormat)
 		df = &v
 	}
 
@@ -52,8 +52,7 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 
 func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
 	if m.TimestampFormat != nil {
-		v := string(*m.TimestampFormat)
-		b.TimestampFormat = &v
+		b.TimestampFormat = string(*m.TimestampFormat)
 	}
 }
 
@@ -68,5 +67,5 @@ func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
 	if other == nil {
 		return errors.New("backup removed")
 	}
-	return comparePointers("TimestampFormat", b.TimestampFormat, other.TimestampFormat)
+	return compareValues("TimestampFormat", b.TimestampFormat, other.TimestampFormat)
 }

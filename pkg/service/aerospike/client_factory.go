@@ -67,7 +67,7 @@ func clientHosts(c *model.AerospikeCluster) []*as.Host {
 func (f *DefaultClientFactory) clientPolicy(ctx context.Context, c *model.AerospikeCluster) (*as.ClientPolicy, error) {
 	policy := as.NewClientPolicy()
 	if c.Credentials != nil {
-		policy.User = ptr.ValueOrZero(c.GetUser())
+		policy.User = c.GetUser()
 		password, err := f.resolveClusterPassword(ctx, c.Credentials)
 		if err != nil {
 			return nil, err
@@ -132,7 +132,7 @@ func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
 	if !anySeedNodeHasTLSName(c) {
 		if c.TLS != nil {
 			slog.Warn("A TLS configuration is provided, but no seed nodes have TLS names. Ignoring TLS settings.",
-				slog.String("cluster", ptr.ValueOrZero(c.ClusterLabel)))
+				slog.String("cluster", c.ClusterLabel))
 		}
 
 		return // no TLS configuration needed for this cluster
@@ -149,7 +149,7 @@ func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
 	policy.TlsConfig, err = NewTLSConfig(tlsToApply)
 	if err != nil {
 		slog.Error("Failed to initialize TLS config",
-			slog.String("cluster", ptr.ValueOrZero(c.ClusterLabel)),
+			slog.String("cluster", c.ClusterLabel),
 			attr.Error(err))
 	}
 }

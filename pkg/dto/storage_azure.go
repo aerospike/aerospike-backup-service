@@ -30,7 +30,7 @@ type AzureStorage struct {
 	ClientID string `yaml:"client-id,omitempty" json:"client-id,omitempty" extensions:"x-nullable"`
 	// ClientSecret is the Azure Active Directory client secret for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty" extensions:"x-nullable"`
+	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty" extensions:"x-nullable"` //nolint:lll
 	// The minimum size in bytes of individual Azure Blob chunks.
 	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" minimum:"1048576"`
 	// StorageClass defines the storage tier for data and metadata objects.
