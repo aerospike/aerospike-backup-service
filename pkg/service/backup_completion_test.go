@@ -16,7 +16,6 @@ import (
 
 func TestBackupCompletionHandler_OnFailure(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1"}
 	registry := NewMockRunningBackupsRegistry(ctrl)
@@ -28,7 +27,6 @@ func TestBackupCompletionHandler_OnFailure(t *testing.T) {
 
 func TestBackupCompletionHandler_OnSuccess_Incremental(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1"}
 	registry := NewMockRunningBackupsRegistry(ctrl)
@@ -54,7 +52,6 @@ func TestBackupCompletionHandler_OnSuccess_Incremental(t *testing.T) {
 
 func TestBackupCompletionHandler_OnSuccess_FullRunsRetentionAndClusterConfig(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{
 		Name: "routine-1",
@@ -96,7 +93,6 @@ func TestBackupCompletionHandler_OnSuccess_FullRunsRetentionAndClusterConfig(t *
 
 func TestBackupCompletionHandler_OnSuccess_FullSkipsClusterConfigWhenDisabled(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{
 		Name:         "routine-1",
@@ -127,7 +123,6 @@ func TestBackupCompletionHandler_OnSuccess_FullSkipsClusterConfigWhenDisabled(t 
 
 func TestBackupCompletionHandler_OnSuccess_LogsRetentionFailure(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{
 		Name:         "routine-1",

@@ -28,7 +28,6 @@ func (m backupTypeMatcher) String() string {
 
 func TestHistoryManager_FindLastRun_NoBackups(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
 	reader := NewMockBackupReader(ctrl)
@@ -45,7 +44,6 @@ func TestHistoryManager_FindLastRun_NoBackups(t *testing.T) {
 
 func TestHistoryManager_FindLastRun_FullOnly(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
 	fullTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -69,7 +67,6 @@ func TestHistoryManager_FindLastRun_FullOnly(t *testing.T) {
 
 func TestHistoryManager_FindLastRun_FullAndIncremental(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
 	fullTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -93,7 +90,6 @@ func TestHistoryManager_FindLastRun_FullAndIncremental(t *testing.T) {
 
 func TestHistoryManager_FindLastRun_FullBackupError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
 	fullErr := errors.New("full backup scan failed")
@@ -113,7 +109,6 @@ func TestHistoryManager_FindLastRun_FullBackupError(t *testing.T) {
 
 func TestHistoryManager_FindLastRun_IncrementalBackupError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
 	fullTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)

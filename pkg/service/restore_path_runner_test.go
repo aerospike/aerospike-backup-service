@@ -18,7 +18,6 @@ import (
 
 func TestRestoreOK(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
@@ -64,7 +63,6 @@ func TestRestoreOK(t *testing.T) {
 
 func TestCancelRestoreOK(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
@@ -130,7 +128,6 @@ func TestCancelRestoreOK(t *testing.T) {
 
 func TestRestoreFailsWithClientError(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	storage := &model.LocalStorage{Path: "/backup/path"}
@@ -155,7 +152,6 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 
 func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	destinationNS := "test-ns"
@@ -192,7 +188,6 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 
 func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
@@ -229,7 +224,6 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 
 func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
@@ -268,7 +262,6 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 
 func TestCancelRestore_RaceCondition(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	storage := &model.LocalStorage{}
@@ -331,7 +324,8 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 		// If we timed out, it means Run was never called.
 		// Check the job status to see if it failed early.
 		status, _ := env.restoreManager.JobStatus(jobID)
-		t.Fatalf("Timed out waiting for Run() to start. Job status: %v, Error: %v", status.Status, status.Error)
+		t.Fatalf("Timed out waiting for Run() to start. Job status: %v, Error: %v",
+			status.Status, status.Error)
 	}
 
 	// 3. Cancel the job while the Run() method is still "executing".

@@ -13,7 +13,6 @@ import (
 
 func TestStartControllerAcquire_DeniesConcurrentAcquireForSameRoutineType(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
@@ -45,7 +44,6 @@ func TestStartControllerAcquire_DeniesConcurrentAcquireForSameRoutineType(t *tes
 
 func TestStartControllerAcquire_DeniesIncrementalWhenFullIsReserved(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
@@ -77,7 +75,6 @@ func TestStartControllerAcquire_DeniesIncrementalWhenFullIsReserved(t *testing.T
 
 func TestStartControllerRelease_IsIdempotent(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
@@ -108,7 +105,6 @@ func TestStartControllerRelease_IsIdempotent(t *testing.T) {
 
 func TestStartControllerRelease_TracksReservationCountByToken(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
@@ -152,7 +148,6 @@ func TestStartControllerRelease_TracksReservationCountByToken(t *testing.T) {
 
 func TestStartController_HasBackupRunning(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()

@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"errors"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -33,9 +32,7 @@ func setupTestCertificates(t *testing.T) *testCertificates {
 
 	// Generate a test CA certificate
 	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("Failed to generate CA key: %v", err)
-	}
+	require.NoError(t, err, "Failed to generate CA key")
 
 	caTemplate := x509.Certificate{
 		SerialNumber: big.NewInt(1),
@@ -52,32 +49,22 @@ func setupTestCertificates(t *testing.T) *testCertificates {
 	}
 
 	caCertDER, err := x509.CreateCertificate(rand.Reader, &caTemplate, &caTemplate, &caKey.PublicKey, caKey)
-	if err != nil {
-		t.Fatalf("Failed to create CA certificate: %v", err)
-	}
+	require.NoError(t, err, "Failed to create CA certificate")
 
 	// Write CA certificate file
 	caFile := filepath.Join(tempDir, "ca.pem")
 	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCertDER})
-	if err := os.WriteFile(caFile, caPEM, 0600); err != nil {
-		t.Fatalf("Failed to write CA file: %v", err)
-	}
+	require.NoError(t, os.WriteFile(caFile, caPEM, 0600), "Failed to write CA file")
 
 	// Create CA directory and copy CA file there
 	caDir := filepath.Join(tempDir, "ca")
-	if err := os.MkdirAll(caDir, 0755); err != nil {
-		t.Fatalf("Failed to create CA directory: %v", err)
-	}
+	require.NoError(t, os.MkdirAll(caDir, 0755), "Failed to create CA directory")
 	caDirFile := filepath.Join(caDir, "ca.pem")
-	if err := os.WriteFile(caDirFile, caPEM, 0600); err != nil {
-		t.Fatalf("Failed to write CA file to directory: %v", err)
-	}
+	require.NoError(t, os.WriteFile(caDirFile, caPEM, 0600), "Failed to write CA file to directory")
 
 	// Generate client certificate and key
 	clientKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("Failed to generate client key: %v", err)
-	}
+	require.NoError(t, err, "Failed to generate client key")
 
 	clientTemplate := x509.Certificate{
 		SerialNumber: big.NewInt(2),
@@ -92,23 +79,17 @@ func setupTestCertificates(t *testing.T) *testCertificates {
 	}
 
 	clientCertDER, err := x509.CreateCertificate(rand.Reader, &clientTemplate, &caTemplate, &clientKey.PublicKey, caKey)
-	if err != nil {
-		t.Fatalf("Failed to create client certificate: %v", err)
-	}
+	require.NoError(t, err, "Failed to create client certificate")
 
 	// Write client certificate file
 	certFile := filepath.Join(tempDir, "client.pem")
 	clientCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: clientCertDER})
-	if err := os.WriteFile(certFile, clientCertPEM, 0600); err != nil {
-		t.Fatalf("Failed to write client certificate file: %v", err)
-	}
+	require.NoError(t, os.WriteFile(certFile, clientCertPEM, 0600), "Failed to write client certificate file")
 
 	// Write client key file
 	keyFile := filepath.Join(tempDir, "client-key.pem")
 	clientKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(clientKey)})
-	if err := os.WriteFile(keyFile, clientKeyPEM, 0600); err != nil {
-		t.Fatalf("Failed to write client key file: %v", err)
-	}
+	require.NoError(t, os.WriteFile(keyFile, clientKeyPEM, 0600), "Failed to write client key file")
 
 	return &testCertificates{
 		caFile:   caFile,
@@ -322,8 +303,8 @@ func TestTLS_Validate(t *testing.T) {
 			if tt.wantErr {
 				require.Error(t, err)
 
-				if tt.errType != nil && !errors.Is(err, tt.errType) {
-					t.Errorf("expected error type %v, got %v", tt.errType, err)
+				if tt.errType != nil {
+					require.ErrorIs(t, err, tt.errType)
 				}
 			} else {
 				require.NoError(t, err)

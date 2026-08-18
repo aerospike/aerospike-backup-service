@@ -91,7 +91,6 @@ func TestService_UpdateConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc, ctrl := newConfigTestService(t)
-			defer ctrl.Finish()
 
 			mockConfigurationManager := NewmockManager(ctrl)
 			if tt.expectedStatus != http.StatusBadRequest {
@@ -162,7 +161,6 @@ func TestService_ApplyConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc, ctrl := newConfigTestService(t)
-			defer ctrl.Finish()
 
 			mockConfigurationManager := NewmockManager(ctrl)
 			mockConfigurationManager.EXPECT().Read(gomock.Any()).Return(tt.readConfig, tt.readErr)
@@ -189,7 +187,6 @@ func TestService_ApplyConfig(t *testing.T) {
 
 func TestService_changeConfig(t *testing.T) {
 	svc, ctrl := newConfigTestService(t)
-	defer ctrl.Finish()
 
 	mockConfigurationManager := NewmockManager(ctrl)
 	mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil)
@@ -210,8 +207,7 @@ func TestService_changeConfig(t *testing.T) {
 }
 
 func TestService_changeConfig_UpdateFuncError(t *testing.T) {
-	svc, ctrl := newConfigTestService(t)
-	defer ctrl.Finish()
+	svc, _ := newConfigTestService(t)
 
 	err := svc.changeConfig(t.Context(), func(config *model.Config) error {
 		return errors.New("update boom")

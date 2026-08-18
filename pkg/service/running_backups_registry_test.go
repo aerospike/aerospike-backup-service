@@ -14,7 +14,6 @@ import (
 
 func TestRegisterAndCurrentStat(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	registry := NewRunningBackupsRegistry(nil, nil)
 
@@ -40,7 +39,6 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 
 func TestHistoryScan(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	historyMgr := NewMockHistoryManager(ctrl)
 	backupTime := model.NewBackupTime(time.Now(), time.Now().Add(-1*time.Hour))
@@ -69,7 +67,6 @@ func TestHistoryScan(t *testing.T) {
 
 func TestFinishFull(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Now()
 	backupTime := model.NewFullBackupTime(now)
@@ -100,7 +97,6 @@ func TestFinishFull(t *testing.T) {
 
 func TestFinishIncremental(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Now()
 	backupTime := model.NewBackupTime(now.Add(-1*time.Second), now)
@@ -131,7 +127,6 @@ func TestFinishIncremental(t *testing.T) {
 
 func TestCanceledHistoryScanKeepsPreviousLastRun(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	previous := model.NewFullBackupTime(time.Now())
 	historyMgr := NewMockHistoryManager(ctrl)
@@ -154,7 +149,6 @@ func TestCanceledHistoryScanKeepsPreviousLastRun(t *testing.T) {
 
 func TestGetAllCurrentStats(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	routine1 := "routine1"
 	routine2 := "routine2"
@@ -201,7 +195,6 @@ func TestGetAllCurrentStats(t *testing.T) {
 
 func TestCancel(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	registry := NewRunningBackupsRegistry(nil, nil)
 

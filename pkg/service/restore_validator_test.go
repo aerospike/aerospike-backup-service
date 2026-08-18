@@ -20,7 +20,6 @@ func (f fakeInfoGetter) GetNamespacesList(_ context.Context) ([]string, error) {
 
 func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
 	config := NewmockRoutineProvider(ctrl)
@@ -61,7 +60,6 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 
 func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
 	config := NewmockRoutineProvider(ctrl)
@@ -102,7 +100,6 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 
 func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
 	config := NewmockRoutineProvider(ctrl)
@@ -141,7 +138,6 @@ func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
 
 func TestRestoreValidator_BlocksTimeRestoreOnPendingBackupStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
 	config := NewmockRoutineProvider(ctrl)

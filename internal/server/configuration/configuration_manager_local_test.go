@@ -50,7 +50,6 @@ func TestFileConfigurationManager_Read(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 			mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
@@ -71,7 +70,6 @@ func TestFileConfigurationManager_Read(t *testing.T) {
 
 func TestFileConfigurationManager_Read_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 
@@ -112,7 +110,6 @@ func TestFileConfigurationManager_Write(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 
@@ -135,7 +132,6 @@ func TestFileConfigurationManager_Write(t *testing.T) {
 
 func TestFileConfigurationManager_Write_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 
@@ -151,7 +147,6 @@ func TestFileConfigurationManager_Write_ContextCanceled(t *testing.T) {
 
 func TestFileConfigurationManager_WriteThenRead_RoundTrip(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()

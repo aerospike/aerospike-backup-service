@@ -7,7 +7,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go/mocks"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/mock" // backup-go mocks are mockery/testify-generated
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -22,7 +22,6 @@ type testEnv struct {
 func newTestEnv(t *testing.T) *testEnv {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	return &testEnv{
 		ctrl:              ctrl,
@@ -127,7 +126,6 @@ func TestFindMissingByRoutine_InfoError_SkipsCluster(t *testing.T) {
 
 func TestFindMissingByRoutine_TwoClusters_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mgr := NewMockClientManager(ctrl)
 	a := &model.AerospikeCluster{ClusterLabel: "A"}
@@ -149,7 +147,6 @@ func TestFindMissingByRoutine_TwoClusters_OK(t *testing.T) {
 
 func TestFindMissingByRoutine_TwoClusters_Fail(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mgr := NewMockClientManager(ctrl)
 	a := &model.AerospikeCluster{ClusterLabel: "A"}

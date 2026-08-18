@@ -96,9 +96,7 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			errStr := err.Error()
 			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
-				if !strings.Contains(errStr, substr) {
-					t.Errorf("error message %q should contain %q", errStr, substr)
-				}
+				assert.Contains(t, errStr, substr)
 			}
 		})
 	}
@@ -168,9 +166,7 @@ func TestFileLoggerConfig_Compare(t *testing.T) {
 			errStr := err.Error()
 			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
-				if !strings.Contains(errStr, substr) {
-					t.Errorf("error message %q should contain %q", errStr, substr)
-				}
+				assert.Contains(t, errStr, substr)
 			}
 		})
 	}
@@ -230,9 +226,7 @@ func TestRateLimiterConfig_Compare(t *testing.T) {
 			errStr := err.Error()
 			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
-				if !strings.Contains(errStr, substr) {
-					t.Errorf("error message %q should contain %q", errStr, substr)
-				}
+				assert.Contains(t, errStr, substr)
 			}
 		})
 	}
@@ -297,9 +291,7 @@ func TestHTTPServerConfig_Compare(t *testing.T) {
 			errStr := err.Error()
 			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
-				if !strings.Contains(errStr, substr) {
-					t.Errorf("error message %q should contain %q", errStr, substr)
-				}
+				assert.Contains(t, errStr, substr)
 			}
 		})
 	}
@@ -383,9 +375,7 @@ func TestLoggerConfig_Compare(t *testing.T) {
 			errStr := err.Error()
 			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
-				if !strings.Contains(errStr, substr) {
-					t.Errorf("error message %q should contain %q", errStr, substr)
-				}
+				assert.Contains(t, errStr, substr)
 			}
 		})
 	}

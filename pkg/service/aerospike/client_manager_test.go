@@ -12,7 +12,7 @@ import (
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/mocks"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/mock" // backup-go mocks are mockery/testify-generated
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -27,7 +27,6 @@ var cluster2 = &model.AerospikeCluster{
 
 func Test_GetClient(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
 	mockAsClient := mocks.NewMockAerospikeClient(t)
@@ -59,7 +58,6 @@ func Test_GetClient(t *testing.T) {
 
 func Test_GetClientParallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
 	mockAsClient := mocks.NewMockAerospikeClient(t)
@@ -106,7 +104,6 @@ func Test_GetClientParallel(t *testing.T) {
 
 func Test_GetTwoClients(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	clientFactory := NewMockClientFactory(ctrl)
 	mockAsClient := mocks.NewMockAerospikeClient(t)
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil).Times(2)
@@ -137,7 +134,6 @@ func Test_GetTwoClients(t *testing.T) {
 
 func Test_GetClient_UnhealthyConnection(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
 	mockAsClient := mocks.NewMockAerospikeClient(t)
@@ -165,7 +161,6 @@ func Test_GetClient_UnhealthyConnection(t *testing.T) {
 
 func Test_CreateClient_Errors(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
 	aeroCluster := &model.AerospikeCluster{}
@@ -185,7 +180,6 @@ func Test_CreateClient_Errors(t *testing.T) {
 
 func Test_Close(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
 	mockAsClient := mocks.NewMockAerospikeClient(t)
@@ -220,7 +214,6 @@ func Test_Close(t *testing.T) {
 
 func Test_Close_Multiple(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
 	mockAsClient := mocks.NewMockAerospikeClient(t)
@@ -258,7 +251,6 @@ func Test_Close_Multiple(t *testing.T) {
 
 func Test_Close_CancelOnReuse(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
 	mockAsClient := mocks.NewMockAerospikeClient(t)
@@ -298,7 +290,6 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 
 func Test_Close_NotExisting(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
 	clientManager := NewClientManager(

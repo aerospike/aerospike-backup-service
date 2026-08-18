@@ -51,7 +51,7 @@ func waitForHTTPServerReady(t *testing.T, healthURL string) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	t.Fatal("timed out waiting for server to start")
+	t.Fatalf("timed out waiting for server to start")
 }
 
 func TestNewHTTPServer_StartAndShutdown(t *testing.T) {

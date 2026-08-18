@@ -8,7 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/mock" // backup-go mocks are mockery/testify-generated
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -19,7 +19,6 @@ import (
 // Mocks return data only when called with the expected filters.
 func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	// All times in the past: full backup T1, request time T2, incremental created between T1 and T2.
 	now := time.Now()
@@ -86,7 +85,6 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 
 func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	now := time.Now()
 	fullAt11 := now.Add(-2 * time.Hour)
@@ -212,7 +210,6 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			env := setupTestRestoreEnv(t)
-			defer env.ctrl.Finish()
 
 			request := &model.RestoreTimestampRequest{
 				DestinationCluster: model.AerospikeCluster{},
@@ -302,7 +299,6 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			env := setupTestRestoreEnv(t)
-			defer env.ctrl.Finish()
 
 			now := time.Now()
 			fullCreated := now.Add(-3 * time.Hour)
