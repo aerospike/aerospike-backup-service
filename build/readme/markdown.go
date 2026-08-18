@@ -14,6 +14,7 @@ const (
 	openapi        = "docs/openapi.json"
 	docFolder      = "docs/readme/dto"
 	requiredMarker = "📍"
+	redactedMarker = "🔒"
 )
 
 var schemas = readSchemas()
@@ -39,6 +40,7 @@ type Row struct {
 	Help           string
 	Default        string // New field for default value
 	PossibleValues string // New field for possible enum values
+	Redacted       bool   // True when the field is redacted in API responses.
 }
 
 func generateMarkdownTable(dtoName string) string {
@@ -58,11 +60,22 @@ func generateMarkdownTable(dtoName string) string {
 		sb.WriteString(writeRows(rows))
 	}
 
+	var legend strings.Builder
 	if len(schema.Required) > 0 {
-		fmt.Fprintf(&sb, "\n%s = Required field", requiredMarker)
+		fmt.Fprintf(&legend, "\n%s = Required field", requiredMarker)
 	}
+	if hasRedactedField(rows) {
+		if legend.Len() > 0 {
+			legend.WriteString("\n")
+		}
+		fmt.Fprintf(&legend, "%s = Redacted in API responses", redactedMarker)
+	}
+	sb.WriteString(legend.String())
 
 	if len(schema.Enum) > 0 {
+		if legend.Len() > 0 {
+			sb.WriteString("\n")
+		}
 		fmt.Fprintf(&sb, "Possible values: %s.\n", joinEnumValues(schema.Enum))
 	}
 
@@ -128,6 +141,15 @@ func hasOptionalColumns(rows []Row) (bool, bool) {
 	return hasDefaultColumn, hasPossibleValuesColumn
 }
 
+func hasRedactedField(rows []Row) bool {
+	for _, r := range rows {
+		if r.Redacted {
+			return true
+		}
+	}
+	return false
+}
+
 func determineColumsWidth(rows []Row) (int, int, int, int) {
 	maxName := len("Field")
 	maxHelp := len("Description")
@@ -186,6 +208,7 @@ type Schema struct {
 type Property struct {
 	Description string      `json:"description,omitempty"`
 	Type        string      `json:"type,omitempty"`
+	Format      string      `json:"format,omitempty"`
 	AllOf       []Reference `json:"allOf"` //nolint:tagliatelle
 	Items       Reference   `json:"items"`
 	Enum        []string    `json:"enum"`
@@ -272,7 +295,10 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 	}
 
 	printName := "`" + fieldName + "`"
-	// Add a required filed marker
+	if prop.Format == "password" {
+		printName = fmt.Sprintf("%s %s", redactedMarker, printName)
+	}
+	// Add a required field marker
 	if requiredFields[fieldName] {
 		printName = fmt.Sprintf("%s %s", requiredMarker, printName)
 	}
@@ -282,6 +308,7 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 		Help:           description,
 		Default:        defaultValue,
 		PossibleValues: possibleValues,
+		Redacted:       prop.Format == "password",
 	}
 
 	return row

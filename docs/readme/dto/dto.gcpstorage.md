@@ -5,7 +5,7 @@ GcpStorage represents the configuration for GCP storage.
 |---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
 | 📍 `bucket-name`     | GCP storage bucket name.                                                                                                                                                                                                                      |               |
 | `endpoint`          | Alternative url.<br>It is not recommended to use an alternate URL in a production environment.                                                                                                                                                |               |
-| `key`               | Key is the service account key in JSON format.<br>This is sensitive information. Can be a path in secret agent or an actual value.<br>Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is. |               |
+| 🔒 `key`             | Key is the service account key in JSON format.<br>This is sensitive information. Can be a path in secret agent or an actual value.<br>Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is. |               |
 | `key-file-path`     | Path to the file containing the service account key in JSON format.                                                                                                                                                                           |               |
 | `min-part-size`     | The minimum size in bytes of individual GCP storage chunks.                                                                                                                                                                                   | `5.24288e+07` |
 | `path`              | The root path for the backup repository. If not specified, backups will be saved in the bucket's root.                                                                                                                                        |               |
@@ -14,3 +14,4 @@ GcpStorage represents the configuration for GCP storage.
 | `storage-class`     | StorageClass defines the storage class for data and metadata objects.<br>See: [dto.GcpStorageClass](dto.gcpstorageclass.md)                                                                                                                   |               |
 
 📍 = Required field
+🔒 = Redacted in API responses
