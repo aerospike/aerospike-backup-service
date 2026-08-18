@@ -20,7 +20,7 @@ func init() {
 // NewHandler returns the application log handler with the configured level.
 func NewHandler(config *model.LoggerConfig) slog.Handler {
 	const addSource = true
-	writer := newRedactingWriter(logWriter(config))
+	writer := logWriter(config)
 	switch strings.ToUpper(config.GetFormatOrDefault()) {
 	case "PLAIN":
 		return slog.NewTextHandler(writer, &slog.HandlerOptions{
