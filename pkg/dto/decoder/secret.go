@@ -65,3 +65,7 @@ func (s Secret) GoString() string {
 func (s Secret) LogValue() slog.Value {
 	return slog.StringValue(s.DisplayString())
 }
+
+func (s Secret) IsRedacted() bool {
+	return s == RedactedSecret
+}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -28,11 +29,14 @@ func (s *Service) changeBackupConfig(
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
 
+	existingConfig := dto.NewConfigFromModel(s.config)
 	dtoConfig := dto.NewConfigFromModel(s.config)
 	routinesToInvalidate, err := mutate(dtoConfig)
 	if err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
+
+	decoder.Merge(dtoConfig, existingConfig)
 
 	modelConfig, err := dtoConfig.ToModel(dto.ValidationSkipTLSFiles)
 	if err != nil {
