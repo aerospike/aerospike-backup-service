@@ -45,7 +45,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	decoder.Merge(newConfig, oldConfig)
+	decoder.MergeSecrets(newConfig, oldConfig)
 
 	newConfigModel, err := newConfig.ToModel()
 	if err != nil {

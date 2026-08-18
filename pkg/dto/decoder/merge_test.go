@@ -19,7 +19,7 @@ func TestMergeSecrets_ComplexFixture(t *testing.T) {
 		SecretAccessKey: Secret(RedactedSecret),
 	}
 
-	Merge(&redacted, original)
+	MergeSecrets(&redacted, original)
 
 	t.Run("restores literal secrets", func(t *testing.T) {
 		assert.Equal(t, Secret(literalPassword), redacted.AerospikeClusters["cluster1"].Credentials.Password)
@@ -69,7 +69,7 @@ func TestMergeSecrets_NewMapEntryWithSentinel(t *testing.T) {
 		},
 	}
 
-	Merge(&incoming, existing)
+	MergeSecrets(&incoming, existing)
 
 	assert.Equal(t, Secret(RedactedSecret), incoming.AerospikeClusters["new-cluster"].Credentials.Password)
 }
@@ -97,7 +97,7 @@ func TestMergeSecrets_ExplicitSecretUpdate(t *testing.T) {
 		},
 	}
 
-	Merge(&incoming, existing)
+	MergeSecrets(&incoming, existing)
 
 	assert.Equal(t, Secret("new-password"), incoming.AerospikeClusters["cluster1"].Credentials.Password)
 }
@@ -125,7 +125,7 @@ func TestMergeSecrets_ClearSecretWithEmptyString(t *testing.T) {
 		},
 	}
 
-	Merge(&incoming, existing)
+	MergeSecrets(&incoming, existing)
 
 	assert.Empty(t, incoming.AerospikeClusters["cluster1"].Credentials.Password)
 }
@@ -134,9 +134,9 @@ func TestMergeSecrets_NilInput(t *testing.T) {
 	original := testComplexConfig()
 
 	require.NotPanics(t, func() {
-		Merge(nil, original)
-		Merge(&original, nil)
-		Merge(nil, nil)
+		MergeSecrets(nil, original)
+		MergeSecrets(&original, nil)
+		MergeSecrets(nil, nil)
 	})
 }
 

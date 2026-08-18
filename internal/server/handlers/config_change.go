@@ -36,7 +36,7 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	decoder.Merge(dtoConfig, existingConfig)
+	decoder.MergeSecrets(dtoConfig, existingConfig)
 
 	modelConfig, err := dtoConfig.ToModel(dto.ValidationSkipTLSFiles)
 	if err != nil {

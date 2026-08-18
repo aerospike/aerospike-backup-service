@@ -4,9 +4,9 @@ import (
 	"reflect"
 )
 
-// Merge mutates incoming in place, replacing RedactedSecret sentinel values
+// MergeSecrets mutates incoming in place, replacing RedactedSecret sentinel values
 // with the corresponding Secret values from existing.
-func Merge(incoming, existing any) {
+func MergeSecrets(incoming, existing any) {
 	if incoming == nil || existing == nil {
 		return
 	}
