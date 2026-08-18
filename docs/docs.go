@@ -1704,8 +1704,9 @@ const docTemplate = `{
             ],
             "properties": {
                 "account-key": {
-                    "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                    "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "account-name": {
@@ -1714,13 +1715,15 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "client-id": {
-                    "description": "ClientID is the Azure Active Directory client ID for AAD authentication.",
+                    "description": "ClientID is the Azure Active Directory client ID for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "client-secret": {
-                    "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                    "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "container-name": {
@@ -1765,8 +1768,9 @@ const docTemplate = `{
                     ]
                 },
                 "tenant-id": {
-                    "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.",
+                    "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 }
             }
@@ -2222,10 +2226,10 @@ const docTemplate = `{
                     ]
                 },
                 "password": {
-                    "description": "The password for the cluster authentication.\nIt can be either plain text or path into the secret agent.",
+                    "description": "The password for the cluster authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
-                    "x-nullable": true,
-                    "example": "testPswd"
+                    "format": "password",
+                    "x-nullable": true
                 },
                 "password-path": {
                     "description": "The file path with the password string.",
@@ -2269,8 +2273,9 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "key-secret": {
-                    "description": "The secret keyword in Aerospike Secret Agent containing the encryption key.",
+                    "description": "The secret keyword in Aerospike Secret Agent containing the encryption key.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "mode": {
@@ -2340,8 +2345,9 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "key": {
-                    "description": "Key is the service account key in JSON format.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                    "description": "Key is the service account key in JSON format.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "key-file-path": {
@@ -3098,8 +3104,9 @@ const docTemplate = `{
             ],
             "properties": {
                 "access-key-id": {
-                    "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                    "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "bucket": {
@@ -3157,8 +3164,9 @@ const docTemplate = `{
                     "example": "eu-central-1"
                 },
                 "secret-access-key": {
-                    "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                    "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "secret-agent": {
@@ -3415,10 +3423,10 @@ const docTemplate = `{
                     "example": "/path/to/key.pem"
                 },
                 "key-file-password": {
-                    "description": "Passphrase for an encrypted TLS key file. The value is used verbatim as the decryption password.",
+                    "description": "Passphrase for an encrypted TLS key file.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
-                    "x-nullable": true,
-                    "example": "my-secret-passphrase"
+                    "format": "password",
+                    "x-nullable": true
                 },
                 "name": {
                     "description": "TLSName used for server certificate verification (ServerName for SNI).",

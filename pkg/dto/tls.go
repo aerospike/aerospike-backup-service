@@ -20,8 +20,10 @@ type TLS struct {
 	Protocols string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
 	CipherSuite string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA" extensions:"x-nullable"`
-	// Passphrase for an encrypted TLS key file. The value is used verbatim as the decryption password.
-	KeyfilePassword string `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" example:"my-secret-passphrase" extensions:"x-nullable"`
+	// Passphrase for an encrypted TLS key file.
+	// This is sensitive information. Can be a path in secret agent or an actual value.
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	KeyfilePassword secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
 }
 
 func (t *TLS) Validate(opts ...ValidationOption) error {
@@ -82,7 +84,7 @@ func (t *TLS) fromModel(m *model.TLS) {
 	t.Protocols = m.Protocols
 	t.CipherSuite = m.CipherSuite
 	t.Keyfile = m.Keyfile
-	t.KeyfilePassword = m.KeyfilePassword
+	t.KeyfilePassword = secret(m.KeyfilePassword)
 	t.Certfile = m.Certfile
 }
 
@@ -96,6 +98,6 @@ func (t *TLS) toModel() *model.TLS {
 		CAPath:          t.CAPath,
 		Protocols:       t.Protocols,
 		CipherSuite:     t.CipherSuite,
-		KeyfilePassword: t.KeyfilePassword,
+		KeyfilePassword: string(t.KeyfilePassword),
 	}
 }

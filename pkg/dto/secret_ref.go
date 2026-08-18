@@ -1,24 +1,14 @@
 package dto
 
-import (
-	"strings"
+import "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-)
-
-const secretRefPrefix = "secrets:"
-
-func validateSecretRef(value string, agent *model.SecretAgent) error {
-	if value == "" || !strings.HasPrefix(value, secretRefPrefix) {
+func validateSecretRef(value secret, agent *model.SecretAgent) error {
+	if !value.IsRef() {
 		return nil
 	}
 
 	if agent == nil {
 		return errValidationSecretRefNoAgent(value)
-	}
-
-	if len(strings.Split(value, ":")) != 3 {
-		return errValidationSecretRefMalformed(value)
 	}
 
 	return nil

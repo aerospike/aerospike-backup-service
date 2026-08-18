@@ -190,8 +190,9 @@ type Credentials struct {
 	// The username for the cluster authentication.
 	User string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"  extensions:"x-nullable"`
 	// The password for the cluster authentication.
-	// It can be either plain text or path into the secret agent.
-	Password string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"  extensions:"x-nullable"`
+	// This is sensitive information. Can be a path in secret agent or an actual value.
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	Password secret `yaml:"password,omitempty" json:"password,omitempty" format:"password" extensions:"x-nullable"`
 	// The file path with the password string.
 	PasswordPath string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
 	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
@@ -200,7 +201,7 @@ type Credentials struct {
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
 	c.User = m.User
-	c.Password = m.Password
+	c.Password = secret(m.Password)
 	c.PasswordPath = m.PasswordPath
 	c.AuthMode = m.AuthMode.String()
 
@@ -253,7 +254,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 
 	return &model.Credentials{
 		User:         c.User,
-		Password:     c.Password,
+		Password:     string(c.Password),
 		PasswordPath: c.PasswordPath,
 		AuthMode:     authMode,
 		SecretAgent:  agent,

@@ -120,8 +120,9 @@
         ],
         "properties": {
           "account-key": {
-            "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+            "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
             "type": "string",
+            "format": "password",
             "nullable": true
           },
           "account-name": {
@@ -130,13 +131,15 @@
             "nullable": true
           },
           "client-id": {
-            "description": "ClientID is the Azure Active Directory client ID for AAD authentication.",
+            "description": "ClientID is the Azure Active Directory client ID for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
             "type": "string",
+            "format": "password",
             "nullable": true
           },
           "client-secret": {
-            "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+            "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
             "type": "string",
+            "format": "password",
             "nullable": true
           },
           "container-name": {
@@ -181,8 +184,9 @@
             ]
           },
           "tenant-id": {
-            "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.",
+            "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
             "type": "string",
+            "format": "password",
             "nullable": true
           }
         }
@@ -589,9 +593,9 @@
             ]
           },
           "password": {
-            "description": "The password for the cluster authentication.\nIt can be either plain text or path into the secret agent.",
+            "description": "The password for the cluster authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
             "type": "string",
-            "example": "testPswd",
+            "format": "password",
             "nullable": true
           },
           "password-path": {
@@ -636,8 +640,9 @@
             "nullable": true
           },
           "key-secret": {
-            "description": "The secret keyword in Aerospike Secret Agent containing the encryption key.",
+            "description": "The secret keyword in Aerospike Secret Agent containing the encryption key.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
             "type": "string",
+            "format": "password",
             "nullable": true
           },
           "mode": {
@@ -707,8 +712,9 @@
             "nullable": true
           },
           "key": {
-            "description": "Key is the service account key in JSON format.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+            "description": "Key is the service account key in JSON format.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
             "type": "string",
+            "format": "password",
             "nullable": true
           },
           "key-file-path": {
@@ -1465,8 +1471,9 @@
         ],
         "properties": {
           "access-key-id": {
-            "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+            "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
             "type": "string",
+            "format": "password",
             "nullable": true
           },
           "bucket": {
@@ -1524,8 +1531,9 @@
             "example": "eu-central-1"
           },
           "secret-access-key": {
-            "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+            "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
             "type": "string",
+            "format": "password",
             "nullable": true
           },
           "secret-agent": {
@@ -1782,9 +1790,9 @@
             "nullable": true
           },
           "key-file-password": {
-            "description": "Passphrase for an encrypted TLS key file. The value is used verbatim as the decryption password.",
+            "description": "Passphrase for an encrypted TLS key file.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
             "type": "string",
-            "example": "my-secret-passphrase",
+            "format": "password",
             "nullable": true
           },
           "name": {

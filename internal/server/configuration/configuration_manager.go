@@ -15,7 +15,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"gopkg.in/yaml.v3"
 )
 
 type Manager interface {
@@ -79,7 +78,7 @@ func readConfig(
 
 func writeConfig(writer io.Writer, config *model.Config) error {
 	dtoConfig := dto.NewConfigFromModel(config)
-	data, err := yaml.Marshal(dtoConfig)
+	data, err := decoder.Marshal(dtoConfig, decoder.YAML, false)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration: %w", err)
 	}

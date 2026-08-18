@@ -33,10 +33,12 @@ type S3Storage struct {
 	MaxConnsPerHost *int `yaml:"max-async-connections,omitempty" json:"max-async-connections,omitempty" example:"16" extensions:"x-nullable"`
 	// Access Key ID for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	AccessKeyID string `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty" extensions:"x-nullable"`
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	AccessKeyID secret `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty" format:"password" extensions:"x-nullable"`
 	// Secret Access Key for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	SecretAccessKey string `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty" extensions:"x-nullable"`
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	SecretAccessKey secret `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty" format:"password" extensions:"x-nullable"`
 	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *S3StorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
@@ -92,8 +94,8 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 		}
 
 		auth = &model.S3Authentication{
-			KeyIDSecret:     s.AccessKeyID,
-			AccessKeySecret: s.SecretAccessKey,
+			KeyIDSecret:     string(s.AccessKeyID),
+			AccessKeySecret: string(s.SecretAccessKey),
 			SecretAgent:     agent,
 		}
 	}
@@ -126,8 +128,8 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 	}
 	if s.Auth != nil {
 		result.SecretAgentConfig = ResolveSecretAgentFromModel(s.Auth.SecretAgent, config)
-		result.AccessKeyID = s.Auth.KeyIDSecret
-		result.SecretAccessKey = s.Auth.AccessKeySecret
+		result.AccessKeyID = secret(s.Auth.KeyIDSecret)
+		result.SecretAccessKey = secret(s.Auth.AccessKeySecret)
 	}
 
 	return result

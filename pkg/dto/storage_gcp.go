@@ -16,7 +16,8 @@ type GcpStorage struct {
 	KeyFile string `yaml:"key-file-path,omitempty" json:"key-file-path,omitempty" extensions:"x-nullable"`
 	// Key is the service account key in JSON format.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	Key string `yaml:"key,omitempty" json:"key,omitempty" extensions:"x-nullable"`
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	Key secret `yaml:"key,omitempty" json:"key,omitempty" format:"password" extensions:"x-nullable"`
 	// GCP storage bucket name.
 	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
 	// The root path for the backup repository. If not specified, backups will be saved in the bucket's root.
@@ -71,7 +72,7 @@ func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
 		BucketName:   s.BucketName,
 		Path:         s.Path,
 		Endpoint:     s.Endpoint,
-		KeyJSON:      s.Key,
+		KeyJSON:      string(s.Key),
 		SecretAgent:  agent,
 		MinPartSize:  s.MinPartSize,
 		StorageClass: s.StorageClass.ToModel(),
@@ -84,7 +85,7 @@ func newGcpStorageFromModel(s *model.GcpStorage, config *model.BackupConfig) *Gc
 		BucketName:        s.BucketName,
 		Path:              s.Path,
 		Endpoint:          s.Endpoint,
-		Key:               s.KeyJSON,
+		Key:               secret(s.KeyJSON),
 		MinPartSize:       s.MinPartSize,
 		SecretAgentConfig: ResolveSecretAgentFromModel(s.SecretAgent, config),
 		StorageClass:      newGcpStorageClassFromModel(s.StorageClass),
