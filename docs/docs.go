@@ -2273,8 +2273,9 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "key-secret": {
-                    "description": "The secret keyword in Aerospike Secret Agent containing the encryption key.",
+                    "description": "The secret keyword in Aerospike Secret Agent containing the encryption key.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "mode": {
@@ -3422,10 +3423,10 @@ const docTemplate = `{
                     "example": "/path/to/key.pem"
                 },
                 "key-file-password": {
-                    "description": "Passphrase for an encrypted TLS key file. The value is used verbatim as the decryption password.",
+                    "description": "Passphrase for an encrypted TLS key file.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
-                    "x-nullable": true,
-                    "example": "my-secret-passphrase"
+                    "format": "password",
+                    "x-nullable": true
                 },
                 "name": {
                     "description": "TLSName used for server certificate verification (ServerName for SNI).",

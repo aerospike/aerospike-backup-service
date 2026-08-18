@@ -21,7 +21,9 @@ type EncryptionPolicy struct {
 	// The name of the environment variable containing the encryption key.
 	KeyEnv string `yaml:"key-env,omitempty" json:"key-env,omitempty" extensions:"x-nullable"`
 	// The secret keyword in Aerospike Secret Agent containing the encryption key.
-	KeySecret string `yaml:"key-secret,omitempty" json:"key-secret,omitempty" extensions:"x-nullable"`
+	// This is sensitive information. Can be a path in secret agent or an actual value.
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	KeySecret secret `yaml:"key-secret,omitempty" json:"key-secret,omitempty" format:"password" extensions:"x-nullable"`
 }
 
 // Validate validates the encryption policy.
@@ -77,7 +79,7 @@ func (p *EncryptionPolicy) ToModel() *model.EncryptionPolicy {
 		Mode:      p.Mode,
 		KeyFile:   p.KeyFile,
 		KeyEnv:    p.KeyEnv,
-		KeySecret: p.KeySecret,
+		KeySecret: string(p.KeySecret),
 	}
 }
 
@@ -94,5 +96,5 @@ func (p *EncryptionPolicy) fromModel(m *model.EncryptionPolicy) {
 	p.Mode = m.Mode
 	p.KeyFile = m.KeyFile
 	p.KeyEnv = m.KeyEnv
-	p.KeySecret = m.KeySecret
+	p.KeySecret = secret(m.KeySecret)
 }
