@@ -2,6 +2,7 @@ package decoder_test
 
 import (
 	"bytes"
+	"fmt"
 	"log/slog"
 	"testing"
 	"time"
@@ -79,6 +80,16 @@ func TestPasswordMasking(t *testing.T) {
 		output := string(data)
 		assert.Contains(t, output, "superSecretPassword")
 	})
+}
+
+func TestStringRedactSecrets(t *testing.T) {
+	creds := &dto.Credentials{
+		User:     "testUser",
+		Password: "superSecretPassword",
+	}
+
+	output := fmt.Sprintf("user: %s, password: %s", creds.User, creds.Password)
+	assert.NotContains(t, output, "superSecretPassword")
 }
 
 func TestRedactSecrets_PreservesTime(t *testing.T) {
