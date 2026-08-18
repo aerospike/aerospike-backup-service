@@ -277,7 +277,6 @@ func TestDeletePolicy_InUseErrorMessage(t *testing.T) {
 
 func TestUpdatePolicy_Case2_ClusterMaxSetBeforeParallelIncrease(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	svc := setupTestService(t)
 	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)

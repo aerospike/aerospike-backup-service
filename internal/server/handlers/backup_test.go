@@ -11,7 +11,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -20,7 +19,7 @@ func TestService_GetAllFullBackups(t *testing.T) {
 	tests := []struct {
 		name           string
 		queryParams    map[string]string
-		setupMock      func(*MockBackupBackendService)
+		setupMock      func(*service.MockBackupReader)
 		expectedStatus int
 		expectedBody   map[string][]dto.BackupDetails
 	}{
@@ -30,8 +29,8 @@ func TestService_GetAllFullBackups(t *testing.T) {
 				"from": "1000",
 				"to":   "2000",
 			},
-			setupMock: func(m *MockBackupBackendService) {
-				m.On("GetBackups", mock.Anything, mock.Anything).
+			setupMock: func(m *service.MockBackupReader) {
+				m.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 					Return([]model.BackupDetails{{Key: "backup1", BackupMetadata: model.BackupMetadata{
 						Created:  time.UnixMilli(1000).In(time.UTC),
 						Finished: time.UnixMilli(5000).In(time.UTC),
@@ -57,14 +56,15 @@ func TestService_GetAllFullBackups(t *testing.T) {
 				"from": "invalid",
 				"to":   "2000",
 			},
-			setupMock:      func(*MockBackupBackendService) {},
+			setupMock:      func(*service.MockBackupReader) {},
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockBackends := &MockBackupBackendService{}
+			ctrl := gomock.NewController(t)
+			mockBackends := service.NewMockBackupReader(ctrl)
 			cfg := model.NewConfig()
 			_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 
@@ -238,7 +238,6 @@ func TestService_CancelCurrentBackup_RoutineNotFound(t *testing.T) {
 
 func TestService_CancelCurrentBackup_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	cfg := model.NewConfig()
 	_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
@@ -294,7 +293,6 @@ func TestService_GetCurrentBackupInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			svc := &Service{config: model.NewConfig()}
 			tt.setupSvc(svc, ctrl)
@@ -321,33 +319,33 @@ func TestService_GetFullBackupsForRoutine(t *testing.T) {
 		name           string
 		routineName    string
 		queryParams    map[string]string
-		setupMock      func(*MockBackupBackendService)
+		setupMock      func(*service.MockBackupReader)
 		expectedStatus int
 	}{
 		{
 			name:           "invalid time bounds",
 			routineName:    "routine1",
 			queryParams:    map[string]string{"from": "invalid"},
-			setupMock:      func(*MockBackupBackendService) {},
+			setupMock:      func(*service.MockBackupReader) {},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "missing routine name",
 			routineName:    "",
-			setupMock:      func(*MockBackupBackendService) {},
+			setupMock:      func(*service.MockBackupReader) {},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "routine not found",
 			routineName:    "unknown",
-			setupMock:      func(*MockBackupBackendService) {},
+			setupMock:      func(*service.MockBackupReader) {},
 			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:        "backend error",
 			routineName: "routine1",
-			setupMock: func(m *MockBackupBackendService) {
-				m.On("GetBackups", mock.Anything, mock.Anything).
+			setupMock: func(m *service.MockBackupReader) {
+				m.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 					Return([]model.BackupDetails(nil), assert.AnError)
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -355,8 +353,8 @@ func TestService_GetFullBackupsForRoutine(t *testing.T) {
 		{
 			name:        "success",
 			routineName: "routine1",
-			setupMock: func(m *MockBackupBackendService) {
-				m.On("GetBackups", mock.Anything, mock.Anything).
+			setupMock: func(m *service.MockBackupReader) {
+				m.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 					Return([]model.BackupDetails{{Key: "backup1"}}, nil)
 			},
 			expectedStatus: http.StatusOK,
@@ -365,7 +363,8 @@ func TestService_GetFullBackupsForRoutine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockBackends := &MockBackupBackendService{}
+			ctrl := gomock.NewController(t)
+			mockBackends := service.NewMockBackupReader(ctrl)
 			tt.setupMock(mockBackends)
 
 			cfg := model.NewConfig()
@@ -400,19 +399,19 @@ func TestService_GetAllIncrementalBackups(t *testing.T) {
 	tests := []struct {
 		name           string
 		queryParams    map[string]string
-		setupMock      func(*MockBackupBackendService)
+		setupMock      func(*service.MockBackupReader)
 		expectedStatus int
 	}{
 		{
 			name:           "invalid time bounds",
 			queryParams:    map[string]string{"from": "invalid"},
-			setupMock:      func(*MockBackupBackendService) {},
+			setupMock:      func(*service.MockBackupReader) {},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name: "success",
-			setupMock: func(m *MockBackupBackendService) {
-				m.On("GetBackups", mock.Anything, mock.Anything).
+			setupMock: func(m *service.MockBackupReader) {
+				m.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 					Return([]model.BackupDetails{{Key: "incr1"}}, nil)
 			},
 			expectedStatus: http.StatusOK,
@@ -421,7 +420,8 @@ func TestService_GetAllIncrementalBackups(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockBackends := &MockBackupBackendService{}
+			ctrl := gomock.NewController(t)
+			mockBackends := service.NewMockBackupReader(ctrl)
 			tt.setupMock(mockBackends)
 
 			cfg := model.NewConfig()
@@ -453,26 +453,26 @@ func TestService_GetIncrementalBackupsForRoutine(t *testing.T) {
 	tests := []struct {
 		name           string
 		routineName    string
-		setupMock      func(*MockBackupBackendService)
+		setupMock      func(*service.MockBackupReader)
 		expectedStatus int
 	}{
 		{
 			name:           "missing routine name",
 			routineName:    "",
-			setupMock:      func(*MockBackupBackendService) {},
+			setupMock:      func(*service.MockBackupReader) {},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "routine not found",
 			routineName:    "unknown",
-			setupMock:      func(*MockBackupBackendService) {},
+			setupMock:      func(*service.MockBackupReader) {},
 			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:        "success",
 			routineName: "routine1",
-			setupMock: func(m *MockBackupBackendService) {
-				m.On("GetBackups", mock.Anything, mock.Anything).
+			setupMock: func(m *service.MockBackupReader) {
+				m.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 					Return([]model.BackupDetails{{Key: "incr1"}}, nil)
 			},
 			expectedStatus: http.StatusOK,
@@ -481,7 +481,8 @@ func TestService_GetIncrementalBackupsForRoutine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockBackends := &MockBackupBackendService{}
+			ctrl := gomock.NewController(t)
+			mockBackends := service.NewMockBackupReader(ctrl)
 			tt.setupMock(mockBackends)
 
 			cfg := model.NewConfig()

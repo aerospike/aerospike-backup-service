@@ -45,7 +45,6 @@ func TestService_RestoreHandlers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			mockManager := service.NewMockRestoreManager(ctrl)
 			mockManager.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(tt.jobID, nil)
@@ -138,7 +137,6 @@ func TestService_restoreByPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			mockManager := service.NewMockRestoreManager(ctrl)
 			tt.setupMock(mockManager)
@@ -233,7 +231,6 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			mockManager := service.NewMockRestoreManager(ctrl)
 			tt.setupMock(mockManager)
@@ -313,7 +310,6 @@ func TestService_RestoreStatusHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			mockManager := service.NewMockRestoreManager(ctrl)
 			tt.setupMock(mockManager)
@@ -382,7 +378,6 @@ func TestService_RetrieveRestoreJobs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			mockManager := service.NewMockRestoreManager(ctrl)
 			tt.setupMock(mockManager)
@@ -486,7 +481,6 @@ func TestService_RetrieveConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			mockRetriever := NewmockConfigRetriever(ctrl)
 			tt.setupMock(mockRetriever)
@@ -562,7 +556,6 @@ func TestService_CancelRestoreHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			mockManager := service.NewMockRestoreManager(ctrl)
 			tt.setupMock(mockManager)

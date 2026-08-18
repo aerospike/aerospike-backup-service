@@ -67,7 +67,6 @@ func TestHTTPConfigurationManager_Read(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 			mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
@@ -88,7 +87,6 @@ func TestHTTPConfigurationManager_Read(t *testing.T) {
 
 func TestHTTPConfigurationManager_Read_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 
@@ -104,7 +102,6 @@ func TestHTTPConfigurationManager_Read_ContextCanceled(t *testing.T) {
 
 func TestHTTPConfigurationManager_Write(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 
