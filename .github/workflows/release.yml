@@ -93,6 +93,32 @@ jobs:
         with:
           egress-policy: audit
 
+      # Needed only to read the Helm chart's own version out of Chart.yaml at this tag --
+      # the chart's version is tracked independently of the package version (see prepare's
+      # HELM_VERSION vs PACKAGE_VERSION in pre-release.yml), so it can't be derived from
+      # BUNDLE_VERSION alone.
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          ref: ${{ env.BUNDLE_VERSION }}
+
+      - name: Resolve Helm chart version
+        id: helm-version
+        run: |
+          set -euo pipefail
+          CHART_FILE="helm/aerospike-backup-service/Chart.yaml"
+          if [ ! -f "$CHART_FILE" ]; then
+            echo "Chart file not found at $CHART_FILE" >&2
+            exit 1
+          fi
+          HELM_VERSION=$(yq '.version' "$CHART_FILE" | tr -d '\n')
+          if [ -z "$HELM_VERSION" ]; then
+            echo "Failed to extract Helm chart version." >&2
+            exit 1
+          fi
+          echo "HELM_VERSION=$HELM_VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Login to JFrog
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
@@ -102,22 +128,35 @@ jobs:
           oidc-provider-name: gh-aerospike
           oidc-audience: aerospike
 
-      - name: Download signed artifacts from the release bundle
+      - name: Download signed artifacts from JFrog PROD
+        env:
+          HELM_VERSION: ${{ steps.helm-version.outputs.HELM_VERSION }}
+          DEB_REPO: ${{ vars.ARTIFACTORY_DEB_PROD }}
+          RPM_REPO: ${{ vars.ARTIFACTORY_RPM_PROD }}
+          HELM_REPO: ${{ vars.ARTIFACTORY_HELM_PROD }}
         run: |
           set -euxo pipefail
-          echo "Listing artifacts in release bundle ${BUNDLE_NAME}/${BUNDLE_VERSION}..."
-          # jf rt search --bundle lists every artifact that is a member of this exact, immutable
-          # release bundle version, regardless of which promoted repo it currently lives in --
-          # the same technique citrusleaf/artifact-publisher uses to fetch bundle contents. This
-          # avoids having to guess the PROD-public repos' internal pool/path layout per artifact type.
-          jf rt search --bundle="${BUNDLE_NAME}/${BUNDLE_VERSION}" > bundle-artifacts.json
+          # jf rt search's --bundle filter turned out not to reliably list release-bundle
+          # members on our JFrog instance (verified empty against a real, promoted bundle;
+          # same for --build, the bundle signature API, and release-bundle-export). Instead,
+          # filter each PROD-public repo directly by the "version" property that
+          # reusable_deploy-artifacts.yaml stamps on every artifact it deploys -- verified
+          # live to return exact, reliable matches with full metadata (including sha256).
+          mkdir -p release-assets
+
+          echo "Searching ${DEB_REPO} for version=${BUNDLE_VERSION}..."
+          jf rt search "${DEB_REPO}/**" --props "version=${BUNDLE_VERSION}" > deb-artifacts.json
+          echo "Searching ${RPM_REPO} for version=${BUNDLE_VERSION}..."
+          jf rt search "${RPM_REPO}/**" --props "version=${BUNDLE_VERSION}" > rpm-artifacts.json
+          echo "Searching ${HELM_REPO} for version=${HELM_VERSION}..."
+          jf rt search "${HELM_REPO}/**" --props "version=${HELM_VERSION}" > helm-artifacts.json
+
+          jq -s 'add' deb-artifacts.json rpm-artifacts.json helm-artifacts.json > bundle-artifacts.json
           cat bundle-artifacts.json
 
-          mkdir -p release-assets
-          jq -r '.[] | select(.path | test("\\.(deb|rpm|deb\\.asc|rpm\\.asc|tgz|tgz\\.prov)$")) | .path' bundle-artifacts.json > artifact-paths.txt
-
+          jq -r '.[].path' bundle-artifacts.json > artifact-paths.txt
           if [ ! -s artifact-paths.txt ]; then
-            echo "::error::No .deb/.rpm/.tgz artifacts found in release bundle ${BUNDLE_NAME}/${BUNDLE_VERSION}. Check bundle-artifacts.json above." >&2
+            echo "::error::No package/Helm artifacts found for ${BUNDLE_NAME}:${BUNDLE_VERSION} (helm ${HELM_VERSION}) in ${DEB_REPO}, ${RPM_REPO}, or ${HELM_REPO}." >&2
             exit 1
           fi
 
@@ -126,15 +165,26 @@ jobs:
 
           while IFS= read -r artifact_path; do
             jf rt download "${artifact_path}" release-assets/ --flat=true
+            # GPG/prov signature files are deterministic siblings of the primary artifact and
+            # don't carry their own "version" property, so fetch them by direct sibling path
+            # instead of a second search.
+            jf rt download "${artifact_path}.asc" release-assets/ --flat=true --fail-no-op=false || true
+            jf rt download "${artifact_path}.prov" release-assets/ --flat=true --fail-no-op=false || true
           done < artifact-paths.txt
 
-      - name: Generate checksums for downloaded packages
+      - name: Write checksums from JFrog metadata
         run: |
-          set -x
-          # Records the checksum of each already-immutable, already-signed downloaded artifact;
-          # does not rebuild or re-sign anything (per PR review: JFrog is the source of truth).
-          find release-assets -type f \( -name '*.deb' -o -name '*.rpm' \) \
-            -exec sh -c 'sha256sum "$1" | cut -d" " -f1 > "$1.sha256"' _ {} \;
+          set -euxo pipefail
+          # JFrog already computes and stores a sha256 for every artifact (visible in
+          # bundle-artifacts.json above) -- write out that recorded checksum instead of
+          # re-hashing the downloaded file locally, so the .sha256 we publish is JFrog's own
+          # recorded value for this immutable artifact, not something recomputed here.
+          jq -r '.[] | select(.path | test("\\.(deb|rpm)$")) | "\(.path)\t\(.sha256)"' bundle-artifacts.json |
+          while IFS=$'\t' read -r artifact_path sha256; do
+            filename="$(basename "$artifact_path")"
+            echo "$sha256" > "release-assets/${filename}.sha256"
+          done
+
           echo "Final release-assets tree:"
           find release-assets -type f | sort
 
