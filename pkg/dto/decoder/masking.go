@@ -6,23 +6,10 @@ import (
 	"time"
 )
 
-const RedactedSecret = "[secret]"
-
-// Secret marks a string field as sensitive for redaction during API responses and logging.
-type Secret string
-
 var (
 	secretType = reflect.TypeFor[Secret]()
 	timeType   = reflect.TypeFor[time.Time]()
 )
-
-func (s Secret) String() string {
-	if s == "" {
-		return ""
-	}
-
-	return RedactedSecret
-}
 
 // RedactSecrets returns a deep copy of v with all Secret-typed values replaced by RedactedSecret.
 func RedactSecrets(v any) any {
