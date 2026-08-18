@@ -46,7 +46,7 @@ jobs:
       - name: Check coverage threshold
         run: |
           TOTAL=$(go tool cover -func=coverage.out | awk '/total:/ {gsub(/%/,"",$3); print $3}')
-          THRESHOLD=53
+          THRESHOLD=80
           awk -v t="$TOTAL" -v min="$THRESHOLD" 'BEGIN { exit (t+0 >= min+0 ? 0 : 1) }' || \
             (echo "Coverage $TOTAL% below threshold $THRESHOLD%" && exit 1)
 
