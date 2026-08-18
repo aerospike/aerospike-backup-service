@@ -38,7 +38,7 @@ docker ps
 
 ```
 CONTAINER ID   IMAGE                                       COMMAND                  CREATED              STATUS                        PORTS                                                             NAMES
-6113ba55af02   aerospike/aerospike-backup-service:3.6.1    "aerospike-backup-se…"   About a minute ago   Up 38 seconds (healthy)       0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp                       aerospike-backup-service
+6113ba55af02   aerospike/aerospike-backup-service:3.6.2    "aerospike-backup-se…"   About a minute ago   Up 38 seconds (healthy)       0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp                       aerospike-backup-service
 018dd00cdd3c   aerospike/aerospike-server-enterprise:8.1   "/usr/bin/as-tini-st…"   About a minute ago   Up About a minute (healthy)   0.0.0.0:3000-3003->3000-3003/tcp, [::]:3000-3003->3000-3003/tcp   aerospike-cluster
 9bd8386be71d   minio/minio:latest                          "/usr/bin/docker-ent…"   About a minute ago   Up About a minute (healthy)   0.0.0.0:9000-9001->9000-9001/tcp, [::]:9000-9001->9000-9001/tcp   minio
 ```
