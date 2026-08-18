@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
@@ -38,14 +39,26 @@ func NewHandler(config *model.LoggerConfig) slog.Handler {
 	}
 }
 
-// handlerReplaceAttr customizes the TRACE level string representation in logs.
-var handlerReplaceAttr = func(_ []string, a slog.Attr) slog.Attr {
-	if a.Key == slog.LevelKey {
-		level := a.Value.Any().(slog.Level)
-		if level == slog.Level(logger.LevelTrace) {
-			a.Value = slog.StringValue("TRACE")
-		}
+// handlerReplaceAttr applies all log attribute customizations in order.
+var handlerReplaceAttr = func(groups []string, a slog.Attr) slog.Attr {
+	redacted := decoder.RedactSecretsReplaceAttr()(groups, a)
+	trace := traceLevelReplaceAttr(groups, redacted)
+
+	return trace
+}
+
+func traceLevelReplaceAttr(_ []string, a slog.Attr) slog.Attr {
+	if a.Key != slog.LevelKey {
+		return a
 	}
+
+	level := a.Value.Any().(slog.Level)
+	if level != slog.Level(logger.LevelTrace) {
+		return a
+	}
+
+	a.Value = slog.StringValue("TRACE")
+
 	return a
 }
 

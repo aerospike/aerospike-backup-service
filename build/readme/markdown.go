@@ -15,6 +15,7 @@ const (
 	docFolder      = "docs/readme/dto"
 	requiredMarker = "📍"
 	redactedMarker = "🔒"
+	password       = "password"
 )
 
 var schemas = readSchemas()
@@ -295,7 +296,7 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 	}
 
 	printName := "`" + fieldName + "`"
-	if prop.Format == "password" {
+	if prop.Format == password {
 		printName = fmt.Sprintf("%s %s", redactedMarker, printName)
 	}
 	// Add a required field marker
@@ -308,7 +309,7 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 		Help:           description,
 		Default:        defaultValue,
 		PossibleValues: possibleValues,
-		Redacted:       prop.Format == "password",
+		Redacted:       prop.Format == password,
 	}
 
 	return row
