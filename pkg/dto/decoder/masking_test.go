@@ -12,7 +12,7 @@ import (
 
 func TestRedactSecrets_ComplexFixture(t *testing.T) {
 	original := testComplexConfig()
-	literals := literalSecretsInConfig(original)
+	literals := literalSecretsInConfig()
 	nonSecrets := nonSecretValuesInConfig()
 
 	t.Run("marshal json with redact", func(t *testing.T) {
