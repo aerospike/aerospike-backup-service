@@ -60,7 +60,9 @@ func VersionActionHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = decoder.Serialize(w, response, decoder.JSON, false)
+
+	body, _ := decoder.Marshal(response, decoder.JSON, false)
+	_, _ = w.Write(body)
 }
 
 // MetricsActionHandler

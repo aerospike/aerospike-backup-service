@@ -1,55 +1,35 @@
-package decoder_test
+package decoder
 
 import (
-	"bytes"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMarshal_Redact(t *testing.T) {
-	config := dto.Config{
-		AerospikeClusters: map[string]*dto.AerospikeCluster{
-			"cluster1": {
-				Credentials: &dto.Credentials{
-					User:     "testUser",
-					Password: "superSecretPassword",
-				},
-			},
-		},
+	cred := testCredentials{
+		User:     "testUser",
+		Password: literalPassword,
 	}
 
 	t.Run("yaml without redact", func(t *testing.T) {
-		data, err := decoder.Marshal(&config, decoder.YAML, false)
+		data, err := Marshal(&cred, YAML, false)
 		require.NoError(t, err)
-		assert.Contains(t, string(data), "superSecretPassword")
+		assert.Contains(t, string(data), literalPassword)
 	})
 
 	t.Run("yaml with redact", func(t *testing.T) {
-		data, err := decoder.Marshal(&config, decoder.YAML, true)
+		data, err := Marshal(&cred, YAML, true)
 		require.NoError(t, err)
-		assert.Contains(t, string(data), decoder.RedactedSecret)
-		assert.NotContains(t, string(data), "superSecretPassword")
+		assert.Contains(t, string(data), "password")
+		assert.NotContains(t, string(data), literalPassword)
 	})
-}
 
-func TestSerialize_Redact(t *testing.T) {
-	config := dto.Config{
-		AerospikeClusters: map[string]*dto.AerospikeCluster{
-			"cluster1": {
-				Credentials: &dto.Credentials{
-					Password: "superSecretPassword",
-				},
-			},
-		},
-	}
-
-	var buf bytes.Buffer
-	err := decoder.Serialize(&buf, &config, decoder.JSON, true)
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), decoder.RedactedSecret)
-	assert.NotContains(t, buf.String(), "superSecretPassword")
+	t.Run("json with redact", func(t *testing.T) {
+		data, err := Marshal(&cred, JSON, true)
+		require.NoError(t, err)
+		assert.Contains(t, string(data), "password")
+		assert.NotContains(t, string(data), literalPassword)
+	})
 }

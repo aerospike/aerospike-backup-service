@@ -68,7 +68,7 @@ linters:
         - pattern: '^json\.MarshalIndent$'
           msg: use decoder.Marshal instead
         - pattern: '^json\.NewEncoder$'
-          msg: use decoder.Serialize instead
+          msg: use decoder.Marshal instead
         - pattern: '^json\.Unmarshal$'
           msg: use decoder.Deserialize instead
         - pattern: '^json\.NewDecoder$'
@@ -78,7 +78,7 @@ linters:
         - pattern: '^yaml\.Unmarshal$'
           msg: use decoder.Deserialize instead
         - pattern: '^yaml\.NewEncoder$'
-          msg: use decoder.Serialize instead
+          msg: use decoder.Marshal instead
         - pattern: '^yaml\.NewDecoder$'
           msg: use decoder.Deserialize instead
     nlreturn:

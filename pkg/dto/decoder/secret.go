@@ -7,8 +7,9 @@ import (
 )
 
 const (
+	// RedactedSecret is the placeholder emitted for literal secret values in API responses and logs.
 	RedactedSecret  = "[secret]"
-	SecretRefPrefix = "secrets:"
+	secretRefPrefix = "secrets:"
 )
 
 // Secret marks a string field as sensitive for redaction during API responses and logging.
@@ -21,17 +22,11 @@ func (s Secret) IsRef() bool {
 		return false
 	}
 
-	if !strings.HasPrefix(asString, SecretRefPrefix) {
+	if !strings.HasPrefix(asString, secretRefPrefix) {
 		return false
 	}
 
 	return strings.Count(asString, ":") == 2
-}
-
-// HasRefPrefix reports whether the value starts with the secret agent reference prefix,
-// including malformed references such as "secrets:foo".
-func (s Secret) HasRefPrefix() bool {
-	return strings.HasPrefix(string(s), SecretRefPrefix)
 }
 
 // DisplayString returns a safe string for logs and errors: secret agent references are shown
