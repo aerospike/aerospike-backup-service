@@ -33,10 +33,12 @@ type S3Storage struct {
 	MaxConnsPerHost *int `yaml:"max-async-connections,omitempty" json:"max-async-connections,omitempty" example:"16" extensions:"x-nullable"`
 	// Access Key ID for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	AccessKeyID secret `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty" extensions:"x-nullable"`
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	AccessKeyID secret `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty" format:"password" extensions:"x-nullable"`
 	// Secret Access Key for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	SecretAccessKey secret `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty" extensions:"x-nullable"`
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	SecretAccessKey secret `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty" format:"password" extensions:"x-nullable"`
 	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *S3StorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
