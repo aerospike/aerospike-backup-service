@@ -1,20 +1,56 @@
 package decoder
 
-import "log/slog"
+import (
+	"fmt"
+	"log/slog"
+	"strings"
+)
 
-const RedactedSecret = "[secret]"
+const (
+	RedactedSecret  = "[secret]"
+	SecretRefPrefix = "secrets:"
+)
 
 // Secret marks a string field as sensitive for redaction during API responses and logging.
 type Secret string
 
-// String redacts fmt "%s" and "%v" output. Empty secrets stay empty so logs do not
-// imply a password is set when it is not.
-func (s Secret) String() string {
+// IsRef reports whether the value is a well-formed Secret Agent reference.
+func (s Secret) IsRef() bool {
+	asString := string(s)
+	if asString == "" {
+		return false
+	}
+
+	if !strings.HasPrefix(asString, SecretRefPrefix) {
+		return false
+	}
+
+	return strings.Count(asString, ":") == 2
+}
+
+// HasRefPrefix reports whether the value starts with the secret agent reference prefix,
+// including malformed references such as "secrets:foo".
+func (s Secret) HasRefPrefix() bool {
+	return strings.HasPrefix(string(s), SecretRefPrefix)
+}
+
+// DisplayString returns a safe string for logs and errors: secret agent references are shown
+// as-is; literal secrets are redacted.
+func (s Secret) DisplayString() string {
 	if s == "" {
 		return ""
 	}
 
+	if s.IsRef() {
+		return string(s)
+	}
+
 	return RedactedSecret
+}
+
+// String implements fmt.Stringer for "%s" and "%v".
+func (s Secret) String() string {
+	return s.DisplayString()
 }
 
 // GoString redacts fmt "%#v" output used in debug prints and some test failure messages.
@@ -23,14 +59,14 @@ func (s Secret) GoString() string {
 		return "decoder.Secret(\"\")"
 	}
 
+	if s.IsRef() {
+		return fmt.Sprintf("decoder.Secret(%q)", string(s))
+	}
+
 	return `decoder.Secret("[secret]")`
 }
 
-// LogValue redacts slog.Any("password", secret) without requiring ReplaceAttr on the handler.
+// LogValue implements slog.LogValuer for direct slog.Any("password", secret) calls.
 func (s Secret) LogValue() slog.Value {
-	if s == "" {
-		return slog.StringValue("")
-	}
-
-	return slog.StringValue(RedactedSecret)
+	return slog.StringValue(s.DisplayString())
 }

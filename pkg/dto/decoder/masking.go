@@ -34,6 +34,11 @@ func redactValue(v reflect.Value) reflect.Value {
 	}
 
 	if v.Type() == secretType {
+		s, ok := v.Interface().(Secret)
+		if ok && s.IsRef() {
+			return v
+		}
+
 		return reflect.ValueOf(Secret(RedactedSecret))
 	}
 

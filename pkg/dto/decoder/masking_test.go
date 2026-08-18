@@ -102,3 +102,23 @@ func TestRedactSecrets_PreservesTime(t *testing.T) {
 	assert.Equal(t, finished, redacted["routine1"][0].Finished)
 	assert.Equal(t, int64(1000), redacted["routine1"][0].Timestamp)
 }
+
+func TestRedactSecrets_PreservesSecretRef(t *testing.T) {
+	config := dto.Config{
+		AerospikeClusters: map[string]*dto.AerospikeCluster{
+			"cluster1": {
+				Credentials: &dto.Credentials{
+					User:     "testUser",
+					Password: "secrets:resource:key",
+				},
+			},
+		},
+	}
+
+	data, err := decoder.Marshal(&config, decoder.JSON, true)
+	require.NoError(t, err)
+
+	output := string(data)
+	assert.Contains(t, output, `"password":"secrets:resource:key"`)
+	assert.NotContains(t, output, decoder.RedactedSecret)
+}

@@ -63,11 +63,11 @@ func errValidationDuplicate[T any](field string, value T) error {
 	return fmt.Errorf("%w: %s contains duplicate value: %v", errDuplicate, field, value)
 }
 
-func errValidationSecretRefNoAgent(value string) error {
+func errValidationSecretRefNoAgent(value secret) error {
 	return fmt.Errorf("%w: %q requires secret agent configuration (secret-agent or secret-agent-name)",
-		errSecretRefNoAgent, value)
+		errSecretRefNoAgent, string(value))
 }
 
-func errValidationSecretRefMalformed(value string) error {
-	return fmt.Errorf("%w: %q must be secrets:<resource>:<secret>", errSecretRefMalformed, value)
+func errValidationSecretRefMalformed(value secret) error {
+	return fmt.Errorf("%w: %q must be secrets:<resource>:<secret>", errSecretRefMalformed, string(value))
 }

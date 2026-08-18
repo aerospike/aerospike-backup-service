@@ -198,8 +198,6 @@ type Credentials struct {
 	AuthMode string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL"`
 }
 
-type secret = decoder.Secret
-
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
 	c.User = m.User
 	c.Password = secret(m.Password)
@@ -243,7 +241,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 	}
 
 	if c.Password != "" {
-		if err := validateSecretRef(string(c.Password), agent); err != nil {
+		if err := validateSecretRef(c.Password, agent); err != nil {
 			return nil, fmt.Errorf("password: %w", err)
 		}
 	}
