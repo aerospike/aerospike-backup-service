@@ -16,16 +16,6 @@ import (
 func newTestHTTPServer(t *testing.T, httpCfg *model.HTTPServerConfig) *httpServer {
 	t.Helper()
 
-	if httpCfg == nil {
-		httpCfg = &model.HTTPServerConfig{}
-	}
-	if httpCfg.Address == "" {
-		httpCfg.Address = "127.0.0.1"
-	}
-	if httpCfg.Port == nil {
-		httpCfg.Port = ptr.Of(model.Port(0)) // let the OS choose a free port
-	}
-
 	svc := handlers.NewService(
 		t.Context(),
 		model.NewConfig(),
@@ -60,7 +50,7 @@ func waitForHTTPServerReady(t *testing.T, healthURL string) {
 }
 
 func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
-	srv := newTestHTTPServer(t, nil)
+	srv := newTestHTTPServer(t, &model.HTTPServerConfig{})
 	require.NotNil(t, srv.Server)
 	require.Equal(t, 5*time.Second, srv.ReadHeaderTimeout)
 	require.Equal(t, 30*time.Second, srv.ReadTimeout)
