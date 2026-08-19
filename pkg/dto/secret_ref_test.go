@@ -3,28 +3,50 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidateSecretRef_NilAgentWithPrefix(t *testing.T) {
-	err := validateSecretRef("secrets:asbackup:psw", nil)
+func TestSecret_Validate_NilAgentWithPrefix(t *testing.T) {
+	err := secret("secrets:asbackup:psw").Validate(false)
 	require.Error(t, err)
-	require.ErrorIs(t, err, errValidation)
+	require.ErrorIs(t, err, decoder.ErrSecretValidation)
 	require.ErrorContains(t, err, "secrets:asbackup:psw")
 	require.ErrorContains(t, err, "secret agent")
 }
 
-func TestValidateSecretRef_ValidReference(t *testing.T) {
-	agent := &model.SecretAgent{ConnectionType: "tcp", Address: "localhost"}
-
-	err := validateSecretRef("secrets:resource:key", agent)
+func TestSecret_Validate_ValidReference(t *testing.T) {
+	err := secret("secrets:resource:key").Validate(true)
 	require.NoError(t, err)
 }
 
-func TestValidateSecretRef_PlainValue(t *testing.T) {
-	err := validateSecretRef("plain-password", nil)
+func TestSecret_Validate_PlainValue(t *testing.T) {
+	err := secret("plain-password").Validate(false)
 	require.NoError(t, err)
+}
+
+func TestSecret_Validate_MalformedReference(t *testing.T) {
+	err := secret("secrets:foo").Validate(true)
+	require.Error(t, err)
+	require.ErrorIs(t, err, decoder.ErrSecretValidation)
+	require.ErrorContains(t, err, "secrets:foo")
+	require.ErrorContains(t, err, "secrets:<resource>:<key>")
+}
+
+func TestCredentialsValidate_MalformedSecretRef(t *testing.T) {
+	cluster := &AerospikeCluster{
+		SeedNodes: []SeedNode{{HostName: "localhost", Port: 3000}},
+		Credentials: &Credentials{
+			User:     "user",
+			Password: "secrets:foo",
+		},
+	}
+
+	err := cluster.Validate()
+	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
+	require.ErrorContains(t, err, "password")
+	require.ErrorContains(t, err, "secrets:<resource>:<key>")
 }
 
 func TestCredentialsToModel_SecretRefWithoutAgent(t *testing.T) {
@@ -36,7 +58,7 @@ func TestCredentialsToModel_SecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	_, err := cluster.ToModel(model.NewConfig())
+	err := cluster.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "password")
@@ -53,7 +75,7 @@ func TestS3StorageToModel_SecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	_, err := storage.ToModel(model.NewConfig())
+	err := storage.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "access-key-id")
@@ -68,7 +90,7 @@ func TestGcpStorageToModel_SecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	_, err := storage.ToModel(model.NewConfig())
+	err := storage.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "key-json")
@@ -95,7 +117,6 @@ func TestConfigToModel_SecretRefWithoutAgent(t *testing.T) {
 }
 
 func TestRestoreRequestToModel_SecretRefWithoutAgent(t *testing.T) {
-	config := model.NewConfig()
 	request := &RestoreRequest{
 		DestinationClusterConfig: DestinationClusterConfig{
 			Cluster: &AerospikeCluster{
@@ -114,7 +135,7 @@ func TestRestoreRequestToModel_SecretRefWithoutAgent(t *testing.T) {
 		BackupDataPath: "backup-path",
 	}
 
-	_, err := request.ToModel(config)
+	err := request.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "secret agent")

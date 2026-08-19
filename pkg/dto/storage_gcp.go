@@ -52,6 +52,12 @@ func (s *GcpStorage) Validate(opts ...ValidationOption) error {
 	if s.MinPartSize != nil && *s.MinPartSize < gcsMinUploadChunkSize {
 		return errValidationInvalidValue("min-part-size", *s.MinPartSize, "at least 256KiB")
 	}
+
+	withAgent := s.hasSecretAgent()
+	if err := s.Key.Validate(withAgent); err != nil {
+		return errValidationSecret("key-json", err)
+	}
+
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 	return s.SecretAgentConfig.validate(opts...)
 }
@@ -61,10 +67,6 @@ func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
 	agent, err := s.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, err
-	}
-
-	if err := validateSecretRef(s.Key, agent); err != nil {
-		return nil, fmt.Errorf("key-json: %w", err)
 	}
 
 	return &model.GcpStorage{

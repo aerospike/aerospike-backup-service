@@ -227,6 +227,12 @@ func (c *Credentials) Validate(opts ...ValidationOption) error {
 	if _, err := model.ParseAuthMode(c.AuthMode); err != nil {
 		return err
 	}
+
+	withAgent := c.hasSecretAgent()
+	if err := c.Password.Validate(withAgent); err != nil {
+		return errValidationSecret("password", err)
+	}
+
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 	return c.SecretAgentConfig.validate(opts...)
 }
@@ -239,12 +245,6 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 	agent, err := c.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, err
-	}
-
-	if c.Password != "" {
-		if err := validateSecretRef(c.Password, agent); err != nil {
-			return nil, fmt.Errorf("password: %w", err)
-		}
 	}
 
 	authMode, err := model.ParseAuthMode(c.AuthMode)

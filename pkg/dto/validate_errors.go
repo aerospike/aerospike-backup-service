@@ -17,7 +17,6 @@ var (
 	errInvalidValue      = fmt.Errorf("invalid value %w", errValidation)
 	errMissingDependency = fmt.Errorf("missing dependent field %w", errValidation)
 	errDuplicate         = fmt.Errorf("duplicate value %w", errValidation)
-	errSecretRefNoAgent  = fmt.Errorf("secret reference without agent %w", errValidation)
 )
 
 func errValidationRequiredEither(fields ...string) error {
@@ -62,7 +61,6 @@ func errValidationDuplicate[T any](field string, value T) error {
 	return fmt.Errorf("%w: %s contains duplicate value: %v", errDuplicate, field, value)
 }
 
-func errValidationSecretRefNoAgent(value secret) error {
-	return fmt.Errorf("%w: %q requires secret agent configuration (secret-agent or secret-agent-name)",
-		errSecretRefNoAgent, string(value))
+func errValidationSecret(field string, err error) error {
+	return fmt.Errorf("%s: %w: %w", field, errValidation, err)
 }

@@ -58,10 +58,35 @@ func TestSecret_UnderlyingValueUnchanged(t *testing.T) {
 }
 
 func TestSecret_IsRef(t *testing.T) {
-	assert.True(t, Secret("secrets:resource:key").IsRef())
-	assert.False(t, Secret("secrets:foo").IsRef())
-	assert.False(t, Secret("plain-password").IsRef())
-	assert.False(t, Secret("").IsRef())
+	assert.True(t, Secret("secrets:resource:key").isRef())
+	assert.False(t, Secret("secrets:foo").isRef())
+	assert.False(t, Secret("plain-password").isRef())
+	assert.False(t, Secret("").isRef())
+}
+
+func TestSecret_Validate(t *testing.T) {
+	t.Run("secret ref without agent", func(t *testing.T) {
+		err := Secret("secrets:asbackup:psw").Validate(false)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrSecretValidation)
+		require.ErrorContains(t, err, "secrets:asbackup:psw")
+	})
+
+	t.Run("secret ref with agent", func(t *testing.T) {
+		require.NoError(t, Secret("secrets:resource:key").Validate(true))
+	})
+
+	t.Run("plain value", func(t *testing.T) {
+		require.NoError(t, Secret("plain-password").Validate(false))
+	})
+
+	t.Run("malformed secret ref", func(t *testing.T) {
+		err := Secret("secrets:foo").Validate(true)
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrSecretValidation)
+		require.ErrorContains(t, err, "secrets:foo")
+		require.ErrorContains(t, err, "secrets:<resource>:<key>")
+	})
 }
 
 func TestSecret_DisplayString_MalformedRef(t *testing.T) {

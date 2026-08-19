@@ -1,6 +1,7 @@
 package decoder
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -15,8 +16,34 @@ const (
 // Secret marks a string field as sensitive for redaction during API responses and logging.
 type Secret string
 
-// IsRef reports whether the value is a well-formed Secret Agent reference.
-func (s Secret) IsRef() bool {
+// ErrSecretValidation is returned when a secret value fails validation.
+var ErrSecretValidation = errors.New("secret validation failed")
+
+// Validate checks secret agent references.
+func (s Secret) Validate(withAgent bool) error {
+	if s == "" {
+		return nil
+	}
+
+	if s.isMalformedRef() {
+		return fmt.Errorf("%w: %q must be in the form secrets:<resource>:<key>", ErrSecretValidation, string(s))
+	}
+
+	if s.isRef() && !withAgent {
+		return fmt.Errorf("%w: %q requires secret agent configuration (secret-agent or secret-agent-name)",
+			ErrSecretValidation, string(s))
+	}
+
+	return nil
+}
+
+// isMalformedRef reports whether the value looks like a secret agent reference but is not well-formed.
+func (s Secret) isMalformedRef() bool {
+	return strings.HasPrefix(string(s), secretRefPrefix) && !s.isRef()
+}
+
+// isRef reports whether the value is a well-formed Secret Agent reference.
+func (s Secret) isRef() bool {
 	asString := string(s)
 	if asString == "" {
 		return false
@@ -36,7 +63,7 @@ func (s Secret) DisplayString() string {
 		return ""
 	}
 
-	if s.IsRef() {
+	if s.isRef() {
 		return string(s)
 	}
 
@@ -54,7 +81,7 @@ func (s Secret) GoString() string {
 		return "decoder.Secret(\"\")"
 	}
 
-	if s.IsRef() {
+	if s.isRef() {
 		return fmt.Sprintf("decoder.Secret(%q)", string(s))
 	}
 
