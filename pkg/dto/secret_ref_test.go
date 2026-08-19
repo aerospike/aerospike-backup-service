@@ -140,3 +140,51 @@ func TestRestoreRequestToModel_SecretRefWithoutAgent(t *testing.T) {
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "secret agent")
 }
+
+func TestRestoreRequest_Validate_PolicySecretRefWithoutAgent(t *testing.T) {
+	request := &RestoreRequest{
+		DestinationClusterConfig: DestinationClusterConfig{
+			Cluster: &AerospikeCluster{
+				SeedNodes: []SeedNode{{HostName: "localhost", Port: 3000}},
+			},
+		},
+		StorageConfig: StorageConfig{
+			Storage: &Storage{
+				LocalStorage: &LocalStorage{Path: "/tmp/backups"},
+			},
+		},
+		BackupDataPath: "backup-path",
+		Policy: &RestorePolicy{
+			BaseRestorePolicy: BaseRestorePolicy{
+				EncryptionPolicy: &EncryptionPolicy{
+					Mode:      EncryptAES256,
+					KeySecret: "secrets:resource:key",
+				},
+			},
+		},
+	}
+
+	err := request.Validate(ValidationDefault)
+	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
+	require.ErrorContains(t, err, "key-secret")
+	require.ErrorContains(t, err, "secret agent")
+}
+
+func TestRestoreTimestampRequest_Validate_PolicySecretRefWithoutInlineAgent(t *testing.T) {
+	request := &RestoreTimestampRequest{
+		Time:    1_700_000_000_000,
+		Routine: "daily",
+		Policy: &TimestampRestorePolicy{
+			BaseRestorePolicy: BaseRestorePolicy{
+				EncryptionPolicy: &EncryptionPolicy{
+					Mode:      EncryptAES256,
+					KeySecret: "secrets:resource:key",
+				},
+			},
+		},
+	}
+
+	err := request.Validate(ValidationDefault)
+	require.NoError(t, err)
+}

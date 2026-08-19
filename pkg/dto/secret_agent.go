@@ -18,7 +18,10 @@ type SecretAgentConfig struct {
 	SecretAgentName string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty" extensions:"x-nullable"`
 }
 
-func (c SecretAgentConfig) validate(opts ValidationOptions) error {
+func (c *SecretAgentConfig) validate(opts ValidationOptions) error {
+	if c == nil {
+		return nil
+	}
 	if c.SecretAgent != nil && c.SecretAgentName != "" {
 		return errValidationMutuallyExclusive("secret-agent-name", "secret-agent")
 	}
@@ -29,7 +32,11 @@ func (c SecretAgentConfig) validate(opts ValidationOptions) error {
 	return nil
 }
 
-func (c SecretAgentConfig) hasSecretAgent() bool {
+func (c *SecretAgentConfig) hasSecretAgent() bool {
+	if c == nil {
+		return false
+	}
+
 	return c.SecretAgent != nil || c.SecretAgentName != ""
 }
 

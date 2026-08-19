@@ -79,13 +79,17 @@ func (r *RestoreRequest) Validate(opts ValidationOptions) error {
 	if err := r.DestinationClusterConfig.Validate(opts); err != nil {
 		return err
 	}
-	if err := r.Policy.Validate(restorePolicyValidationOpts(r.SecretAgentConfig, opts)); err != nil {
-		return err
-	}
 	if err := r.StorageConfig.Validate(opts); err != nil {
 		return err
 	}
-	if err := validateOptionalSecretAgentConfig(r.SecretAgentConfig, opts); err != nil {
+	//nolint:staticcheck // We want to explicitly call secret agent validation.
+	if err := r.SecretAgentConfig.validate(opts); err != nil {
+		return err
+	}
+	if r.hasSecretAgent() {
+		opts = opts.With(ValidationWithSecretAgent)
+	}
+	if err := r.Policy.Validate(opts); err != nil {
 		return err
 	}
 
@@ -103,10 +107,12 @@ func (r *RestoreTimestampRequest) Validate(opts ValidationOptions) error {
 		return err
 	}
 	// Secret agent is an optional override; if omitted, it will be resolved from routine.
-	if err := validateOptionalSecretAgentConfig(r.SecretAgentConfig, opts); err != nil {
+	//nolint:staticcheck // We want to explicitly call secret agent validation.
+	if err := r.SecretAgentConfig.validate(opts); err != nil {
 		return err
 	}
-	if err := r.Policy.Validate(restorePolicyValidationOpts(r.SecretAgentConfig, opts)); err != nil {
+	// Secret agent may also come from the referenced routine at ToModel time.
+	if err := r.Policy.Validate(opts.With(ValidationWithSecretAgent)); err != nil {
 		return err
 	}
 	if r.Time == 0 {
@@ -123,21 +129,6 @@ func (r *RestoreTimestampRequest) Validate(opts ValidationOptions) error {
 	}
 
 	return nil
-}
-
-func validateOptionalSecretAgentConfig(config *SecretAgentConfig, opts ValidationOptions) error {
-	if config == nil {
-		return nil
-	}
-	return config.validate(opts)
-}
-
-func restorePolicyValidationOpts(config *SecretAgentConfig, opts ValidationOptions) ValidationOptions {
-	if config == nil || !config.hasSecretAgent() {
-		return opts
-	}
-
-	return opts.With(ValidationWithSecretAgent)
 }
 
 func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {

@@ -24,7 +24,7 @@ func TestHandlerReplaceAttr_RedactsSecrets(t *testing.T) {
 
 	output := buf.String()
 	assert.Contains(t, output, `"user":"testUser"`)
-	assert.Contains(t, output, `"password":`)
+	assert.Contains(t, output, `"password":"[secret]"`)
 	assert.NotContains(t, output, "superSecretPassword")
 }
 
@@ -41,6 +41,7 @@ func TestHandlerReplaceAttr_PreservesSecretRef(t *testing.T) {
 
 	output := buf.String()
 	assert.Contains(t, output, `"password":"secrets:resource:key"`)
+	assert.NotContains(t, output, `"password":"[secret]"`)
 }
 
 func TestHandlerReplaceAttr_RendersTraceLevel(t *testing.T) {
