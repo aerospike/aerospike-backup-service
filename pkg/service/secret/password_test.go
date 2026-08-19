@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	testdataFolder = "./testdata"
+	testdataFolder = "testdata"
 	passwordPath   = testdataFolder + "/password.txt"
 )
 

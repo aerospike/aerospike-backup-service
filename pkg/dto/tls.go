@@ -6,6 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // TLS represents the Aerospike cluster TLS configuration options.
@@ -35,6 +36,10 @@ func (t *TLS) Validate(opts ...ValidationOption) error {
 		return err
 	}
 
+	if err := t.validatePaths(); err != nil {
+		return err
+	}
+
 	if err := t.validateCACertificates(); err != nil {
 		return err
 	}
@@ -46,7 +51,16 @@ func (t *TLS) Validate(opts ...ValidationOption) error {
 	return t.validateTLSConfig(opts...)
 }
 
+func (t *TLS) validatePaths() error {
+	if err := safepath.ValidateClean(t.CAPath); err != nil {
+		return errValidationInvalidPath("ca-path", t.CAPath, err)
+	}
+
+	return nil
+}
+
 // validateCACertificates ensures CA file and path are mutually exclusive.
+// Both are optional ways to trust the server certificate; see ClientTLS.Validate.
 func (t *TLS) validateCACertificates() error {
 	if t.CAFile != "" && t.CAPath != "" {
 		return errValidationMutuallyExclusive("ca-file", "ca-path")

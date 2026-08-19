@@ -23,7 +23,7 @@ aerospike-clusters:
 storage:
     local:
         local-storage:
-            path: ./localStorage
+            path: localStorage
     minio:
         s3-storage:
             bucket: as-backup-bucket
