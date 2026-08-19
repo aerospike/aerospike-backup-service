@@ -40,7 +40,7 @@ func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credenti
 	if creds.PasswordPath != "" {
 		data, err := safepath.ReadFile(creds.PasswordPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read password from password-path: %w", err)
+			return nil, errors.New("failed to read password from password-path")
 		}
 		slog.Debug("Successfully read password from password-path")
 

@@ -226,7 +226,7 @@ func (c *Credentials) Validate(opts ...ValidationOption) error {
 	}
 
 	if err := safepath.ValidateClean(c.PasswordPath); err != nil {
-		return errValidationInvalidPath("password-path", c.PasswordPath, err)
+		return fmt.Errorf("%w: invalid password-path", errInvalidPath)
 	}
 
 	if _, err := model.ParseAuthMode(c.AuthMode); err != nil {
