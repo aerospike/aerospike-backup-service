@@ -6,7 +6,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // TLS represents the Aerospike cluster TLS configuration options.
@@ -53,8 +52,8 @@ func (t *TLS) Validate(opts ...ValidationOption) error {
 
 func (t *TLS) validatePaths() error {
 	if t.CAPath != "" {
-		if err := safepath.ValidateClean(t.CAPath); err != nil {
-			return errValidationInvalidPath("ca-path", t.CAPath)
+		if err := errValidationInvalidPath("ca-path", t.CAPath); err != nil {
+			return err
 		}
 	}
 

@@ -18,7 +18,7 @@ func TestValidateClean(t *testing.T) {
 		{name: "clean relative path", path: "testdata/password.txt"},
 		{name: "clean absolute path", path: "/etc/ssl/certs/ca.pem"},
 		{name: "parent traversal", path: "certs/../../outside.pem", wantErr: true},
-		{name: "leading parent traversal segment", path: "../etc/passwd"},
+		{name: "leading parent traversal segment", path: "../etc/passwd", wantErr: true},
 		{name: "dot prefix", path: "./certs/ca.pem", wantErr: true},
 		{name: "redundant separators", path: "/etc//ssl/ca.pem", wantErr: true},
 	}
@@ -33,6 +33,13 @@ func TestValidateClean(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHasParentPathComponent(t *testing.T) {
+	require.True(t, HasParentPathComponent("../etc/passwd"))
+	require.True(t, HasParentPathComponent("backups/../../outside"))
+	require.False(t, HasParentPathComponent("backups/data"))
+	require.False(t, HasParentPathComponent("/var/backups"))
 }
 
 func TestReadFile(t *testing.T) {

@@ -21,7 +21,14 @@ func TestClientTLS_ValidatePaths(t *testing.T) {
 			},
 		},
 		{
-			name: "traversal in ca-file",
+			name: "leading parent traversal in ca-file",
+			tls: ClientTLS{
+				CAFile: "../etc/passwd",
+			},
+			wantErr: true,
+		},
+		{
+			name: "embedded traversal in ca-file",
 			tls: ClientTLS{
 				CAFile: "certs/../../outside.pem",
 			},

@@ -90,8 +90,8 @@ func (c *ClientTLS) validatePaths() error {
 		if path == "" {
 			continue
 		}
-		if err := safepath.ValidateClean(path); err != nil {
-			return errValidationInvalidPath(field, path)
+		if err := errValidationInvalidPath(field, path); err != nil {
+			return err
 		}
 	}
 
