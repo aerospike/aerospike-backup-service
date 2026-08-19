@@ -60,6 +60,7 @@ func (t *TLS) validatePaths() error {
 }
 
 // validateCACertificates ensures CA file and path are mutually exclusive.
+// Both are optional ways to trust the server certificate; see ClientTLS.Validate.
 func (t *TLS) validateCACertificates() error {
 	if t.CAFile != "" && t.CAPath != "" {
 		return errValidationMutuallyExclusive("ca-file", "ca-path")

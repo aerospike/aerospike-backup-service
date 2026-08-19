@@ -30,18 +30,25 @@ func ValidateClean(path string) error {
 	return nil
 }
 
-// Stat returns file metadata for a validated clean path using os.Root.
-func Stat(path string) (fs.FileInfo, error) {
+// EnsureFileExists checks that a validated file path exists using os.Root.
+// path must have passed ValidateClean.
+func EnsureFileExists(path string) error {
+	if path == "" {
+		return nil
+	}
+
 	root, name, err := openRootForFile(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer root.Close()
 
-	return root.Stat(name)
+	_, err = root.Stat(name)
+
+	return err
 }
 
-// ReadFile reads the full contents of a file at a validated clean path using os.Root.
+// ReadFile reads the full contents of a validated file path using os.Root.
 func ReadFile(path string) ([]byte, error) {
 	root, name, err := openRootForFile(path)
 	if err != nil {
@@ -52,12 +59,8 @@ func ReadFile(path string) ([]byte, error) {
 	return root.ReadFile(name)
 }
 
-// ReadDir lists entries in a validated clean directory path using os.Root.
+// ReadDir lists entries in a validated directory path using os.Root.
 func ReadDir(path string) ([]fs.DirEntry, error) {
-	if err := ValidateClean(path); err != nil {
-		return nil, err
-	}
-
 	root, err := os.OpenRoot(path)
 	if err != nil {
 		return nil, err
@@ -67,11 +70,7 @@ func ReadDir(path string) ([]fs.DirEntry, error) {
 	return fs.ReadDir(root.FS(), ".")
 }
 
-// OpenRoot opens an os.Root for the directory part of a file path.
-func OpenRootForFile(path string) (*os.Root, string, error) {
-	return openRootForFile(path)
-}
-
+// openRootForFile splits a validated file path into its directory and base name.
 func openRootForFile(path string) (*os.Root, string, error) {
 	dir, name := filepath.Split(path)
 	if name == "" {
@@ -80,8 +79,6 @@ func openRootForFile(path string) (*os.Root, string, error) {
 
 	if dir == "" {
 		dir = "."
-	} else {
-		dir = filepath.Clean(dir)
 	}
 
 	root, err := os.OpenRoot(dir)

@@ -85,13 +85,12 @@ func loadCertPool(caFile, caPath string) (*x509.CertPool, error) {
 
 	// Load from CAFile if provided.
 	if caFile != "" {
-		root, name, err := safepath.OpenRootForFile(caFile)
+		pemBytes, err := safepath.ReadFile(caFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to open CA file: %w", err)
+			return nil, fmt.Errorf("failed to read CA file: %w", err)
 		}
-		defer root.Close()
 
-		if err := appendCertFile(pool, root, name); err != nil {
+		if err := appendCertPEM(pool, pemBytes, caFile); err != nil {
 			return nil, err
 		}
 	}
@@ -129,7 +128,13 @@ func loadCertsFromPath(pool *x509.CertPool, caPath string) error {
 		if fileInfo.IsDir() {
 			continue
 		}
-		if err := appendCertFile(pool, root, name); err != nil {
+		pemBytes, err := root.ReadFile(name)
+		if err != nil {
+			slog.Warn("Failed to read certificate file, skipping",
+				slog.String("path", name), attr.Error(err))
+			continue
+		}
+		if err := appendCertPEM(pool, pemBytes, name); err != nil {
 			slog.Warn("Failed to append certificate file, skipping",
 				slog.String("path", name), attr.Error(err))
 		}
@@ -138,13 +143,7 @@ func loadCertsFromPath(pool *x509.CertPool, caPath string) error {
 	return nil
 }
 
-// appendCertFile reads a PEM file and appends its certificates to the given CertPool.
-func appendCertFile(pool *x509.CertPool, root *os.Root, name string) error {
-	pemBytes, err := root.ReadFile(name)
-	if err != nil {
-		return err
-	}
-
+func appendCertPEM(pool *x509.CertPool, pemBytes []byte, name string) error {
 	if !pool.AppendCertsFromPEM(pemBytes) {
 		return fmt.Errorf("failed to append certificates from CA file %s", name)
 	}

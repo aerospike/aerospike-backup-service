@@ -59,14 +59,12 @@ func TestReadFileRejectsRootEscape(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestStat(t *testing.T) {
+func TestEnsureFileExists(t *testing.T) {
 	tempDir := t.TempDir()
 	filePath := filepath.Join(tempDir, "cert.pem")
 	require.NoError(t, os.WriteFile(filePath, []byte("cert"), 0600))
 
-	info, err := Stat(filePath)
-	require.NoError(t, err)
-	require.False(t, info.IsDir())
+	require.NoError(t, EnsureFileExists(filePath))
 }
 
 func TestReadDir(t *testing.T) {
