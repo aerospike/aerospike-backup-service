@@ -29,7 +29,6 @@ func (s *Service) changeBackupConfig(
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
 
-	existingConfig := dto.NewConfigFromModel(s.config)
 	dtoConfig := dto.NewConfigFromModel(s.config)
 	routinesToInvalidate, err := mutate(dtoConfig)
 	if err != nil {
@@ -39,6 +38,7 @@ func (s *Service) changeBackupConfig(
 	// GET responses redact secrets as "[secret]". Before persisting a PUT, copy real secret
 	// values from the stored config into the incoming payload wherever the sentinel appears,
 	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
+	existingConfig := dto.NewConfigFromModel(s.config)
 	decoder.MergeSecrets(dtoConfig, existingConfig)
 
 	modelConfig, err := dtoConfig.ToModel(dto.ValidationSkipTLSFiles)

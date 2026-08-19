@@ -6,6 +6,44 @@ import (
 
 // MergeSecrets mutates incoming in place, replacing RedactedSecret sentinel values
 // with the corresponding Secret values from existing.
+//
+// It walks incoming recursively and, for every Secret field equal to RedactedSecret,
+// copies the value from the matching field in existing.
+//
+// Example:
+//
+// Before:
+// Incoming:
+//
+//	{
+//	  "clusters": {
+//	    "c1": {
+//	      "password": "[secret]",
+//	      "user": "new-user"
+//	    }
+//	  }
+//	}
+//
+// Existing:
+//
+//	{
+//	  "clusters": {
+//	    "c1": {
+//	      "password": "real-password"
+//	    }
+//	  }
+//	}
+//
+// Incoming After:
+//
+//	{
+//	  "clusters": {
+//	    "c1": {
+//	      "password": "real-password",
+//	      "user": "new-user"
+//	    }
+//	  }
+//	}
 func MergeSecrets(incoming, existing any) {
 	if incoming == nil || existing == nil {
 		return
