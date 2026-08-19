@@ -87,7 +87,7 @@ type TimestampRestorePolicy struct {
 // Validate validates the base restore policy.
 //
 //nolint:gocognit,funlen
-func (p *BaseRestorePolicy) Validate() error {
+func (p *BaseRestorePolicy) Validate(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
@@ -140,7 +140,7 @@ func (p *BaseRestorePolicy) Validate() error {
 		}
 	}
 
-	if err := p.EncryptionPolicy.Validate(); err != nil {
+	if err := p.EncryptionPolicy.Validate(opts); err != nil {
 		return err
 	}
 	if err := p.RetryPolicy.Validate(); err != nil {
@@ -154,11 +154,11 @@ func (p *BaseRestorePolicy) Validate() error {
 }
 
 // Validate validates the restore policy.
-func (p *RestorePolicy) Validate() error {
+func (p *RestorePolicy) Validate(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
-	if err := p.BaseRestorePolicy.Validate(); err != nil {
+	if err := p.BaseRestorePolicy.Validate(opts); err != nil {
 		return err
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {
@@ -168,11 +168,11 @@ func (p *RestorePolicy) Validate() error {
 }
 
 // Validate validates the timestamp restore policy.
-func (p *TimestampRestorePolicy) Validate() error {
+func (p *TimestampRestorePolicy) Validate(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
-	return p.BaseRestorePolicy.Validate()
+	return p.BaseRestorePolicy.Validate(opts)
 }
 
 func (p *BaseRestorePolicy) validateExistingRecordPolicy() error {

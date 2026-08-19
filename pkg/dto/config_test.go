@@ -54,7 +54,7 @@ func NewLocalAerospikeCluster() *AerospikeCluster {
 func TestValidConfigValidation(t *testing.T) {
 	config := validConfig()
 
-	require.NoError(t, config.Validate())
+	require.NoError(t, config.Validate(0))
 }
 
 func TestInvalidClusterReference(t *testing.T) {
@@ -62,7 +62,7 @@ func TestInvalidClusterReference(t *testing.T) {
 	routine := config.BackupRoutines["routine1"]
 	routine.SourceCluster = "nonExistentCluster"
 
-	_, err := config.ToModel()
+	_, err := config.ToModel(0)
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, errNotFound)
@@ -74,7 +74,7 @@ func TestInvalidBackupPolicyReference(t *testing.T) {
 	routine := config.BackupRoutines["routine1"]
 	routine.BackupPolicy = "nonExistentPolicy"
 
-	_, err := config.ToModel()
+	_, err := config.ToModel(0)
 	require.Error(t, err)
 	require.ErrorIs(t, err, errNotFound)
 	require.ErrorContains(t, err, "nonExistentPolicy")
@@ -85,7 +85,7 @@ func TestInvalidStorageReference(t *testing.T) {
 	routine := config.BackupRoutines["routine1"]
 	routine.Storage = "nonExistentStorage"
 
-	_, err := config.ToModel()
+	_, err := config.ToModel(0)
 	require.Error(t, err)
 	require.ErrorIs(t, err, errNotFound)
 	require.ErrorContains(t, err, "nonExistentStorage")
@@ -105,7 +105,7 @@ func TestInvalidTlsFile(t *testing.T) {
 		},
 	}
 
-	_, err := config.ToModel()
+	_, err := config.ToModel(0)
 	require.Error(t, err)
 
 	_, err = config.ToModel(ValidationSkipTLSFiles)

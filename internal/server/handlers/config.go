@@ -45,7 +45,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newConfigModel, err := newConfig.ToModel()
+	newConfigModel, err := newConfig.ToModel(dto.ValidationSkipTLSFiles)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return

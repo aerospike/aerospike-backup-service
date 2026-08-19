@@ -2,7 +2,6 @@ package dto
 
 import (
 	"os"
-	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -23,12 +22,12 @@ type ClientTLS struct {
 }
 
 // Validate validates the ClientTLS configuration.
-func (c *ClientTLS) Validate(opts ...ValidationOption) error {
+func (c *ClientTLS) Validate(opts ValidationOptions) error {
 	if c == nil {
 		return nil
 	}
 
-	if !slices.Contains(opts, ValidationSkipTLSFiles) {
+	if !opts.Has(ValidationSkipTLSFiles) {
 		if err := verifyFilesExist(c); err != nil {
 			return err
 		}

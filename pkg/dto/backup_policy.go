@@ -79,7 +79,7 @@ func NewBackupPolicyFromReader(r io.Reader, format decoder.SerializationFormat) 
 		return nil, err
 	}
 
-	if err := b.Validate(); err != nil {
+	if err := b.Validate(0); err != nil {
 		return nil, err
 	}
 
@@ -87,7 +87,7 @@ func NewBackupPolicyFromReader(r io.Reader, format decoder.SerializationFormat) 
 }
 
 // Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
-func (p *BackupPolicy) Validate() error {
+func (p *BackupPolicy) Validate(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
@@ -126,7 +126,7 @@ func (p *BackupPolicy) Validate() error {
 	if err := p.RetentionPolicy.Validate(); err != nil {
 		return fmt.Errorf("invalid retention policy: %w", err)
 	}
-	if err := p.EncryptionPolicy.Validate(); err != nil {
+	if err := p.EncryptionPolicy.Validate(opts); err != nil {
 		return err
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {

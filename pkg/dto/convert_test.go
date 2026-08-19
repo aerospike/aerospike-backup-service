@@ -158,7 +158,7 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 	t.Logf("\nOriginal config:\n%s\n", string(configJSON))
 
 	// Convert the Config to a model.Config
-	modelConfig, err := originalConfig.ToModel()
+	modelConfig, err := originalConfig.ToModel(0)
 	require.NoError(t, err, "toModel should not return an error")
 
 	// Convert the model.Config back to a Config
@@ -170,7 +170,7 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 
 func TestConfigValidation(t *testing.T) {
 	configJSON, _ := json.Marshal(originalConfig)
-	require.NoError(t, originalConfig.Validate())
+	require.NoError(t, originalConfig.Validate(0))
 	configJSONAfter, _ := json.Marshal(originalConfig)
 	require.JSONEq(t, string(configJSON), string(configJSONAfter), "validation should not change the config")
 }

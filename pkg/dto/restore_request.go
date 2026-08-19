@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"slices"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
@@ -67,7 +66,7 @@ func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest
 }
 
 // Validate validates the restore operation request.
-func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
+func (r *RestoreRequest) Validate(opts ValidationOptions) error {
 	if len(r.BackupDataPath) == 0 {
 		return errValidationEmptyField("backup-data-path")
 	}
@@ -77,16 +76,16 @@ func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
 	if hasParentPathComponent(r.BackupDataPath) {
 		return fmt.Errorf("%w: backup-data-path must not contain traversal", errValidation)
 	}
-	if err := r.DestinationClusterConfig.Validate(opts...); err != nil {
+	if err := r.DestinationClusterConfig.Validate(opts); err != nil {
 		return err
 	}
-	if err := r.Policy.Validate(); err != nil {
+	if err := r.Policy.Validate(restorePolicyValidationOpts(r.SecretAgentConfig, opts)); err != nil {
 		return err
 	}
-	if err := r.StorageConfig.Validate(opts...); err != nil {
+	if err := r.StorageConfig.Validate(opts); err != nil {
 		return err
 	}
-	if err := validateOptionalSecretAgentConfig(r.SecretAgentConfig, opts...); err != nil {
+	if err := validateOptionalSecretAgentConfig(r.SecretAgentConfig, opts); err != nil {
 		return err
 	}
 
@@ -94,20 +93,20 @@ func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
 }
 
 // Validate validates the restore operation request.
-func (r *RestoreTimestampRequest) Validate(opts ...ValidationOption) error {
+func (r *RestoreTimestampRequest) Validate(opts ValidationOptions) error {
 	// Storage is an optional override; if omitted, it will be resolved from routine.
-	if err := r.StorageConfig.Validate(append(opts, ValidationAllowEmpty)...); err != nil {
+	if err := r.StorageConfig.Validate(opts.With(ValidationAllowEmpty)); err != nil {
 		return err
 	}
 	// Destination is an optional override; if omitted, it will be resolved from routine.
-	if err := r.DestinationClusterConfig.Validate(append(opts, ValidationAllowEmpty)...); err != nil {
+	if err := r.DestinationClusterConfig.Validate(opts.With(ValidationAllowEmpty)); err != nil {
 		return err
 	}
 	// Secret agent is an optional override; if omitted, it will be resolved from routine.
-	if err := validateOptionalSecretAgentConfig(r.SecretAgentConfig, opts...); err != nil {
+	if err := validateOptionalSecretAgentConfig(r.SecretAgentConfig, opts); err != nil {
 		return err
 	}
-	if err := r.Policy.Validate(); err != nil {
+	if err := r.Policy.Validate(restorePolicyValidationOpts(r.SecretAgentConfig, opts)); err != nil {
 		return err
 	}
 	if r.Time == 0 {
@@ -126,11 +125,19 @@ func (r *RestoreTimestampRequest) Validate(opts ...ValidationOption) error {
 	return nil
 }
 
-func validateOptionalSecretAgentConfig(config *SecretAgentConfig, opts ...ValidationOption) error {
+func validateOptionalSecretAgentConfig(config *SecretAgentConfig, opts ValidationOptions) error {
 	if config == nil {
 		return nil
 	}
-	return config.validate(opts...)
+	return config.validate(opts)
+}
+
+func restorePolicyValidationOpts(config *SecretAgentConfig, opts ValidationOptions) ValidationOptions {
+	if config == nil || !config.hasSecretAgent() {
+		return opts
+	}
+
+	return opts.With(ValidationWithSecretAgent)
 }
 
 func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
@@ -221,15 +228,15 @@ func (c *DestinationClusterConfig) IsEmpty() bool {
 	return c.Name == "" && c.Cluster == nil
 }
 
-func (c *DestinationClusterConfig) Validate(opts ...ValidationOption) error {
-	if c.Cluster == nil && c.Name == "" && !slices.Contains(opts, ValidationAllowEmpty) {
+func (c *DestinationClusterConfig) Validate(opts ValidationOptions) error {
+	if c.Cluster == nil && c.Name == "" && !opts.Has(ValidationAllowEmpty) {
 		return errValidationRequiredEither("destination", "destination-name")
 	}
 	if c.Cluster != nil && c.Name != "" {
 		return errValidationMutuallyExclusive("destination", "destination-name")
 	}
 	if c.Cluster != nil {
-		if err := c.Cluster.Validate(opts...); err != nil {
+		if err := c.Cluster.Validate(opts); err != nil {
 			return err
 		}
 	}
@@ -269,15 +276,15 @@ func (c *StorageConfig) IsEmpty() bool {
 	return c.Name == "" && c.Storage == nil
 }
 
-func (c *StorageConfig) Validate(opts ...ValidationOption) error {
-	if c.Storage == nil && c.Name == "" && !slices.Contains(opts, ValidationAllowEmpty) {
+func (c *StorageConfig) Validate(opts ValidationOptions) error {
+	if c.Storage == nil && c.Name == "" && !opts.Has(ValidationAllowEmpty) {
 		return errValidationRequiredEither("source", "source-name")
 	}
 	if c.Storage != nil && c.Name != "" {
 		return errValidationMutuallyExclusive("source", "source-name")
 	}
 	if c.Storage != nil {
-		if err := c.Storage.Validate(opts...); err != nil {
+		if err := c.Storage.Validate(opts); err != nil {
 			return err
 		}
 	}

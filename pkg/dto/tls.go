@@ -2,7 +2,6 @@ package dto
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -26,12 +25,12 @@ type TLS struct {
 	KeyfilePassword secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
 }
 
-func (t *TLS) Validate(opts ...ValidationOption) error {
+func (t *TLS) Validate(opts ValidationOptions) error {
 	if t == nil {
 		return nil // TLS is optional
 	}
 
-	if err := t.ClientTLS.Validate(opts...); err != nil {
+	if err := t.ClientTLS.Validate(opts); err != nil {
 		return err
 	}
 
@@ -39,11 +38,11 @@ func (t *TLS) Validate(opts ...ValidationOption) error {
 		return err
 	}
 
-	if err := t.validateKeyfilePassword(); err != nil {
+	if err := t.validateKeyfilePassword(opts); err != nil {
 		return err
 	}
 
-	return t.validateTLSConfig(opts...)
+	return t.validateTLSConfig(opts)
 }
 
 // validateCACertificates ensures CA file and path are mutually exclusive.
@@ -56,17 +55,21 @@ func (t *TLS) validateCACertificates() error {
 }
 
 // validateKeyfilePassword ensures keyfile password is only set when keyfile is present.
-func (t *TLS) validateKeyfilePassword() error {
+func (t *TLS) validateKeyfilePassword(opts ValidationOptions) error {
 	if t.KeyfilePassword != "" && t.Keyfile == "" {
 		return errValidationRequires("key-file-password", "key-file")
+	}
+
+	if err := t.KeyfilePassword.Validate(opts.Has(ValidationWithSecretAgent)); err != nil {
+		return errValidationSecret("key-file-password", err)
 	}
 
 	return nil
 }
 
 // validateTLSConfig attempts to create a TLS config to catch low-level issues.
-func (t *TLS) validateTLSConfig(opts ...ValidationOption) error {
-	if slices.Contains(opts, ValidationSkipTLSFiles) {
+func (t *TLS) validateTLSConfig(opts ValidationOptions) error {
+	if opts.Has(ValidationSkipTLSFiles) {
 		return nil
 	}
 

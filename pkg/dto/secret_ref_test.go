@@ -42,7 +42,7 @@ func TestCredentialsValidate_MalformedSecretRef(t *testing.T) {
 		},
 	}
 
-	err := cluster.Validate()
+	err := cluster.Validate(0)
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "password")
@@ -58,7 +58,7 @@ func TestCredentialsToModel_SecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	err := cluster.Validate()
+	err := cluster.Validate(0)
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "password")
@@ -75,7 +75,7 @@ func TestS3StorageToModel_SecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	err := storage.Validate()
+	err := storage.Validate(0)
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "access-key-id")
@@ -90,7 +90,7 @@ func TestGcpStorageToModel_SecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	err := storage.Validate()
+	err := storage.Validate(0)
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "key-json")
@@ -135,7 +135,7 @@ func TestRestoreRequestToModel_SecretRefWithoutAgent(t *testing.T) {
 		BackupDataPath: "backup-path",
 	}
 
-	err := request.Validate()
+	err := request.Validate(0)
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "secret agent")

@@ -39,7 +39,7 @@ type AerospikeCluster struct {
 }
 
 // Validate validates the Aerospike cluster entity.
-func (a *AerospikeCluster) Validate(opts ...ValidationOption) error {
+func (a *AerospikeCluster) Validate(opts ValidationOptions) error {
 	if a == nil {
 		return errors.New("cluster is not specified")
 	}
@@ -50,9 +50,13 @@ func (a *AerospikeCluster) Validate(opts ...ValidationOption) error {
 		return errValidationDuplicate("seed-nodes", duplicates)
 	}
 
-	withTLS := a.TLS != nil
+	nodeOpts := opts
+	if a.TLS != nil {
+		nodeOpts = opts.With(ValidationWithTLS)
+	}
+
 	for _, node := range a.SeedNodes {
-		if err := node.Validate(withTLS); err != nil {
+		if err := node.Validate(nodeOpts); err != nil {
 			return err
 		}
 	}
@@ -60,11 +64,16 @@ func (a *AerospikeCluster) Validate(opts ...ValidationOption) error {
 		return err
 	}
 
-	if err := a.Credentials.Validate(opts...); err != nil {
+	if err := a.Credentials.Validate(opts); err != nil {
 		return fmt.Errorf("credentials validation error: %w", err)
 	}
 
-	if err := a.TLS.Validate(opts...); err != nil {
+	tlsOpts := opts
+	if a.Credentials != nil && a.Credentials.hasSecretAgent() {
+		tlsOpts = opts.With(ValidationWithSecretAgent)
+	}
+
+	if err := a.TLS.Validate(tlsOpts); err != nil {
 		return fmt.Errorf("tls validation error: %w", err)
 	}
 
@@ -118,7 +127,7 @@ func NewClusterFromReader(r io.Reader, format decoder.SerializationFormat) (*Aer
 		return nil, err
 	}
 
-	if err := a.Validate(); err != nil {
+	if err := a.Validate(0); err != nil {
 		return nil, err
 	}
 
@@ -209,7 +218,7 @@ func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig
 }
 
 // Validate validates the credentials configuration.
-func (c *Credentials) Validate(opts ...ValidationOption) error {
+func (c *Credentials) Validate(opts ValidationOptions) error {
 	if c == nil {
 		return nil
 	}
@@ -234,7 +243,7 @@ func (c *Credentials) Validate(opts ...ValidationOption) error {
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-	return c.SecretAgentConfig.validate(opts...)
+	return c.SecretAgentConfig.validate(opts)
 }
 
 func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) {
@@ -273,8 +282,8 @@ type SeedNode struct {
 }
 
 // Validate validates the SeedNode entity.
-func (node *SeedNode) Validate(withTLS bool) error {
-	if withTLS && node.TLSName == "" {
+func (node *SeedNode) Validate(opts ValidationOptions) error {
+	if opts.Has(ValidationWithTLS) && node.TLSName == "" {
 		return errValidationEmptyField("tls-name")
 	}
 	if node.HostName == "" {

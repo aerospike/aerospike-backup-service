@@ -24,7 +24,7 @@ func TestLocalStorage_ValidatePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := (&LocalStorage{Path: tt.path}).Validate()
+			err := (&LocalStorage{Path: tt.path}).Validate(0)
 			if tt.valid {
 				require.NoError(t, err)
 			} else {

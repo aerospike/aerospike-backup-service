@@ -29,13 +29,13 @@ func TestRestorePolicy_ValidPolicy(t *testing.T) {
 			BinList:            []string{"bin1", "bin2"},
 		},
 	}
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.NoError(t, err)
 }
 
 func TestRestorePolicy_NilPolicy(t *testing.T) {
 	var policy *RestorePolicy
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.NoError(t, err)
 }
 
@@ -45,7 +45,7 @@ func TestRestorePolicy_InvalidTotalTimeout(t *testing.T) {
 			TotalTimeout: ptr.Of(int64(-1)),
 		},
 	}
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "total-timeout")
 	assert.Contains(t, err.Error(), "should not be negative number")
@@ -57,7 +57,7 @@ func TestRestorePolicy_InvalidSocketTimeout(t *testing.T) {
 			SocketTimeout: ptr.Of(int64(-1)),
 		},
 	}
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "socket-timeout")
 	assert.Contains(t, err.Error(), "should not be negative number")
@@ -69,7 +69,7 @@ func TestRestorePolicy_SocketTimeoutZero(t *testing.T) {
 			SocketTimeout: ptr.Of(int64(0)),
 		},
 	}
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.NoError(t, err)
 }
 
@@ -79,7 +79,7 @@ func TestRestorePolicy_InvalidParallel(t *testing.T) {
 			Parallel: ptr.Of(0),
 		},
 	}
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "parallel")
 	assert.Contains(t, err.Error(), "should be positive number")
@@ -91,7 +91,7 @@ func TestRestorePolicy_InvalidMaxAsyncBatches(t *testing.T) {
 			MaxAsyncBatches: ptr.Of(0),
 		},
 	}
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "max-async-batches")
 	assert.Contains(t, err.Error(), "should be positive number")
@@ -103,7 +103,7 @@ func TestRestorePolicy_InvalidBatchSize(t *testing.T) {
 			BatchSize: ptr.Of(0),
 		},
 	}
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "batch-size")
 	assert.Contains(t, err.Error(), "should be positive number")
@@ -115,7 +115,7 @@ func TestRestorePolicy_InvalidBandwidth(t *testing.T) {
 			Bandwidth: ptr.Of(int64(-1)),
 		},
 	}
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "bandwidth")
 	assert.Contains(t, err.Error(), "\"bandwidth\" -1 invalid, should not be negative number")
@@ -127,7 +127,7 @@ func TestRestorePolicy_InvalidTps(t *testing.T) {
 			Tps: ptr.Of(0),
 		},
 	}
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "tps")
 	assert.Contains(t, err.Error(), "should be positive number")
@@ -140,7 +140,7 @@ func TestRestorePolicy_MutuallyExclusiveReplaceUnique(t *testing.T) {
 			Unique:  ptr.Of(true),
 		},
 	}
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "mutually exclusive fields")
 	assert.Contains(t, err.Error(), "replace")
@@ -153,7 +153,7 @@ func TestRestorePolicy_InvalidExtraTTL(t *testing.T) {
 			ExtraTTL: ptr.Of(int64(-1)),
 		},
 	}
-	err := policy.Validate()
+	err := policy.Validate(0)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "extra-ttl")
 	assert.Contains(t, err.Error(), "should not be negative")
