@@ -43,9 +43,15 @@ func EnsureFileExists(path string) error {
 	}
 	defer root.Close()
 
-	_, err = root.Stat(name)
+	info, err := root.Stat(name)
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		return fmt.Errorf("path %q is a directory, not a file", path)
+	}
 
-	return err
+	return nil
 }
 
 // ReadFile reads the full contents of a validated file path using os.Root.
@@ -55,6 +61,14 @@ func ReadFile(path string) ([]byte, error) {
 		return nil, err
 	}
 	defer root.Close()
+
+	info, err := root.Stat(name)
+	if err != nil {
+		return nil, err
+	}
+	if info.IsDir() {
+		return nil, fmt.Errorf("path %q is a directory, not a file", path)
+	}
 
 	return root.ReadFile(name)
 }
