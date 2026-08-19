@@ -4,6 +4,11 @@ package dto
 type ValidationOptions uint
 
 const (
+	// ValidationDefault is the zero value: full validation with no optional flags enabled.
+	ValidationDefault ValidationOptions = 0
+)
+
+const (
 	// ValidationSkipTLSFiles skips filesystem existence checks for TLS certificate and key paths.
 	// Used when validating config before files are present on disk (for example API config updates).
 	ValidationSkipTLSFiles ValidationOptions = 1 << iota

@@ -127,7 +127,7 @@ func NewClusterFromReader(r io.Reader, format decoder.SerializationFormat) (*Aer
 		return nil, err
 	}
 
-	if err := a.Validate(0); err != nil {
+	if err := a.Validate(ValidationDefault); err != nil {
 		return nil, err
 	}
 

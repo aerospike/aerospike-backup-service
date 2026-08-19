@@ -91,13 +91,13 @@ func TestRedactSecrets_ComplexFixture(t *testing.T) {
 		require.NoError(t, err)
 		clusterOutput := string(clusterData)
 		assert.Contains(t, clusterOutput, `"password":""`)
-		assert.NotContains(t, clusterOutput, `"password":"`+RedactedSecret+`"`)
+		assert.NotContains(t, clusterOutput, `"password":"`+redactedSecret+`"`)
 
 		storageData, err := Marshal(redacted.StorageProviders["s3-ref"], JSON, false)
 		require.NoError(t, err)
 		storageOutput := string(storageData)
 		assert.Contains(t, storageOutput, `"secret-access-key":""`)
-		assert.NotContains(t, storageOutput, `"secret-access-key":"`+RedactedSecret+`"`)
+		assert.NotContains(t, storageOutput, `"secret-access-key":"`+redactedSecret+`"`)
 	})
 
 	t.Run("preserves valid secret ref", func(t *testing.T) {
@@ -111,11 +111,11 @@ func TestRedactSecrets_ComplexFixture(t *testing.T) {
 	t.Run("redacts malformed secret ref", func(t *testing.T) {
 		redacted := RedactSecrets(original).(testConfig)
 
-		assert.Equal(t, Secret(RedactedSecret), redacted.AerospikeClusters["cluster2"].Encryption.KeySecret)
+		assert.Equal(t, Secret(redactedSecret), redacted.AerospikeClusters["cluster2"].Encryption.KeySecret)
 
 		data, err := Marshal(&redacted, JSON, false)
 		require.NoError(t, err)
-		assert.Contains(t, string(data), `"key-secret":"`+RedactedSecret+`"`)
+		assert.Contains(t, string(data), `"key-secret":"`+redactedSecret+`"`)
 		assert.NotContains(t, string(data), malformedSecretRef)
 	})
 
@@ -164,7 +164,7 @@ func assertRedactedOutput(t *testing.T, output string, literals, nonSecrets []st
 		assert.Contains(t, output, value)
 	}
 
-	assert.Contains(t, output, RedactedSecret)
+	assert.Contains(t, output, redactedSecret)
 }
 
 func TestRedactSecrets_PreservesTime(t *testing.T) {

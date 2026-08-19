@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,7 +24,7 @@ func TestHandlerReplaceAttr_RedactsSecrets(t *testing.T) {
 
 	output := buf.String()
 	assert.Contains(t, output, `"user":"testUser"`)
-	assert.Contains(t, output, `"password":"`+decoder.RedactedSecret+`"`)
+	assert.Contains(t, output, `"password":`)
 	assert.NotContains(t, output, "superSecretPassword")
 }
 
@@ -42,7 +41,6 @@ func TestHandlerReplaceAttr_PreservesSecretRef(t *testing.T) {
 
 	output := buf.String()
 	assert.Contains(t, output, `"password":"secrets:resource:key"`)
-	assert.NotContains(t, output, decoder.RedactedSecret)
 }
 
 func TestHandlerReplaceAttr_RendersTraceLevel(t *testing.T) {

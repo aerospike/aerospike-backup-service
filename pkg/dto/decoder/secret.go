@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	// RedactedSecret is the placeholder emitted for literal secret values in API responses and logs.
-	RedactedSecret  = "[secret]"
+	// redactedSecret is the placeholder emitted for literal secret values in API responses and logs.
+	redactedSecret  = "[secret]"
 	secretRefPrefix = "secrets:"
 )
 
@@ -67,7 +67,7 @@ func (s Secret) DisplayString() string {
 		return string(s)
 	}
 
-	return RedactedSecret
+	return redactedSecret
 }
 
 // String implements fmt.Stringer for "%s" and "%v".

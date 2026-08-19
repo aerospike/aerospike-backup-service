@@ -79,7 +79,7 @@ func NewBackupPolicyFromReader(r io.Reader, format decoder.SerializationFormat) 
 		return nil, err
 	}
 
-	if err := b.Validate(0); err != nil {
+	if err := b.Validate(ValidationDefault); err != nil {
 		return nil, err
 	}
 

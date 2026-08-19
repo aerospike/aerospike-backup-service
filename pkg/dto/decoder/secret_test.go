@@ -12,7 +12,7 @@ import (
 
 func TestSecret_String(t *testing.T) {
 	assert.Empty(t, Secret("").String())
-	assert.Equal(t, RedactedSecret, Secret("superSecretPassword").String())
+	assert.Equal(t, redactedSecret, Secret("superSecretPassword").String())
 	assert.Equal(t, "secrets:resource:key", Secret("secrets:resource:key").String())
 }
 
@@ -23,7 +23,7 @@ func TestSecret_GoString(t *testing.T) {
 
 	output := fmt.Sprintf("%#v", Secret("superSecretPassword"))
 	assert.NotContains(t, output, "superSecretPassword")
-	assert.Contains(t, output, RedactedSecret)
+	assert.Contains(t, output, redactedSecret)
 
 	refOutput := fmt.Sprintf("%#v", Secret("secrets:resource:key"))
 	assert.Contains(t, refOutput, "secrets:resource:key")
@@ -34,7 +34,7 @@ func TestSecret_LogValue(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
 	logger.Info("credentials", slog.Any("password", Secret("superSecretPassword")))
 
-	assert.Contains(t, buf.String(), `"password":"`+RedactedSecret+`"`)
+	assert.Contains(t, buf.String(), `"password":"`+redactedSecret+`"`)
 	assert.NotContains(t, buf.String(), "superSecretPassword")
 
 	buf.Reset()
@@ -45,7 +45,7 @@ func TestSecret_LogValue(t *testing.T) {
 func TestSecret_StringInCredentials(t *testing.T) {
 	output := fmt.Sprintf("user: %s, password: %s", testCreds.User, testCreds.Password)
 	assert.Contains(t, output, "testUser")
-	assert.Contains(t, output, RedactedSecret)
+	assert.Contains(t, output, redactedSecret)
 	assert.NotContains(t, output, "superSecretPassword")
 }
 
@@ -90,5 +90,5 @@ func TestSecret_Validate(t *testing.T) {
 }
 
 func TestSecret_DisplayString_MalformedRef(t *testing.T) {
-	assert.Equal(t, RedactedSecret, Secret("secrets:foo").DisplayString())
+	assert.Equal(t, redactedSecret, Secret("secrets:foo").DisplayString())
 }

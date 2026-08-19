@@ -119,7 +119,7 @@ func NewStorageFromReader(r io.Reader, format decoder.SerializationFormat) (*Sto
 		return nil, err
 	}
 
-	if err := s.Validate(0); err != nil {
+	if err := s.Validate(ValidationDefault); err != nil {
 		return nil, err
 	}
 
