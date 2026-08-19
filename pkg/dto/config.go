@@ -138,11 +138,7 @@ func (c *Config) Validate(opts ValidationOptions) error {
 	return nil
 }
 
-func (c *Config) ToModel(opts ValidationOptions) (*model.Config, error) {
-	if err := c.Validate(opts); err != nil {
-		return nil, fmt.Errorf("configuration validation failed: %w", err)
-	}
-
+func (c *Config) ToModel() (*model.Config, error) {
 	config := c.ServiceConfig
 	modelConfig := model.NewConfig()
 	modelConfig.ServiceConfig = *config.ToModel()

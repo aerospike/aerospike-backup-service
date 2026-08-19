@@ -66,7 +66,11 @@ func readConfig(
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 
-	modelConfig, err := config.ToModel(dto.ValidationDefault)
+	if err := config.Validate(dto.ValidationDefault); err != nil {
+		return nil, fmt.Errorf("failed to validate configuration: %w", err)
+	}
+
+	modelConfig, err := config.ToModel()
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert configuration to model: %w", err)
 	}

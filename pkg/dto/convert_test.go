@@ -157,8 +157,10 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 	configJSON, _ := json.MarshalIndent(originalConfig, "", "    ")
 	t.Logf("\nOriginal config:\n%s\n", string(configJSON))
 
+	require.NoError(t, originalConfig.Validate(ValidationDefault))
+
 	// Convert the Config to a model.Config
-	modelConfig, err := originalConfig.ToModel(ValidationDefault)
+	modelConfig, err := originalConfig.ToModel()
 	require.NoError(t, err, "toModel should not return an error")
 
 	// Convert the model.Config back to a Config

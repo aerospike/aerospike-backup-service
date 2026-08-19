@@ -110,7 +110,7 @@ func TestConfigToModel_SecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	_, err := config.ToModel(ValidationSkipTLSFiles)
+	err := config.Validate(ValidationSkipTLSFiles)
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "secret agent")

@@ -10,7 +10,7 @@ const (
 
 const (
 	// ValidationSkipTLSFiles skips filesystem existence checks for TLS certificate and key paths.
-	// Used when validating config before files are present on disk (for example API config updates).
+	// Used by pkg/validation for offline validation where TLS files are not on disk.
 	ValidationSkipTLSFiles ValidationOptions = 1 << iota
 
 	// ValidationAllowEmpty permits optional override fields to be omitted.
