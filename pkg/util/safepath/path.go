@@ -9,14 +9,10 @@ import (
 	"strings"
 )
 
-// HasParentPathComponent reports whether path contains a ".." path element.
-func HasParentPathComponent(path string) bool {
-	return slices.Contains(strings.Split(path, string(filepath.Separator)), "..")
-}
-
 // ValidateClean reports whether path is safe for config use.
 // Empty paths are allowed and return nil.
-// Paths must be in canonical form and must not contain ".." elements.
+// Paths must be in canonical form (no ./ prefix, redundant separators, etc.)
+// and must not contain ".." elements.
 func ValidateClean(path string) error {
 	if path == "" {
 		return nil
@@ -27,7 +23,7 @@ func ValidateClean(path string) error {
 		return fmt.Errorf("path %q is not clean (normalizes to %q)", path, cleaned)
 	}
 
-	if HasParentPathComponent(path) {
+	if slices.Contains(strings.Split(path, string(filepath.Separator)), "..") {
 		return fmt.Errorf("path %q must not contain traversal", path)
 	}
 

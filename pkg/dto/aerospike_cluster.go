@@ -8,6 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -224,10 +225,8 @@ func (c *Credentials) Validate(opts ...ValidationOption) error {
 		return errValidationMutuallyExclusive("password", "password-path")
 	}
 
-	if c.PasswordPath != "" {
-		if err := errValidationInvalidPath("password-path", c.PasswordPath); err != nil {
-			return err
-		}
+	if err := safepath.ValidateClean(c.PasswordPath); err != nil {
+		return errValidationInvalidPath("password-path", c.PasswordPath, err)
 	}
 
 	if _, err := model.ParseAuthMode(c.AuthMode); err != nil {

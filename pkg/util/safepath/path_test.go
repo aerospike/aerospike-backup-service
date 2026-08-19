@@ -35,13 +35,6 @@ func TestValidateClean(t *testing.T) {
 	}
 }
 
-func TestHasParentPathComponent(t *testing.T) {
-	require.True(t, HasParentPathComponent("../etc/passwd"))
-	require.True(t, HasParentPathComponent("backups/../../outside"))
-	require.False(t, HasParentPathComponent("backups/data"))
-	require.False(t, HasParentPathComponent("/var/backups"))
-}
-
 func TestReadFile(t *testing.T) {
 	tempDir := t.TempDir()
 	filePath := filepath.Join(tempDir, "secret.txt")

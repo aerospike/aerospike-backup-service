@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 var (
@@ -70,10 +68,6 @@ func errValidationSecretRefNoAgent(value secret) error {
 		errSecretRefNoAgent, string(value))
 }
 
-func errValidationInvalidPath(field, path string) error {
-	if err := safepath.ValidateClean(path); err != nil {
-		return fmt.Errorf("%w: %q for %q: %w", errInvalidPath, path, field, err)
-	}
-
-	return nil
+func errValidationInvalidPath(field, path string, err error) error {
+	return fmt.Errorf("%w: %q for %q: %w", errInvalidPath, path, field, err)
 }
