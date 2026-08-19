@@ -12,8 +12,14 @@ type HTTPServerConfig struct {
 	Rate *RateLimiterConfig
 	// ContextPath customizes path for the API endpoints.
 	ContextPath string
-	// Timeout for http server operations.
+	// Timeout for reading HTTP request headers (http.Server.ReadHeaderTimeout).
 	Timeout *time.Duration
+	// ReadTimeout is the maximum duration for reading the entire request, including the body.
+	ReadTimeout *time.Duration
+	// WriteTimeout is the maximum duration before timing out writes of the response.
+	WriteTimeout *time.Duration
+	// IdleTimeout is the maximum amount of time to wait for the next request when keep-alives are enabled.
+	IdleTimeout *time.Duration
 }
 
 // GetAddressOrDefault returns the value of the Address property.
@@ -41,6 +47,33 @@ func (s *HTTPServerConfig) GetTimeoutOrDefault() time.Duration {
 		return *s.Timeout
 	}
 	return *defaultConfig.http.Timeout
+}
+
+// GetReadTimeoutOrDefault returns the value of the ReadTimeout property.
+// If the property is not set, it returns the default value = 30s.
+func (s *HTTPServerConfig) GetReadTimeoutOrDefault() time.Duration {
+	if s.ReadTimeout != nil {
+		return *s.ReadTimeout
+	}
+	return *defaultConfig.http.ReadTimeout
+}
+
+// GetWriteTimeoutOrDefault returns the value of the WriteTimeout property.
+// If the property is not set, it returns the default value = 60s.
+func (s *HTTPServerConfig) GetWriteTimeoutOrDefault() time.Duration {
+	if s.WriteTimeout != nil {
+		return *s.WriteTimeout
+	}
+	return *defaultConfig.http.WriteTimeout
+}
+
+// GetIdleTimeoutOrDefault returns the value of the IdleTimeout property.
+// If the property is not set, it returns the default value = 120s.
+func (s *HTTPServerConfig) GetIdleTimeoutOrDefault() time.Duration {
+	if s.IdleTimeout != nil {
+		return *s.IdleTimeout
+	}
+	return *defaultConfig.http.IdleTimeout
 }
 
 // GetRateOrDefault returns the value of the Rate property.
