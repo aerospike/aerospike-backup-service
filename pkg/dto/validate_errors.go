@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
@@ -18,6 +19,7 @@ var (
 	errMissingDependency = fmt.Errorf("missing dependent field %w", errValidation)
 	errDuplicate         = fmt.Errorf("duplicate value %w", errValidation)
 	errSecretRefNoAgent  = fmt.Errorf("secret reference without agent %w", errValidation)
+	errInvalidPath       = fmt.Errorf("invalid path %w", errValidation)
 )
 
 func errValidationRequiredEither(fields ...string) error {
@@ -65,4 +67,10 @@ func errValidationDuplicate[T any](field string, value T) error {
 func errValidationSecretRefNoAgent(value secret) error {
 	return fmt.Errorf("%w: %q requires secret agent configuration (secret-agent or secret-agent-name)",
 		errSecretRefNoAgent, string(value))
+}
+
+func errValidationInvalidPath(field, path string) error {
+	cleaned := filepath.Clean(path)
+	return fmt.Errorf("%w: %q for %q is not a clean path (normalizes to %q)",
+		errInvalidPath, path, field, cleaned)
 }

@@ -1,10 +1,10 @@
 package dto
 
 import (
-	"os"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // ClientTLS represents the TLS configuration options relevant for client-side connections.
@@ -29,6 +29,10 @@ func (c *ClientTLS) Validate(opts ...ValidationOption) error {
 	}
 
 	if !slices.Contains(opts, ValidationSkipTLSFiles) {
+		if err := c.validatePaths(); err != nil {
+			return err
+		}
+
 		if err := verifyFilesExist(c); err != nil {
 			return err
 		}
@@ -77,21 +81,38 @@ func (c *ClientTLS) ToModel() model.ClientTLS {
 	}
 }
 
+func (c *ClientTLS) validatePaths() error {
+	for field, path := range map[string]string{
+		"ca-file":   c.CAFile,
+		"cert-file": c.Certfile,
+		"key-file":  c.Keyfile,
+	} {
+		if path == "" {
+			continue
+		}
+		if err := safepath.ValidateClean(path); err != nil {
+			return errValidationInvalidPath(field, path)
+		}
+	}
+
+	return nil
+}
+
 func verifyFilesExist(c *ClientTLS) error {
 	if c.CAFile != "" {
-		if _, err := os.Stat(c.CAFile); err != nil {
+		if _, err := safepath.Stat(c.CAFile); err != nil {
 			return errValidationNotFound("ca-file", c.CAFile)
 		}
 	}
 
 	if c.Certfile != "" {
-		if _, err := os.Stat(c.Certfile); err != nil {
+		if _, err := safepath.Stat(c.Certfile); err != nil {
 			return errValidationNotFound("cert-file", c.Certfile)
 		}
 	}
 
 	if c.Keyfile != "" {
-		if _, err := os.Stat(c.Keyfile); err != nil {
+		if _, err := safepath.Stat(c.Keyfile); err != nil {
 			return errValidationNotFound("key-file", c.Keyfile)
 		}
 	}
