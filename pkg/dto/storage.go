@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // Storage represents the configuration for a backup storage details.
@@ -28,8 +29,8 @@ func validateObjectStoragePath(path string) error {
 		if !filepath.IsLocal(path) {
 			return fmt.Errorf("storage path must be local: %q", path)
 		}
-		if hasParentPathComponent(path) {
-			return fmt.Errorf("storage path must not contain traversal: %q", path)
+		if err := safepath.ValidateClean(path); err != nil {
+			return fmt.Errorf("storage path: %w", err)
 		}
 	}
 	return nil

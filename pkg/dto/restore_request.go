@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // RestoreRequest represents a restore operation request from custom storage
@@ -73,8 +74,8 @@ func (r *RestoreRequest) Validate(opts ValidationOptions) error {
 	if !filepath.IsLocal(r.BackupDataPath) {
 		return fmt.Errorf("%w: backup-data-path must be local", errValidation)
 	}
-	if hasParentPathComponent(r.BackupDataPath) {
-		return fmt.Errorf("%w: backup-data-path must not contain traversal", errValidation)
+	if err := safepath.ValidateClean(r.BackupDataPath); err != nil {
+		return fmt.Errorf("%w: backup-data-path: %w", errValidation, err)
 	}
 	if err := r.DestinationClusterConfig.Validate(opts); err != nil {
 		return err

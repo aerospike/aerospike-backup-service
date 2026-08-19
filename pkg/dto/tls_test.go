@@ -273,6 +273,16 @@ func TestTLS_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "non-clean CA file path",
+			tls: &TLS{
+				ClientTLS: ClientTLS{
+					CAFile: "/etc//passwd",
+				},
+			},
+			wantErr: true,
+			errType: errInvalidPath,
+		},
+		{
 			name: "invalid key file path",
 			tls: &TLS{
 				ClientTLS: ClientTLS{

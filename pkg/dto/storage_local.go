@@ -2,11 +2,11 @@ package dto
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
-	"slices"
-	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // LocalStorage represents the configuration for local storage.
@@ -26,18 +26,14 @@ func (l *LocalStorage) Validate(_ ValidationOptions) error {
 	if !filepath.IsAbs(l.Path) && !filepath.IsLocal(l.Path) {
 		return errors.New("local storage path must be absolute or local")
 	}
-	if hasParentPathComponent(l.Path) {
-		return errors.New("local storage path must not contain traversal")
+	if err := safepath.ValidateClean(l.Path); err != nil {
+		return fmt.Errorf("local storage path: %w", err)
 	}
 	if l.MinPartSize != nil && *l.MinPartSize <= 0 {
 		return errors.New("min-part-size for local storage must be a positive value")
 	}
 
 	return nil
-}
-
-func hasParentPathComponent(path string) bool {
-	return slices.Contains(strings.Split(path, string(filepath.Separator)), "..")
 }
 
 func (l *LocalStorage) toModel() (model.Storage, error) {

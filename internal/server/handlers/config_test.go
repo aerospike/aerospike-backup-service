@@ -206,6 +206,56 @@ func TestService_changeConfig(t *testing.T) {
 	assert.True(t, called)
 }
 
+func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
+	const realPassword = "real-secret-password"
+
+	svc, ctrl := newConfigTestService(t)
+	clusterModel := &model.AerospikeCluster{
+		SeedNodes: []model.SeedNode{{HostName: "localhost", Port: 3000}},
+		Credentials: &model.Credentials{
+			User:     "testUser",
+			Password: realPassword,
+			AuthMode: ptr.Of(model.AuthModeInternal),
+		},
+	}
+	require.NoError(t, svc.config.AddCluster("test-cluster", clusterModel))
+
+	mockConfigurationManager := NewmockManager(ctrl)
+	mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil)
+	svc.configurationManager = mockConfigurationManager
+
+	mockConfigApplier := NewmockConfigApplier(ctrl)
+	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil)
+	svc.configApplier = mockConfigApplier
+
+	getReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config", nil)
+	getW := httptest.NewRecorder()
+	svc.ReadConfig(getW, getReq)
+	require.Equal(t, http.StatusOK, getW.Code)
+
+	var configDTO dto.Config
+	require.NoError(t, json.NewDecoder(getW.Body).Decode(&configDTO))
+	require.NotNil(t, configDTO.AerospikeClusters["test-cluster"].Credentials)
+	assert.Equal(t, "[secret]", string(configDTO.AerospikeClusters["test-cluster"].Credentials.Password))
+
+	configDTO.AerospikeClusters["test-cluster"].ClusterLabel = "updated-label"
+	putBody, err := json.Marshal(configDTO)
+	require.NoError(t, err)
+
+	putReq := httptest.NewRequestWithContext(
+		t.Context(), http.MethodPut, "/v1/config", strings.NewReader(string(putBody)),
+	)
+	putW := httptest.NewRecorder()
+	svc.UpdateConfig(putW, putReq)
+	require.Equal(t, http.StatusOK, putW.Code)
+
+	updated, ok := svc.config.BackupConfigCopy().AerospikeClusters["test-cluster"]
+	require.True(t, ok)
+	require.NotNil(t, updated.Credentials)
+	assert.Equal(t, realPassword, updated.Credentials.Password)
+	assert.Equal(t, "updated-label", updated.ClusterLabel)
+}
+
 func TestService_changeConfig_UpdateFuncError(t *testing.T) {
 	svc, _ := newConfigTestService(t)
 

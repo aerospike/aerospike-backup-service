@@ -1,9 +1,8 @@
 package dto
 
 import (
-	"os"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // ClientTLS represents the TLS configuration options relevant for client-side connections.
@@ -21,42 +20,58 @@ type ClientTLS struct {
 	Keyfile string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/key.pem" extensions:"x-nullable"`
 }
 
+const (
+	caField   = "ca-file"
+	certField = "cert-file"
+	keyField  = "key-file"
+	nameField = "name"
+)
+
 // Validate validates the ClientTLS configuration.
+//
+// ca-file is optional and independent: it trusts the server certificate.
+// cert-file, key-file, and name are a separate mTLS set:
+// together they identify this client to the server.
 func (c *ClientTLS) Validate(opts ValidationOptions) error {
 	if c == nil {
 		return nil
 	}
 
 	if !opts.Has(ValidationSkipTLSFiles) {
-		if err := verifyFilesExist(c); err != nil {
+		if err := c.validatePaths(); err != nil {
+			return err
+		}
+
+		if err := c.verifyFilesExist(); err != nil {
 			return err
 		}
 	}
 
+	// mTLS: cert-file, key-file, and name must be set together.
 	if c.Certfile != "" {
 		if c.Keyfile == "" {
-			return errValidationRequires("cert-file", "key-file")
+			return errValidationRequires(certField, keyField)
 		}
 		if c.Name == "" {
-			return errValidationRequires("cert-file", "name")
+			return errValidationRequires(certField, nameField)
 		}
 	}
 
 	if c.Keyfile != "" {
 		if c.Certfile == "" {
-			return errValidationRequires("key-file", "cert-file")
+			return errValidationRequires(keyField, certField)
 		}
 		if c.Name == "" {
-			return errValidationRequires("key-file", "name")
+			return errValidationRequires(keyField, nameField)
 		}
 	}
 
 	if c.Name != "" {
 		if c.Certfile == "" {
-			return errValidationRequires("name", "cert-file")
+			return errValidationRequires(nameField, certField)
 		}
 		if c.Keyfile == "" {
-			return errValidationRequires("name", "key-file")
+			return errValidationRequires(nameField, keyField)
 		}
 	}
 
@@ -76,22 +91,28 @@ func (c *ClientTLS) ToModel() model.ClientTLS {
 	}
 }
 
-func verifyFilesExist(c *ClientTLS) error {
-	if c.CAFile != "" {
-		if _, err := os.Stat(c.CAFile); err != nil {
-			return errValidationNotFound("ca-file", c.CAFile)
+func (c *ClientTLS) validatePaths() error {
+	for field, path := range map[string]string{
+		caField:   c.CAFile,
+		certField: c.Certfile,
+		keyField:  c.Keyfile,
+	} {
+		if err := safepath.ValidateClean(path); err != nil {
+			return errValidationInvalidPath(field, path, err)
 		}
 	}
 
-	if c.Certfile != "" {
-		if _, err := os.Stat(c.Certfile); err != nil {
-			return errValidationNotFound("cert-file", c.Certfile)
-		}
-	}
+	return nil
+}
 
-	if c.Keyfile != "" {
-		if _, err := os.Stat(c.Keyfile); err != nil {
-			return errValidationNotFound("key-file", c.Keyfile)
+func (c *ClientTLS) verifyFilesExist() error {
+	for field, path := range map[string]string{
+		caField:   c.CAFile,
+		certField: c.Certfile,
+		keyField:  c.Keyfile,
+	} {
+		if err := safepath.EnsureFileExists(path); err != nil {
+			return errValidationNotFound(field, path)
 		}
 	}
 

@@ -17,6 +17,7 @@ var (
 	errInvalidValue      = fmt.Errorf("invalid value %w", errValidation)
 	errMissingDependency = fmt.Errorf("missing dependent field %w", errValidation)
 	errDuplicate         = fmt.Errorf("duplicate value %w", errValidation)
+	errInvalidPath       = fmt.Errorf("invalid path %w", errValidation)
 )
 
 func errValidationRequiredEither(fields ...string) error {
@@ -63,4 +64,8 @@ func errValidationDuplicate[T any](field string, value T) error {
 
 func errValidationSecret(field string, err error) error {
 	return fmt.Errorf("%s: %w: %w", field, errValidation, err)
+}
+
+func errValidationInvalidPath(field, path string, err error) error {
+	return fmt.Errorf("%w: %q for %q: %w", errInvalidPath, path, field, err)
 }

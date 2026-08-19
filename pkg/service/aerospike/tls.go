@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 var protocolMap = map[string]uint16{
@@ -85,48 +85,67 @@ func loadCertPool(caFile, caPath string) (*x509.CertPool, error) {
 
 	// Load from CAFile if provided.
 	if caFile != "" {
-		if err := appendCertFile(pool, caFile); err != nil {
+		pemBytes, err := safepath.ReadFile(caFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA file: %w", err)
+		}
+
+		if err := appendCertPEM(pool, pemBytes, caFile); err != nil {
 			return nil, err
 		}
 	}
 
 	// Load from CAPath if provided.
 	if caPath != "" {
-		files, err := os.ReadDir(caPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read CA path directory %s: %w", caPath, err)
-		}
-
-		for _, file := range files {
-			path := filepath.Join(caPath, file.Name())
-			fileInfo, err := os.Stat(path)
-			if err != nil {
-				slog.Warn("Failed to stat file, skipping",
-					slog.String("path", path), attr.Error(err))
-				continue
-			}
-			if fileInfo.IsDir() {
-				continue
-			}
-			if err := appendCertFile(pool, path); err != nil {
-				slog.Warn("Failed to append certificate file, skipping",
-					slog.String("path", path), attr.Error(err))
-			}
+		if err := loadCertsFromPath(pool, caPath); err != nil {
+			return nil, err
 		}
 	}
 
 	return pool, nil
 }
 
-// appendCertFile reads a PEM file and appends its certificates to the given CertPool.
-func appendCertFile(pool *x509.CertPool, path string) error {
-	pemBytes, err := readFromFile(path)
+func loadCertsFromPath(pool *x509.CertPool, caPath string) error {
+	root, err := os.OpenRoot(caPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open CA path directory: %w", err)
+	}
+	defer root.Close()
+
+	files, err := safepath.ReadDir(caPath)
+	if err != nil {
+		return fmt.Errorf("failed to read CA path directory: %w", err)
 	}
 
+	for _, file := range files {
+		name := file.Name()
+		fileInfo, err := root.Stat(name)
+		if err != nil {
+			slog.Warn("Failed to stat file, skipping",
+				slog.String("path", name), attr.Error(err))
+			continue
+		}
+		if fileInfo.IsDir() {
+			continue
+		}
+		pemBytes, err := root.ReadFile(name)
+		if err != nil {
+			slog.Warn("Failed to read certificate file, skipping",
+				slog.String("path", name), attr.Error(err))
+			continue
+		}
+		if err := appendCertPEM(pool, pemBytes, name); err != nil {
+			slog.Warn("Failed to append certificate file, skipping",
+				slog.String("path", name), attr.Error(err))
+		}
+	}
+
+	return nil
+}
+
+func appendCertPEM(pool *x509.CertPool, pemBytes []byte, name string) error {
 	if !pool.AppendCertsFromPEM(pemBytes) {
-		return fmt.Errorf("failed to append certificates from CA file %s", path)
+		return fmt.Errorf("failed to append certificates from CA file %s", name)
 	}
 
 	return nil
@@ -247,9 +266,9 @@ func parseCipherSuites(cipherSuiteStr string) ([]uint16, error) {
 }
 
 func readFromFile(filePath string) ([]byte, error) {
-	dataBytes, err := os.ReadFile(filePath)
+	dataBytes, err := safepath.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read from file %s: %w", filePath, err)
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 	data := bytes.TrimSuffix(dataBytes, []byte("\n"))
 
