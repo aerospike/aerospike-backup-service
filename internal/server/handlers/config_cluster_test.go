@@ -8,8 +8,10 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -213,6 +215,57 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUpdateAerospikeCluster_PreservesSecretOnRoundTrip(t *testing.T) {
+	const realPassword = "real-secret-password"
+
+	svc := setupTestService(t)
+	ctrl := gomock.NewController(t)
+	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
+	svc.nsValidator = mockNsValidator
+	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Eq(svc.config)).AnyTimes()
+
+	clusterModel := &model.AerospikeCluster{
+		SeedNodes: []model.SeedNode{{HostName: "localhost", Port: 3000}},
+		Credentials: &model.Credentials{
+			User:     "testUser",
+			Password: realPassword,
+			AuthMode: ptr.Of(model.AuthModeInternal),
+		},
+	}
+	require.NoError(t, svc.config.AddCluster("test-cluster", clusterModel))
+
+	getReq := httptest.NewRequestWithContext(
+		t.Context(), http.MethodGet, "/v1/config/clusters/test-cluster", nil,
+	)
+	getReq.SetPathValue("name", "test-cluster")
+	getW := httptest.NewRecorder()
+	svc.ReadAerospikeCluster(getW, getReq)
+	require.Equal(t, http.StatusOK, getW.Code)
+
+	var clusterDTO dto.AerospikeCluster
+	require.NoError(t, json.NewDecoder(getW.Body).Decode(&clusterDTO))
+	require.NotNil(t, clusterDTO.Credentials)
+	assert.Equal(t, decoder.RedactedSecret, string(clusterDTO.Credentials.Password))
+
+	clusterDTO.SeedNodes[0].HostName = "updated-host"
+	putBody, err := json.Marshal(clusterDTO)
+	require.NoError(t, err)
+
+	putReq := httptest.NewRequestWithContext(
+		t.Context(), http.MethodPut, "/v1/config/clusters/test-cluster", strings.NewReader(string(putBody)),
+	)
+	putReq.SetPathValue("name", "test-cluster")
+	putW := httptest.NewRecorder()
+	svc.UpdateAerospikeCluster(putW, putReq)
+	require.Equal(t, http.StatusOK, putW.Code)
+
+	updated, ok := svc.config.BackupConfigCopy().AerospikeClusters["test-cluster"]
+	require.True(t, ok)
+	require.NotNil(t, updated.Credentials)
+	assert.Equal(t, realPassword, updated.Credentials.Password)
+	assert.Equal(t, "updated-host", updated.SeedNodes[0].HostName)
 }
 
 //nolint:dupl
