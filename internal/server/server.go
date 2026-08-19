@@ -64,7 +64,7 @@ func NewHTTPServer(ctx context.Context, serverConfig *model.HTTPServerConfig, se
 	}
 }
 
-// ServeHTTP serves a single request using the server's route and middleware chain.
+// ServeHTTP implements http.Handler so integration tests can wrap the server with httptest.
 func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.Handler.ServeHTTP(w, r)
 }
