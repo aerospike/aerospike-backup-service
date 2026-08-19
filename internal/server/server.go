@@ -19,8 +19,7 @@ const (
 	shutdownTimeout = 30 * time.Second
 )
 
-// HTTPServer manages the backup service HTTP server lifecycle. It also serves requests directly,
-// so tests can drive the full route and middleware chain without binding a port.
+// HTTPServer manages the backup service HTTP server lifecycle.
 type HTTPServer interface {
 	http.Handler
 
@@ -66,7 +65,6 @@ func NewHTTPServer(ctx context.Context, serverConfig *model.HTTPServerConfig, se
 }
 
 // ServeHTTP serves a single request using the server's route and middleware chain.
-// *http.Server does not implement http.Handler, so this must be forwarded explicitly.
 func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.Handler.ServeHTTP(w, r)
 }
