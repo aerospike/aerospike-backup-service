@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestHTTPServer(t *testing.T, httpCfg *model.HTTPServerConfig) *HTTPServerImpl {
+func newTestHTTPServer(t *testing.T, httpCfg *model.HTTPServerConfig) *httpServer {
 	t.Helper()
 
 	if httpCfg == nil {
@@ -32,7 +32,7 @@ func newTestHTTPServer(t *testing.T, httpCfg *model.HTTPServerConfig) *HTTPServe
 		nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
-	return NewHTTPServer(t.Context(), httpCfg, svc).(*HTTPServerImpl)
+	return NewHTTPServer(t.Context(), httpCfg, svc).(*httpServer)
 }
 
 func waitForHTTPServerReady(t *testing.T, healthURL string) {
@@ -61,18 +61,18 @@ func waitForHTTPServerReady(t *testing.T, healthURL string) {
 
 func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
 	srv := newTestHTTPServer(t, nil)
-	require.NotNil(t, srv.server)
-	require.Equal(t, 5*time.Second, srv.server.ReadHeaderTimeout)
-	require.Equal(t, 30*time.Second, srv.server.ReadTimeout)
-	require.Equal(t, 60*time.Second, srv.server.WriteTimeout)
-	require.Equal(t, 120*time.Second, srv.server.IdleTimeout)
+	require.NotNil(t, srv.Server)
+	require.Equal(t, 5*time.Second, srv.ReadHeaderTimeout)
+	require.Equal(t, 30*time.Second, srv.ReadTimeout)
+	require.Equal(t, 60*time.Second, srv.WriteTimeout)
+	require.Equal(t, 120*time.Second, srv.IdleTimeout)
 
 	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- srv.server.Serve(ln)
+		errCh <- srv.Serve(ln)
 	}()
 
 	waitForHTTPServerReady(t, "http://"+ln.Addr().String()+"/health")
@@ -94,15 +94,15 @@ func TestNewHTTPServer_ReadTimeoutClosesSilentClient(t *testing.T) {
 		Timeout:     ptr.Of(time.Duration(0)),
 		ReadTimeout: ptr.Of(readTimeout),
 	})
-	require.Equal(t, time.Duration(0), srv.server.ReadHeaderTimeout)
-	require.Equal(t, readTimeout, srv.server.ReadTimeout)
+	require.Equal(t, time.Duration(0), srv.ReadHeaderTimeout)
+	require.Equal(t, readTimeout, srv.ReadTimeout)
 
 	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- srv.server.Serve(ln)
+		errCh <- srv.Serve(ln)
 	}()
 	t.Cleanup(func() {
 		_ = srv.Shutdown()

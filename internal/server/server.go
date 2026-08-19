@@ -30,12 +30,12 @@ type HTTPServer interface {
 	Shutdown() error
 }
 
-// HTTPServerImpl is the backup service HTTP server wrapper.
-type HTTPServerImpl struct {
-	server *http.Server
+// httpServer wraps *http.Server with Start/Shutdown lifecycle helpers.
+type httpServer struct {
+	*http.Server
 }
 
-var _ HTTPServer = (*HTTPServerImpl)(nil)
+var _ HTTPServer = (*httpServer)(nil)
 
 // NewHTTPServer returns a new instance of HTTPServer.
 func NewHTTPServer(ctx context.Context, serverConfig *model.HTTPServerConfig, service *handlers.Service) HTTPServer {
@@ -53,8 +53,8 @@ func NewHTTPServer(ctx context.Context, serverConfig *model.HTTPServerConfig, se
 		middleware.RateLimiter(ctx, serverConfig.GetRateOrDefault()),
 	)
 
-	return &HTTPServerImpl{
-		server: &http.Server{
+	return &httpServer{
+		Server: &http.Server{
 			Addr:              addr,
 			ReadHeaderTimeout: serverConfig.GetTimeoutOrDefault(),
 			ReadTimeout:       serverConfig.GetReadTimeoutOrDefault(),
@@ -66,13 +66,14 @@ func NewHTTPServer(ctx context.Context, serverConfig *model.HTTPServerConfig, se
 }
 
 // ServeHTTP serves a single request using the server's route and middleware chain.
-func (s *HTTPServerImpl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.server.Handler.ServeHTTP(w, r)
+// *http.Server does not implement http.Handler, so this must be forwarded explicitly.
+func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.Handler.ServeHTTP(w, r)
 }
 
 // Start starts the HTTP server. Returns an error if the server fails to start.
-func (s *HTTPServerImpl) Start() error {
-	err := s.server.ListenAndServe()
+func (s *httpServer) Start() error {
+	err := s.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
 		slog.Info("HTTP server closed", attr.Error(err))
 		return nil
@@ -81,8 +82,8 @@ func (s *HTTPServerImpl) Start() error {
 }
 
 // Shutdown shuts down the HTTP server gracefully with a timeout.
-func (s *HTTPServerImpl) Shutdown() error {
+func (s *httpServer) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
-	return s.server.Shutdown(ctx)
+	return s.Server.Shutdown(ctx)
 }
