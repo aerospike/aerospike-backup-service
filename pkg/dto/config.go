@@ -80,7 +80,7 @@ func NewConfigFromReader(r io.Reader, format decoder.SerializationFormat) (*Conf
 // Validate validates the configuration.
 //
 //nolint:gocognit
-func (c *Config) Validate(opts ...ValidationOption) error {
+func (c *Config) Validate(opts ValidationOptions) error {
 	for name, routine := range c.BackupRoutines {
 		if name == "" {
 			return errValidationEmptyField("routine name")
@@ -94,7 +94,7 @@ func (c *Config) Validate(opts ...ValidationOption) error {
 		if name == "" {
 			return errValidationEmptyField("storage name")
 		}
-		if err := storage.Validate(); err != nil {
+		if err := storage.Validate(opts); err != nil {
 			return fmt.Errorf("storage '%s' validation error: %w", name, err)
 		}
 	}
@@ -103,7 +103,7 @@ func (c *Config) Validate(opts ...ValidationOption) error {
 		if name == "" {
 			return errValidationEmptyField("cluster name")
 		}
-		if err := cluster.Validate(opts...); err != nil {
+		if err := cluster.Validate(opts); err != nil {
 			return fmt.Errorf("cluster '%s' validation error: %w", name, err)
 		}
 	}
@@ -112,7 +112,12 @@ func (c *Config) Validate(opts ...ValidationOption) error {
 		if name == "" {
 			return errValidationEmptyField("policy name")
 		}
-		if err := policy.Validate(); err != nil {
+		policyOpts := opts
+		if c.backupPolicyHasSecretAgent(name) {
+			policyOpts = opts.With(ValidationWithSecretAgent)
+		}
+
+		if err := policy.Validate(policyOpts); err != nil {
 			return fmt.Errorf("policy '%s' validation error: %w", name, err)
 		}
 	}
@@ -121,7 +126,7 @@ func (c *Config) Validate(opts ...ValidationOption) error {
 		if name == "" {
 			return errValidationEmptyField("secret agent name")
 		}
-		if err := agent.validate(opts...); err != nil {
+		if err := agent.validate(opts); err != nil {
 			return fmt.Errorf("secret agent '%s' validation error: %w", name, err)
 		}
 	}
@@ -133,11 +138,7 @@ func (c *Config) Validate(opts ...ValidationOption) error {
 	return nil
 }
 
-func (c *Config) ToModel(opts ...ValidationOption) (*model.Config, error) {
-	if err := c.Validate(opts...); err != nil {
-		return nil, fmt.Errorf("configuration validation failed: %w", err)
-	}
-
+func (c *Config) ToModel() (*model.Config, error) {
 	config := c.ServiceConfig
 	modelConfig := model.NewConfig()
 	modelConfig.ServiceConfig = *config.ToModel()
@@ -191,4 +192,14 @@ func (c *Config) ToModel(opts ...ValidationOption) (*model.Config, error) {
 	}
 
 	return modelConfig, nil
+}
+
+func (c *Config) backupPolicyHasSecretAgent(policyName string) bool {
+	for _, routine := range c.BackupRoutines {
+		if routine != nil && routine.BackupPolicy == policyName && routine.SecretAgent != "" {
+			return true
+		}
+	}
+
+	return false
 }

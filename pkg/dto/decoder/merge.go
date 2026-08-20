@@ -4,10 +4,10 @@ import (
 	"reflect"
 )
 
-// MergeSecrets mutates incoming in place, replacing RedactedSecret sentinel values
+// MergeSecrets mutates incoming in place, replacing redactedSecret sentinel values
 // with the corresponding Secret values from existing.
 //
-// It walks incoming recursively and, for every Secret field equal to RedactedSecret,
+// It walks incoming recursively and, for every Secret field equal to redactedSecret,
 // copies the value from the matching field in existing.
 //
 // Example:

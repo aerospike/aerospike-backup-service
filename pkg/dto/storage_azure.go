@@ -48,7 +48,7 @@ type AzureStorage struct {
 const azureMinUploadBlockSize = 1024 * 1024 // 1 MiB
 
 // Validate checks if the AzureStorage is valid.
-func (a *AzureStorage) Validate(opts ...ValidationOption) error {
+func (a *AzureStorage) Validate(opts ValidationOptions) error {
 	if a.Endpoint == "" {
 		return errors.New("azure storage endpoint is not specified")
 	}
@@ -75,8 +75,22 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 		return errValidationInvalidValue("min-part-size", *a.MinPartSize, "at least 1MiB")
 	}
 
+	withAgent := a.hasSecretAgent()
+	if err := a.AccountKey.Validate(withAgent); err != nil {
+		return errValidationSecret("account-key", err)
+	}
+	if err := a.TenantID.Validate(withAgent); err != nil {
+		return errValidationSecret("tenant-id", err)
+	}
+	if err := a.ClientID.Validate(withAgent); err != nil {
+		return errValidationSecret("client-id", err)
+	}
+	if err := a.ClientSecret.Validate(withAgent); err != nil {
+		return errValidationSecret("client-secret", err)
+	}
+
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-	return a.SecretAgentConfig.validate(opts...)
+	return a.SecretAgentConfig.validate(opts)
 }
 
 func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
@@ -84,19 +98,6 @@ func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
 	agent, err := a.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, err
-	}
-
-	if err := validateSecretRef(a.AccountKey, agent); err != nil {
-		return nil, fmt.Errorf("account-key: %w", err)
-	}
-	if err := validateSecretRef(a.TenantID, agent); err != nil {
-		return nil, fmt.Errorf("tenant-id: %w", err)
-	}
-	if err := validateSecretRef(a.ClientID, agent); err != nil {
-		return nil, fmt.Errorf("client-id: %w", err)
-	}
-	if err := validateSecretRef(a.ClientSecret, agent); err != nil {
-		return nil, fmt.Errorf("client-secret: %w", err)
 	}
 
 	return &model.AzureStorage{
