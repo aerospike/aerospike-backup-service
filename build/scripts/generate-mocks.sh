@@ -206,6 +206,18 @@ generate_external_mocks \
     "backupgo_mockgen.go" \
     "InfoGetter,AerospikeClient"
 
+generate_external_mocks \
+    "github.com/aerospike/backup-go" \
+    "pkg/service/backupexecutor" \
+    "backupgo_mockgen.go" \
+    "Writer"
+
+generate_external_mocks \
+    "github.com/aerospike/backup-go" \
+    "pkg/service/restoreexecutor" \
+    "backupgo_mockgen.go" \
+    "StreamingReader"
+
 generate_mocks \
     "internal/server/handlers" \
     "runningBackupsRegistry,configRetriever,manager,configApplier"

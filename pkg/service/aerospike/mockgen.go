@@ -185,10 +185,10 @@ func (mr *MockClientMockRecorder) AerospikeClient() *gomock.Call {
 }
 
 // Backup mocks base method.
-func (m *MockClient) Backup(ctx context.Context, config *backup.ConfigBackup, writer backup.Writer, reader backup.StreamingReader) (*backup.BackupHandler, error) {
+func (m *MockClient) Backup(ctx context.Context, config *backup.ConfigBackup, writer backup.Writer, reader backup.StreamingReader) (backup.BackupHandler, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Backup", ctx, config, writer, reader)
-	ret0, _ := ret[0].(*backup.BackupHandler)
+	ret0, _ := ret[0].(backup.BackupHandler)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -214,10 +214,10 @@ func (mr *MockClientMockRecorder) InfoClient() *gomock.Call {
 }
 
 // Restore mocks base method.
-func (m *MockClient) Restore(ctx context.Context, config *backup.ConfigRestore, streamingReader backup.StreamingReader) (backup.Restorer, error) {
+func (m *MockClient) Restore(ctx context.Context, config *backup.ConfigRestore, streamingReader backup.StreamingReader) (backup.RestoreHandler, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Restore", ctx, config, streamingReader)
-	ret0, _ := ret[0].(backup.Restorer)
+	ret0, _ := ret[0].(backup.RestoreHandler)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
