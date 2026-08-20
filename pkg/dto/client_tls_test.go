@@ -82,7 +82,7 @@ func TestCredentials_ValidatePasswordPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.creds.Validate()
+			err := tt.creds.Validate(ValidationDefault)
 			if tt.wantErr {
 				require.Error(t, err)
 				require.ErrorIs(t, err, errInvalidPath)

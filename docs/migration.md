@@ -17,6 +17,13 @@ This release redacts secret fields in configuration API responses and changes ho
   overwrite the real secret. To change a secret, send the new literal value or a new Secret Agent reference explicitly.
   Sending `"[secret]"` for a newly added entity (with no stored secret yet) is invalid.
 
+#### Improvements
+
+- **HTTP server timeouts** — The HTTP server now bounds `ReadTimeout`, `WriteTimeout`, and `IdleTimeout` in addition
+  to the existing `timeout` (`ReadHeaderTimeout`). Defaults are 30s / 60s / 120s respectively. Configure them under
+  [`service.http`](readme/dto/dto.httpserverconfig.md) as `read-timeout`, `write-timeout`, and `idle-timeout`
+  (milliseconds). Existing configs that omit these fields pick up the new defaults automatically.
+
 ## v3.5 -> v3.6
 
 This release adds compact backups, more flexible restore-by-timestamp, performance optimizations in the record

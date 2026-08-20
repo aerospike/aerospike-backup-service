@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
@@ -237,7 +236,7 @@ func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
 	var configDTO dto.Config
 	require.NoError(t, json.NewDecoder(getW.Body).Decode(&configDTO))
 	require.NotNil(t, configDTO.AerospikeClusters["test-cluster"].Credentials)
-	assert.Equal(t, decoder.RedactedSecret, string(configDTO.AerospikeClusters["test-cluster"].Credentials.Password))
+	assert.Equal(t, "[secret]", string(configDTO.AerospikeClusters["test-cluster"].Credentials.Password))
 
 	configDTO.AerospikeClusters["test-cluster"].ClusterLabel = "updated-label"
 	putBody, err := json.Marshal(configDTO)

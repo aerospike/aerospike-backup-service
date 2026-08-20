@@ -11,7 +11,7 @@ var (
 	timeType   = reflect.TypeFor[time.Time]()
 )
 
-// RedactSecrets returns a deep copy of v with all Secret-typed values replaced by RedactedSecret.
+// RedactSecrets returns a deep copy of v with all Secret-typed values replaced by redactedSecret.
 func RedactSecrets(v any) any {
 	if v == nil {
 		return nil

@@ -15,8 +15,8 @@ func TestMergeSecrets_ComplexFixture(t *testing.T) {
 	redacted.AerospikeClusters["cluster1"].Credentials.User = "updatedUser"
 	redacted.StorageProviders["s3-main"] = testStorage{
 		Name:            "updated-bucket",
-		AccessKeyID:     Secret(RedactedSecret),
-		SecretAccessKey: Secret(RedactedSecret),
+		AccessKeyID:     Secret(redactedSecret),
+		SecretAccessKey: Secret(redactedSecret),
 	}
 
 	MergeSecrets(&redacted, original)
@@ -63,7 +63,7 @@ func TestMergeSecrets_NewMapEntryWithSentinel(t *testing.T) {
 			"new-cluster": {
 				Credentials: &testCredentials{
 					User:     "newUser",
-					Password: RedactedSecret,
+					Password: redactedSecret,
 				},
 			},
 		},
@@ -71,7 +71,7 @@ func TestMergeSecrets_NewMapEntryWithSentinel(t *testing.T) {
 
 	MergeSecrets(&incoming, existing)
 
-	assert.Equal(t, Secret(RedactedSecret), incoming.AerospikeClusters["new-cluster"].Credentials.Password)
+	assert.Equal(t, Secret(redactedSecret), incoming.AerospikeClusters["new-cluster"].Credentials.Password)
 }
 
 func TestMergeSecrets_ExplicitSecretUpdate(t *testing.T) {
@@ -141,7 +141,7 @@ func TestMergeSecrets_NilInput(t *testing.T) {
 }
 
 func TestSecret_IsRedacted(t *testing.T) {
-	assert.True(t, Secret(RedactedSecret).IsRedacted())
+	assert.True(t, Secret(redactedSecret).IsRedacted())
 	assert.False(t, Secret("real-password").IsRedacted())
 	assert.False(t, Secret("").IsRedacted())
 	assert.False(t, Secret(validSecretRef).IsRedacted())

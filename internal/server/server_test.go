@@ -1,6 +1,7 @@
 package server
 
 import (
+	"io"
 	"net"
 	"net/http"
 	"testing"
@@ -12,22 +13,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestHTTPServer(t *testing.T) *HTTPServer {
+func newTestHTTPServer(t *testing.T, httpCfg *model.HTTPServerConfig) *httpServer {
 	t.Helper()
-
-	cfg := model.NewConfig()
-	cfg.ServiceConfig.HTTPServer = &model.HTTPServerConfig{
-		Address: "127.0.0.1",
-		Port:    ptr.Of(model.Port(0)), // let the OS choose a free port
-	}
 
 	svc := handlers.NewService(
 		t.Context(),
-		cfg,
+		model.NewConfig(),
 		nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
-	return NewHTTPServer(t.Context(), svc)
+	return NewHTTPServer(t.Context(), httpCfg, svc).(*httpServer)
 }
 
 func waitForHTTPServerReady(t *testing.T, healthURL string) {
@@ -55,15 +50,19 @@ func waitForHTTPServerReady(t *testing.T, healthURL string) {
 }
 
 func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
-	srv := newTestHTTPServer(t)
-	require.NotNil(t, srv.server)
+	srv := newTestHTTPServer(t, &model.HTTPServerConfig{})
+	require.NotNil(t, srv.Server)
+	require.Equal(t, 5*time.Second, srv.ReadHeaderTimeout)
+	require.Equal(t, 30*time.Second, srv.ReadTimeout)
+	require.Equal(t, 60*time.Second, srv.WriteTimeout)
+	require.Equal(t, 120*time.Second, srv.IdleTimeout)
 
 	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- srv.server.Serve(ln)
+		errCh <- srv.Serve(ln)
 	}()
 
 	waitForHTTPServerReady(t, "http://"+ln.Addr().String()+"/health")
@@ -76,4 +75,45 @@ func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for server to stop")
 	}
+}
+
+func TestNewHTTPServer_ReadTimeoutClosesSilentClient(t *testing.T) {
+	readTimeout := 100 * time.Millisecond
+	srv := newTestHTTPServer(t, &model.HTTPServerConfig{
+		// ReadHeaderTimeout of 0 falls back to ReadTimeout in net/http.
+		Timeout:     ptr.Of(time.Duration(0)),
+		ReadTimeout: ptr.Of(readTimeout),
+	})
+	require.Equal(t, time.Duration(0), srv.ReadHeaderTimeout)
+	require.Equal(t, readTimeout, srv.ReadTimeout)
+
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.Serve(ln)
+	}()
+	t.Cleanup(func() {
+		_ = srv.Shutdown()
+		<-errCh
+	})
+
+	waitForHTTPServerReady(t, "http://"+ln.Addr().String()+"/health")
+
+	conn, err := (&net.Dialer{}).DialContext(t.Context(), "tcp", ln.Addr().String())
+	require.NoError(t, err)
+	defer conn.Close()
+
+	// Silent client: open a connection but never send a request.
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	buf := make([]byte, 1)
+	start := time.Now()
+	_, err = conn.Read(buf)
+	elapsed := time.Since(start)
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, io.EOF)
+	require.Less(t, elapsed, time.Second, "server should close the connection near ReadTimeout")
+	require.GreaterOrEqual(t, elapsed, readTimeout/2)
 }

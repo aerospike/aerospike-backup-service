@@ -2423,6 +2423,11 @@ const docTemplate = `{
                     "type": "string",
                     "default": "/"
                 },
+                "idle-timeout": {
+                    "description": "IdleTimeout is the maximum amount of time in milliseconds to wait for the next request\nwhen keep-alives are enabled (http.Server.IdleTimeout).",
+                    "type": "integer",
+                    "default": 120000
+                },
                 "port": {
                     "description": "The port to listen on.",
                     "type": "integer",
@@ -2437,10 +2442,20 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "read-timeout": {
+                    "description": "ReadTimeout is the maximum duration in milliseconds for reading the entire request,\nincluding the body (http.Server.ReadTimeout).",
+                    "type": "integer",
+                    "default": 30000
+                },
                 "timeout": {
-                    "description": "Timeout for http server operations in milliseconds.",
+                    "description": "Timeout for reading HTTP request headers in milliseconds (http.Server.ReadHeaderTimeout).",
                     "type": "integer",
                     "default": 5000
+                },
+                "write-timeout": {
+                    "description": "WriteTimeout is the maximum duration in milliseconds before timing out writes of the response\n(http.Server.WriteTimeout).",
+                    "type": "integer",
+                    "default": 60000
                 }
             }
         },

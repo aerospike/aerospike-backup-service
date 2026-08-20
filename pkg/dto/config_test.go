@@ -54,7 +54,7 @@ func NewLocalAerospikeCluster() *AerospikeCluster {
 func TestValidConfigValidation(t *testing.T) {
 	config := validConfig()
 
-	require.NoError(t, config.Validate())
+	require.NoError(t, config.Validate(ValidationDefault))
 }
 
 func TestInvalidClusterReference(t *testing.T) {
@@ -105,10 +105,11 @@ func TestInvalidTlsFile(t *testing.T) {
 		},
 	}
 
-	_, err := config.ToModel()
+	err := config.Validate(ValidationDefault)
 	require.Error(t, err)
 
-	_, err = config.ToModel(ValidationSkipTLSFiles)
+	require.NoError(t, config.Validate(ValidationSkipTLSFiles))
+	_, err = config.ToModel()
 	require.NoError(t, err)
 }
 
