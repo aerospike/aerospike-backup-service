@@ -19,12 +19,13 @@ import (
 const (
 	aerospikeImage = "aerospike/aerospike-server:8.1"
 
-	clusterName = "testCluster"
-	storageName = "local"
-	policyName  = "defaultPolicy"
-	routineName = "integrationRoutine"
-	namespace   = "test"
-	setName     = "filteredSet"
+	clusterName     = "testCluster"
+	storageName     = "local"
+	policyName      = "defaultPolicy"
+	routineName     = "integrationRoutine"
+	secretAgentName = "secretAgent"
+	namespace       = "test"
+	setName         = "filteredSet"
 )
 
 // Suite runs every test in this package against a single Aerospike container.
