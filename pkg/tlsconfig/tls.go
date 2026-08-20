@@ -1,4 +1,8 @@
-package aerospike
+// Package tlsconfig builds crypto/tls configuration from the Aerospike TLS model.
+//
+// It is deliberately a leaf package so configuration types (pkg/dto, pkg/validation)
+// can validate TLS settings without depending on pkg/service.
+package tlsconfig
 
 import (
 	"bytes"
@@ -32,8 +36,8 @@ var cipherSuiteMap = func() map[string]uint16 {
 	return m
 }()
 
-// NewTLSConfig creates a tls.Config from the provided model TLS struct.
-func NewTLSConfig(t *model.TLS) (*tls.Config, error) {
+// New creates a tls.Config from the provided model TLS struct.
+func New(t *model.TLS) (*tls.Config, error) {
 	if t == nil {
 		return nil, nil // If no TLS config is provided, return nil.
 	}

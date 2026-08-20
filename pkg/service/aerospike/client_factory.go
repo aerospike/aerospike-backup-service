@@ -8,6 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
@@ -146,7 +147,7 @@ func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
 	}
 
 	var err error
-	policy.TlsConfig, err = NewTLSConfig(tlsToApply)
+	policy.TlsConfig, err = tlsconfig.New(tlsToApply)
 	if err != nil {
 		slog.Error("Failed to initialize TLS config",
 			slog.String("cluster", c.ClusterLabel),

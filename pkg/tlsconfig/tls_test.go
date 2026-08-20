@@ -1,4 +1,4 @@
-package aerospike
+package tlsconfig
 
 import (
 	"crypto/rand"
@@ -96,24 +96,24 @@ func setupCertificates(t *testing.T) {
 	require.NoError(t, os.WriteFile(encKeyFile, pem.EncodeToMemory(encryptedBlock), 0600))
 }
 
-func TestNewTLSConfig(t *testing.T) {
+func TestNew(t *testing.T) {
 	setupCertificates(t)
 
 	t.Run("Nil TLS Input", func(t *testing.T) {
-		cfg, err := NewTLSConfig(nil)
+		cfg, err := New(nil)
 		require.NoError(t, err)
 		assert.Nil(t, cfg)
 	})
 
 	t.Run("Empty TLS Input", func(t *testing.T) {
-		cfg, err := NewTLSConfig(&model.TLS{})
+		cfg, err := New(&model.TLS{})
 		require.NoError(t, err)
 		assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion, "Default MinVersion should be TLS 1.2")
 	})
 
 	t.Run("With Server Name", func(t *testing.T) {
 		serverName := "my.test.server"
-		cfg, err := NewTLSConfig(&model.TLS{ClientTLS: model.ClientTLS{Name: serverName}})
+		cfg, err := New(&model.TLS{ClientTLS: model.ClientTLS{Name: serverName}})
 		require.NoError(t, err)
 		assert.Equal(t, serverName, cfg.ServerName)
 	})
@@ -123,7 +123,7 @@ func TestNewTLSConfig(t *testing.T) {
 		require.NoError(t, os.Mkdir(caSubDir, 0755))
 		require.NoError(t, os.WriteFile(filepath.Join(caSubDir, "ca.crt"), caCertPEM, 0600))
 
-		cfg, err := NewTLSConfig(&model.TLS{
+		cfg, err := New(&model.TLS{
 			ClientTLS: model.ClientTLS{CAFile: caCertFile},
 			CAPath:    caSubDir,
 		})
@@ -159,12 +159,12 @@ func TestNewTLSConfig(t *testing.T) {
 		symlinkCert1Path := filepath.Join(caPathK8s, "cert1.pem")
 		require.NoError(t, os.Symlink(target1, symlinkCert1Path))
 
-		// 6. Test NewTLSConfig with this path
+		// 6. Test New with this path
 		// The loadCertPool function will scan `caPathK8s` and find:
 		// - `..2025_10_27_12_34_56_789` (dir, skipped)
 		// - `..data` (symlink to dir, skipped)
 		// - `cert1.pem` (symlink to file, loaded)
-		cfg, err := NewTLSConfig(&model.TLS{CAPath: caPathK8s})
+		cfg, err := New(&model.TLS{CAPath: caPathK8s})
 		require.NoError(t, err)
 		require.NotNil(t, cfg.RootCAs, "RootCAs should be populated")
 
@@ -178,7 +178,7 @@ func TestNewTLSConfig(t *testing.T) {
 	})
 
 	t.Run("With Client Certs", func(t *testing.T) {
-		cfg, err := NewTLSConfig(&model.TLS{
+		cfg, err := New(&model.TLS{
 			ClientTLS: model.ClientTLS{
 				Certfile: serverCertFile,
 				Keyfile:  serverKeyFile,
@@ -190,7 +190,7 @@ func TestNewTLSConfig(t *testing.T) {
 
 	t.Run("With Encrypted Client Key", func(t *testing.T) {
 		t.Run("Correct Password", func(t *testing.T) {
-			cfg, err := NewTLSConfig(&model.TLS{
+			cfg, err := New(&model.TLS{
 				ClientTLS: model.ClientTLS{
 					Certfile: serverCertFile,
 					Keyfile:  encKeyFile,
@@ -203,7 +203,7 @@ func TestNewTLSConfig(t *testing.T) {
 
 		t.Run("Wrong Password", func(t *testing.T) {
 			wrongPass := "wrong"
-			_, err := NewTLSConfig(&model.TLS{
+			_, err := New(&model.TLS{
 				ClientTLS: model.ClientTLS{
 					Certfile: serverCertFile,
 					Keyfile:  encKeyFile,
@@ -214,7 +214,7 @@ func TestNewTLSConfig(t *testing.T) {
 		})
 
 		t.Run("No Password", func(t *testing.T) {
-			_, err := NewTLSConfig(&model.TLS{
+			_, err := New(&model.TLS{
 				ClientTLS: model.ClientTLS{
 					Certfile: serverCertFile,
 					Keyfile:  encKeyFile,
