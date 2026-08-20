@@ -1,11 +1,14 @@
-package cluster
+package aerospike
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	_ "github.com/aerospike/aerospike-backup-service/v3/modules/schema" // it's required to load configuration schemas in init method
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/try"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
@@ -13,7 +16,48 @@ import (
 	"github.com/go-logr/logr"
 )
 
-func ReadConfiguration(client aerospike.Cluster, logger *slog.Logger) []asconfig.DotConf {
+// ClusterConfigSource collects aerospike.conf from live cluster nodes for backup.
+type ClusterConfigSource interface {
+	// NodeConfigs returns one serialized aerospike.conf per reachable node.
+	NodeConfigs(
+		ctx context.Context,
+		cluster *model.AerospikeCluster,
+		logger *slog.Logger,
+	) ([]asconfig.DotConf, error)
+}
+
+type clusterConfigSource struct {
+	clientManager ClientManager
+}
+
+var _ ClusterConfigSource = (*clusterConfigSource)(nil)
+
+// NewClusterConfigSource returns a ClusterConfigSource.
+func NewClusterConfigSource(clientManager ClientManager) ClusterConfigSource {
+	return &clusterConfigSource{clientManager: clientManager}
+}
+
+func (s *clusterConfigSource) NodeConfigs(
+	ctx context.Context,
+	clusterCfg *model.AerospikeCluster,
+	logger *slog.Logger,
+) ([]asconfig.DotConf, error) {
+	client, err := s.clientManager.GetClient(ctx, clusterCfg, nil, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get backup client: %w", err)
+	}
+
+	defer s.clientManager.Close(client)
+
+	infos := readConfiguration(client.AerospikeClient(), logger)
+	if len(infos) == 0 {
+		return nil, errors.New("failed to read Aerospike configuration")
+	}
+
+	return infos, nil
+}
+
+func readConfiguration(client Cluster, logger *slog.Logger) []asconfig.DotConf {
 	activeHosts := getActiveHosts(client)
 
 	var outputs = make([]asconfig.DotConf, 0, len(activeHosts))
@@ -53,7 +97,7 @@ func ReadConfiguration(client aerospike.Cluster, logger *slog.Logger) []asconfig
 	return outputs
 }
 
-func getActiveHosts(client aerospike.Cluster) []*as.Host {
+func getActiveHosts(client Cluster) []*as.Host {
 	var activeHosts []*as.Host
 	for _, node := range client.Cluster().GetNodes() {
 		if node.IsActive() {

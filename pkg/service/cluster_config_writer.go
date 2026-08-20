@@ -10,7 +10,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike/cluster"
 )
 
 type storageDataWriter interface {
@@ -18,7 +17,7 @@ type storageDataWriter interface {
 	WriteDataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
 }
 
-// ClusterConfigWriter handles writing cluster configuration to storage.
+// ClusterConfigWriter writes cluster configuration backups to storage.
 type ClusterConfigWriter interface {
 	// Write writes the cluster configuration for the given routine and timestamp.
 	Write(ctx context.Context, routine *model.BackupRoutine, timestamp time.Time) error
@@ -26,21 +25,21 @@ type ClusterConfigWriter interface {
 
 // DefaultClusterConfigWriter is the default implementation of ClusterConfigWriter.
 type DefaultClusterConfigWriter struct {
-	clientManager aerospike.ClientManager
-	pathService   PathService
-	operations    storageDataWriter
+	pathService  PathService
+	operations   storageDataWriter
+	configSource aerospike.ClusterConfigSource
 }
 
 // NewClusterConfigWriter returns a new DefaultClusterConfigWriter instance.
 func NewClusterConfigWriter(
-	clientManager aerospike.ClientManager,
 	pathService PathService,
 	operations storageDataWriter,
+	configSource aerospike.ClusterConfigSource,
 ) *DefaultClusterConfigWriter {
 	return &DefaultClusterConfigWriter{
-		clientManager: clientManager,
-		pathService:   pathService,
-		operations:    operations,
+		pathService:  pathService,
+		operations:   operations,
+		configSource: configSource,
 	}
 }
 
@@ -52,16 +51,9 @@ func (w *DefaultClusterConfigWriter) Write(
 	logger := slog.Default().With(attr.Routine(routine.Name))
 	logger.Info("writing cluster config", slog.Time("timestamp", timestamp))
 
-	client, err := w.clientManager.GetClient(ctx, routine.SourceCluster, nil, logger)
+	infos, err := w.configSource.NodeConfigs(ctx, routine.SourceCluster, logger)
 	if err != nil {
-		return fmt.Errorf("failed to get backup client: %w", err)
-	}
-
-	defer w.clientManager.Close(client)
-
-	infos := cluster.ReadConfiguration(client.AerospikeClient(), logger)
-	if len(infos) == 0 {
-		return errors.New("failed to read Aerospike configuration")
+		return err
 	}
 
 	var errs error

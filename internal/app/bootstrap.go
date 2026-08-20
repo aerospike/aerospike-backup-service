@@ -55,7 +55,11 @@ func InitComponents(
 	registry := service.NewRunningBackupsRegistry(history, config)
 	var routineStorage u.LockMap
 	retentionManager := service.NewBackupRetentionManager(backendService, &routineStorage)
-	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, operations)
+	clusterConfigWriter := service.NewClusterConfigWriter(
+		pathService,
+		operations,
+		aerospike.NewClusterConfigSource(clientManager),
+	)
 	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
 	backupExecutor := backupexecutor.NewBackupExecutor(clientManager, operations)
 	startController := service.NewStartController(registry, service.NewStartDecider())
