@@ -3,8 +3,4 @@
 /modules/
 /build/
 /pkg/model/
-/pkg/stdio/
-/pkg/service/aerospike/
-/pkg/service/configuration_manager.*\.go
-/pkg/service/estimates.go
 [^:]*mockgen\.go:

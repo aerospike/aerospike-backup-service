@@ -58,9 +58,6 @@ generated mocks, entrypoints, and packages that are thin wrappers or hard to uni
 | `/cmd/` | CLI entrypoint |
 | `/docs/`, `/modules/` | Non-Go assets |
 | `/pkg/model/` | Data structs with no logic |
-| `/pkg/stdio/` | I/O wrapper |
-| `/pkg/service/aerospike/` | Live Aerospike client |
-| `configuration_manager*.go`, `estimates.go` | Integration-heavy service code |
 | `*mockgen.go` | Generated mocks |
 
 `internal/` (HTTP handlers, server wiring) **is** measured. CI fails if filtered coverage drops below the threshold
