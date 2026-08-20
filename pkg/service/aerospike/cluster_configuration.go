@@ -27,14 +27,18 @@ type ClusterConfigSource interface {
 }
 
 type clusterConfigSource struct {
-	clientManager ClientManager
+	clientManager     ClientManager
+	readConfiguration func(client Cluster, logger *slog.Logger) []asconfig.DotConf
 }
 
 var _ ClusterConfigSource = (*clusterConfigSource)(nil)
 
 // NewClusterConfigSource returns a ClusterConfigSource.
 func NewClusterConfigSource(clientManager ClientManager) ClusterConfigSource {
-	return &clusterConfigSource{clientManager: clientManager}
+	return &clusterConfigSource{
+		clientManager:     clientManager,
+		readConfiguration: readConfiguration,
+	}
 }
 
 func (s *clusterConfigSource) NodeConfigs(
@@ -49,7 +53,7 @@ func (s *clusterConfigSource) NodeConfigs(
 
 	defer s.clientManager.Close(client)
 
-	infos := readConfiguration(client.AerospikeClient(), logger)
+	infos := s.readConfiguration(client.AerospikeClient(), logger)
 	if len(infos) == 0 {
 		return nil, errors.New("failed to read Aerospike configuration")
 	}
@@ -58,7 +62,10 @@ func (s *clusterConfigSource) NodeConfigs(
 }
 
 func readConfiguration(client Cluster, logger *slog.Logger) []asconfig.DotConf {
-	activeHosts := getActiveHosts(client)
+	activeHosts := getActiveHosts(clusterNodesOf(client))
+	if len(activeHosts) == 0 {
+		return nil
+	}
 
 	var outputs = make([]asconfig.DotConf, 0, len(activeHosts))
 
@@ -97,9 +104,25 @@ func readConfiguration(client Cluster, logger *slog.Logger) []asconfig.DotConf {
 	return outputs
 }
 
-func getActiveHosts(client Cluster) []*as.Host {
+// clusterNode is the subset of as.Node used when collecting aerospike.conf.
+type clusterNode interface {
+	IsActive() bool
+	GetHost() *as.Host
+}
+
+func clusterNodesOf(client Cluster) []clusterNode {
+	raw := client.Cluster().GetNodes()
+	nodes := make([]clusterNode, len(raw))
+	for i, node := range raw {
+		nodes[i] = node
+	}
+
+	return nodes
+}
+
+func getActiveHosts(nodes []clusterNode) []*as.Host {
 	var activeHosts []*as.Host
-	for _, node := range client.Cluster().GetNodes() {
+	for _, node := range nodes {
 		if node.IsActive() {
 			activeHosts = append(activeHosts, node.GetHost())
 		}
