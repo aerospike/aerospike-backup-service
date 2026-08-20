@@ -61,7 +61,7 @@ generated mocks, entrypoints, and packages that are thin wrappers or hard to uni
 | `/pkg/stdio/` | I/O wrapper |
 | `/pkg/service/aerospike/` | Live Aerospike client |
 | `configuration_manager*.go`, `estimates.go` | Integration-heavy service code |
-| `/*/mockgen.go` | Generated mocks |
+| `*mockgen.go` | Generated mocks |
 
 `internal/` (HTTP handlers, server wiring) **is** measured. CI fails if filtered coverage drops below the threshold
 configured in [`.github/workflows/build.yml`](../.github/workflows/build.yml) (currently 53%, matching the
