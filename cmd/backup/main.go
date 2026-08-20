@@ -14,7 +14,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/spf13/cobra"
 )
 
@@ -65,7 +64,7 @@ func startService(configFile string, remote bool) error {
 	ctx, stop := systemCtx()
 	defer stop()
 
-	scheduler, httpService, err := app.InitComponents(ctx, configFile, remote)
+	scheduler, httpServer, err := app.InitComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
 	}
@@ -73,7 +72,7 @@ func startService(configFile string, remote bool) error {
 	// start the scheduler only after all the initialization is done
 	scheduler.Start(ctx)
 
-	err = runHTTPServer(ctx, httpService)
+	err = runHTTPServer(ctx, httpServer)
 
 	// stop the scheduler
 	scheduler.Stop()
@@ -85,9 +84,7 @@ func systemCtx() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 }
 
-func runHTTPServer(ctx context.Context, service *handlers.Service) error {
-	httpServer := server.NewHTTPServer(ctx, service)
-
+func runHTTPServer(ctx context.Context, httpServer server.HTTPServer) error {
 	// Channel to capture server startup errors
 	errCh := make(chan error, 1)
 	go func() {
