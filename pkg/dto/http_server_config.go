@@ -21,8 +21,17 @@ type HTTPServerConfig struct {
 	Rate *RateLimiterConfig `yaml:"rate,omitempty" json:"rate,omitempty"`
 	// ContextPath customizes path for the API endpoints.
 	ContextPath string `yaml:"context-path,omitempty" json:"context-path,omitempty" default:"/"`
-	// Timeout for http server operations in milliseconds.
+	// Timeout for reading HTTP request headers in milliseconds (http.Server.ReadHeaderTimeout).
 	Timeout *int64 `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"5000"`
+	// ReadTimeout is the maximum duration in milliseconds for reading the entire request,
+	// including the body (http.Server.ReadTimeout).
+	ReadTimeout *int64 `yaml:"read-timeout,omitempty" json:"read-timeout,omitempty" default:"30000"`
+	// WriteTimeout is the maximum duration in milliseconds before timing out writes of the response
+	// (http.Server.WriteTimeout).
+	WriteTimeout *int64 `yaml:"write-timeout,omitempty" json:"write-timeout,omitempty" default:"60000"`
+	// IdleTimeout is the maximum amount of time in milliseconds to wait for the next request
+	// when keep-alives are enabled (http.Server.IdleTimeout).
+	IdleTimeout *int64 `yaml:"idle-timeout,omitempty" json:"idle-timeout,omitempty" default:"120000"`
 }
 
 // Validate validates the HTTP server configuration.
@@ -36,6 +45,15 @@ func (s *HTTPServerConfig) Validate() error {
 	}
 	if s.Timeout != nil && *s.Timeout < 0 {
 		return errValidationNegative("timeout", *s.Timeout)
+	}
+	if s.ReadTimeout != nil && *s.ReadTimeout < 0 {
+		return errValidationNegative("read-timeout", *s.ReadTimeout)
+	}
+	if s.WriteTimeout != nil && *s.WriteTimeout < 0 {
+		return errValidationNegative("write-timeout", *s.WriteTimeout)
+	}
+	if s.IdleTimeout != nil && *s.IdleTimeout < 0 {
+		return errValidationNegative("idle-timeout", *s.IdleTimeout)
 	}
 
 	if err := s.Rate.Validate(); err != nil {
@@ -51,11 +69,14 @@ func (s *HTTPServerConfig) ToModel() *model.HTTPServerConfig {
 	}
 
 	return &model.HTTPServerConfig{
-		Address:     s.Address,
-		Port:        s.Port.ToModel(),
-		Rate:        s.Rate.ToModel(),
-		ContextPath: s.ContextPath,
-		Timeout:     millisToDuration(s.Timeout),
+		Address:      s.Address,
+		Port:         s.Port.ToModel(),
+		Rate:         s.Rate.ToModel(),
+		ContextPath:  s.ContextPath,
+		Timeout:      millisToDuration(s.Timeout),
+		ReadTimeout:  millisToDuration(s.ReadTimeout),
+		WriteTimeout: millisToDuration(s.WriteTimeout),
+		IdleTimeout:  millisToDuration(s.IdleTimeout),
 	}
 }
 
@@ -71,6 +92,9 @@ func (s *HTTPServerConfig) fromModel(m *model.HTTPServerConfig) {
 	}
 	s.ContextPath = m.ContextPath
 	s.Timeout = durationToMillis(m.Timeout)
+	s.ReadTimeout = durationToMillis(m.ReadTimeout)
+	s.WriteTimeout = durationToMillis(m.WriteTimeout)
+	s.IdleTimeout = durationToMillis(m.IdleTimeout)
 }
 
 // Compare HTTPServerConfig object with another and return detailed errors.
@@ -90,6 +114,9 @@ func (s *HTTPServerConfig) Compare(other *HTTPServerConfig) error {
 		comparePointers("Port", s.Port, other.Port),
 		compareValues("ContextPath", s.ContextPath, other.ContextPath),
 		comparePointers("Timeout", s.Timeout, other.Timeout),
+		comparePointers("ReadTimeout", s.ReadTimeout, other.ReadTimeout),
+		comparePointers("WriteTimeout", s.WriteTimeout, other.WriteTimeout),
+		comparePointers("IdleTimeout", s.IdleTimeout, other.IdleTimeout),
 	)
 
 	if e := s.Rate.Compare(other.Rate); e != nil {

@@ -8,6 +8,7 @@ import (
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -24,14 +25,14 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
-// InitComponents builds the full object graph and returns scheduler and HTTP service.
+// InitComponents builds the full object graph and returns scheduler and HTTP server.
 //
 //nolint:funlen // deliberately keep all initialization in a single function.
 func InitComponents(
 	ctx context.Context,
 	configFile string,
 	remote bool,
-) (quartz.Scheduler, *handlers.Service, error) {
+) (quartz.Scheduler, server.HTTPServer, error) {
 	resolver := secrets.NewResolver()
 	operations := newStorageOperations(resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
@@ -107,8 +108,9 @@ func InitComponents(
 		configurationManager,
 		nsValidator,
 	)
+	httpServer := server.NewHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService)
 
-	return scheduler, httpService, nil
+	return scheduler, httpServer, nil
 }
 
 func newStorageOperations(resolver secrets.Resolver) *storage.Operations {
