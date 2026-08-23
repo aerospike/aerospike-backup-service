@@ -96,24 +96,24 @@ func setupCertificates(t *testing.T) {
 	require.NoError(t, os.WriteFile(encKeyFile, pem.EncodeToMemory(encryptedBlock), 0600))
 }
 
-func TestNewTlsConfig(t *testing.T) {
+func TestNewTLSConfig(t *testing.T) {
 	setupCertificates(t)
 
 	t.Run("Nil TLS Input", func(t *testing.T) {
-		cfg, err := NewTlsConfig(nil)
+		cfg, err := NewTLSConfig(nil)
 		require.NoError(t, err)
 		assert.Nil(t, cfg)
 	})
 
 	t.Run("Empty TLS Input", func(t *testing.T) {
-		cfg, err := NewTlsConfig(&model.TLS{})
+		cfg, err := NewTLSConfig(&model.TLS{})
 		require.NoError(t, err)
 		assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion, "Default MinVersion should be TLS 1.2")
 	})
 
 	t.Run("With Server Name", func(t *testing.T) {
 		serverName := "my.test.server"
-		cfg, err := NewTlsConfig(&model.TLS{ClientTLS: model.ClientTLS{Name: serverName}})
+		cfg, err := NewTLSConfig(&model.TLS{ClientTLS: model.ClientTLS{Name: serverName}})
 		require.NoError(t, err)
 		assert.Equal(t, serverName, cfg.ServerName)
 	})
@@ -123,7 +123,7 @@ func TestNewTlsConfig(t *testing.T) {
 		require.NoError(t, os.Mkdir(caSubDir, 0755))
 		require.NoError(t, os.WriteFile(filepath.Join(caSubDir, "ca.crt"), caCertPEM, 0600))
 
-		cfg, err := NewTlsConfig(&model.TLS{
+		cfg, err := NewTLSConfig(&model.TLS{
 			ClientTLS: model.ClientTLS{CAFile: caCertFile},
 			CAPath:    caSubDir,
 		})
@@ -164,7 +164,7 @@ func TestNewTlsConfig(t *testing.T) {
 		// - `..2025_10_27_12_34_56_789` (dir, skipped)
 		// - `..data` (symlink to dir, skipped)
 		// - `cert1.pem` (symlink to file, loaded)
-		cfg, err := NewTlsConfig(&model.TLS{CAPath: caPathK8s})
+		cfg, err := NewTLSConfig(&model.TLS{CAPath: caPathK8s})
 		require.NoError(t, err)
 		require.NotNil(t, cfg.RootCAs, "RootCAs should be populated")
 
@@ -178,7 +178,7 @@ func TestNewTlsConfig(t *testing.T) {
 	})
 
 	t.Run("With Client Certs", func(t *testing.T) {
-		cfg, err := NewTlsConfig(&model.TLS{
+		cfg, err := NewTLSConfig(&model.TLS{
 			ClientTLS: model.ClientTLS{
 				Certfile: serverCertFile,
 				Keyfile:  serverKeyFile,
@@ -190,7 +190,7 @@ func TestNewTlsConfig(t *testing.T) {
 
 	t.Run("With Encrypted Client Key", func(t *testing.T) {
 		t.Run("Correct Password", func(t *testing.T) {
-			cfg, err := NewTlsConfig(&model.TLS{
+			cfg, err := NewTLSConfig(&model.TLS{
 				ClientTLS: model.ClientTLS{
 					Certfile: serverCertFile,
 					Keyfile:  encKeyFile,
@@ -203,7 +203,7 @@ func TestNewTlsConfig(t *testing.T) {
 
 		t.Run("Wrong Password", func(t *testing.T) {
 			wrongPass := "wrong"
-			_, err := NewTlsConfig(&model.TLS{
+			_, err := NewTLSConfig(&model.TLS{
 				ClientTLS: model.ClientTLS{
 					Certfile: serverCertFile,
 					Keyfile:  encKeyFile,
@@ -214,7 +214,7 @@ func TestNewTlsConfig(t *testing.T) {
 		})
 
 		t.Run("No Password", func(t *testing.T) {
-			_, err := NewTlsConfig(&model.TLS{
+			_, err := NewTLSConfig(&model.TLS{
 				ClientTLS: model.ClientTLS{
 					Certfile: serverCertFile,
 					Keyfile:  encKeyFile,

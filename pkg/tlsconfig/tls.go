@@ -36,8 +36,8 @@ var cipherSuiteMap = func() map[string]uint16 {
 	return m
 }()
 
-// NewTlsConfig creates a tls.Config from the provided model TLS struct.
-func NewTlsConfig(t *model.TLS) (*tls.Config, error) {
+// NewTLSConfig creates a tls.Config from the provided model TLS struct.
+func NewTLSConfig(t *model.TLS) (*tls.Config, error) {
 	if t == nil {
 		return nil, nil // If no TLS config is provided, return nil.
 	}

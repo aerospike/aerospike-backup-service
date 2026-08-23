@@ -87,7 +87,7 @@ func (t *TLS) validateTLSConfig(opts ValidationOptions) error {
 		return nil
 	}
 
-	if _, err := tlsconfig.NewTlsConfig(t.toModel()); err != nil {
+	if _, err := tlsconfig.NewTLSConfig(t.toModel()); err != nil {
 		return fmt.Errorf("tls %w: %w", errValidation, err)
 	}
 
