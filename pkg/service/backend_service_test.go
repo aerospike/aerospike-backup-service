@@ -2,13 +2,16 @@ package service
 
 import (
 	"context"
+	"path"
 	"testing"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 const (
@@ -314,60 +317,80 @@ func TestIncrementalBackup(t *testing.T) {
 }
 
 func TestLastBackupsReadsOnlyLatestTimestampMetadataFiles(t *testing.T) {
+	ctrl := gomock.NewController(t)
 	pathService := NewPathService(nil)
-	operations := &countingOperations{
-		Operations: storage.NewOperations(storage.NewLocalStorageAccessor()),
-	}
-	service := NewBackupBackendService(pathService, operations)
 	routine := &model.BackupRoutine{
-		Name: "test-routine",
-		Storage: &model.LocalStorage{
-			Path: t.TempDir(),
-		},
+		Name:    routineName,
+		Storage: &model.LocalStorage{Path: "/backups"},
 	}
 
 	fullTimes := []time.Time{
 		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 		time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
 	}
-	for _, tm := range fullTimes {
-		path := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, tm)
-		err := service.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
-			Created:   tm,
-			Finished:  tm,
-			Namespace: testNamespace,
-		})
-		require.NoError(t, err)
-	}
-
 	latestFullTime := fullTimes[1]
-	latestFullOtherNamespacePath := pathService.GetBackupPath(
-		routineName,
-		model.BackupTypeFull,
-		"other-ns",
-		latestFullTime,
-	)
-	err := service.WriteBackupMetadata(t.Context(), routine, latestFullOtherNamespacePath, model.BackupMetadata{
-		Created:   latestFullTime,
-		Finished:  latestFullTime,
-		Namespace: "other-ns",
-	})
-	require.NoError(t, err)
-
 	incrementalTimes := []time.Time{
 		time.Date(2021, 1, 2, 1, 0, 0, 0, time.UTC),
 		time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
 	}
-	for _, tm := range incrementalTimes {
-		path := pathService.GetBackupPath(routineName, model.BackupTypeIncremental, testNamespace, tm)
-		err = service.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
-			Created:   tm,
-			Finished:  tm,
-			From:      latestFullTime,
-			Namespace: testNamespace,
-		})
-		require.NoError(t, err)
+
+	fullFiles := []string{
+		metadataPath(pathService, model.BackupTypeFull, testNamespace, fullTimes[0]),
+		metadataPath(pathService, model.BackupTypeFull, testNamespace, fullTimes[1]),
+		metadataPath(pathService, model.BackupTypeFull, "other-ns", latestFullTime),
 	}
+	incFiles := []string{
+		metadataPath(pathService, model.BackupTypeIncremental, testNamespace, incrementalTimes[0]),
+		metadataPath(pathService, model.BackupTypeIncremental, testNamespace, incrementalTimes[1]),
+	}
+	contents := map[string][]byte{
+		fullFiles[0]: metadataYAML(t, model.BackupMetadata{
+			Created: fullTimes[0], Finished: fullTimes[0], Namespace: testNamespace,
+		}),
+		fullFiles[1]: metadataYAML(t, model.BackupMetadata{
+			Created: latestFullTime, Finished: latestFullTime, Namespace: testNamespace,
+		}),
+		fullFiles[2]: metadataYAML(t, model.BackupMetadata{
+			Created: latestFullTime, Finished: latestFullTime, Namespace: "other-ns",
+		}),
+		incFiles[0]: metadataYAML(t, model.BackupMetadata{
+			Created: incrementalTimes[0], Finished: incrementalTimes[0],
+			From: latestFullTime, Namespace: testNamespace,
+		}),
+		incFiles[1]: metadataYAML(t, model.BackupMetadata{
+			Created: incrementalTimes[1], Finished: incrementalTimes[1],
+			From: latestFullTime, Namespace: testNamespace,
+		}),
+	}
+	readFile := func(_ context.Context, _ model.Storage, filePath string) ([]byte, error) {
+		data, ok := contents[filePath]
+		require.True(t, ok, filePath)
+		return data, nil
+	}
+
+	operations := storage.NewMockOperations(ctrl)
+	operations.EXPECT().
+		ReadFileNames(
+			gomock.Any(),
+			routine.Storage,
+			backupRootPath(routineName, model.BackupTypeFull),
+			metadataFile,
+			nil,
+		).
+		Return(fullFiles, nil)
+	operations.EXPECT().
+		ReadFileNames(
+			gomock.Any(),
+			routine.Storage,
+			backupRootPath(routineName, model.BackupTypeIncremental),
+			metadataFile,
+			gomock.Any(),
+		).
+		Return(incFiles, nil)
+	operations.EXPECT().ReadFile(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(readFile).Times(2)
+	operations.EXPECT().ReadFile(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(readFile).Times(1)
+
+	service := NewBackupBackendService(pathService, operations)
 
 	backups, err := service.GetBackups(t.Context(), NewFullBackupFilter(routine).Last())
 	require.NoError(t, err)
@@ -375,14 +398,23 @@ func TestLastBackupsReadsOnlyLatestTimestampMetadataFiles(t *testing.T) {
 	assert.Equal(t, latestFullTime, backups[0].Created)
 	assert.Equal(t, latestFullTime, backups[1].Created)
 	assert.ElementsMatch(t, []string{testNamespace, "other-ns"}, []string{backups[0].Namespace, backups[1].Namespace})
-	assert.Equal(t, 2, operations.readFileCount)
 
 	backups, err = service.GetBackups(t.Context(),
 		NewIncrementalBackupFilter(routine).WithFromTime(latestFullTime).Last())
 	require.NoError(t, err)
 	require.Len(t, backups, 1)
 	assert.Equal(t, incrementalTimes[1], backups[0].Created)
-	assert.Equal(t, 3, operations.readFileCount)
+}
+
+func metadataPath(pathService PathService, backupType model.BackupType, namespace string, timestamp time.Time) string {
+	return path.Join(pathService.GetBackupPath(routineName, backupType, namespace, timestamp), metadataFile)
+}
+
+func metadataYAML(t *testing.T, md model.BackupMetadata) []byte {
+	t.Helper()
+	data, err := decoder.Marshal(md, decoder.YAML, false)
+	require.NoError(t, err)
+	return data
 }
 
 func TestReadPath(t *testing.T) {
@@ -455,19 +487,4 @@ func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, Pa
 	pathService := NewPathService(nil)
 	return NewBackupBackendService(pathService,
 		storage.NewOperations(storage.NewLocalStorageAccessor())), pathService, routine
-}
-
-// countingOperations counts ReadFile calls to assert that only the required metadata files are read.
-type countingOperations struct {
-	storage.Operations
-	readFileCount int
-}
-
-func (o *countingOperations) ReadFile(
-	ctx context.Context,
-	storage model.Storage,
-	filePath string,
-) ([]byte, error) {
-	o.readFileCount++
-	return o.Operations.ReadFile(ctx, storage, filePath)
 }
