@@ -242,7 +242,7 @@ func TestService_CancelCurrentBackup_Success(t *testing.T) {
 	cfg := model.NewConfig()
 	_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 
-	mockRegistry := NewmockRunningBackupsRegistry(ctrl)
+	mockRegistry := service.NewMockBackupStateRegistry(ctrl)
 	mockRegistry.EXPECT().Cancel("routine1")
 
 	svc := &Service{config: cfg, registry: mockRegistry}
@@ -279,7 +279,7 @@ func TestService_GetCurrentBackupInfo(t *testing.T) {
 			routineName: "routine1",
 			setupSvc: func(svc *Service, ctrl *gomock.Controller) {
 				_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
-				mockRegistry := NewmockRunningBackupsRegistry(ctrl)
+				mockRegistry := service.NewMockBackupStateRegistry(ctrl)
 				mockRegistry.EXPECT().GetRoutineState(gomock.Any()).Return(model.RoutineState{
 					LastRunTime: model.NewNoBackupTime(),
 					NextRunTime: model.NewNoBackupTime(),

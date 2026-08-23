@@ -28,14 +28,14 @@ type BackupCompletionHandler interface {
 }
 
 type backupCompletionHandler struct {
-	registry            backupRunCoordinator
+	registry            BackupStateRegistry
 	retentionManager    BackupRetentionManager
 	clusterConfigWriter ClusterConfigWriter
 }
 
 // NewBackupCompletionHandler returns a BackupCompletionHandler.
 func NewBackupCompletionHandler(
-	registry backupRunCoordinator,
+	registry BackupStateRegistry,
 	retentionManager BackupRetentionManager,
 	clusterConfigWriter ClusterConfigWriter,
 ) BackupCompletionHandler {
@@ -55,7 +55,7 @@ func (h *backupCompletionHandler) OnSuccess(
 	timestamp time.Time,
 	logger *slog.Logger,
 ) {
-	go h.registry.recordSuccessfulBackup(routine, backupType)
+	go h.registry.BackupSucceeded(routine, backupType)
 
 	if backupType != model.BackupTypeFull {
 		return
@@ -89,5 +89,5 @@ func (h *backupCompletionHandler) OnFailure(
 	routine *model.BackupRoutine,
 	backupType model.BackupType,
 ) {
-	h.registry.clearFailedBackup(routine.Name, backupType)
+	h.registry.BackupFailed(routine.Name, backupType)
 }

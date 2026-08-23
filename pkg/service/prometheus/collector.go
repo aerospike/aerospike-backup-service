@@ -8,29 +8,23 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// RunningBackupsRegistry is the metrics view of the service's running-backups registry.
-type RunningBackupsRegistry interface {
-	// GetRunningState returns statistics for all current backups.
-	GetRunningState() map[string]model.RoutineState
-}
-
-// RestoreJobsHolder is the metrics view of the service's restore jobs.
-type RestoreJobsHolder interface {
-	// StatusCounts returns counts of restore jobs by status.
-	StatusCounts() map[model.RestoreState]int
-}
+// CollectInterval is how often the service refreshes the collected gauges.
+const CollectInterval = 1 * time.Second
 
 type MetricsCollector struct {
-	mu       sync.Mutex
-	backups  RunningBackupsRegistry
-	restores RestoreJobsHolder
+	mu            sync.Mutex
+	runningState  func() map[string]model.RoutineState
+	restoreCounts func() map[model.RestoreState]int
 }
 
-// NewMetricsCollector creates a new MetricsCollector.
-func NewMetricsCollector(bh RunningBackupsRegistry, jh RestoreJobsHolder) *MetricsCollector {
+// NewMetricsCollector returns a MetricsCollector.
+func NewMetricsCollector(
+	runningState func() map[string]model.RoutineState,
+	restoreCounts func() map[model.RestoreState]int,
+) *MetricsCollector {
 	return &MetricsCollector{
-		backups:  bh,
-		restores: jh,
+		runningState:  runningState,
+		restoreCounts: restoreCounts,
 	}
 }
 
@@ -60,7 +54,7 @@ func (mc *MetricsCollector) collectMetrics() {
 }
 
 func (mc *MetricsCollector) collectBackupMetrics() {
-	runningState := mc.backups.GetRunningState()
+	runningState := mc.runningState()
 
 	// set backup running gauge.
 	backupRunningGauge.Reset()
@@ -90,7 +84,7 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 }
 
 func (mc *MetricsCollector) collectRestoreMetrics() {
-	counts := mc.restores.StatusCounts()
+	counts := mc.restoreCounts()
 	running := float64(counts[model.RestoreRunning])
 	restoreRunningGauge.WithLabelValues().Set(running)
 }

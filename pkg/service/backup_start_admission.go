@@ -31,7 +31,7 @@ type StartController interface {
 type TokenID = uuid.UUID
 
 type startController struct {
-	registry     backupStateReader
+	registry     BackupStateRegistry
 	startDecider StartDecider
 
 	mu sync.Mutex
@@ -50,7 +50,7 @@ type reservationKey struct {
 
 // NewStartController returns a StartController.
 func NewStartController(
-	registry backupStateReader,
+	registry BackupStateRegistry,
 	policy StartDecider,
 ) StartController {
 	return &startController{

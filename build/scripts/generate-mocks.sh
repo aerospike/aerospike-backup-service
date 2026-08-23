@@ -72,8 +72,8 @@ echo "Module path: $BASE_IMPORT_PATH"
 # build_mock_names takes a comma-separated list of interface names and returns a
 # comma-separated -mock_names specification for unexported interfaces only.
 #
-# Example input:  "runningBackupsRegistry,configApplier,RestoreManager"
-# Example output: "runningBackupsRegistry=mockRunningBackupsRegistry,configApplier=mockConfigApplier"
+# Example input:  "configApplier,RestoreManager"
+# Example output: "configApplier=mockConfigApplier"
 #
 # Exported interfaces (RestoreManager) are omitted; mockgen defaults apply.
 # Returns an empty string when there are no unexported interfaces.
@@ -186,7 +186,7 @@ generate_external_mocks() {
 
 generate_mocks \
     "pkg/service" \
-    "RestoreManager,BackupReaderWriter,BackupReader,backupStateReader,backupRunCoordinator,BackupRetentionManager,ClusterConfigWriter,CancelableBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController,RoutineBackupRunner,NamespaceBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler,storageFileReader,storageDataWriter"
+    "RestoreManager,BackupReaderWriter,BackupReader,BackupStateRegistry,BackupRetentionManager,ClusterConfigWriter,CancelableBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController,RoutineBackupRunner,NamespaceBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler,storageFileReader,storageDataWriter"
 
 generate_mocks \
     "pkg/service/restoreexecutor" \
@@ -220,7 +220,7 @@ generate_external_mocks \
 
 generate_mocks \
     "internal/server/handlers" \
-    "runningBackupsRegistry,configRetriever,manager,configApplier"
+    "configRetriever,manager,configApplier"
 
 generate_mocks \
     "internal/server/configuration" \

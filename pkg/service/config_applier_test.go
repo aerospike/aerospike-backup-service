@@ -17,7 +17,7 @@ func TestConfigApplier_ApplyNewConfig_NoInvalidations(t *testing.T) {
 
 	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
-		NewmockBackupStateReader(ctrl),
+		NewMockBackupStateRegistry(ctrl),
 		cfg,
 	)
 
@@ -41,7 +41,7 @@ func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T
 	scheduler.EXPECT().ScheduleJob(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 	syncDone := make(chan struct{})
-	registry := NewmockBackupStateReader(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().SynchroniseBackupHistory(gomock.Any(), gomock.Any()).
 		Do(func(context.Context, []*model.BackupRoutine) { close(syncDone) })
 
@@ -66,7 +66,7 @@ func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 	scheduler.EXPECT().DeleteJob(jobKey("removed-routine", model.BackupTypeIncremental)).Return(nil)
 
 	syncDone := make(chan struct{})
-	registry := NewmockBackupStateReader(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().SynchroniseBackupHistory(gomock.Any(), gomock.Len(0)).
 		Do(func(context.Context, []*model.BackupRoutine) { close(syncDone) })
 
@@ -95,7 +95,7 @@ func TestConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
 
 	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
-		NewmockBackupStateReader(ctrl),
+		NewMockBackupStateRegistry(ctrl),
 		cfg,
 	)
 
@@ -121,7 +121,7 @@ func TestConfigApplier_ApplyNewConfig_ScheduleJobError(t *testing.T) {
 
 	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
-		NewmockBackupStateReader(ctrl),
+		NewMockBackupStateRegistry(ctrl),
 		cfg,
 	)
 

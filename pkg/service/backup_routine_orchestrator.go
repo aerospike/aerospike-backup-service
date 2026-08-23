@@ -23,7 +23,7 @@ type BackupOrchestrator interface {
 
 // backupOrchestrator runs backup operations for a routine.
 type backupOrchestrator struct {
-	registry          backupRunCoordinator
+	registry          BackupStateRegistry
 	completionHandler BackupCompletionHandler
 	outcomeReporter   BackupReporter
 	startController   StartController
@@ -34,7 +34,7 @@ var _ BackupOrchestrator = (*backupOrchestrator)(nil)
 
 // NewBackupOrchestrator returns a BackupOrchestrator.
 func NewBackupOrchestrator(
-	registry backupRunCoordinator,
+	registry BackupStateRegistry,
 	completionHandler BackupCompletionHandler,
 	reporter BackupReporter,
 	startController StartController,
@@ -90,7 +90,7 @@ func (p *backupOrchestrator) runBackupInternal(
 	if err != nil {
 		return err
 	}
-	p.registry.register(routine.Name, backupType, backupHandler)
+	p.registry.BackupStarted(routine.Name, backupType, backupHandler)
 
 	if err = backupHandler.Wait(ctx); err != nil {
 		p.completionHandler.OnFailure(routine, backupType)

@@ -16,7 +16,7 @@ func TestStartControllerAcquire_DeniesConcurrentAcquireForSameRoutineType(t *tes
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
-	registry := NewmockBackupStateReader(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewNoBackupTime()},
 	).Times(3)
@@ -47,7 +47,7 @@ func TestStartControllerAcquire_DeniesIncrementalWhenFullIsReserved(t *testing.T
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
-	registry := NewmockBackupStateReader(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewFullBackupTime(now.Add(-24 * time.Hour))},
 	).Times(3)
@@ -78,7 +78,7 @@ func TestStartControllerRelease_IsIdempotent(t *testing.T) {
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
-	registry := NewmockBackupStateReader(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewNoBackupTime()},
 	).Times(2)
@@ -109,7 +109,7 @@ func TestStartControllerRelease_TracksReservationCountByToken(t *testing.T) {
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
 	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
-	registry := NewmockBackupStateReader(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewFullBackupTime(now.Add(-24 * time.Hour))},
 	).AnyTimes()
@@ -151,7 +151,7 @@ func TestStartController_HasBackupRunning(t *testing.T) {
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
-	registry := NewmockBackupStateReader(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewNoBackupTime()},
 	).AnyTimes()

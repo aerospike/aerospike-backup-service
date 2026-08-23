@@ -18,8 +18,8 @@ func TestBackupCompletionHandler_OnFailure(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine := &model.BackupRoutine{Name: "routine-1"}
-	registry := NewmockBackupRunCoordinator(ctrl)
-	registry.EXPECT().clearFailedBackup("routine-1", model.BackupTypeFull)
+	registry := NewMockBackupStateRegistry(ctrl)
+	registry.EXPECT().BackupFailed("routine-1", model.BackupTypeFull)
 
 	handler := NewBackupCompletionHandler(registry, nil, nil)
 	handler.OnFailure(routine, model.BackupTypeFull)
@@ -29,9 +29,9 @@ func TestBackupCompletionHandler_OnSuccess_Incremental(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine := &model.BackupRoutine{Name: "routine-1"}
-	registry := NewmockBackupRunCoordinator(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	recorded := make(chan struct{})
-	registry.EXPECT().recordSuccessfulBackup(routine, model.BackupTypeIncremental).
+	registry.EXPECT().BackupSucceeded(routine, model.BackupTypeIncremental).
 		Do(func(*model.BackupRoutine, model.BackupType) { close(recorded) })
 
 	handler := NewBackupCompletionHandler(
@@ -62,7 +62,7 @@ func TestBackupCompletionHandler_OnSuccess_FullRunsRetentionAndClusterConfig(t *
 	timestamp := time.Now()
 	ctx := t.Context()
 
-	registry := NewmockBackupRunCoordinator(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	retention := NewMockBackupRetentionManager(ctrl)
 	clusterWriter := NewMockClusterConfigWriter(ctrl)
 
@@ -70,7 +70,7 @@ func TestBackupCompletionHandler_OnSuccess_FullRunsRetentionAndClusterConfig(t *
 	retentionDone := make(chan struct{})
 	clusterConfigDone := make(chan struct{})
 
-	registry.EXPECT().recordSuccessfulBackup(routine, model.BackupTypeFull).
+	registry.EXPECT().BackupSucceeded(routine, model.BackupTypeFull).
 		Do(func(*model.BackupRoutine, model.BackupType) { close(recorded) })
 	retention.EXPECT().ApplyRetention(ctx, routine).
 		DoAndReturn(func(context.Context, *model.BackupRoutine) error {
@@ -100,13 +100,13 @@ func TestBackupCompletionHandler_OnSuccess_FullSkipsClusterConfigWhenDisabled(t 
 	}
 	ctx := t.Context()
 
-	registry := NewmockBackupRunCoordinator(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	retention := NewMockBackupRetentionManager(ctrl)
 
 	recorded := make(chan struct{})
 	retentionDone := make(chan struct{})
 
-	registry.EXPECT().recordSuccessfulBackup(routine, model.BackupTypeFull).
+	registry.EXPECT().BackupSucceeded(routine, model.BackupTypeFull).
 		Do(func(*model.BackupRoutine, model.BackupType) { close(recorded) })
 	retention.EXPECT().ApplyRetention(ctx, routine).
 		DoAndReturn(func(context.Context, *model.BackupRoutine) error {
@@ -131,11 +131,11 @@ func TestBackupCompletionHandler_OnSuccess_LogsRetentionFailure(t *testing.T) {
 	ctx := t.Context()
 	logger, logBuf := newTestLogger(t)
 
-	registry := NewmockBackupRunCoordinator(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	retention := NewMockBackupRetentionManager(ctrl)
 
 	retentionErr := errors.New("retention failed")
-	registry.EXPECT().recordSuccessfulBackup(routine, model.BackupTypeFull).AnyTimes()
+	registry.EXPECT().BackupSucceeded(routine, model.BackupTypeFull).AnyTimes()
 	retention.EXPECT().ApplyRetention(ctx, routine).Return(retentionErr)
 
 	handler := NewBackupCompletionHandler(registry, retention, nil)

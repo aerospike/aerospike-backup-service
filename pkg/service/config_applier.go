@@ -22,7 +22,7 @@ type ConfigApplier interface {
 type configApplier struct {
 	mu              sync.Mutex
 	backupScheduler *BackupScheduler
-	registry        backupStateReader
+	registry        BackupStateRegistry
 	config          *model.Config
 }
 
@@ -31,7 +31,7 @@ var _ ConfigApplier = (*configApplier)(nil)
 // NewConfigApplier returns a ConfigApplier.
 func NewConfigApplier(
 	backupScheduler *BackupScheduler,
-	registry backupStateReader,
+	registry BackupStateRegistry,
 	config *model.Config,
 ) ConfigApplier {
 	return &configApplier{

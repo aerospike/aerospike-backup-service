@@ -19,7 +19,7 @@ type Service struct {
 	restoreManager       service.RestoreManager
 	configRetriever      configRetriever
 	backupReader         service.BackupReader
-	registry             runningBackupsRegistry
+	registry             service.BackupStateRegistry
 	configurationManager manager
 	nsValidator          aerospike.NamespaceValidator
 
@@ -34,7 +34,7 @@ func NewService(
 	restoreManager service.RestoreManager,
 	configRetriever configRetriever,
 	backupReader service.BackupReader,
-	registry runningBackupsRegistry,
+	registry service.BackupStateRegistry,
 	configurationManager manager,
 	nsValidator aerospike.NamespaceValidator,
 ) *Service {
@@ -50,16 +50,6 @@ func NewService(
 		configurationManager: configurationManager,
 		nsValidator:          nsValidator,
 	}
-}
-
-// runningBackupsRegistry is the part of the backup registry that the HTTP endpoints use.
-type runningBackupsRegistry interface {
-	// GetRoutineState returns the current backup statistics for a routine.
-	GetRoutineState(routine *model.BackupRoutine) model.RoutineState
-	// GetRunningState returns statistics for all current backups.
-	GetRunningState() map[string]model.RoutineState
-	// Cancel stops all ongoing backups for a specific routine.
-	Cancel(routineName string)
 }
 
 // manager reads and writes the service configuration; it mirrors configuration.Manager.
