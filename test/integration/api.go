@@ -157,12 +157,12 @@ func (s *Suite) getFullBackups(e *env) []dto.BackupDetails {
 
 // restoreURL returns the ad-hoc restore endpoint.
 func (e *env) restoreURL() string {
-	return fmt.Sprintf("%s/v1/restore/full", e.server.URL)
+	return e.server.URL + "/v1/restore/full"
 }
 
 // restoreTimestampURL returns the restore-by-timestamp endpoint.
 func (e *env) restoreTimestampURL() string {
-	return fmt.Sprintf("%s/v1/restore/timestamp", e.server.URL)
+	return e.server.URL + "/v1/restore/timestamp"
 }
 
 // restoreStatusURL returns the restore status endpoint.
@@ -185,8 +185,8 @@ func (s *Suite) restoreByTimestamp(e *env, timestamp time.Time) dto.RestoreJobSt
 	return s.waitForRestore(e, jobID)
 }
 
-func (s *Suite) restoreByPath(e *env, key string) dto.RestoreJobStatus {
-	restoreReq := dto.RestoreRequest{
+func defaultRestoreRequest(key string) dto.RestoreRequest {
+	return dto.RestoreRequest{
 		DestinationClusterConfig: dto.DestinationClusterConfig{
 			Name: clusterName,
 		},
@@ -196,8 +196,10 @@ func (s *Suite) restoreByPath(e *env, key string) dto.RestoreJobStatus {
 		Policy:         &dto.RestorePolicy{},
 		BackupDataPath: key,
 	}
+}
 
-	jobID := s.triggerRestore(e, restoreReq)
+func (s *Suite) restoreByPath(e *env, request dto.RestoreRequest) dto.RestoreJobStatus {
+	jobID := s.triggerRestore(e, request)
 
 	return s.waitForRestore(e, jobID)
 }
@@ -220,7 +222,7 @@ func (s *Suite) triggerRestoreByTimestamp(e *env, request dto.RestoreTimestampRe
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
 
-	s.Require().Equal(resp.StatusCode, http.StatusAccepted, "failed to trigger restore by timestamp: %s", body)
+	s.Require().Equal(http.StatusAccepted, resp.StatusCode, "failed to trigger restore by timestamp: %s", body)
 
 	jobID, err := strconv.ParseInt(string(body), 10, 64)
 	s.Require().NoError(err)
@@ -244,7 +246,7 @@ func (s *Suite) triggerRestore(e *env, request dto.RestoreRequest) int64 {
 	body, err := io.ReadAll(resp.Body)
 	s.Require().NoError(err)
 
-	s.Require().Equal(resp.StatusCode, http.StatusAccepted, "failed to trigger restore")
+	s.Require().Equal(http.StatusAccepted, resp.StatusCode, "failed to trigger restore")
 
 	jobID, err := strconv.ParseInt(string(body), 10, 64)
 	s.Require().NoError(err)
