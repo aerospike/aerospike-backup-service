@@ -166,13 +166,13 @@ mocks-generate:
 # The find runs inside the recipe (not at parse time) so it picks up newly created files.
 .PHONY: mocks-check
 mocks-check: mocks-generate
-	@UNTRACKED=$$(git ls-files --others --exclude-standard '*.mockgen.go' '**/mockgen.go'); \
+	@UNTRACKED=$$(git ls-files --others --exclude-standard '*mockgen.go'); \
 	if [ -n "$$UNTRACKED" ]; then \
 		echo "Untracked mock files found — these should be committed:"; \
 		echo "$$UNTRACKED"; \
 		exit 1; \
 	fi
-	@git diff --exit-code -- $$(find . -name 'mockgen.go' -not -path './.git/*') \
+	@git diff --exit-code -- $$(find . -name '*mockgen.go' -not -path './.git/*') \
 		|| (echo "Mock files are out of date. Run 'make mocks-generate' and commit the changes." && exit 1)
 
 .PHONY: format

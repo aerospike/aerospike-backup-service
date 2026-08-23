@@ -46,6 +46,9 @@
 #   2. Append the interface name to the appropriate generate_mocks call below.
 #   3. Run this script and commit the updated mockgen.go.
 #   4. In tests (same package as the interface), construct mocks with the generated constructor.
+#
+# Dependency interfaces (e.g. backup-go) are generated with generate_external_mocks into a
+# separate *mockgen.go file so they do not overwrite the package's own mockgen.go.
 
 set -e
 
@@ -153,9 +156,37 @@ generate_mocks() {
     echo "    Done."
 }
 
+# generate_external_mocks runs mockgen for interfaces defined in a dependency.
+#
+# Arguments:
+#   $1 - import path of the source package (e.g. github.com/aerospike/backup-go)
+#   $2 - destination package path relative to repo root (e.g. pkg/service/aerospike)
+#   $3 - destination file name (e.g. backupgo_mockgen.go) so this does not overwrite mockgen.go
+#   $4 - comma-separated interface names to mock
+generate_external_mocks() {
+    _src_pkg_import="$1"
+    _dest_pkg_rel_path="$2"
+    _dest_file="$3"
+    _interfaces="$4"
+
+    _out_pkg_name=$(basename "$_dest_pkg_rel_path")
+    _dest_rel="$_dest_pkg_rel_path/$_dest_file"
+
+    echo "--> Generating mocks for $_src_pkg_import"
+    echo "    Output: $_dest_rel (package $_out_pkg_name)"
+
+    mockgen \
+        -package "$_out_pkg_name" \
+        -destination "$_dest_rel" \
+        "$_src_pkg_import" \
+        "$_interfaces"
+
+    echo "    Done."
+}
+
 generate_mocks \
     "pkg/service" \
-    "RestoreManager,BackupReaderWriter,BackupReader,RunningBackupsRegistry,RetentionManager,ClusterConfigWriter,CancelableBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController,RoutineBackupRunner,NamespaceBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler,storageFileReader"
+    "RestoreManager,BackupReaderWriter,BackupReader,RunningBackupsRegistry,RetentionManager,ClusterConfigWriter,CancelableBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController,RoutineBackupRunner,NamespaceBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler,storageFileReader,storageDataWriter"
 
 generate_mocks \
     "pkg/service/restoreexecutor" \
@@ -167,7 +198,25 @@ generate_mocks \
 
 generate_mocks \
     "pkg/service/aerospike" \
-    "ClientManager,NamespaceResolver,NamespaceValidator,Client,ClientFactory"
+    "ClientManager,NamespaceResolver,NamespaceValidator,Client,ClientFactory,ClusterConfigSource"
+
+generate_external_mocks \
+    "github.com/aerospike/backup-go" \
+    "pkg/service/aerospike" \
+    "backupgo_mockgen.go" \
+    "InfoGetter,AerospikeClient"
+
+generate_external_mocks \
+    "github.com/aerospike/backup-go" \
+    "pkg/service/backupexecutor" \
+    "backupgo_mockgen.go" \
+    "Writer"
+
+generate_external_mocks \
+    "github.com/aerospike/backup-go" \
+    "pkg/service/restoreexecutor" \
+    "backupgo_mockgen.go" \
+    "StreamingReader"
 
 generate_mocks \
     "internal/server/handlers" \

@@ -10,7 +10,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
-	bgmocks "github.com/aerospike/backup-go/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -88,7 +87,7 @@ func TestBackupExecutor_Run_CreateWriterError(t *testing.T) {
 func TestBackupExecutor_Run_BackupStartError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	writer := bgmocks.NewMockWriter(t)
+	writer := NewMockWriter(ctrl)
 	client := aerospike.NewMockClient(ctrl)
 	clientManager := aerospike.NewMockClientManager(ctrl)
 
@@ -120,7 +119,7 @@ func TestBackupExecutor_Run_BackupStartError(t *testing.T) {
 func TestBackupExecutor_Run_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	writer := bgmocks.NewMockWriter(t)
+	writer := NewMockWriter(ctrl)
 	client := aerospike.NewMockClient(ctrl)
 	clientManager := aerospike.NewMockClientManager(ctrl)
 

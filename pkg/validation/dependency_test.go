@@ -24,7 +24,7 @@ func TestPackageDoesNotDependOnSchema(t *testing.T) {
 		}
 		seen[pkg.ID] = true
 
-		require.NotEqual(t, pkg.ID, forbidden)
+		require.NotEqual(t, pkg.ID, forbidden, "package %s depends on schema", pkg)
 
 		for _, imp := range pkg.Imports {
 			check(imp)

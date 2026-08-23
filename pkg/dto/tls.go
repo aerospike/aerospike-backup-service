@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
@@ -87,7 +87,7 @@ func (t *TLS) validateTLSConfig(opts ValidationOptions) error {
 		return nil
 	}
 
-	if _, err := aerospike.NewTLSConfig(t.toModel()); err != nil {
+	if _, err := tlsconfig.NewTLSConfig(t.toModel()); err != nil {
 		return fmt.Errorf("tls %w: %w", errValidation, err)
 	}
 

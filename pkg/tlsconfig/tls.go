@@ -1,4 +1,5 @@
-package aerospike
+// Package tlsconfig builds crypto/tls configuration from the Aerospike TLS model.
+package tlsconfig
 
 import (
 	"bytes"

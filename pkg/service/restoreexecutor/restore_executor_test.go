@@ -10,7 +10,6 @@ import (
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/common"
 	"github.com/aerospike/backup-go/io/storage/options"
-	bgmocks "github.com/aerospike/backup-go/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -35,7 +34,7 @@ func (m *mockStorageReader) CreateDirReader(
 func TestRestoreExecutor_Run_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	reader := bgmocks.NewMockStreamingReader(t)
+	reader := NewMockStreamingReader(ctrl)
 	restoreHandler := NewMockRestoreHandler(ctrl)
 
 	client := aerospike.NewMockClient(ctrl)
@@ -56,7 +55,7 @@ func TestRestoreExecutor_Run_Success(t *testing.T) {
 func TestRestoreExecutor_Run_RestoreStartError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	reader := bgmocks.NewMockStreamingReader(t)
+	reader := NewMockStreamingReader(ctrl)
 	client := aerospike.NewMockClient(ctrl)
 	client.EXPECT().
 		Restore(gomock.Any(), gomock.Any(), reader).
@@ -97,7 +96,7 @@ func TestRunRestore_CreateReaderError(t *testing.T) {
 func TestRunRestore_RestoreStartError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	reader := bgmocks.NewMockStreamingReader(t)
+	reader := NewMockStreamingReader(ctrl)
 	client := aerospike.NewMockClient(ctrl)
 	client.EXPECT().
 		Restore(gomock.Any(), gomock.Any(), reader).

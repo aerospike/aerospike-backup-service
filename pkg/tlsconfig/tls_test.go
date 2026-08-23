@@ -1,4 +1,4 @@
-package aerospike
+package tlsconfig
 
 import (
 	"crypto/rand"

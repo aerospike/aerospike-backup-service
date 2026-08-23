@@ -14,13 +14,13 @@ type Client interface {
 		config *backup.ConfigBackup,
 		writer backup.Writer,
 		reader backup.StreamingReader,
-	) (*backup.BackupHandler, error)
+	) (backup.BackupHandler, error)
 	// Restore starts a restore operation that reads data from given readers.
 	Restore(
 		ctx context.Context,
 		config *backup.ConfigRestore,
 		streamingReader backup.StreamingReader,
-	) (backup.Restorer, error)
+	) (backup.RestoreHandler, error)
 	// InfoClient returns the underlying info client.
 	InfoClient() backup.InfoGetter
 	// AerospikeClient returns the underlying Aerospike client.
