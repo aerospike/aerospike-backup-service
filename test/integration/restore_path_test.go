@@ -22,7 +22,7 @@ func (s *Suite) TestRestoreByPath() {
 
 	s.Require().NoError(s.client.Truncate(nil, namespace, "", nil))
 
-	status := s.restoreByPath(e, fullBackup.Key)
+	status := s.restoreByPath(e, defaultRestoreRequest(fullBackup.Key))
 
 	s.Equal(dto.RestoreSuccess, status.Status)
 	s.Equal(uint64(3), status.InsertedRecords)
@@ -62,7 +62,7 @@ func (s *Suite) TestBackupRestoreWithIndexes() {
 	s.Require().NoError(s.client.DropIndex(nil, namespace, setName, "age_sidx"))
 	s.Require().NoError(s.client.DropIndex(nil, namespace, setName, "set_sidx"))
 
-	restoreStatus := s.restoreByPath(e, fullBackup.Key)
+	restoreStatus := s.restoreByPath(e, defaultRestoreRequest(fullBackup.Key))
 
 	// We expect 2 indexes to be successfully restored (1 secondary index + 1 set index)
 	s.Equal(expectedIndexCount, restoreStatus.IndexCount)
