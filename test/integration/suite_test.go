@@ -9,5 +9,9 @@ import (
 )
 
 func TestIntegration(t *testing.T) {
-	suite.Run(t, new(Suite))
+	suite.Run(t, new(BackupSuite))
+}
+
+func TestClusterAuth(t *testing.T) {
+	suite.Run(t, new(AuthSuite))
 }

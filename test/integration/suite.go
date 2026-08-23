@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	aerospikeImage = "aerospike/aerospike-server:8.1"
+	aerospikeImage = "aerospike/aerospike-server-enterprise:8.1"
 
 	clusterName     = "testCluster"
 	storageName     = "local"
@@ -28,7 +28,7 @@ const (
 	setName         = "filteredSet"
 )
 
-// Suite runs every test in this package against a single Aerospike container.
+// Suite is the shared ABS test fixture: seed address, Aerospike client, and HTTP helpers.
 type Suite struct {
 	suite.Suite
 
@@ -36,12 +36,17 @@ type Suite struct {
 	client   *as.Client
 }
 
+// BackupSuite runs backup/restore scenarios against a stock EE node with no security.
+type BackupSuite struct {
+	Suite
+}
+
 // SetupSuite starts the Aerospike container and connects the shared client.
 //
 // Cleanup is registered with T().Cleanup instead of TearDownSuite because testify only registers
 // its TearDownSuite defer after SetupSuite returns; a failure part way through here would
 // otherwise leave the container running.
-func (s *Suite) SetupSuite() {
+func (s *BackupSuite) SetupSuite() {
 	t := s.T()
 	ctx := context.Background()
 

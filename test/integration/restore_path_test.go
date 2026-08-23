@@ -9,7 +9,7 @@ import (
 
 // TestRestoreByPath runs a full backup, wipes the namespace, restores via POST /v1/restore/full,
 // and verifies both the restored data and the exposed restore metrics.
-func (s *Suite) TestRestoreByPath() {
+func (s *BackupSuite) TestRestoreByPath() {
 	e := s.setupEnv()
 
 	s.seedRecords([]int{10, 20, 30})
@@ -34,7 +34,7 @@ func (s *Suite) TestRestoreByPath() {
 }
 
 // TestBackupRestoreWithIndexes runs a backup-and-restore flow with secondary and set indexes.
-func (s *Suite) TestBackupRestoreWithIndexes() {
+func (s *BackupSuite) TestBackupRestoreWithIndexes() {
 	e := s.setupEnv()
 
 	var expectedIndexCount = uint64(1)
