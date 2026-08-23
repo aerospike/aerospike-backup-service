@@ -159,7 +159,7 @@ func TestNewTLSConfig(t *testing.T) {
 		symlinkCert1Path := filepath.Join(caPathK8s, "cert1.pem")
 		require.NoError(t, os.Symlink(target1, symlinkCert1Path))
 
-		// 6. Test New with this path
+		// 6. Test NewTLSConfig with this path
 		// The loadCertPool function will scan `caPathK8s` and find:
 		// - `..2025_10_27_12_34_56_789` (dir, skipped)
 		// - `..data` (symlink to dir, skipped)
