@@ -10,12 +10,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// StartController coordinates admission for backup starts.
+// StartController decides whether a backup may start and holds the reservation until the run ends.
 type StartController interface {
-	// TryStart attempts to reserve a pending-start slot for the given routine and backup type.
+	// TryStart asks permission to start a backup of the given type for the routine.
 	//
-	// If admission is denied, Acquire returns an error wrapped with errBackupSkipped.
-	// If admission succeeds, it returns a release callback that MUST be called exactly
+	// If the start is denied, it returns an error wrapping errBackupSkipped.
+	// If it is allowed, it returns a release callback that MUST be called exactly
 	// once to clear the reservation.
 	TryStart(
 		routine *model.BackupRoutine,
@@ -30,8 +30,8 @@ type StartController interface {
 // TokenID identifies a single in-flight admission reservation.
 type TokenID = uuid.UUID
 
-type startControllerImpl struct {
-	registry     RunningBackupsRegistry
+type startController struct {
+	registry     backupStateReader
 	startDecider StartDecider
 
 	mu sync.Mutex
@@ -41,19 +41,19 @@ type startControllerImpl struct {
 	activeReservations map[reservationKey]int
 }
 
-var _ StartController = (*startControllerImpl)(nil)
+var _ StartController = (*startController)(nil)
 
 type reservationKey struct {
 	routineName string
 	backupType  model.BackupType
 }
 
-// NewStartController builds a StartController backed by the provided registry and decision policy.
+// NewStartController returns a StartController.
 func NewStartController(
-	registry RunningBackupsRegistry,
+	registry backupStateReader,
 	policy StartDecider,
 ) StartController {
-	return &startControllerImpl{
+	return &startController{
 		registry:           registry,
 		startDecider:       policy,
 		tokenToReservation: make(map[TokenID]reservationKey),
@@ -61,7 +61,7 @@ func NewStartController(
 	}
 }
 
-func (a *startControllerImpl) TryStart(
+func (a *startController) TryStart(
 	routine *model.BackupRoutine,
 	now time.Time,
 	backupType model.BackupType,
@@ -88,7 +88,7 @@ func (a *startControllerImpl) TryStart(
 }
 
 // HasBackupRunning reports whether a full or incremental backup is active for the routine.
-func (a *startControllerImpl) HasBackupRunning(routine *model.BackupRoutine) bool {
+func (a *startController) HasBackupRunning(routine *model.BackupRoutine) bool {
 	state := a.registry.GetRoutineState(routine)
 	if state.Full != nil || state.Incremental != nil {
 		return true
@@ -98,7 +98,7 @@ func (a *startControllerImpl) HasBackupRunning(routine *model.BackupRoutine) boo
 		a.hasPendingStart(routine.Name, model.BackupTypeIncremental)
 }
 
-func (a *startControllerImpl) hasPendingStart(routineName string, backupType model.BackupType) bool {
+func (a *startController) hasPendingStart(routineName string, backupType model.BackupType) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -108,7 +108,7 @@ func (a *startControllerImpl) hasPendingStart(routineName string, backupType mod
 	})
 }
 
-func (a *startControllerImpl) hasPendingStartLocked(key reservationKey) bool {
+func (a *startController) hasPendingStartLocked(key reservationKey) bool {
 	return a.activeReservations[key] > 0
 }
 
@@ -116,7 +116,7 @@ func (a *startControllerImpl) hasPendingStartLocked(key reservationKey) bool {
 //
 // This operation is idempotent: unknown or already-released tokens are ignored.
 // Multiple reservations for the same routine/type are tracked by a reference count.
-func (a *startControllerImpl) release(tokenID TokenID) {
+func (a *startController) release(tokenID TokenID) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -135,7 +135,7 @@ func (a *startControllerImpl) release(tokenID TokenID) {
 }
 
 // buildStartFacts composes admission facts.
-func (a *startControllerImpl) buildStartFacts(routine *model.BackupRoutine, now time.Time) StartFacts {
+func (a *startController) buildStartFacts(routine *model.BackupRoutine, now time.Time) StartFacts {
 	state := a.registry.GetRoutineState(routine)
 	fullRunning := a.hasPendingStartLocked(reservationKey{
 		routineName: routine.Name,

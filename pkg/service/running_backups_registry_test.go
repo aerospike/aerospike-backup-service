@@ -16,7 +16,6 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	registry := NewRunningBackupsRegistry(nil, nil)
-
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
 
@@ -75,7 +74,6 @@ func TestFinishFull(t *testing.T) {
 	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(backupTime, nil).Times(1)
 
 	registry := NewRunningBackupsRegistry(historyMgr, nil)
-
 	handler := NewMockCancelableBackupHandler(ctrl)
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
@@ -105,7 +103,6 @@ func TestFinishIncremental(t *testing.T) {
 	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(backupTime, nil).Times(1)
 
 	registry := NewRunningBackupsRegistry(historyMgr, nil)
-
 	handler := NewMockCancelableBackupHandler(ctrl)
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
@@ -166,7 +163,6 @@ func TestGetAllCurrentStats(t *testing.T) {
 	}).AnyTimes()
 
 	registry := NewRunningBackupsRegistry(nil, mockReader)
-
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
 
@@ -197,7 +193,6 @@ func TestCancel(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	registry := NewRunningBackupsRegistry(nil, nil)
-
 	handlerFull := NewMockCancelableBackupHandler(ctrl)
 	handlerFull.EXPECT().Cancel()
 

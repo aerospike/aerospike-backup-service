@@ -17,6 +17,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
+// Manager reads and writes the whole service configuration in its backing source:
+// a local file, an HTTP endpoint, or a storage backend.
 type Manager interface {
 	// Read reads the configuration from the source.
 	Read(ctx context.Context) (*model.Config, error)

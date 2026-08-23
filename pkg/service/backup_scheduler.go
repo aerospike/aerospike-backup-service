@@ -23,7 +23,7 @@ const (
 	minAdHocBackupDelay = 50 * time.Millisecond
 )
 
-// JobScheduler is the subset of quartz.Scheduler used for backup job scheduling and removal.
+// JobScheduler is the part of quartz.Scheduler used to add and remove backup jobs.
 type JobScheduler interface {
 	// ScheduleJob registers jobDetail with the provided trigger.
 	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error
@@ -31,24 +31,24 @@ type JobScheduler interface {
 	DeleteJob(key *quartz.JobKey) error
 }
 
-// AdHocScheduler schedules one-off full or incremental backup jobs on demand.
+// AdHocScheduler triggers a single backup outside the routine's cron schedule.
 type AdHocScheduler interface {
-	// TriggerAdHocFullBackup schedules one full backup run for routineName after delay.
+	// TriggerAdHocFullBackup schedules one full backup run for the routine after delay.
 	TriggerAdHocFullBackup(routine *model.BackupRoutine, delay time.Duration) error
-	// TriggerAdHocIncrementalBackup schedules one incremental backup run for routineName after delay.
+	// TriggerAdHocIncrementalBackup schedules one incremental backup run for the routine after delay.
 	TriggerAdHocIncrementalBackup(routine *model.BackupRoutine, delay time.Duration) error
 }
 
 // BackupScheduler wires Quartz to the backup orchestrator: periodic cron jobs, ad-hoc runs, and job deletion.
 type BackupScheduler struct {
 	scheduler JobScheduler
-	// orchestrator runs each fired job (cron or ad-hoc) via [BackupOrchestrator.RunBackup].
+	// orchestrator runs each fired job (cron or ad-hoc) via [BackupOrchestrator.Backup].
 	orchestrator BackupOrchestrator
 }
 
 var _ AdHocScheduler = (*BackupScheduler)(nil)
 
-// NewBackupScheduler creates a scheduler backed by Quartz and a [BackupOrchestrator].
+// NewBackupScheduler returns a BackupScheduler.
 func NewBackupScheduler(scheduler JobScheduler, orchestrator BackupOrchestrator) *BackupScheduler {
 	return &BackupScheduler{scheduler: scheduler, orchestrator: orchestrator}
 }

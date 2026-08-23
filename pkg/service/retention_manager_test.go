@@ -53,7 +53,7 @@ func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 		NewIncrementalBackupFilter(routine).WithToTime(time.UnixMilli(4000))).
 		Return([]model.BackupDetails{}, nil)
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -103,7 +103,7 @@ func TestRetentionManager_FullAndIncremental(t *testing.T) {
 	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1100").Return(nil)
 	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1200").Return(nil)
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -147,7 +147,7 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1100").Return(nil)
 	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1200").Return(nil)
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -161,7 +161,7 @@ func TestRetentionManager_NoPolicy(t *testing.T) {
 
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -188,7 +188,7 @@ func TestRetentionManager_NoneToDelete(t *testing.T) {
 
 	// No Delete calls are expected
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -212,7 +212,7 @@ func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 	// Expect a single delete call for the incremental root path
 	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/incremental").Return(nil)
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -236,7 +236,7 @@ func TestRetentionManager_ConcurrencyLock(t *testing.T) {
 	defer mu.Unlock()
 
 	// This call should be skipped due to the lock
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -251,7 +251,7 @@ func TestRetentionManager_PolicyWithNilCounts(t *testing.T) {
 
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 

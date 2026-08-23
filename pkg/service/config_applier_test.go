@@ -10,21 +10,21 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestDefaultConfigApplier_ApplyNewConfig_NoInvalidations(t *testing.T) {
+func TestConfigApplier_ApplyNewConfig_NoInvalidations(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	cfg := model.NewConfig()
 	scheduler := NewMockJobScheduler(ctrl)
 
-	applier := NewDefaultConfigApplier(
+	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
-		NewMockRunningBackupsRegistry(ctrl),
+		NewmockBackupStateReader(ctrl),
 		cfg,
 	)
 
 	require.NoError(t, applier.ApplyNewConfig(t.Context()))
 }
 
-func TestDefaultConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T) {
+func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	cfg := model.NewConfig()
@@ -41,11 +41,11 @@ func TestDefaultConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *te
 	scheduler.EXPECT().ScheduleJob(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 	syncDone := make(chan struct{})
-	registry := NewMockRunningBackupsRegistry(ctrl)
+	registry := NewmockBackupStateReader(ctrl)
 	registry.EXPECT().SynchroniseBackupHistory(gomock.Any(), gomock.Any()).
 		Do(func(context.Context, []*model.BackupRoutine) { close(syncDone) })
 
-	applier := NewDefaultConfigApplier(
+	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
 		registry,
 		cfg,
@@ -55,7 +55,7 @@ func TestDefaultConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *te
 	waitAsyncDone(t, syncDone, "backup history sync")
 }
 
-func TestDefaultConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
+func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	cfg := model.NewConfig()
@@ -66,11 +66,11 @@ func TestDefaultConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 	scheduler.EXPECT().DeleteJob(jobKey("removed-routine", model.BackupTypeIncremental)).Return(nil)
 
 	syncDone := make(chan struct{})
-	registry := NewMockRunningBackupsRegistry(ctrl)
+	registry := NewmockBackupStateReader(ctrl)
 	registry.EXPECT().SynchroniseBackupHistory(gomock.Any(), gomock.Len(0)).
 		Do(func(context.Context, []*model.BackupRoutine) { close(syncDone) })
 
-	applier := NewDefaultConfigApplier(
+	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
 		registry,
 		cfg,
@@ -80,7 +80,7 @@ func TestDefaultConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 	waitAsyncDone(t, syncDone, "backup history sync")
 }
 
-func TestDefaultConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
+func TestConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	cfg := model.NewConfig()
 	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
@@ -93,9 +93,9 @@ func TestDefaultConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
 	scheduler := NewMockJobScheduler(ctrl)
 	scheduler.EXPECT().DeleteJob(gomock.Any()).Return(nil).Times(2)
 
-	applier := NewDefaultConfigApplier(
+	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
-		NewMockRunningBackupsRegistry(ctrl),
+		NewmockBackupStateReader(ctrl),
 		cfg,
 	)
 
@@ -104,7 +104,7 @@ func TestDefaultConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
 	require.ErrorContains(t, err, "failed to schedule periodic backups")
 }
 
-func TestDefaultConfigApplier_ApplyNewConfig_ScheduleJobError(t *testing.T) {
+func TestConfigApplier_ApplyNewConfig_ScheduleJobError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	cfg := model.NewConfig()
 	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
@@ -119,9 +119,9 @@ func TestDefaultConfigApplier_ApplyNewConfig_ScheduleJobError(t *testing.T) {
 	scheduler.EXPECT().DeleteJob(gomock.Any()).Return(nil).Times(2)
 	scheduler.EXPECT().ScheduleJob(gomock.Any(), gomock.Any()).Return(scheduleErr)
 
-	applier := NewDefaultConfigApplier(
+	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
-		NewMockRunningBackupsRegistry(ctrl),
+		NewmockBackupStateReader(ctrl),
 		cfg,
 	)
 

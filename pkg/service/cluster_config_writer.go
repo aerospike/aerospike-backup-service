@@ -12,38 +12,41 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
+// storageDataWriter is the part of storage.Operations used to write one whole file.
 type storageDataWriter interface {
 	// WriteDataFile writes a data file to the specified storage.
 	WriteDataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
 }
 
-// ClusterConfigWriter writes cluster configuration backups to storage.
+// ClusterConfigWriter saves the configuration of a routine's source cluster: one file per node,
+// at the path [PathService] returns for that routine and timestamp.
 type ClusterConfigWriter interface {
 	// Write writes the cluster configuration for the given routine and timestamp.
 	Write(ctx context.Context, routine *model.BackupRoutine, timestamp time.Time) error
 }
 
-// DefaultClusterConfigWriter is the default implementation of ClusterConfigWriter.
-type DefaultClusterConfigWriter struct {
+type clusterConfigWriter struct {
 	pathService   PathService
 	storageWriter storageDataWriter
 	configSource  aerospike.ClusterConfigSource
 }
 
-// NewClusterConfigWriter returns a new DefaultClusterConfigWriter instance.
+var _ ClusterConfigWriter = (*clusterConfigWriter)(nil)
+
+// NewClusterConfigWriter returns a ClusterConfigWriter.
 func NewClusterConfigWriter(
 	pathService PathService,
 	storageWriter storageDataWriter,
 	configSource aerospike.ClusterConfigSource,
-) *DefaultClusterConfigWriter {
-	return &DefaultClusterConfigWriter{
+) ClusterConfigWriter {
+	return &clusterConfigWriter{
 		pathService:   pathService,
 		storageWriter: storageWriter,
 		configSource:  configSource,
 	}
 }
 
-func (w *DefaultClusterConfigWriter) Write(
+func (w *clusterConfigWriter) Write(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	timestamp time.Time,

@@ -32,25 +32,26 @@ type NamespaceBackupRunner interface {
 	) CancelableBackupHandler
 }
 
-// NewNamespaceBackupRunner builds a [NamespaceBackupRunner] from the low-level
-// backup routineRunner, storage writer, and path layout service.
+// NewNamespaceBackupRunner returns a NamespaceBackupRunner.
 func NewNamespaceBackupRunner(
 	backupExecutor backupexecutor.Backup,
 	backendService BackupWriter,
 	pathService PathService,
 ) NamespaceBackupRunner {
-	return &NamespaceBackupRunnerImpl{
+	return &namespaceBackupRunner{
 		backupExecutor: backupExecutor,
 		backendService: backendService,
 		pathService:    pathService,
 	}
 }
 
-type NamespaceBackupRunnerImpl struct {
+type namespaceBackupRunner struct {
 	backupExecutor backupexecutor.Backup
 	backendService BackupWriter
 	pathService    PathService
 }
+
+var _ NamespaceBackupRunner = (*namespaceBackupRunner)(nil)
 
 // CancelableBackupHandler is a [backupexecutor.BackupHandler] that can be canceled
 // while a backup is in progress.
@@ -64,7 +65,7 @@ type CancelableBackupHandler interface {
 // with cleanup and metadata callbacks wired for the routine's storage layout.
 // scanLimiter is a per-routine limiter shared across all namespace backups within
 // a single routine run to ensure fair resource allocation.
-func (e *NamespaceBackupRunnerImpl) Run(
+func (e *namespaceBackupRunner) Run(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	namespace string,
@@ -110,7 +111,7 @@ func (e *NamespaceBackupRunnerImpl) Run(
 
 // deleteFolder removes backup data under the given path on failure or cancel; logs
 // errors except when the context was canceled during delete.
-func (e *NamespaceBackupRunnerImpl) deleteFolder(
+func (e *namespaceBackupRunner) deleteFolder(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	path string,
@@ -129,7 +130,7 @@ func (e *NamespaceBackupRunnerImpl) deleteFolder(
 }
 
 // writeBackupMetadata persists backup metadata to storage and logs the folder on success.
-func (e *NamespaceBackupRunnerImpl) writeBackupMetadata(
+func (e *namespaceBackupRunner) writeBackupMetadata(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	metadata model.BackupMetadata,

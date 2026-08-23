@@ -408,9 +408,9 @@ func TestRun_RetryRecalculatesPath(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestNamespaceBackupRunnerImpl_DeleteFolder_Success(t *testing.T) {
+func TestNamespaceBackupRunner_DeleteFolder_Success(t *testing.T) {
 	mocks, runner := initMocks(t)
-	impl, ok := runner.(*NamespaceBackupRunnerImpl)
+	impl, ok := runner.(*namespaceBackupRunner)
 	require.True(t, ok)
 
 	routine := &model.BackupRoutine{Name: routineName}
@@ -419,9 +419,9 @@ func TestNamespaceBackupRunnerImpl_DeleteFolder_Success(t *testing.T) {
 	impl.deleteFolder(t.Context(), routine, "some/path", slog.New(slog.DiscardHandler))
 }
 
-func TestNamespaceBackupRunnerImpl_DeleteFolder_ContextCanceled(t *testing.T) {
+func TestNamespaceBackupRunner_DeleteFolder_ContextCanceled(t *testing.T) {
 	mocks, runner := initMocks(t)
-	impl, ok := runner.(*NamespaceBackupRunnerImpl)
+	impl, ok := runner.(*namespaceBackupRunner)
 	require.True(t, ok)
 
 	routine := &model.BackupRoutine{Name: routineName}
@@ -434,9 +434,9 @@ func TestNamespaceBackupRunnerImpl_DeleteFolder_ContextCanceled(t *testing.T) {
 	require.Contains(t, logBuf.String(), "Delete folder context canceled")
 }
 
-func TestNamespaceBackupRunnerImpl_DeleteFolder_Error(t *testing.T) {
+func TestNamespaceBackupRunner_DeleteFolder_Error(t *testing.T) {
 	mocks, runner := initMocks(t)
-	impl, ok := runner.(*NamespaceBackupRunnerImpl)
+	impl, ok := runner.(*namespaceBackupRunner)
 	require.True(t, ok)
 
 	routine := &model.BackupRoutine{Name: routineName}

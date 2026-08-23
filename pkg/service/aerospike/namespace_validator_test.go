@@ -68,7 +68,7 @@ func TestFindMissingByRoutine_MissingDetected_SingleFetchForSharedCluster(t *tes
 
 	env.expectSingleClusterFetch(cluster, []string{"foo"}, nil)
 
-	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
+	nv := &namespaceValidator{clientManager: env.mockClientManager}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Len(t, got, 2)
@@ -83,7 +83,7 @@ func TestFindMissingByRoutine_NoNamespaces_NoFetch(t *testing.T) {
 		"empty": {SourceCluster: cluster, Namespaces: nil},
 	}
 
-	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
+	nv := &namespaceValidator{clientManager: env.mockClientManager}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Empty(t, got)
@@ -101,7 +101,7 @@ func TestFindMissingByRoutine_FetchError_SkipsCluster(t *testing.T) {
 		Return(nil, errors.New("boom")).
 		Times(1)
 
-	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
+	nv := &namespaceValidator{clientManager: env.mockClientManager}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Empty(t, got)
@@ -116,7 +116,7 @@ func TestFindMissingByRoutine_InfoError_SkipsCluster(t *testing.T) {
 
 	env.expectSingleClusterFetch(cluster, nil, errors.New("info failed"))
 
-	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
+	nv := &namespaceValidator{clientManager: env.mockClientManager}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Empty(t, got)
@@ -137,7 +137,7 @@ func TestFindMissingByRoutine_TwoClusters_OK(t *testing.T) {
 	expectPerCluster(t, ctrl, mgr, a, []string{"ns1"}, nil)
 	expectPerCluster(t, ctrl, mgr, b, []string{"ns2"}, nil)
 
-	nv := &NamespaceValidatorImpl{clientManager: mgr}
+	nv := &namespaceValidator{clientManager: mgr}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Empty(t, got)
@@ -158,7 +158,7 @@ func TestFindMissingByRoutine_TwoClusters_Fail(t *testing.T) {
 	expectPerCluster(t, ctrl, mgr, a, []string{"ns1"}, nil)
 	expectPerCluster(t, ctrl, mgr, b, []string{"ns2"}, nil)
 
-	nv := &NamespaceValidatorImpl{clientManager: mgr}
+	nv := &namespaceValidator{clientManager: mgr}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Len(t, got, 2)

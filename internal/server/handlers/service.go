@@ -52,8 +52,7 @@ func NewService(
 	}
 }
 
-// runningBackupsRegistry defines the interface for managing running backups and their statuses.
-// this is public version of service.RunningBackupsRegistry.
+// runningBackupsRegistry is the part of the backup registry that the HTTP endpoints use.
 type runningBackupsRegistry interface {
 	// GetRoutineState returns the current backup statistics for a routine.
 	GetRoutineState(routine *model.BackupRoutine) model.RoutineState
@@ -63,21 +62,24 @@ type runningBackupsRegistry interface {
 	Cancel(routineName string)
 }
 
-// manager reads and writes service configuration.
+// manager reads and writes the service configuration; it mirrors configuration.Manager.
 type manager interface {
 	// Read reads the configuration from the source.
 	Read(ctx context.Context) (*model.Config, error)
-	// Write writes the configuration to the source.
+	// Write writes the configuration back to the source.
+	// Not supported when the configuration is served over HTTP.
 	Write(ctx context.Context, config *model.Config) error
 }
 
-// configApplier applies new configuration to the service.
+// configApplier applies a changed configuration to the running service;
+// it mirrors service.ConfigApplier.
 type configApplier interface {
 	// ApplyNewConfig applies new configuration to the service.
 	ApplyNewConfig(ctx context.Context) error
 }
 
-// configRetriever reads backed-up Aerospike configuration from storage.
+// configRetriever returns the Aerospike cluster configuration archived with a backup;
+// it mirrors service.ConfigRetriever.
 type configRetriever interface {
 	// RetrieveConfiguration returns backed up Aerospike configuration.
 	RetrieveConfiguration(ctx context.Context, routine *model.BackupRoutine, t time.Time) ([]byte, error)

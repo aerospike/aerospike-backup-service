@@ -78,7 +78,7 @@ func InitComponents(
 		routineBackupRunner,
 	)
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
-	configApplier := service.NewDefaultConfigApplier(backupScheduler, registry, config)
+	configApplier := service.NewConfigApplier(backupScheduler, registry, config)
 
 	err = configApplier.ApplyNewConfig(ctx)
 	if err != nil {

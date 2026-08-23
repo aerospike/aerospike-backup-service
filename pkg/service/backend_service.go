@@ -13,7 +13,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
-// storageOperations abstracts storage I/O for backup metadata.
+// storageOperations is the part of storage.Operations used to read and write backup metadata
+// files and to delete backup folders.
 type storageOperations interface {
 	// ReadFileNames lists the names of files in the specified storage matching the filter.
 	ReadFileNames(ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
@@ -26,20 +27,20 @@ type storageOperations interface {
 	DeleteFolder(ctx context.Context, storage model.Storage, path string) error
 }
 
-// BackupReaderWriter defines operations for reading and writing backups metadata.
+// BackupReaderWriter combines BackupReader and BackupWriter.
 type BackupReaderWriter interface {
 	BackupReader
 	BackupWriter
 }
 
-// BackupReader defines operations for reading backups metadata.
+// BackupReader lists backups by reading the metadata files stored inside backup folders.
 type BackupReader interface {
 	// GetBackups retrieves backup details based on the provided filter.
 	// Returned backups are sorted by Created time in ascending order.
 	GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error)
 }
 
-// BackupWriter defines operations for writing backups metadata.
+// BackupWriter stores backup metadata and deletes backup folders.
 type BackupWriter interface {
 	// WriteBackupMetadata stores metadata for a specific backup.
 	WriteBackupMetadata(context.Context, *model.BackupRoutine, string, model.BackupMetadata) error
@@ -48,7 +49,8 @@ type BackupWriter interface {
 	Delete(ctx context.Context, routine *model.BackupRoutine, path string) error
 }
 
-// BackupBackendServiceImpl default implementation of BackupReaderWriter.
+// BackupBackendServiceImpl reads and writes backup metadata, taking a lock per routine so that
+// listing, writing, and deleting a routine's backups do not overlap.
 type BackupBackendServiceImpl struct {
 	*backupReader
 	locks       collections.LockMap // lock per routine

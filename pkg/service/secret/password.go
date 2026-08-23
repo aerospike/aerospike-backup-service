@@ -11,8 +11,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
-// PasswordResolver resolves password from either a file, a literal value,
-// or via a Secret Agent.
+// PasswordResolver derives an Aerospike password from credentials: a literal value,
+// a password file, or a Secret Agent reference resolved through [Resolver].
 type PasswordResolver interface {
 	// Resolve resolves the password from the credentials.
 	Resolve(ctx context.Context, creds *model.Credentials) (*string, error)

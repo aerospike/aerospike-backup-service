@@ -8,13 +8,13 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// RunningBackupsRegistry defines the interface for managing running backups and their statuses.
+// RunningBackupsRegistry is the metrics view of the service's running-backups registry.
 type RunningBackupsRegistry interface {
 	// GetRunningState returns statistics for all current backups.
 	GetRunningState() map[string]model.RoutineState
 }
 
-// RestoreJobsHolder defines the interface retrieving restore jobs and their statuses.
+// RestoreJobsHolder is the metrics view of the service's restore jobs.
 type RestoreJobsHolder interface {
 	// StatusCounts returns counts of restore jobs by status.
 	StatusCounts() map[model.RestoreState]int

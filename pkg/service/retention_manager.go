@@ -11,13 +11,15 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
-// RetentionManager defines the interface for deleting old backups.
-type RetentionManager interface {
-	// Run runs the retention manager. It deletes old backups based on the configured retention policy.
-	deleteOldBackups(ctx context.Context, routine *model.BackupRoutine) error
+// BackupRetentionManager deletes the backups that fall outside a routine's retention policy.
+type BackupRetentionManager interface {
+	// ApplyRetention deletes backups that exceed the routine's configured retention limits.
+	// It does nothing when the routine has no retention policy, or when the routine's
+	// storage is already locked by another delete or restore.
+	ApplyRetention(ctx context.Context, routine *model.BackupRoutine) error
 }
 
-type RetentionManagerImpl struct {
+type backupRetentionManager struct {
 	backendService BackupReaderWriter
 
 	// Lock per routine. The restore service reads backup data,
@@ -26,19 +28,19 @@ type RetentionManagerImpl struct {
 	routineStorage *collections.LockMap
 }
 
-var _ RetentionManager = (*RetentionManagerImpl)(nil)
+var _ BackupRetentionManager = (*backupRetentionManager)(nil)
 
 func NewBackupRetentionManager(
 	backendService BackupReaderWriter,
 	routineStorage *collections.LockMap,
-) *RetentionManagerImpl {
-	return &RetentionManagerImpl{
+) BackupRetentionManager {
+	return &backupRetentionManager{
 		backendService: backendService,
 		routineStorage: routineStorage,
 	}
 }
 
-func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routine *model.BackupRoutine) error {
+func (e *backupRetentionManager) ApplyRetention(ctx context.Context, routine *model.BackupRoutine) error {
 	policy := routine.BackupPolicy.RetentionPolicy
 	if policy.IsEmpty() {
 		return nil // Retention policy is not enabled, do nothing.
@@ -75,7 +77,7 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routine *mo
 	return nil
 }
 
-func (e *RetentionManagerImpl) deleteFullBackups(
+func (e *backupRetentionManager) deleteFullBackups(
 	ctx context.Context,
 	timestamps []time.Time,
 	retainCount int,
@@ -100,7 +102,7 @@ func (e *RetentionManagerImpl) deleteFullBackups(
 	return errs
 }
 
-func (e *RetentionManagerImpl) deleteIncrementalBackups(
+func (e *backupRetentionManager) deleteIncrementalBackups(
 	ctx context.Context, timestamps []time.Time, retainCount int, routine *model.BackupRoutine,
 ) error {
 	if retainCount == 0 { // Delete all incremental backups.
