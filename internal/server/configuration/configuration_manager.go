@@ -66,6 +66,10 @@ func readConfig(
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 
+	if err := config.Validate(dto.ValidationDefault); err != nil {
+		return nil, fmt.Errorf("failed to validate configuration: %w", err)
+	}
+
 	modelConfig, err := config.ToModel()
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert configuration to model: %w", err)
@@ -120,7 +124,7 @@ func readStorage(ctx context.Context, configURI string) (model.Storage, error) {
 		return nil, fmt.Errorf("failed to unmarshal storage configuration: %w", err)
 	}
 
-	if err = configStorage.Validate(); err != nil {
+	if err = configStorage.Validate(dto.ValidationDefault); err != nil {
 		return nil, fmt.Errorf("validate storage configuration error: %w", err)
 	}
 

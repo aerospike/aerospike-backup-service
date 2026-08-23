@@ -47,7 +47,7 @@ type S3Storage struct {
 const s3MinUploadPartSize = 5 * 1024 * 1024 // 5 MiB
 
 // Validate checks if the S3Storage is valid.
-func (s *S3Storage) Validate(opts ...ValidationOption) error {
+func (s *S3Storage) Validate(opts ValidationOptions) error {
 	if s.Bucket == "" {
 		return errValidationEmptyField("bucket")
 	}
@@ -73,8 +73,17 @@ func (s *S3Storage) Validate(opts ...ValidationOption) error {
 	if err := s.StorageClass.Validate(); err != nil {
 		return fmt.Errorf("invalid storage class: %w", err)
 	}
+
+	withAgent := s.hasSecretAgent()
+	if err := s.AccessKeyID.Validate(withAgent); err != nil {
+		return errValidationSecret("access-key-id", err)
+	}
+	if err := s.SecretAccessKey.Validate(withAgent); err != nil {
+		return errValidationSecret("secret-access-key", err)
+	}
+
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-	return s.SecretAgentConfig.validate(opts...)
+	return s.SecretAgentConfig.validate(opts)
 }
 
 func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
@@ -84,13 +93,6 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 		agent, err := s.SecretAgentConfig.ToModel(config)
 		if err != nil {
 			return nil, err
-		}
-
-		if err := validateSecretRef(s.AccessKeyID, agent); err != nil {
-			return nil, fmt.Errorf("access-key-id: %w", err)
-		}
-		if err := validateSecretRef(s.SecretAccessKey, agent); err != nil {
-			return nil, fmt.Errorf("secret-access-key: %w", err)
 		}
 
 		auth = &model.S3Authentication{

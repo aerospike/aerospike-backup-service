@@ -29,8 +29,11 @@ var defaultConfig = struct {
 			Size:      ptr.Of(1024),
 			WhiteList: []string{},
 		},
-		ContextPath: "/",
-		Timeout:     ptr.Of(5 * time.Second),
+		ContextPath:  "/",
+		Timeout:      ptr.Of(5 * time.Second),
+		ReadTimeout:  ptr.Of(30 * time.Second),
+		WriteTimeout: ptr.Of(60 * time.Second),
+		IdleTimeout:  ptr.Of(120 * time.Second),
 	},
 	logger: LoggerConfig{
 		Level:        "INFO",

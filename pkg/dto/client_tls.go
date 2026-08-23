@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"slices"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
@@ -34,12 +32,12 @@ const (
 // ca-file is optional and independent: it trusts the server certificate.
 // cert-file, key-file, and name are a separate mTLS set:
 // together they identify this client to the server.
-func (c *ClientTLS) Validate(opts ...ValidationOption) error {
+func (c *ClientTLS) Validate(opts ValidationOptions) error {
 	if c == nil {
 		return nil
 	}
 
-	if !slices.Contains(opts, ValidationSkipTLSFiles) {
+	if !opts.Has(ValidationSkipTLSFiles) {
 		if err := c.validatePaths(); err != nil {
 			return err
 		}

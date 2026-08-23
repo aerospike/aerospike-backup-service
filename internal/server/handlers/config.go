@@ -50,6 +50,11 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
 	decoder.MergeSecrets(newConfig, oldConfig)
 
+	if err := newConfig.Validate(dto.ValidationDefault); err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
+
 	newConfigModel, err := newConfig.ToModel()
 	if err != nil {
 		httpError(w, errBadRequest(err))

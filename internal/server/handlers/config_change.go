@@ -13,8 +13,8 @@ type backupConfigChangeOptions struct {
 	validateNamespaces bool
 }
 
-// changeBackupConfig applies a mutation to the backup configuration DTO, validates the
-// full configuration via ToModel, and persists the result.
+// changeBackupConfig applies a mutation to the backup configuration DTO, validates and
+// converts the full configuration, and persists the result.
 // The mutate function returns routine names that should be rescheduled and rescanned.
 func (s *Service) changeBackupConfig(
 	ctx context.Context,
@@ -41,7 +41,11 @@ func (s *Service) changeBackupConfig(
 	existingConfig := dto.NewConfigFromModel(s.config)
 	decoder.MergeSecrets(dtoConfig, existingConfig)
 
-	modelConfig, err := dtoConfig.ToModel(dto.ValidationSkipTLSFiles)
+	if err := dtoConfig.Validate(dto.ValidationDefault); err != nil {
+		return fmt.Errorf("failed to update configuration: %w", err)
+	}
+
+	modelConfig, err := dtoConfig.ToModel()
 	if err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
