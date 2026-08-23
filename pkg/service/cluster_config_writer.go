@@ -10,13 +10,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
-
-// storageDataWriter is the part of storage.Operations used to write one whole file.
-type storageDataWriter interface {
-	// WriteDataFile writes a data file to the specified storage.
-	WriteDataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
-}
 
 // ClusterConfigWriter saves the configuration of a routine's source cluster: one file per node,
 // at the path [PathService] returns for that routine and timestamp.
@@ -26,9 +21,9 @@ type ClusterConfigWriter interface {
 }
 
 type clusterConfigWriter struct {
-	pathService   PathService
-	storageWriter storageDataWriter
-	configSource  aerospike.ClusterConfigSource
+	pathService  PathService
+	operations   storage.Operations
+	configSource aerospike.ClusterConfigSource
 }
 
 var _ ClusterConfigWriter = (*clusterConfigWriter)(nil)
@@ -36,13 +31,13 @@ var _ ClusterConfigWriter = (*clusterConfigWriter)(nil)
 // NewClusterConfigWriter returns a ClusterConfigWriter.
 func NewClusterConfigWriter(
 	pathService PathService,
-	storageWriter storageDataWriter,
+	operations storage.Operations,
 	configSource aerospike.ClusterConfigSource,
 ) ClusterConfigWriter {
 	return &clusterConfigWriter{
-		pathService:   pathService,
-		storageWriter: storageWriter,
-		configSource:  configSource,
+		pathService:  pathService,
+		operations:   operations,
+		configSource: configSource,
 	}
 }
 
@@ -62,7 +57,7 @@ func (w *clusterConfigWriter) Write(
 	var errs error
 	for i, info := range infos {
 		confFilePath := w.pathService.GetConfigurationFilePath(routine.Name, timestamp, i)
-		err := w.storageWriter.WriteDataFile(ctx, routine.Storage, confFilePath, []byte(info))
+		err := w.operations.WriteDataFile(ctx, routine.Storage, confFilePath, []byte(info))
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to write cluster configuration backup: %w", err))
 			continue

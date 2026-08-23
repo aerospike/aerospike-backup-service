@@ -8,18 +8,11 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
-	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/aerospike/backup-go/models"
 )
-
-// storageWriter is the part of storage.Operations used to open the directory writer
-// that receives backup data.
-type storageWriter interface {
-	// CreateDirWriter creates a writer for a folder in the specified storage.
-	CreateDirWriter(ctx context.Context, storage model.Storage, path string, opts ...options.Opt) (backup.Writer, error)
-}
 
 // BackupHandler observes a started backup: wait for it to finish and read its statistics.
 type BackupHandler interface {
@@ -52,13 +45,13 @@ type Backup interface {
 // BackupExecutor runs scan backups with backup-go and writes the data through storage operations.
 type BackupExecutor struct {
 	clientManager aerospike.ClientManager
-	operations    storageWriter
+	operations    storage.Operations
 }
 
 var _ Backup = (*BackupExecutor)(nil)
 
 // NewBackupExecutor returns a BackupExecutor.
-func NewBackupExecutor(clientManager aerospike.ClientManager, operations storageWriter) *BackupExecutor {
+func NewBackupExecutor(clientManager aerospike.ClientManager, operations storage.Operations) *BackupExecutor {
 	return &BackupExecutor{
 		clientManager: clientManager,
 		operations:    operations,

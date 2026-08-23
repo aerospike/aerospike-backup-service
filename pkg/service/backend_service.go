@@ -5,27 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
-
-// storageOperations is the part of storage.Operations used to read and write backup metadata
-// files and to delete backup folders.
-type storageOperations interface {
-	// ReadFileNames lists the names of files in the specified storage matching the filter.
-	ReadFileNames(ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
-	) ([]string, error)
-	// ReadFile reads the content of a file in the specified storage.
-	ReadFile(ctx context.Context, storage model.Storage, filePath string) ([]byte, error)
-	// WriteMetadataFile writes a metadata file to the specified storage.
-	WriteMetadataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
-	// DeleteFolder deletes a folder and its contents in the specified storage.
-	DeleteFolder(ctx context.Context, storage model.Storage, path string) error
-}
 
 // BackupReaderWriter combines BackupReader and BackupWriter.
 type BackupReaderWriter interface {
@@ -55,14 +41,14 @@ type BackupBackendServiceImpl struct {
 	*backupReader
 	locks       collections.LockMap // lock per routine
 	pathService PathService
-	operations  storageOperations
+	operations  storage.Operations
 }
 
 var _ BackupReaderWriter = (*BackupBackendServiceImpl)(nil)
 
 func NewBackupBackendService(
 	pathService PathService,
-	operations storageOperations,
+	operations storage.Operations,
 ) *BackupBackendServiceImpl {
 	return &BackupBackendServiceImpl{
 		backupReader: newBackupReader(pathService, operations),

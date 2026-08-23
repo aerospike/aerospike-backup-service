@@ -315,8 +315,8 @@ func TestIncrementalBackup(t *testing.T) {
 
 func TestLastBackupsReadsOnlyLatestTimestampMetadataFiles(t *testing.T) {
 	pathService := NewPathService(nil)
-	operations := &countingStorageOperations{
-		storageOperations: storage.NewOperations(storage.NewLocalStorageAccessor()),
+	operations := &countingOperations{
+		Operations: storage.NewOperations(storage.NewLocalStorageAccessor()),
 	}
 	service := NewBackupBackendService(pathService, operations)
 	routine := &model.BackupRoutine{
@@ -457,16 +457,17 @@ func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, Pa
 		storage.NewOperations(storage.NewLocalStorageAccessor())), pathService, routine
 }
 
-type countingStorageOperations struct {
-	storageOperations
+// countingOperations counts ReadFile calls to assert that only the required metadata files are read.
+type countingOperations struct {
+	storage.Operations
 	readFileCount int
 }
 
-func (o *countingStorageOperations) ReadFile(
+func (o *countingOperations) ReadFile(
 	ctx context.Context,
 	storage model.Storage,
 	filePath string,
 ) ([]byte, error) {
 	o.readFileCount++
-	return o.storageOperations.ReadFile(ctx, storage, filePath)
+	return o.Operations.ReadFile(ctx, storage, filePath)
 }

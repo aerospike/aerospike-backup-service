@@ -186,7 +186,7 @@ generate_external_mocks() {
 
 generate_mocks \
     "pkg/service" \
-    "RestoreManager,BackupReaderWriter,BackupReader,BackupStateRegistry,BackupRetentionManager,ClusterConfigWriter,CancelableBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController,RoutineBackupRunner,NamespaceBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler,storageFileReader,storageDataWriter"
+    "RestoreManager,BackupReaderWriter,BackupReader,BackupStateRegistry,BackupRetentionManager,ClusterConfigWriter,CancelableBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController,RoutineBackupRunner,NamespaceBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler"
 
 generate_mocks \
     "pkg/service/restoreexecutor" \
@@ -199,6 +199,10 @@ generate_mocks \
 generate_mocks \
     "pkg/service/aerospike" \
     "ClientManager,NamespaceResolver,NamespaceValidator,Client,ClientFactory,ClusterConfigSource"
+
+generate_mocks \
+    "pkg/service/storage" \
+    "Operations"
 
 generate_external_mocks \
     "github.com/aerospike/backup-go" \
@@ -221,9 +225,5 @@ generate_external_mocks \
 generate_mocks \
     "internal/server/handlers" \
     "configRetriever,manager,configApplier"
-
-generate_mocks \
-    "internal/server/configuration" \
-    "storageReaderWriter"
 
 echo "All mocks generated successfully."

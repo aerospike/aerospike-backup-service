@@ -9,15 +9,16 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
 // backupReader holds dependencies and logic for listing and reading backup metadata.
 type backupReader struct {
 	pathService PathService
-	operations  storageOperations
+	operations  storage.Operations
 }
 
-func newBackupReader(pathService PathService, operations storageOperations) *backupReader {
+func newBackupReader(pathService PathService, operations storage.Operations) *backupReader {
 	return &backupReader{
 		pathService: pathService,
 		operations:  operations,

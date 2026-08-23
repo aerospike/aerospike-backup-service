@@ -1,12 +1,13 @@
 package configuration
 
 import (
-	"context"
 	"errors"
+	"path/filepath"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -15,7 +16,7 @@ func TestStorageManager_Read(t *testing.T) {
 	tests := []struct {
 		name        string
 		content     []byte
-		readErr     error
+		missingFile bool
 		expectError string
 	}{
 		{
@@ -24,7 +25,7 @@ func TestStorageManager_Read(t *testing.T) {
 		},
 		{
 			name:        "read error",
-			readErr:     errors.New("read boom"),
+			missingFile: true,
 			expectError: "failed to read configuration from storage",
 		},
 		{
@@ -37,11 +38,12 @@ func TestStorageManager_Read(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
+			manager, ops, configStorage := newTestStorageManager(t, ctrl)
 
-			mockOps := NewmockStorageReaderWriter(ctrl)
-			mockOps.EXPECT().ReadFile(gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.content, tt.readErr)
+			if !tt.missingFile {
+				require.NoError(t, ops.WriteDataFile(t.Context(), configStorage, "", tt.content))
+			}
 
-			manager := newTestStorageManager(ctrl, mockOps)
 			cfg, err := manager.Read(t.Context())
 
 			if tt.expectError != "" {
@@ -56,61 +58,40 @@ func TestStorageManager_Read(t *testing.T) {
 }
 
 func TestStorageManager_Write(t *testing.T) {
-	tests := []struct {
-		name        string
-		writeErr    error
-		expectError string
-	}{
-		{
-			name: "success",
-		},
-		{
-			name:        "write error",
-			writeErr:    errors.New("write boom"),
-			expectError: "failed to write configuration to storage",
-		},
-	}
+	t.Run("success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		manager, ops, configStorage := newTestStorageManager(t, ctrl)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
+		require.NoError(t, manager.Write(t.Context(), model.NewConfig()))
 
-			var written []byte
-			mockOps := NewmockStorageReaderWriter(ctrl)
-			call := mockOps.EXPECT().WriteDataFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
-			if tt.writeErr != nil {
-				call.Return(tt.writeErr)
-			} else {
-				call.Do(func(_ context.Context, _ model.Storage, _ string, content []byte) { written = content }).Return(nil)
-			}
+		written, err := ops.ReadFile(t.Context(), configStorage, "")
+		require.NoError(t, err)
+		require.Contains(t, string(written), "yaml-language-server")
+	})
 
-			manager := newTestStorageManager(ctrl, mockOps)
-			err := manager.Write(t.Context(), model.NewConfig())
+	t.Run("write error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
 
-			if tt.expectError != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.expectError)
-				return
-			}
-			require.NoError(t, err)
-			require.Contains(t, string(written), "yaml-language-server")
-		})
-	}
+		ops := storage.NewMockOperations(ctrl)
+		ops.EXPECT().
+			WriteDataFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(errors.New("disk full"))
+
+		manager := newStorageManager(
+			&model.LocalStorage{Path: filepath.Join(t.TempDir(), "config.yml")},
+			newTestNamespaceValidator(ctrl),
+			ops,
+		)
+
+		err := manager.Write(t.Context(), model.NewConfig())
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to write configuration to storage")
+	})
 }
 
 func TestStorageManager_WriteThenRead_RoundTrip(t *testing.T) {
 	ctrl := gomock.NewController(t)
-
-	var stored []byte
-
-	mockOps := NewmockStorageReaderWriter(ctrl)
-	mockOps.EXPECT().WriteDataFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Do(func(_ context.Context, _ model.Storage, _ string, content []byte) { stored = content }).Return(nil)
-	mockOps.EXPECT().ReadFile(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ model.Storage, _ string) ([]byte, error) {
-			return stored, nil
-		})
-	manager := newTestStorageManager(ctrl, mockOps)
+	manager, _, _ := newTestStorageManager(t, ctrl)
 
 	require.NoError(t, manager.Write(t.Context(), model.NewConfig()))
 
@@ -119,9 +100,16 @@ func TestStorageManager_WriteThenRead_RoundTrip(t *testing.T) {
 	require.NotNil(t, cfg)
 }
 
-func newTestStorageManager(ctrl *gomock.Controller, ops storageReaderWriter) Manager {
+func newTestStorageManager(t *testing.T, ctrl *gomock.Controller) (Manager, storage.Operations, *model.LocalStorage) {
+	t.Helper()
+
+	configStorage := &model.LocalStorage{Path: filepath.Join(t.TempDir(), "config.yml")}
+	ops := storage.NewOperations(storage.NewLocalStorageAccessor())
+	return newStorageManager(configStorage, newTestNamespaceValidator(ctrl), ops), ops, configStorage
+}
+
+func newTestNamespaceValidator(ctrl *gomock.Controller) aerospike.NamespaceValidator {
 	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
-
-	return newStorageManager(&model.LocalStorage{Path: "/config.yaml"}, mockNsValidator, ops)
+	return mockNsValidator
 }

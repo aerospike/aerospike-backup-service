@@ -5,17 +5,8 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/io/storage/options"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
-
-// storageReader is the part of storage.Operations used to open the directory reader
-// that supplies backup data.
-type storageReader interface {
-	// CreateDirReader creates a reader for a folder in the specified storage.
-	CreateDirReader(ctx context.Context, storage model.Storage, path string, opts ...options.Opt,
-	) (backup.StreamingReader, error)
-}
 
 // Restore starts a restore from one backup location and returns a handle to observe it.
 type Restore interface {
@@ -29,13 +20,13 @@ type Restore interface {
 
 // RestoreExecutor runs scan restores with backup-go, reading the data through storage operations.
 type RestoreExecutor struct {
-	operations storageReader
+	operations storage.Operations
 }
 
 var _ Restore = (*RestoreExecutor)(nil)
 
 // NewRestoreExecutor returns a RestoreExecutor.
-func NewRestoreExecutor(operations storageReader) *RestoreExecutor {
+func NewRestoreExecutor(operations storage.Operations) *RestoreExecutor {
 	return &RestoreExecutor{
 		operations: operations,
 	}

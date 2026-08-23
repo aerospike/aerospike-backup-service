@@ -10,14 +10,9 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go/io/storage/common"
 )
-
-// storageFileReader is the part of storage.Operations used to read whole files under a path.
-type storageFileReader interface {
-	// ReadFiles reads the content of files in the specified storage matching the filter.
-	ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error)
-}
 
 // ConfigRetriever returns the cluster configuration files saved with the last full backup
 // at or before a given time, packed into a zip archive.
@@ -29,7 +24,7 @@ type ConfigRetriever interface {
 type configRetriever struct {
 	backupReader BackupReader
 	pathService  PathService
-	operations   storageFileReader
+	operations   storage.Operations
 }
 
 var _ ConfigRetriever = (*configRetriever)(nil)
@@ -37,7 +32,7 @@ var _ ConfigRetriever = (*configRetriever)(nil)
 func NewConfigRetriever(
 	backupReader BackupReaderWriter,
 	pathService PathService,
-	operations storageFileReader,
+	operations storage.Operations,
 ) ConfigRetriever {
 	return &configRetriever{
 		backupReader: backupReader,

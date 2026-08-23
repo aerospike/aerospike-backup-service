@@ -129,7 +129,7 @@ func InitComponents(
 	}, nil
 }
 
-func newStorageOperations(resolver secrets.Resolver) *storage.Operations {
+func newStorageOperations(resolver secrets.Resolver) storage.Operations {
 	return storage.NewOperations(
 		storage.NewS3StorageAccessor(resolver),
 		storage.NewGcpStorageAccessor(resolver),
