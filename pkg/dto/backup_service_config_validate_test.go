@@ -3,6 +3,7 @@ package dto
 import (
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,9 +50,83 @@ func TestBackupServiceConfig_Validate_InvalidTimestampFormat(t *testing.T) {
 func TestBackupServiceConfig_Validate_ValidTimestampFormats(t *testing.T) {
 	for _, v := range []string{"ISO", "US", "EU", "iso", "us", "eu"} {
 		cfg := &ServiceConfig{
-			Backup: &BackupCommonConfig{TimestampFormat: v},
+			Backup: &BackupCommonConfig{TimestampFormat: TimestampFormat(v)},
 		}
 		err := cfg.Validate()
 		require.NoError(t, err)
+	}
+}
+
+func TestServiceConfigValidateListeners(t *testing.T) {
+	certs := setupTestCertificates(t)
+
+	tests := []struct {
+		name    string
+		config  *ServiceConfig
+		wantErr string
+	}{
+		{
+			name:   "default HTTP listener",
+			config: &ServiceConfig{},
+		},
+		{
+			name: "HTTPS listener with HTTP disabled",
+			config: &ServiceConfig{
+				HTTPServer: &HTTPServerConfig{Disabled: true},
+				HTTPSServer: &HTTPSServerConfig{
+					CertFile: certs.certFile,
+					KeyFile:  certs.keyFile,
+				},
+			},
+		},
+		{
+			name: "both listeners enabled on different ports",
+			config: &ServiceConfig{
+				HTTPServer: &HTTPServerConfig{Port: ptr.Of(Port(8080))},
+				HTTPSServer: &HTTPSServerConfig{
+					Port:     ptr.Of(Port(8443)),
+					CertFile: certs.certFile,
+					KeyFile:  certs.keyFile,
+				},
+			},
+		},
+		{
+			name: "HTTP disabled and HTTPS absent",
+			config: &ServiceConfig{
+				HTTPServer: &HTTPServerConfig{Disabled: true},
+			},
+			wantErr: "service.http and service.https cannot both be disabled",
+		},
+		{
+			name: "both listeners disabled",
+			config: &ServiceConfig{
+				HTTPServer:  &HTTPServerConfig{Disabled: true},
+				HTTPSServer: &HTTPSServerConfig{Disabled: true},
+			},
+			wantErr: "service.http and service.https cannot both be disabled",
+		},
+		{
+			name: "both listeners use same explicit port",
+			config: &ServiceConfig{
+				HTTPServer: &HTTPServerConfig{Port: ptr.Of(Port(8443))},
+				HTTPSServer: &HTTPSServerConfig{
+					Port:     ptr.Of(Port(8443)),
+					CertFile: certs.certFile,
+					KeyFile:  certs.keyFile,
+				},
+			},
+			wantErr: "cannot use the same port 8443",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.config.Validate()
+			if test.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, test.wantErr)
+		})
 	}
 }

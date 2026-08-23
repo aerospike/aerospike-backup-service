@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
@@ -22,7 +21,7 @@ func (s *AuthSuite) TestInternalPlain() {
 			Credentials: &dto.Credentials{
 				User:     intUser,
 				Password: intPassword,
-				AuthMode: string(model.AuthModeInternal),
+				AuthMode: dto.AuthModeInternal,
 			},
 		})
 	})
@@ -52,7 +51,7 @@ func (s *AuthSuite) TestInternalServerTLS() {
 		Credentials: &dto.Credentials{
 			User:     intUser,
 			Password: intPassword,
-			AuthMode: string(model.AuthModeInternal),
+			AuthMode: dto.AuthModeInternal,
 		},
 		TLS: &dto.TLS{
 			ClientTLS: dto.ClientTLS{CAFile: s.certs.caCert},
@@ -70,7 +69,7 @@ func (s *AuthSuite) TestMutualTLS() {
 			Credentials: &dto.Credentials{
 				User:     intUser,
 				Password: intPassword,
-				AuthMode: string(model.AuthModeInternal),
+				AuthMode: dto.AuthModeInternal,
 			},
 			TLS: &dto.TLS{
 				ClientTLS: dto.ClientTLS{
@@ -88,7 +87,7 @@ func (s *AuthSuite) TestMutualTLS() {
 			SeedNodes:            []dto.SeedNode{cluster.seed},
 			UseServicesAlternate: ptr.Of(true),
 			Credentials: &dto.Credentials{
-				AuthMode: string(model.AuthModePKI),
+				AuthMode: dto.AuthModePKI,
 			},
 			TLS: &dto.TLS{
 				ClientTLS: dto.ClientTLS{

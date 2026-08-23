@@ -131,7 +131,7 @@ func (c *Config) Validate(opts ValidationOptions) error {
 		}
 	}
 
-	if err := c.ServiceConfig.Validate(); err != nil {
+	if err := c.ServiceConfig.Validate(opts); err != nil {
 		return fmt.Errorf("service validation error: %w", err)
 	}
 

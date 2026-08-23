@@ -5,6 +5,7 @@ HTTPServerConfig represents the service's HTTP server configuration.
 |-----------------|---------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
 | `address`       | The address to listen on.                                                                                                                         | `0.0.0.0`     |
 | `context-path`  | ContextPath customizes path for the API endpoints.                                                                                                | `/`           |
+| `disabled`      | Disabled controls whether the HTTP listener is disabled.                                                                                          | `false`       |
 | `idle-timeout`  | IdleTimeout is the maximum amount of time in milliseconds to wait for the next request<br>when keep-alives are enabled (http.Server.IdleTimeout). | `120000`      |
 | `port`          | The port to listen on.                                                                                                                            | `8080`        |
 | `rate`          | HTTP rate limiter configuration.<br>See: [dto.RateLimiterConfig](dto.ratelimiterconfig.md)                                                        |               |

@@ -1,7 +1,5 @@
 package model
 
-import "strings"
-
 // TimestampFormat represents the encoding for backup date timestamp in human-readable format.
 type TimestampFormat string
 
@@ -11,10 +9,7 @@ const (
 	TimestampFormatEU  TimestampFormat = "EU"
 )
 
-func TimestampFormatFromString(s string) TimestampFormat {
-	return TimestampFormat(strings.ToUpper(s))
-}
-
+// TimestampFormatPresets maps a timestamp format to a Go time layout.
 var TimestampFormatPresets = map[TimestampFormat]string{
 	TimestampFormatISO: "2006-01-02T15-04-05",
 	TimestampFormatUS:  "Jan-02-2006-15-04-05",

@@ -4,6 +4,8 @@ package model
 type ServiceConfig struct {
 	// HTTPServer is the backup service HTTP server configuration.
 	HTTPServer *HTTPServerConfig
+	// HTTPSServer is the backup service HTTPS server configuration.
+	HTTPSServer *HTTPSServerConfig
 	// Logger is the backup service logger configuration.
 	Logger *LoggerConfig
 	// Backup contains service-level backup settings.

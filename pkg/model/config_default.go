@@ -16,6 +16,7 @@ const (
 // defaultConfig represents default configuration values.
 var defaultConfig = struct {
 	http          HTTPServerConfig
+	https         HTTPSServerConfig
 	logger        LoggerConfig
 	backupPolicy  BackupPolicy
 	restorePolicy RestorePolicy
@@ -34,6 +35,22 @@ var defaultConfig = struct {
 		ReadTimeout:  ptr.Of(30 * time.Second),
 		WriteTimeout: ptr.Of(60 * time.Second),
 		IdleTimeout:  ptr.Of(120 * time.Second),
+	},
+	https: HTTPSServerConfig{
+		Address: "0.0.0.0",
+		Port:    NewPort(8443),
+		Rate: &RateLimiterConfig{
+			Tps:       ptr.Of(1024),
+			Size:      ptr.Of(1024),
+			WhiteList: []string{},
+		},
+		ContextPath:  "/",
+		Timeout:      ptr.Of(5 * time.Second),
+		ReadTimeout:  ptr.Of(30 * time.Second),
+		WriteTimeout: ptr.Of(60 * time.Second),
+		IdleTimeout:  ptr.Of(120 * time.Second),
+		MinVersion:   TLSMinVersion12,
+		ClientAuth:   TLSClientAuthNone,
 	},
 	logger: LoggerConfig{
 		Level:        "INFO",

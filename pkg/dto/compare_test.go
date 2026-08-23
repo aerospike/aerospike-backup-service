@@ -60,6 +60,24 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			},
 		},
 		{
+			name: "changed HTTPS server config",
+			current: ServiceConfig{
+				HTTPSServer: &HTTPSServerConfig{
+					Disabled: true,
+					CertFile: "server.pem",
+				},
+			},
+			other: ServiceConfig{
+				HTTPSServer: &HTTPSServerConfig{
+					Disabled: true,
+					CertFile: "new-server.pem",
+				},
+			},
+			errors: []string{
+				"CertFile changed: server.pem -> new-server.pem",
+			},
+		},
+		{
 			name: "changed logger config",
 			current: ServiceConfig{
 				Logger: &LoggerConfig{
@@ -273,6 +291,7 @@ func TestHTTPServerConfig_Compare(t *testing.T) {
 				IdleTimeout:  ptr.Of(int64(120000)),
 			},
 			other: &HTTPServerConfig{
+				Disabled:     true,
 				Address:      "0.0.0.0",
 				Port:         ptr.Of(Port(9090)),
 				ContextPath:  "/v1/api",
@@ -282,6 +301,7 @@ func TestHTTPServerConfig_Compare(t *testing.T) {
 				IdleTimeout:  ptr.Of(int64(180000)),
 			},
 			errors: []string{
+				"Disabled changed: false -> true",
 				"Address changed: localhost -> 0.0.0.0",
 				"Port changed: 8080 -> 9090",
 				"ContextPath changed: /api -> /v1/api",

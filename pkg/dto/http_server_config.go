@@ -13,6 +13,8 @@ import (
 // HTTPServerConfig represents the service's HTTP server configuration.
 // @Description HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
+	// Disabled controls whether the HTTP listener is disabled.
+	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty" default:"false"`
 	// The address to listen on.
 	Address string `yaml:"address,omitempty" json:"address,omitempty" default:"0.0.0.0" example:"0.0.0.0"`
 	// The port to listen on.
@@ -43,6 +45,9 @@ func (s *HTTPServerConfig) Validate() error {
 	if s.ContextPath != "" && !strings.HasPrefix(s.ContextPath, "/") {
 		return fmt.Errorf("context-path must start with a slash: %s", s.ContextPath)
 	}
+	if err := s.Port.Validate(); err != nil {
+		return err
+	}
 	if s.Timeout != nil && *s.Timeout < 0 {
 		return errValidationNegative("timeout", *s.Timeout)
 	}
@@ -69,6 +74,7 @@ func (s *HTTPServerConfig) ToModel() *model.HTTPServerConfig {
 	}
 
 	return &model.HTTPServerConfig{
+		Disabled:     s.Disabled,
 		Address:      s.Address,
 		Port:         s.Port.ToModel(),
 		Rate:         s.Rate.ToModel(),
@@ -84,6 +90,7 @@ func (s *HTTPServerConfig) fromModel(m *model.HTTPServerConfig) {
 	if m == nil {
 		return
 	}
+	s.Disabled = m.Disabled
 	s.Address = m.Address
 	s.Port = NewPortFromModel(m.Port)
 	if m.Rate != nil {
@@ -110,6 +117,7 @@ func (s *HTTPServerConfig) Compare(other *HTTPServerConfig) error {
 	}
 
 	var err = errors.Join(
+		compareValues("Disabled", s.Disabled, other.Disabled),
 		compareValues("Address", s.Address, other.Address),
 		comparePointers("Port", s.Port, other.Port),
 		compareValues("ContextPath", s.ContextPath, other.ContextPath),

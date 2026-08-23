@@ -12,15 +12,28 @@ import (
 type ServiceConfig struct {
 	// HTTPServer is the backup service HTTP server configuration.
 	HTTPServer *HTTPServerConfig `yaml:"http,omitempty" json:"http,omitempty"`
+	// HTTPSServer is the backup service HTTPS server configuration.
+	HTTPSServer *HTTPSServerConfig `yaml:"https,omitempty" json:"https,omitempty"`
 	// Logger is the backup service logger configuration.
 	Logger *LoggerConfig `yaml:"logger,omitempty" json:"logger,omitempty"`
 	// Backup contains service-level backup settings.
 	Backup *BackupCommonConfig `yaml:"backup,omitempty" json:"backup,omitempty"`
 }
 
-func (c *ServiceConfig) Validate() error {
+func (c *ServiceConfig) Validate(options ...ValidationOptions) error {
+	opts := ValidationDefault
+	if len(options) > 0 {
+		opts = options[0]
+	}
+
 	if err := c.HTTPServer.Validate(); err != nil {
 		return fmt.Errorf("`http` validation error: %w", err)
+	}
+	if err := c.HTTPSServer.Validate(opts); err != nil {
+		return fmt.Errorf("`https` validation error: %w", err)
+	}
+	if err := c.validateListeners(); err != nil {
+		return err
 	}
 	if err := c.Logger.Validate(); err != nil {
 		return fmt.Errorf("`logger` validation error: %w", err)
@@ -32,11 +45,30 @@ func (c *ServiceConfig) Validate() error {
 	return nil
 }
 
+func (c *ServiceConfig) validateListeners() error {
+	httpEnabled := c.HTTPServer == nil || !c.HTTPServer.Disabled
+	httpsEnabled := c.HTTPSServer != nil && !c.HTTPSServer.Disabled
+
+	if !httpEnabled && !httpsEnabled {
+		return errors.New("service.http and service.https cannot both be disabled")
+	}
+	if httpEnabled && httpsEnabled {
+		httpPort := model.ServiceConfig{HTTPServer: c.HTTPServer.ToModel()}.GetHTTPServerOrDefault().GetPortOrDefault()
+		httpsPort := c.HTTPSServer.ToModel().GetPortOrDefault()
+		if httpPort == httpsPort {
+			return fmt.Errorf("service.http and service.https cannot use the same port %d", httpPort)
+		}
+	}
+
+	return nil
+}
+
 func (c *ServiceConfig) ToModel() *model.ServiceConfig {
 	return &model.ServiceConfig{
-		HTTPServer: c.HTTPServer.ToModel(),
-		Logger:     c.Logger.ToModel(),
-		Backup:     c.Backup.ToModel(),
+		HTTPServer:  c.HTTPServer.ToModel(),
+		HTTPSServer: c.HTTPSServer.ToModel(),
+		Logger:      c.Logger.ToModel(),
+		Backup:      c.Backup.ToModel(),
 	}
 }
 
@@ -48,6 +80,11 @@ func (c *ServiceConfig) fromModel(m *model.ServiceConfig) {
 	if m.HTTPServer != nil {
 		c.HTTPServer = &HTTPServerConfig{}
 		c.HTTPServer.fromModel(m.HTTPServer)
+	}
+
+	if m.HTTPSServer != nil {
+		c.HTTPSServer = &HTTPSServerConfig{}
+		c.HTTPSServer.fromModel(m.HTTPSServer)
 	}
 
 	if m.Logger != nil {
@@ -67,6 +104,10 @@ func (c *ServiceConfig) Compare(other ServiceConfig) error {
 
 	if e := c.HTTPServer.Compare(other.HTTPServer); e != nil {
 		err = errors.Join(err, fmt.Errorf("HTTPServer changes: %w", e))
+	}
+
+	if e := c.HTTPSServer.Compare(other.HTTPSServer); e != nil {
+		err = errors.Join(err, fmt.Errorf("HTTPSServer changes: %w", e))
 	}
 
 	if e := c.Logger.Compare(other.Logger); e != nil {

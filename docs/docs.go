@@ -1695,6 +1695,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.AuthMode": {
+            "description": "AuthMode is the Aerospike cluster authentication mode.",
+            "type": "string",
+            "enum": [
+                "INTERNAL",
+                "EXTERNAL",
+                "PKI"
+            ],
+            "x-enum-varnames": [
+                "AuthModeInternal",
+                "AuthModeExternal",
+                "AuthModePKI"
+            ]
+        },
         "dto.AzureStorage": {
             "description": "AzureStorage represents the configuration for Azure Blob storage.",
             "type": "object",
@@ -1808,11 +1822,15 @@ const docTemplate = `{
             "properties": {
                 "timestamp-format": {
                     "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
-                    "type": "string",
                     "enum": [
                         "ISO",
                         "US",
                         "EU"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.TimestampFormat"
+                        }
                     ],
                     "x-nullable": true
                 }
@@ -2217,12 +2235,16 @@ const docTemplate = `{
             "properties": {
                 "auth-mode": {
                     "description": "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
-                    "type": "string",
                     "default": "INTERNAL",
                     "enum": [
                         "INTERNAL",
                         "EXTERNAL",
                         "PKI"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.AuthMode"
+                        }
                     ]
                 },
                 "password": {
@@ -2408,6 +2430,121 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.HTTPSServerConfig": {
+            "description": "HTTPSServerConfig represents the service's HTTPS server configuration.",
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "The address to listen on.",
+                    "type": "string",
+                    "default": "0.0.0.0",
+                    "example": "0.0.0.0"
+                },
+                "cert-file": {
+                    "description": "Path to the HTTPS server certificate in PEM format.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/server.pem"
+                },
+                "cipher-suites": {
+                    "description": "Allowed TLS cipher suite names. An empty list uses Go's secure defaults.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "x-nullable": true
+                },
+                "client-auth": {
+                    "description": "Client certificate authentication mode.",
+                    "default": "none",
+                    "enum": [
+                        "none",
+                        "request",
+                        "require-and-verify"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.TLSClientAuth"
+                        }
+                    ]
+                },
+                "client-ca-file": {
+                    "description": "Path to trusted client CA certificates in PEM format.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/client-ca.pem"
+                },
+                "context-path": {
+                    "description": "ContextPath customizes the path for API endpoints.",
+                    "type": "string",
+                    "default": "/"
+                },
+                "disabled": {
+                    "description": "Disabled controls whether the HTTPS listener is disabled.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "idle-timeout": {
+                    "description": "IdleTimeout is the maximum time in milliseconds to wait for the next keep-alive request.",
+                    "type": "integer",
+                    "default": 120000
+                },
+                "key-file": {
+                    "description": "Path to the HTTPS server private key in PEM format.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/server-key.pem"
+                },
+                "key-file-password": {
+                    "description": "Passphrase for an encrypted HTTPS server private key.\nThis is sensitive information. Literal values are redacted as \"[secret]\" in API responses.",
+                    "type": "string",
+                    "format": "password",
+                    "x-nullable": true
+                },
+                "min-version": {
+                    "description": "Minimum accepted TLS protocol version.",
+                    "default": "1.2",
+                    "enum": [
+                        "1.2",
+                        "1.3"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.TLSMinVersion"
+                        }
+                    ]
+                },
+                "port": {
+                    "description": "The port to listen on.",
+                    "type": "integer",
+                    "default": 8443,
+                    "example": 8443
+                },
+                "rate": {
+                    "description": "HTTP rate limiter configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RateLimiterConfig"
+                        }
+                    ]
+                },
+                "read-timeout": {
+                    "description": "ReadTimeout is the maximum duration in milliseconds for reading an entire request.",
+                    "type": "integer",
+                    "default": 30000
+                },
+                "timeout": {
+                    "description": "Timeout for reading HTTP request headers in milliseconds.",
+                    "type": "integer",
+                    "default": 5000
+                },
+                "write-timeout": {
+                    "description": "WriteTimeout is the maximum duration in milliseconds before timing out response writes.",
+                    "type": "integer",
+                    "default": 60000
+                }
+            }
+        },
         "dto.HTTPServerConfig": {
             "description": "HTTPServerConfig represents the service's HTTP server configuration.",
             "type": "object",
@@ -2422,6 +2559,11 @@ const docTemplate = `{
                     "description": "ContextPath customizes path for the API endpoints.",
                     "type": "string",
                     "default": "/"
+                },
+                "disabled": {
+                    "description": "Disabled controls whether the HTTP listener is disabled.",
+                    "type": "boolean",
+                    "default": false
                 },
                 "idle-timeout": {
                     "description": "IdleTimeout is the maximum amount of time in milliseconds to wait for the next request\nwhen keep-alives are enabled (http.Server.IdleTimeout).",
@@ -3355,6 +3497,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "https": {
+                    "description": "HTTPSServer is the backup service HTTPS server configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.HTTPSServerConfig"
+                        }
+                    ]
+                },
                 "logger": {
                     "description": "Logger is the backup service logger configuration.",
                     "allOf": [
@@ -3455,6 +3605,46 @@ const docTemplate = `{
                     "default": "TLSv1.2"
                 }
             }
+        },
+        "dto.TLSClientAuth": {
+            "description": "TLSClientAuth is HTTPS client-certificate authentication.",
+            "type": "string",
+            "enum": [
+                "none",
+                "request",
+                "require-and-verify"
+            ],
+            "x-enum-varnames": [
+                "TLSClientAuthNone",
+                "TLSClientAuthRequest",
+                "TLSClientAuthRequireAndVerify"
+            ]
+        },
+        "dto.TLSMinVersion": {
+            "description": "TLSMinVersion is the minimum accepted TLS protocol version.",
+            "type": "string",
+            "enum": [
+                "1.2",
+                "1.3"
+            ],
+            "x-enum-varnames": [
+                "TLSMinVersion12",
+                "TLSMinVersion13"
+            ]
+        },
+        "dto.TimestampFormat": {
+            "description": "TimestampFormat is the encoding for backup dates in file paths.",
+            "type": "string",
+            "enum": [
+                "ISO",
+                "US",
+                "EU"
+            ],
+            "x-enum-varnames": [
+                "TimestampFormatISO",
+                "TimestampFormatUS",
+                "TimestampFormatEU"
+            ]
         },
         "dto.TimestampRestorePolicy": {
             "description": "TimestampRestorePolicy represents a policy for the point-in-time restore operation.",

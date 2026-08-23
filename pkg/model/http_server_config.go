@@ -4,6 +4,8 @@ import "time"
 
 // HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
+	// Disabled controls whether the HTTP listener is disabled.
+	Disabled bool
 	// The address to listen on.
 	Address string
 	// The port to listen on.
@@ -20,6 +22,14 @@ type HTTPServerConfig struct {
 	WriteTimeout *time.Duration
 	// IdleTimeout is the maximum amount of time to wait for the next request when keep-alives are enabled.
 	IdleTimeout *time.Duration
+}
+
+// GetDisabledOrDefault returns whether the HTTP listener is disabled.
+func (s *HTTPServerConfig) GetDisabledOrDefault() bool {
+	if s == nil {
+		return defaultConfig.http.Disabled
+	}
+	return s.Disabled
 }
 
 // GetAddressOrDefault returns the value of the Address property.
