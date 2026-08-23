@@ -1,7 +1,4 @@
 // Package tlsconfig builds crypto/tls configuration from the Aerospike TLS model.
-//
-// It is deliberately a leaf package so configuration types (pkg/dto, pkg/validation)
-// can validate TLS settings without depending on pkg/service.
 package tlsconfig
 
 import (
