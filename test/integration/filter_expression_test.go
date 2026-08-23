@@ -7,7 +7,7 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
-func (s *Suite) TestBackupWithFilterExpression() {
+func (s *BackupSuite) TestBackupWithFilterExpression() {
 	filterExpression, asErr := as.ExpGreater(as.ExpIntBin("age"), as.ExpIntVal(25)).Base64()
 	s.Require().NoError(asErr)
 

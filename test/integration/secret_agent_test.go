@@ -10,7 +10,7 @@ import (
 // TestBackupRestoreWithSecretAgentEncryption starts Aerospike Secret Agent with the
 // local file backend, fetches the backup encryption key from it, then restores
 // with the same key.
-func (s *Suite) TestBackupRestoreWithSecretAgentEncryption() {
+func (s *BackupSuite) TestBackupRestoreWithSecretAgentEncryption() {
 	pemKey, err := generateEncryptionPEM()
 	s.Require().NoError(err)
 

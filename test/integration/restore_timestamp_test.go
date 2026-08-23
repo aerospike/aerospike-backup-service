@@ -12,7 +12,7 @@ import (
 // TestRestoreByTimestampWorkflow runs full backup, incremental backup, empty incremental backup,
 // then restores the namespace to a point in time via POST /v1/restore/timestamp.
 // Subtests share env, backup storage, and Aerospike state.
-func (s *Suite) TestRestoreByTimestampWorkflow() {
+func (s *BackupSuite) TestRestoreByTimestampWorkflow() {
 	e := s.setupEnv()
 
 	var fullBackup, incrBackup dto.BackupDetails
