@@ -13,7 +13,7 @@ import (
 )
 
 func (s *AuthSuite) TestInternalPlain() {
-	cluster := s.startAndProvision(false, false, false)
+	cluster := s.startAndProvision(profilePlain)
 
 	s.Run("literal password", func() {
 		s.testAuthenticatedBackup(cluster, &dto.AerospikeCluster{
@@ -44,7 +44,7 @@ func (s *AuthSuite) TestInternalPlain() {
 }
 
 func (s *AuthSuite) TestInternalServerTLS() {
-	cluster := s.startAndProvision(true, false, false)
+	cluster := s.startAndProvision(profileServerTLS)
 
 	s.testAuthenticatedBackup(cluster, &dto.AerospikeCluster{
 		SeedNodes:            []dto.SeedNode{cluster.seed},
@@ -61,7 +61,7 @@ func (s *AuthSuite) TestInternalServerTLS() {
 }
 
 func (s *AuthSuite) TestMutualTLS() {
-	cluster := s.startAndProvision(true, true, true)
+	cluster := s.startAndProvision(profileMutualTLS)
 
 	s.Run("internal", func() {
 		s.testAuthenticatedBackup(cluster, &dto.AerospikeCluster{
@@ -103,8 +103,8 @@ func (s *AuthSuite) TestMutualTLS() {
 }
 
 func (s *AuthSuite) testAuthenticatedBackup(cluster authCluster, config *dto.AerospikeCluster) {
-	s.Require().NoError(cluster.admin.Truncate(nil, namespace, "", nil))
-	s.seedAuthRecords(cluster.admin, []int{10, 20, 30})
+	s.Require().NoError(cluster.adminClient.Truncate(nil, namespace, "", nil))
+	s.seedAuthRecords(cluster.adminClient, []int{10, 20, 30})
 
 	e := s.setupEnv(func(c *dto.Config) {
 		c.AerospikeClusters[clusterName] = config

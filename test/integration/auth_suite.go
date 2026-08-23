@@ -31,7 +31,10 @@ import (
 const (
 	containerConfPath = "/etc/aerospike/aerospike.conf"
 	tlsPort           = "4333/tcp"
-	tlsName           = "test-tls"
+	// tlsName is both the Aerospike `tls` stanza name and the DNS SAN of the server
+	// certificate. The client sends it as SNI and then verifies it against the cert,
+	// so the two must stay in sync.
+	tlsName = "test-tls"
 
 	adminUser     = "admin"
 	adminPassword = "admin"
@@ -45,8 +48,8 @@ const (
 	containerServerKey  = "/etc/aerospike/server.key"
 )
 
-// Stock EE docker conf plus a security stanza. The image entrypoint overwrites
-// /etc/aerospike/aerospike.conf on first start, so this is copied in after that.
+// secureConf is the stock EE docker conf plus an empty security stanza, which is all it
+// takes to turn RBAC on. The server then starts with the default admin/admin superuser.
 const secureConf = `service {
 	feature-key-file /etc/aerospike/features.conf
 	cluster-name docker
@@ -92,25 +95,63 @@ namespace test {
 }
 `
 
+// authCluster is one running secured node.
 type authCluster struct {
-	seed      dto.SeedNode
+	// seed is what ABS is pointed at, and carries the profile under test: the TLS port
+	// and tls-name for the TLS profiles.
+	seed dto.SeedNode
+	// adminSeed is always the plaintext service port. User and role management is done
+	// out of band so that bootstrapping never depends on the transport under test.
 	adminSeed dto.SeedNode
-	admin     *as.Client
+	// adminClient is logged in as the superuser over adminSeed.
+	adminClient *as.Client
 }
 
+// certificateFiles is a throwaway PKI generated per suite run.
 type certificateFiles struct {
-	caCert       string
-	serverCert   []byte
-	serverKey    []byte
+	caCert string
+	// serverCert and serverKey stay in memory because they are copied straight into the
+	// container rather than read by the client.
+	serverCert []byte
+	serverKey  []byte
+	// The client certificate common names are Aerospike usernames on purpose: with
+	// auth-mode PKI the server takes the username from the CN rather than from the
+	// connection credentials.
 	internalCert string
 	internalKey  string
 	pkiCert      string
 	pkiKey       string
 }
 
-// AuthSuite runs connection smoke tests against secured EE nodes. Only one
-// Aerospike container is kept running at a time; each Test* method starts the
-// profile it needs and testcontainers cleanup stops it when that test returns.
+// authProfile is the transport and client-authentication setup of a secured node.
+//
+// Each profile needs its own server process: plain and TLS differ in which ports are
+// open, and the two TLS profiles differ in tls-authenticate-client.
+type authProfile int
+
+const (
+	// profilePlain serves the plaintext port only.
+	profilePlain authProfile = iota
+	// profileServerTLS presents a server certificate and does not ask for a client one.
+	profileServerTLS
+	// profileMutualTLS additionally requires a client certificate, which is what PKI
+	// authentication needs to identify the user.
+	profileMutualTLS
+)
+
+func (p authProfile) usesTLS() bool {
+	return p != profilePlain
+}
+
+func (p authProfile) requiresClientCert() bool {
+	return p == profileMutualTLS
+}
+
+// AuthSuite runs connection smoke tests against secured EE nodes.
+//
+// Since no two profiles can share a server process, each Test* method starts the node
+// it needs and testcontainers cleanup stops it when that test returns, keeping only one
+// secured container alive at a time.
 type AuthSuite struct {
 	Suite
 
@@ -125,37 +166,48 @@ func (s *AuthSuite) SetupSuite() {
 // client, and each scenario truncates the node it just started.
 func (s *AuthSuite) SetupTest() {}
 
-func (s *AuthSuite) startAndProvision(withTLS, requireClientCert, withPKI bool) authCluster {
+// startAndProvision boots a node for one profile and creates the users the tests log in as.
+func (s *AuthSuite) startAndProvision(profile authProfile) authCluster {
 	t := s.T()
-	cluster := s.startSecureAerospike(context.Background(), withTLS, requireClientCert)
+	// Not t.Context(): it is canceled before t.Cleanup runs, which would make the
+	// terminate call below fail and leave the container behind.
+	cluster := s.startSecureAerospike(context.Background(), profile)
 
-	s.Require().NoError(cluster.admin.CreateUser(nil, intUser, intPassword, []string{readWriteRole}))
-	s.Require().NoError(cluster.admin.GrantRoles(
+	admin := cluster.adminClient
+	s.Require().NoError(admin.CreateUser(nil, intUser, intPassword, []string{readWriteRole}))
+	s.Require().NoError(admin.GrantRoles(
 		nil, adminUser, []string{"sys-admin", "truncate", readWriteRole},
 	))
-	if withPKI {
-		s.Require().NoError(cluster.admin.CreatePKIUser(nil, pkiUser, []string{readWriteRole}))
+	if profile.requiresClientCert() {
+		s.Require().NoError(admin.CreatePKIUser(nil, pkiUser, []string{readWriteRole}))
 	}
 
-	cluster.admin.Close()
+	// Roles are baked into the session token at login, so the admin client that granted
+	// them still holds a token without truncate. Reconnect to pick the new roles up.
+	admin.Close()
 	admin, err := newAdminClient(cluster.adminSeed)
 	s.Require().NoError(err)
 	t.Cleanup(admin.Close)
-	cluster.admin = admin
+	cluster.adminClient = admin
 
 	return cluster
 }
 
+// startSecureAerospike brings up a single node with security enabled.
+//
+// The image entrypoint rewrites /etc/aerospike/aerospike.conf every time it boots a
+// fresh container, so the config cannot simply be mounted. The sequence is: let the
+// image start normally, stop it, copy in the config (and certificates), start it again.
+//
 //nolint:funlen // Container lifecycle is clearer when setup remains in one place.
-func (s *AuthSuite) startSecureAerospike(
-	ctx context.Context,
-	withTLS bool,
-	requireClientCert bool,
-) authCluster {
+func (s *AuthSuite) startSecureAerospike(ctx context.Context, profile authProfile) authCluster {
 	t := s.T()
 
 	var options []testcontainers.ContainerCustomizer
-	if withTLS {
+	if profile.usesTLS() {
+		// Docker Desktop hands out a new host port whenever a container is stopped and
+		// started, but the port has to be baked into tls-alternate-access-port before the
+		// restart. Pinning the binding at create time keeps it stable across the restart.
 		mappedTLSPort := availableHostPort(ctx, s)
 		options = append(
 			options,
@@ -172,48 +224,47 @@ func (s *AuthSuite) startSecureAerospike(
 		)
 	}
 
-	container, err := tcAerospike.Run(ctx, aerospikeImage, options...)
+	asContainer, err := tcAerospike.Run(ctx, aerospikeImage, options...)
 	s.Require().NoError(err)
 	t.Cleanup(func() {
-		if err := container.Terminate(ctx); err != nil {
+		if err := asContainer.Terminate(ctx); err != nil {
 			t.Logf("failed to terminate Aerospike container: %v", err)
 		}
 	})
 
-	host, err := container.Host(ctx)
+	host, err := asContainer.Host(ctx)
 	s.Require().NoError(err)
 
 	var mappedTLSPort int
-	if withTLS {
-		mapped, mapErr := container.MappedPort(ctx, tlsPort)
+	if profile.usesTLS() {
+		mapped, mapErr := asContainer.MappedPort(ctx, tlsPort)
 		s.Require().NoError(mapErr)
 		mappedTLSPort = int(mapped.Num())
 	}
 
 	stopTimeout := 10 * time.Second
-	s.Require().NoError(container.Stop(ctx, &stopTimeout))
+	s.Require().NoError(asContainer.Stop(ctx, &stopTimeout))
 
 	config := secureConf
-	if withTLS {
-		config = tlsSecureConf(host, mappedTLSPort, requireClientCert)
-		s.copyServerCertificates(ctx, container)
+	if profile.usesTLS() {
+		config = tlsSecureConf(host, mappedTLSPort, profile)
+		s.copyServerCertificates(ctx, asContainer)
 	}
-	s.Require().NoError(container.CopyToContainer(ctx, []byte(config), containerConfPath, 0o644))
-	s.Require().NoError(container.Start(ctx))
+	s.Require().NoError(asContainer.CopyToContainer(ctx, []byte(config), containerConfPath, 0o644))
+	s.Require().NoError(asContainer.Start(ctx))
 
-	// Start() can return after the module sees logs from the first boot. Poll a
-	// real authenticated connection before proceeding.
-	plainPort, err := container.MappedPort(ctx, "3000/tcp")
+	// Poll real connections.
+	plainPort, err := asContainer.MappedPort(ctx, "3000/tcp")
 	s.Require().NoError(err)
 	adminSeed := dto.SeedNode{HostName: host, Port: dto.Port(plainPort.Num())}
-	s.Require().NoError(waitForAdmin(ctx, adminSeed))
+	s.Require().NoError(waitForDBStart(ctx, adminSeed))
 
 	seed := adminSeed
-	if withTLS {
-		mapped, mapErr := container.MappedPort(ctx, tlsPort)
+	if profile.usesTLS() {
+		mapped, mapErr := asContainer.MappedPort(ctx, tlsPort)
 		s.Require().NoError(mapErr)
 		s.Equal(mappedTLSPort, int(mapped.Num()), "TLS port mapping changed after restart")
-		s.Require().NoError(s.waitForTLS(ctx, host, mappedTLSPort, requireClientCert))
+		s.Require().NoError(s.waitForTLS(ctx, host, mappedTLSPort, profile))
 		seed = dto.SeedNode{
 			HostName: host,
 			Port:     dto.Port(mapped.Num()),
@@ -224,13 +275,18 @@ func (s *AuthSuite) startSecureAerospike(
 	admin, err := newAdminClient(adminSeed)
 	s.Require().NoError(err)
 
-	return authCluster{seed: seed, adminSeed: adminSeed, admin: admin}
+	return authCluster{seed: seed, adminSeed: adminSeed, adminClient: admin}
 }
 
+// tlsSecureConf keeps the plaintext service port for bootstrapping and adds a TLS port.
+//
+// The tls-alternate-access-* settings are what the node gossips back to clients; without
+// them it would advertise its in-container address, which is unreachable from the host.
+//
 //nolint:funlen // The embedded Aerospike configuration is intentionally kept together.
-func tlsSecureConf(host string, mappedTLSPort int, requireClientCert bool) string {
+func tlsSecureConf(host string, mappedTLSPort int, profile authProfile) string {
 	clientAuthentication := "false"
-	if requireClientCert {
+	if profile.requiresClientCert() {
 		clientAuthentication = "any"
 	}
 
@@ -317,7 +373,7 @@ func (s *AuthSuite) copyServerCertificates(ctx context.Context, container *tcAer
 	s.Require().NoError(container.CopyToContainer(ctx, s.certs.serverKey, containerServerKey, 0o600))
 }
 
-func (s *AuthSuite) waitForTLS(ctx context.Context, host string, port int, withClientCert bool) error {
+func (s *AuthSuite) waitForTLS(ctx context.Context, host string, port int, profile authProfile) error {
 	caPEM, err := os.ReadFile(s.certs.caCert)
 	if err != nil {
 		return err
@@ -333,7 +389,7 @@ func (s *AuthSuite) waitForTLS(ctx context.Context, host string, port int, withC
 		ServerName: tlsName,
 		MinVersion: tls.VersionTLS12,
 	}
-	if withClientCert {
+	if profile.requiresClientCert() {
 		cert, loadErr := tls.LoadX509KeyPair(s.certs.internalCert, s.certs.internalKey)
 		if loadErr != nil {
 			return loadErr
@@ -367,7 +423,7 @@ func (s *AuthSuite) generateCertificates() certificateFiles {
 	dir := s.T().TempDir()
 
 	caTemplate := &x509.Certificate{
-		SerialNumber:          randomSerial(s),
+		SerialNumber:          big.NewInt(1),
 		Subject:               pkix.Name{CommonName: "ABS integration CA"},
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().Add(24 * time.Hour),
@@ -386,10 +442,13 @@ func (s *AuthSuite) generateCertificates() certificateFiles {
 	caFile := filepath.Join(dir, "ca.crt")
 	s.Require().NoError(os.WriteFile(caFile, caPEM, 0o600))
 
+	// The DNS SAN, not the common name, is what the client checks, so tlsName has to
+	// appear there.
 	serverCert, serverKey := issueCertificate(
 		s,
 		caCert,
 		caKey,
+		2,
 		pkix.Name{CommonName: tlsName},
 		[]string{tlsName},
 		[]x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
@@ -398,6 +457,7 @@ func (s *AuthSuite) generateCertificates() certificateFiles {
 		s,
 		caCert,
 		caKey,
+		3,
 		pkix.Name{CommonName: intUser},
 		nil,
 		[]x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
@@ -406,6 +466,7 @@ func (s *AuthSuite) generateCertificates() certificateFiles {
 		s,
 		caCert,
 		caKey,
+		4, // https://xkcd.com/221/
 		pkix.Name{CommonName: pkiUser},
 		nil,
 		[]x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
@@ -426,6 +487,7 @@ func issueCertificate(
 	s *AuthSuite,
 	ca *x509.Certificate,
 	caKey *rsa.PrivateKey,
+	serial int64,
 	subject pkix.Name,
 	dnsNames []string,
 	usage []x509.ExtKeyUsage,
@@ -434,7 +496,7 @@ func issueCertificate(
 	s.Require().NoError(err)
 
 	template := &x509.Certificate{
-		SerialNumber: randomSerial(s),
+		SerialNumber: big.NewInt(serial),
 		Subject:      subject,
 		DNSNames:     dnsNames,
 		NotBefore:    time.Now().Add(-time.Hour),
@@ -449,20 +511,13 @@ func issueCertificate(
 		pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
 }
 
-func randomSerial(s *AuthSuite) *big.Int {
-	limit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serial, err := rand.Int(rand.Reader, limit)
-	s.Require().NoError(err)
-	return serial
-}
-
 func writeCertificateFile(s *AuthSuite, dir, name string, content []byte) string {
 	path := filepath.Join(dir, name)
 	s.Require().NoError(os.WriteFile(path, content, 0o600))
 	return path
 }
 
-func waitForAdmin(ctx context.Context, seed dto.SeedNode) error {
+func waitForDBStart(ctx context.Context, seed dto.SeedNode) error {
 	deadline := time.Now().Add(45 * time.Second)
 	var last error
 
@@ -486,6 +541,9 @@ func waitForAdmin(ctx context.Context, seed dto.SeedNode) error {
 	return fmt.Errorf("admin login to %s:%d: %w", seed.HostName, seed.Port, last)
 }
 
+// newAdminClient connects as the default EE superuser over the plaintext port. Every
+// profile keeps that port open so bootstrapping is identical regardless of the transport
+// under test.
 func newAdminClient(seed dto.SeedNode) (*as.Client, error) {
 	policy := as.NewClientPolicy()
 	policy.User = adminUser
