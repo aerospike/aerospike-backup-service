@@ -16,14 +16,14 @@ type Resolver interface {
 	Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error)
 }
 
-type resolverImpl struct{}
+type resolver struct{}
 
 func NewResolver() Resolver {
-	return &resolverImpl{}
+	return &resolver{}
 }
 
 // Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
-func (m *resolverImpl) Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error) {
+func (m *resolver) Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error) {
 	if agent == nil {
 		return value, nil
 	}
