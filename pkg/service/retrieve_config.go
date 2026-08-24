@@ -30,7 +30,7 @@ type configRetriever struct {
 var _ ConfigRetriever = (*configRetriever)(nil)
 
 func NewConfigRetriever(
-	backupReader BackupReaderWriter,
+	backupReader BackupReader,
 	pathService PathService,
 	operations storage.Operations,
 ) ConfigRetriever {

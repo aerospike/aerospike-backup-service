@@ -58,11 +58,11 @@ func InitComponents(
 	}
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
-	backendService := service.NewBackupBackendService(pathService, operations)
-	history := service.NewHistoryManager(backendService)
+	catalog := service.NewBackupCatalog(pathService, operations)
+	history := service.NewHistoryManager(catalog)
 	registry := service.NewBackupStateRegistry(history, config)
 	var routineStorage u.LockMap
-	retentionManager := service.NewBackupRetentionManager(backendService, &routineStorage)
+	retentionManager := service.NewBackupRetentionManager(catalog, &routineStorage)
 	clusterConfigWriter := service.NewClusterConfigWriter(
 		pathService,
 		operations,
@@ -71,7 +71,7 @@ func InitComponents(
 	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
 	backupExecutor := backupexecutor.NewBackupExecutor(clientManager, operations)
 	startController := service.NewStartController(registry, service.NewStartDecider())
-	namespaceRunner := service.NewNamespaceBackupRunner(backupExecutor, backendService, pathService)
+	namespaceRunner := service.NewNamespaceBackupRunner(backupExecutor, catalog, pathService)
 	namespaceResolver := aerospike.NewNamespaceResolver(clientManager)
 	routineBackupRunner := service.NewRoutineBackupRunner(
 		namespaceRunner,
@@ -100,14 +100,14 @@ func InitComponents(
 		restoreexecutor.NewRestoreExecutor(operations),
 		clientManager,
 		restoreJobs,
-		backendService,
+		catalog,
 		&routineStorage,
 		restoreValidator,
 	)
 
 	metricsCollector := prometheus.NewMetricsCollector(registry.GetRunningState, restoreJobs.StatusCounts)
 
-	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
+	configRetriever := service.NewConfigRetriever(catalog, pathService, operations)
 	httpService := handlers.NewService(
 		ctx,
 		config,
@@ -115,7 +115,7 @@ func InitComponents(
 		backupScheduler,
 		restoreMgr,
 		configRetriever,
-		backendService,
+		catalog,
 		registry,
 		configurationManager,
 		nsValidator,

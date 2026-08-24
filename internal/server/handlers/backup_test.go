@@ -64,15 +64,15 @@ func TestService_GetAllFullBackups(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			mockBackends := service.NewMockBackupReader(ctrl)
+			backupReader := service.NewMockBackupReader(ctrl)
 			cfg := model.NewConfig()
 			_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 
-			tt.setupMock(mockBackends)
+			tt.setupMock(backupReader)
 
 			svc := &Service{
 				config:       cfg,
-				backupReader: mockBackends,
+				backupReader: backupReader,
 			}
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/backups/full", nil)

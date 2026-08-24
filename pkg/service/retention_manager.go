@@ -20,7 +20,7 @@ type BackupRetentionManager interface {
 }
 
 type backupRetentionManager struct {
-	backendService BackupReaderWriter
+	catalog BackupCatalog
 
 	// Lock per routine. The restore service reads backup data,
 	// while the retention manager deletes backup data.
@@ -31,11 +31,11 @@ type backupRetentionManager struct {
 var _ BackupRetentionManager = (*backupRetentionManager)(nil)
 
 func NewBackupRetentionManager(
-	backendService BackupReaderWriter,
+	catalog BackupCatalog,
 	routineStorage *collections.LockMap,
 ) BackupRetentionManager {
 	return &backupRetentionManager{
-		backendService: backendService,
+		catalog:        catalog,
 		routineStorage: routineStorage,
 	}
 }
@@ -52,7 +52,7 @@ func (e *backupRetentionManager) ApplyRetention(ctx context.Context, routine *mo
 	}
 	defer mu.Unlock()
 
-	fullBackups, err := e.backendService.GetBackups(ctx, NewFullBackupFilter(routine))
+	fullBackups, err := e.catalog.GetBackups(ctx, NewFullBackupFilter(routine))
 	if err != nil {
 		return fmt.Errorf("failed to get full backups: %w", err)
 	}
@@ -94,7 +94,7 @@ func (e *backupRetentionManager) deleteFullBackups(
 		if !b.Created.Before(earliest) {
 			continue
 		}
-		if err := e.backendService.Delete(ctx, routine, extractBackupDirFromKey(b.Key)); err != nil {
+		if err := e.catalog.Delete(ctx, routine, extractBackupDirFromKey(b.Key)); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", b.Key, err))
 		}
 	}
@@ -107,7 +107,7 @@ func (e *backupRetentionManager) deleteIncrementalBackups(
 ) error {
 	if retainCount == 0 { // Delete all incremental backups.
 		path := backupRootPath(routine.Name, model.BackupTypeIncremental)
-		return e.backendService.Delete(ctx, routine, path)
+		return e.catalog.Delete(ctx, routine, path)
 	}
 
 	if len(timestamps) <= retainCount {
@@ -115,14 +115,14 @@ func (e *backupRetentionManager) deleteIncrementalBackups(
 	}
 
 	earliest := timestamps[len(timestamps)-retainCount]
-	incrBackups, err := e.backendService.GetBackups(ctx, NewIncrementalBackupFilter(routine).WithToTime(earliest))
+	incrBackups, err := e.catalog.GetBackups(ctx, NewIncrementalBackupFilter(routine).WithToTime(earliest))
 	if err != nil {
 		return fmt.Errorf("failed to fetch incremental backups: %w", err)
 	}
 
 	var errs error
 	for _, b := range incrBackups {
-		if err := e.backendService.Delete(ctx, routine, extractBackupDirFromKey(b.Key)); err != nil {
+		if err := e.catalog.Delete(ctx, routine, extractBackupDirFromKey(b.Key)); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", b.Key, err))
 		}
 	}
