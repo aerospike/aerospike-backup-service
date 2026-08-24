@@ -79,10 +79,24 @@ func (s *HTTPSServerConfig) Validate(opts ValidationOptions) error {
 	if err := s.SecretAgentConfig.validate(opts); err != nil {
 		return err
 	}
-	if !opts.Has(ValidationSkipTLSFiles) {
-		if _, err := servertls.New(s.toModel()); err != nil {
-			return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
-		}
+
+	return s.validateTLSConfig(opts)
+}
+
+func (s *HTTPSServerConfig) validateTLSConfig(opts ValidationOptions) error {
+	if opts.Has(ValidationSkipTLSFiles) {
+		return nil
+	}
+	if s.CertFile == "" || s.KeyFile == "" {
+		return nil
+	}
+	// Secret Agent references are resolved at runtime; they cannot be used to decrypt the key here.
+	if err := s.KeyFilePassword.Validate(s.hasSecretAgent()); err != nil {
+		return err
+	}
+
+	if _, err := servertls.New(s.toModel()); err != nil {
+		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
 	}
 
 	return nil

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -119,6 +120,38 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 			},
 			wantErr: "client authentication",
 		},
+		{
+			name: "secret agent password reference with agent",
+			config: &HTTPSServerConfig{
+				CertFile:        certs.certFile,
+				KeyFile:         certs.keyFile,
+				KeyFilePassword: "secrets:agent1:tls-key",
+				SecretAgentConfig: SecretAgentConfig{
+					SecretAgentName: "agent1",
+				},
+			},
+		},
+		{
+			name: "secret agent password reference without agent",
+			config: &HTTPSServerConfig{
+				CertFile:        certs.certFile,
+				KeyFile:         certs.keyFile,
+				KeyFilePassword: "secrets:agent1:tls-key",
+			},
+			wantErr: "secret agent",
+		},
+		{
+			name: "mutually exclusive secret agent settings",
+			config: &HTTPSServerConfig{
+				CertFile: certs.certFile,
+				KeyFile:  certs.keyFile,
+				SecretAgentConfig: SecretAgentConfig{
+					SecretAgent:     &SecretAgent{Address: "localhost", ConnectionType: "tcp"},
+					SecretAgentName: "agent1",
+				},
+			},
+			wantErr: "mutually exclusive",
+		},
 	}
 
 	for _, test := range tests {
@@ -151,6 +184,12 @@ func TestHTTPSServerConfigToModelAndFromModel(t *testing.T) {
 		CipherSuites:    []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 		ClientCAFile:    "/ca.pem",
 		ClientAuth:      "require-and-verify",
+		SecretAgentConfig: SecretAgentConfig{
+			SecretAgent: &SecretAgent{
+				Address:        "localhost",
+				ConnectionType: saClient.ConnectionTypeTCP,
+			},
+		},
 	}
 
 	modelConfig := config.ToModel()
@@ -177,6 +216,9 @@ func TestHTTPSServerConfigCompareReportsEveryField(t *testing.T) {
 		CipherSuites:    []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 		ClientCAFile:    "ca",
 		ClientAuth:      "none",
+		SecretAgentConfig: SecretAgentConfig{
+			SecretAgentName: "agent-a",
+		},
 	}
 	other := &HTTPSServerConfig{
 		Disabled:        true,
@@ -195,16 +237,19 @@ func TestHTTPSServerConfigCompareReportsEveryField(t *testing.T) {
 		CipherSuites:    []string{"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"},
 		ClientCAFile:    "new-ca",
 		ClientAuth:      "require-and-verify",
+		SecretAgentConfig: SecretAgentConfig{
+			SecretAgentName: "agent-b",
+		},
 	}
 
 	err := current.Compare(other)
 	require.Error(t, err)
 	lines := strings.Split(err.Error(), "\n")
-	assert.Len(t, lines, 16)
+	assert.Len(t, lines, 17)
 	for _, field := range []string{
 		"Disabled", "Address", "Port", "rate changes", "ContextPath", "Timeout", "ReadTimeout", "WriteTimeout",
 		"IdleTimeout", "CertFile", "KeyFile", "KeyFilePassword", "MinVersion", "CipherSuites",
-		"ClientCAFile", "ClientAuth",
+		"ClientCAFile", "ClientAuth", "SecretAgentName",
 	} {
 		assert.Contains(t, err.Error(), field)
 	}
@@ -215,4 +260,34 @@ func TestHTTPSServerConfigSecureCipherCatalog(t *testing.T) {
 		_, exists := secureServerCipherSuites[suite.Name]
 		assert.False(t, exists)
 	}
+}
+
+func TestHTTPSServerConfigToModel_ResolvesSecretAgentName(t *testing.T) {
+	certs := setupTestCertificates(t)
+	config := &Config{
+		ServiceConfig: ServiceConfig{
+			HTTPSServer: &HTTPSServerConfig{
+				CertFile:        certs.certFile,
+				KeyFile:         certs.keyFile,
+				KeyFilePassword: "secrets:agent1:tls-key",
+				SecretAgentConfig: SecretAgentConfig{
+					SecretAgentName: "agent1",
+				},
+			},
+		},
+		SecretAgents: map[string]*SecretAgent{
+			"agent1": {
+				Address:        "localhost",
+				ConnectionType: saClient.ConnectionTypeTCP,
+			},
+		},
+	}
+
+	require.NoError(t, config.Validate(ValidationDefault))
+
+	modelConfig, err := config.ToModel()
+	require.NoError(t, err)
+	require.NotNil(t, modelConfig.ServiceConfig.HTTPSServer)
+	require.NotNil(t, modelConfig.ServiceConfig.HTTPSServer.SecretAgent)
+	assert.Equal(t, "localhost", modelConfig.ServiceConfig.HTTPSServer.SecretAgent.Address)
 }
