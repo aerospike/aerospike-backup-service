@@ -41,6 +41,8 @@ type routineProvider interface {
 	Routines() map[string]*model.BackupRoutine
 }
 
+var _ routineProvider = (*model.Config)(nil)
+
 type backupStateRegistry struct {
 	// trackers holds the state for all known routines
 	trackers *collections.SafeMap[string, *routineTracker]
