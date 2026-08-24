@@ -26,6 +26,7 @@ const clientCAField = "client-ca-file"
 //
 //nolint:lll
 type HTTPSServerConfig struct {
+	SecretAgentConfig `yaml:",inline"`
 	// Disabled controls whether the HTTPS listener is disabled.
 	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty" default:"false"`
 	// The address to listen on.
@@ -49,7 +50,8 @@ type HTTPSServerConfig struct {
 	// Path to the HTTPS server private key in PEM format.
 	KeyFile string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/server-key.pem" extensions:"x-nullable"`
 	// Passphrase for an encrypted HTTPS server private key.
-	// This is sensitive information. Literal values are redacted as "[secret]" in API responses.
+	// This is sensitive information. Can be a path in secret agent or an actual value.
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
 	KeyFilePassword secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
 	// Minimum accepted TLS protocol version.
 	MinVersion TLSMinVersion `yaml:"min-version,omitempty" json:"min-version,omitempty" default:"1.2" enums:"1.2,1.3"`
@@ -70,14 +72,17 @@ func (s *HTTPSServerConfig) Validate(opts ValidationOptions) error {
 	if err := s.validateHTTPFields(); err != nil {
 		return err
 	}
-	if err := s.validateTLSFields(opts); err != nil {
+	if err := s.validateTLSFields(); err != nil {
 		return err
 	}
-	if opts.Has(ValidationSkipTLSFiles) || s.CertFile == "" {
-		return nil
+	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
+	if err := s.SecretAgentConfig.validate(opts); err != nil {
+		return err
 	}
-	if _, err := servertls.New(s.ToModel()); err != nil {
-		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
+	if !opts.Has(ValidationSkipTLSFiles) {
+		if _, err := servertls.New(s.toModel()); err != nil {
+			return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
+		}
 	}
 
 	return nil
@@ -109,7 +114,7 @@ func (s *HTTPSServerConfig) validateHTTPFields() error {
 	return nil
 }
 
-func (s *HTTPSServerConfig) validateTLSFields(opts ValidationOptions) error {
+func (s *HTTPSServerConfig) validateTLSFields() error {
 	if !s.Disabled {
 		if s.CertFile == "" {
 			return errValidationEmptyField(certField)
@@ -127,7 +132,7 @@ func (s *HTTPSServerConfig) validateTLSFields(opts ValidationOptions) error {
 	if s.KeyFilePassword != "" && s.KeyFile == "" {
 		return errValidationRequires("key-file-password", keyField)
 	}
-	if err := s.KeyFilePassword.Validate(opts.Has(ValidationWithSecretAgent)); err != nil {
+	if err := s.KeyFilePassword.Validate(s.hasSecretAgent()); err != nil {
 		return errValidationSecret("key-file-password", err)
 	}
 
@@ -167,6 +172,11 @@ func (s *HTTPSServerConfig) ToModel() *model.HTTPSServerConfig {
 		return nil
 	}
 
+	result := s.toModel()
+	return result
+}
+
+func (s *HTTPSServerConfig) toModel() *model.HTTPSServerConfig {
 	clientAuth, _ := s.ClientAuth.ToModel()
 	minVersion, _ := s.MinVersion.ToModel()
 	return &model.HTTPSServerConfig{
@@ -182,6 +192,7 @@ func (s *HTTPSServerConfig) ToModel() *model.HTTPSServerConfig {
 		CertFile:        s.CertFile,
 		KeyFile:         s.KeyFile,
 		KeyFilePassword: string(s.KeyFilePassword),
+		SecretAgent:     s.SecretAgent.ToModel(),
 		MinVersion:      minVersion,
 		CipherSuites:    s.CipherSuites,
 		ClientCAFile:    s.ClientCAFile,
@@ -213,6 +224,7 @@ func (s *HTTPSServerConfig) fromModel(m *model.HTTPSServerConfig) {
 	s.CipherSuites = m.CipherSuites
 	s.ClientCAFile = m.ClientCAFile
 	s.ClientAuth = NewTLSClientAuthFromModel(m.ClientAuth)
+	s.SecretAgent = newSecretAgentFromModel(m.SecretAgent)
 }
 
 // Compare compares HTTPS server configurations and reports every static field change.
@@ -248,6 +260,7 @@ func (s *HTTPSServerConfig) Compare(other *HTTPSServerConfig) error {
 		compareSlices("CipherSuites", s.CipherSuites, other.CipherSuites),
 		compareValues("ClientCAFile", s.ClientCAFile, other.ClientCAFile),
 		compareValues("ClientAuth", s.ClientAuth, other.ClientAuth),
+		compareValues("SecretAgentName", s.SecretAgentName, other.SecretAgentName),
 	)
 	if e := s.Rate.Compare(other.Rate); e != nil {
 		err = errors.Join(err, fmt.Errorf("rate changes: %w", e))

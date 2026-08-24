@@ -121,7 +121,7 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := test.config.Validate()
+			err := test.config.Validate(ValidationSkipTLSFiles)
 			if test.wantErr == "" {
 				require.NoError(t, err)
 				return
