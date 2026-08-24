@@ -18,7 +18,7 @@ type PasswordResolver interface {
 	Resolve(ctx context.Context, creds *model.Credentials) (*string, error)
 }
 
-type passwordResolverImpl struct {
+type passwordResolver struct {
 	resolver Resolver
 }
 
@@ -26,12 +26,12 @@ type passwordResolverImpl struct {
 // to resolve Secret Agent-backed values. Passing nil disables Secret Agent
 // resolution (password is treated as a literal).
 func NewPasswordResolver(resolver Resolver) PasswordResolver {
-	return &passwordResolverImpl{resolver: resolver}
+	return &passwordResolver{resolver: resolver}
 }
 
 // Resolve resolves the password from the credentials.
 // It handles reading from file or using the Secret Agent.
-func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credentials) (*string, error) {
+func (r passwordResolver) Resolve(ctx context.Context, creds *model.Credentials) (*string, error) {
 	if creds == nil {
 		return nil, nil
 	}
