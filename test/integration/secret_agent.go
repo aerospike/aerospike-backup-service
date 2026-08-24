@@ -35,7 +35,7 @@ func secretRef() string {
 
 // startSecretAgent starts Aerospike Secret Agent with the file backend described in
 // https://github.com/aerospike/aerospike-secret-agent/blob/main/docs/file.md
-func (s *Suite) startSecretAgent(pemKey string) *dto.SecretAgent {
+func (s *Suite) startSecretAgent(secret string) *dto.SecretAgent {
 	ctx := s.T().Context()
 
 	agent, err := testcontainers.Run(ctx, secretAgentImage,
@@ -48,7 +48,7 @@ func (s *Suite) startSecretAgent(pemKey string) *dto.SecretAgent {
 				FileMode:          0o644,
 			},
 			testcontainers.ContainerFile{
-				Reader:            strings.NewReader(secretsJSON(pemKey)),
+				Reader:            strings.NewReader(secretsJSON(secret)),
 				ContainerFilePath: secretsFilePath,
 				FileMode:          0o600,
 			},
@@ -69,6 +69,11 @@ func (s *Suite) startSecretAgent(pemKey string) *dto.SecretAgent {
 		Address:        host,
 		Port:           ptr.Of(dto.Port(mapped.Num())),
 		Timeout:        ptr.Of(5000),
+		// The file backend stores values base64-encoded and returns them as stored,
+		// so the client has to decode. Without this the caller gets the encoded
+		// string: harmless for an encryption key that is only compared to itself,
+		// but a cluster password fails with INVALID_CREDENTIAL.
+		IsBase64: ptr.Of(true),
 	}
 }
 
@@ -96,9 +101,9 @@ func (s *Suite) secretAgentConfigYAML() string {
 	return string(data)
 }
 
-func secretsJSON(pemKey string) string {
+func secretsJSON(secret string) string {
 	// File-backend values must be base64-encoded strings.
-	return fmt.Sprintf(`{%q:%q}`, secretKeyName, base64.StdEncoding.EncodeToString([]byte(pemKey)))
+	return fmt.Sprintf(`{%q:%q}`, secretKeyName, base64.StdEncoding.EncodeToString([]byte(secret)))
 }
 
 func (s *Suite) cleanupContainer(c testcontainers.Container) {

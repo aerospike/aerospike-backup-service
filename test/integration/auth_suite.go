@@ -35,6 +35,14 @@ const (
 	// certificate. The client sends it as SNI and then verifies it against the cert,
 	// so the two must stay in sync.
 	tlsName = "test-tls"
+	// clientKeyPassword unlocks the encrypted client key PEMs used in mTLS tests.
+	clientKeyPassword = "client-key-pass"
+	// tlsProtocols pins the handshake to TLS 1.2. That is the only version ABS
+	// currently maps (see pkg/tlsconfig); a single token is both min and max.
+	tlsProtocols = "TLSv1.2"
+	// tlsCipherSuite is an IANA name, colon-separated if there are several.
+	// These tests mint RSA certificates, so the suite must be ECDHE_RSA, not ECDSA.
+	tlsCipherSuite = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
 
 	adminUser     = "admin"
 	adminPassword = "admin"
@@ -109,7 +117,11 @@ type authCluster struct {
 
 // certificateFiles is a throwaway PKI generated per suite run.
 type certificateFiles struct {
+	// caCert is the CA bundle as a single PEM file (dto.TLS.ca-file).
 	caCert string
+	// caDir is a directory containing that same CA PEM (dto.TLS.ca-path).
+	// ca-file and ca-path are mutually exclusive; tests pick one per cluster config.
+	caDir string
 	// serverCert and serverKey stay in memory because they are copied straight into the
 	// container rather than read by the client.
 	serverCert []byte
@@ -118,9 +130,12 @@ type certificateFiles struct {
 	// auth-mode PKI the server takes the username from the CN rather than from the
 	// connection credentials.
 	internalCert string
-	internalKey  string
-	pkiCert      string
-	pkiKey       string
+	// internalKey is the unencrypted private key, used only by waitForTLS.
+	internalKey string
+	// Encrypted keys are what ABS loads via dto.TLS.key-file + key-file-password.
+	internalKeyEncrypted string
+	pkiCert              string
+	pkiKeyEncrypted      string
 }
 
 // authProfile is the transport and client-authentication setup of a secured node.
@@ -438,9 +453,7 @@ func (s *AuthSuite) generateCertificates() certificateFiles {
 	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caDER})
 	caCert, err := x509.ParseCertificate(caDER)
 	s.Require().NoError(err)
-
-	caFile := filepath.Join(dir, "ca.crt")
-	s.Require().NoError(os.WriteFile(caFile, caPEM, 0o600))
+	caFile, caDir := writeCAFiles(s, dir, caPEM)
 
 	// The DNS SAN, not the common name, is what the client checks, so tlsName has to
 	// appear there.
@@ -473,14 +486,40 @@ func (s *AuthSuite) generateCertificates() certificateFiles {
 	)
 
 	return certificateFiles{
-		caCert:       caFile,
-		serverCert:   serverCert,
-		serverKey:    serverKey,
-		internalCert: writeCertificateFile(s, dir, "internal.crt", internalCert),
-		internalKey:  writeCertificateFile(s, dir, "internal.key", internalKey),
-		pkiCert:      writeCertificateFile(s, dir, "pki.crt", pkiCert),
-		pkiKey:       writeCertificateFile(s, dir, "pki.key", pkiKey),
+		caCert:               caFile,
+		caDir:                caDir,
+		serverCert:           serverCert,
+		serverKey:            serverKey,
+		internalCert:         writeCertificateFile(s, dir, "internal.crt", internalCert),
+		internalKey:          writeCertificateFile(s, dir, "internal.key", internalKey),
+		internalKeyEncrypted: writeCertificateFile(s, dir, "internal.enc.key", encryptPEMKey(s, internalKey)),
+		pkiCert:              writeCertificateFile(s, dir, "pki.crt", pkiCert),
+		pkiKeyEncrypted:      writeCertificateFile(s, dir, "pki.enc.key", encryptPEMKey(s, pkiKey)),
 	}
+}
+
+// encryptPEMKey wraps a PKCS#1 key in a password-protected PEM block so the tests
+// can exercise dto.TLS.key-file-password. ABS decrypts this with the same
+// (deprecated) PEM encryption the Go stdlib still uses for DEK-Info keys.
+func encryptPEMKey(s *AuthSuite, keyPEM []byte) []byte {
+	block, _ := pem.Decode(keyPEM)
+	s.Require().NotNil(block, "client key PEM")
+
+	encrypted, err := x509.EncryptPEMBlock( //nolint:staticcheck // DEK-Info PEM is what ABS decrypts
+		rand.Reader, block.Type, block.Bytes, []byte(clientKeyPassword), x509.PEMCipherAES256)
+	s.Require().NoError(err)
+
+	return pem.EncodeToMemory(encrypted)
+}
+
+func writeCAFiles(s *AuthSuite, dir string, caPEM []byte) (caFile, caDir string) {
+	caFile = filepath.Join(dir, "ca.crt")
+	s.Require().NoError(os.WriteFile(caFile, caPEM, 0o600))
+	caDir = filepath.Join(dir, "ca")
+	s.Require().NoError(os.Mkdir(caDir, 0o700))
+	s.Require().NoError(os.WriteFile(filepath.Join(caDir, "ca.crt"), caPEM, 0o600))
+
+	return caFile, caDir
 }
 
 func issueCertificate(
