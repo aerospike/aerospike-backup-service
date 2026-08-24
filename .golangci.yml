@@ -103,6 +103,7 @@ linters:
             - checkPrivateReceivers
           exclude:
             - test
+        - name: unexported-return
     usetesting:
       context-background: true
       context-todo: true

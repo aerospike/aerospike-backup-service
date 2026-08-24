@@ -14,7 +14,8 @@ import (
 	"github.com/aerospike/backup-go"
 )
 
-// ClientFactory defines an interface for creating and checking clients.
+// ClientFactory opens Aerospike connections and wraps them into backup-go clients.
+// Reuse of those clients is handled by [ClientManager].
 type ClientFactory interface {
 	// NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
 	NewClientWithPolicyAndHost(context.Context, *model.AerospikeCluster) (backup.AerospikeClient, error)
@@ -22,25 +23,25 @@ type ClientFactory interface {
 	NewBackupClient(backup.AerospikeClient, ...backup.ClientOpt) (Client, error)
 }
 
-var _ ClientFactory = (*DefaultClientFactory)(nil)
+var _ ClientFactory = (*clientFactory)(nil)
 
-// DefaultClientFactory is the default implementation of ClientFactory.
-type DefaultClientFactory struct {
+type clientFactory struct {
 	passwordResolver secrets.PasswordResolver
 }
 
-func NewClientFactory(passwordResolver secrets.PasswordResolver) *DefaultClientFactory {
-	return &DefaultClientFactory{
+// NewClientFactory returns a ClientFactory.
+func NewClientFactory(passwordResolver secrets.PasswordResolver) ClientFactory {
+	return &clientFactory{
 		passwordResolver: passwordResolver,
 	}
 }
 
-func (f *DefaultClientFactory) NewBackupClient(client backup.AerospikeClient, opt ...backup.ClientOpt) (Client, error) {
+func (f *clientFactory) NewBackupClient(client backup.AerospikeClient, opt ...backup.ClientOpt) (Client, error) {
 	return backup.NewClient(client, opt...)
 }
 
 // NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
-func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
+func (f *clientFactory) NewClientWithPolicyAndHost(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
 ) (backup.AerospikeClient, error) {
@@ -65,7 +66,7 @@ func clientHosts(c *model.AerospikeCluster) []*as.Host {
 }
 
 // clientPolicy builds and returns a new ClientPolicy from the AerospikeCluster configuration.
-func (f *DefaultClientFactory) clientPolicy(ctx context.Context, c *model.AerospikeCluster) (*as.ClientPolicy, error) {
+func (f *clientFactory) clientPolicy(ctx context.Context, c *model.AerospikeCluster) (*as.ClientPolicy, error) {
 	policy := as.NewClientPolicy()
 	if c.Credentials != nil {
 		policy.User = c.GetUser()
@@ -96,7 +97,7 @@ func (f *DefaultClientFactory) clientPolicy(ctx context.Context, c *model.Aerosp
 	return policy, nil
 }
 
-func (f *DefaultClientFactory) resolveClusterPassword(
+func (f *clientFactory) resolveClusterPassword(
 	ctx context.Context,
 	creds *model.Credentials,
 ) (*string, error) {

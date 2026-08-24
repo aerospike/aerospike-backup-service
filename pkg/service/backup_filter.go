@@ -7,7 +7,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// BackupFilter is an interface that all filter types must implement.
+// BackupFilter selects which backups GetBackups returns. Only the filter types of this package
+// are accepted, because GetBackups switches on the concrete type.
 type BackupFilter interface {
 	// timeBounds returns time bounds specified for current filter.
 	timeBounds() model.TimeBounds

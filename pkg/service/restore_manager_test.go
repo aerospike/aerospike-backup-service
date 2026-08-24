@@ -13,9 +13,9 @@ func TestJobNotFoundError_Error(t *testing.T) {
 	assert.Equal(t, "restore job with ID 42 not found", err.Error())
 }
 
-func TestRestoreManagerImpl_GetFilteredJobs(t *testing.T) {
+func TestRestoreManager_GetFilteredJobs(t *testing.T) {
 	jobsHolder := NewRestoreJobsHolder()
-	mgr := &RestoreManagerImpl{restoreJobs: jobsHolder}
+	mgr := &restoreManager{restoreJobs: jobsHolder}
 
 	older := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	newer := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)

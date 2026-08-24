@@ -207,7 +207,7 @@ func Test_Close(t *testing.T) {
 	time.Sleep(150 * time.Millisecond) // Wait for timer to fire
 
 	assertClientExists(t, clientManager, cluster, false)
-	assert.Zero(t, clientManager.clients.Size())
+	assert.Zero(t, clientCacheSize(clientManager))
 }
 
 func Test_Close_Multiple(t *testing.T) {
@@ -305,10 +305,14 @@ func Test_Close_NotExisting(t *testing.T) {
 	clientManager.Close(client)
 }
 
-func assertClientExists(t *testing.T, clientManager *ClientManagerImpl,
+func assertClientExists(t *testing.T, manager ClientManager,
 	cl *model.AerospikeCluster, shouldExist bool) {
 	t.Helper()
 
-	_, exists := clientManager.clients.Load(cl.Hash())
+	_, exists := manager.(*clientManager).clients.Load(cl.Hash())
 	assert.Equal(t, shouldExist, exists)
+}
+
+func clientCacheSize(manager ClientManager) int {
+	return manager.(*clientManager).clients.Size()
 }

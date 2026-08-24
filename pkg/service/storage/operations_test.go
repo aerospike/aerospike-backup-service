@@ -10,16 +10,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestOperations(t *testing.T) (*Operations, *model.LocalStorage) {
+func newTestOperations(t *testing.T) (*operations, *model.LocalStorage) {
 	t.Helper()
 
-	return NewOperations(NewLocalStorageAccessor()), &model.LocalStorage{Path: t.TempDir()}
+	return newLocalOperations(t), &model.LocalStorage{Path: t.TempDir()}
+}
+
+func newLocalOperations(t *testing.T) *operations {
+	t.Helper()
+
+	ops, ok := NewOperations(NewLocalStorageAccessor()).(*operations)
+	require.True(t, ok)
+
+	return ops
 }
 
 func TestNewOperations(t *testing.T) {
 	t.Parallel()
 
-	ops := NewOperations(NewLocalStorageAccessor())
+	ops := newLocalOperations(t)
 	require.NotNil(t, ops)
 	assert.Len(t, ops.accessors, 1)
 }
@@ -155,7 +164,7 @@ func TestOperations_DeleteFolder(t *testing.T) {
 func TestOperations_GetAccessor_Unsupported(t *testing.T) {
 	t.Parallel()
 
-	ops := NewOperations(NewLocalStorageAccessor())
+	ops := newLocalOperations(t)
 
 	_, err := ops.getAccessor(&model.S3Storage{})
 	require.Error(t, err)
@@ -165,7 +174,7 @@ func TestOperations_GetAccessor_Unsupported(t *testing.T) {
 func TestOperations_ReadFile_UnsupportedStorage(t *testing.T) {
 	t.Parallel()
 
-	ops := NewOperations(NewLocalStorageAccessor())
+	ops := newLocalOperations(t)
 
 	_, err := ops.ReadFile(t.Context(), &model.S3Storage{}, "file.asb")
 	require.Error(t, err)
@@ -175,7 +184,7 @@ func TestOperations_ReadFile_UnsupportedStorage(t *testing.T) {
 func TestOperations_UnsupportedStorage_ErrorPaths(t *testing.T) {
 	t.Parallel()
 
-	ops := NewOperations(NewLocalStorageAccessor())
+	ops := newLocalOperations(t)
 	unsupported := &model.S3Storage{}
 	ctx := t.Context()
 

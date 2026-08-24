@@ -32,7 +32,7 @@ func TestConfigRetriever_RetrieveConfiguration_Success(t *testing.T) {
 		require.NoError(t, operations.WriteDataFile(t.Context(), routine.Storage, filePath, []byte(content)))
 	}
 
-	backupReader := NewMockBackupReaderWriter(ctrl)
+	backupReader := NewMockBackupReader(ctrl)
 	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 		Return([]model.BackupDetails{{BackupMetadata: model.BackupMetadata{Created: backupCreated}}}, nil)
 
@@ -63,7 +63,7 @@ func TestConfigRetriever_RetrieveConfiguration_GetBackupsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
-	backupReader := NewMockBackupReaderWriter(ctrl)
+	backupReader := NewMockBackupReader(ctrl)
 	backupsErr := errors.New("backend unavailable")
 	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(nil, backupsErr)
 
@@ -78,7 +78,7 @@ func TestConfigRetriever_RetrieveConfiguration_NoFullBackups(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
-	backupReader := NewMockBackupReaderWriter(ctrl)
+	backupReader := NewMockBackupReader(ctrl)
 	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(nil, nil)
 
 	retriever := NewConfigRetriever(backupReader, NewPathService(nil), nil)
@@ -92,16 +92,17 @@ func TestConfigRetriever_RetrieveConfiguration_ReadFilesError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
-	backupReader := NewMockBackupReaderWriter(ctrl)
+	backupReader := NewMockBackupReader(ctrl)
 	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 		Return([]model.BackupDetails{{BackupMetadata: model.BackupMetadata{Created: time.Now()}}}, nil)
 
 	readErr := errors.New("read failed")
-	fileReader := NewmockStorageFileReader(ctrl)
-	fileReader.EXPECT().
+	operations := storage.NewMockOperations(ctrl)
+	operations.EXPECT().
 		ReadFiles(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, readErr)
-	retriever := NewConfigRetriever(backupReader, NewPathService(nil), fileReader)
+
+	retriever := NewConfigRetriever(backupReader, NewPathService(nil), operations)
 	_, err := retriever.RetrieveConfiguration(t.Context(), routine, time.Now())
 
 	require.Error(t, err)
@@ -112,15 +113,16 @@ func TestConfigRetriever_RetrieveConfiguration_NoConfigFiles(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
-	backupReader := NewMockBackupReaderWriter(ctrl)
+	backupReader := NewMockBackupReader(ctrl)
 	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 		Return([]model.BackupDetails{{BackupMetadata: model.BackupMetadata{Created: time.Now()}}}, nil)
 
-	fileReader := NewmockStorageFileReader(ctrl)
-	fileReader.EXPECT().
+	operations := storage.NewMockOperations(ctrl)
+	operations.EXPECT().
 		ReadFiles(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, nil)
-	retriever := NewConfigRetriever(backupReader, NewPathService(nil), fileReader)
+
+	retriever := NewConfigRetriever(backupReader, NewPathService(nil), operations)
 	_, err := retriever.RetrieveConfiguration(t.Context(), routine, time.Now())
 
 	require.Error(t, err)

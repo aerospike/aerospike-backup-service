@@ -10,6 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
@@ -40,13 +41,14 @@ func (s *Suite) setupEnv(customize ...func(*dto.Config)) *env {
 	configPath := filepath.Join(t.TempDir(), "config.yml")
 	s.Require().NoError(os.WriteFile(configPath, configYAML, 0o600))
 
-	scheduler, httpServer, err := app.InitComponents(ctx, configPath, false)
+	components, err := app.InitComponents(ctx, configPath, false)
 	s.Require().NoError(err)
 
-	scheduler.Start(ctx)
-	t.Cleanup(func() { scheduler.Stop() })
+	components.Scheduler.Start(ctx)
+	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
+	t.Cleanup(func() { components.Scheduler.Stop() })
 
-	srv := httptest.NewServer(httpServer)
+	srv := httptest.NewServer(components.HTTPServer)
 	t.Cleanup(srv.Close)
 
 	return &env{

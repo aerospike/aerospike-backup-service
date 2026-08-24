@@ -7,8 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
@@ -321,10 +323,10 @@ func setupTestService(t *testing.T) *Service {
 	t.Helper()
 
 	ctrl := gomock.NewController(t)
-	mockManager := NewmockManager(ctrl)
+	mockManager := configuration.NewMockManager(ctrl)
 	mockManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-	mockConfigApplier := NewmockConfigApplier(ctrl)
+	mockConfigApplier := service.NewMockConfigApplier(ctrl)
 	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil).AnyTimes()
 
 	return NewService(

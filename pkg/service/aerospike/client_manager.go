@@ -16,7 +16,9 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-// ClientManager is responsible for creating, storing and closing backup clients.
+// ClientManager hands out backup clients for an Aerospike cluster. The underlying connection is
+// shared per cluster and reference counted: it is opened on first use and closed shortly after
+// the last Close. Connections and client wrappers are created by [ClientFactory].
 type ClientManager interface {
 	// GetClient returns a backup client by aerospike cluster name (new or cached).
 	// localLimiter is an optional per-routine scan limiter. When provided, it is combined
@@ -31,24 +33,23 @@ type ClientManager interface {
 	Close(Client)
 }
 
+// Cluster exposes the Aerospike cluster object behind a live client.
 type Cluster interface {
-	// Cluster exposes the cluster object to the user
+	// Cluster returns the cluster object of the live connection.
 	Cluster() *as.Cluster
 }
 
-// ClientManagerImpl implements [ClientManager].
-// It keeps track of clients:
-// on the first GetClient call it creates a client, and subsequent calls return the same instance.
-// Close only decrements the reference counter;
-// the client is actually closed when the counter reaches zero.
-type ClientManagerImpl struct {
+// clientManager shares one connection per cluster: the first GetClient opens it, later calls
+// reuse it, and Close decrements a reference counter. The connection is closed once the counter
+// reaches zero and closeDelay has passed.
+type clientManager struct {
 	// clients holds the state for each cluster.
 	clients       *collections.SafeMap[uint64, *clientInfo]
 	clientFactory ClientFactory
 	closeDelay    time.Duration
 }
 
-var _ ClientManager = (*ClientManagerImpl)(nil)
+var _ ClientManager = (*clientManager)(nil)
 
 const DefaultCloseDelay = 10 * time.Second
 
@@ -62,10 +63,10 @@ type clientInfo struct {
 	closeTimer *time.Timer
 }
 
-// NewClientManager creates a new ClientManagerImpl.
+// NewClientManager creates a ClientManager.
 // closeDelay specifies how long to wait before actually closing the client after the last user releases it.
-func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Duration) *ClientManagerImpl {
-	return &ClientManagerImpl{
+func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Duration) ClientManager {
+	return &clientManager{
 		clients:       collections.NewSafeMap[uint64, *clientInfo](),
 		clientFactory: aerospikeClientFactory,
 		closeDelay:    closeDelay,
@@ -77,7 +78,7 @@ func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Dura
 // localLimiter is an optional per-routine scan limiter. When provided, it is combined
 // with the global cluster limiter using a DualLimiter to enforce both limits.
 // logger will be passed to the backup client. If not set, a default logger will be used.
-func (cm *ClientManagerImpl) GetClient(
+func (cm *clientManager) GetClient(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
 	localLimiter syncutil.Limiter,
@@ -143,7 +144,7 @@ func newInfo(cluster *model.AerospikeCluster) *clientInfo {
 	return value
 }
 
-func (cm *ClientManagerImpl) createBackupClient(
+func (cm *clientManager) createBackupClient(
 	info *clientInfo,
 	localLimiter syncutil.Limiter,
 	logger *slog.Logger,
@@ -161,7 +162,7 @@ func (cm *ClientManagerImpl) createBackupClient(
 }
 
 // Close ensures that the specified backup client is released.
-func (cm *ClientManagerImpl) Close(client Client) {
+func (cm *clientManager) Close(client Client) {
 	var (
 		targetInfo *clientInfo
 		targetKey  uint64
@@ -197,7 +198,7 @@ func (cm *ClientManagerImpl) Close(client Client) {
 }
 
 // decrementRef decreases the reference count and schedules closing if count reaches zero.
-func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey uint64) {
+func (cm *clientManager) decrementRef(info *clientInfo, clusterKey uint64) {
 	info.mu.Lock()
 	defer info.mu.Unlock()
 
@@ -212,7 +213,7 @@ func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey uint64) {
 }
 
 // scheduleClosing schedules client closing after the configured delay.
-func (cm *ClientManagerImpl) scheduleClosing(clusterKey uint64) *time.Timer {
+func (cm *clientManager) scheduleClosing(clusterKey uint64) *time.Timer {
 	return time.AfterFunc(cm.closeDelay, func() {
 		// 1. Retrieve the info struct
 		info, exists := cm.clients.Load(clusterKey)

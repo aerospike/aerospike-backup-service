@@ -16,13 +16,13 @@ import (
 func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	backendService := NewMockBackupReaderWriter(ctrl)
+	catalog := NewMockBackupCatalog(ctrl)
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: optional.Of(2),
 	})
 
-	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
+	retentionManager := NewBackupRetentionManager(catalog, &collections.LockMap{})
 
 	fullBackups := []model.BackupDetails{
 		{
@@ -40,20 +40,20 @@ func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(4000)}}, // keep
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(5000)}}, // keep
 	}
-	backendService.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
 		Return(fullBackups, nil)
 
 	// Expect deletion of the first 3 full backups (keep last 2)
-	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/backup/1000").Return(nil)
-	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/backup/2000").Return(nil)
-	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/backup/3000").Return(nil)
+	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/backup/1000").Return(nil)
+	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/backup/2000").Return(nil)
+	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/backup/3000").Return(nil)
 
 	// Expect calls to get incremental backups.
-	backendService.EXPECT().GetBackups(t.Context(),
+	catalog.EXPECT().GetBackups(t.Context(),
 		NewIncrementalBackupFilter(routine).WithToTime(time.UnixMilli(4000))).
 		Return([]model.BackupDetails{}, nil)
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -63,13 +63,13 @@ func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 func TestRetentionManager_FullAndIncremental(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	backendService := NewMockBackupReaderWriter(ctrl)
+	catalog := NewMockBackupCatalog(ctrl)
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: optional.Of(1),
 	})
 
-	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
+	retentionManager := NewBackupRetentionManager(catalog, &collections.LockMap{})
 
 	fullBackups := []model.BackupDetails{
 		{
@@ -78,11 +78,11 @@ func TestRetentionManager_FullAndIncremental(t *testing.T) {
 		}, // to be deleted
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(2000)}}, // keep
 	}
-	backendService.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
 		Return(fullBackups, nil)
 
 	// Expect deletion of the first full backup
-	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/backup/1000").Return(nil)
+	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/backup/1000").Return(nil)
 
 	// Expect a call to get incrementals for the deleted full backup
 	incrementals := []model.BackupDetails{
@@ -95,15 +95,15 @@ func TestRetentionManager_FullAndIncremental(t *testing.T) {
 			BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(1200)},
 		}, // to be deleted
 	}
-	backendService.EXPECT().
+	catalog.EXPECT().
 		GetBackups(t.Context(), NewIncrementalBackupFilter(routine).WithToTime(time.UnixMilli(2000))).
 		Return(incrementals, nil)
 
 	// Expect deletion of the incrementals
-	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1100").Return(nil)
-	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1200").Return(nil)
+	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1100").Return(nil)
+	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1200").Return(nil)
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -116,15 +116,15 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 		IncrBackups: optional.Of(1),
 	})
 
-	backendService := NewMockBackupReaderWriter(ctrl)
+	catalog := NewMockBackupCatalog(ctrl)
 
-	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
+	retentionManager := NewBackupRetentionManager(catalog, &collections.LockMap{})
 
 	fullBackups := []model.BackupDetails{
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(1000)}}, // keep
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(2000)}}, // keep
 	}
-	backendService.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
 		Return(fullBackups, nil)
 
 	// Expect a call to get incrementals for the retained full backups
@@ -139,15 +139,15 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 		}, // to be deleted
 	}
 
-	backendService.EXPECT().
+	catalog.EXPECT().
 		GetBackups(t.Context(), NewIncrementalBackupFilter(routine).WithToTime(time.UnixMilli(2000))).
 		Return(incrementals, nil)
 
 	// Expect deletion of the older incrementals
-	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1100").Return(nil)
-	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1200").Return(nil)
+	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1100").Return(nil)
+	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1200").Return(nil)
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -155,13 +155,13 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 func TestRetentionManager_NoPolicy(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
+	catalog := NewMockBackupCatalog(ctrl) // Expects no calls
 
 	routine := routineWithRetentionPolicy(nil)
 
-	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
+	retentionManager := NewBackupRetentionManager(catalog, &collections.LockMap{})
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -170,25 +170,25 @@ func TestRetentionManager_NoPolicy(t *testing.T) {
 func TestRetentionManager_NoneToDelete(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	backendService := NewMockBackupReaderWriter(ctrl)
+	catalog := NewMockBackupCatalog(ctrl)
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: optional.Of(5),
 	})
 
-	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
+	retentionManager := NewBackupRetentionManager(catalog, &collections.LockMap{})
 
 	fullBackups := []model.BackupDetails{
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(1000)}}, // keep
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(2000)}}, // keep
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(3000)}}, // keep
 	}
-	backendService.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
 		Return(fullBackups, nil)
 
 	// No Delete calls are expected
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -201,18 +201,18 @@ func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 		IncrBackups: optional.Of(0),
 	})
 
-	backendService := NewMockBackupReaderWriter(ctrl)
+	catalog := NewMockBackupCatalog(ctrl)
 
-	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
+	retentionManager := NewBackupRetentionManager(catalog, &collections.LockMap{})
 
 	// GetBackups is still called for full backups
-	backendService.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
 		Return([]model.BackupDetails{}, nil)
 
 	// Expect a single delete call for the incremental root path
-	backendService.EXPECT().Delete(t.Context(), routine, "test-routine/incremental").Return(nil)
+	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/incremental").Return(nil)
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -225,10 +225,10 @@ func TestRetentionManager_ConcurrencyLock(t *testing.T) {
 		FullBackups: optional.Of(1),
 	})
 
-	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
+	catalog := NewMockBackupCatalog(ctrl) // Expects no calls
 
 	storage := &collections.LockMap{}
-	retentionManager := NewBackupRetentionManager(backendService, storage)
+	retentionManager := NewBackupRetentionManager(catalog, storage)
 
 	// Simulate lock being held by another process
 	mu := storage.Get(routineName)
@@ -236,7 +236,7 @@ func TestRetentionManager_ConcurrencyLock(t *testing.T) {
 	defer mu.Unlock()
 
 	// This call should be skipped due to the lock
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 
@@ -245,13 +245,13 @@ func TestRetentionManager_ConcurrencyLock(t *testing.T) {
 func TestRetentionManager_PolicyWithNilCounts(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
+	catalog := NewMockBackupCatalog(ctrl) // Expects no calls
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{})
 
-	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
+	retentionManager := NewBackupRetentionManager(catalog, &collections.LockMap{})
 
-	err := retentionManager.deleteOldBackups(t.Context(), routine)
+	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/spf13/cobra"
 )
 
@@ -64,18 +65,18 @@ func startService(configFile string, remote bool) error {
 	ctx, stop := systemCtx()
 	defer stop()
 
-	scheduler, httpServer, err := app.InitComponents(ctx, configFile, remote)
+	components, err := app.InitComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
 	}
 
-	// start the scheduler only after all the initialization is done
-	scheduler.Start(ctx)
+	components.Scheduler.Start(ctx)
+	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 
-	err = runHTTPServer(ctx, httpServer)
+	err = runHTTPServer(ctx, components.HTTPServer)
 
 	// stop the scheduler
-	scheduler.Stop()
+	components.Scheduler.Stop()
 
 	return err
 }

@@ -8,18 +8,13 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
-	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/aerospike/backup-go/models"
 )
 
-type storageWriter interface {
-	// CreateDirWriter creates a writer for a folder in the specified storage.
-	CreateDirWriter(ctx context.Context, storage model.Storage, path string, opts ...options.Opt) (backup.Writer, error)
-}
-
-// BackupHandler defines the contract for backup operation results.
+// BackupHandler observes a started backup: wait for it to finish and read its statistics.
 type BackupHandler interface {
 	// GetStats returns backup job statistics.
 	//
@@ -33,7 +28,7 @@ type BackupHandler interface {
 	GetMetrics() *models.Metrics
 }
 
-// Backup defines the interface for running backups.
+// Backup starts the backup of a single namespace and returns a handle to observe it.
 type Backup interface {
 	// Run runs the backup and returns a handler for monitoring progress.
 	Run(
@@ -47,22 +42,23 @@ type Backup interface {
 	) (BackupHandler, error)
 }
 
-// BackupExecutor implements [Backup] using backup-go scan backup against Aerospike
-// and writes backup data via the storage operations facade.
+// BackupExecutor runs scan backups with backup-go and writes the data through storage operations.
 type BackupExecutor struct {
 	clientManager aerospike.ClientManager
-	operations    storageWriter
+	operations    storage.Operations
 }
 
-// NewBackupExecutor creates an executor that acquires clients through clientManager and writes via operations.
-func NewBackupExecutor(clientManager aerospike.ClientManager, operations storageWriter) *BackupExecutor {
+var _ Backup = (*BackupExecutor)(nil)
+
+// NewBackupExecutor returns a BackupExecutor.
+func NewBackupExecutor(clientManager aerospike.ClientManager, operations storage.Operations) *BackupExecutor {
 	return &BackupExecutor{
 		clientManager: clientManager,
 		operations:    operations,
 	}
 }
 
-// Run implements the backup logic using scan-based backup.
+// Run starts a scan backup of one namespace.
 // scanLimiter is an optional per-routine scan limiter that limits parallel scans
 // within a single routine run, providing fair resource allocation across routines.
 func (r *BackupExecutor) Run(

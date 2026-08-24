@@ -14,9 +14,13 @@ import (
 
 var ErrRestorePrerequisitesFailed = errors.New("restore pre-requisites failed")
 
-// RestoreValidator validates restore preconditions before actual execution starts.
+// RestoreValidator checks whether a restore request can run: the backup encryption must match
+// the request policy, the destination cluster must have the target namespaces, and no routine
+// may be backing up the same cluster and namespaces at that moment.
 type RestoreValidator interface {
-	// ValidatePath validates path-restore preconditions.
+	// ValidatePath validates a restore from an explicit backup path. On top of the common checks
+	// it requires the backups to hold data and to be taken at the same time.
+	// A path without backup metadata is allowed and restored as is.
 	ValidatePath(
 		ctx context.Context,
 		request *model.RestoreRequest,
@@ -32,24 +36,26 @@ type RestoreValidator interface {
 	) error
 }
 
-type restoreValidatorImpl struct {
+type restoreValidator struct {
 	startController StartController
 	routines        routineProvider
 }
 
-// NewRestoreValidator creates a validator for restore operations.
+var _ RestoreValidator = (*restoreValidator)(nil)
+
+// NewRestoreValidator returns a RestoreValidator.
 func NewRestoreValidator(
 	startController StartController,
 	routines routineProvider,
 ) RestoreValidator {
-	return &restoreValidatorImpl{
+	return &restoreValidator{
 		startController: startController,
 		routines:        routines,
 	}
 }
 
 // ValidatePath validates path-restore preconditions.
-func (r *restoreValidatorImpl) ValidatePath(
+func (r *restoreValidator) ValidatePath(
 	ctx context.Context,
 	request *model.RestoreRequest,
 	infoGetter backup.InfoGetter,
@@ -87,7 +93,7 @@ func (r *restoreValidatorImpl) ValidatePath(
 }
 
 // ValidateTimestamp validates point-in-time restore preconditions.
-func (r *restoreValidatorImpl) ValidateTimestamp(
+func (r *restoreValidator) ValidateTimestamp(
 	ctx context.Context,
 	request *model.RestoreTimestampRequest,
 	infoGetter backup.InfoGetter,
@@ -113,7 +119,7 @@ func (r *restoreValidatorImpl) ValidateTimestamp(
 
 // checkRunningBackupsConflict validates the provided destination cluster and namespaces
 // against all currently active backup routines to prevent concurrent operations on the same data.
-func (r *restoreValidatorImpl) checkRunningBackupsConflict(
+func (r *restoreValidator) checkRunningBackupsConflict(
 	cluster model.AerospikeCluster,
 	destinationNamespaces []string,
 ) error {
