@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 	"time"
@@ -23,6 +24,18 @@ func newLocalOperations(t *testing.T) *operations {
 	require.True(t, ok)
 
 	return ops
+}
+
+// connectivityFailureContext bounds tests that point a storage client at a failing endpoint.
+// Storage clients retry up to model.StorageRetryPolicy.MaxRetries times, so without a deadline
+// shorter than connectivityTimeout such tests would keep retrying for the whole timeout.
+func connectivityFailureContext(t *testing.T) context.Context {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	t.Cleanup(cancel)
+
+	return ctx
 }
 
 func TestNewOperations(t *testing.T) {

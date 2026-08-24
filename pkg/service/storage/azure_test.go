@@ -67,7 +67,7 @@ func TestAzureStorage_ConnectivityFailure(t *testing.T) {
 
 	key := base64.StdEncoding.EncodeToString([]byte("dummy-key"))
 
-	ctx := t.Context()
+	ctx := connectivityFailureContext(t)
 	accessor := NewAzureStorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getAzureClient(ctx, &model.AzureStorage{

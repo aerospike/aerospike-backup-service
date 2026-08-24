@@ -5,17 +5,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func init() {
-	connectivityTimeout = 100 * time.Millisecond
-}
 
 func TestS3Storage_ConnectivitySuccess(t *testing.T) {
 	t.Parallel()
@@ -69,7 +64,7 @@ func TestS3Storage_ConnectivityFailure(t *testing.T) {
 	}))
 	t.Cleanup(ts.Close)
 
-	ctx := t.Context()
+	ctx := connectivityFailureContext(t)
 	accessor := NewS3StorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getS3Client(ctx, &model.S3Storage{
