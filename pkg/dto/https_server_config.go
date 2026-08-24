@@ -11,10 +11,10 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
-var secureServerCipherSuites = func() map[string]struct{} {
-	result := make(map[string]struct{})
+var secureServerCipherSuites = func() map[string]bool {
+	result := make(map[string]bool)
 	for _, suite := range tls.CipherSuites() {
-		result[suite.Name] = struct{}{}
+		result[suite.Name] = true
 	}
 	return result
 }()
@@ -164,7 +164,7 @@ func (s *HTTPSServerConfig) validateTLSFields() error {
 		return err
 	}
 	for _, cipherSuite := range s.CipherSuites {
-		if _, ok := secureServerCipherSuites[cipherSuite]; !ok {
+		if !secureServerCipherSuites[cipherSuite] {
 			return errValidationInvalidValue("cipher-suites", cipherSuite, "secure Go TLS cipher suites")
 		}
 	}
