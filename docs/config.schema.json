@@ -863,7 +863,7 @@
             "nullable": true
           },
           "key-file-password": {
-            "description": "Passphrase for an encrypted HTTPS server private key.\nThis is sensitive information. Literal values are redacted as \"[secret]\" in API responses.",
+            "description": "Passphrase for an encrypted HTTPS server private key.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
             "type": "string",
             "format": "password",
             "nullable": true
@@ -899,6 +899,19 @@
             "description": "ReadTimeout is the maximum duration in milliseconds for reading an entire request.",
             "type": "integer",
             "default": 30000
+          },
+          "secret-agent": {
+            "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/dto.SecretAgent"
+              }
+            ]
+          },
+          "secret-agent-name": {
+            "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+            "type": "string",
+            "nullable": true
           },
           "timeout": {
             "description": "Timeout for reading HTTP request headers in milliseconds.",
