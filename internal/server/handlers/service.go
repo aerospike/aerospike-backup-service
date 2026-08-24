@@ -3,8 +3,8 @@ package handlers
 import (
 	"context"
 	"sync"
-	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -14,13 +14,13 @@ import (
 type Service struct {
 	sysCtx               context.Context //nolint:containedctx
 	config               *model.Config
-	configApplier        configApplier
+	configApplier        service.ConfigApplier
 	backupScheduler      service.AdHocScheduler
 	restoreManager       service.RestoreManager
-	configRetriever      configRetriever
+	configRetriever      service.ConfigRetriever
 	backupReader         service.BackupReader
 	registry             service.BackupStateRegistry
-	configurationManager manager
+	configurationManager configuration.Manager
 	nsValidator          aerospike.NamespaceValidator
 
 	changeConfigLock sync.Mutex
@@ -29,13 +29,13 @@ type Service struct {
 func NewService(
 	ctx context.Context,
 	config *model.Config,
-	configApplier configApplier,
+	configApplier service.ConfigApplier,
 	backupScheduler service.AdHocScheduler,
 	restoreManager service.RestoreManager,
-	configRetriever configRetriever,
+	configRetriever service.ConfigRetriever,
 	backupReader service.BackupReader,
 	registry service.BackupStateRegistry,
-	configurationManager manager,
+	configurationManager configuration.Manager,
 	nsValidator aerospike.NamespaceValidator,
 ) *Service {
 	return &Service{
@@ -50,27 +50,4 @@ func NewService(
 		configurationManager: configurationManager,
 		nsValidator:          nsValidator,
 	}
-}
-
-// manager reads and writes the service configuration; it mirrors configuration.Manager.
-type manager interface {
-	// Read reads the configuration from the source.
-	Read(ctx context.Context) (*model.Config, error)
-	// Write writes the configuration back to the source.
-	// Not supported when the configuration is served over HTTP.
-	Write(ctx context.Context, config *model.Config) error
-}
-
-// configApplier applies a changed configuration to the running service;
-// it mirrors service.ConfigApplier.
-type configApplier interface {
-	// ApplyNewConfig applies new configuration to the service.
-	ApplyNewConfig(ctx context.Context) error
-}
-
-// configRetriever returns the Aerospike cluster configuration archived with a backup;
-// it mirrors service.ConfigRetriever.
-type configRetriever interface {
-	// RetrieveConfiguration returns backed up Aerospike configuration.
-	RetrieveConfiguration(ctx context.Context, routine *model.BackupRoutine, t time.Time) ([]byte, error)
 }

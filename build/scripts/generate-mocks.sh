@@ -21,16 +21,16 @@
 #   Go interfaces whose names start with a lowercase letter are package-private.
 #   Tests in the same package can mock them, but mockgen's default naming is ugly:
 #
-#     interface:  configApplier
-#     default:    MockconfigApplier / NewMockconfigApplier
+#     interface:  routineProvider
+#     default:    MockroutineProvider / NewMockroutineProvider
 #                         ^ lowercase letter after "Mock" looks wrong
 #
 #   We pass gomock's -mock_names flag to rename only the mock TYPE, keeping the
 #   mock unexported and capitalizing the interface-name portion:
 #
-#     interface:  configApplier
-#     mock type:  mockConfigApplier        (unexported — not part of public API)
-#     constructor NewmockConfigApplier     (mockgen always prefixes "New" + type name)
+#     interface:  routineProvider
+#     mock type:  mockRoutineProvider      (unexported — not part of public API)
+#     constructor NewmockRoutineProvider   (mockgen always prefixes "New" + type name)
 #
 #   Exported interfaces (RestoreManager, ClientFactory, ...) keep mockgen defaults:
 #
@@ -72,8 +72,8 @@ echo "Module path: $BASE_IMPORT_PATH"
 # build_mock_names takes a comma-separated list of interface names and returns a
 # comma-separated -mock_names specification for unexported interfaces only.
 #
-# Example input:  "configApplier,RestoreManager"
-# Example output: "configApplier=mockConfigApplier"
+# Example input:  "routineProvider,RestoreManager"
+# Example output: "routineProvider=mockRoutineProvider"
 #
 # Exported interfaces (RestoreManager) are omitted; mockgen defaults apply.
 # Returns an empty string when there are no unexported interfaces.
@@ -94,7 +94,7 @@ build_mock_names() {
         case "$_first_char" in
             [a-z])
                 # Capitalize only the first character of the interface name, then prefix "mock".
-                # configApplier -> mockConfigApplier
+                # routineProvider -> mockRoutineProvider
                 # storageReaderWriter -> mockStorageReaderWriter
                 _cap=$(printf '%s' "$_first_char" | tr '[:lower:]' '[:upper:]')$(printf '%s' "$_iface" | cut -c2-)
                 if [ -n "$_mock_names" ]; then
@@ -112,7 +112,7 @@ build_mock_names() {
 # generate_mocks runs mockgen for one package.
 #
 # Arguments:
-#   $1 - package path relative to repo root (e.g. internal/server/handlers)
+#   $1 - package path relative to repo root (e.g. pkg/service)
 #   $2 - comma-separated interface names to mock in that package
 #
 # Writes: <package>/mockgen.go in the same package as the interfaces so tests can
@@ -186,7 +186,7 @@ generate_external_mocks() {
 
 generate_mocks \
     "pkg/service" \
-    "RestoreManager,BackupReaderWriter,BackupReader,BackupStateRegistry,BackupRetentionManager,ClusterConfigWriter,CancelableBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController,RoutineBackupRunner,NamespaceBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler"
+    "RestoreManager,BackupReaderWriter,BackupReader,BackupStateRegistry,BackupRetentionManager,ClusterConfigWriter,CancelableBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController,RoutineBackupRunner,NamespaceBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler,ConfigApplier,ConfigRetriever"
 
 generate_mocks \
     "pkg/service/restoreexecutor" \
@@ -223,7 +223,7 @@ generate_external_mocks \
     "StreamingReader"
 
 generate_mocks \
-    "internal/server/handlers" \
-    "configRetriever,manager,configApplier"
+    "internal/server/configuration" \
+    "Manager"
 
 echo "All mocks generated successfully."
