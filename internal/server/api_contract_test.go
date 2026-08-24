@@ -31,13 +31,10 @@ func newUnconfiguredService(t *testing.T) http.Handler {
 	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
-	scheduler, httpServer, err := app.InitComponents(ctx, configPath, false)
+	components, err := app.InitComponents(ctx, configPath, false)
 	require.NoError(t, err)
 
-	scheduler.Start(ctx)
-	t.Cleanup(scheduler.Stop)
-
-	return httpServer
+	return components.HTTPServer
 }
 
 func serve(t *testing.T, handler http.Handler, method, path, body string) *httptest.ResponseRecorder {
