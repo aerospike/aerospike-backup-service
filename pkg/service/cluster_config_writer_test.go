@@ -1,12 +1,14 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -25,20 +27,24 @@ func TestClusterConfigWriter_Write_Success(t *testing.T) {
 		NodeConfigs(gomock.Any(), routine.SourceCluster, gomock.Any()).
 		Return(infos, nil)
 
-	operations := NewmockStorageDataWriter(ctrl)
-	for i, info := range infos {
-		operations.EXPECT().
-			WriteDataFile(
-				gomock.Any(),
-				routine.Storage,
-				pathService.GetConfigurationFilePath(routine.Name, timestamp, i),
-				[]byte(info),
-			).
-			Return(nil)
-	}
+	writes := map[string][]byte{}
+	operations := storage.NewMockOperations(ctrl)
+	operations.EXPECT().
+		WriteDataFile(gomock.Any(), routine.Storage, gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ model.Storage, fileName string, content []byte) error {
+			writes[fileName] = content
+			return nil
+		}).
+		Times(len(infos))
 
 	writer := NewClusterConfigWriter(pathService, operations, configSource)
 	require.NoError(t, writer.Write(t.Context(), routine, timestamp))
+
+	require.Len(t, writes, len(infos))
+	for i, info := range infos {
+		path := pathService.GetConfigurationFilePath(routine.Name, timestamp, i)
+		require.Equal(t, []byte(info), writes[path])
+	}
 }
 
 func TestClusterConfigWriter_Write_SourceError(t *testing.T) {
@@ -71,14 +77,9 @@ func TestClusterConfigWriter_Write_StorageWriteError(t *testing.T) {
 		NodeConfigs(gomock.Any(), routine.SourceCluster, gomock.Any()).
 		Return([]asconfig.DotConf{"namespace ns1 {}"}, nil)
 
-	operations := NewmockStorageDataWriter(ctrl)
+	operations := storage.NewMockOperations(ctrl)
 	operations.EXPECT().
-		WriteDataFile(
-			gomock.Any(),
-			routine.Storage,
-			pathService.GetConfigurationFilePath(routine.Name, timestamp, 0),
-			[]byte("namespace ns1 {}"),
-		).
+		WriteDataFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(writeErr)
 
 	writer := NewClusterConfigWriter(pathService, operations, configSource)

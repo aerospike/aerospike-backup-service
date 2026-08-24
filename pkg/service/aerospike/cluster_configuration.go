@@ -16,7 +16,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// ClusterConfigSource collects aerospike.conf from live cluster nodes for backup.
+// ClusterConfigSource reads aerospike.conf from the live nodes of a cluster.
 type ClusterConfigSource interface {
 	// NodeConfigs returns one serialized aerospike.conf per reachable node.
 	NodeConfigs(

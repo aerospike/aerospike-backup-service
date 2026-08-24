@@ -69,33 +69,15 @@ func TestSetLastBackupTimestamp(t *testing.T) {
 	assert.InDelta(t, float64(incrTime.Unix()), testutil.ToFloat64(incrGauge), 0.001)
 }
 
-type stubBackupsRegistry struct {
-	state map[string]model.RoutineState
-}
-
-func (s stubBackupsRegistry) GetRunningState() map[string]model.RoutineState {
-	return s.state
-}
-
-type stubRestoreJobsHolder struct {
-	counts map[model.RestoreState]int
-}
-
-func (s stubRestoreJobsHolder) StatusCounts() map[model.RestoreState]int {
-	return s.counts
-}
-
 func TestMetricsCollector_collectBackupMetrics(t *testing.T) {
-	collector := NewMetricsCollector(stubBackupsRegistry{
-		state: map[string]model.RoutineState{
+	collector := NewMetricsCollector(func() map[string]model.RoutineState {
+		return map[string]model.RoutineState{
 			"routine-1": {
-				Full: &model.RunningJob{Progress: 0.42},
-				Incremental: &model.RunningJob{
-					Progress: 0.75,
-				},
+				Full:        &model.RunningJob{Progress: 0.42},
+				Incremental: &model.RunningJob{Progress: 0.75},
 			},
-		},
-	}, stubRestoreJobsHolder{})
+		}
+	}, func() map[model.RestoreState]int { return nil })
 
 	collector.collectBackupMetrics()
 
@@ -111,11 +93,12 @@ func TestMetricsCollector_collectBackupMetrics(t *testing.T) {
 }
 
 func TestMetricsCollector_collectRestoreMetrics(t *testing.T) {
-	collector := NewMetricsCollector(stubBackupsRegistry{}, stubRestoreJobsHolder{
-		counts: map[model.RestoreState]int{
-			model.RestoreRunning: 3,
+	collector := NewMetricsCollector(
+		func() map[string]model.RoutineState { return nil },
+		func() map[model.RestoreState]int {
+			return map[model.RestoreState]int{model.RestoreRunning: 3}
 		},
-	})
+	)
 
 	collector.collectRestoreMetrics()
 
@@ -123,7 +106,10 @@ func TestMetricsCollector_collectRestoreMetrics(t *testing.T) {
 }
 
 func TestMetricsCollector_collectMetrics_skipsWhenLocked(t *testing.T) {
-	collector := NewMetricsCollector(stubBackupsRegistry{}, stubRestoreJobsHolder{})
+	collector := NewMetricsCollector(
+		func() map[string]model.RoutineState { return nil },
+		func() map[model.RestoreState]int { return nil },
+	)
 	collector.mu.Lock()
 	defer collector.mu.Unlock()
 

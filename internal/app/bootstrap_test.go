@@ -19,35 +19,34 @@ func TestInitComponents_MinimalConfig(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
-	scheduler, httpServer, err := InitComponents(ctx, configPath, false)
+	components, err := InitComponents(ctx, configPath, false)
 	require.NoError(t, err)
 
-	require.NotNil(t, scheduler)
-	require.NotNil(t, httpServer)
+	require.NotNil(t, components.Scheduler)
+	require.NotNil(t, components.HTTPServer)
+	require.NotNil(t, components.MetricsCollector)
 
-	scheduler.Start(ctx)
-	t.Cleanup(scheduler.Stop)
+	components.Scheduler.Start(ctx)
+	t.Cleanup(components.Scheduler.Stop)
 }
 
 func TestInitComponents_ConfigLoadError(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "does-not-exist.yaml")
 
-	scheduler, httpServer, err := InitComponents(t.Context(), configPath, false)
+	components, err := InitComponents(t.Context(), configPath, false)
 
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed to load configuration")
-	require.Nil(t, scheduler)
-	require.Nil(t, httpServer)
+	require.Nil(t, components)
 }
 
 func TestInitComponents_InvalidConfig(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "invalid.yaml")
 	require.NoError(t, os.WriteFile(configPath, []byte("invalid: [yaml"), 0o600))
 
-	scheduler, httpServer, err := InitComponents(t.Context(), configPath, false)
+	components, err := InitComponents(t.Context(), configPath, false)
 
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed to load configuration")
-	require.Nil(t, scheduler)
-	require.Nil(t, httpServer)
+	require.Nil(t, components)
 }

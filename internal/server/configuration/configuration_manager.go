@@ -15,8 +15,11 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
+// Manager reads and writes the whole service configuration in its backing source:
+// a local file, an HTTP endpoint, or a storage backend.
 type Manager interface {
 	// Read reads the configuration from the source.
 	Read(ctx context.Context) (*model.Config, error)
@@ -32,7 +35,7 @@ func Load(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
-	operations storageReaderWriter,
+	operations storage.Operations,
 ) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
@@ -96,7 +99,7 @@ func newConfigManager(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
-	operations storageReaderWriter,
+	operations storage.Operations,
 ) (Manager, error) {
 	if remote {
 		s, err := readStorage(ctx, configFile)

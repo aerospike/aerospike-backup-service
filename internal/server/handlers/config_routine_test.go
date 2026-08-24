@@ -9,6 +9,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -314,7 +315,7 @@ func TestDisableRoutine(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
-			mockRegistry := NewmockRunningBackupsRegistry(ctrl)
+			mockRegistry := service.NewMockBackupStateRegistry(ctrl)
 			mockRegistry.EXPECT().Cancel(tt.routineName).Times(tt.expectedCancelRuns)
 
 			svc := setupTestService(t)

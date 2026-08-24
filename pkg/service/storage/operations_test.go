@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 	"time"
@@ -10,16 +11,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestOperations(t *testing.T) (*Operations, *model.LocalStorage) {
+func newTestOperations(t *testing.T) (*operations, *model.LocalStorage) {
 	t.Helper()
 
-	return NewOperations(NewLocalStorageAccessor()), &model.LocalStorage{Path: t.TempDir()}
+	return newLocalOperations(t), &model.LocalStorage{Path: t.TempDir()}
+}
+
+func newLocalOperations(t *testing.T) *operations {
+	t.Helper()
+
+	ops, ok := NewOperations(NewLocalStorageAccessor()).(*operations)
+	require.True(t, ok)
+
+	return ops
+}
+
+// connectivityFailureContext bounds tests that point a storage client at a failing endpoint.
+// Storage clients retry up to model.StorageRetryPolicy.MaxRetries times, so without a deadline
+// shorter than connectivityTimeout such tests would keep retrying for the whole timeout.
+func connectivityFailureContext(t *testing.T) context.Context {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	t.Cleanup(cancel)
+
+	return ctx
 }
 
 func TestNewOperations(t *testing.T) {
 	t.Parallel()
 
-	ops := NewOperations(NewLocalStorageAccessor())
+	ops := newLocalOperations(t)
 	require.NotNil(t, ops)
 	assert.Len(t, ops.accessors, 1)
 }
@@ -155,7 +177,7 @@ func TestOperations_DeleteFolder(t *testing.T) {
 func TestOperations_GetAccessor_Unsupported(t *testing.T) {
 	t.Parallel()
 
-	ops := NewOperations(NewLocalStorageAccessor())
+	ops := newLocalOperations(t)
 
 	_, err := ops.getAccessor(&model.S3Storage{})
 	require.Error(t, err)
@@ -165,7 +187,7 @@ func TestOperations_GetAccessor_Unsupported(t *testing.T) {
 func TestOperations_ReadFile_UnsupportedStorage(t *testing.T) {
 	t.Parallel()
 
-	ops := NewOperations(NewLocalStorageAccessor())
+	ops := newLocalOperations(t)
 
 	_, err := ops.ReadFile(t.Context(), &model.S3Storage{}, "file.asb")
 	require.Error(t, err)
@@ -175,7 +197,7 @@ func TestOperations_ReadFile_UnsupportedStorage(t *testing.T) {
 func TestOperations_UnsupportedStorage_ErrorPaths(t *testing.T) {
 	t.Parallel()
 
-	ops := NewOperations(NewLocalStorageAccessor())
+	ops := newLocalOperations(t)
 	unsupported := &model.S3Storage{}
 	ctx := t.Context()
 
