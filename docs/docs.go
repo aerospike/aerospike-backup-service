@@ -3431,7 +3431,7 @@ const docTemplate = `{
                     "example": "/path/to/key.pem"
                 },
                 "name": {
-                    "description": "TLSName used for server certificate verification (ServerName for SNI).",
+                    "description": "TLS ServerName (SNI) for verifying the peer certificate.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "example.com"
@@ -3470,7 +3470,7 @@ const docTemplate = `{
                     "example": 3000
                 },
                 "tls-name": {
-                    "description": "TLS certificate name used for secure connections (if enabled).",
+                    "description": "TLS name sent as SNI and checked against the server certificate.\nRequired when the cluster has a tls block.\nThis is the name that takes effect for cluster connections.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "certName"
@@ -3576,10 +3576,10 @@ const docTemplate = `{
                     "example": "/path/to/cert.pem"
                 },
                 "cipher-suite": {
-                    "description": "TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.",
+                    "description": "Colon-separated IANA TLS 1.2 cipher suite names (not OpenSSL nicknames).\nThe suite must match the certificate key type (RSA vs ECDSA).\nIf omitted, the client offers Go crypto/tls TLS 1.2 defaults:\nTLS_ECDHE_{ECDSA,RSA}_WITH_AES_128_GCM_SHA256,\nTLS_ECDHE_{ECDSA,RSA}_WITH_AES_256_GCM_SHA384,\nTLS_ECDHE_{ECDSA,RSA}_WITH_CHACHA20_POLY1305_SHA256,\nand ECDHE AES-CBC SHA for compatibility.\nRSA key-exchange, 3DES, RC4, and CBC-SHA256 are not offered.\nThis field does not select TLS 1.3 suites.",
                     "type": "string",
                     "x-nullable": true,
-                    "example": "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA"
+                    "example": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
                 },
                 "key-file": {
                     "description": "Path to a client private key file for mutual TLS authentication.",
@@ -3594,7 +3594,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "name": {
-                    "description": "TLSName used for server certificate verification (ServerName for SNI).",
+                    "description": "TLS ServerName (SNI) for verifying the peer certificate.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "example.com"

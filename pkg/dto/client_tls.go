@@ -12,7 +12,7 @@ import (
 type ClientTLS struct {
 	// Path to a trusted CA certificate file in PEM format.
 	CAFile string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/ca.pem" extensions:"x-nullable"`
-	// TLSName used for server certificate verification (ServerName for SNI).
+	// TLS ServerName (SNI) for verifying the peer certificate.
 	Name string `yaml:"name,omitempty" json:"name,omitempty" example:"example.com" extensions:"x-nullable"`
 	// Path to a client certificate file for mutual TLS authentication.
 	Certfile string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/cert.pem" extensions:"x-nullable"`
@@ -30,8 +30,8 @@ const (
 // Validate validates the ClientTLS configuration.
 //
 // ca-file is optional and independent: it trusts the server certificate.
-// cert-file, key-file, and name are a separate mTLS set:
-// together they identify this client to the server.
+// cert-file and key-file identify this client (mTLS). name must be set with
+// them; for cluster connections SNI still comes from seed-nodes[].tls-name.
 func (c *ClientTLS) Validate(opts ValidationOptions) error {
 	if c == nil {
 		return nil

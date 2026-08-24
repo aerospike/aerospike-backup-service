@@ -18,8 +18,16 @@ type TLS struct {
 	CAPath string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
 	Protocols string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
-	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
-	CipherSuite string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA" extensions:"x-nullable"`
+	// Colon-separated IANA TLS 1.2 cipher suite names (not OpenSSL nicknames).
+	// The suite must match the certificate key type (RSA vs ECDSA).
+	// If omitted, the client offers Go crypto/tls TLS 1.2 defaults:
+	// TLS_ECDHE_{ECDSA,RSA}_WITH_AES_128_GCM_SHA256,
+	// TLS_ECDHE_{ECDSA,RSA}_WITH_AES_256_GCM_SHA384,
+	// TLS_ECDHE_{ECDSA,RSA}_WITH_CHACHA20_POLY1305_SHA256,
+	// and ECDHE AES-CBC SHA for compatibility.
+	// RSA key-exchange, 3DES, RC4, and CBC-SHA256 are not offered.
+	// This field does not select TLS 1.3 suites.
+	CipherSuite string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" extensions:"x-nullable"`
 	// Passphrase for an encrypted TLS key file.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
