@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
@@ -36,7 +37,7 @@ func (s *AuthSuite) TestInternalPlain() {
 			Credentials: &dto.Credentials{
 				User:         intUser,
 				PasswordPath: passwordPath,
-				AuthMode:     string(model.AuthModeInternal),
+				AuthMode:     dto.AuthModeInternal,
 			},
 		})
 	})
@@ -52,7 +53,7 @@ func (s *AuthSuite) TestInternalPlain() {
 			Credentials: &dto.Credentials{
 				User:     intUser,
 				Password: decoder.Secret(secretRef()),
-				AuthMode: string(model.AuthModeInternal),
+				AuthMode: dto.AuthModeInternal,
 				SecretAgentConfig: dto.SecretAgentConfig{
 					SecretAgent: agent,
 				},
