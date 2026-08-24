@@ -9,6 +9,7 @@ import (
 var (
 	secretType = reflect.TypeFor[Secret]()
 	timeType   = reflect.TypeFor[time.Time]()
+	errType    = reflect.TypeFor[error]()
 )
 
 // RedactSecrets returns a deep copy of v with all Secret-typed values replaced by redactedSecret.
@@ -43,6 +44,10 @@ func redactValue(v reflect.Value) reflect.Value {
 	}
 
 	if v.Type() == timeType {
+		return v
+	}
+
+	if v.Type().Implements(errType) {
 		return v
 	}
 
