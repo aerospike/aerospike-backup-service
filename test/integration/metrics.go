@@ -42,6 +42,7 @@ func (e *env) fetchMetricFamilies(ctx context.Context) (map[string]*dto.MetricFa
 	}
 
 	var parser = expfmt.NewTextParser(prommodel.UTF8Validation)
+
 	return parser.TextToMetricFamilies(resp.Body)
 }
 
