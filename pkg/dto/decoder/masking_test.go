@@ -2,6 +2,8 @@ package decoder
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"log/slog"
 	"testing"
 	"time"
@@ -187,4 +189,99 @@ func TestRedactSecrets_PreservesTime(t *testing.T) {
 	assert.Equal(t, created, redacted["routine1"][0].Created)
 	assert.Equal(t, finished, redacted["routine1"][0].Finished)
 	assert.Equal(t, int64(1000), redacted["routine1"][0].Timestamp)
+}
+
+// credentialError mirrors aerospike.AerospikeError: exported fields on a type
+// stored behind fmt.Errorf("%w"). slog.Any("error", err) walks that wrapError,
+// whose err field is unexported, then Set panics when copying ResultCode.
+type credentialError struct {
+	ResultCode int
+	message    string
+}
+
+func (e *credentialError) Error() string {
+	return e.message
+}
+
+func TestRedactSecrets_WrappedError(t *testing.T) {
+	err := fmt.Errorf("failed to connect to cluster: %w", &credentialError{
+		ResultCode: 65,
+		message:    "Invalid credential",
+	})
+
+	assert.Equal(t, err, RedactSecrets(err))
+}
+
+// RedactSecrets returns errors untouched, so a secret interpolated into an error
+// message can only be masked by Secret's Stringer at construction time.
+func TestSecret_MaskedInErrorMessages(t *testing.T) {
+	secret := Secret(literalPassword)
+
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{
+			name: "%s verb",
+			err:  fmt.Errorf("login failed for password %s", secret),
+		},
+		{
+			name: "%v verb",
+			err:  fmt.Errorf("login failed for password %v", secret),
+		},
+		{
+			name: "wrapped with %w",
+			err:  fmt.Errorf("connect cluster1: %w", fmt.Errorf("bad password %s", secret)),
+		},
+		{
+			name: "joined errors",
+			err:  errors.Join(fmt.Errorf("cluster1: %v", secret), fmt.Errorf("cluster2: %v", secret)),
+		},
+		{
+			name: "secret nested in struct",
+			err:  fmt.Errorf("invalid credentials %v", testCreds),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Contains(t, tt.err.Error(), redactedSecret)
+			assert.NotContains(t, tt.err.Error(), literalPassword)
+
+			redacted, ok := RedactSecrets(tt.err).(error)
+			require.True(t, ok)
+			assert.NotContains(t, redacted.Error(), literalPassword)
+		})
+	}
+
+	t.Run("secret ref preserved", func(t *testing.T) {
+		err := fmt.Errorf("cannot resolve %v", Secret(validSecretRef))
+		assert.Contains(t, err.Error(), validSecretRef)
+	})
+
+	t.Run("logged error attribute is masked", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
+			ReplaceAttr: RedactSecretsReplaceAttr(),
+		}))
+
+		logger.Error("connect failed", slog.Any("error", fmt.Errorf("bad password %s", secret)))
+
+		assert.Contains(t, buf.String(), redactedSecret)
+		assert.NotContains(t, buf.String(), literalPassword)
+	})
+
+	t.Run("%q verb", func(t *testing.T) {
+		err := fmt.Errorf("password %q", secret)
+		assert.Contains(t, err.Error(), redactedSecret)
+		assert.NotContains(t, err.Error(), literalPassword)
+	})
+
+	// Guards the one sharp edge: converting to string bypasses the Stringer, and
+	// RedactSecrets cannot repair an error message after the fact.
+	t.Run("raw string conversion leaks", func(t *testing.T) {
+		err := fmt.Errorf("password %s", string(secret))
+		assert.Contains(t, err.Error(), literalPassword)
+		assert.Equal(t, err.Error(), RedactSecrets(err).(error).Error())
+	})
 }

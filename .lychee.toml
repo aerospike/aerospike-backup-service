@@ -16,9 +16,11 @@ exclude = [
   # Pre-existing broken link in the Helm chart README, owned by the
   # security plan's docs-supporting item.
   "helm/aerospike-backup-service/examples$",
+  # kubernetes.io is often unreachable from GitHub Actions runners
+  # (connection failed / WAF), so CI cannot reliably verify these links.
+  "^https://kubernetes\\.io/",
   # Stable reference docs that time out or redirect heavily from GitHub
   # Actions runners; not worth failing CI over.
-  "^https://kubernetes\\.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes",
   "^https://docs\\.aerospike\\.com/cloud/kubernetes/operator",
 ]
 
