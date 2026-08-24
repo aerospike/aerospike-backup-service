@@ -53,7 +53,7 @@ func TestGcpStorage_ConnectivityFailure(t *testing.T) {
 	}))
 	t.Cleanup(ts.Close)
 
-	ctx := t.Context()
+	ctx := connectivityFailureContext(t)
 	accessor := NewGcpStorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getGcpClient(ctx, &model.GcpStorage{
