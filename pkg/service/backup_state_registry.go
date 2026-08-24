@@ -15,35 +15,35 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 )
 
-// RunningBackupsRegistry defines the interface for managing running backups and their statuses.
-type RunningBackupsRegistry interface {
-	// register adds a new backup handler for a specific routine and job type.
-	register(routineName string, jt model.BackupType, handler CancelableBackupHandler)
-	// clearFailedBackup deletes a backup from the registry.
-	// Should be called for failed backups.
-	clearFailedBackup(routineName string, jt model.BackupType)
-	// recordSuccessfulBackup removes a backup from the registry and triggers a storage scan
-	// to update the last backup timestamp. Storage is the single source of truth for history.
-	recordSuccessfulBackup(routine *model.BackupRoutine, jt model.BackupType)
-
+// BackupStateRegistry tracks running backups and the last known backup times for each routine.
+type BackupStateRegistry interface {
 	// GetRoutineState returns the current backup statistics for a routine.
 	GetRoutineState(routine *model.BackupRoutine) model.RoutineState
-	// GetRunningState returns statistics for all current backups.
+	// GetRunningState returns statistics for all currently running backups.
 	GetRunningState() map[string]model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.
 	Cancel(routineName string)
-	// SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
-	// found in the storage backends. It scans provided routines in parallel.
+	// SynchroniseBackupHistory updates last backup times from storage for the given routines.
+	// It scans the routines in parallel.
 	SynchroniseBackupHistory(ctx context.Context, routines []*model.BackupRoutine)
+
+	// BackupStarted stores the handler of a started backup, so it can be tracked and canceled.
+	BackupStarted(routineName string, backupType model.BackupType, handler CancelableBackupHandler)
+	// BackupSucceeded drops the handler and rescans storage to refresh the last backup time.
+	BackupSucceeded(routine *model.BackupRoutine, backupType model.BackupType)
+	// BackupFailed drops the handler of a failed backup.
+	BackupFailed(routineName string, backupType model.BackupType)
 }
 
+// routineProvider supplies the configured backup routines. It is the part of *model.Config
+// that callers need, so tests can provide routines without building a whole configuration.
 type routineProvider interface {
 	Routines() map[string]*model.BackupRoutine
 }
 
-// RunningBackupsRegistryImpl implements the RunningBackupsRegistry interface.
-// It acts as a coordinator, managing a map of per-routine trackers.
-type RunningBackupsRegistryImpl struct {
+var _ routineProvider = (*model.Config)(nil)
+
+type backupStateRegistry struct {
 	// trackers holds the state for all known routines
 	trackers *collections.SafeMap[string, *routineTracker]
 
@@ -54,16 +54,16 @@ type RunningBackupsRegistryImpl struct {
 	config routineProvider
 }
 
-var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
+var _ BackupStateRegistry = (*backupStateRegistry)(nil)
 
 const getStateTimeout = 15 * time.Second
 
-// NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
-func NewRunningBackupsRegistry(
+// NewBackupStateRegistry returns a BackupStateRegistry.
+func NewBackupStateRegistry(
 	history HistoryManager,
 	config routineProvider,
-) *RunningBackupsRegistryImpl {
-	return &RunningBackupsRegistryImpl{
+) BackupStateRegistry {
+	return &backupStateRegistry{
 		trackers: collections.NewSafeMap[string, *routineTracker](),
 		history:  history,
 		config:   config,
@@ -71,13 +71,13 @@ func NewRunningBackupsRegistry(
 }
 
 // getTracker atomically retrieves or creates a new tracker for a routine.
-func (r *RunningBackupsRegistryImpl) getTracker(routineName string) *routineTracker {
+func (r *backupStateRegistry) getTracker(routineName string) *routineTracker {
 	return r.trackers.LoadOrStore(routineName, newRoutineTracker())
 }
 
 // SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans provided routines in parallel.
-func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Context, routines []*model.BackupRoutine) {
+func (r *backupStateRegistry) SynchroniseBackupHistory(ctx context.Context, routines []*model.BackupRoutine) {
 	if len(routines) == 0 {
 		return
 	}
@@ -113,7 +113,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Contex
 	slog.Error("History synchronization failed", attr.Error(err))
 }
 
-func (r *RunningBackupsRegistryImpl) scanRoutinesHistory(ctx context.Context, routines []*model.BackupRoutine) error {
+func (r *backupStateRegistry) scanRoutinesHistory(ctx context.Context, routines []*model.BackupRoutine) error {
 	var (
 		errs  error
 		errMu sync.Mutex
@@ -135,7 +135,7 @@ func (r *RunningBackupsRegistryImpl) scanRoutinesHistory(ctx context.Context, ro
 	return errs
 }
 
-func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Context, routine *model.BackupRoutine) error {
+func (r *backupStateRegistry) scanSingleRoutineHistory(ctx context.Context, routine *model.BackupRoutine) error {
 	tracker := r.getTracker(routine.Name)
 
 	// Cancel any previous scan that might still be running
@@ -178,8 +178,8 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 	return nil
 }
 
-// register adds a new backup handler for a specific routine and job type.
-func (r *RunningBackupsRegistryImpl) register(
+// BackupStarted adds a new backup handler for a specific routine and job type.
+func (r *backupStateRegistry) BackupStarted(
 	routineName string,
 	backupType model.BackupType,
 	handler CancelableBackupHandler,
@@ -187,9 +187,9 @@ func (r *RunningBackupsRegistryImpl) register(
 	r.getTracker(routineName).register(backupType, handler)
 }
 
-// recordSuccessfulBackup removes a backup from the registry and triggers a storage scan
+// BackupSucceeded removes a backup from the registry and triggers a storage scan
 // to update the last backup timestamp. Storage is the single source of truth for history.
-func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(
+func (r *backupStateRegistry) BackupSucceeded(
 	routine *model.BackupRoutine,
 	backupType model.BackupType,
 ) {
@@ -197,13 +197,13 @@ func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(
 	_ = r.scanSingleRoutineHistory(context.Background(), routine)
 }
 
-// clearFailedBackup deletes a backup from the registry.
-func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, backupType model.BackupType) {
+// BackupFailed deletes a backup from the registry.
+func (r *backupStateRegistry) BackupFailed(routineName string, backupType model.BackupType) {
 	r.getTracker(routineName).clearBackup(backupType)
 }
 
 // GetRoutineState returns the current backup statistics for a routine.
-func (r *RunningBackupsRegistryImpl) GetRoutineState(routine *model.BackupRoutine) model.RoutineState {
+func (r *backupStateRegistry) GetRoutineState(routine *model.BackupRoutine) model.RoutineState {
 	tracker := r.getTracker(routine.Name)
 
 	snapshot, err := tracker.getState(getStateTimeout)
@@ -231,8 +231,8 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routine *model.BackupRoutin
 	}
 }
 
-// GetRunningState returns statistics for all current backups.
-func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]model.RoutineState {
+// GetRunningState returns statistics for all currently running backups.
+func (r *backupStateRegistry) GetRunningState() map[string]model.RoutineState {
 	stats := make(map[string]model.RoutineState)
 
 	for _, routine := range r.config.Routines() {
@@ -246,7 +246,7 @@ func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]model.RoutineS
 }
 
 // Cancel stops all ongoing backups for a specific routine.
-func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
+func (r *backupStateRegistry) Cancel(routineName string) {
 	if tracker, ok := r.trackers.Load(routineName); ok {
 		tracker.cancel()
 	}

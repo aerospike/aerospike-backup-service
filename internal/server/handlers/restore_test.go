@@ -410,7 +410,7 @@ func TestService_RetrieveConfig(t *testing.T) {
 		routineName    string
 		timestamp      string
 		setupSvc       func(*Service)
-		setupMock      func(*mockConfigRetriever)
+		setupMock      func(*service.MockConfigRetriever)
 		expectedStatus int
 		expectedError  string
 	}{
@@ -419,7 +419,7 @@ func TestService_RetrieveConfig(t *testing.T) {
 			routineName:    "",
 			timestamp:      "1000",
 			setupSvc:       func(*Service) {},
-			setupMock:      func(*mockConfigRetriever) {},
+			setupMock:      func(*service.MockConfigRetriever) {},
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  errMissingRoutineName.Error(),
 		},
@@ -428,7 +428,7 @@ func TestService_RetrieveConfig(t *testing.T) {
 			routineName:    "routine1",
 			timestamp:      "",
 			setupSvc:       func(*Service) {},
-			setupMock:      func(*mockConfigRetriever) {},
+			setupMock:      func(*service.MockConfigRetriever) {},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
@@ -436,7 +436,7 @@ func TestService_RetrieveConfig(t *testing.T) {
 			routineName:    "routine1",
 			timestamp:      "not-a-number",
 			setupSvc:       func(*Service) {},
-			setupMock:      func(*mockConfigRetriever) {},
+			setupMock:      func(*service.MockConfigRetriever) {},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
@@ -444,7 +444,7 @@ func TestService_RetrieveConfig(t *testing.T) {
 			routineName:    "unknown-routine",
 			timestamp:      "1000",
 			setupSvc:       func(*Service) {},
-			setupMock:      func(*mockConfigRetriever) {},
+			setupMock:      func(*service.MockConfigRetriever) {},
 			expectedStatus: http.StatusNotFound,
 		},
 		{
@@ -454,7 +454,7 @@ func TestService_RetrieveConfig(t *testing.T) {
 			setupSvc: func(s *Service) {
 				_ = s.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 			},
-			setupMock: func(m *mockConfigRetriever) {
+			setupMock: func(m *service.MockConfigRetriever) {
 				m.EXPECT().
 					RetrieveConfiguration(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("boom"))
@@ -469,7 +469,7 @@ func TestService_RetrieveConfig(t *testing.T) {
 			setupSvc: func(s *Service) {
 				_ = s.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 			},
-			setupMock: func(m *mockConfigRetriever) {
+			setupMock: func(m *service.MockConfigRetriever) {
 				m.EXPECT().
 					RetrieveConfiguration(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return([]byte("zip-content"), nil)
@@ -482,7 +482,7 @@ func TestService_RetrieveConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
-			mockRetriever := NewmockConfigRetriever(ctrl)
+			mockRetriever := service.NewMockConfigRetriever(ctrl)
 			tt.setupMock(mockRetriever)
 
 			svc := &Service{

@@ -64,15 +64,15 @@ func TestService_GetAllFullBackups(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			mockBackends := service.NewMockBackupReader(ctrl)
+			backupReader := service.NewMockBackupReader(ctrl)
 			cfg := model.NewConfig()
 			_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 
-			tt.setupMock(mockBackends)
+			tt.setupMock(backupReader)
 
 			svc := &Service{
 				config:       cfg,
-				backupReader: mockBackends,
+				backupReader: backupReader,
 			}
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/backups/full", nil)
@@ -242,7 +242,7 @@ func TestService_CancelCurrentBackup_Success(t *testing.T) {
 	cfg := model.NewConfig()
 	_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 
-	mockRegistry := NewmockRunningBackupsRegistry(ctrl)
+	mockRegistry := service.NewMockBackupStateRegistry(ctrl)
 	mockRegistry.EXPECT().Cancel("routine1")
 
 	svc := &Service{config: cfg, registry: mockRegistry}
@@ -279,7 +279,7 @@ func TestService_GetCurrentBackupInfo(t *testing.T) {
 			routineName: "routine1",
 			setupSvc: func(svc *Service, ctrl *gomock.Controller) {
 				_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
-				mockRegistry := NewmockRunningBackupsRegistry(ctrl)
+				mockRegistry := service.NewMockBackupStateRegistry(ctrl)
 				mockRegistry.EXPECT().GetRoutineState(gomock.Any()).Return(model.RoutineState{
 					LastRunTime: model.NewNoBackupTime(),
 					NextRunTime: model.NewNoBackupTime(),

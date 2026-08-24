@@ -8,8 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
@@ -92,13 +94,13 @@ func TestService_UpdateConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc, ctrl := newConfigTestService(t)
 
-			mockConfigurationManager := NewmockManager(ctrl)
+			mockConfigurationManager := configuration.NewMockManager(ctrl)
 			if tt.expectedStatus != http.StatusBadRequest {
 				mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(tt.writeErr)
 			}
 			svc.configurationManager = mockConfigurationManager
 
-			mockConfigApplier := NewmockConfigApplier(ctrl)
+			mockConfigApplier := service.NewMockConfigApplier(ctrl)
 			if tt.expectedStatus == http.StatusOK || tt.configApplierErr != nil {
 				mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(tt.configApplierErr)
 			}
@@ -162,11 +164,11 @@ func TestService_ApplyConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc, ctrl := newConfigTestService(t)
 
-			mockConfigurationManager := NewmockManager(ctrl)
+			mockConfigurationManager := configuration.NewMockManager(ctrl)
 			mockConfigurationManager.EXPECT().Read(gomock.Any()).Return(tt.readConfig, tt.readErr)
 			svc.configurationManager = mockConfigurationManager
 
-			mockConfigApplier := NewmockConfigApplier(ctrl)
+			mockConfigApplier := service.NewMockConfigApplier(ctrl)
 			if tt.expectedStatus == http.StatusOK || tt.configApplierErr != nil {
 				mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(tt.configApplierErr)
 			}
@@ -188,11 +190,11 @@ func TestService_ApplyConfig(t *testing.T) {
 func TestService_changeConfig(t *testing.T) {
 	svc, ctrl := newConfigTestService(t)
 
-	mockConfigurationManager := NewmockManager(ctrl)
+	mockConfigurationManager := configuration.NewMockManager(ctrl)
 	mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil)
 	svc.configurationManager = mockConfigurationManager
 
-	mockConfigApplier := NewmockConfigApplier(ctrl)
+	mockConfigApplier := service.NewMockConfigApplier(ctrl)
 	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil)
 	svc.configApplier = mockConfigApplier
 
@@ -220,11 +222,11 @@ func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
 	}
 	require.NoError(t, svc.config.AddCluster("test-cluster", clusterModel))
 
-	mockConfigurationManager := NewmockManager(ctrl)
+	mockConfigurationManager := configuration.NewMockManager(ctrl)
 	mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil)
 	svc.configurationManager = mockConfigurationManager
 
-	mockConfigApplier := NewmockConfigApplier(ctrl)
+	mockConfigApplier := service.NewMockConfigApplier(ctrl)
 	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil)
 	svc.configApplier = mockConfigApplier
 

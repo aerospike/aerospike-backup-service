@@ -12,6 +12,8 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
+// RestoreManager starts restore jobs and keeps their status in memory, so a job can be
+// queried or canceled by its id. Statuses live as long as the process.
 type RestoreManager interface {
 	// Restore starts a restore process using the given request.
 	// Returns the job id as a unique identifier.
@@ -46,17 +48,16 @@ func NewJobNotFoundError(id model.RestoreJobID) *JobNotFoundError {
 	return &JobNotFoundError{JobID: id}
 }
 
-// RestoreManagerImpl implements the RestoreManager interface.
-// Stores job information locally within a map.
-type RestoreManagerImpl struct {
+// restoreManager stores restore job information locally and delegates execution by request type.
+type restoreManager struct {
 	restoreJobs *RestoreJobsHolder
 	pathRunner  *pathRestoreRunner
 	timeRunner  *timeRestoreRunner
 }
 
-var _ RestoreManager = (*RestoreManagerImpl)(nil)
+var _ RestoreManager = (*restoreManager)(nil)
 
-// NewRestoreManager returns a new RestoreManager implementation.
+// NewRestoreManager returns a RestoreManager.
 func NewRestoreManager(
 	restoreService restoreexecutor.Restore,
 	clientManager aerospike.ClientManager,
@@ -65,7 +66,7 @@ func NewRestoreManager(
 	routineStorage *collections.LockMap,
 	validator RestoreValidator,
 ) RestoreManager {
-	return &RestoreManagerImpl{
+	return &restoreManager{
 		restoreJobs: restoreJobs,
 		pathRunner: newPathRestoreRunner(
 			restoreJobs,
@@ -86,18 +87,18 @@ func NewRestoreManager(
 	}
 }
 
-func (r *RestoreManagerImpl) Restore(ctx context.Context, request *model.RestoreRequest) (model.RestoreJobID, error) {
+func (r *restoreManager) Restore(ctx context.Context, request *model.RestoreRequest) (model.RestoreJobID, error) {
 	return r.pathRunner.Restore(ctx, request)
 }
 
-func (r *RestoreManagerImpl) RestoreByTime(
+func (r *restoreManager) RestoreByTime(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
 	return r.timeRunner.RestoreByTime(ctx, request)
 }
 
 // JobStatus returns the status of the job with the given id.
-func (r *RestoreManagerImpl) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
+func (r *restoreManager) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
 	job, err := r.restoreJobs.getJob(jobID)
 	if err != nil {
 		return nil, err
@@ -107,7 +108,7 @@ func (r *RestoreManagerImpl) JobStatus(jobID model.RestoreJobID) (*model.Restore
 }
 
 // CancelRestore cancels an ongoing restore.
-func (r *RestoreManagerImpl) CancelRestore(jobID model.RestoreJobID) error {
+func (r *restoreManager) CancelRestore(jobID model.RestoreJobID) error {
 	job, err := r.restoreJobs.getJob(jobID)
 	if err != nil {
 		return err
@@ -119,7 +120,7 @@ func (r *RestoreManagerImpl) CancelRestore(jobID model.RestoreJobID) error {
 }
 
 // GetFilteredJobs returns all jobs matching the given filters as a map of jobId -> RestoreJobStatus.
-func (r *RestoreManagerImpl) GetFilteredJobs(
+func (r *restoreManager) GetFilteredJobs(
 	timeBounds model.TimeBounds,
 	statusFilter model.StatusFilter,
 ) map[model.RestoreJobID]*model.RestoreJobStatus {

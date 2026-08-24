@@ -1,35 +1,17 @@
 package restoreexecutor
 
 import (
-	"context"
 	"errors"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/backup-go"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go/io/storage/common"
-	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
-
-type mockStorageReader struct {
-	reader backup.StreamingReader
-	err    error
-	calls  int
-}
-
-func (m *mockStorageReader) CreateDirReader(
-	_ context.Context,
-	_ model.Storage,
-	_ string,
-	_ ...options.Opt,
-) (backup.StreamingReader, error) {
-	m.calls++
-	return m.reader, m.err
-}
 
 func TestRestoreExecutor_Run_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -42,14 +24,17 @@ func TestRestoreExecutor_Run_Success(t *testing.T) {
 		Restore(gomock.Any(), gomock.Any(), reader).
 		Return(restoreHandler, nil)
 
-	operations := &mockStorageReader{reader: reader}
+	operations := storage.NewMockOperations(ctrl)
+	operations.EXPECT().
+		CreateDirReader(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(reader, nil)
+
 	executor := NewRestoreExecutor(operations)
 
 	handler, err := executor.Run(t.Context(), client, testRestoreRequest())
 	require.NoError(t, err)
 	require.NotNil(t, handler)
 	assert.Same(t, restoreHandler, handler)
-	assert.Equal(t, 1, operations.calls)
 }
 
 func TestRestoreExecutor_Run_RestoreStartError(t *testing.T) {
@@ -61,7 +46,11 @@ func TestRestoreExecutor_Run_RestoreStartError(t *testing.T) {
 		Restore(gomock.Any(), gomock.Any(), reader).
 		Return(nil, errors.New("restore failed"))
 
-	operations := &mockStorageReader{reader: reader}
+	operations := storage.NewMockOperations(ctrl)
+	operations.EXPECT().
+		CreateDirReader(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(reader, nil)
+
 	executor := NewRestoreExecutor(operations)
 
 	_, err := executor.Run(t.Context(), client, testRestoreRequest())
@@ -72,7 +61,11 @@ func TestRestoreExecutor_Run_RestoreStartError(t *testing.T) {
 func TestRestoreExecutor_Run_EmptyStorage(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	operations := &mockStorageReader{err: common.ErrEmptyStorage}
+	operations := storage.NewMockOperations(ctrl)
+	operations.EXPECT().
+		CreateDirReader(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, common.ErrEmptyStorage)
+
 	executor := NewRestoreExecutor(operations)
 
 	client := aerospike.NewMockClient(ctrl)
@@ -80,13 +73,16 @@ func TestRestoreExecutor_Run_EmptyStorage(t *testing.T) {
 	_, err := executor.Run(t.Context(), client, testRestoreRequest())
 	require.Error(t, err)
 	require.ErrorIs(t, err, common.ErrEmptyStorage)
-	assert.Equal(t, 1, operations.calls)
 }
 
 func TestRunRestore_CreateReaderError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	client := aerospike.NewMockClient(ctrl)
-	operations := &mockStorageReader{err: errors.New("reader failed")}
+
+	operations := storage.NewMockOperations(ctrl)
+	operations.EXPECT().
+		CreateDirReader(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("reader failed"))
 
 	_, err := runScanRestore(t.Context(), client, testRestoreRequest(), operations)
 	require.Error(t, err)
@@ -102,7 +98,10 @@ func TestRunRestore_RestoreStartError(t *testing.T) {
 		Restore(gomock.Any(), gomock.Any(), reader).
 		Return(nil, errors.New("restore failed"))
 
-	operations := &mockStorageReader{reader: reader}
+	operations := storage.NewMockOperations(ctrl)
+	operations.EXPECT().
+		CreateDirReader(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(reader, nil)
 
 	_, err := runScanRestore(t.Context(), client, testRestoreRequest(), operations)
 	require.Error(t, err)

@@ -21,7 +21,7 @@ const (
 	configPrefix                 = "aerospike"
 )
 
-// PathService defines the interface for path-related operations.
+// PathService defines the canonical storage layout for backup data, metadata, and cluster configuration.
 type PathService interface {
 	// GetTimestampPath returns a timestamped path for a backup.
 	// The path is composed of {routineName}/{backupType}/{timestamp}.
@@ -43,15 +43,16 @@ type PathService interface {
 	ExtractTimestampFromPath(path string) string
 }
 
-// PathServiceImpl implements the PathService interface.
-type PathServiceImpl struct {
+type pathService struct {
 	format           *model.TimestampFormat
 	timestampPattern *regexp.Regexp
 }
 
-// NewPathService creates a new PathServiceImpl.
-func NewPathService(format *model.TimestampFormat) *PathServiceImpl {
-	return &PathServiceImpl{
+var _ PathService = (*pathService)(nil)
+
+// NewPathService returns a PathService. A nil format means plain epoch-millisecond timestamps.
+func NewPathService(format *model.TimestampFormat) PathService {
+	return &pathService{
 		format: format,
 		timestampPattern: regexp.MustCompile(
 			fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})(?:_[^/]*)?/`,
@@ -61,7 +62,7 @@ func NewPathService(format *model.TimestampFormat) *PathServiceImpl {
 }
 
 // GetTimestampPath returns the timestamped path for a backup.
-func (s *PathServiceImpl) GetTimestampPath(
+func (s *pathService) GetTimestampPath(
 	routineName string,
 	timestamp time.Time,
 	backupType model.BackupType,
@@ -70,7 +71,7 @@ func (s *PathServiceImpl) GetTimestampPath(
 }
 
 // GetBackupPath returns the path for a specific namespace backup.
-func (s *PathServiceImpl) GetBackupPath(
+func (s *pathService) GetBackupPath(
 	routineName string,
 	backupType model.BackupType,
 	namespace string,
@@ -80,17 +81,17 @@ func (s *PathServiceImpl) GetBackupPath(
 }
 
 // GetConfigurationPath returns the path for the configuration backup.
-func (s *PathServiceImpl) GetConfigurationPath(routineName string, timestamp time.Time) string {
+func (s *pathService) GetConfigurationPath(routineName string, timestamp time.Time) string {
 	return path.Join(routineName, fullBackupDirectory, s.formatTimestamp(timestamp), configurationBackupDirectory)
 }
 
 // GetConfigurationFilePath returns the path for a specific configuration file.
-func (s *PathServiceImpl) GetConfigurationFilePath(routineName string, timestamp time.Time, index int) string {
+func (s *pathService) GetConfigurationFilePath(routineName string, timestamp time.Time, index int) string {
 	return path.Join(s.GetConfigurationPath(routineName, timestamp), configFileName(index))
 }
 
 // FormatTimestamp formats a timestamp into a string.
-func (s *PathServiceImpl) formatTimestamp(t time.Time) string {
+func (s *pathService) formatTimestamp(t time.Time) string {
 	timestamp := strconv.FormatInt(t.UnixMilli(), 10)
 	if s.format == nil {
 		return timestamp
@@ -100,7 +101,7 @@ func (s *PathServiceImpl) formatTimestamp(t time.Time) string {
 }
 
 // ExtractTimestampFromPath extracts the timestamp part from a path.
-func (s *PathServiceImpl) ExtractTimestampFromPath(path string) string {
+func (s *pathService) ExtractTimestampFromPath(path string) string {
 	matches := s.timestampPattern.FindStringSubmatch(path)
 	if len(matches) >= 3 {
 		return matches[2] // The timestamp is in the second capturing group
