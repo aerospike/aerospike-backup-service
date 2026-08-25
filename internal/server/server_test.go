@@ -80,9 +80,11 @@ func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
 func TestNewHTTPServer_ReadTimeoutClosesSilentClient(t *testing.T) {
 	readTimeout := 100 * time.Millisecond
 	srv := newTestHTTPServer(t, &model.HTTPServerConfig{
-		// ReadHeaderTimeout of 0 falls back to ReadTimeout in net/http.
-		Timeout:     ptr.Of(time.Duration(0)),
-		ReadTimeout: ptr.Of(readTimeout),
+		ListenerConfig: model.ListenerConfig{
+			// ReadHeaderTimeout of 0 falls back to ReadTimeout in net/http.
+			Timeout:     ptr.Of(time.Duration(0)),
+			ReadTimeout: ptr.Of(readTimeout),
+		},
 	})
 	require.Equal(t, time.Duration(0), srv.ReadHeaderTimeout)
 	require.Equal(t, readTimeout, srv.ReadTimeout)
