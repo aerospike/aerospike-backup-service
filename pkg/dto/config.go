@@ -40,8 +40,8 @@ func NewConfigFromModel(m *model.Config) *Config {
 func (c *Config) fromModel(m *model.Config) {
 	c.ServiceConfig.fromModel(&m.ServiceConfig)
 	backupConfig := m.BackupConfigCopy()
-	if c.ServiceConfig.HTTPSServer != nil {
-		c.ServiceConfig.HTTPSServer.SecretAgentConfig = ResolveSecretAgentFromModel(
+	if c.ServiceConfig.ServerHTTPS != nil {
+		c.ServiceConfig.ServerHTTPS.SecretAgentConfig = ResolveSecretAgentFromModel(
 			m.ServiceConfig.ServerHTTPS.SecretAgent, backupConfig,
 		)
 	}
@@ -153,9 +153,9 @@ func (c *Config) ToModel() (*model.Config, error) {
 			return nil, err
 		}
 	}
-	if c.ServiceConfig.HTTPSServer != nil {
+	if c.ServiceConfig.ServerHTTPS != nil {
 		// Resolve the HTTPS Secret Agent after the top-level agents have been added.
-		agent, err := c.ServiceConfig.HTTPSServer.SecretAgentConfig.ToModel(modelConfig)
+		agent, err := c.ServiceConfig.ServerHTTPS.SecretAgentConfig.ToModel(modelConfig)
 		if err != nil {
 			return nil, fmt.Errorf("invalid HTTPS server secret agent: %w", err)
 		}

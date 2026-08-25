@@ -19,8 +19,8 @@ const (
 	shutdownTimeout = 30 * time.Second
 )
 
-// ServerHTTP manages the backup service HTTP server lifecycle.
-type ServerHTTP interface {
+// HTTP manages the backup service HTTP server lifecycle.
+type HTTP interface {
 	http.Handler
 
 	// Start starts the HTTP server. Returns an error if the server fails to start.
@@ -34,10 +34,10 @@ type serverHTTP struct {
 	*http.Server
 }
 
-var _ ServerHTTP = (*serverHTTP)(nil)
+var _ HTTP = (*serverHTTP)(nil)
 
-// NewHTTPServer returns a new instance of ServerHTTP.
-func NewHTTPServer(ctx context.Context, serverConfig *model.ServerConfigHTTP, service *handlers.Service) ServerHTTP {
+// NewServerHTTP returns a new instance of HTTP.
+func NewServerHTTP(ctx context.Context, serverConfig *model.ServerConfigHTTP, service *handlers.Service) HTTP {
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
 	// Create router

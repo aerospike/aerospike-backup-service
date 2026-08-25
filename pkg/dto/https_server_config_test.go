@@ -11,30 +11,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHTTPSServerConfigValidate(t *testing.T) {
+func TestServerHTTPSConfigValidate(t *testing.T) {
 	certs := setupTestCertificates(t)
 	otherCerts := setupTestCertificates(t)
 
 	tests := []struct {
 		name    string
-		config  *HTTPSServerConfig
+		config  *ServerConfigHTTPS
 		options ValidationOptions
 		wantErr string
 	}{
 		{
 			name: "valid config",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				CertFile: certs.certFile,
 				KeyFile:  certs.keyFile,
 			},
 		},
 		{
 			name:   "disabled without certificate",
-			config: &HTTPSServerConfig{ListenerConfig: ListenerConfig{Disabled: true}},
+			config: &ServerConfigHTTPS{ListenerConfig: ListenerConfig{Disabled: true}},
 		},
 		{
 			name: "disabled with valid certificate",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				ListenerConfig: ListenerConfig{Disabled: true},
 				CertFile:       certs.certFile,
 				KeyFile:        certs.keyFile,
@@ -42,7 +42,7 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name: "valid mutual TLS",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				CertFile:     certs.certFile,
 				KeyFile:      certs.keyFile,
 				ClientCAFile: certs.caFile,
@@ -51,7 +51,7 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name: "skip unavailable TLS files",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				CertFile: "/not/available/server.pem",
 				KeyFile:  "/not/available/server-key.pem",
 			},
@@ -59,17 +59,17 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name:    "missing certificate",
-			config:  &HTTPSServerConfig{KeyFile: certs.keyFile},
+			config:  &ServerConfigHTTPS{KeyFile: certs.keyFile},
 			wantErr: "cert-file",
 		},
 		{
 			name:    "missing key",
-			config:  &HTTPSServerConfig{CertFile: certs.certFile},
+			config:  &ServerConfigHTTPS{CertFile: certs.certFile},
 			wantErr: "key-file",
 		},
 		{
 			name: "mismatched certificate and key",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				CertFile: certs.certFile,
 				KeyFile:  otherCerts.keyFile,
 			},
@@ -77,7 +77,7 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name: "disabled with mismatched certificate and key",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				ListenerConfig: ListenerConfig{Disabled: true},
 				CertFile:       certs.certFile,
 				KeyFile:        otherCerts.keyFile,
@@ -86,7 +86,7 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name: "client authentication without CA",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				CertFile:   certs.certFile,
 				KeyFile:    certs.keyFile,
 				ClientAuth: "request",
@@ -95,7 +95,7 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name: "invalid minimum version",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				CertFile:   certs.certFile,
 				KeyFile:    certs.keyFile,
 				MinVersion: "1.1",
@@ -104,7 +104,7 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name: "insecure cipher suite",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				CertFile:     certs.certFile,
 				KeyFile:      certs.keyFile,
 				CipherSuites: []string{"TLS_RSA_WITH_3DES_EDE_CBC_SHA"},
@@ -113,7 +113,7 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name: "unknown client authentication",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				CertFile:   certs.certFile,
 				KeyFile:    certs.keyFile,
 				ClientAuth: "verify-if-given",
@@ -122,7 +122,7 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name: "secret agent password reference with agent",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				CertFile:        certs.certFile,
 				KeyFile:         certs.keyFile,
 				KeyFilePassword: "secrets:agent1:tls-key",
@@ -133,7 +133,7 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name: "secret agent password reference without agent",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				CertFile:        certs.certFile,
 				KeyFile:         certs.keyFile,
 				KeyFilePassword: "secrets:agent1:tls-key",
@@ -142,7 +142,7 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name: "mutually exclusive secret agent settings",
-			config: &HTTPSServerConfig{
+			config: &ServerConfigHTTPS{
 				CertFile: certs.certFile,
 				KeyFile:  certs.keyFile,
 				SecretAgentConfig: SecretAgentConfig{
@@ -167,8 +167,8 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 	}
 }
 
-func TestHTTPSServerConfigToModelAndFromModel(t *testing.T) {
-	config := &HTTPSServerConfig{
+func TestServerHTTPSConfigToModelAndFromModel(t *testing.T) {
+	config := &ServerConfigHTTPS{
 		ListenerConfig: ListenerConfig{
 			Disabled:     true,
 			Address:      "127.0.0.1",
@@ -195,14 +195,14 @@ func TestHTTPSServerConfigToModelAndFromModel(t *testing.T) {
 	}
 
 	modelConfig := config.ToModel()
-	roundTrip := &HTTPSServerConfig{}
+	roundTrip := &ServerConfigHTTPS{}
 	roundTrip.fromModel(modelConfig)
 
 	assert.Equal(t, config, roundTrip)
 }
 
-func TestHTTPSServerConfigCompareReportsEveryField(t *testing.T) {
-	current := &HTTPSServerConfig{
+func TestServerHTTPSConfigCompareReportsEveryField(t *testing.T) {
+	current := &ServerConfigHTTPS{
 		ListenerConfig: ListenerConfig{
 			Address:      "localhost",
 			Rate:         &RateLimiterConfig{Tps: ptr.Of(1)},
@@ -224,7 +224,7 @@ func TestHTTPSServerConfigCompareReportsEveryField(t *testing.T) {
 			SecretAgentName: "agent-a",
 		},
 	}
-	other := &HTTPSServerConfig{
+	other := &ServerConfigHTTPS{
 		ListenerConfig: ListenerConfig{
 			Disabled:     true,
 			Address:      "0.0.0.0",
@@ -261,18 +261,18 @@ func TestHTTPSServerConfigCompareReportsEveryField(t *testing.T) {
 	}
 }
 
-func TestHTTPSServerConfigSecureCipherCatalog(t *testing.T) {
+func TestServerHTTPSConfigSecureCipherCatalog(t *testing.T) {
 	for _, suite := range tls.InsecureCipherSuites() {
 		_, exists := secureServerCipherSuites[suite.Name]
 		assert.False(t, exists)
 	}
 }
 
-func TestHTTPSServerConfigToModel_ResolvesSecretAgentName(t *testing.T) {
+func TestServerHTTPSConfigToModel_ResolvesSecretAgentName(t *testing.T) {
 	certs := setupTestCertificates(t)
 	config := &Config{
 		ServiceConfig: ServiceConfig{
-			HTTPSServer: &HTTPSServerConfig{
+			ServerHTTPS: &ServerConfigHTTPS{
 				CertFile:        certs.certFile,
 				KeyFile:         certs.keyFile,
 				KeyFilePassword: "secrets:agent1:tls-key",

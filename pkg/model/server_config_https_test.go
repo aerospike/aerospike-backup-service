@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHTTPSServerConfigDefaults(t *testing.T) {
+func TestServerHTTPSConfigDefaults(t *testing.T) {
 	config := &ServerConfigHTTPS{}
 
 	assert.False(t, config.GetDisabledOrDefault())

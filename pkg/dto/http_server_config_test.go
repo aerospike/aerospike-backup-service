@@ -8,15 +8,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHTTPServerConfig_Validate(t *testing.T) {
+func TestServerHTTPConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
-		cfg     *HTTPServerConfig
+		cfg     *ServerConfigHTTP
 		wantErr string
 	}{
 		{
 			name: "valid config",
-			cfg: &HTTPServerConfig{
+			cfg: &ServerConfigHTTP{
 				ListenerConfig: ListenerConfig{
 					ContextPath:  "/",
 					Timeout:      ptr.Of(int64(5000)),
@@ -28,28 +28,28 @@ func TestHTTPServerConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "negative timeout",
-			cfg: &HTTPServerConfig{
+			cfg: &ServerConfigHTTP{
 				ListenerConfig: ListenerConfig{Timeout: ptr.Of(int64(-1))},
 			},
 			wantErr: "timeout",
 		},
 		{
 			name: "negative read-timeout",
-			cfg: &HTTPServerConfig{
+			cfg: &ServerConfigHTTP{
 				ListenerConfig: ListenerConfig{ReadTimeout: ptr.Of(int64(-1))},
 			},
 			wantErr: "read-timeout",
 		},
 		{
 			name: "negative write-timeout",
-			cfg: &HTTPServerConfig{
+			cfg: &ServerConfigHTTP{
 				ListenerConfig: ListenerConfig{WriteTimeout: ptr.Of(int64(-1))},
 			},
 			wantErr: "write-timeout",
 		},
 		{
 			name: "negative idle-timeout",
-			cfg: &HTTPServerConfig{
+			cfg: &ServerConfigHTTP{
 				ListenerConfig: ListenerConfig{IdleTimeout: ptr.Of(int64(-1))},
 			},
 			wantErr: "idle-timeout",
@@ -69,8 +69,8 @@ func TestHTTPServerConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestHTTPServerConfig_ToModelAndFromModel(t *testing.T) {
-	dtoCfg := &HTTPServerConfig{
+func TestServerHTTPConfig_ToModelAndFromModel(t *testing.T) {
+	dtoCfg := &ServerConfigHTTP{
 		ListenerConfig: ListenerConfig{
 			Address:      "127.0.0.1",
 			ContextPath:  "/api",
@@ -89,7 +89,7 @@ func TestHTTPServerConfig_ToModelAndFromModel(t *testing.T) {
 	require.Equal(t, int64(60000), modelCfg.WriteTimeout.Milliseconds())
 	require.Equal(t, int64(120000), modelCfg.IdleTimeout.Milliseconds())
 
-	roundTrip := &HTTPServerConfig{}
+	roundTrip := &ServerConfigHTTP{}
 	roundTrip.fromModel(modelCfg)
 	require.Equal(t, dtoCfg, roundTrip)
 }

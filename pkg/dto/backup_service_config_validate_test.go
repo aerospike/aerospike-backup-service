@@ -9,7 +9,7 @@ import (
 
 func TestBackupServiceConfig_Validate_Success(t *testing.T) {
 	cfg := &ServiceConfig{
-		HTTPServer: &HTTPServerConfig{ListenerConfig: ListenerConfig{ContextPath: "/"}},
+		ServerHTTP: &ServerConfigHTTP{ListenerConfig: ListenerConfig{ContextPath: "/"}},
 		Logger:     &LoggerConfig{Level: "INFO"},
 	}
 
@@ -17,10 +17,10 @@ func TestBackupServiceConfig_Validate_Success(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestBackupServiceConfig_Validate_PropagatesHTTPServerError(t *testing.T) {
+func TestBackupServiceConfig_Validate_PropagatesServerHTTPError(t *testing.T) {
 	cfg := &ServiceConfig{
 		// missing leading slash => invalid
-		HTTPServer: &HTTPServerConfig{ListenerConfig: ListenerConfig{ContextPath: "FOO"}},
+		ServerHTTP: &ServerConfigHTTP{ListenerConfig: ListenerConfig{ContextPath: "FOO"}},
 	}
 
 	err := cfg.Validate(ValidationDefault)
@@ -73,8 +73,8 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 		{
 			name: "HTTPS listener with HTTP disabled",
 			config: &ServiceConfig{
-				HTTPServer: &HTTPServerConfig{ListenerConfig: ListenerConfig{Disabled: true}},
-				HTTPSServer: &HTTPSServerConfig{
+				ServerHTTP: &ServerConfigHTTP{ListenerConfig: ListenerConfig{Disabled: true}},
+				ServerHTTPS: &ServerConfigHTTPS{
 					CertFile: certs.certFile,
 					KeyFile:  certs.keyFile,
 				},
@@ -83,8 +83,8 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 		{
 			name: "both listeners enabled on different ports",
 			config: &ServiceConfig{
-				HTTPServer: &HTTPServerConfig{Port: ptr.Of(Port(8080))},
-				HTTPSServer: &HTTPSServerConfig{
+				ServerHTTP: &ServerConfigHTTP{Port: ptr.Of(Port(8080))},
+				ServerHTTPS: &ServerConfigHTTPS{
 					Port:     ptr.Of(Port(8443)),
 					CertFile: certs.certFile,
 					KeyFile:  certs.keyFile,
@@ -94,23 +94,23 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 		{
 			name: "HTTP disabled and HTTPS absent",
 			config: &ServiceConfig{
-				HTTPServer: &HTTPServerConfig{ListenerConfig: ListenerConfig{Disabled: true}},
+				ServerHTTP: &ServerConfigHTTP{ListenerConfig: ListenerConfig{Disabled: true}},
 			},
 			wantErr: "service.http and service.https cannot both be disabled",
 		},
 		{
 			name: "both listeners disabled",
 			config: &ServiceConfig{
-				HTTPServer:  &HTTPServerConfig{ListenerConfig: ListenerConfig{Disabled: true}},
-				HTTPSServer: &HTTPSServerConfig{ListenerConfig: ListenerConfig{Disabled: true}},
+				ServerHTTP:  &ServerConfigHTTP{ListenerConfig: ListenerConfig{Disabled: true}},
+				ServerHTTPS: &ServerConfigHTTPS{ListenerConfig: ListenerConfig{Disabled: true}},
 			},
 			wantErr: "service.http and service.https cannot both be disabled",
 		},
 		{
 			name: "both listeners use same explicit port",
 			config: &ServiceConfig{
-				HTTPServer: &HTTPServerConfig{Port: ptr.Of(Port(8443))},
-				HTTPSServer: &HTTPSServerConfig{
+				ServerHTTP: &ServerConfigHTTP{Port: ptr.Of(Port(8443))},
+				ServerHTTPS: &ServerConfigHTTPS{
 					Port:     ptr.Of(Port(8443)),
 					CertFile: certs.certFile,
 					KeyFile:  certs.keyFile,

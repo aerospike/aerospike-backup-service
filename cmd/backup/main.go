@@ -85,11 +85,11 @@ func systemCtx() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 }
 
-func runServerHTTP(ctx context.Context, httpServer server.ServerHTTP) error {
+func runServerHTTP(ctx context.Context, serverHTTP server.HTTP) error {
 	// Channel to capture server startup errors
 	errCh := make(chan error, 1)
 	go func() {
-		if err := httpServer.Start(); err != nil {
+		if err := serverHTTP.Start(); err != nil {
 			errCh <- err
 		}
 	}()
@@ -101,7 +101,7 @@ func runServerHTTP(ctx context.Context, httpServer server.ServerHTTP) error {
 	case <-ctx.Done():
 	}
 
-	if err := httpServer.Shutdown(); err != nil {
+	if err := serverHTTP.Shutdown(); err != nil {
 		slog.Error("HTTP server shutdown failed", attr.Error(err))
 		return err
 	}

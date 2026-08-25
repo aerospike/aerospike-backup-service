@@ -2430,8 +2430,8 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.HTTPSServerConfig": {
-            "description": "HTTPSServerConfig represents the service's HTTPS server configuration.",
+        "dto.ServerHTTPSConfig": {
+            "description": "ServerHTTPSConfig represents the service's HTTPS server configuration.",
             "type": "object",
             "properties": {
                 "address": {
@@ -2558,8 +2558,8 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.HTTPServerConfig": {
-            "description": "HTTPServerConfig represents the service's HTTP server configuration.",
+        "dto.ServerHTTPConfig": {
+            "description": "ServerHTTPConfig represents the service's HTTP server configuration.",
             "type": "object",
             "properties": {
                 "address": {
@@ -3503,18 +3503,18 @@ const docTemplate = `{
                     ]
                 },
                 "http": {
-                    "description": "HTTPServer is the backup service HTTP server configuration.",
+                    "description": "ServerHTTP is the backup service HTTP server configuration.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/dto.HTTPServerConfig"
+                            "$ref": "#/definitions/dto.ServerHTTPConfig"
                         }
                     ]
                 },
                 "https": {
-                    "description": "HTTPSServer is the backup service HTTPS server configuration.",
+                    "description": "ServerHTTPS is the backup service HTTPS server configuration.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/dto.HTTPSServerConfig"
+                            "$ref": "#/definitions/dto.ServerHTTPSConfig"
                         }
                     ]
                 },

@@ -19,7 +19,7 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 		{
 			name: "identical configs",
 			current: ServiceConfig{
-				HTTPServer: &HTTPServerConfig{
+				ServerHTTP: &ServerConfigHTTP{
 					ListenerConfig: ListenerConfig{Address: "localhost"},
 					Port:           ptr.Of(Port(8080)),
 				},
@@ -29,7 +29,7 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 				},
 			},
 			other: ServiceConfig{
-				HTTPServer: &HTTPServerConfig{
+				ServerHTTP: &ServerConfigHTTP{
 					ListenerConfig: ListenerConfig{Address: "localhost"},
 					Port:           ptr.Of(Port(8080)),
 				},
@@ -43,13 +43,13 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 		{
 			name: "changed http server config",
 			current: ServiceConfig{
-				HTTPServer: &HTTPServerConfig{
+				ServerHTTP: &ServerConfigHTTP{
 					ListenerConfig: ListenerConfig{Address: "localhost"},
 					Port:           ptr.Of(Port(8080)),
 				},
 			},
 			other: ServiceConfig{
-				HTTPServer: &HTTPServerConfig{
+				ServerHTTP: &ServerConfigHTTP{
 					ListenerConfig: ListenerConfig{Address: "0.0.0.0"},
 					Port:           ptr.Of(Port(9090)),
 				},
@@ -62,13 +62,13 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 		{
 			name: "changed HTTPS server config",
 			current: ServiceConfig{
-				HTTPSServer: &HTTPSServerConfig{
+				ServerHTTPS: &ServerConfigHTTPS{
 					ListenerConfig: ListenerConfig{Disabled: true},
 					CertFile:       "server.pem",
 				},
 			},
 			other: ServiceConfig{
-				HTTPSServer: &HTTPSServerConfig{
+				ServerHTTPS: &ServerConfigHTTPS{
 					ListenerConfig: ListenerConfig{Disabled: true},
 					CertFile:       "new-server.pem",
 				},
@@ -250,8 +250,8 @@ func TestRateLimiterConfig_Compare(t *testing.T) {
 	}
 }
 
-func testHTTPServerConfig() *HTTPServerConfig {
-	return &HTTPServerConfig{
+func testServerHTTPConfig() *ServerConfigHTTP {
+	return &ServerConfigHTTP{
 		ListenerConfig: ListenerConfig{
 			Address:      "localhost",
 			ContextPath:  "/api",
@@ -264,23 +264,23 @@ func testHTTPServerConfig() *HTTPServerConfig {
 	}
 }
 
-func TestHTTPServerConfig_Compare(t *testing.T) {
+func TestServerHTTPConfig_Compare(t *testing.T) {
 	tests := []struct {
 		name    string
-		current *HTTPServerConfig
-		other   *HTTPServerConfig
+		current *ServerConfigHTTP
+		other   *ServerConfigHTTP
 		errors  []string
 	}{
 		{
 			name:    "identical configs",
-			current: testHTTPServerConfig(),
-			other:   testHTTPServerConfig(),
+			current: testServerHTTPConfig(),
+			other:   testServerHTTPConfig(),
 			errors:  nil,
 		},
 		{
 			name:    "all fields changed",
-			current: testHTTPServerConfig(),
-			other: &HTTPServerConfig{
+			current: testServerHTTPConfig(),
+			other: &ServerConfigHTTP{
 				ListenerConfig: ListenerConfig{
 					Disabled:     true,
 					Address:      "0.0.0.0",

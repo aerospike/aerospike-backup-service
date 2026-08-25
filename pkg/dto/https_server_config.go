@@ -20,11 +20,11 @@ var secureServerCipherSuites = func() map[string]bool {
 
 const clientCAField = "client-ca-file"
 
-// HTTPSServerConfig represents the service's HTTPS server configuration.
-// @Description HTTPSServerConfig represents the service's HTTPS server configuration.
+// ServerConfigHTTPS represents the service's HTTPS server configuration.
+// @Description ServerConfigHTTPS represents the service's HTTPS server configuration.
 //
 //nolint:lll
-type HTTPSServerConfig struct {
+type ServerConfigHTTPS struct {
 	ListenerConfig    `yaml:",inline"`
 	SecretAgentConfig `yaml:",inline"`
 	// The port to listen on.
@@ -48,7 +48,7 @@ type HTTPSServerConfig struct {
 }
 
 // Validate validates the HTTPS server configuration.
-func (s *HTTPSServerConfig) Validate(opts ValidationOptions) error {
+func (s *ServerConfigHTTPS) Validate(opts ValidationOptions) error {
 	if s == nil {
 		return nil
 	}
@@ -71,7 +71,7 @@ func (s *HTTPSServerConfig) Validate(opts ValidationOptions) error {
 	return s.validateTLSConfig(opts)
 }
 
-func (s *HTTPSServerConfig) validateTLSConfig(opts ValidationOptions) error {
+func (s *ServerConfigHTTPS) validateTLSConfig(opts ValidationOptions) error {
 	if opts.Has(ValidationSkipTLSFiles) {
 		return nil
 	}
@@ -90,7 +90,7 @@ func (s *HTTPSServerConfig) validateTLSConfig(opts ValidationOptions) error {
 	return nil
 }
 
-func (s *HTTPSServerConfig) validateTLSFields() error {
+func (s *ServerConfigHTTPS) validateTLSFields() error {
 	if !s.Disabled {
 		if s.CertFile == "" {
 			return errValidationEmptyField(certField)
@@ -143,7 +143,7 @@ func (s *HTTPSServerConfig) validateTLSFields() error {
 }
 
 // ToModel converts the HTTPS server DTO to its model representation.
-func (s *HTTPSServerConfig) ToModel() *model.ServerConfigHTTPS {
+func (s *ServerConfigHTTPS) ToModel() *model.ServerConfigHTTPS {
 	if s == nil {
 		return nil
 	}
@@ -166,7 +166,7 @@ func (s *HTTPSServerConfig) ToModel() *model.ServerConfigHTTPS {
 	}
 }
 
-func (s *HTTPSServerConfig) fromModel(m *model.ServerConfigHTTPS) {
+func (s *ServerConfigHTTPS) fromModel(m *model.ServerConfigHTTPS) {
 	if m == nil {
 		return
 	}
@@ -184,15 +184,15 @@ func (s *HTTPSServerConfig) fromModel(m *model.ServerConfigHTTPS) {
 }
 
 // Compare compares HTTPS server configurations and reports every static field change.
-func (s *HTTPSServerConfig) Compare(other *HTTPSServerConfig) error {
+func (s *ServerConfigHTTPS) Compare(other *ServerConfigHTTPS) error {
 	if s == nil && other == nil {
 		return nil
 	}
 	if s == nil {
-		return errors.New("HTTPSServer added")
+		return errors.New("ServerHTTPS added")
 	}
 	if other == nil {
-		return errors.New("HTTPSServer removed")
+		return errors.New("ServerHTTPS removed")
 	}
 
 	var keyFilePasswordChange error

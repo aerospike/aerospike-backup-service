@@ -9,16 +9,16 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
-// HTTPServerConfig represents the service's HTTP server configuration.
-// @Description HTTPServerConfig represents the service's HTTP server configuration.
-type HTTPServerConfig struct {
+// ServerConfigHTTP represents the service's HTTP server configuration.
+// @Description ServerConfigHTTP represents the service's HTTP server configuration.
+type ServerConfigHTTP struct {
 	ListenerConfig `yaml:",inline"`
 	// The port to listen on.
 	Port *Port `yaml:"port,omitempty" json:"port,omitempty" default:"8080" example:"8080"`
 }
 
 // Validate validates the HTTP server configuration.
-func (s *HTTPServerConfig) Validate() error {
+func (s *ServerConfigHTTP) Validate() error {
 	if s == nil {
 		return nil
 	}
@@ -30,7 +30,7 @@ func (s *HTTPServerConfig) Validate() error {
 	return s.ListenerConfig.validate()
 }
 
-func (s *HTTPServerConfig) ToModel() *model.ServerConfigHTTP {
+func (s *ServerConfigHTTP) ToModel() *model.ServerConfigHTTP {
 	if s == nil {
 		return nil
 	}
@@ -42,7 +42,7 @@ func (s *HTTPServerConfig) ToModel() *model.ServerConfigHTTP {
 	}
 }
 
-func (s *HTTPServerConfig) fromModel(m *model.ServerConfigHTTP) {
+func (s *ServerConfigHTTP) fromModel(m *model.ServerConfigHTTP) {
 	if m == nil {
 		return
 	}
@@ -50,16 +50,16 @@ func (s *HTTPServerConfig) fromModel(m *model.ServerConfigHTTP) {
 	s.Port = NewPortFromModel(m.Port)
 }
 
-// Compare HTTPServerConfig object with another and return detailed errors.
-func (s *HTTPServerConfig) Compare(other *HTTPServerConfig) error {
+// Compare ServerConfigHTTP object with another and return detailed errors.
+func (s *ServerConfigHTTP) Compare(other *ServerConfigHTTP) error {
 	if s == nil && other == nil {
 		return nil
 	}
 	if s == nil {
-		return errors.New("HTTPServer added")
+		return errors.New("ServerHTTP added")
 	}
 	if other == nil {
-		return errors.New("HTTPServer removed")
+		return errors.New("ServerHTTP removed")
 	}
 
 	return errors.Join(
