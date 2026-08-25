@@ -24,6 +24,9 @@ func generateMarkdownFiles() {
 	_ = os.RemoveAll(docFolder)
 	_ = os.MkdirAll(docFolder, 0755)
 	for dtoName := range schemas {
+		if shouldSkipEnumSchema(dtoName) {
+			continue
+		}
 		fileName := filepath.Join(docFolder, strings.ToLower(dtoName)+".md")
 		fileContent := generateMarkdownTable(dtoName)
 
@@ -276,8 +279,12 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 		for _, ref := range prop.AllOf {
 			if ref.Ref != "" {
 				refName := extractRefName(ref.Ref)
-				linkedFileName := strings.ToLower(refName) + ".md"
-				description = fmt.Sprintf("%s<br>See: [%s](%s)", description, refName, linkedFileName)
+				if refSchema, ok := schemas[refName]; ok && isEnumOnlySchema(refSchema) {
+					possibleValues = joinEnumValues(refSchema.Enum)
+				} else {
+					linkedFileName := strings.ToLower(refName) + ".md"
+					description = fmt.Sprintf("%s<br>See: [%s](%s)", description, refName, linkedFileName)
+				}
 				break // Assume only one reference in allOf for simplicity
 			}
 		}
@@ -317,6 +324,19 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 
 func joinEnumValues(enum []string) string {
 	return "`" + strings.Join(enum, "`, `") + "`"
+}
+
+func isEnumOnlySchema(schema Schema) bool {
+	return len(schema.Enum) > 0 && len(schema.Properties) == 0
+}
+
+func shouldSkipEnumSchema(dtoName string) bool {
+	schema, ok := schemas[dtoName]
+	if !ok {
+		return false
+	}
+
+	return isEnumOnlySchema(schema)
 }
 
 // Example: "#/components/schemas/dto.RunningJob" → "dto.RunningJob".
