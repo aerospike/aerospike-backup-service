@@ -2585,6 +2585,38 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.LogFormat": {
+            "description": "LogFormat is the logger format.",
+            "type": "string",
+            "enum": [
+                "PLAIN",
+                "JSON"
+            ],
+            "x-enum-varnames": [
+                "LogFormatPlain",
+                "LogFormatJSON"
+            ]
+        },
+        "dto.LogLevel": {
+            "description": "LogLevel is the logger level.",
+            "type": "string",
+            "enum": [
+                "TRACE",
+                "DEBUG",
+                "INFO",
+                "WARN",
+                "WARNING",
+                "ERROR"
+            ],
+            "x-enum-varnames": [
+                "LogLevelTrace",
+                "LogLevelDebug",
+                "LogLevelInfo",
+                "LogLevelWarn",
+                "LogLevelWarning",
+                "LogLevelError"
+            ]
+        },
         "dto.LoggerConfig": {
             "description": "LoggerConfig represents the backup service logger configuration.",
             "type": "object",
@@ -2599,13 +2631,21 @@ const docTemplate = `{
                 },
                 "format": {
                     "description": "Format is the logger format (PLAIN, JSON).",
-                    "type": "string",
-                    "default": "PLAIN"
+                    "default": "PLAIN",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LogFormat"
+                        }
+                    ]
                 },
                 "level": {
                     "description": "Level is the logger level.",
-                    "type": "string",
-                    "default": "INFO"
+                    "default": "INFO",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LogLevel"
+                        }
+                    ]
                 },
                 "stdout-writer": {
                     "description": "Whether to enable logging to the standard output.",
