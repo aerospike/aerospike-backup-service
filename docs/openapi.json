@@ -1978,50 +1978,6 @@
                     }
                 }
             },
-            "dto.AuthMode": {
-                "description": "AuthMode is the Aerospike cluster authentication mode.",
-                "type": "string",
-                "enum": [
-                    "INTERNAL",
-                    "EXTERNAL",
-                    "PKI"
-                ],
-                "x-enum-varnames": [
-                    "AuthModeInternal",
-                    "AuthModeExternal",
-                    "AuthModePKI"
-                ]
-            },
-            "dto.AzureDataClass": {
-                "description": "AzureDataClass is the Azure storage tier for object data.",
-                "type": "string",
-                "enum": [
-                    "Hot",
-                    "Cool",
-                    "Cold",
-                    "Archive"
-                ],
-                "x-enum-varnames": [
-                    "AzureDataClassHot",
-                    "AzureDataClassCool",
-                    "AzureDataClassCold",
-                    "AzureDataClassArchive"
-                ]
-            },
-            "dto.AzureMetadataClass": {
-                "description": "AzureMetadataClass is the Azure storage tier for metadata.",
-                "type": "string",
-                "enum": [
-                    "Hot",
-                    "Cool",
-                    "Cold"
-                ],
-                "x-enum-varnames": [
-                    "AzureMetadataClassHot",
-                    "AzureMetadataClassCool",
-                    "AzureMetadataClassCold"
-                ]
-            },
             "dto.AzureStorage": {
                 "description": "AzureStorage represents the configuration for Azure Blob storage.",
                 "type": "object",
@@ -2108,19 +2064,22 @@
                 "properties": {
                     "data": {
                         "description": "DataClass specifies the storage tier for object data.",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.AzureDataClass"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "Hot",
+                            "Cool",
+                            "Cold",
+                            "Archive"
                         ],
                         "nullable": true
                     },
                     "metadata": {
                         "description": "MetadataClass specifies the storage tier for metadata.",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.AzureMetadataClass"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "Hot",
+                            "Cool",
+                            "Cold"
                         ],
                         "nullable": true
                     }
@@ -2132,10 +2091,11 @@
                 "properties": {
                     "timestamp-format": {
                         "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.TimestampFormat"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "ISO",
+                            "US",
+                            "EU"
                         ],
                         "nullable": true
                     }
@@ -2416,7 +2376,7 @@
                         ]
                     },
                     "node-list": {
-                        "description": "NodeList specifies which Aerospike nodes to include in the backup.\nOnly the listed nodes will be backed up.\nEach node can be specified as one of the following:\n- \"<IP address>:<port>\"\n- \"<hostname>:<port>\"\n- \"<node ID>\"\nTo obtain node identifiers, run: `asinfo -v \"service:\"`.\nIf using IP addresses or hostnames, ensure they match the values returned by the `asinfo` command.\nMutually exclusive with partition-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.\nParallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.",
+                        "description": "NodeList specifies which Aerospike nodes to include in the backup.\nOnly the listed nodes will be backed up.\nEach node can be specified as one of the following:\n- \"\u003cIP address\u003e:\u003cport\u003e\"\n- \"\u003chostname\u003e:\u003cport\u003e\"\n- \"\u003cnode ID\u003e\"\nTo obtain node identifiers, run: `asinfo -v \"service:\"`.\nIf using IP addresses or hostnames, ensure they match the values returned by the `asinfo` command.\nMutually exclusive with partition-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.\nParallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.",
                         "type": "array",
                         "items": {
                             "type": "string"
@@ -2424,7 +2384,7 @@
                         "nullable": true
                     },
                     "partition-list": {
-                        "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"<start>-<count>\" (e.g., \"100-50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nMutually exclusive with node-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.",
+                        "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"\u003cstart\u003e-\u003ccount\u003e\" (e.g., \"100-50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nMutually exclusive with node-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.",
                         "type": "string",
                         "nullable": true
                     },
@@ -2463,18 +2423,6 @@
                     }
                 }
             },
-            "dto.CompressionMode": {
-                "description": "CompressionMode identifies the compression algorithm used for backup files.",
-                "type": "string",
-                "enum": [
-                    "NONE",
-                    "ZSTD"
-                ],
-                "x-enum-varnames": [
-                    "CompressionModeNone",
-                    "CompressionModeZSTD"
-                ]
-            },
             "dto.CompressionPolicy": {
                 "description": "CompressionPolicy contains backup compression information.",
                 "type": "object",
@@ -2489,10 +2437,10 @@
                     "mode": {
                         "description": "The compression mode to be used (default is NONE).",
                         "default": "NONE",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.CompressionMode"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "NONE",
+                            "ZSTD"
                         ]
                     }
                 }
@@ -2546,18 +2494,6 @@
                     }
                 }
             },
-            "dto.ConnectionType": {
-                "description": "ConnectionType is the Secret Agent connection type.",
-                "type": "string",
-                "enum": [
-                    "tcp",
-                    "unix"
-                ],
-                "x-enum-varnames": [
-                    "ConnectionTypeTCP",
-                    "ConnectionTypeUnix"
-                ]
-            },
             "dto.Credentials": {
                 "description": "Credentials represents authentication details to the Aerospike cluster.",
                 "type": "object",
@@ -2565,10 +2501,11 @@
                     "auth-mode": {
                         "description": "The authentication mode (INTERNAL, EXTERNAL, PKI).",
                         "default": "INTERNAL",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.AuthMode"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "INTERNAL",
+                            "EXTERNAL",
+                            "PKI"
                         ]
                     },
                     "password": {
@@ -2604,20 +2541,6 @@
                     }
                 }
             },
-            "dto.EncryptionMode": {
-                "description": "EncryptionMode identifies the encryption algorithm used for backup files.",
-                "type": "string",
-                "enum": [
-                    "NONE",
-                    "AES128",
-                    "AES256"
-                ],
-                "x-enum-varnames": [
-                    "EncryptionModeNone",
-                    "EncryptionModeAES128",
-                    "EncryptionModeAES256"
-                ]
-            },
             "dto.EncryptionPolicy": {
                 "description": "EncryptionPolicy contains backup encryption information.",
                 "type": "object",
@@ -2641,10 +2564,11 @@
                     "mode": {
                         "description": "The encryption mode to be used (NONE, AES128, AES256)",
                         "default": "NONE",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.EncryptionMode"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "NONE",
+                            "AES128",
+                            "AES256"
                         ]
                     }
                 }
@@ -2686,22 +2610,6 @@
                         "nullable": true
                     }
                 }
-            },
-            "dto.GcpDataClass": {
-                "description": "GcpDataClass is the GCP storage class for object data.",
-                "type": "string",
-                "enum": [
-                    "STANDARD",
-                    "NEARLINE",
-                    "COLDLINE",
-                    "ARCHIVE"
-                ],
-                "x-enum-varnames": [
-                    "GcpDataClassStandard",
-                    "GcpDataClassNearline",
-                    "GcpDataClassColdline",
-                    "GcpDataClassArchive"
-                ]
             },
             "dto.GcpStorage": {
                 "description": "GcpStorage represents the configuration for GCP storage.",
@@ -2772,10 +2680,12 @@
                 "properties": {
                     "data": {
                         "description": "DataClass specifies the storage class for object data.",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.GcpDataClass"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "STANDARD",
+                            "NEARLINE",
+                            "COLDLINE",
+                            "ARCHIVE"
                         ],
                         "nullable": true
                     }
@@ -2832,22 +2742,6 @@
                     }
                 }
             },
-            "dto.JobStatus": {
-                "description": "Possible states of restore jobs.",
-                "type": "string",
-                "enum": [
-                    "running",
-                    "success",
-                    "failure",
-                    "canceled"
-                ],
-                "x-enum-varnames": [
-                    "RestoreRunning",
-                    "RestoreSuccess",
-                    "RestoreFailure",
-                    "RestoreCanceled"
-                ]
-            },
             "dto.LocalStorage": {
                 "description": "LocalStorage represents the configuration for local storage.",
                 "type": "object",
@@ -2868,38 +2762,6 @@
                     }
                 }
             },
-§            "dto.LogFormat": {
-                "description": "LogFormat is the logger format.",
-                "type": "string",
-                "enum": [
-                    "PLAIN",
-                    "JSON"
-                ],
-                "x-enum-varnames": [
-                    "LogFormatPlain",
-                    "LogFormatJSON"
-                ]
-            },
-            "dto.LogLevel": {
-                "description": "LogLevel is the logger level.",
-                "type": "string",
-                "enum": [
-                    "TRACE",
-                    "DEBUG",
-                    "INFO",
-                    "WARN",
-                    "WARNING",
-                    "ERROR"
-                ],
-                "x-enum-varnames": [
-                    "LogLevelTrace",
-                    "LogLevelDebug",
-                    "LogLevelInfo",
-                    "LogLevelWarn",
-                    "LogLevelWarning",
-                    "LogLevelError"
-                ]
-            },
             "dto.LoggerConfig": {
                 "description": "LoggerConfig represents the backup service logger configuration.",
                 "type": "object",
@@ -2915,19 +2777,23 @@
                     "format": {
                         "description": "Format is the logger format (PLAIN, JSON).",
                         "default": "PLAIN",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.LogFormat"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "PLAIN",
+                            "JSON"
                         ]
                     },
                     "level": {
                         "description": "Level is the logger level.",
                         "default": "INFO",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.LogLevel"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "TRACE",
+                            "DEBUG",
+                            "INFO",
+                            "WARN",
+                            "WARNING",
+                            "ERROR"
                         ]
                     },
                     "stdout-writer": {
@@ -2988,10 +2854,10 @@
                     "mode": {
                         "description": "The compression mode to be used (default is NONE).",
                         "default": "NONE",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.CompressionMode"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "NONE",
+                            "ZSTD"
                         ]
                     }
                 }
@@ -3068,10 +2934,12 @@
                     },
                     "status": {
                         "description": "Status of the restore job.",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.JobStatus"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "running",
+                            "success",
+                            "failure",
+                            "canceled"
                         ]
                     },
                     "total-bytes": {
@@ -3511,76 +3379,6 @@
                     }
                 }
             },
-            "dto.S3DataClass": {
-                "description": "S3DataClass is the S3 storage class for object data.",
-                "type": "string",
-                "enum": [
-                    "STANDARD",
-                    "GLACIER",
-                    "STANDARD_IA",
-                    "ONEZONE_IA",
-                    "INTELLIGENT_TIERING",
-                    "DEEP_ARCHIVE",
-                    "OUTPOSTS",
-                    "GLACIER_IR",
-                    "SNOW",
-                    "EXPRESS_ONEZONE"
-                ],
-                "x-enum-varnames": [
-                    "S3DataClassStandard",
-                    "S3DataClassGlacier",
-                    "S3DataClassStandardIa",
-                    "S3DataClassOnezoneIa",
-                    "S3DataClassIntelligentTiering",
-                    "S3DataClassDeepArchive",
-                    "S3DataClassOutposts",
-                    "S3DataClassGlacierIr",
-                    "S3DataClassSnow",
-                    "S3DataClassExpressOnezone"
-                ]
-            },
-            "dto.S3LogLevel": {
-                "description": "S3LogLevel controls the verbosity of the AWS SDK logging.",
-                "type": "string",
-                "enum": [
-                    "OFF",
-                    "FATAL",
-                    "ERROR",
-                    "WARN",
-                    "INFO",
-                    "DEBUG",
-                    "TRACE"
-                ],
-                "x-enum-varnames": [
-                    "S3LogLevelOff",
-                    "S3LogLevelFatal",
-                    "S3LogLevelError",
-                    "S3LogLevelWarn",
-                    "S3LogLevelInfo",
-                    "S3LogLevelDebug",
-                    "S3LogLevelTrace"
-                ]
-            },
-            "dto.S3MetadataClass": {
-                "description": "S3MetadataClass is the S3 storage class for metadata.",
-                "type": "string",
-                "enum": [
-                    "STANDARD",
-                    "STANDARD_IA",
-                    "INTELLIGENT_TIERING",
-                    "EXPRESS_ONEZONE",
-                    "ONEZONE_IA",
-                    "OUTPOSTS"
-                ],
-                "x-enum-varnames": [
-                    "S3MetadataClassStandard",
-                    "S3MetadataClassStandardIa",
-                    "S3MetadataClassIntelligentTiering",
-                    "S3MetadataClassExpressOnezone",
-                    "S3MetadataClassOnezoneIa",
-                    "S3MetadataClassOutposts"
-                ]
-            },
             "dto.S3Storage": {
                 "description": "S3Storage represents the configuration for S3 storage.",
                 "type": "object",
@@ -3627,10 +3425,15 @@
                     "s3-log-level": {
                         "description": "The log level of the AWS S3 SDK (AWS S3 optional).",
                         "default": "FATAL",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.S3LogLevel"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "OFF",
+                            "FATAL",
+                            "ERROR",
+                            "WARN",
+                            "INFO",
+                            "DEBUG",
+                            "TRACE"
                         ]
                     },
                     "s3-profile": {
@@ -3679,19 +3482,31 @@
                 "properties": {
                     "data": {
                         "description": "DataClass specifies the storage class for object data.",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.S3DataClass"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "STANDARD",
+                            "GLACIER",
+                            "STANDARD_IA",
+                            "ONEZONE_IA",
+                            "INTELLIGENT_TIERING",
+                            "DEEP_ARCHIVE",
+                            "OUTPOSTS",
+                            "GLACIER_IR",
+                            "SNOW",
+                            "EXPRESS_ONEZONE"
                         ],
                         "nullable": true
                     },
                     "metadata": {
                         "description": "MetadataClass specifies the storage class for metadata.",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.S3MetadataClass"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "STANDARD",
+                            "STANDARD_IA",
+                            "INTELLIGENT_TIERING",
+                            "EXPRESS_ONEZONE",
+                            "ONEZONE_IA",
+                            "OUTPOSTS"
                         ],
                         "nullable": true
                     }
@@ -3724,10 +3539,10 @@
                     },
                     "connection-type": {
                         "description": "Connection type.",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.ConnectionType"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "tcp",
+                            "unix"
                         ],
                         "example": "tcp"
                     },
@@ -3909,20 +3724,6 @@
                         "default": "TLSv1.2"
                     }
                 }
-            },
-            "dto.TimestampFormat": {
-                "description": "TimestampFormat is the encoding for backup dates in file paths.",
-                "type": "string",
-                "enum": [
-                    "ISO",
-                    "US",
-                    "EU"
-                ],
-                "x-enum-varnames": [
-                    "TimestampFormatISO",
-                    "TimestampFormatUS",
-                    "TimestampFormatEU"
-                ]
             },
             "dto.TimestampRestorePolicy": {
                 "description": "TimestampRestorePolicy represents a policy for the point-in-time restore operation.",
