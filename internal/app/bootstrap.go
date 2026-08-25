@@ -120,7 +120,7 @@ func InitComponents(
 		configurationManager,
 		nsValidator,
 	)
-	httpServer := server.NewHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService)
+	httpServer := server.NewHTTPServer(ctx, config.ServiceConfig.GetServerHTTPOrDefault(), httpService)
 
 	return &Components{
 		Scheduler:        scheduler,

@@ -12,7 +12,7 @@ type ServiceConfig struct {
 	Backup *BackupCommonConfig
 }
 
-func (c ServiceConfig) GetHTTPServerOrDefault() *ServerConfigHTTP {
+func (c ServiceConfig) GetServerHTTPOrDefault() *ServerConfigHTTP {
 	if c.ServerHTTP != nil {
 		return c.ServerHTTP
 	}
