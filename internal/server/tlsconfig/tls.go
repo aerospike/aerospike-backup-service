@@ -21,7 +21,7 @@ var secureCipherSuites = func() map[string]uint16 {
 }()
 
 // New builds a static server TLS configuration.
-func New(config *model.HTTPSServerConfig) (*tls.Config, error) {
+func New(config *model.ServerConfigHTTPS) (*tls.Config, error) {
 	if config == nil {
 		return nil, errors.New("HTTPS server config is required")
 	}

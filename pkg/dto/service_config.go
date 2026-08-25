@@ -48,7 +48,7 @@ func (c *ServiceConfig) validateListeners() error {
 		return errors.New("service.http and service.https cannot both be disabled")
 	}
 	if httpEnabled && httpsEnabled {
-		httpPort := model.ServiceConfig{HTTPServer: c.HTTPServer.ToModel()}.GetHTTPServerOrDefault().GetPortOrDefault()
+		httpPort := model.ServiceConfig{ServerHTTP: c.HTTPServer.ToModel()}.GetHTTPServerOrDefault().GetPortOrDefault()
 		httpsPort := c.HTTPSServer.ToModel().GetPortOrDefault()
 		if httpPort == httpsPort {
 			return fmt.Errorf("service.http and service.https cannot use the same port %d", httpPort)
@@ -60,8 +60,8 @@ func (c *ServiceConfig) validateListeners() error {
 
 func (c *ServiceConfig) ToModel() *model.ServiceConfig {
 	return &model.ServiceConfig{
-		HTTPServer:  c.HTTPServer.ToModel(),
-		HTTPSServer: c.HTTPSServer.ToModel(),
+		ServerHTTP:  c.HTTPServer.ToModel(),
+		ServerHTTPS: c.HTTPSServer.ToModel(),
 		Logger:      c.Logger.ToModel(),
 		Backup:      c.Backup.ToModel(),
 	}
@@ -72,14 +72,14 @@ func (c *ServiceConfig) fromModel(m *model.ServiceConfig) {
 		return
 	}
 
-	if m.HTTPServer != nil {
+	if m.ServerHTTP != nil {
 		c.HTTPServer = &HTTPServerConfig{}
-		c.HTTPServer.fromModel(m.HTTPServer)
+		c.HTTPServer.fromModel(m.ServerHTTP)
 	}
 
-	if m.HTTPSServer != nil {
+	if m.ServerHTTPS != nil {
 		c.HTTPSServer = &HTTPSServerConfig{}
-		c.HTTPSServer.fromModel(m.HTTPSServer)
+		c.HTTPSServer.fromModel(m.ServerHTTPS)
 	}
 
 	if m.Logger != nil {

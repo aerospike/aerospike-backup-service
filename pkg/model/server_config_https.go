@@ -22,8 +22,8 @@ const (
 	TLSMinVersion13 TLSMinVersion = "1.3"
 )
 
-// HTTPSServerConfig represents the service's HTTPS server configuration.
-type HTTPSServerConfig struct {
+// ServerConfigHTTPS represents the service's HTTPS server configuration.
+type ServerConfigHTTPS struct {
 	ListenerConfig
 	// The port to listen on.
 	Port *Port
@@ -47,7 +47,7 @@ type HTTPSServerConfig struct {
 }
 
 // GetPortOrDefault returns the configured port or its default.
-func (s *HTTPSServerConfig) GetPortOrDefault() Port {
+func (s *ServerConfigHTTPS) GetPortOrDefault() Port {
 	if s == nil || s.Port == nil {
 		return *defaultConfig.https.Port
 	}
@@ -55,7 +55,7 @@ func (s *HTTPSServerConfig) GetPortOrDefault() Port {
 }
 
 // GetMinVersionOrDefault returns the configured minimum TLS version or its default.
-func (s *HTTPSServerConfig) GetMinVersionOrDefault() TLSMinVersion {
+func (s *ServerConfigHTTPS) GetMinVersionOrDefault() TLSMinVersion {
 	if s == nil || s.MinVersion == "" {
 		return defaultConfig.https.MinVersion
 	}
@@ -63,7 +63,7 @@ func (s *HTTPSServerConfig) GetMinVersionOrDefault() TLSMinVersion {
 }
 
 // GetCipherSuitesOrDefault returns the configured cipher suites or the empty default.
-func (s *HTTPSServerConfig) GetCipherSuitesOrDefault() []string {
+func (s *ServerConfigHTTPS) GetCipherSuitesOrDefault() []string {
 	if s == nil || s.CipherSuites == nil {
 		return defaultConfig.https.CipherSuites
 	}
@@ -71,7 +71,7 @@ func (s *HTTPSServerConfig) GetCipherSuitesOrDefault() []string {
 }
 
 // GetClientAuthOrDefault returns the configured client authentication mode or its default.
-func (s *HTTPSServerConfig) GetClientAuthOrDefault() TLSClientAuth {
+func (s *ServerConfigHTTPS) GetClientAuthOrDefault() TLSClientAuth {
 	if s == nil || s.ClientAuth == "" {
 		return defaultConfig.https.ClientAuth
 	}

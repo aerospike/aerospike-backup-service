@@ -42,7 +42,7 @@ func (c *Config) fromModel(m *model.Config) {
 	backupConfig := m.BackupConfigCopy()
 	if c.ServiceConfig.HTTPSServer != nil {
 		c.ServiceConfig.HTTPSServer.SecretAgentConfig = ResolveSecretAgentFromModel(
-			m.ServiceConfig.HTTPSServer.SecretAgent, backupConfig,
+			m.ServiceConfig.ServerHTTPS.SecretAgent, backupConfig,
 		)
 	}
 
@@ -159,7 +159,7 @@ func (c *Config) ToModel() (*model.Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid HTTPS server secret agent: %w", err)
 		}
-		modelConfig.ServiceConfig.HTTPSServer.SecretAgent = agent
+		modelConfig.ServiceConfig.ServerHTTPS.SecretAgent = agent
 	}
 
 	// storage must be added after secret agents.

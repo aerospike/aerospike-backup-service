@@ -293,7 +293,7 @@ func TestHTTPSServerConfigToModel_ResolvesSecretAgentName(t *testing.T) {
 
 	modelConfig, err := config.ToModel()
 	require.NoError(t, err)
-	require.NotNil(t, modelConfig.ServiceConfig.HTTPSServer)
-	require.NotNil(t, modelConfig.ServiceConfig.HTTPSServer.SecretAgent)
-	assert.Equal(t, "localhost", modelConfig.ServiceConfig.HTTPSServer.SecretAgent.Address)
+	require.NotNil(t, modelConfig.ServiceConfig.ServerHTTPS)
+	require.NotNil(t, modelConfig.ServiceConfig.ServerHTTPS.SecretAgent)
+	assert.Equal(t, "localhost", modelConfig.ServiceConfig.ServerHTTPS.SecretAgent.Address)
 }

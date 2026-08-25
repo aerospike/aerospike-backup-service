@@ -79,7 +79,7 @@ func TestNew(t *testing.T) {
 	files := createTestCertificateFiles(t)
 
 	t.Run("secure defaults", func(t *testing.T) {
-		config, err := New(&model.HTTPSServerConfig{
+		config, err := New(&model.ServerConfigHTTPS{
 			CertFile: files.certFile,
 			KeyFile:  files.keyFile,
 		})
@@ -92,7 +92,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("explicit secure settings and client CA", func(t *testing.T) {
-		config, err := New(&model.HTTPSServerConfig{
+		config, err := New(&model.ServerConfigHTTPS{
 			CertFile:     files.certFile,
 			KeyFile:      files.keyFile,
 			MinVersion:   "1.3",
@@ -124,7 +124,7 @@ func TestNew(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, encryptedKey.Close())
 
-		config, err := New(&model.HTTPSServerConfig{
+		config, err := New(&model.ServerConfigHTTPS{
 			CertFile:        files.certFile,
 			KeyFile:         encryptedKey.Name(),
 			KeyFilePassword: "password",
@@ -135,7 +135,7 @@ func TestNew(t *testing.T) {
 
 	t.Run("mismatched certificate and key", func(t *testing.T) {
 		other := createTestCertificateFiles(t)
-		_, err := New(&model.HTTPSServerConfig{
+		_, err := New(&model.ServerConfigHTTPS{
 			CertFile: files.certFile,
 			KeyFile:  other.keyFile,
 		})
@@ -143,7 +143,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("client authentication without CA", func(t *testing.T) {
-		_, err := New(&model.HTTPSServerConfig{
+		_, err := New(&model.ServerConfigHTTPS{
 			CertFile:   files.certFile,
 			KeyFile:    files.keyFile,
 			ClientAuth: model.TLSClientAuthRequireAndVerify,

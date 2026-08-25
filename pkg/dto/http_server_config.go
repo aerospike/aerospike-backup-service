@@ -30,19 +30,19 @@ func (s *HTTPServerConfig) Validate() error {
 	return s.ListenerConfig.validate()
 }
 
-func (s *HTTPServerConfig) ToModel() *model.HTTPServerConfig {
+func (s *HTTPServerConfig) ToModel() *model.ServerConfigHTTP {
 	if s == nil {
 		return nil
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-	return &model.HTTPServerConfig{
+	return &model.ServerConfigHTTP{
 		ListenerConfig: s.ListenerConfig.toModel(),
 		Port:           s.Port.ToModel(),
 	}
 }
 
-func (s *HTTPServerConfig) fromModel(m *model.HTTPServerConfig) {
+func (s *HTTPServerConfig) fromModel(m *model.ServerConfigHTTP) {
 	if m == nil {
 		return
 	}

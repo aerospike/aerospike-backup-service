@@ -30,18 +30,18 @@ var defaultListener = ListenerConfig{
 
 // defaultConfig represents default configuration values.
 var defaultConfig = struct {
-	http          HTTPServerConfig
-	https         HTTPSServerConfig
+	http          ServerConfigHTTP
+	https         ServerConfigHTTPS
 	logger        LoggerConfig
 	backupPolicy  BackupPolicy
 	restorePolicy RestorePolicy
 	credentials   Credentials
 }{
-	http: HTTPServerConfig{
+	http: ServerConfigHTTP{
 		ListenerConfig: defaultListener,
 		Port:           NewPort(8080),
 	},
-	https: HTTPSServerConfig{
+	https: ServerConfigHTTPS{
 		ListenerConfig: defaultListener,
 		Port:           NewPort(8443),
 		MinVersion:     TLSMinVersion12,

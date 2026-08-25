@@ -8,7 +8,7 @@ import (
 )
 
 func TestHTTPSServerConfigDefaults(t *testing.T) {
-	config := &HTTPSServerConfig{}
+	config := &ServerConfigHTTPS{}
 
 	assert.False(t, config.GetDisabledOrDefault())
 	assert.Equal(t, "0.0.0.0", config.GetAddressOrDefault())

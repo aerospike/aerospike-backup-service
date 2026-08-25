@@ -143,7 +143,7 @@ func (s *HTTPSServerConfig) validateTLSFields() error {
 }
 
 // ToModel converts the HTTPS server DTO to its model representation.
-func (s *HTTPSServerConfig) ToModel() *model.HTTPSServerConfig {
+func (s *HTTPSServerConfig) ToModel() *model.ServerConfigHTTPS {
 	if s == nil {
 		return nil
 	}
@@ -152,7 +152,7 @@ func (s *HTTPSServerConfig) ToModel() *model.HTTPSServerConfig {
 	minVersion, _ := s.MinVersion.ToModel()
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-	return &model.HTTPSServerConfig{
+	return &model.ServerConfigHTTPS{
 		ListenerConfig:  s.ListenerConfig.toModel(),
 		Port:            s.Port.ToModel(),
 		CertFile:        s.CertFile,
@@ -166,7 +166,7 @@ func (s *HTTPSServerConfig) ToModel() *model.HTTPSServerConfig {
 	}
 }
 
-func (s *HTTPSServerConfig) fromModel(m *model.HTTPSServerConfig) {
+func (s *HTTPSServerConfig) fromModel(m *model.ServerConfigHTTPS) {
 	if m == nil {
 		return
 	}

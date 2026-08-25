@@ -37,7 +37,7 @@ type httpServer struct {
 var _ HTTPServer = (*httpServer)(nil)
 
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(ctx context.Context, serverConfig *model.HTTPServerConfig, service *handlers.Service) HTTPServer {
+func NewHTTPServer(ctx context.Context, serverConfig *model.ServerConfigHTTP, service *handlers.Service) HTTPServer {
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
 	// Create router

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestHTTPServer(t *testing.T, httpCfg *model.HTTPServerConfig) *httpServer {
+func newTestHTTPServer(t *testing.T, httpCfg *model.ServerConfigHTTP) *httpServer {
 	t.Helper()
 
 	svc := handlers.NewService(
@@ -50,7 +50,7 @@ func waitForHTTPServerReady(t *testing.T, healthURL string) {
 }
 
 func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
-	srv := newTestHTTPServer(t, &model.HTTPServerConfig{})
+	srv := newTestHTTPServer(t, &model.ServerConfigHTTP{})
 	require.NotNil(t, srv.Server)
 	require.Equal(t, 5*time.Second, srv.ReadHeaderTimeout)
 	require.Equal(t, 30*time.Second, srv.ReadTimeout)
@@ -79,7 +79,7 @@ func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
 
 func TestNewHTTPServer_ReadTimeoutClosesSilentClient(t *testing.T) {
 	readTimeout := 100 * time.Millisecond
-	srv := newTestHTTPServer(t, &model.HTTPServerConfig{
+	srv := newTestHTTPServer(t, &model.ServerConfigHTTP{
 		ListenerConfig: model.ListenerConfig{
 			// ReadHeaderTimeout of 0 falls back to ReadTimeout in net/http.
 			Timeout:     ptr.Of(time.Duration(0)),
