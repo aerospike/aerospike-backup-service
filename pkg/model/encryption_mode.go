@@ -8,3 +8,8 @@ const (
 	EncryptionModeAES128 EncryptionMode = "AES128"
 	EncryptionModeAES256 EncryptionMode = "AES256"
 )
+
+// String returns the wire value of the encryption mode.
+func (m EncryptionMode) String() string {
+	return string(m)
+}

@@ -7,3 +7,8 @@ const (
 	ConnectionTypeTCP  ConnectionType = "tcp"
 	ConnectionTypeUnix ConnectionType = "unix"
 )
+
+// String returns the wire value of the connection type.
+func (c ConnectionType) String() string {
+	return string(c)
+}

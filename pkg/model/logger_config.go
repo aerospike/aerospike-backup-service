@@ -16,18 +16,18 @@ type LoggerConfig struct {
 // If the property is not set, it returns the default value.
 func (l *LoggerConfig) GetLevelOrDefault() string {
 	if l.Level != "" {
-		return string(l.Level)
+		return l.Level.String()
 	}
-	return string(defaultConfig.logger.Level)
+	return defaultConfig.logger.Level.String()
 }
 
 // GetFormatOrDefault returns the value of the Format property.
 // If the property is not set, it returns the default value.
 func (l *LoggerConfig) GetFormatOrDefault() string {
 	if l.Format != "" {
-		return string(l.Format)
+		return l.Format.String()
 	}
-	return string(defaultConfig.logger.Format)
+	return defaultConfig.logger.Format.String()
 }
 
 // GetStdoutWriterOrDefault returns the value of the StdoutWriter property.

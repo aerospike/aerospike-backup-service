@@ -29,7 +29,7 @@ func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
 	}
 
 	return &backup.SecretAgentConfig{
-		ConnectionType:     ptr.StringOrNil(string(s.ConnectionType)),
+		ConnectionType:     ptr.StringOrNil(s.ConnectionType.String()),
 		Address:            &s.Address,
 		Port:               (*int)(s.Port),
 		TimeoutMillisecond: s.Timeout,

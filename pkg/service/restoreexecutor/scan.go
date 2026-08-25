@@ -71,13 +71,13 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 
 	if restoreRequest.Policy.CompressionPolicy != nil {
 		config.CompressionPolicy = &backup.CompressionPolicy{
-			Mode:  string(restoreRequest.Policy.CompressionPolicy.Mode),
+			Mode:  restoreRequest.Policy.CompressionPolicy.Mode.String(),
 			Level: int(restoreRequest.Policy.CompressionPolicy.Level),
 		}
 	}
 	if restoreRequest.Policy.EncryptionPolicy != nil {
 		config.EncryptionPolicy = &backup.EncryptionPolicy{
-			Mode:      string(restoreRequest.Policy.EncryptionPolicy.Mode),
+			Mode:      restoreRequest.Policy.EncryptionPolicy.Mode.String(),
 			KeyFile:   ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyFile),
 			KeySecret: ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeySecret),
 			KeyEnv:    ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyEnv),

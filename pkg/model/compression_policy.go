@@ -8,6 +8,11 @@ const (
 	CompressionModeZSTD CompressionMode = "ZSTD"
 )
 
+// String returns the wire value of the compression mode.
+func (m CompressionMode) String() string {
+	return string(m)
+}
+
 // CompressionPolicy contains backup compression information.
 type CompressionPolicy struct {
 	// The compression mode to be used (default is NONE).

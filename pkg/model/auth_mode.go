@@ -11,3 +11,8 @@ const (
 	// AuthModePKI is the Aerospike PKI (TLS certificate) authentication mode.
 	AuthModePKI AuthMode = "PKI"
 )
+
+// String returns the wire value of the authentication mode.
+func (m AuthMode) String() string {
+	return string(m)
+}
