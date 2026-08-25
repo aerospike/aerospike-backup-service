@@ -4,7 +4,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -21,21 +20,21 @@ func init() {
 func NewHandler(config *model.LoggerConfig) slog.Handler {
 	const addSource = true
 	writer := logWriter(config)
-	switch strings.ToUpper(config.GetFormatOrDefault()) {
-	case "PLAIN":
+	switch config.GetFormatOrDefault() {
+	case model.LogFormatPlain:
 		return slog.NewTextHandler(writer, &slog.HandlerOptions{
-			Level:       logLevel(config.GetLevelOrDefault()),
+			Level:       config.GetLevelOrDefault().SlogLevel(),
 			AddSource:   addSource,
 			ReplaceAttr: handlerReplaceAttr,
 		})
-	case "JSON":
+	case model.LogFormatJSON:
 		return slog.NewJSONHandler(writer, &slog.HandlerOptions{
-			Level:       logLevel(config.GetLevelOrDefault()),
+			Level:       config.GetLevelOrDefault().SlogLevel(),
 			AddSource:   addSource,
 			ReplaceAttr: handlerReplaceAttr,
 		})
 	default:
-		panic("unsupported log format: " + config.GetFormatOrDefault())
+		panic("unsupported log format: " + config.GetFormatOrDefault().String())
 	}
 }
 
@@ -89,25 +88,6 @@ var _ io.Writer = (*ignoreWriter)(nil)
 
 func (*ignoreWriter) Write(_ []byte) (n int, err error) {
 	return 0, nil
-}
-
-// logLevel returns a level for the given string name.
-// Panics on an invalid argument.
-func logLevel(level string) slog.Level {
-	switch strings.ToUpper(level) {
-	case "TRACE":
-		return slog.Level(logger.LevelTrace)
-	case "DEBUG":
-		return slog.LevelDebug
-	case "INFO":
-		return slog.LevelInfo
-	case "WARN", "WARNING":
-		return slog.LevelWarn
-	case "ERROR":
-		return slog.LevelError
-	default:
-		panic("invalid log level: " + level)
-	}
 }
 
 // ToExitVal returns an exit value for the error.

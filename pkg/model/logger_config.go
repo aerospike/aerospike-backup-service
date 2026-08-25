@@ -14,20 +14,20 @@ type LoggerConfig struct {
 
 // GetLevelOrDefault returns the value of the Level property.
 // If the property is not set, it returns the default value.
-func (l *LoggerConfig) GetLevelOrDefault() string {
+func (l *LoggerConfig) GetLevelOrDefault() LogLevel {
 	if l.Level != "" {
-		return l.Level.String()
+		return l.Level
 	}
-	return defaultConfig.logger.Level.String()
+	return defaultConfig.logger.Level
 }
 
 // GetFormatOrDefault returns the value of the Format property.
 // If the property is not set, it returns the default value.
-func (l *LoggerConfig) GetFormatOrDefault() string {
+func (l *LoggerConfig) GetFormatOrDefault() LogFormat {
 	if l.Format != "" {
-		return l.Format.String()
+		return l.Format
 	}
-	return defaultConfig.logger.Format.String()
+	return defaultConfig.logger.Format
 }
 
 // GetStdoutWriterOrDefault returns the value of the StdoutWriter property.

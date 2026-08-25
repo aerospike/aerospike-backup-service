@@ -11,8 +11,8 @@ import (
 type LogFormat string
 
 const (
-	LogFormatPlain LogFormat = LogFormat(model.LogFormatPlain)
-	LogFormatJSON  LogFormat = LogFormat(model.LogFormatJSON)
+	LogFormatPlain LogFormat = "PLAIN"
+	LogFormatJSON  LogFormat = "JSON"
 )
 
 func (f LogFormat) normalized() LogFormat {

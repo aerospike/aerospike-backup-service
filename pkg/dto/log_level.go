@@ -12,12 +12,12 @@ import (
 type LogLevel string
 
 const (
-	LogLevelTrace   LogLevel = LogLevel(model.LogLevelTrace)
-	LogLevelDebug   LogLevel = LogLevel(model.LogLevelDebug)
-	LogLevelInfo    LogLevel = LogLevel(model.LogLevelInfo)
-	LogLevelWarn    LogLevel = LogLevel(model.LogLevelWarn)
-	LogLevelWarning LogLevel = LogLevel(model.LogLevelWarning)
-	LogLevelError   LogLevel = LogLevel(model.LogLevelError)
+	LogLevelTrace   LogLevel = "TRACE"
+	LogLevelDebug   LogLevel = "DEBUG"
+	LogLevelInfo    LogLevel = "INFO"
+	LogLevelWarn    LogLevel = "WARN"
+	LogLevelWarning LogLevel = "WARNING"
+	LogLevelError   LogLevel = "ERROR"
 )
 
 var validLogLevels = []LogLevel{
