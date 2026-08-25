@@ -10,8 +10,6 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-const EncryptNone = EncryptionModeNone
-
 // BackupDetails contains information about a backup.
 type BackupDetails struct {
 	BackupMetadata // Backup metadata that is stored in metadata.yaml file
@@ -97,7 +95,7 @@ func NewBackupMetadata(
 	if backupPolicy != nil && backupPolicy.CompressionPolicy != nil {
 		compression = backupPolicy.CompressionPolicy.Mode
 	}
-	encryption := EncryptNone
+	encryption := EncryptionModeNone
 	if backupPolicy != nil && backupPolicy.EncryptionPolicy != nil {
 		encryption = backupPolicy.EncryptionPolicy.Mode
 	}

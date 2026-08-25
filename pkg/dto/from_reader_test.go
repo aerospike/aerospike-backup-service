@@ -67,7 +67,7 @@ func TestNewBackupDetailsFromModel(t *testing.T) {
 			SecondaryIndexCount: 5,
 			UDFCount:            2,
 			Compression:         model.CompressionModeNone,
-			Encryption:          model.EncryptNone,
+			Encryption:          model.EncryptionModeNone,
 		},
 		"daily/backup/key",
 		storage,
