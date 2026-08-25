@@ -3,7 +3,6 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -26,7 +25,7 @@ type S3Storage struct {
 	// An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).
 	S3EndpointOverride string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000" extensions:"x-nullable"`
 	// The log level of the AWS S3 SDK (AWS S3 optional).
-	S3LogLevel string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enums:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
+	S3LogLevel S3LogLevel `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL"`
 	// The minimum size in bytes of individual S3 UploadParts.
 	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" extensions:"x-nullable" minimum:"5242880"`
 	// The maximum number of simultaneous requests from S3.
@@ -70,6 +69,9 @@ func (s *S3Storage) Validate(opts ValidationOptions) error {
 	if s.MaxConnsPerHost != nil && *s.MaxConnsPerHost < 0 {
 		return errValidationNegative("max-async-connections", *s.MaxConnsPerHost)
 	}
+	if err := s.S3LogLevel.Validate(); err != nil {
+		return err
+	}
 	if err := s.StorageClass.Validate(); err != nil {
 		return fmt.Errorf("invalid storage class: %w", err)
 	}
@@ -108,7 +110,7 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 		S3Region:           s.S3Region,
 		S3Profile:          s.S3Profile,
 		S3EndpointOverride: s.S3EndpointOverride,
-		S3LogLevel:         s.S3LogLevel,
+		S3LogLevel:         s.S3LogLevel.ToModel(),
 		MinPartSize:        s.MinPartSize,
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 		Auth:               auth,
@@ -123,7 +125,7 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 		S3Region:           s.S3Region,
 		S3Profile:          s.S3Profile,
 		S3EndpointOverride: s.S3EndpointOverride,
-		S3LogLevel:         s.S3LogLevel,
+		S3LogLevel:         NewS3LogLevelFromModel(s.S3LogLevel),
 		MinPartSize:        s.MinPartSize,
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 		StorageClass:       newS3StorageClassFromModel(s.StorageClass),
@@ -137,57 +139,16 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 	return result
 }
 
-// Storage classes represents the different types of storage classes available on Amazon S3.
-// See https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html for more details.
-const (
-	StorageClassStandard           = "STANDARD"
-	StorageClassGlacier            = "GLACIER"
-	StorageClassStandardIa         = "STANDARD_IA"
-	StorageClassOnezoneIa          = "ONEZONE_IA"
-	StorageClassIntelligentTiering = "INTELLIGENT_TIERING"
-	StorageClassDeepArchive        = "DEEP_ARCHIVE"
-	StorageClassOutposts           = "OUTPOSTS"
-	StorageClassGlacierIr          = "GLACIER_IR"
-	StorageClassSnow               = "SNOW"
-	StorageClassExpressOnezone     = "EXPRESS_ONEZONE"
-)
-
-// metadata should only be stored in classes with fast retrieval time.
-var s3metadataClasses = []string{
-	"",
-	StorageClassStandard,
-	StorageClassStandardIa,
-	StorageClassIntelligentTiering,
-	StorageClassExpressOnezone,
-	StorageClassOnezoneIa,
-	StorageClassOutposts,
-}
-
-// backup data can be stored in any class.
-var s3dataClasses = []string{
-	"",
-	StorageClassStandard,
-	StorageClassGlacier,
-	StorageClassStandardIa,
-	StorageClassOnezoneIa,
-	StorageClassIntelligentTiering,
-	StorageClassDeepArchive,
-	StorageClassOutposts,
-	StorageClassGlacierIr,
-	StorageClassSnow,
-	StorageClassExpressOnezone,
-}
-
 // S3StorageClass represents the configuration for S3 Storage Class.
 // @Description S3StorageClass represents the configuration for S3 Storage Class.
 //
-//nolint:lll
+
 type S3StorageClass struct {
 	// DataClass specifies the storage class for object data.
-	DataClass string `json:"data" yaml:"data" extensions:"x-nullable" enums:"STANDARD,GLACIER,STANDARD_IA,ONEZONE_IA,INTELLIGENT_TIERING,DEEP_ARCHIVE,OUTPOSTS,GLACIER_IR,SNOW,EXPRESS_ONEZONE"`
+	DataClass S3DataClass `json:"data" yaml:"data" extensions:"x-nullable"`
 
 	// MetadataClass specifies the storage class for metadata.
-	MetadataClass string `json:"metadata" yaml:"metadata" extensions:"x-nullable" enums:"STANDARD,STANDARD_IA,INTELLIGENT_TIERING,EXPRESS_ONEZONE,ONEZONE_IA,OUTPOSTS"`
+	MetadataClass S3MetadataClass `json:"metadata" yaml:"metadata" extensions:"x-nullable"`
 }
 
 func (s *S3StorageClass) Validate() error {
@@ -195,26 +156,18 @@ func (s *S3StorageClass) Validate() error {
 		return nil
 	}
 
-	if !slices.Contains(s3dataClasses, s.DataClass) {
-		return errValidationInvalidValue("data", s.DataClass, s3dataClasses)
+	if err := s.DataClass.Validate(); err != nil {
+		return err
 	}
-
-	if !slices.Contains(s3metadataClasses, s.MetadataClass) {
-		return errValidationInvalidValue("metadata", s.MetadataClass, s3metadataClasses)
+	if err := s.MetadataClass.Validate(); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func (s *S3StorageClass) ToModel() *model.StorageClass {
-	if s == nil {
-		return nil
-	}
-
-	return &model.StorageClass{
-		DataClass:     s.DataClass,
-		MetadataClass: s.MetadataClass,
-	}
+	return storageClassFromS3(s)
 }
 
 func newS3StorageClassFromModel(s *model.StorageClass) *S3StorageClass {
@@ -223,7 +176,7 @@ func newS3StorageClassFromModel(s *model.StorageClass) *S3StorageClass {
 	}
 
 	return &S3StorageClass{
-		DataClass:     s.DataClass,
-		MetadataClass: s.MetadataClass,
+		DataClass:     newS3DataClassFromString(s.DataClass),
+		MetadataClass: newS3MetadataClassFromString(s.MetadataClass),
 	}
 }

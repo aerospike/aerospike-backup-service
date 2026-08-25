@@ -69,7 +69,7 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupCo
 	d.FileCount = m.FileCount
 	d.SecondaryIndexCount = m.SecondaryIndexCount
 	d.UDFCount = m.UDFCount
-	d.Encryption = m.Encryption
-	d.Compression = m.Compression
+	d.Encryption = string(m.Encryption)
+	d.Compression = string(m.Compression)
 	d.Storage = NewStorageFromModel(m.Storage, config)
 }

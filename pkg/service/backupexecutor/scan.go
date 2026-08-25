@@ -136,7 +136,7 @@ func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy
 	}
 
 	return &backup.CompressionPolicy{
-		Mode:  policy.CompressionPolicy.Mode,
+		Mode:  string(policy.CompressionPolicy.Mode),
 		Level: int(policy.CompressionPolicy.Level),
 	}
 }
@@ -147,7 +147,7 @@ func makeEncryptionPolicy(policy *model.BackupPolicy) *backup.EncryptionPolicy {
 	}
 
 	return &backup.EncryptionPolicy{
-		Mode:      policy.EncryptionPolicy.Mode,
+		Mode:      string(policy.EncryptionPolicy.Mode),
 		KeyFile:   ptr.StringOrNil(policy.EncryptionPolicy.KeyFile),
 		KeySecret: ptr.StringOrNil(policy.EncryptionPolicy.KeySecret),
 		KeyEnv:    ptr.StringOrNil(policy.EncryptionPolicy.KeyEnv),

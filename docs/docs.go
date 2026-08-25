@@ -1695,6 +1695,50 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.AuthMode": {
+            "description": "AuthMode is the Aerospike cluster authentication mode.",
+            "type": "string",
+            "enum": [
+                "INTERNAL",
+                "EXTERNAL",
+                "PKI"
+            ],
+            "x-enum-varnames": [
+                "AuthModeInternal",
+                "AuthModeExternal",
+                "AuthModePKI"
+            ]
+        },
+        "dto.AzureDataClass": {
+            "description": "AzureDataClass is the Azure storage tier for object data.",
+            "type": "string",
+            "enum": [
+                "Hot",
+                "Cool",
+                "Cold",
+                "Archive"
+            ],
+            "x-enum-varnames": [
+                "AzureDataClassHot",
+                "AzureDataClassCool",
+                "AzureDataClassCold",
+                "AzureDataClassArchive"
+            ]
+        },
+        "dto.AzureMetadataClass": {
+            "description": "AzureMetadataClass is the Azure storage tier for metadata.",
+            "type": "string",
+            "enum": [
+                "Hot",
+                "Cool",
+                "Cold"
+            ],
+            "x-enum-varnames": [
+                "AzureMetadataClassHot",
+                "AzureMetadataClassCool",
+                "AzureMetadataClassCold"
+            ]
+        },
         "dto.AzureStorage": {
             "description": "AzureStorage represents the configuration for Azure Blob storage.",
             "type": "object",
@@ -1781,22 +1825,19 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage tier for object data.",
-                    "type": "string",
-                    "enum": [
-                        "Hot",
-                        "Cool",
-                        "Cold",
-                        "Archive"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.AzureDataClass"
+                        }
                     ],
                     "x-nullable": true
                 },
                 "metadata": {
                     "description": "MetadataClass specifies the storage tier for metadata.",
-                    "type": "string",
-                    "enum": [
-                        "Hot",
-                        "Cool",
-                        "Cold"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.AzureMetadataClass"
+                        }
                     ],
                     "x-nullable": true
                 }
@@ -1808,11 +1849,10 @@ const docTemplate = `{
             "properties": {
                 "timestamp-format": {
                     "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
-                    "type": "string",
-                    "enum": [
-                        "ISO",
-                        "US",
-                        "EU"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.TimestampFormat"
+                        }
                     ],
                     "x-nullable": true
                 }
@@ -2140,6 +2180,18 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.CompressionMode": {
+            "description": "CompressionMode identifies the compression algorithm used for backup files.",
+            "type": "string",
+            "enum": [
+                "NONE",
+                "ZSTD"
+            ],
+            "x-enum-varnames": [
+                "CompressionModeNone",
+                "CompressionModeZSTD"
+            ]
+        },
         "dto.CompressionPolicy": {
             "description": "CompressionPolicy contains backup compression information.",
             "type": "object",
@@ -2153,11 +2205,11 @@ const docTemplate = `{
                 },
                 "mode": {
                     "description": "The compression mode to be used (default is NONE).",
-                    "type": "string",
                     "default": "NONE",
-                    "enum": [
-                        "NONE",
-                        "ZSTD"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.CompressionMode"
+                        }
                     ]
                 }
             }
@@ -2211,18 +2263,29 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ConnectionType": {
+            "description": "ConnectionType is the Secret Agent connection type.",
+            "type": "string",
+            "enum": [
+                "tcp",
+                "unix"
+            ],
+            "x-enum-varnames": [
+                "ConnectionTypeTCP",
+                "ConnectionTypeUnix"
+            ]
+        },
         "dto.Credentials": {
             "description": "Credentials represents authentication details to the Aerospike cluster.",
             "type": "object",
             "properties": {
                 "auth-mode": {
-                    "description": "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
-                    "type": "string",
+                    "description": "The authentication mode (INTERNAL, EXTERNAL, PKI).",
                     "default": "INTERNAL",
-                    "enum": [
-                        "INTERNAL",
-                        "EXTERNAL",
-                        "PKI"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.AuthMode"
+                        }
                     ]
                 },
                 "password": {
@@ -2258,6 +2321,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.EncryptionMode": {
+            "description": "EncryptionMode identifies the encryption algorithm used for backup files.",
+            "type": "string",
+            "enum": [
+                "NONE",
+                "AES128",
+                "AES256"
+            ],
+            "x-enum-varnames": [
+                "EncryptionModeNone",
+                "EncryptionModeAES128",
+                "EncryptionModeAES256"
+            ]
+        },
         "dto.EncryptionPolicy": {
             "description": "EncryptionPolicy contains backup encryption information.",
             "type": "object",
@@ -2280,12 +2357,11 @@ const docTemplate = `{
                 },
                 "mode": {
                     "description": "The encryption mode to be used (NONE, AES128, AES256)",
-                    "type": "string",
                     "default": "NONE",
-                    "enum": [
-                        "NONE",
-                        "AES128",
-                        "AES256"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.EncryptionMode"
+                        }
                     ]
                 }
             }
@@ -2327,6 +2403,22 @@ const docTemplate = `{
                     "example": 100
                 }
             }
+        },
+        "dto.GcpDataClass": {
+            "description": "GcpDataClass is the GCP storage class for object data.",
+            "type": "string",
+            "enum": [
+                "STANDARD",
+                "NEARLINE",
+                "COLDLINE",
+                "ARCHIVE"
+            ],
+            "x-enum-varnames": [
+                "GcpDataClassStandard",
+                "GcpDataClassNearline",
+                "GcpDataClassColdline",
+                "GcpDataClassArchive"
+            ]
         },
         "dto.GcpStorage": {
             "description": "GcpStorage represents the configuration for GCP storage.",
@@ -2397,12 +2489,10 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage class for object data.",
-                    "type": "string",
-                    "enum": [
-                        "STANDARD",
-                        "NEARLINE",
-                        "COLDLINE",
-                        "ARCHIVE"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.GcpDataClass"
+                        }
                     ],
                     "x-nullable": true
                 }
@@ -2510,24 +2600,12 @@ const docTemplate = `{
                 "format": {
                     "description": "Format is the logger format (PLAIN, JSON).",
                     "type": "string",
-                    "default": "PLAIN",
-                    "enum": [
-                        "PLAIN",
-                        "JSON"
-                    ]
+                    "default": "PLAIN"
                 },
                 "level": {
                     "description": "Level is the logger level.",
                     "type": "string",
-                    "default": "INFO",
-                    "enum": [
-                        "TRACE",
-                        "DEBUG",
-                        "INFO",
-                        "WARN",
-                        "WARNING",
-                        "ERROR"
-                    ]
+                    "default": "INFO"
                 },
                 "stdout-writer": {
                     "description": "Whether to enable logging to the standard output.",
@@ -2586,11 +2664,11 @@ const docTemplate = `{
             "properties": {
                 "mode": {
                     "description": "The compression mode to be used (default is NONE).",
-                    "type": "string",
                     "default": "NONE",
-                    "enum": [
-                        "NONE",
-                        "ZSTD"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.CompressionMode"
+                        }
                     ]
                 }
             }
@@ -3110,6 +3188,76 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.S3DataClass": {
+            "description": "S3DataClass is the S3 storage class for object data.",
+            "type": "string",
+            "enum": [
+                "STANDARD",
+                "GLACIER",
+                "STANDARD_IA",
+                "ONEZONE_IA",
+                "INTELLIGENT_TIERING",
+                "DEEP_ARCHIVE",
+                "OUTPOSTS",
+                "GLACIER_IR",
+                "SNOW",
+                "EXPRESS_ONEZONE"
+            ],
+            "x-enum-varnames": [
+                "S3DataClassStandard",
+                "S3DataClassGlacier",
+                "S3DataClassStandardIa",
+                "S3DataClassOnezoneIa",
+                "S3DataClassIntelligentTiering",
+                "S3DataClassDeepArchive",
+                "S3DataClassOutposts",
+                "S3DataClassGlacierIr",
+                "S3DataClassSnow",
+                "S3DataClassExpressOnezone"
+            ]
+        },
+        "dto.S3LogLevel": {
+            "description": "S3LogLevel controls the verbosity of the AWS SDK logging.",
+            "type": "string",
+            "enum": [
+                "OFF",
+                "FATAL",
+                "ERROR",
+                "WARN",
+                "INFO",
+                "DEBUG",
+                "TRACE"
+            ],
+            "x-enum-varnames": [
+                "S3LogLevelOff",
+                "S3LogLevelFatal",
+                "S3LogLevelError",
+                "S3LogLevelWarn",
+                "S3LogLevelInfo",
+                "S3LogLevelDebug",
+                "S3LogLevelTrace"
+            ]
+        },
+        "dto.S3MetadataClass": {
+            "description": "S3MetadataClass is the S3 storage class for metadata.",
+            "type": "string",
+            "enum": [
+                "STANDARD",
+                "STANDARD_IA",
+                "INTELLIGENT_TIERING",
+                "EXPRESS_ONEZONE",
+                "ONEZONE_IA",
+                "OUTPOSTS"
+            ],
+            "x-enum-varnames": [
+                "S3MetadataClassStandard",
+                "S3MetadataClassStandardIa",
+                "S3MetadataClassIntelligentTiering",
+                "S3MetadataClassExpressOnezone",
+                "S3MetadataClassOnezoneIa",
+                "S3MetadataClassOutposts"
+            ]
+        },
         "dto.S3Storage": {
             "description": "S3Storage represents the configuration for S3 storage.",
             "type": "object",
@@ -3155,16 +3303,11 @@ const docTemplate = `{
                 },
                 "s3-log-level": {
                     "description": "The log level of the AWS S3 SDK (AWS S3 optional).",
-                    "type": "string",
                     "default": "FATAL",
-                    "enum": [
-                        "OFF",
-                        "FATAL",
-                        "ERROR",
-                        "WARN",
-                        "INFO",
-                        "DEBUG",
-                        "TRACE"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.S3LogLevel"
+                        }
                     ]
                 },
                 "s3-profile": {
@@ -3213,31 +3356,19 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage class for object data.",
-                    "type": "string",
-                    "enum": [
-                        "STANDARD",
-                        "GLACIER",
-                        "STANDARD_IA",
-                        "ONEZONE_IA",
-                        "INTELLIGENT_TIERING",
-                        "DEEP_ARCHIVE",
-                        "OUTPOSTS",
-                        "GLACIER_IR",
-                        "SNOW",
-                        "EXPRESS_ONEZONE"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.S3DataClass"
+                        }
                     ],
                     "x-nullable": true
                 },
                 "metadata": {
                     "description": "MetadataClass specifies the storage class for metadata.",
-                    "type": "string",
-                    "enum": [
-                        "STANDARD",
-                        "STANDARD_IA",
-                        "INTELLIGENT_TIERING",
-                        "EXPRESS_ONEZONE",
-                        "ONEZONE_IA",
-                        "OUTPOSTS"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.S3MetadataClass"
+                        }
                     ],
                     "x-nullable": true
                 }
@@ -3270,10 +3401,10 @@ const docTemplate = `{
                 },
                 "connection-type": {
                     "description": "Connection type.",
-                    "type": "string",
-                    "enum": [
-                        "tcp",
-                        "unix"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.ConnectionType"
+                        }
                     ],
                     "example": "tcp"
                 },
@@ -3455,6 +3586,20 @@ const docTemplate = `{
                     "default": "TLSv1.2"
                 }
             }
+        },
+        "dto.TimestampFormat": {
+            "description": "TimestampFormat is the encoding for backup dates in file paths.",
+            "type": "string",
+            "enum": [
+                "ISO",
+                "US",
+                "EU"
+            ],
+            "x-enum-varnames": [
+                "TimestampFormatISO",
+                "TimestampFormatUS",
+                "TimestampFormatEU"
+            ]
         },
         "dto.TimestampRestorePolicy": {
             "description": "TimestampRestorePolicy represents a policy for the point-in-time restore operation.",

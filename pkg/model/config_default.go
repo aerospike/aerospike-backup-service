@@ -36,8 +36,8 @@ var defaultConfig = struct {
 		IdleTimeout:  ptr.Of(120 * time.Second),
 	},
 	logger: LoggerConfig{
-		Level:        "INFO",
-		Format:       "PLAIN",
+		Level:        LogLevelInfo,
+		Format:       LogFormatPlain,
 		StdoutWriter: ptr.Of(true),
 		FileWriter: &FileLoggerConfig{
 			MaxSize:    100,

@@ -38,7 +38,7 @@ func TestBackupServiceConfig_Validate_PropagatesLoggerError(t *testing.T) {
 
 func TestBackupServiceConfig_Validate_InvalidTimestampFormat(t *testing.T) {
 	cfg := &ServiceConfig{
-		Backup: &BackupCommonConfig{TimestampFormat: "UK"},
+		Backup: &BackupCommonConfig{TimestampFormat: TimestampFormat("UK")},
 	}
 
 	err := cfg.Validate()
@@ -49,7 +49,7 @@ func TestBackupServiceConfig_Validate_InvalidTimestampFormat(t *testing.T) {
 func TestBackupServiceConfig_Validate_ValidTimestampFormats(t *testing.T) {
 	for _, v := range []string{"ISO", "US", "EU", "iso", "us", "eu"} {
 		cfg := &ServiceConfig{
-			Backup: &BackupCommonConfig{TimestampFormat: v},
+			Backup: &BackupCommonConfig{TimestampFormat: TimestampFormat(v)},
 		}
 		err := cfg.Validate()
 		require.NoError(t, err)

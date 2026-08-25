@@ -4,17 +4,51 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// Compression modes.
+// CompressionMode identifies the compression algorithm used for backup files.
+// @Description CompressionMode identifies the compression algorithm used for backup files.
+type CompressionMode string
+
 const (
-	CompressNone = "NONE"
-	CompressZSTD = "ZSTD"
+	CompressionModeNone CompressionMode = "NONE"
+	CompressionModeZSTD CompressionMode = "ZSTD"
 )
+
+func (m CompressionMode) normalized() CompressionMode {
+	if m == "" {
+		return m
+	}
+	return CompressionMode(foldUpper(string(m)))
+}
+
+// Validate checks that the compression mode is supported.
+func (m CompressionMode) Validate() error {
+	switch m.normalized() {
+	case CompressionModeNone, CompressionModeZSTD:
+		return nil
+	default:
+		return errValidationInvalidValue(
+			"compression mode",
+			m,
+			[]CompressionMode{CompressionModeNone, CompressionModeZSTD},
+		)
+	}
+}
+
+// ToModel converts the DTO compression mode to the model type.
+func (m CompressionMode) ToModel() model.CompressionMode {
+	return model.CompressionMode(m.normalized())
+}
+
+// NewCompressionModeFromModel creates a DTO compression mode from the model type.
+func NewCompressionModeFromModel(m model.CompressionMode) CompressionMode {
+	return CompressionMode(m)
+}
 
 // CompressionPolicy contains backup compression information.
 // @Description CompressionPolicy contains backup compression information.
 type CompressionPolicy struct {
 	// The compression mode to be used (default is NONE).
-	Mode string `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE" enums:"NONE,ZSTD"`
+	Mode CompressionMode `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE"`
 	// The compression level to use.
 	// Algorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).
 	// This field is ignored if the compression mode is NONE.
@@ -26,8 +60,8 @@ func (p *CompressionPolicy) Validate() error {
 	if p == nil {
 		return nil
 	}
-	if p.Mode != CompressNone && p.Mode != CompressZSTD {
-		return errValidationInvalidValue("compression mode", p.Mode, []string{CompressNone, CompressZSTD})
+	if err := p.Mode.Validate(); err != nil {
+		return err
 	}
 	if p.Level < -1 || p.Level > 22 {
 		return errValidationInvalidValue("compression level", p.Level, "-1 to 22")
@@ -42,7 +76,7 @@ func (p *CompressionPolicy) ToModel() *model.CompressionPolicy {
 	}
 
 	return &model.CompressionPolicy{
-		Mode:  p.Mode,
+		Mode:  p.Mode.ToModel(),
 		Level: p.Level,
 	}
 }
@@ -59,7 +93,7 @@ func newCompressionPolicyFromModel(m *model.CompressionPolicy) *CompressionPolic
 }
 
 func (p *CompressionPolicy) fromModel(m *model.CompressionPolicy) {
-	p.Mode = m.Mode
+	p.Mode = NewCompressionModeFromModel(m.Mode)
 	p.Level = m.Level
 }
 
@@ -67,7 +101,7 @@ func (p *CompressionPolicy) fromModel(m *model.CompressionPolicy) {
 // @Description RestoreCompressionPolicy contains restore compression information.
 type RestoreCompressionPolicy struct {
 	// The compression mode to be used (default is NONE).
-	Mode string `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE" enums:"NONE,ZSTD"`
+	Mode CompressionMode `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE"`
 }
 
 // Validate validates the restore compression policy.
@@ -75,10 +109,7 @@ func (p *RestoreCompressionPolicy) Validate() error {
 	if p == nil {
 		return nil
 	}
-	if p.Mode != CompressNone && p.Mode != CompressZSTD {
-		return errValidationInvalidValue("compression mode", p.Mode, []string{CompressNone, CompressZSTD})
-	}
-	return nil
+	return p.Mode.Validate()
 }
 
 func (p *RestoreCompressionPolicy) ToModel() *model.CompressionPolicy {
@@ -87,6 +118,6 @@ func (p *RestoreCompressionPolicy) ToModel() *model.CompressionPolicy {
 	}
 
 	return &model.CompressionPolicy{
-		Mode: p.Mode,
+		Mode: p.Mode.ToModel(),
 	}
 }

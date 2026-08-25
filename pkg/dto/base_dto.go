@@ -1,6 +1,8 @@
 package dto
 
 import (
+	"strings"
+
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -35,4 +37,8 @@ func ConvertStorageMapToDTO(modelMap map[string]model.Storage, config *model.Bac
 		result[key] = NewStorageFromModel(s, config)
 	}
 	return result
+}
+
+func foldUpper(s string) string {
+	return strings.ToUpper(strings.TrimSpace(s))
 }

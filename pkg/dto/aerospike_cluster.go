@@ -205,15 +205,15 @@ type Credentials struct {
 	Password secret `yaml:"password,omitempty" json:"password,omitempty" format:"password" extensions:"x-nullable"`
 	// The file path with the password string.
 	PasswordPath string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
-	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
-	AuthMode string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL"`
+	// The authentication mode (INTERNAL, EXTERNAL, PKI).
+	AuthMode AuthMode `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" default:"INTERNAL"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
 	c.User = m.User
 	c.Password = secret(m.Password)
 	c.PasswordPath = m.PasswordPath
-	c.AuthMode = m.AuthMode.String()
+	c.AuthMode = NewAuthModeFromModel(m.AuthMode)
 
 	c.SecretAgentConfig = ResolveSecretAgentFromModel(m.SecretAgent, config)
 }
@@ -238,7 +238,7 @@ func (c *Credentials) Validate(opts ValidationOptions) error {
 		return fmt.Errorf("%w: invalid password-path", errInvalidPath)
 	}
 
-	if _, err := model.ParseAuthMode(c.AuthMode); err != nil {
+	if err := c.AuthMode.Validate(); err != nil {
 		return err
 	}
 
@@ -261,7 +261,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 		return nil, err
 	}
 
-	authMode, err := model.ParseAuthMode(c.AuthMode)
+	authMode, err := c.AuthMode.ToModel()
 	if err != nil {
 		return nil, err
 	}
