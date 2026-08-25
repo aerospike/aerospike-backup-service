@@ -19,8 +19,8 @@ const (
 	shutdownTimeout = 30 * time.Second
 )
 
-// HTTPServer manages the backup service HTTP server lifecycle.
-type HTTPServer interface {
+// ServerHTTP manages the backup service HTTP server lifecycle.
+type ServerHTTP interface {
 	http.Handler
 
 	// Start starts the HTTP server. Returns an error if the server fails to start.
@@ -29,15 +29,15 @@ type HTTPServer interface {
 	Shutdown() error
 }
 
-// httpServer wraps *http.Server with Start/Shutdown lifecycle helpers.
-type httpServer struct {
+// serverHTTP wraps *http.Server with Start/Shutdown lifecycle helpers.
+type serverHTTP struct {
 	*http.Server
 }
 
-var _ HTTPServer = (*httpServer)(nil)
+var _ ServerHTTP = (*serverHTTP)(nil)
 
-// NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(ctx context.Context, serverConfig *model.ServerConfigHTTP, service *handlers.Service) HTTPServer {
+// NewHTTPServer returns a new instance of ServerHTTP.
+func NewHTTPServer(ctx context.Context, serverConfig *model.ServerConfigHTTP, service *handlers.Service) ServerHTTP {
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
 	// Create router
@@ -52,7 +52,7 @@ func NewHTTPServer(ctx context.Context, serverConfig *model.ServerConfigHTTP, se
 		middleware.RateLimiter(ctx, serverConfig.GetRateOrDefault()),
 	)
 
-	return &httpServer{
+	return &serverHTTP{
 		Server: &http.Server{
 			Addr:              addr,
 			ReadHeaderTimeout: serverConfig.GetTimeoutOrDefault(),
@@ -65,12 +65,12 @@ func NewHTTPServer(ctx context.Context, serverConfig *model.ServerConfigHTTP, se
 }
 
 // ServeHTTP implements http.Handler so integration tests can wrap the server with httptest.
-func (s *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *serverHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.Handler.ServeHTTP(w, r)
 }
 
 // Start starts the HTTP server. Returns an error if the server fails to start.
-func (s *httpServer) Start() error {
+func (s *serverHTTP) Start() error {
 	err := s.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
 		slog.Info("HTTP server closed", attr.Error(err))
@@ -80,7 +80,7 @@ func (s *httpServer) Start() error {
 }
 
 // Shutdown shuts down the HTTP server gracefully with a timeout.
-func (s *httpServer) Shutdown() error {
+func (s *serverHTTP) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	return s.Server.Shutdown(ctx)

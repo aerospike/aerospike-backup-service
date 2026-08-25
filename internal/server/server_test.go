@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestHTTPServer(t *testing.T, httpCfg *model.ServerConfigHTTP) *httpServer {
+func newTestHTTPServer(t *testing.T, httpCfg *model.ServerConfigHTTP) *serverHTTP {
 	t.Helper()
 
 	svc := handlers.NewService(
@@ -22,7 +22,7 @@ func newTestHTTPServer(t *testing.T, httpCfg *model.ServerConfigHTTP) *httpServe
 		nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
-	return NewHTTPServer(t.Context(), httpCfg, svc).(*httpServer)
+	return NewHTTPServer(t.Context(), httpCfg, svc).(*serverHTTP)
 }
 
 func waitForHTTPServerReady(t *testing.T, healthURL string) {

@@ -27,7 +27,7 @@ import (
 // Components group the long-running parts of the service.
 type Components struct {
 	Scheduler        quartz.Scheduler
-	HTTPServer       server.HTTPServer
+	ServerHTTP       server.ServerHTTP
 	MetricsCollector *prometheus.MetricsCollector
 }
 
@@ -124,7 +124,7 @@ func InitComponents(
 
 	return &Components{
 		Scheduler:        scheduler,
-		HTTPServer:       httpServer,
+		ServerHTTP:       httpServer,
 		MetricsCollector: metricsCollector,
 	}, nil
 }

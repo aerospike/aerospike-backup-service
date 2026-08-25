@@ -73,7 +73,7 @@ func startService(configFile string, remote bool) error {
 	components.Scheduler.Start(ctx)
 	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 
-	err = runHTTPServer(ctx, components.HTTPServer)
+	err = runServerHTTP(ctx, components.ServerHTTP)
 
 	// stop the scheduler
 	components.Scheduler.Stop()
@@ -85,7 +85,7 @@ func systemCtx() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 }
 
-func runHTTPServer(ctx context.Context, httpServer server.HTTPServer) error {
+func runServerHTTP(ctx context.Context, httpServer server.ServerHTTP) error {
 	// Channel to capture server startup errors
 	errCh := make(chan error, 1)
 	go func() {

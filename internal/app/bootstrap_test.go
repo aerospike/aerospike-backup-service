@@ -23,7 +23,7 @@ func TestInitComponents_MinimalConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotNil(t, components.Scheduler)
-	require.NotNil(t, components.HTTPServer)
+	require.NotNil(t, components.ServerHTTP)
 	require.NotNil(t, components.MetricsCollector)
 
 	components.Scheduler.Start(ctx)
