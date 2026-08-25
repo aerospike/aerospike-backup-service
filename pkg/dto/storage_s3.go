@@ -141,8 +141,6 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 
 // S3StorageClass represents the configuration for S3 Storage Class.
 // @Description S3StorageClass represents the configuration for S3 Storage Class.
-//
-
 type S3StorageClass struct {
 	// DataClass specifies the storage class for object data.
 	DataClass S3DataClass `json:"data" yaml:"data" extensions:"x-nullable"`
