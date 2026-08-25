@@ -275,6 +275,7 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 	possibleValues := ""
 
 	// Check if it's a reference via allOf first, as this is the primary indicator for linked objects
+	//nolint:nestif
 	if len(prop.AllOf) > 0 {
 		for _, ref := range prop.AllOf {
 			if ref.Ref != "" {
