@@ -1,9 +1,5 @@
 package model
 
-import (
-	"time"
-)
-
 // TLSClientAuth identifies how the HTTPS listener authenticates client certificates.
 type TLSClientAuth string
 
@@ -28,24 +24,9 @@ const (
 
 // HTTPSServerConfig represents the service's HTTPS server configuration.
 type HTTPSServerConfig struct {
-	// Disabled controls whether the HTTPS listener is disabled.
-	Disabled bool
-	// Address is the address to listen on.
-	Address string
-	// Port is the port to listen on.
+	ListenerConfig
+	// The port to listen on.
 	Port *Port
-	// Rate is the HTTP rate limiter configuration.
-	Rate *RateLimiterConfig
-	// ContextPath customizes the path for API endpoints.
-	ContextPath string
-	// Timeout is the timeout for reading HTTP request headers.
-	Timeout *time.Duration
-	// ReadTimeout is the maximum duration for reading an entire request.
-	ReadTimeout *time.Duration
-	// WriteTimeout is the maximum duration before timing out response writes.
-	WriteTimeout *time.Duration
-	// IdleTimeout is the maximum time to wait for the next keep-alive request.
-	IdleTimeout *time.Duration
 	// CertFile is the path to the server certificate.
 	CertFile string
 	// KeyFile is the path to the server private key.
@@ -65,98 +46,34 @@ type HTTPSServerConfig struct {
 	ClientAuth TLSClientAuth
 }
 
-// GetDisabledOrDefault returns whether the HTTPS listener is disabled.
-func (s *HTTPSServerConfig) GetDisabledOrDefault() bool {
-	if s == nil {
-		return defaultConfig.https.Disabled
-	}
-	return s.Disabled
-}
-
-// GetAddressOrDefault returns the configured address or its default.
-func (s *HTTPSServerConfig) GetAddressOrDefault() string {
-	if s.Address != "" {
-		return s.Address
-	}
-	return defaultConfig.https.Address
-}
-
 // GetPortOrDefault returns the configured port or its default.
 func (s *HTTPSServerConfig) GetPortOrDefault() Port {
-	if s.Port != nil {
-		return *s.Port
+	if s == nil || s.Port == nil {
+		return *defaultConfig.https.Port
 	}
-	return *defaultConfig.https.Port
-}
-
-// GetRateOrDefault returns the configured rate limiter or its default.
-func (s *HTTPSServerConfig) GetRateOrDefault() *RateLimiterConfig {
-	if s.Rate != nil {
-		return s.Rate
-	}
-	return defaultConfig.https.Rate
-}
-
-// GetContextPathOrDefault returns the configured context path or its default.
-func (s *HTTPSServerConfig) GetContextPathOrDefault() string {
-	if s.ContextPath != "" {
-		return s.ContextPath
-	}
-	return defaultConfig.https.ContextPath
-}
-
-// GetTimeoutOrDefault returns the configured header timeout or its default.
-func (s *HTTPSServerConfig) GetTimeoutOrDefault() time.Duration {
-	if s.Timeout != nil {
-		return *s.Timeout
-	}
-	return *defaultConfig.https.Timeout
-}
-
-// GetReadTimeoutOrDefault returns the configured read timeout or its default.
-func (s *HTTPSServerConfig) GetReadTimeoutOrDefault() time.Duration {
-	if s.ReadTimeout != nil {
-		return *s.ReadTimeout
-	}
-	return *defaultConfig.https.ReadTimeout
-}
-
-// GetWriteTimeoutOrDefault returns the configured write timeout or its default.
-func (s *HTTPSServerConfig) GetWriteTimeoutOrDefault() time.Duration {
-	if s.WriteTimeout != nil {
-		return *s.WriteTimeout
-	}
-	return *defaultConfig.https.WriteTimeout
-}
-
-// GetIdleTimeoutOrDefault returns the configured idle timeout or its default.
-func (s *HTTPSServerConfig) GetIdleTimeoutOrDefault() time.Duration {
-	if s.IdleTimeout != nil {
-		return *s.IdleTimeout
-	}
-	return *defaultConfig.https.IdleTimeout
+	return *s.Port
 }
 
 // GetMinVersionOrDefault returns the configured minimum TLS version or its default.
 func (s *HTTPSServerConfig) GetMinVersionOrDefault() TLSMinVersion {
-	if s.MinVersion != "" {
-		return s.MinVersion
+	if s == nil || s.MinVersion == "" {
+		return defaultConfig.https.MinVersion
 	}
-	return defaultConfig.https.MinVersion
+	return s.MinVersion
 }
 
 // GetCipherSuitesOrDefault returns the configured cipher suites or the empty default.
 func (s *HTTPSServerConfig) GetCipherSuitesOrDefault() []string {
-	if s.CipherSuites != nil {
-		return s.CipherSuites
+	if s == nil || s.CipherSuites == nil {
+		return defaultConfig.https.CipherSuites
 	}
-	return defaultConfig.https.CipherSuites
+	return s.CipherSuites
 }
 
 // GetClientAuthOrDefault returns the configured client authentication mode or its default.
 func (s *HTTPSServerConfig) GetClientAuthOrDefault() TLSClientAuth {
-	if s.ClientAuth != "" {
-		return s.ClientAuth
+	if s == nil || s.ClientAuth == "" {
+		return defaultConfig.https.ClientAuth
 	}
-	return defaultConfig.https.ClientAuth
+	return s.ClientAuth
 }

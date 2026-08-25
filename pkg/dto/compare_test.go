@@ -20,8 +20,8 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			name: "identical configs",
 			current: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: "localhost",
-					Port:    ptr.Of(Port(8080)),
+					ListenerConfig: ListenerConfig{Address: "localhost"},
+					Port:           ptr.Of(Port(8080)),
 				},
 				Logger: &LoggerConfig{
 					Level:  "INFO",
@@ -30,8 +30,8 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			},
 			other: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: "localhost",
-					Port:    ptr.Of(Port(8080)),
+					ListenerConfig: ListenerConfig{Address: "localhost"},
+					Port:           ptr.Of(Port(8080)),
 				},
 				Logger: &LoggerConfig{
 					Level:  "INFO",
@@ -44,14 +44,14 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			name: "changed http server config",
 			current: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: "localhost",
-					Port:    ptr.Of(Port(8080)),
+					ListenerConfig: ListenerConfig{Address: "localhost"},
+					Port:           ptr.Of(Port(8080)),
 				},
 			},
 			other: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: "0.0.0.0",
-					Port:    ptr.Of(Port(9090)),
+					ListenerConfig: ListenerConfig{Address: "0.0.0.0"},
+					Port:           ptr.Of(Port(9090)),
 				},
 			},
 			errors: []string{
@@ -63,14 +63,14 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			name: "changed HTTPS server config",
 			current: ServiceConfig{
 				HTTPSServer: &HTTPSServerConfig{
-					Disabled: true,
-					CertFile: "server.pem",
+					ListenerConfig: ListenerConfig{Disabled: true},
+					CertFile:       "server.pem",
 				},
 			},
 			other: ServiceConfig{
 				HTTPSServer: &HTTPSServerConfig{
-					Disabled: true,
-					CertFile: "new-server.pem",
+					ListenerConfig: ListenerConfig{Disabled: true},
+					CertFile:       "new-server.pem",
 				},
 			},
 			errors: []string{
@@ -250,6 +250,20 @@ func TestRateLimiterConfig_Compare(t *testing.T) {
 	}
 }
 
+func testHTTPServerConfig() *HTTPServerConfig {
+	return &HTTPServerConfig{
+		ListenerConfig: ListenerConfig{
+			Address:      "localhost",
+			ContextPath:  "/api",
+			Timeout:      ptr.Of(int64(5000)),
+			ReadTimeout:  ptr.Of(int64(30000)),
+			WriteTimeout: ptr.Of(int64(60000)),
+			IdleTimeout:  ptr.Of(int64(120000)),
+		},
+		Port: ptr.Of(Port(8080)),
+	}
+}
+
 func TestHTTPServerConfig_Compare(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -258,47 +272,25 @@ func TestHTTPServerConfig_Compare(t *testing.T) {
 		errors  []string
 	}{
 		{
-			name: "identical configs",
-			current: &HTTPServerConfig{
-				Address:      "localhost",
-				Port:         ptr.Of(Port(8080)),
-				ContextPath:  "/api",
-				Timeout:      ptr.Of(int64(5000)),
-				ReadTimeout:  ptr.Of(int64(30000)),
-				WriteTimeout: ptr.Of(int64(60000)),
-				IdleTimeout:  ptr.Of(int64(120000)),
-			},
-			other: &HTTPServerConfig{
-				Address:      "localhost",
-				Port:         ptr.Of(Port(8080)),
-				ContextPath:  "/api",
-				Timeout:      ptr.Of(int64(5000)),
-				ReadTimeout:  ptr.Of(int64(30000)),
-				WriteTimeout: ptr.Of(int64(60000)),
-				IdleTimeout:  ptr.Of(int64(120000)),
-			},
-			errors: nil,
+			name:    "identical configs",
+			current: testHTTPServerConfig(),
+			other:   testHTTPServerConfig(),
+			errors:  nil,
 		},
 		{
-			name: "all fields changed",
-			current: &HTTPServerConfig{
-				Address:      "localhost",
-				Port:         ptr.Of(Port(8080)),
-				ContextPath:  "/api",
-				Timeout:      ptr.Of(int64(5000)),
-				ReadTimeout:  ptr.Of(int64(30000)),
-				WriteTimeout: ptr.Of(int64(60000)),
-				IdleTimeout:  ptr.Of(int64(120000)),
-			},
+			name:    "all fields changed",
+			current: testHTTPServerConfig(),
 			other: &HTTPServerConfig{
-				Disabled:     true,
-				Address:      "0.0.0.0",
-				Port:         ptr.Of(Port(9090)),
-				ContextPath:  "/v1/api",
-				Timeout:      ptr.Of(int64(10000)),
-				ReadTimeout:  ptr.Of(int64(45000)),
-				WriteTimeout: ptr.Of(int64(90000)),
-				IdleTimeout:  ptr.Of(int64(180000)),
+				ListenerConfig: ListenerConfig{
+					Disabled:     true,
+					Address:      "0.0.0.0",
+					ContextPath:  "/v1/api",
+					Timeout:      ptr.Of(int64(10000)),
+					ReadTimeout:  ptr.Of(int64(45000)),
+					WriteTimeout: ptr.Of(int64(90000)),
+					IdleTimeout:  ptr.Of(int64(180000)),
+				},
+				Port: ptr.Of(Port(9090)),
 			},
 			errors: []string{
 				"Disabled changed: false -> true",

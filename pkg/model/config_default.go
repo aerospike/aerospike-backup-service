@@ -13,6 +13,21 @@ const (
 	DefaultPartSize      = 50 * 1024 * 1024
 )
 
+// defaultListener represents the listen settings shared by the HTTP and HTTPS servers.
+var defaultListener = ListenerConfig{
+	Address: "0.0.0.0",
+	Rate: &RateLimiterConfig{
+		Tps:       ptr.Of(1024),
+		Size:      ptr.Of(1024),
+		WhiteList: []string{},
+	},
+	ContextPath:  "/",
+	Timeout:      ptr.Of(5 * time.Second),
+	ReadTimeout:  ptr.Of(30 * time.Second),
+	WriteTimeout: ptr.Of(60 * time.Second),
+	IdleTimeout:  ptr.Of(120 * time.Second),
+}
+
 // defaultConfig represents default configuration values.
 var defaultConfig = struct {
 	http          HTTPServerConfig
@@ -23,34 +38,14 @@ var defaultConfig = struct {
 	credentials   Credentials
 }{
 	http: HTTPServerConfig{
-		Address: "0.0.0.0",
-		Port:    NewPort(8080),
-		Rate: &RateLimiterConfig{
-			Tps:       ptr.Of(1024),
-			Size:      ptr.Of(1024),
-			WhiteList: []string{},
-		},
-		ContextPath:  "/",
-		Timeout:      ptr.Of(5 * time.Second),
-		ReadTimeout:  ptr.Of(30 * time.Second),
-		WriteTimeout: ptr.Of(60 * time.Second),
-		IdleTimeout:  ptr.Of(120 * time.Second),
+		ListenerConfig: defaultListener,
+		Port:           NewPort(8080),
 	},
 	https: HTTPSServerConfig{
-		Address: "0.0.0.0",
-		Port:    NewPort(8443),
-		Rate: &RateLimiterConfig{
-			Tps:       ptr.Of(1024),
-			Size:      ptr.Of(1024),
-			WhiteList: []string{},
-		},
-		ContextPath:  "/",
-		Timeout:      ptr.Of(5 * time.Second),
-		ReadTimeout:  ptr.Of(30 * time.Second),
-		WriteTimeout: ptr.Of(60 * time.Second),
-		IdleTimeout:  ptr.Of(120 * time.Second),
-		MinVersion:   TLSMinVersion12,
-		ClientAuth:   TLSClientAuthNone,
+		ListenerConfig: defaultListener,
+		Port:           NewPort(8443),
+		MinVersion:     TLSMinVersion12,
+		ClientAuth:     TLSClientAuthNone,
 	},
 	logger: LoggerConfig{
 		Level:        "INFO",

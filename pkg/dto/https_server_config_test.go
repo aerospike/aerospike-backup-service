@@ -30,14 +30,14 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		},
 		{
 			name:   "disabled without certificate",
-			config: &HTTPSServerConfig{Disabled: true},
+			config: &HTTPSServerConfig{ListenerConfig: ListenerConfig{Disabled: true}},
 		},
 		{
 			name: "disabled with valid certificate",
 			config: &HTTPSServerConfig{
-				Disabled: true,
-				CertFile: certs.certFile,
-				KeyFile:  certs.keyFile,
+				ListenerConfig: ListenerConfig{Disabled: true},
+				CertFile:       certs.certFile,
+				KeyFile:        certs.keyFile,
 			},
 		},
 		{
@@ -78,9 +78,9 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 		{
 			name: "disabled with mismatched certificate and key",
 			config: &HTTPSServerConfig{
-				Disabled: true,
-				CertFile: certs.certFile,
-				KeyFile:  otherCerts.keyFile,
+				ListenerConfig: ListenerConfig{Disabled: true},
+				CertFile:       certs.certFile,
+				KeyFile:        otherCerts.keyFile,
 			},
 			wantErr: "private key does not match public key",
 		},
@@ -169,14 +169,16 @@ func TestHTTPSServerConfigValidate(t *testing.T) {
 
 func TestHTTPSServerConfigToModelAndFromModel(t *testing.T) {
 	config := &HTTPSServerConfig{
-		Disabled:        true,
-		Address:         "127.0.0.1",
+		ListenerConfig: ListenerConfig{
+			Disabled:     true,
+			Address:      "127.0.0.1",
+			ContextPath:  "/api",
+			Timeout:      ptr.Of(int64(1000)),
+			ReadTimeout:  ptr.Of(int64(2000)),
+			WriteTimeout: ptr.Of(int64(3000)),
+			IdleTimeout:  ptr.Of(int64(4000)),
+		},
 		Port:            ptr.Of(Port(9443)),
-		ContextPath:     "/api",
-		Timeout:         ptr.Of(int64(1000)),
-		ReadTimeout:     ptr.Of(int64(2000)),
-		WriteTimeout:    ptr.Of(int64(3000)),
-		IdleTimeout:     ptr.Of(int64(4000)),
 		CertFile:        "/cert.pem",
 		KeyFile:         "/key.pem",
 		KeyFilePassword: "password",
@@ -201,14 +203,16 @@ func TestHTTPSServerConfigToModelAndFromModel(t *testing.T) {
 
 func TestHTTPSServerConfigCompareReportsEveryField(t *testing.T) {
 	current := &HTTPSServerConfig{
-		Address:         "localhost",
+		ListenerConfig: ListenerConfig{
+			Address:      "localhost",
+			Rate:         &RateLimiterConfig{Tps: ptr.Of(1)},
+			ContextPath:  "/",
+			Timeout:      ptr.Of(int64(1)),
+			ReadTimeout:  ptr.Of(int64(2)),
+			WriteTimeout: ptr.Of(int64(3)),
+			IdleTimeout:  ptr.Of(int64(4)),
+		},
 		Port:            ptr.Of(Port(8443)),
-		Rate:            &RateLimiterConfig{Tps: ptr.Of(1)},
-		ContextPath:     "/",
-		Timeout:         ptr.Of(int64(1)),
-		ReadTimeout:     ptr.Of(int64(2)),
-		WriteTimeout:    ptr.Of(int64(3)),
-		IdleTimeout:     ptr.Of(int64(4)),
 		CertFile:        "cert",
 		KeyFile:         "key",
 		KeyFilePassword: "password",
@@ -221,15 +225,17 @@ func TestHTTPSServerConfigCompareReportsEveryField(t *testing.T) {
 		},
 	}
 	other := &HTTPSServerConfig{
-		Disabled:        true,
-		Address:         "0.0.0.0",
+		ListenerConfig: ListenerConfig{
+			Disabled:     true,
+			Address:      "0.0.0.0",
+			Rate:         &RateLimiterConfig{Tps: ptr.Of(2)},
+			ContextPath:  "/api",
+			Timeout:      ptr.Of(int64(10)),
+			ReadTimeout:  ptr.Of(int64(20)),
+			WriteTimeout: ptr.Of(int64(30)),
+			IdleTimeout:  ptr.Of(int64(40)),
+		},
 		Port:            ptr.Of(Port(9443)),
-		Rate:            &RateLimiterConfig{Tps: ptr.Of(2)},
-		ContextPath:     "/api",
-		Timeout:         ptr.Of(int64(10)),
-		ReadTimeout:     ptr.Of(int64(20)),
-		WriteTimeout:    ptr.Of(int64(30)),
-		IdleTimeout:     ptr.Of(int64(40)),
 		CertFile:        "new-cert",
 		KeyFile:         "new-key",
 		KeyFilePassword: "new-password",

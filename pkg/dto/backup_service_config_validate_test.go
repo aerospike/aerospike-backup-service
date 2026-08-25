@@ -9,7 +9,7 @@ import (
 
 func TestBackupServiceConfig_Validate_Success(t *testing.T) {
 	cfg := &ServiceConfig{
-		HTTPServer: &HTTPServerConfig{ContextPath: "/"},
+		HTTPServer: &HTTPServerConfig{ListenerConfig: ListenerConfig{ContextPath: "/"}},
 		Logger:     &LoggerConfig{Level: "INFO"},
 	}
 
@@ -19,7 +19,8 @@ func TestBackupServiceConfig_Validate_Success(t *testing.T) {
 
 func TestBackupServiceConfig_Validate_PropagatesHTTPServerError(t *testing.T) {
 	cfg := &ServiceConfig{
-		HTTPServer: &HTTPServerConfig{ContextPath: "FOO"}, // missing leading slash => invalid
+		// missing leading slash => invalid
+		HTTPServer: &HTTPServerConfig{ListenerConfig: ListenerConfig{ContextPath: "FOO"}},
 	}
 
 	err := cfg.Validate(ValidationDefault)
@@ -72,7 +73,7 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 		{
 			name: "HTTPS listener with HTTP disabled",
 			config: &ServiceConfig{
-				HTTPServer: &HTTPServerConfig{Disabled: true},
+				HTTPServer: &HTTPServerConfig{ListenerConfig: ListenerConfig{Disabled: true}},
 				HTTPSServer: &HTTPSServerConfig{
 					CertFile: certs.certFile,
 					KeyFile:  certs.keyFile,
@@ -93,15 +94,15 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 		{
 			name: "HTTP disabled and HTTPS absent",
 			config: &ServiceConfig{
-				HTTPServer: &HTTPServerConfig{Disabled: true},
+				HTTPServer: &HTTPServerConfig{ListenerConfig: ListenerConfig{Disabled: true}},
 			},
 			wantErr: "service.http and service.https cannot both be disabled",
 		},
 		{
 			name: "both listeners disabled",
 			config: &ServiceConfig{
-				HTTPServer:  &HTTPServerConfig{Disabled: true},
-				HTTPSServer: &HTTPSServerConfig{Disabled: true},
+				HTTPServer:  &HTTPServerConfig{ListenerConfig: ListenerConfig{Disabled: true}},
+				HTTPSServer: &HTTPSServerConfig{ListenerConfig: ListenerConfig{Disabled: true}},
 			},
 			wantErr: "service.http and service.https cannot both be disabled",
 		},

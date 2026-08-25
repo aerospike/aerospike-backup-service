@@ -16,7 +16,7 @@ var secretAgentConfig = SecretAgentConfig{
 var originalConfig = &Config{
 	ServiceConfig: ServiceConfig{
 		HTTPServer: &HTTPServerConfig{
-			Address: "localhost",
+			ListenerConfig: ListenerConfig{Address: "localhost"},
 		},
 		Logger: &LoggerConfig{
 			Level: "INFO",
