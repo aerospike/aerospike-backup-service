@@ -13,22 +13,13 @@ import (
 
 const swagger2OpenAPIPackage = "swagger2openapi@7.0.8"
 
-func generate(workspace string) error {
-	originalDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	if err := os.Chdir(workspace); err != nil {
-		return fmt.Errorf("chdir workspace: %w", err)
-	}
-	defer func() { _ = os.Chdir(originalDir) }()
-
-	docsDir := filepath.Join(workspace, "docs")
+func generate() error {
+	const docsDir = "docs"
 	swaggerPath := filepath.Join(docsDir, "swagger.json")
 	openAPIPath := filepath.Join(docsDir, "openapi.json")
 	configSchemaPath := filepath.Join(docsDir, "config.schema.json")
 
-	if err := generateSwagger(workspace, docsDir); err != nil {
+	if err := generateSwagger(docsDir); err != nil {
 		return fmt.Errorf("generate swagger: %w", err)
 	}
 	if err := fixSwaggerFile(swaggerPath); err != nil {
@@ -49,10 +40,9 @@ func generate(workspace string) error {
 	return nil
 }
 
-func generateSwagger(workspace, outputDir string) error {
+func generateSwagger(outputDir string) error {
 	return gen.New().Build(&gen.Config{
-		SearchDir: filepath.Join(workspace, "internal/server/handlers") + "," +
-			filepath.Join(workspace, "pkg/dto"),
+		SearchDir:          "internal/server/handlers,pkg/dto",
 		MainAPIFile:        "info.go",
 		OutputDir:          outputDir,
 		OutputTypes:        []string{"go", "json"},
