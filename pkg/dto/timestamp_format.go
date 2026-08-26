@@ -1,10 +1,10 @@
 package dto
 
 import (
-	"maps"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // TimestampFormat is the encoding for backup dates in file paths.
@@ -20,30 +20,24 @@ const (
 	TimestampFormatEU TimestampFormat = "EU"
 )
 
+var timestampFormats = []TimestampFormat{TimestampFormatISO, TimestampFormatUS, TimestampFormatEU}
+
 // Validate checks that the timestamp format is supported.
 func (f TimestampFormat) Validate() error {
-	if f == "" {
+	if f == "" || slices.Contains(timestampFormats, f) {
 		return nil
 	}
-	if _, err := f.ToModel(); err != nil {
-		return err
-	}
-	return nil
+
+	return errValidationInvalidValue("timestamp-format", f, timestampFormats)
 }
 
 // ToModel converts the DTO timestamp format to the model type.
-func (f TimestampFormat) ToModel() (*model.TimestampFormat, error) {
+func (f TimestampFormat) ToModel() *model.TimestampFormat {
 	if f == "" {
-		return nil, nil
+		return nil
 	}
 
-	format := model.TimestampFormat(foldUpper(string(f)))
-	if _, ok := model.TimestampFormatPresets[format]; !ok {
-		allowed := slices.Collect(maps.Keys(model.TimestampFormatPresets))
-		return nil, errValidationInvalidValue("timestamp-format", f, allowed)
-	}
-
-	return &format, nil
+	return ptr.Of(model.TimestampFormat(f))
 }
 
 // NewTimestampFormatFromModel creates a DTO timestamp format from the model type.

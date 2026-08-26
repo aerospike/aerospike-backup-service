@@ -31,8 +31,7 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 		return nil
 	}
 
-	format, _ := b.TimestampFormat.ToModel()
-	return &model.BackupCommonConfig{TimestampFormat: format}
+	return &model.BackupCommonConfig{TimestampFormat: b.TimestampFormat.ToModel()}
 }
 
 func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
