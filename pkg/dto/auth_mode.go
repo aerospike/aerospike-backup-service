@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"fmt"
+	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -19,42 +19,23 @@ const (
 	AuthModePKI AuthMode = "PKI"
 )
 
+var authModes = []AuthMode{AuthModeInternal, AuthModeExternal, AuthModePKI}
+
 // Validate checks that the authentication mode is supported.
 func (m AuthMode) Validate() error {
-	_, err := m.ToModel()
-	return err
+	if m == "" || slices.Contains(authModes, m) {
+		return nil
+	}
+
+	return errValidationInvalidValue("auth-mode", m, authModes)
 }
 
 // ToModel converts the DTO authentication mode to the model type.
-func (m AuthMode) ToModel() (model.AuthMode, error) {
-	switch m {
-	case AuthModeInternal:
-		return model.AuthModeInternal, nil
-	case AuthModeExternal:
-		return model.AuthModeExternal, nil
-	case AuthModePKI:
-		return model.AuthModePKI, nil
-	default:
-		return "", fmt.Errorf(
-			"auth-mode %q incorrect, should be one of: %s,%s,%s",
-			m,
-			AuthModeInternal,
-			AuthModeExternal,
-			AuthModePKI,
-		)
-	}
+func (m AuthMode) ToModel() model.AuthMode {
+	return model.AuthMode(m)
 }
 
 // NewAuthModeFromModel creates a DTO authentication mode from the model type.
 func NewAuthModeFromModel(m model.AuthMode) AuthMode {
-	switch m {
-	case model.AuthModeInternal:
-		return AuthModeInternal
-	case model.AuthModeExternal:
-		return AuthModeExternal
-	case model.AuthModePKI:
-		return AuthModePKI
-	default:
-		return ""
-	}
+	return AuthMode(m)
 }

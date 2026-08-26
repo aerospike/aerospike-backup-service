@@ -77,19 +77,19 @@ type Credentials struct {
 	Password string
 	// The file path with the password string, will take precedence over the password field.
 	PasswordPath string
-	// The authentication mode (INTERNAL, EXTERNAL, PKI). Nil means unset.
-	AuthMode *AuthMode
+	// The authentication mode (INTERNAL, EXTERNAL, PKI).
+	AuthMode AuthMode
 	// The name of the configured Secret Agent to use for authentication.
 	SecretAgent *SecretAgent
 }
 
 // AuthModeOrDefault returns the configured auth mode, or the default when unset.
 func (c *Credentials) AuthModeOrDefault() AuthMode {
-	if c == nil || c.AuthMode == nil || *c.AuthMode == "" {
-		return *defaultConfig.credentials.AuthMode
+	if c == nil || c.AuthMode == "" {
+		return defaultConfig.credentials.AuthMode
 	}
 
-	return *c.AuthMode
+	return c.AuthMode
 }
 
 // Hash returns a unique identifier for the Credentials.

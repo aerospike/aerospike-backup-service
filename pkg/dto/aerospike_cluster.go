@@ -261,16 +261,11 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 		return nil, err
 	}
 
-	authMode, err := c.AuthMode.ToModel()
-	if err != nil {
-		return nil, err
-	}
-
 	return &model.Credentials{
 		User:         c.User,
 		Password:     string(c.Password),
 		PasswordPath: c.PasswordPath,
-		AuthMode:     authMode,
+		AuthMode:     c.AuthMode.ToModel(),
 		SecretAgent:  agent,
 	}, nil
 }
