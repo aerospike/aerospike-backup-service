@@ -9,8 +9,8 @@ import (
 type ConnectionType string
 
 const (
-	ConnectionTypeTCP  ConnectionType = "tcp"
-	ConnectionTypeUnix ConnectionType = "unix"
+	ConnectionTypeTCP  ConnectionType = "TCP"
+	ConnectionTypeUnix ConnectionType = "UNIX"
 )
 
 var connectionTypes = []ConnectionType{ConnectionTypeTCP, ConnectionTypeUnix}
