@@ -1695,20 +1695,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.AuthMode": {
-            "description": "AuthMode is the Aerospike cluster authentication mode.",
-            "type": "string",
-            "enum": [
-                "INTERNAL",
-                "EXTERNAL",
-                "PKI"
-            ],
-            "x-enum-varnames": [
-                "AuthModeInternal",
-                "AuthModeExternal",
-                "AuthModePKI"
-            ]
-        },
         "dto.AzureStorage": {
             "description": "AzureStorage represents the configuration for Azure Blob storage.",
             "type": "object",
@@ -1822,15 +1808,11 @@ const docTemplate = `{
             "properties": {
                 "timestamp-format": {
                     "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
+                    "type": "string",
                     "enum": [
                         "ISO",
                         "US",
                         "EU"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.TimestampFormat"
-                        }
                     ],
                     "x-nullable": true
                 }
@@ -2235,16 +2217,12 @@ const docTemplate = `{
             "properties": {
                 "auth-mode": {
                     "description": "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
+                    "type": "string",
                     "default": "INTERNAL",
                     "enum": [
                         "INTERNAL",
                         "EXTERNAL",
                         "PKI"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.AuthMode"
-                        }
                     ]
                 },
                 "password": {
@@ -3643,20 +3621,6 @@ const docTemplate = `{
             "x-enum-varnames": [
                 "TLSMinVersion12",
                 "TLSMinVersion13"
-            ]
-        },
-        "dto.TimestampFormat": {
-            "description": "TimestampFormat is the encoding for backup dates in file paths.",
-            "type": "string",
-            "enum": [
-                "ISO",
-                "US",
-                "EU"
-            ],
-            "x-enum-varnames": [
-                "TimestampFormatISO",
-                "TimestampFormatUS",
-                "TimestampFormatEU"
             ]
         },
         "dto.TimestampRestorePolicy": {

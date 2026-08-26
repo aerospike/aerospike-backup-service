@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
@@ -22,7 +23,7 @@ func (s *AuthSuite) TestInternalPlain() {
 			Credentials: &dto.Credentials{
 				User:     intUser,
 				Password: intPassword,
-				AuthMode: dto.AuthModeInternal,
+				AuthMode: string(model.AuthModeInternal),
 			},
 		})
 	})
@@ -37,7 +38,7 @@ func (s *AuthSuite) TestInternalPlain() {
 			Credentials: &dto.Credentials{
 				User:         intUser,
 				PasswordPath: passwordPath,
-				AuthMode:     dto.AuthModeInternal,
+				AuthMode:     string(model.AuthModeInternal),
 			},
 		})
 	})
@@ -53,7 +54,7 @@ func (s *AuthSuite) TestInternalPlain() {
 			Credentials: &dto.Credentials{
 				User:     intUser,
 				Password: decoder.Secret(secretRef()),
-				AuthMode: dto.AuthModeInternal,
+				AuthMode: string(model.AuthModeInternal),
 				SecretAgentConfig: dto.SecretAgentConfig{
 					SecretAgent: agent,
 				},
@@ -71,7 +72,7 @@ func (s *AuthSuite) TestInternalServerTLS() {
 		Credentials: &dto.Credentials{
 			User:     intUser,
 			Password: intPassword,
-			AuthMode: dto.AuthModeInternal,
+			AuthMode: string(model.AuthModeInternal),
 		},
 		// Server authenticates to us; we do not present a client certificate.
 		// Trust comes from ca-path. SNI is seed-nodes[].tls-name, not tls.name
@@ -90,7 +91,7 @@ func (s *AuthSuite) TestMutualTLS() {
 			Credentials: &dto.Credentials{
 				User:     intUser,
 				Password: intPassword,
-				AuthMode: dto.AuthModeInternal,
+				AuthMode: string(model.AuthModeInternal),
 			},
 			TLS: s.mutualTLS(s.certs.internalCert, s.certs.internalKeyEncrypted),
 		})
@@ -101,7 +102,7 @@ func (s *AuthSuite) TestMutualTLS() {
 			SeedNodes:            []dto.SeedNode{cluster.seed},
 			UseServicesAlternate: ptr.Of(true),
 			Credentials: &dto.Credentials{
-				AuthMode: dto.AuthModePKI,
+				AuthMode: string(model.AuthModePKI),
 			},
 			TLS: s.mutualTLS(s.certs.pkiCert, s.certs.pkiKeyEncrypted),
 		})

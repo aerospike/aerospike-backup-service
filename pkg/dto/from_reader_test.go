@@ -98,7 +98,7 @@ func TestBackupCommonConfig_fromModel(t *testing.T) {
 	var dtoConfig BackupCommonConfig
 	dtoConfig.fromModel(&model.BackupCommonConfig{TimestampFormat: &format})
 
-	assert.Equal(t, TimestampFormatISO, dtoConfig.TimestampFormat)
+	assert.Equal(t, "ISO", dtoConfig.TimestampFormat)
 
 	roundTrip := dtoConfig.ToModel()
 	require.NotNil(t, roundTrip.TimestampFormat)

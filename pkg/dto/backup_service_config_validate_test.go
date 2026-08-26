@@ -51,7 +51,7 @@ func TestBackupServiceConfig_Validate_InvalidTimestampFormat(t *testing.T) {
 func TestBackupServiceConfig_Validate_ValidTimestampFormats(t *testing.T) {
 	for _, v := range []string{"ISO", "US", "EU", "iso", "us", "eu"} {
 		cfg := &ServiceConfig{
-			Backup: &BackupCommonConfig{TimestampFormat: TimestampFormat(v)},
+			Backup: &BackupCommonConfig{TimestampFormat: v},
 		}
 		err := cfg.Validate(ValidationDefault)
 		require.NoError(t, err)
