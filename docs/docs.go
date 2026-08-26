@@ -1454,7 +1454,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated filter: running, success, failure, canceled (case-insensitive). Prefix ! excludes (e.g. !canceled)",
+                        "description": "Comma-separated filter: running, success, failure, canceled (case-insensitive). Aliases done→success, failed→failure. Prefix ! excludes (e.g. !canceled)",
                         "name": "status",
                         "in": "query"
                     }
