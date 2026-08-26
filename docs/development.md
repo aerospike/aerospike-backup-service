@@ -7,7 +7,7 @@ released build rather than building from source, see the [Run](../README.md#run)
 
 - Go 1.25 (see `go` directive in [`go.mod`](../go.mod) for the exact minimum version)
 - Docker, for building images and running the [Docker Compose](../build/docker-compose/README.md) dev stack
-- Node.js (`npx`), used by `make openapi` to convert the generated Swagger spec to OpenAPI 3
+- Node.js (`npx`), used by `make docs` to convert the generated Swagger spec to OpenAPI 3
 - [`golangci-lint`](https://golangci-lint.run/) and [`gci`](https://github.com/daixiang0/gci), used by `make lint`
   and `make format`
 
@@ -66,17 +66,16 @@ configured in [`.github/workflows/build.yml`](../.github/workflows/build.yml) (c
 
 ## Generated artifacts
 
-Three sets of files are generated from source and checked into the repository. Each has a `make <x>` target to
+Two sets of files are generated from source and checked into the repository. Each has a `make <x>` target to
 regenerate it and a `make <x>-check` target (used in CI) that fails if the committed output is stale:
 
 | What                                             | Regenerate         | Verify              |
 |---------------------------------------------------|---------------------|----------------------|
 | Mocks for `pkg/service` interfaces (`mockgen.go`)  | `make mocks-generate` | `make mocks-check`  |
-| OpenAPI spec (`docs/docs.go`, `docs/openapi.json`, `docs/config.schema.json`) | `make openapi` | `make openapi-check` |
-| README and split docs (DTO examples, default config, metrics table) | `make readme` | `make readme-check`  |
+| OpenAPI spec, config schema, README, examples, and DTO markdown | `make docs` | `make docs-check` |
 
-`make generated-check` runs all three and is what CI's "Generated files up to date" workflow calls. If you change a
-`pkg/dto` struct, an HTTP handler's Swagger annotations, or a Prometheus metric, run the corresponding generator and
+`make generated-check` runs both and is what CI's "Generated files up to date" workflow calls. If you change a
+`pkg/dto` struct, an HTTP handler's Swagger annotations, or a Prometheus metric, run `make docs` and
 commit its output in the same PR — don't hand-edit the generated sections.
 
 ## Before opening a pull request
@@ -85,7 +84,7 @@ commit its output in the same PR — don't hand-edit the generated sections.
 make pr
 ```
 
-This runs `go mod tidy`, `mocks-check`, `format`, `lint-fix`, `test`, `openapi`, and `readme` in sequence — the same
+This runs `go mod tidy`, `mocks-check`, `format`, `lint-fix`, `test`, and `docs` in sequence — the same
 checks (plus the race-enabled test run) that CI enforces via the `Build`, `golangci-lint`, and `Generated files up to
 date` workflows. Running it locally before pushing avoids a slow feedback loop through CI.
 

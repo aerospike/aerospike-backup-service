@@ -1,5 +1,5 @@
 # Job for generated-artifact checks (mocks, OpenAPI, readme, examples).
-# Fails if they are out of date. Run "make mocks-generate", "make openapi", and "make readme" locally and commit.
+# Fails if they are out of date. Run "make mocks-generate" and "make docs" locally and commit.
 name: Generated files up to date
 
 on:

@@ -13,7 +13,7 @@ import (
 
 const swagger2OpenAPIPackage = "swagger2openapi@7.0.8"
 
-func generate() error {
+func generateOpenAPI() error {
 	const docsDir = "docs"
 	swaggerPath := filepath.Join(docsDir, "swagger.json")
 	openAPIPath := filepath.Join(docsDir, "openapi.json")
@@ -32,8 +32,8 @@ func generate() error {
 		return err
 	}
 
-	_ = removeFile(filepath.Join(docsDir, "swagger.yaml"))
-	if err := removeFile(swaggerPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+	_ = os.Remove(filepath.Join(docsDir, "swagger.yaml"))
+	if err := os.Remove(swaggerPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("remove swagger.json: %w", err)
 	}
 
@@ -73,7 +73,7 @@ var runCommand = func(name string, args ...string) error {
 }
 
 func fixSwaggerFile(swaggerPath string) error {
-	swaggerData, err := readFile(swaggerPath)
+	swaggerData, err := os.ReadFile(swaggerPath)
 	if err != nil {
 		return fmt.Errorf("read swagger: %w", err)
 	}
@@ -92,7 +92,7 @@ func fixSwaggerFile(swaggerPath string) error {
 }
 
 func finalizeOpenAPI(openAPIPath, configSchemaPath string) error {
-	openAPIData, err := readFile(openAPIPath)
+	openAPIData, err := os.ReadFile(openAPIPath)
 	if err != nil {
 		return fmt.Errorf("read OpenAPI: %w", err)
 	}
@@ -196,5 +196,5 @@ func writeJSONObject(path string, doc *jsonObject, indent string) error {
 		return err
 	}
 
-	return writeFile(path, data)
+	return os.WriteFile(path, data, 0600)
 }
