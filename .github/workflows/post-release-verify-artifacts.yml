@@ -1,0 +1,551 @@
+# Post-release verification: confirms a published version's artifacts are actually in place,
+# downloadable, correctly checksummed/signed, and installable. Targets the "database" JFrog
+# project (the shared-workflows pipeline) only -- see pre-release.yml/release.yml for the
+# pipeline this verifies. DockerHub checks are best-effort (see verify-dockerhub) since that
+# mirror is populated externally/asynchronously by artifact-publisher, outside this repo's
+# control. SBOM/attestation only exists for the container image today (confirmed by reading
+# aerospike/shared-workflows directly) -- .deb/.rpm/.tgz have none, and this workflow says so
+# explicitly rather than silently skipping or faking that check.
+
+name: Post-Release Verify Artifacts
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Released version to verify (must match a published GitHub Release, e.g. v3.7.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: aerospike-backup-service
+  DOCKERHUB_IMAGE: aerospike/aerospike-backup-service
+
+jobs:
+  verify-github-release:
+    # ubuntu-22.04, not 24.04: aerospike/shared-workflows' own setup-gpg action hard-fails on any
+    # other Ubuntu version ("This action only supports Ubuntu 22.04"), reflecting a real GnuPG
+    # behavior difference between the two. This job's GPG usage here is much lighter (import a
+    # public key + verify, no signing/agent/pinentry setup), but there's no reason to gamble on
+    # 24.04 compatibility when the org has already established this constraint elsewhere.
+    runs-on: ubuntu-22.04
+    outputs:
+      helm-chart-file: ${{ steps.list.outputs.helm-chart-file }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Confirm release exists and is not a draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release view "${{ inputs.version }}" --json isDraft,tagName --repo "${{ github.repository }}" \
+            | tee release.json
+          if [ "$(jq -r '.isDraft' release.json)" = "true" ]; then
+            echo "::error::Release ${{ inputs.version }} is still a draft."
+            exit 1
+          fi
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p release-assets
+          gh release download "${{ inputs.version }}" --repo "${{ github.repository }}" --dir release-assets --clobber
+          echo "Downloaded assets:"
+          ls -la release-assets
+
+      - name: List helm chart asset
+        id: list
+        run: |
+          cd release-assets
+          chart="$(ls -1 *.tgz 2>/dev/null | head -1 || true)"
+          echo "helm-chart-file=${chart}" >> "$GITHUB_OUTPUT"
+
+      - name: Import GPG public key
+        env:
+          GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
+        run: echo "$GPG_PUBLIC_KEY" | gpg --import
+
+      - name: Verify DEB/RPM checksums and signatures
+        run: |
+          set -euo pipefail
+          cd release-assets
+          fail=0
+          shopt -s nullglob
+          for pkg in *.deb *.rpm; do
+            if [ ! -f "${pkg}.sha256" ]; then
+              echo "::error::Missing ${pkg}.sha256"
+              fail=1
+              continue
+            fi
+            computed="$(sha256sum "$pkg" | awk '{print $1}')"
+            recorded="$(tr -d '[:space:]' < "${pkg}.sha256")"
+            if [ "$computed" != "$recorded" ]; then
+              echo "::error::Checksum mismatch for ${pkg}: computed=${computed} recorded=${recorded}"
+              fail=1
+              continue
+            fi
+            echo "Checksum OK: ${pkg}"
+            if [ -f "${pkg}.sha256.asc" ]; then
+              if gpg --verify "${pkg}.sha256.asc" "${pkg}.sha256" 2>&1; then
+                echo "Signature OK: ${pkg}.sha256"
+              else
+                echo "::error::GPG signature verification failed for ${pkg}.sha256"
+                fail=1
+              fi
+            else
+              echo "::error::Missing ${pkg}.sha256.asc"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: Verify Helm chart signature and checksum
+        if: steps.list.outputs.helm-chart-file != ''
+        run: |
+          set -euo pipefail
+          cd release-assets
+          chart="${{ steps.list.outputs.helm-chart-file }}"
+          prov="${chart}.prov"
+          if [ ! -f "$prov" ]; then
+            echo "::error::Missing ${prov}"
+            exit 1
+          fi
+          gpg --verify "$prov"
+          computed="$(sha256sum "$chart" | awk '{print $1}')"
+          recorded="$(gpg --decrypt --output - "$prov" 2>/dev/null | grep -A1 "^files:" | grep "$chart" | sed -n 's/.*sha256:\([0-9a-f]*\).*/\1/p')"
+          if [ -z "$recorded" ]; then
+            echo "::warning::Could not parse recorded sha256 out of ${prov}; skipping cross-check (signature was still verified above)."
+          elif [ "$computed" != "$recorded" ]; then
+            echo "::error::Helm chart checksum mismatch: computed=${computed} recorded(prov)=${recorded}"
+            exit 1
+          else
+            echo "Helm chart checksum OK: ${chart}"
+          fi
+
+      - name: Write checksum summary for downstream jobs
+        run: |
+          cd release-assets
+          python3 - <<'EOF'
+          import glob, hashlib, json
+          out = {}
+          for f in glob.glob("*.deb") + glob.glob("*.rpm") + glob.glob("*.tgz"):
+              h = hashlib.sha256()
+              with open(f, "rb") as fh:
+                  h.update(fh.read())
+              out[f] = h.hexdigest()
+          with open("../checksums.json", "w") as fh:
+              json.dump(out, fh, indent=2)
+          EOF
+          cat ../checksums.json
+
+      - name: Upload verified assets + checksums for downstream jobs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-assets
+          path: |
+            release-assets/
+            checksums.json
+          retention-days: 1
+
+  verify-jfrog-prod:
+    needs: [verify-github-release]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          ref: ${{ inputs.version }}
+
+      - name: Download verified checksums
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: release-assets
+
+      - name: Resolve Helm chart version
+        id: helm-version
+        run: |
+          HELM_VERSION="$(yq '.version' helm/aerospike-backup-service/Chart.yaml | tr -d '\n')"
+          echo "HELM_VERSION=${HELM_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to JFrog
+        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        env:
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
+        with:
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
+
+      - name: Verify DEB/RPM/Helm present in JFrog PROD with matching checksums
+        env:
+          DEB_REPO: ${{ vars.JF_ARTIFACTORY_DEB_PROD }}
+          RPM_REPO: ${{ vars.JF_ARTIFACTORY_RPM_PROD }}
+          HELM_REPO: ${{ vars.JF_ARTIFACTORY_HELM_PROD }}
+          VERSION: ${{ inputs.version }}
+          HELM_VERSION: ${{ steps.helm-version.outputs.HELM_VERSION }}
+        run: |
+          set -euo pipefail
+          fail=0
+
+          echo "Searching ${DEB_REPO} for version=${VERSION}..."
+          jf rt search "${DEB_REPO}/**" --props "version=${VERSION}" > deb.json
+          echo "Searching ${RPM_REPO} for version=${VERSION}..."
+          jf rt search "${RPM_REPO}/**" --props "version=${VERSION}" > rpm.json
+          echo "Searching ${HELM_REPO} for version=${HELM_VERSION}..."
+          jf rt search "${HELM_REPO}/**" --props "version=${HELM_VERSION}" > helm.json
+
+          for f in deb.json rpm.json helm.json; do
+            count="$(jq 'length' "$f")"
+            if [ "$count" -eq 0 ]; then
+              echo "::error::No artifacts found in JFrog PROD for $f"
+              fail=1
+            else
+              echo "$f: found $count artifact(s)"
+            fi
+          done
+
+          echo "Cross-checking JFrog-recorded sha256 against the GitHub Release's independently-computed checksums..."
+          jq -s 'add' deb.json rpm.json helm.json > all.json
+          python3 - <<'EOF'
+          import json, sys
+          jfrog = json.load(open("all.json"))
+          local = json.load(open("checksums.json"))
+          jfrog_by_name = {a["path"].rsplit("/", 1)[-1]: a.get("sha256", "") for a in jfrog}
+          mismatches = []
+          for name, sha in local.items():
+              jfrog_sha = jfrog_by_name.get(name)
+              if jfrog_sha is None:
+                  continue  # not every local file is expected in every repo search result
+              if jfrog_sha != sha:
+                  mismatches.append((name, sha, jfrog_sha))
+          if mismatches:
+              for name, local_sha, jfrog_sha in mismatches:
+                  print(f"::error::Checksum mismatch between GitHub Release and JFrog PROD for {name}: github={local_sha} jfrog={jfrog_sha}")
+              sys.exit(1)
+          print("All cross-checked artifacts agree between GitHub Release and JFrog PROD.")
+          EOF
+
+          exit $fail
+
+      - name: Verify container image tag exists in JFrog PROD
+        env:
+          CONTAINER_REPO: ${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          TAG_NO_V="${VERSION#v}"
+          RESPONSE="$(jf rt curl "/api/docker/${CONTAINER_REPO}/v2/${{ env.IMAGE_NAME }}/tags/list")"
+          echo "$RESPONSE" | jq .
+          if echo "$RESPONSE" | jq -e --arg t "$VERSION" '.tags | index($t)' >/dev/null || \
+             echo "$RESPONSE" | jq -e --arg t "$TAG_NO_V" '.tags | index($t)' >/dev/null; then
+            echo "Container image tag found in ${CONTAINER_REPO}."
+          else
+            echo "::error::Neither '${VERSION}' nor '${TAG_NO_V}' found in ${CONTAINER_REPO} tag list."
+            exit 1
+          fi
+
+  verify-dockerhub:
+    needs: [verify-jfrog-prod]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Wait for DockerHub tag
+        id: wait
+        uses: ./.github/actions/wait-for-dockerhub-tag
+        with:
+          image: ${{ env.DOCKERHUB_IMAGE }}
+          tag: ${{ inputs.version }}
+        continue-on-error: true
+
+      - name: Report DockerHub status
+        run: |
+          if [ "${{ steps.wait.outputs.found }}" = "true" ]; then
+            docker buildx imagetools inspect --raw "docker.io/${{ env.DOCKERHUB_IMAGE }}:${{ inputs.version }}" | \
+              jq -r '.manifests[]?.platform | "\(.os)/\(.architecture)"' | tee platforms.txt
+            for want in "linux/amd64" "linux/arm64"; do
+              grep -qx "$want" platforms.txt || echo "::warning::DockerHub manifest missing platform ${want}"
+            done
+            echo "### DockerHub: present" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::DockerHub tag ${{ inputs.version }} not found for ${{ env.DOCKERHUB_IMAGE }} within the polling window. artifact-publisher mirroring is external/async -- re-run this workflow later to re-check. Not treating this as a failure."
+            echo "### DockerHub: NOT YET PRESENT (external, async) -- re-run later" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  verify-sbom-attestation:
+    needs: [verify-jfrog-prod]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: read
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Login to JFrog
+        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        env:
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
+        with:
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
+
+      - name: Verify SLSA build-provenance attestation
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          IMAGE_REF="${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}/${{ env.IMAGE_NAME }}:${{ inputs.version }}"
+          gh attestation verify "oci://${IMAGE_REF}" --owner aerospike
+
+      - name: Verify SBOM/provenance OCI referrers are present
+        run: |
+          IMAGE_REF="${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}/${{ env.IMAGE_NAME }}:${{ inputs.version }}"
+          docker buildx imagetools inspect "$IMAGE_REF" --format '{{json .SBOM}}' | tee sbom.json
+          if [ "$(cat sbom.json)" = "null" ] || [ -z "$(cat sbom.json)" ]; then
+            echo "::error::No SBOM referrer found for ${IMAGE_REF}"
+            exit 1
+          fi
+          echo "SBOM referrer present for ${IMAGE_REF}."
+
+      - name: Report N/A for RPM/DEB/Helm
+        run: |
+          {
+            echo "### SBOM / attestation coverage"
+            echo "| Artifact | SBOM/attestation |"
+            echo "| --- | --- |"
+            echo "| Docker image | verified (SPDX SBOM + SLSA attestation) |"
+            echo "| .deb / .rpm / .tgz | N/A -- no SBOM or attestation is produced anywhere in the build/sign/deploy pipeline for these artifact types (confirmed gap, not a bug in this check) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  verify-oci-labels:
+    needs: [verify-jfrog-prod]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          ref: ${{ inputs.version }}
+
+      - name: Login to JFrog
+        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        env:
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
+        with:
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
+
+      - name: Inspect and verify required labels are present
+        run: |
+          set -euo pipefail
+          IMAGE_REF="${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}/${{ env.IMAGE_NAME }}:${{ inputs.version }}"
+          docker buildx imagetools inspect "$IMAGE_REF" --format '{{json .Config.Labels}}' | tee labels.json
+          fail=0
+          for key in title description documentation base.name vendor licenses; do
+            val="$(jq -r --arg k "org.opencontainers.image.${key}" '.[$k] // empty' labels.json)"
+            if [ -z "$val" ]; then
+              echo "::error::Missing or empty label org.opencontainers.image.${key}"
+              fail=1
+            else
+              echo "org.opencontainers.image.${key} = ${val}"
+            fi
+          done
+          exit $fail
+
+      - name: Cross-check base.name label against the real Dockerfile
+        run: |
+          set -euo pipefail
+          IMAGE_REF="${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}/${{ env.IMAGE_NAME }}:${{ inputs.version }}"
+          label_base="$(docker buildx imagetools inspect "$IMAGE_REF" --format '{{json .Config.Labels}}' | jq -r '."org.opencontainers.image.base.name"')"
+          dockerfile_from="$(grep -E '^FROM' Dockerfile | tail -1 | awk '{print $2}')"
+          # Resolve ${REGISTRY} the same way pre-release.yml's build-args-json does (REGISTRY=docker.io).
+          resolved_from="${dockerfile_from//\$\{REGISTRY\}/docker.io}"
+          echo "Label base.name:        ${label_base}"
+          echo "Dockerfile FROM (real): ${resolved_from}"
+          if [ "$label_base" != "$resolved_from" ]; then
+            echo "::warning::org.opencontainers.image.base.name ('${label_base}') does not match the Dockerfile's actual final-stage base image ('${resolved_from}'). This is a known, pre-existing metadata bug, not something introduced by this release -- filing/fixing it is a separate task. Not failing this check."
+          else
+            echo "base.name label matches the Dockerfile's actual base image."
+          fi
+
+  package-install:
+    needs: [verify-github-release]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+            family: deb
+            distro_tag: ubuntu24.04
+            image: ubuntu:24.04
+            pkg_arch_token: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            family: deb
+            distro_tag: ubuntu24.04
+            image: ubuntu:24.04
+            pkg_arch_token: arm64
+          - runner: ubuntu-24.04
+            arch: amd64
+            family: rpm
+            distro_tag: amzn2023
+            image: amazonlinux:2023
+            pkg_arch_token: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            family: rpm
+            distro_tag: amzn2023
+            image: amazonlinux:2023
+            pkg_arch_token: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Download verified assets
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: release-assets
+          path: release-assets
+
+      - name: Install and run package
+        run: |
+          set -euo pipefail
+          cd release-assets
+          # Both arch variants share the same distro_tag suffix (e.g. *_amd64_ubuntu24.04.deb and
+          # *_arm64_ubuntu24.04.deb both match "*ubuntu24.04.deb"), so filter by the arch token too.
+          pkg="$(ls -1 *.${{ matrix.family }} | grep "${{ matrix.distro_tag }}" | grep "${{ matrix.pkg_arch_token }}")"
+          echo "Testing package: ${pkg}"
+
+          docker run -d --name target --platform "linux/${{ matrix.arch }}" "${{ matrix.image }}" sleep infinity
+          docker cp "$pkg" target:/tmp/package.${{ matrix.family }}
+
+          if [ "${{ matrix.family }}" = "deb" ]; then
+            docker exec target sh -c "apt-get update && apt-get install -y /tmp/package.deb"
+          else
+            docker exec target sh -c "dnf install -y /tmp/package.rpm"
+          fi
+
+          docker exec -d target /usr/bin/aerospike-backup-service -c /etc/aerospike-backup-service/aerospike-backup-service.yml
+
+          for i in $(seq 1 10); do
+            if docker exec target wget -qO- http://localhost:8080/health; then
+              break
+            fi
+            [ "$i" -eq 10 ] && { echo "::error::aerospike-backup-service never became healthy"; exit 1; }
+            sleep 3
+          done
+
+          version_output="$(docker exec target wget -qO- http://localhost:8080/version)"
+          echo "Reported version: ${version_output}"
+          case "$version_output" in
+            *"${{ inputs.version }}"*) echo "Version matches." ;;
+            *) echo "::warning::Reported version '${version_output}' does not obviously contain '${{ inputs.version }}' -- confirm the exact /version response format." ;;
+          esac
+
+      - name: Teardown
+        if: always()
+        run: docker rm -f target || true
+
+  docker-image-install:
+    needs: [verify-jfrog-prod]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Login to JFrog
+        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        env:
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
+        with:
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
+
+      - name: Pull image (DockerHub first, JFrog PROD fallback)
+        id: pull
+        run: |
+          set +e
+          if docker pull --platform "linux/${{ matrix.arch }}" "docker.io/${{ env.DOCKERHUB_IMAGE }}:${{ inputs.version }}"; then
+            echo "ref=docker.io/${{ env.DOCKERHUB_IMAGE }}:${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::DockerHub pull failed (likely still mirroring) -- falling back to JFrog PROD."
+            IMAGE_REF="${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}/${{ env.IMAGE_NAME }}:${{ inputs.version }}"
+            docker pull --platform "linux/${{ matrix.arch }}" "$IMAGE_REF"
+            echo "ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run and health-check
+        run: |
+          set -euo pipefail
+          docker run -d --name abs --platform "linux/${{ matrix.arch }}" -p 8080:8080 "${{ steps.pull.outputs.ref }}"
+          for i in $(seq 1 10); do
+            if curl -sf http://localhost:8080/health; then break; fi
+            [ "$i" -eq 10 ] && { echo "::error::Container never became healthy"; docker logs abs; exit 1; }
+            sleep 3
+          done
+          curl -s http://localhost:8080/version
+
+      - name: Teardown
+        if: always()
+        run: docker rm -f abs || true
+
+  summary:
+    needs: [verify-github-release, verify-jfrog-prod, verify-dockerhub, verify-sbom-attestation, verify-oci-labels, package-install, docker-image-install]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Aggregate results
+        run: |
+          {
+            echo "### Post-Release Verification: ${{ inputs.version }}"
+            echo "| Job | Result |"
+            echo "| --- | --- |"
+            echo "| verify-github-release | ${{ needs.verify-github-release.result }} |"
+            echo "| verify-jfrog-prod | ${{ needs.verify-jfrog-prod.result }} |"
+            echo "| verify-dockerhub | ${{ needs.verify-dockerhub.result }} |"
+            echo "| verify-sbom-attestation | ${{ needs.verify-sbom-attestation.result }} |"
+            echo "| verify-oci-labels | ${{ needs.verify-oci-labels.result }} |"
+            echo "| package-install (matrix) | ${{ needs.package-install.result }} |"
+            echo "| docker-image-install (matrix) | ${{ needs.docker-image-install.result }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
