@@ -1454,7 +1454,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated filter: running, success, failure, canceled (case-insensitive). Aliases done→success, failed→failure. Prefix ! excludes (e.g. !canceled)",
+                        "description": "Comma-separated filter: running, success, failure, canceled (case-insensitive). Prefix ! excludes (e.g. !canceled)",
                         "name": "status",
                         "in": "query"
                     }
@@ -1709,36 +1709,6 @@ const docTemplate = `{
                 "AuthModePKI"
             ]
         },
-        "dto.AzureDataClass": {
-            "description": "AzureDataClass is the Azure storage tier for object data.",
-            "type": "string",
-            "enum": [
-                "Hot",
-                "Cool",
-                "Cold",
-                "Archive"
-            ],
-            "x-enum-varnames": [
-                "AzureDataClassHot",
-                "AzureDataClassCool",
-                "AzureDataClassCold",
-                "AzureDataClassArchive"
-            ]
-        },
-        "dto.AzureMetadataClass": {
-            "description": "AzureMetadataClass is the Azure storage tier for metadata.",
-            "type": "string",
-            "enum": [
-                "Hot",
-                "Cool",
-                "Cold"
-            ],
-            "x-enum-varnames": [
-                "AzureMetadataClassHot",
-                "AzureMetadataClassCool",
-                "AzureMetadataClassCold"
-            ]
-        },
         "dto.AzureStorage": {
             "description": "AzureStorage represents the configuration for Azure Blob storage.",
             "type": "object",
@@ -1825,19 +1795,22 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage tier for object data.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.AzureDataClass"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "Hot",
+                        "Cool",
+                        "Cold",
+                        "Archive"
                     ],
                     "x-nullable": true
                 },
                 "metadata": {
                     "description": "MetadataClass specifies the storage tier for metadata.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.AzureMetadataClass"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "Hot",
+                        "Cool",
+                        "Cold"
                     ],
                     "x-nullable": true
                 }
@@ -2404,22 +2377,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.GcpDataClass": {
-            "description": "GcpDataClass is the GCP storage class for object data.",
-            "type": "string",
-            "enum": [
-                "STANDARD",
-                "NEARLINE",
-                "COLDLINE",
-                "ARCHIVE"
-            ],
-            "x-enum-varnames": [
-                "GcpDataClassStandard",
-                "GcpDataClassNearline",
-                "GcpDataClassColdline",
-                "GcpDataClassArchive"
-            ]
-        },
         "dto.GcpStorage": {
             "description": "GcpStorage represents the configuration for GCP storage.",
             "type": "object",
@@ -2489,10 +2446,12 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage class for object data.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.GcpDataClass"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "STANDARD",
+                        "NEARLINE",
+                        "COLDLINE",
+                        "ARCHIVE"
                     ],
                     "x-nullable": true
                 }
@@ -3228,34 +3187,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.S3DataClass": {
-            "description": "S3DataClass is the S3 storage class for object data.",
-            "type": "string",
-            "enum": [
-                "STANDARD",
-                "GLACIER",
-                "STANDARD_IA",
-                "ONEZONE_IA",
-                "INTELLIGENT_TIERING",
-                "DEEP_ARCHIVE",
-                "OUTPOSTS",
-                "GLACIER_IR",
-                "SNOW",
-                "EXPRESS_ONEZONE"
-            ],
-            "x-enum-varnames": [
-                "S3DataClassStandard",
-                "S3DataClassGlacier",
-                "S3DataClassStandardIa",
-                "S3DataClassOnezoneIa",
-                "S3DataClassIntelligentTiering",
-                "S3DataClassDeepArchive",
-                "S3DataClassOutposts",
-                "S3DataClassGlacierIr",
-                "S3DataClassSnow",
-                "S3DataClassExpressOnezone"
-            ]
-        },
         "dto.S3LogLevel": {
             "description": "S3LogLevel controls the verbosity of the AWS SDK logging.",
             "type": "string",
@@ -3276,26 +3207,6 @@ const docTemplate = `{
                 "S3LogLevelInfo",
                 "S3LogLevelDebug",
                 "S3LogLevelTrace"
-            ]
-        },
-        "dto.S3MetadataClass": {
-            "description": "S3MetadataClass is the S3 storage class for metadata.",
-            "type": "string",
-            "enum": [
-                "STANDARD",
-                "STANDARD_IA",
-                "INTELLIGENT_TIERING",
-                "EXPRESS_ONEZONE",
-                "ONEZONE_IA",
-                "OUTPOSTS"
-            ],
-            "x-enum-varnames": [
-                "S3MetadataClassStandard",
-                "S3MetadataClassStandardIa",
-                "S3MetadataClassIntelligentTiering",
-                "S3MetadataClassExpressOnezone",
-                "S3MetadataClassOnezoneIa",
-                "S3MetadataClassOutposts"
             ]
         },
         "dto.S3Storage": {
@@ -3396,19 +3307,31 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage class for object data.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.S3DataClass"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "STANDARD",
+                        "GLACIER",
+                        "STANDARD_IA",
+                        "ONEZONE_IA",
+                        "INTELLIGENT_TIERING",
+                        "DEEP_ARCHIVE",
+                        "OUTPOSTS",
+                        "GLACIER_IR",
+                        "SNOW",
+                        "EXPRESS_ONEZONE"
                     ],
                     "x-nullable": true
                 },
                 "metadata": {
                     "description": "MetadataClass specifies the storage class for metadata.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.S3MetadataClass"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "STANDARD",
+                        "STANDARD_IA",
+                        "INTELLIGENT_TIERING",
+                        "EXPRESS_ONEZONE",
+                        "ONEZONE_IA",
+                        "OUTPOSTS"
                     ],
                     "x-nullable": true
                 }

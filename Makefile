@@ -194,11 +194,6 @@ lint-fix:
 docs:
 	cd $(WORKSPACE) && $(GO) run ./build/docs
 
-# Backward-compatible aliases for the unified docs generator.
-.PHONY: openapi readme
-openapi: docs
-readme: docs
-
 DOCS_GENERATED := docs/docs.go docs/openapi.json docs/config.schema.json \
 	README.md docs/installation.md docs/configuration.md docs/api-examples.md \
 	docs/monitoring.md docs/migration.md docs/examples/ docs/readme/dto/ docs/metrics.json
@@ -214,10 +209,6 @@ docs-check: docs
 		echo "$$UNTRACKED"; \
 		exit 1; \
 	fi
-
-.PHONY: openapi-check readme-check
-openapi-check: docs-check
-readme-check: docs-check
 
 .PHONY: tidy
 tidy:

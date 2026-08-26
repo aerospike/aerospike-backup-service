@@ -12,4 +12,4 @@ sed -i "s/$PREV_VERSION/$NEXT_VERSION/" /local/internal/server/handlers/info.go
 sed -i "s|aerospike/aerospike-backup-service:$PREV_IMAGE_TAG|aerospike/aerospike-backup-service:$NEXT_IMAGE_TAG|" /local/build/docker-compose/docker-compose.yaml
 EOF
 
-bash -c "$WORKSPACE"/build/scripts/generate-openapi.sh
+make -C "$WORKSPACE" docs
