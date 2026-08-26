@@ -31,7 +31,7 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 		return err
 	}
 
-	if p.Mode == EncryptionModeNone {
+	if mode, _ := canonicalEnum(p.Mode, encryptionModes); mode == EncryptionModeNone {
 		if p.KeyFile != "" {
 			return errValidationMutuallyExclusive("key-file", "mode = NONE")
 		}

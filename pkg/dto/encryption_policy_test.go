@@ -11,6 +11,9 @@ func TestEncryptionPolicy_Validate_Success(t *testing.T) {
 		"NONE without keys": {
 			Mode: EncryptionModeNone,
 		},
+		"lowercase none without keys": {
+			Mode: "none",
+		},
 		"AES128 with key file": {
 			Mode:    EncryptionModeAES128,
 			KeyFile: "path",

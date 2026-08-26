@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"slices"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -30,7 +28,7 @@ var logLevels = []LogLevel{
 
 // Validate checks that the log level is supported.
 func (l LogLevel) Validate() error {
-	if l == "" || slices.Contains(logLevels, l) {
+	if _, ok := canonicalEnum(l, logLevels); ok {
 		return nil
 	}
 
@@ -39,7 +37,8 @@ func (l LogLevel) Validate() error {
 
 // ToModel converts the DTO log level to the model type.
 func (l LogLevel) ToModel() model.LogLevel {
-	return model.LogLevel(l)
+	c, _ := canonicalEnum(l, logLevels)
+	return model.LogLevel(c)
 }
 
 // NewLogLevelFromModel creates a DTO log level from the model type.

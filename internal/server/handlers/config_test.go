@@ -217,7 +217,7 @@ func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
 		Credentials: &model.Credentials{
 			User:     "testUser",
 			Password: realPassword,
-			AuthMode: ptr.Of(model.AuthModeInternal),
+			AuthMode: model.AuthModeInternal,
 		},
 	}
 	require.NoError(t, svc.config.AddCluster("test-cluster", clusterModel))

@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"slices"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -23,7 +21,7 @@ var authModes = []AuthMode{AuthModeInternal, AuthModeExternal, AuthModePKI}
 
 // Validate checks that the authentication mode is supported.
 func (m AuthMode) Validate() error {
-	if m == "" || slices.Contains(authModes, m) {
+	if _, ok := canonicalEnum(m, authModes); ok {
 		return nil
 	}
 
@@ -32,7 +30,8 @@ func (m AuthMode) Validate() error {
 
 // ToModel converts the DTO authentication mode to the model type.
 func (m AuthMode) ToModel() model.AuthMode {
-	return model.AuthMode(m)
+	c, _ := canonicalEnum(m, authModes)
+	return model.AuthMode(c)
 }
 
 // NewAuthModeFromModel creates a DTO authentication mode from the model type.

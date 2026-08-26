@@ -13,23 +13,22 @@ const (
 	ConnectionTypeUnix ConnectionType = "unix"
 )
 
+var connectionTypes = []ConnectionType{ConnectionTypeTCP, ConnectionTypeUnix}
+
 // Validate checks that the connection type is supported.
 func (c ConnectionType) Validate() error {
-	switch c {
-	case ConnectionTypeTCP, ConnectionTypeUnix:
-		return nil
-	default:
-		return errValidationInvalidValue(
-			"connection-type",
-			c,
-			[]ConnectionType{ConnectionTypeTCP, ConnectionTypeUnix},
-		)
+	canon, ok := canonicalEnum(c, connectionTypes)
+	if !ok || canon == "" {
+		return errValidationInvalidValue("connection-type", c, connectionTypes)
 	}
+
+	return nil
 }
 
 // ToModel converts the DTO connection type to the model type.
 func (c ConnectionType) ToModel() model.ConnectionType {
-	return model.ConnectionType(c)
+	canon, _ := canonicalEnum(c, connectionTypes)
+	return model.ConnectionType(canon)
 }
 
 // NewConnectionTypeFromModel creates a DTO connection type from the model type.

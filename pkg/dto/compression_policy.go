@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"slices"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -19,7 +17,7 @@ var compressionModes = []CompressionMode{CompressionModeNone, CompressionModeZST
 
 // Validate checks that the compression mode is supported.
 func (m CompressionMode) Validate() error {
-	if m == "" || slices.Contains(compressionModes, m) {
+	if _, ok := canonicalEnum(m, compressionModes); ok {
 		return nil
 	}
 
@@ -28,7 +26,8 @@ func (m CompressionMode) Validate() error {
 
 // ToModel converts the DTO compression mode to the model type.
 func (m CompressionMode) ToModel() model.CompressionMode {
-	return model.CompressionMode(m)
+	c, _ := canonicalEnum(m, compressionModes)
+	return model.CompressionMode(c)
 }
 
 // NewCompressionModeFromModel creates a DTO compression mode from the model type.

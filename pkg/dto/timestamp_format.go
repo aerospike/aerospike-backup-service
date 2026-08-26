@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"slices"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
@@ -24,7 +22,7 @@ var timestampFormats = []TimestampFormat{TimestampFormatISO, TimestampFormatUS, 
 
 // Validate checks that the timestamp format is supported.
 func (f TimestampFormat) Validate() error {
-	if f == "" || slices.Contains(timestampFormats, f) {
+	if _, ok := canonicalEnum(f, timestampFormats); ok {
 		return nil
 	}
 
@@ -33,11 +31,12 @@ func (f TimestampFormat) Validate() error {
 
 // ToModel converts the DTO timestamp format to the model type.
 func (f TimestampFormat) ToModel() *model.TimestampFormat {
-	if f == "" {
+	c, _ := canonicalEnum(f, timestampFormats)
+	if c == "" {
 		return nil
 	}
 
-	return ptr.Of(model.TimestampFormat(f))
+	return ptr.Of(model.TimestampFormat(c))
 }
 
 // NewTimestampFormatFromModel creates a DTO timestamp format from the model type.

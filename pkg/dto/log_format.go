@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"slices"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -19,7 +17,7 @@ var logFormats = []LogFormat{LogFormatPlain, LogFormatJSON}
 
 // Validate checks that the log format is supported.
 func (f LogFormat) Validate() error {
-	if f == "" || slices.Contains(logFormats, f) {
+	if _, ok := canonicalEnum(f, logFormats); ok {
 		return nil
 	}
 
@@ -28,7 +26,8 @@ func (f LogFormat) Validate() error {
 
 // ToModel converts the DTO log format to the model type.
 func (f LogFormat) ToModel() model.LogFormat {
-	return model.LogFormat(f)
+	c, _ := canonicalEnum(f, logFormats)
+	return model.LogFormat(c)
 }
 
 // NewLogFormatFromModel creates a DTO log format from the model type.

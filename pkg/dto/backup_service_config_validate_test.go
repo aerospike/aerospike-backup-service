@@ -55,3 +55,13 @@ func TestBackupServiceConfig_Validate_ValidTimestampFormats(t *testing.T) {
 		require.NoError(t, err)
 	}
 }
+
+func TestBackupServiceConfig_Validate_CaseInsensitiveEnums(t *testing.T) {
+	cfg := &ServiceConfig{
+		Logger: &LoggerConfig{Level: "info", Format: "json"},
+		Backup: &BackupCommonConfig{TimestampFormat: "iso"},
+	}
+
+	err := cfg.Validate()
+	require.NoError(t, err)
+}

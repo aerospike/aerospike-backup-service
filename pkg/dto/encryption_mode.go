@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"slices"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -20,7 +18,7 @@ var encryptionModes = []EncryptionMode{EncryptionModeNone, EncryptionModeAES128,
 
 // Validate checks that the encryption mode is supported.
 func (m EncryptionMode) Validate() error {
-	if m == "" || slices.Contains(encryptionModes, m) {
+	if _, ok := canonicalEnum(m, encryptionModes); ok {
 		return nil
 	}
 
@@ -29,7 +27,8 @@ func (m EncryptionMode) Validate() error {
 
 // ToModel converts the DTO encryption mode to the model type.
 func (m EncryptionMode) ToModel() model.EncryptionMode {
-	return model.EncryptionMode(m)
+	c, _ := canonicalEnum(m, encryptionModes)
+	return model.EncryptionMode(c)
 }
 
 // NewEncryptionModeFromModel creates a DTO encryption mode from the model type.
