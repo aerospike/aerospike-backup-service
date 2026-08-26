@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -152,14 +153,40 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 	return azureStorage
 }
 
+// Azure Storage Tiers
+// See https://learn.microsoft.com/en-us/azure/storage/blobs/access-tiers-overview
+const (
+	AzureTierHot     = "Hot"
+	AzureTierCool    = "Cool"
+	AzureTierCold    = "Cold"
+	AzureTierArchive = "Archive"
+)
+
+// metadata should only be stored in tiers with fast retrieval time.
+var azureMetadataTiers = []string{
+	"",
+	AzureTierHot,
+	AzureTierCool,
+	AzureTierCold,
+}
+
+// data can be stored in any tier.
+var azureDataTiers = []string{
+	"",
+	AzureTierHot,
+	AzureTierCool,
+	AzureTierCold,
+	AzureTierArchive,
+}
+
 // AzureStorageClass represents the configuration for Azure Blob Storage access tiers.
 // @Description AzureStorageClass represents the configuration for Azure Blob Storage access tiers.
 type AzureStorageClass struct {
 	// DataClass specifies the storage tier for object data.
-	DataClass AzureDataClass `json:"data" yaml:"data" extensions:"x-nullable"`
+	DataClass string `json:"data" yaml:"data" extensions:"x-nullable" enums:"Hot,Cool,Cold,Archive"`
 
 	// MetadataClass specifies the storage tier for metadata.
-	MetadataClass AzureMetadataClass `json:"metadata" yaml:"metadata" extensions:"x-nullable"`
+	MetadataClass string `json:"metadata" yaml:"metadata" extensions:"x-nullable" enums:"Hot,Cool,Cold"`
 }
 
 func (s *AzureStorageClass) Validate() error {
@@ -167,18 +194,26 @@ func (s *AzureStorageClass) Validate() error {
 		return nil
 	}
 
-	if err := s.DataClass.Validate(); err != nil {
-		return err
+	if !slices.Contains(azureDataTiers, s.DataClass) {
+		return errValidationInvalidValue("data", s.DataClass, azureDataTiers)
 	}
-	if err := s.MetadataClass.Validate(); err != nil {
-		return err
+
+	if !slices.Contains(azureMetadataTiers, s.MetadataClass) {
+		return errValidationInvalidValue("metadata", s.MetadataClass, azureMetadataTiers)
 	}
 
 	return nil
 }
 
 func (s *AzureStorageClass) ToModel() *model.StorageClass {
-	return storageClassFromAzure(s)
+	if s == nil {
+		return nil
+	}
+
+	return &model.StorageClass{
+		DataClass:     s.DataClass,
+		MetadataClass: s.MetadataClass,
+	}
 }
 
 func newAzureStorageClassFromModel(s *model.StorageClass) *AzureStorageClass {
@@ -187,7 +222,7 @@ func newAzureStorageClassFromModel(s *model.StorageClass) *AzureStorageClass {
 	}
 
 	return &AzureStorageClass{
-		DataClass:     newAzureDataClassFromString(s.DataClass),
-		MetadataClass: newAzureMetadataClassFromString(s.MetadataClass),
+		DataClass:     s.DataClass,
+		MetadataClass: s.MetadataClass,
 	}
 }

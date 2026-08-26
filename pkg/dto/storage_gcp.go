@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -93,11 +94,29 @@ func newGcpStorageFromModel(s *model.GcpStorage, config *model.BackupConfig) *Gc
 	}
 }
 
+// GCP Storage Classes
+// See https://cloud.google.com/storage/docs/storage-classes
+const (
+	GcpClassStandard = "STANDARD"
+	GcpClassNearline = "NEARLINE"
+	GcpClassColdline = "COLDLINE"
+	GcpClassArchive  = "ARCHIVE"
+)
+
+// data can be stored in any class.
+var gcpDataClasses = []string{
+	"",
+	GcpClassStandard,
+	GcpClassNearline,
+	GcpClassColdline,
+	GcpClassArchive,
+}
+
 // GcpStorageClass represents the configuration for GCP Storage Class.
 // @Description GcpStorageClass represents the configuration for GCP Storage Class.
 type GcpStorageClass struct {
 	// DataClass specifies the storage class for object data.
-	DataClass GcpDataClass `json:"data" yaml:"data" extensions:"x-nullable"`
+	DataClass string `json:"data" yaml:"data" extensions:"x-nullable" enums:"STANDARD,NEARLINE,COLDLINE,ARCHIVE"`
 }
 
 func (s *GcpStorageClass) Validate() error {
@@ -105,11 +124,22 @@ func (s *GcpStorageClass) Validate() error {
 		return nil
 	}
 
-	return s.DataClass.Validate()
+	if !slices.Contains(gcpDataClasses, s.DataClass) {
+		return errValidationInvalidValue("data", s.DataClass, gcpDataClasses)
+	}
+
+	return nil
 }
 
 func (s *GcpStorageClass) ToModel() *model.StorageClass {
-	return storageClassFromGcp(s)
+	if s == nil {
+		return nil
+	}
+
+	return &model.StorageClass{
+		DataClass:     s.DataClass,
+		MetadataClass: "", // GCP metadata always uses STANDARD class because it's the only one without retrieval fees.
+	}
 }
 
 func newGcpStorageClassFromModel(s *model.StorageClass) *GcpStorageClass {
@@ -118,6 +148,6 @@ func newGcpStorageClassFromModel(s *model.StorageClass) *GcpStorageClass {
 	}
 
 	return &GcpStorageClass{
-		DataClass: newGcpDataClassFromString(s.DataClass),
+		DataClass: s.DataClass,
 	}
 }
