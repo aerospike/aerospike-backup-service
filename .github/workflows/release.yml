@@ -1,4 +1,4 @@
-name: Publish Aerospike Backup Service Release
+name: Publish Aerospike Backup Service Release (Shared Workflows)
 
 on:
   workflow_dispatch:
@@ -19,6 +19,10 @@ permissions:
 # source of truth. Docker Hub mirroring is handled entirely externally by artifact-publisher
 # (https://aerospike.atlassian.net/wiki/spaces/DevOps/pages/4648566799), triggered by JFrog's own
 # promotion webhook -- no job for it lives in this workflow.
+#
+# All `vars.JF_*` used below are dedicated to this pipeline (targets the "database" JFrog
+# project) and are independent of the unprefixed `vars.*` used by release-legacy.yml
+# (targets "ecosystem") — never share values between the two.
 
 jobs:
   verify-prod-promotion:
@@ -38,15 +42,15 @@ jobs:
       - name: Login to JFrog
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
-          JF_URL: ${{ vars.ARTIFACTORY_URL }}
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
         with:
-          oidc-provider-name: gh-aerospike
-          oidc-audience: aerospike
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
       - name: Check release bundle is promoted to PROD
         env:
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
         run: |
           set -euxo pipefail
           if [ -z "${BUNDLE_VERSION}" ]; then
@@ -75,7 +79,7 @@ jobs:
             echo "| --- | --- |"
             echo "| Bundle name | \`${BUNDLE_NAME}\` |"
             echo "| Bundle version | \`${BUNDLE_VERSION}\` |"
-            echo "| JFrog project | \`${{ vars.JFROG_CLI_BUILD_PROJECT }}\` |"
+            echo "| JFrog project | \`${{ vars.JF_PROJECT }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   publish-github-release:
@@ -122,18 +126,18 @@ jobs:
       - name: Login to JFrog
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
-          JF_URL: ${{ vars.ARTIFACTORY_URL }}
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
         with:
-          oidc-provider-name: gh-aerospike
-          oidc-audience: aerospike
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
       - name: Download signed artifacts from JFrog PROD
         env:
           HELM_VERSION: ${{ steps.helm-version.outputs.HELM_VERSION }}
-          DEB_REPO: ${{ vars.ARTIFACTORY_DEB_PROD }}
-          RPM_REPO: ${{ vars.ARTIFACTORY_RPM_PROD }}
-          HELM_REPO: ${{ vars.ARTIFACTORY_HELM_PROD }}
+          DEB_REPO: ${{ vars.JF_ARTIFACTORY_DEB_PROD }}
+          RPM_REPO: ${{ vars.JF_ARTIFACTORY_RPM_PROD }}
+          HELM_REPO: ${{ vars.JF_ARTIFACTORY_HELM_PROD }}
         run: |
           set -euxo pipefail
           # jf rt search's --bundle filter turned out not to reliably list release-bundle

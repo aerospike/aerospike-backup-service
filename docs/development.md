@@ -90,6 +90,16 @@ GitHub Actions side is split into two workflows: [`pre-release.yml`](../.github/
 owned, builds and promotes up to `TEST`) and [`release.yml`](../.github/workflows/release.yml) (run once the release
 is fully approved, publishes it).
 
+> **Transitional note (this branch only):** `pre-release-legacy.yml`/`release-legacy.yml` also exist on
+> `switch-to-sharedworkflows`. They're the previous, proven JFrog-direct pipeline (targets the
+> `ecosystem` JFrog project instead of `database`), kept only as a safety-net/comparison path while the
+> shared-workflows pipeline described here is being trusted. Unlike the workflows above, they trigger
+> manually only (`workflow_dispatch`) rather than on every tag push/release, so they don't
+> double-build/double-publish by default — dispatch them explicitly (e.g.
+> `gh workflow run "Create Aerospike Backup Service Pre Release (Legacy)" -f tag=v3.x.y`) when you want
+> a comparison run. They aren't meant to be merged — delete them outright once this branch merges into
+> `main`.
+
 1. Open a pull request from `dev` into `main` and merge it.
 2. Tag the release commit on `main`: `git tag v3.x.y && git push origin v3.x.y`. This triggers `pre-release.yml`,
    which:

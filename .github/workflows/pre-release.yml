@@ -1,4 +1,4 @@
-name: Create Aerospike Backup Service Pre Release
+name: Create Aerospike Backup Service Pre Release (Shared Workflows)
 on:
   push:
     tags:
@@ -10,6 +10,10 @@ permissions:
 # NOTE: every aerospike/shared-workflows `uses: ...@<sha>` below is pinned to v4.0.0.
 # The `env` context isn't available in `with:` for reusable-workflow-call jobs, so gh-workflows-ref
 # can't be centralized here — bump the sha and the "v4.0.0" gh-workflows-ref value together by hand.
+#
+# All `vars.JF_*` used below are dedicated to this pipeline (targets the "database" JFrog
+# project) and are independent of the unprefixed `vars.*` used by pre-release-legacy.yml
+# (targets "ecosystem") — never share values between the two.
 
 jobs:
   prepare:
@@ -131,7 +135,7 @@ jobs:
     uses: aerospike/shared-workflows/.github/workflows/reusable_execute-build.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
       gh-workflows-ref: v4.0.0
-      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+      jf-project: ${{ vars.JF_PROJECT }}
       jf-build-name: aerospike-backup-service-packages
       jf-build-id: ${{ needs.prepare.outputs.packages_build_id }}
       # reusable_execute-build.yaml checks the source repo out under gh-source-path
@@ -224,7 +228,7 @@ jobs:
     uses: aerospike/shared-workflows/.github/workflows/reusable_deploy-artifacts.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
       gh-workflows-ref: v4.0.0
-      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+      jf-project: ${{ vars.JF_PROJECT }}
       jf-build-name: aerospike-backup-service-packages
       jf-build-id: ${{ needs.prepare.outputs.packages_build_id }}
       version: ${{ needs.prepare.outputs.package_version }}
@@ -242,7 +246,7 @@ jobs:
     uses: aerospike/shared-workflows/.github/workflows/reusable_execute-build.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
       gh-workflows-ref: v4.0.0
-      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+      jf-project: ${{ vars.JF_PROJECT }}
       jf-build-name: aerospike-backup-service-helm
       jf-build-id: ${{ needs.prepare.outputs.helm_build_id }}
       setup-helm: true
@@ -293,7 +297,7 @@ jobs:
     uses: aerospike/shared-workflows/.github/workflows/reusable_deploy-artifacts.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
       gh-workflows-ref: v4.0.0
-      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+      jf-project: ${{ vars.JF_PROJECT }}
       jf-build-name: aerospike-backup-service-helm
       jf-build-id: ${{ needs.prepare.outputs.helm_build_id }}
       version: ${{ needs.prepare.outputs.helm_version }}
@@ -315,10 +319,10 @@ jobs:
       attestations: write
     uses: aerospike/shared-workflows/.github/workflows/reusable_docker-build-deploy.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
-      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
-      jf-registry: ${{ vars.ARTIFACTORY_REGISTRY_URL }}/${{ vars.ARTIFACTORY_CONTAINER_DEV }}
+      jf-project: ${{ vars.JF_PROJECT }}
+      jf-registry: ${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_DEV }}
       # repo-scope defaults to "-docker-dev-local", but our actual repo naming convention
-      # (ARTIFACTORY_CONTAINER_DEV) uses "-container-dev-local". Without this override, the
+      # (JF_ARTIFACTORY_CONTAINER_DEV) uses "-container-dev-local". Without this override, the
       # image gets pushed to .../container-dev-local correctly, but the build-info creation
       # step searches for it under .../docker-dev-local and fails with "Could not find docker
       # image in Artifactory" since that's a different (likely nonexistent) repo.
@@ -355,7 +359,7 @@ jobs:
     uses: aerospike/shared-workflows/.github/workflows/reusable_create-release-bundle.yaml@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
     with:
       gh-workflows-ref: v4.0.0
-      jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+      jf-project: ${{ vars.JF_PROJECT }}
       jf-bundle-name: aerospike-backup-service
       version: ${{ needs.prepare.outputs.package_version }}
       # single unbroken line: a YAML folded/quoted scalar wrapped across lines here would inject
@@ -396,11 +400,11 @@ jobs:
       - name: Login to JFrog
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
-          JF_URL: ${{ vars.ARTIFACTORY_URL }}
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
         with:
-          oidc-provider-name: gh-aerospike
-          oidc-audience: aerospike
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
       - name: Promote release bundle to TEST
         uses: aerospike/shared-workflows/.github/actions/promote-release-bundle@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
@@ -408,7 +412,7 @@ jobs:
           bundle-name: ${{ env.BUNDLE_NAME }}
           version: ${{ env.BUNDLE_VERSION }}
           environment: TEST
-          jf-project: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+          jf-project: ${{ vars.JF_PROJECT }}
 
       - name: Summarize promotion
         if: always()
@@ -419,7 +423,7 @@ jobs:
             echo "| --- | --- |"
             echo "| Bundle name | \`${BUNDLE_NAME}\` |"
             echo "| Bundle version | \`${BUNDLE_VERSION}\` |"
-            echo "| JFrog project | \`${{ vars.JFROG_CLI_BUILD_PROJECT }}\` |"
+            echo "| JFrog project | \`${{ vars.JF_PROJECT }}\` |"
             echo ""
             echo "Next: QE validates the artifacts from JFrog TEST, then promotes to STAGE via the JFrog UI."
           } >> "$GITHUB_STEP_SUMMARY"
