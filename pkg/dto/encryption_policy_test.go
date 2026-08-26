@@ -46,6 +46,10 @@ func TestEncryptionPolicy_Validate_Invalid(t *testing.T) {
 			policy:    EncryptionPolicy{},
 			wantIsErr: errEmpty,
 		},
+		"whitespace mode": {
+			policy:    EncryptionPolicy{Mode: "  "},
+			wantIsErr: errEmpty,
+		},
 		"invalid mode value": {
 			policy: EncryptionPolicy{
 				Mode: "FOO",

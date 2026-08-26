@@ -24,14 +24,16 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
-	if p.Mode == "" {
+
+	mode, ok := canonicalEnum(p.Mode, encryptionModes)
+	if mode == "" {
 		return errValidationEmptyField("mode")
 	}
-	if err := p.Mode.Validate(); err != nil {
-		return err
+	if !ok {
+		return errValidationInvalidValue("mode", p.Mode, encryptionModes)
 	}
 
-	if mode, _ := canonicalEnum(p.Mode, encryptionModes); mode == EncryptionModeNone {
+	if mode == EncryptionModeNone {
 		if p.KeyFile != "" {
 			return errValidationMutuallyExclusive("key-file", "mode = NONE")
 		}
