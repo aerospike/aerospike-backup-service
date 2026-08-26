@@ -19,7 +19,7 @@ This release redacts secret fields in configuration API responses and changes ho
 
 #### Improvements
 
-- **HTTPS listener configuration** — Optional [`service.https`](readme/dto/dto.httpsserverconfig.md) defines a sibling
+- **HTTPS listener configuration** — Optional [`service.https`](readme/dto/dto.serverconfighttps.md) defines a sibling
   HTTPS listener (default port 8443) with TLS fields (`cert-file`, `key-file`, `min-version`, `cipher-suites`,
   `client-ca-file`, `client-auth`). Omitting `https` keeps today's plaintext HTTP-only behavior. Both
   [`service.http`](readme/dto/dto.serverconfighttp.md) and `service.https` use `disabled` (default `false`). At least
