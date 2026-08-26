@@ -1,0 +1,367 @@
+# Post-release Helm smoke test: unlike helm-chart-tests.yml (PR-triggered, builds the chart/image
+# fresh, only does a trivial wget reachability check), this pulls the *released* chart+image from
+# JFrog PROD/GitHub Release, deploys a real MinIO server into the kind cluster (helm-chart-tests.yml
+# only creates a credentials Secret, no actual MinIO), and drives a real backup->restore->record-count
+# check through the REST API via kubectl port-forward. The chart's own trivial test-connection.yaml
+# Helm test hook is left untouched; this workflow adds real validation on top, after ct install
+# succeeds.
+#
+# NOTE: this is the most novel part of the post-release verification suite (new MinIO manifest, new
+# port-forward-based REST trigger against a kind cluster) -- expect to iterate on exact service names
+# and values-file keys during the first real dry run (see docs/development.md verification notes).
+
+name: Post-Release Verify Helm
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Released version to smoke-test (must have a published Helm chart + Docker image, e.g. v3.7.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  NAMESPACE: aerospike
+  BUCKET: abs-testing-bucket
+  RECORD_COUNT: 1000
+  ASDB_NAMESPACE: test
+  ROUTINE: minioKeepFilesRoutine
+
+jobs:
+  helm-backup-restore-smoke-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.version }}
+
+      - name: Install yq
+        uses: dcarbone/install-yq-action@4075b4dca348d74bd83f2bf82d30f25d7c54539b #v1.3.1
+        with:
+          version: "v4.45.4"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: latest
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.x'
+          check-latest: true
+
+      - name: Set up Chart Testing
+        uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
+
+      - name: Create Kind Cluster
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
+
+      - name: Download released chart and pull released image
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release download "${{ inputs.version }}" --repo "${{ github.repository }}" --pattern '*.tgz' --dir chart-download --clobber
+          CHART_FILE="$(ls -1 chart-download/*.tgz | head -1)"
+          echo "CHART_FILE=${CHART_FILE}" >> "$GITHUB_ENV"
+
+          IMAGE_REF="${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}/aerospike-backup-service:${{ inputs.version }}"
+          docker pull "$IMAGE_REF"
+          kind load docker-image "$IMAGE_REF" --name chart-testing
+          echo "IMAGE_REF=${IMAGE_REF}" >> "$GITHUB_ENV"
+
+      # Unchanged from helm-chart-tests.yml: OLM + AKO + AerospikeCluster CR setup is not
+      # release-specific, so it's copied verbatim.
+      - name: Setup Prerequisites (OLM, AKO, AerospikeCluster)
+        run: |
+          echo "Deploying AKO"
+
+          curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.35.0/install.sh | bash -s v0.35.0
+
+          kubectl create -f https://operatorhub.io/install/aerospike-kubernetes-operator.yaml
+          AKO_CSV_NAME="aerospike-kubernetes-operator.$(curl -s https://api.github.com/repos/aerospike/aerospike-kubernetes-operator/releases/latest | jq -r '.tag_name')"
+
+          echo "Waiting for AKO"
+          kubectl wait --for=create "csv/$AKO_CSV_NAME" --namespace operators --timeout=300s
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "csv/$AKO_CSV_NAME" --namespace operators --timeout=300s
+          kubectl wait --for=condition=Ready pod --all --namespace operators --timeout=300s
+
+          kubectl create namespace ${{ env.NAMESPACE }}
+          kubectl --namespace ${{ env.NAMESPACE }} create serviceaccount aerospike-operator-controller-manager
+          kubectl create clusterrolebinding aerospike-cluster --clusterrole=aerospike-cluster --serviceaccount=${{ env.NAMESPACE }}:aerospike-operator-controller-manager
+
+          kubectl --namespace ${{ env.NAMESPACE }} create secret generic aerospike-secret --from-literal=features.conf="$(echo "${{ secrets.FEATURES_CONF }}")"
+          kubectl --namespace ${{ env.NAMESPACE }} create secret generic minio-credentials --from-file=credentials=<(cat <<EOF
+          [minio]
+          aws_access_key_id=minioadmin
+          aws_secret_access_key=minioadmin
+          EOF
+          )
+
+          ASDB_VERSION="$(curl -s "https://hub.docker.com/v2/repositories/aerospike/aerospike-server/tags?page_size=1024" | jq -r '[.results[].name | select(test("^\\d+\\.\\d+$"))] | sort_by(.) | reverse | .[1]').0"
+
+          cat <<EOF | kubectl apply -f -
+          apiVersion: asdb.aerospike.com/v1
+          kind: AerospikeCluster
+          metadata:
+            name: aerocluster
+            namespace: ${{ env.NAMESPACE }}
+          spec:
+            aerospikeConfig:
+              namespaces:
+                - name: ${{ env.ASDB_NAMESPACE }}
+                  replication-factor: 2
+                  storage-engine:
+                    data-size: 1073741824
+                    type: memory
+              network:
+                fabric:
+                  port: 3001
+                heartbeat:
+                  port: 3002
+                service:
+                  port: 3000
+              service:
+                feature-key-file: /etc/aerospike/secret/features.conf
+            image: "aerospike/aerospike-server-enterprise:${ASDB_VERSION}"
+            podSpec:
+              multiPodPerHost: true
+            size: 2
+            storage:
+              volumes:
+                - aerospike:
+                    path: /etc/aerospike/secret
+                  name: aerospike-config-secret
+                  source:
+                    secret:
+                      secretName: aerospike-secret
+            validationPolicy:
+              skipWorkDirValidate: true
+              skipXdrDlogFileValidate: true
+          EOF
+
+          kubectl wait --for=condition=Ready pod -l app=aerospike-cluster --namespace ${{ env.NAMESPACE }} --timeout=300s || \
+            kubectl wait --for=condition=Ready pod/aerocluster-0-0 pod/aerocluster-0-1 --namespace ${{ env.NAMESPACE }} --timeout=300s
+
+      # New: helm-chart-tests.yml only creates a minio-credentials Secret, no actual MinIO server.
+      - name: Deploy real MinIO
+        run: |
+          cat <<EOF | kubectl apply -f -
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: minio
+            namespace: ${{ env.NAMESPACE }}
+          spec:
+            replicas: 1
+            selector:
+              matchLabels: { app: minio }
+            template:
+              metadata:
+                labels: { app: minio }
+              spec:
+                containers:
+                  - name: minio
+                    image: minio/minio:latest
+                    args: ["server", "/data"]
+                    env:
+                      - name: MINIO_ROOT_USER
+                        value: minioadmin
+                      - name: MINIO_ROOT_PASSWORD
+                        value: minioadmin
+                    ports:
+                      - containerPort: 9000
+                    readinessProbe:
+                      httpGet: { path: /minio/health/ready, port: 9000 }
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: minio
+            namespace: ${{ env.NAMESPACE }}
+          spec:
+            selector: { app: minio }
+            ports:
+              - port: 9000
+                targetPort: 9000
+          EOF
+          kubectl wait --for=condition=Available deployment/minio --namespace ${{ env.NAMESPACE }} --timeout=180s
+
+          kubectl run mc --image=minio/mc -n ${{ env.NAMESPACE }} --restart=Never --command -- sleep 3600
+          kubectl wait --for=condition=Ready pod/mc -n ${{ env.NAMESPACE }} --timeout=120s
+          kubectl exec -n ${{ env.NAMESPACE }} mc -- sh -c \
+            "mc alias set myminio http://minio:9000 minioadmin minioadmin && mc mb myminio/${{ env.BUCKET }} && mc anonymous set public myminio/${{ env.BUCKET }}"
+
+      - name: Install released chart via chart-testing
+        env:
+          GITHUB_BRANCH: ${{ inputs.version }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          yq eval '. as $item ireduce ({}; .backupServiceConfig = $item)' .github/config/test-chart-abs-conf.yaml > abs-values.yaml
+          cat <<EOF > ct-values.yaml
+          volumes:
+            - name: minio-credentials
+              secret:
+                secretName: minio-credentials
+                optional: false
+          extraSecretVolumeMounts:
+            - name: minio-credentials
+              mountPath: /home/absuser/.aws/credentials
+              readOnly: true
+          image:
+            repository: ${{ env.IMAGE_REF }}
+            pullPolicy: IfNotPresent
+            tag: "${{ inputs.version }}"
+          configmap:
+            create: false
+          EOF
+
+          ct install \
+            --namespace ${{ env.NAMESPACE }} \
+            --charts "${{ env.CHART_FILE }}" \
+            --target-branch "$GITHUB_DEFAULT_BRANCH" \
+            --debug --helm-extra-args="--debug" \
+            --helm-extra-set-args="--values=ct-values.yaml --values=abs-values.yaml"
+
+      - name: Discover ABS service name and pod, wait for readiness
+        id: discover
+        run: |
+          set -euo pipefail
+          SVC="$(kubectl get svc -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=aerospike-backup-service -o jsonpath='{.items[0].metadata.name}')"
+          echo "svc=${SVC}" >> "$GITHUB_OUTPUT"
+          kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=aerospike-backup-service -n ${{ env.NAMESPACE }} --timeout=180s
+
+      - name: Seed records into the AKO-managed Aerospike cluster
+        id: seed
+        uses: ./.github/actions/seed-and-verify-aerospike
+        with:
+          mode: seed
+          namespace: ${{ env.ASDB_NAMESPACE }}
+          record-count: ${{ env.RECORD_COUNT }}
+          kubectl-namespace: ${{ env.NAMESPACE }}
+          aerospike-k8s-host: aerocluster-0-0:3000
+
+      - name: Confirm seeded count before proceeding
+        id: seed-count
+        uses: ./.github/actions/seed-and-verify-aerospike
+        with:
+          mode: count
+          namespace: ${{ env.ASDB_NAMESPACE }}
+          kubectl-namespace: ${{ env.NAMESPACE }}
+          aerospike-k8s-host: aerocluster-0-0:3000
+
+      - name: Fail fast if seeding didn't work
+        run: |
+          if [ "${{ steps.seed-count.outputs.record_count }}" != "${{ env.RECORD_COUNT }}" ]; then
+            echo "::error::Expected ${{ env.RECORD_COUNT }} records after seeding, got ${{ steps.seed-count.outputs.record_count }}"
+            exit 1
+          fi
+
+      - name: Port-forward ABS service
+        run: |
+          kubectl port-forward -n ${{ env.NAMESPACE }} svc/${{ steps.discover.outputs.svc }} 8080:8080 &
+          echo $! > port-forward.pid
+          for i in $(seq 1 10); do
+            curl -sf http://127.0.0.1:8080/health && break
+            [ "$i" -eq 10 ] && { echo "::error::port-forward to ABS never became reachable"; exit 1; }
+            sleep 3
+          done
+
+      - name: Trigger full backup
+        run: curl -sf -X POST "http://127.0.0.1:8080/v1/backups/full/${{ env.ROUTINE }}"
+
+      - name: Poll for backup completion
+        id: backup
+        uses: ./.github/actions/poll-abs-job
+        with:
+          base-url: http://127.0.0.1:8080
+          kind: backup
+          routine: ${{ env.ROUTINE }}
+
+      - name: Verify backup files landed in MinIO
+        run: |
+          kubectl exec -n ${{ env.NAMESPACE }} mc -- sh -c "mc ls --recursive myminio/${{ env.BUCKET }}" | tee minio-ls.txt
+          [ -s minio-ls.txt ] || { echo "::error::No objects found in MinIO after backup"; exit 1; }
+
+      - name: Truncate namespace before restore
+        run: |
+          kubectl exec -n ${{ env.NAMESPACE }} aerocluster-0-0 -- \
+            asinfo -v "truncate-namespace:namespace=${{ env.ASDB_NAMESPACE }}"
+
+      - name: Confirm namespace is empty before restore
+        id: pre-restore-count
+        uses: ./.github/actions/seed-and-verify-aerospike
+        with:
+          mode: count
+          namespace: ${{ env.ASDB_NAMESPACE }}
+          kubectl-namespace: ${{ env.NAMESPACE }}
+          aerospike-k8s-host: aerocluster-0-0:3000
+
+      - name: Fail if truncate didn't work
+        run: |
+          if [ "${{ steps.pre-restore-count.outputs.record_count }}" != "0" ]; then
+            echo "::error::Namespace still has ${{ steps.pre-restore-count.outputs.record_count }} records after truncate"
+            exit 1
+          fi
+
+      - name: Trigger restore
+        id: restore
+        run: |
+          set -euo pipefail
+          RESPONSE="$(curl -sf -X POST "http://127.0.0.1:8080/v1/restore/full" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "destination-name": "asdb-cluster",
+              "source-name": "minio",
+              "backup-data-path": "${{ steps.backup.outputs.backup-data-path }}",
+              "policy": {}
+            }')"
+          echo "$RESPONSE"
+          JOB_ID="$(echo "$RESPONSE" | jq -r '.["job-id"] // .jobId // .id')"
+          echo "job-id=${JOB_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Poll for restore completion
+        uses: ./.github/actions/poll-abs-job
+        with:
+          base-url: http://127.0.0.1:8080
+          kind: restore
+          job-id: ${{ steps.restore.outputs.job-id }}
+
+      - name: Verify record count matches the original seed
+        id: final-count
+        uses: ./.github/actions/seed-and-verify-aerospike
+        with:
+          mode: count
+          namespace: ${{ env.ASDB_NAMESPACE }}
+          kubectl-namespace: ${{ env.NAMESPACE }}
+          aerospike-k8s-host: aerocluster-0-0:3000
+
+      - name: Assert final count
+        run: |
+          if [ "${{ steps.final-count.outputs.record_count }}" != "${{ env.RECORD_COUNT }}" ]; then
+            echo "::error::Expected ${{ env.RECORD_COUNT }} records after restore, got ${{ steps.final-count.outputs.record_count }}"
+            exit 1
+          fi
+          echo "Helm backup/restore smoke test passed."
+
+      - name: Dump ABS pod logs on failure
+        if: failure()
+        run: kubectl logs -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=aerospike-backup-service --tail=200 || true
+
+      - name: Teardown
+        if: always()
+        run: |
+          [ -f port-forward.pid ] && kill "$(cat port-forward.pid)" 2>/dev/null || true
+          kind delete cluster --name chart-testing || true
