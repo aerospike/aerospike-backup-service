@@ -6,7 +6,6 @@ import (
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // S3Storage represents the configuration for S3 storage.
@@ -106,18 +105,13 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 		}
 	}
 
-	logLevel, err := s.S3LogLevel.ToModel()
-	if err != nil {
-		return nil, err
-	}
-
 	return &model.S3Storage{
 		Path:               s.Path,
 		Bucket:             s.Bucket,
 		S3Region:           s.S3Region,
 		S3Profile:          s.S3Profile,
 		S3EndpointOverride: s.S3EndpointOverride,
-		S3LogLevel:         ptr.ValueOrZero(logLevel),
+		S3LogLevel:         s.S3LogLevel.ToModel(),
 		MinPartSize:        s.MinPartSize,
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 		Auth:               auth,
@@ -132,7 +126,7 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 		S3Region:           s.S3Region,
 		S3Profile:          s.S3Profile,
 		S3EndpointOverride: s.S3EndpointOverride,
-		S3LogLevel:         NewS3LogLevelFromModel(&s.S3LogLevel),
+		S3LogLevel:         NewS3LogLevelFromModel(s.S3LogLevel),
 		MinPartSize:        s.MinPartSize,
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 		StorageClass:       newS3StorageClassFromModel(s.StorageClass),

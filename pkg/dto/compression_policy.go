@@ -104,12 +104,12 @@ func (p *RestoreCompressionPolicy) Validate() error {
 	return p.Mode.Validate()
 }
 
-func (p *RestoreCompressionPolicy) ToModel() (*model.CompressionPolicy, error) {
+func (p *RestoreCompressionPolicy) ToModel() *model.CompressionPolicy {
 	if p == nil {
-		return nil, nil
+		return nil
 	}
 
 	return &model.CompressionPolicy{
 		Mode: p.Mode.ToModel(),
-	}, nil
+	}
 }
