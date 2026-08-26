@@ -1,6 +1,8 @@
 package dto
 
 import (
+	"slices"
+
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -13,30 +15,20 @@ const (
 	CompressionModeZSTD CompressionMode = "ZSTD"
 )
 
-func (m CompressionMode) normalized() CompressionMode {
-	if m == "" {
-		return m
-	}
-	return CompressionMode(foldUpper(string(m)))
-}
+var compressionModes = []CompressionMode{CompressionModeNone, CompressionModeZSTD}
 
 // Validate checks that the compression mode is supported.
 func (m CompressionMode) Validate() error {
-	switch m.normalized() {
-	case CompressionModeNone, CompressionModeZSTD:
+	if m == "" || slices.Contains(compressionModes, m) {
 		return nil
-	default:
-		return errValidationInvalidValue(
-			"compression mode",
-			m,
-			[]CompressionMode{CompressionModeNone, CompressionModeZSTD},
-		)
 	}
+
+	return errValidationInvalidValue("compression mode", m, compressionModes)
 }
 
 // ToModel converts the DTO compression mode to the model type.
 func (m CompressionMode) ToModel() model.CompressionMode {
-	return model.CompressionMode(m.normalized())
+	return model.CompressionMode(m)
 }
 
 // NewCompressionModeFromModel creates a DTO compression mode from the model type.
@@ -70,15 +62,15 @@ func (p *CompressionPolicy) Validate() error {
 	return nil
 }
 
-func (p *CompressionPolicy) ToModel() *model.CompressionPolicy {
+func (p *CompressionPolicy) ToModel() (*model.CompressionPolicy, error) {
 	if p == nil {
-		return nil
+		return nil, nil
 	}
 
 	return &model.CompressionPolicy{
 		Mode:  p.Mode.ToModel(),
 		Level: p.Level,
-	}
+	}, nil
 }
 
 func newCompressionPolicyFromModel(m *model.CompressionPolicy) *CompressionPolicy {
@@ -112,12 +104,12 @@ func (p *RestoreCompressionPolicy) Validate() error {
 	return p.Mode.Validate()
 }
 
-func (p *RestoreCompressionPolicy) ToModel() *model.CompressionPolicy {
+func (p *RestoreCompressionPolicy) ToModel() (*model.CompressionPolicy, error) {
 	if p == nil {
-		return nil
+		return nil, nil
 	}
 
 	return &model.CompressionPolicy{
 		Mode: p.Mode.ToModel(),
-	}
+	}, nil
 }

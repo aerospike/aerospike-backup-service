@@ -23,13 +23,13 @@ func TestCompressionModeValidate(t *testing.T) {
 			mode: CompressionModeZSTD,
 		},
 		{
-			name:    "empty",
-			mode:    "",
-			wantErr: true,
+			name: "empty",
+			mode: "",
 		},
 		{
-			name: "lowercase",
-			mode: "zstd",
+			name:    "lowercase",
+			mode:    "zstd",
+			wantErr: true,
 		},
 		{
 			name:    "unsupported",
@@ -53,5 +53,4 @@ func TestCompressionModeValidate(t *testing.T) {
 func TestCompressionModeModelConversion(t *testing.T) {
 	assert.Equal(t, model.CompressionModeZSTD, CompressionModeZSTD.ToModel())
 	assert.Equal(t, CompressionModeZSTD, NewCompressionModeFromModel(model.CompressionModeZSTD))
-	assert.Equal(t, model.CompressionModeZSTD, CompressionMode("zstd").ToModel())
 }
