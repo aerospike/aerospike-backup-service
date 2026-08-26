@@ -33,7 +33,7 @@ func TestBackupServiceConfig_Validate_PropagatesLoggerError(t *testing.T) {
 
 	err := cfg.Validate()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "invalid logger level")
+	require.Contains(t, err.Error(), "is not a valid level")
 }
 
 func TestBackupServiceConfig_Validate_InvalidTimestampFormat(t *testing.T) {

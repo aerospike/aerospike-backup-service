@@ -2,7 +2,6 @@ package model
 
 import (
 	"log/slog"
-	"strings"
 
 	"github.com/reugn/go-quartz/logger"
 )
@@ -27,16 +26,16 @@ func (l LogLevel) String() string {
 // SlogLevel returns the slog level for the configured log level.
 // Panics on an invalid value.
 func (l LogLevel) SlogLevel() slog.Level {
-	switch strings.ToUpper(l.String()) {
-	case string(LogLevelTrace):
+	switch l {
+	case LogLevelTrace:
 		return slog.Level(logger.LevelTrace)
-	case string(LogLevelDebug):
+	case LogLevelDebug:
 		return slog.LevelDebug
-	case string(LogLevelInfo):
+	case LogLevelInfo:
 		return slog.LevelInfo
-	case string(LogLevelWarn), string(LogLevelWarning):
+	case LogLevelWarn, LogLevelWarning:
 		return slog.LevelWarn
-	case string(LogLevelError):
+	case LogLevelError:
 		return slog.LevelError
 	default:
 		panic("invalid log level: " + l.String())
@@ -50,8 +49,3 @@ const (
 	LogFormatPlain LogFormat = "PLAIN"
 	LogFormatJSON  LogFormat = "JSON"
 )
-
-// String returns the wire value of the log format.
-func (f LogFormat) String() string {
-	return string(f)
-}

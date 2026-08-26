@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"fmt"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -20,7 +19,7 @@ const (
 	LogLevelError   LogLevel = "ERROR"
 )
 
-var validLogLevels = []LogLevel{
+var logLevels = []LogLevel{
 	LogLevelTrace,
 	LogLevelDebug,
 	LogLevelInfo,
@@ -31,13 +30,11 @@ var validLogLevels = []LogLevel{
 
 // Validate checks that the log level is supported.
 func (l LogLevel) Validate() error {
-	if l == "" {
+	if l == "" || slices.Contains(logLevels, l) {
 		return nil
 	}
-	if !slices.Contains(validLogLevels, l) {
-		return fmt.Errorf("invalid logger level: %s", l)
-	}
-	return nil
+
+	return errValidationInvalidValue("level", l, logLevels)
 }
 
 // ToModel converts the DTO log level to the model type.
