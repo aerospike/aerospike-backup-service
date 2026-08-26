@@ -44,7 +44,7 @@ type ServerConfigHTTPS struct {
 	// Path to trusted client CA certificates in PEM format.
 	ClientCAFile string `yaml:"client-ca-file,omitempty" json:"client-ca-file,omitempty" example:"/path/to/client-ca.pem" extensions:"x-nullable"`
 	// Client certificate authentication mode.
-	ClientAuth TLSClientAuth `yaml:"client-auth,omitempty" json:"client-auth,omitempty" default:"none" enums:"none,request,require-and-verify"`
+	ClientAuth TLSClientAuth `yaml:"client-auth,omitempty" json:"client-auth,omitempty" default:"none"`
 }
 
 // Validate validates the HTTPS server configuration.
@@ -131,11 +131,11 @@ func (s *ServerConfigHTTPS) validateTLSFields() error {
 		}
 	}
 
-	clientAuth, err := s.ClientAuth.ToModel()
-	if err != nil {
+	if err := s.ClientAuth.Validate(); err != nil {
 		return err
 	}
-	if clientAuth != model.TLSClientAuthNone && s.ClientCAFile == "" {
+	clientAuth := s.ClientAuth.ToModel()
+	if clientAuth != "" && clientAuth != model.TLSClientAuthNone && s.ClientCAFile == "" {
 		return errValidationRequires("client-auth", clientCAField)
 	}
 
@@ -148,7 +148,7 @@ func (s *ServerConfigHTTPS) ToModel() *model.ServerConfigHTTPS {
 		return nil
 	}
 
-	clientAuth, _ := s.ClientAuth.ToModel()
+	clientAuth := s.ClientAuth.ToModel()
 	minVersion, _ := s.MinVersion.ToModel()
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.

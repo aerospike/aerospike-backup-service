@@ -117,7 +117,7 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 				KeyFile:    certs.keyFile,
 				ClientAuth: "verify-if-given",
 			},
-			wantErr: "client authentication",
+			wantErr: "client-auth",
 		},
 		{
 			name: "secret agent password reference with agent",

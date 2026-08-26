@@ -81,6 +81,7 @@ func TestEnumToModelCanonicalizes(t *testing.T) {
 	assert.Equal(t, model.LogFormatJSON, LogFormat("json").ToModel())
 	assert.Equal(t, model.ConnectionTypeTCP, ConnectionType("TCP").ToModel())
 	assert.Equal(t, model.S3LogLevel("FATAL"), S3LogLevel("fatal").ToModel())
+	assert.Equal(t, model.TLSClientAuthRequireAndVerify, TLSClientAuth("Require-And-Verify").ToModel())
 	require.NotNil(t, TimestampFormat("eu").ToModel())
 	assert.Equal(t, model.TimestampFormatEU, *TimestampFormat("eu").ToModel())
 }
