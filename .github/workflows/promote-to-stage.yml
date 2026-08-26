@@ -1,0 +1,63 @@
+name: Promote Release Bundle to STAGE
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release bundle version currently in TEST to promote to STAGE (e.g. v3.7.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Promotes an already-created release bundle (in the "database" JFrog project) from TEST to STAGE.
+# Intended to be run by QE once they've validated the artifacts in JFrog TEST. This is an alternative
+# to doing the same promotion via the JFrog UI -- either works. No GitHub-side approval gate is
+# enforced here -- anyone who can trigger workflow_dispatch on this repo can run this, so treat it
+# the same as JFrog UI access: only run it once TEST validation has actually passed.
+
+jobs:
+  promote-to-stage:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      BUNDLE_NAME: ${{ github.event.repository.name }}
+      BUNDLE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Login to JFrog
+        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        env:
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
+        with:
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
+
+      - name: Promote release bundle to STAGE
+        uses: aerospike/shared-workflows/.github/actions/promote-release-bundle@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+        with:
+          bundle-name: ${{ env.BUNDLE_NAME }}
+          version: ${{ env.BUNDLE_VERSION }}
+          environment: STAGE
+          jf-project: ${{ vars.JF_PROJECT }}
+
+      - name: Summarize promotion
+        if: always()
+        run: |
+          {
+            echo "### Promoted to JFrog STAGE"
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Bundle name | \`${BUNDLE_NAME}\` |"
+            echo "| Bundle version | \`${BUNDLE_VERSION}\` |"
+            echo "| JFrog project | \`${{ vars.JF_PROJECT }}\` |"
+            echo ""
+            echo "Next: a PM/EM promotes to PROD (via promote-to-prod.yml or the JFrog UI)."
+          } >> "$GITHUB_STEP_SUMMARY"

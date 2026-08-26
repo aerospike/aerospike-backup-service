@@ -107,9 +107,13 @@ is fully approved, publishes it).
    2. Signs the packages and Helm chart, and deploys everything to JFrog `DEV`.
    3. Creates a unified release bundle and automatically promotes it from `DEV` to `TEST`.
 3. QE/developers pull the artifacts from JFrog `TEST` and validate them. Once they pass, the release bundle is
-   promoted from `TEST` to `STAGE` (manually, via the JFrog UI — not automated).
-4. A PM or EM reviews the release and promotes the release bundle from `STAGE` to `PROD` via the JFrog UI. This is
-   the gate that makes a release public; automation intentionally stops before this step.
+   promoted from `TEST` to `STAGE`, either by dispatching
+   [`promote-to-stage.yml`](../.github/workflows/promote-to-stage.yml) or manually via the
+   [JFrog UI](https://aerospike.jfrog.io/ui/artifactory/release-lifecycle/aerospike-backup-service?repoKey=database-release-bundles-v2).
+4. A PM or EM reviews the release and promotes the release bundle from `STAGE` to `PROD`, either by dispatching
+   [`promote-to-prod.yml`](../.github/workflows/promote-to-prod.yml) or manually via the same
+   [JFrog UI](https://aerospike.jfrog.io/ui/artifactory/release-lifecycle/aerospike-backup-service?repoKey=database-release-bundles-v2)
+   link. This is the gate that makes a release public; automation intentionally stops before this step.
 5. Once the bundle is on `PROD`:
    - Docker Hub mirroring happens automatically and externally (JFrog's existing promotion webhook feeds
      `artifact-publisher`) — nothing to trigger here.
