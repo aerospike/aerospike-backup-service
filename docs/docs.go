@@ -2415,7 +2415,7 @@ const docTemplate = `{
                 "running",
                 "success",
                 "failure",
-                "canceled"
+                "canceledARRRRR"
             ],
             "x-enum-varnames": [
                 "RestoreRunning",

@@ -28,6 +28,7 @@ import (
 type Components struct {
 	Scheduler        quartz.Scheduler
 	ServerHTTP       server.HTTP
+	ServerHTTPS      server.HTTP
 	MetricsCollector *prometheus.MetricsCollector
 }
 
@@ -108,7 +109,7 @@ func InitComponents(
 	metricsCollector := prometheus.NewMetricsCollector(registry.GetRunningState, restoreJobs.StatusCounts)
 
 	configRetriever := service.NewConfigRetriever(catalog, pathService, operations)
-	srv := handlers.NewService(
+	httpService := handlers.NewService(
 		ctx,
 		config,
 		configApplier,
@@ -120,11 +121,22 @@ func InitComponents(
 		configurationManager,
 		nsValidator,
 	)
-	ServerHTTP := server.NewServerHTTP(ctx, config.ServiceConfig.GetServerHTTPOrDefault(), srv)
+	var serverHTTP server.HTTP
+	if config.ServiceConfig.ServerHTTP == nil || !config.ServiceConfig.ServerHTTP.GetDisabledOrDefault() {
+		serverHTTP = server.NewServerHTTP(ctx, config.ServiceConfig.GetServerHTTPOrDefault(), httpService)
+	}
+	var serverHTTPS server.HTTP
+	if config.ServiceConfig.ServerHTTPS != nil && !config.ServiceConfig.ServerHTTPS.GetDisabledOrDefault() {
+		serverHTTPS, err = server.NewServerHTTPS(ctx, config.ServiceConfig.ServerHTTPS, httpService)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HTTPS server: %w", err)
+		}
+	}
 
 	return &Components{
 		Scheduler:        scheduler,
-		ServerHTTP:       ServerHTTP,
+		ServerHTTP:       serverHTTP,
+		ServerHTTPS:      serverHTTPS,
 		MetricsCollector: metricsCollector,
 	}, nil
 }
