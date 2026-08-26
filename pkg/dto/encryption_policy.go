@@ -31,8 +31,7 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 		return err
 	}
 
-	mode := p.Mode.normalized()
-	if mode == EncryptionModeNone {
+	if p.Mode == EncryptionModeNone {
 		if p.KeyFile != "" {
 			return errValidationMutuallyExclusive("key-file", "mode = NONE")
 		}
@@ -68,9 +67,9 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 	return nil
 }
 
-func (p *EncryptionPolicy) ToModel() *model.EncryptionPolicy {
+func (p *EncryptionPolicy) ToModel() (*model.EncryptionPolicy, error) {
 	if p == nil {
-		return nil
+		return nil, nil
 	}
 
 	return &model.EncryptionPolicy{
@@ -78,7 +77,7 @@ func (p *EncryptionPolicy) ToModel() *model.EncryptionPolicy {
 		KeyFile:   p.KeyFile,
 		KeyEnv:    p.KeyEnv,
 		KeySecret: string(p.KeySecret),
-	}
+	}, nil
 }
 
 func newEncryptionPolicyFromModel(m *model.EncryptionPolicy) *EncryptionPolicy {
