@@ -1,5 +1,7 @@
 package model
 
+import as "github.com/aerospike/aerospike-client-go/v8"
+
 // AuthMode identifies the Aerospike cluster authentication mode.
 type AuthMode string
 
@@ -12,7 +14,15 @@ const (
 	AuthModePKI AuthMode = "PKI"
 )
 
-// String returns the wire value of the authentication mode.
-func (m AuthMode) String() string {
-	return string(m)
+func (m AuthMode) ResolveAuth() as.AuthMode {
+	switch m {
+	case AuthModeInternal:
+		return as.AuthModeInternal
+	case AuthModeExternal:
+		return as.AuthModeExternal
+	case AuthModePKI:
+		return as.AuthModePKI
+	default:
+		return as.AuthModeInternal
+	}
 }

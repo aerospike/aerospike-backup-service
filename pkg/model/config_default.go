@@ -69,7 +69,7 @@ var defaultConfig = struct {
 		BatchSize:       ptr.Of(128),
 	},
 	credentials: Credentials{
-		AuthMode: ptr.Of(AuthModeInternal),
+		AuthMode: AuthModeInternal,
 	},
 }
 
