@@ -188,8 +188,8 @@ lint:
 lint-fix:
 	golangci-lint run --fix ./...
 
-# openapi: runs swag over handlers/DTOs, then swagger2openapi, producing docs/docs.go,
-#   docs/openapi.json, and docs/config.schema.json. Requires Docker and Node (npx).
+# openapi: runs build/openapi (swag library + swagger2openapi + post-processing),
+#   producing docs/docs.go, docs/openapi.json, and docs/config.schema.json. Requires Go and Node.
 .PHONY: openapi
 openapi:
 	$(WORKSPACE)/build/scripts/generate-openapi.sh

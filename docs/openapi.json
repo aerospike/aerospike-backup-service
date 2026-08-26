@@ -2376,7 +2376,7 @@
                         ]
                     },
                     "node-list": {
-                        "description": "NodeList specifies which Aerospike nodes to include in the backup.\nOnly the listed nodes will be backed up.\nEach node can be specified as one of the following:\n- \"\u003cIP address\u003e:\u003cport\u003e\"\n- \"\u003chostname\u003e:\u003cport\u003e\"\n- \"\u003cnode ID\u003e\"\nTo obtain node identifiers, run: `asinfo -v \"service:\"`.\nIf using IP addresses or hostnames, ensure they match the values returned by the `asinfo` command.\nMutually exclusive with partition-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.\nParallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.",
+                        "description": "NodeList specifies which Aerospike nodes to include in the backup.\nOnly the listed nodes will be backed up.\nEach node can be specified as one of the following:\n- \"<IP address>:<port>\"\n- \"<hostname>:<port>\"\n- \"<node ID>\"\nTo obtain node identifiers, run: `asinfo -v \"service:\"`.\nIf using IP addresses or hostnames, ensure they match the values returned by the `asinfo` command.\nMutually exclusive with partition-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.\nParallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.",
                         "type": "array",
                         "items": {
                             "type": "string"
@@ -2384,7 +2384,7 @@
                         "nullable": true
                     },
                     "partition-list": {
-                        "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"\u003cstart\u003e-\u003ccount\u003e\" (e.g., \"100-50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nMutually exclusive with node-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.",
+                        "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"<start>-<count>\" (e.g., \"100-50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nMutually exclusive with node-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.",
                         "type": "string",
                         "nullable": true
                     },
