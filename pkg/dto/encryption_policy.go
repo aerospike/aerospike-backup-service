@@ -67,9 +67,9 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 	return nil
 }
 
-func (p *EncryptionPolicy) ToModel() (*model.EncryptionPolicy, error) {
+func (p *EncryptionPolicy) ToModel() *model.EncryptionPolicy {
 	if p == nil {
-		return nil, nil
+		return nil
 	}
 
 	return &model.EncryptionPolicy{
@@ -77,7 +77,7 @@ func (p *EncryptionPolicy) ToModel() (*model.EncryptionPolicy, error) {
 		KeyFile:   p.KeyFile,
 		KeyEnv:    p.KeyEnv,
 		KeySecret: string(p.KeySecret),
-	}, nil
+	}
 }
 
 func newEncryptionPolicyFromModel(m *model.EncryptionPolicy) *EncryptionPolicy {

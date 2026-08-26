@@ -62,15 +62,15 @@ func (p *CompressionPolicy) Validate() error {
 	return nil
 }
 
-func (p *CompressionPolicy) ToModel() (*model.CompressionPolicy, error) {
+func (p *CompressionPolicy) ToModel() *model.CompressionPolicy {
 	if p == nil {
-		return nil, nil
+		return nil
 	}
 
 	return &model.CompressionPolicy{
 		Mode:  p.Mode.ToModel(),
 		Level: p.Level,
-	}, nil
+	}
 }
 
 func newCompressionPolicyFromModel(m *model.CompressionPolicy) *CompressionPolicy {
