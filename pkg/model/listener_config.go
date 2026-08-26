@@ -2,12 +2,12 @@ package model
 
 import "time"
 
-// HTTPServerConfig represents the service's HTTP server configuration.
-type HTTPServerConfig struct {
+// ListenerConfig represents the listen settings shared by the HTTP and HTTPS servers.
+type ListenerConfig struct {
+	// Disabled controls whether the listener is disabled.
+	Disabled bool
 	// The address to listen on.
 	Address string
-	// The port to listen on.
-	Port *Port
 	// HTTP rate limiter configuration.
 	Rate *RateLimiterConfig
 	// ContextPath customizes path for the API endpoints.
@@ -22,76 +22,75 @@ type HTTPServerConfig struct {
 	IdleTimeout *time.Duration
 }
 
+// GetDisabledOrDefault returns whether the listener is disabled.
+func (l *ListenerConfig) GetDisabledOrDefault() bool {
+	if l == nil {
+		return defaultListener.Disabled
+	}
+	return l.Disabled
+}
+
 // GetAddressOrDefault returns the value of the Address property.
 // If the property is not set, it returns the default value.
-func (s *HTTPServerConfig) GetAddressOrDefault() string {
-	if s.Address != "" {
-		return s.Address
+func (l *ListenerConfig) GetAddressOrDefault() string {
+	if l == nil || l.Address == "" {
+		return defaultListener.Address
 	}
-	return defaultConfig.http.Address
-}
-
-// GetPortOrDefault returns the value of the Port property.
-// If the property is not set, it returns the default value.
-func (s *HTTPServerConfig) GetPortOrDefault() Port {
-	if s.Port != nil {
-		return *s.Port
-	}
-	return *defaultConfig.http.Port
-}
-
-// GetTimeoutOrDefault returns the value of the Timeout property.
-// If the property is not set, it returns the default value = 5s.
-func (s *HTTPServerConfig) GetTimeoutOrDefault() time.Duration {
-	if s.Timeout != nil {
-		return *s.Timeout
-	}
-	return *defaultConfig.http.Timeout
-}
-
-// GetReadTimeoutOrDefault returns the value of the ReadTimeout property.
-// If the property is not set, it returns the default value = 30s.
-func (s *HTTPServerConfig) GetReadTimeoutOrDefault() time.Duration {
-	if s.ReadTimeout != nil {
-		return *s.ReadTimeout
-	}
-	return *defaultConfig.http.ReadTimeout
-}
-
-// GetWriteTimeoutOrDefault returns the value of the WriteTimeout property.
-// If the property is not set, it returns the default value = 60s.
-func (s *HTTPServerConfig) GetWriteTimeoutOrDefault() time.Duration {
-	if s.WriteTimeout != nil {
-		return *s.WriteTimeout
-	}
-	return *defaultConfig.http.WriteTimeout
-}
-
-// GetIdleTimeoutOrDefault returns the value of the IdleTimeout property.
-// If the property is not set, it returns the default value = 120s.
-func (s *HTTPServerConfig) GetIdleTimeoutOrDefault() time.Duration {
-	if s.IdleTimeout != nil {
-		return *s.IdleTimeout
-	}
-	return *defaultConfig.http.IdleTimeout
+	return l.Address
 }
 
 // GetRateOrDefault returns the value of the Rate property.
 // If the property is not set, it returns the default value.
-func (s *HTTPServerConfig) GetRateOrDefault() *RateLimiterConfig {
-	if s.Rate != nil {
-		return s.Rate
+func (l *ListenerConfig) GetRateOrDefault() *RateLimiterConfig {
+	if l == nil || l.Rate == nil {
+		return defaultListener.Rate
 	}
-	return defaultConfig.http.Rate
+	return l.Rate
 }
 
 // GetContextPathOrDefault returns the value of the ContextPath property.
 // If the property is not set, it returns the default value.
-func (s *HTTPServerConfig) GetContextPathOrDefault() string {
-	if s.ContextPath != "" {
-		return s.ContextPath
+func (l *ListenerConfig) GetContextPathOrDefault() string {
+	if l == nil || l.ContextPath == "" {
+		return defaultListener.ContextPath
 	}
-	return defaultConfig.http.ContextPath
+	return l.ContextPath
+}
+
+// GetTimeoutOrDefault returns the value of the Timeout property.
+// If the property is not set, it returns the default value = 5s.
+func (l *ListenerConfig) GetTimeoutOrDefault() time.Duration {
+	if l == nil || l.Timeout == nil {
+		return *defaultListener.Timeout
+	}
+	return *l.Timeout
+}
+
+// GetReadTimeoutOrDefault returns the value of the ReadTimeout property.
+// If the property is not set, it returns the default value = 30s.
+func (l *ListenerConfig) GetReadTimeoutOrDefault() time.Duration {
+	if l == nil || l.ReadTimeout == nil {
+		return *defaultListener.ReadTimeout
+	}
+	return *l.ReadTimeout
+}
+
+// GetWriteTimeoutOrDefault returns the value of the WriteTimeout property.
+// If the property is not set, it returns the default value = 60s.
+func (l *ListenerConfig) GetWriteTimeoutOrDefault() time.Duration {
+	if l == nil || l.WriteTimeout == nil {
+		return *defaultListener.WriteTimeout
+	}
+	return *l.WriteTimeout
+}
+
+// GetIdleTimeoutOrDefault returns the value of the IdleTimeout property.
+// If the property is not set, it returns the default value = 120s.
+func (l *ListenerConfig) GetIdleTimeoutOrDefault() time.Duration {
+	if l == nil || l.IdleTimeout == nil {
+		return *defaultListener.IdleTimeout
+	}
+	return *l.IdleTimeout
 }
 
 // RateLimiterConfig represents the service's HTTP server rate limiter configuration.
@@ -110,7 +109,7 @@ func (r *RateLimiterConfig) GetTpsOrDefault() int {
 	if r.Tps != nil {
 		return *r.Tps
 	}
-	return *defaultConfig.http.Rate.Tps
+	return *defaultListener.Rate.Tps
 }
 
 // GetSizeOrDefault returns the value of the Size property.
@@ -119,7 +118,7 @@ func (r *RateLimiterConfig) GetSizeOrDefault() int {
 	if r.Size != nil {
 		return *r.Size
 	}
-	return *defaultConfig.http.Rate.Size
+	return *defaultListener.Rate.Size
 }
 
 // GetWhiteListOrDefault returns the value of the WhiteList property.
@@ -128,5 +127,5 @@ func (r *RateLimiterConfig) GetWhiteListOrDefault() []string {
 	if r.WhiteList != nil {
 		return r.WhiteList
 	}
-	return defaultConfig.http.Rate.WhiteList
+	return defaultListener.Rate.WhiteList
 }

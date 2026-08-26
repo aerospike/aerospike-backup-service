@@ -2408,57 +2408,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.HTTPServerConfig": {
-            "description": "HTTPServerConfig represents the service's HTTP server configuration.",
-            "type": "object",
-            "properties": {
-                "address": {
-                    "description": "The address to listen on.",
-                    "type": "string",
-                    "default": "0.0.0.0",
-                    "example": "0.0.0.0"
-                },
-                "context-path": {
-                    "description": "ContextPath customizes path for the API endpoints.",
-                    "type": "string",
-                    "default": "/"
-                },
-                "idle-timeout": {
-                    "description": "IdleTimeout is the maximum amount of time in milliseconds to wait for the next request\nwhen keep-alives are enabled (http.Server.IdleTimeout).",
-                    "type": "integer",
-                    "default": 120000
-                },
-                "port": {
-                    "description": "The port to listen on.",
-                    "type": "integer",
-                    "default": 8080,
-                    "example": 8080
-                },
-                "rate": {
-                    "description": "HTTP rate limiter configuration.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.RateLimiterConfig"
-                        }
-                    ]
-                },
-                "read-timeout": {
-                    "description": "ReadTimeout is the maximum duration in milliseconds for reading the entire request,\nincluding the body (http.Server.ReadTimeout).",
-                    "type": "integer",
-                    "default": 30000
-                },
-                "timeout": {
-                    "description": "Timeout for reading HTTP request headers in milliseconds (http.Server.ReadHeaderTimeout).",
-                    "type": "integer",
-                    "default": 5000
-                },
-                "write-timeout": {
-                    "description": "WriteTimeout is the maximum duration in milliseconds before timing out writes of the response\n(http.Server.WriteTimeout).",
-                    "type": "integer",
-                    "default": 60000
-                }
-            }
-        },
         "dto.JobStatus": {
             "description": "Possible states of restore jobs.",
             "type": "string",
@@ -3289,7 +3238,7 @@ const docTemplate = `{
                     "example": "/path/to/key.pem"
                 },
                 "name": {
-                    "description": "TLSName used for server certificate verification (ServerName for SNI).",
+                    "description": "TLS ServerName (SNI) for verifying the peer certificate.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "example.com"
@@ -3328,10 +3277,194 @@ const docTemplate = `{
                     "example": 3000
                 },
                 "tls-name": {
-                    "description": "TLS certificate name used for secure connections (if enabled).",
+                    "description": "TLS name sent as SNI and checked against the server certificate.\nRequired when the cluster has a tls block.\nThis is the name that takes effect for cluster connections.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "certName"
+                }
+            }
+        },
+        "dto.ServerConfigHTTP": {
+            "description": "ServerConfigHTTP represents the service's HTTP server configuration.",
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "The address to listen on.",
+                    "type": "string",
+                    "default": "0.0.0.0",
+                    "example": "0.0.0.0"
+                },
+                "context-path": {
+                    "description": "ContextPath customizes path for the API endpoints.",
+                    "type": "string",
+                    "default": "/"
+                },
+                "disabled": {
+                    "description": "Disabled controls whether the listener is disabled.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "idle-timeout": {
+                    "description": "IdleTimeout is the maximum amount of time in milliseconds to wait for the next request\nwhen keep-alives are enabled (http.Server.IdleTimeout).",
+                    "type": "integer",
+                    "default": 120000
+                },
+                "port": {
+                    "description": "The port to listen on.",
+                    "type": "integer",
+                    "default": 8080,
+                    "example": 8080
+                },
+                "rate": {
+                    "description": "HTTP rate limiter configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RateLimiterConfig"
+                        }
+                    ]
+                },
+                "read-timeout": {
+                    "description": "ReadTimeout is the maximum duration in milliseconds for reading the entire request,\nincluding the body (http.Server.ReadTimeout).",
+                    "type": "integer",
+                    "default": 30000
+                },
+                "timeout": {
+                    "description": "Timeout for reading HTTP request headers in milliseconds (http.Server.ReadHeaderTimeout).",
+                    "type": "integer",
+                    "default": 5000
+                },
+                "write-timeout": {
+                    "description": "WriteTimeout is the maximum duration in milliseconds before timing out writes of the response\n(http.Server.WriteTimeout).",
+                    "type": "integer",
+                    "default": 60000
+                }
+            }
+        },
+        "dto.ServerConfigHTTPS": {
+            "description": "ServerConfigHTTPS represents the service's HTTPS server configuration.",
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "The address to listen on.",
+                    "type": "string",
+                    "default": "0.0.0.0",
+                    "example": "0.0.0.0"
+                },
+                "cert-file": {
+                    "description": "Path to the HTTPS server certificate in PEM format.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/server.pem"
+                },
+                "cipher-suites": {
+                    "description": "Allowed TLS cipher suite names. An empty list uses Go's secure defaults.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "x-nullable": true
+                },
+                "client-auth": {
+                    "description": "Client certificate authentication mode.",
+                    "default": "none",
+                    "enum": [
+                        "none",
+                        "request",
+                        "require-and-verify"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.TLSClientAuth"
+                        }
+                    ]
+                },
+                "client-ca-file": {
+                    "description": "Path to trusted client CA certificates in PEM format.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/client-ca.pem"
+                },
+                "context-path": {
+                    "description": "ContextPath customizes path for the API endpoints.",
+                    "type": "string",
+                    "default": "/"
+                },
+                "disabled": {
+                    "description": "Disabled controls whether the listener is disabled.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "idle-timeout": {
+                    "description": "IdleTimeout is the maximum amount of time in milliseconds to wait for the next request\nwhen keep-alives are enabled (http.Server.IdleTimeout).",
+                    "type": "integer",
+                    "default": 120000
+                },
+                "key-file": {
+                    "description": "Path to the HTTPS server private key in PEM format.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/server-key.pem"
+                },
+                "key-file-password": {
+                    "description": "Passphrase for an encrypted HTTPS server private key.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
+                    "type": "string",
+                    "format": "password",
+                    "x-nullable": true
+                },
+                "min-version": {
+                    "description": "Minimum accepted TLS protocol version.",
+                    "default": "1.2",
+                    "enum": [
+                        "1.2",
+                        "1.3"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.TLSMinVersion"
+                        }
+                    ]
+                },
+                "port": {
+                    "description": "The port to listen on.",
+                    "type": "integer",
+                    "default": 8443,
+                    "example": 8443
+                },
+                "rate": {
+                    "description": "HTTP rate limiter configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RateLimiterConfig"
+                        }
+                    ]
+                },
+                "read-timeout": {
+                    "description": "ReadTimeout is the maximum duration in milliseconds for reading the entire request,\nincluding the body (http.Server.ReadTimeout).",
+                    "type": "integer",
+                    "default": 30000
+                },
+                "secret-agent": {
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    ]
+                },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "timeout": {
+                    "description": "Timeout for reading HTTP request headers in milliseconds (http.Server.ReadHeaderTimeout).",
+                    "type": "integer",
+                    "default": 5000
+                },
+                "write-timeout": {
+                    "description": "WriteTimeout is the maximum duration in milliseconds before timing out writes of the response\n(http.Server.WriteTimeout).",
+                    "type": "integer",
+                    "default": 60000
                 }
             }
         },
@@ -3348,10 +3481,18 @@ const docTemplate = `{
                     ]
                 },
                 "http": {
-                    "description": "HTTPServer is the backup service HTTP server configuration.",
+                    "description": "ServerHTTP is the backup service HTTP server configuration.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/dto.HTTPServerConfig"
+                            "$ref": "#/definitions/dto.ServerConfigHTTP"
+                        }
+                    ]
+                },
+                "https": {
+                    "description": "ServerHTTPS is the backup service HTTPS server configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.ServerConfigHTTPS"
                         }
                     ]
                 },
@@ -3426,10 +3567,10 @@ const docTemplate = `{
                     "example": "/path/to/cert.pem"
                 },
                 "cipher-suite": {
-                    "description": "TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.",
+                    "description": "Colon-separated IANA TLS 1.2 cipher suite names (not OpenSSL nicknames).\nThe suite must match the certificate key type (RSA vs ECDSA).\nIf omitted, the client offers Go crypto/tls TLS 1.2 defaults:\nTLS_ECDHE_{ECDSA,RSA}_WITH_AES_128_GCM_SHA256,\nTLS_ECDHE_{ECDSA,RSA}_WITH_AES_256_GCM_SHA384,\nTLS_ECDHE_{ECDSA,RSA}_WITH_CHACHA20_POLY1305_SHA256,\nand ECDHE AES-CBC SHA for compatibility.\nRSA key-exchange, 3DES, RC4, and CBC-SHA256 are not offered.\nThis field does not select TLS 1.3 suites.",
                     "type": "string",
                     "x-nullable": true,
-                    "example": "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA"
+                    "example": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
                 },
                 "key-file": {
                     "description": "Path to a client private key file for mutual TLS authentication.",
@@ -3444,7 +3585,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "name": {
-                    "description": "TLSName used for server certificate verification (ServerName for SNI).",
+                    "description": "TLS ServerName (SNI) for verifying the peer certificate.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "example.com"
@@ -3455,6 +3596,32 @@ const docTemplate = `{
                     "default": "TLSv1.2"
                 }
             }
+        },
+        "dto.TLSClientAuth": {
+            "description": "TLSClientAuth is HTTPS client-certificate authentication.",
+            "type": "string",
+            "enum": [
+                "none",
+                "request",
+                "require-and-verify"
+            ],
+            "x-enum-varnames": [
+                "TLSClientAuthNone",
+                "TLSClientAuthRequest",
+                "TLSClientAuthRequireAndVerify"
+            ]
+        },
+        "dto.TLSMinVersion": {
+            "description": "TLSMinVersion is the minimum accepted TLS protocol version.",
+            "type": "string",
+            "enum": [
+                "1.2",
+                "1.3"
+            ],
+            "x-enum-varnames": [
+                "TLSMinVersion12",
+                "TLSMinVersion13"
+            ]
         },
         "dto.TimestampRestorePolicy": {
             "description": "TimestampRestorePolicy represents a policy for the point-in-time restore operation.",

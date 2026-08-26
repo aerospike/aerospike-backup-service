@@ -4,7 +4,9 @@ package model
 type ClientTLS struct {
 	// Path to a trusted CA certificate file in PEM format.
 	CAFile string
-	// TLSName used for server certificate verification (ServerName for SNI).
+	// TLS ServerName (SNI) for verifying the peer certificate.
+	// For an Aerospike cluster the client overwrites this per connection with
+	// each seed node's TLSName. For Secret Agent, this verifies the agent certificate.
 	Name string
 	// Path to a client certificate file for mutual TLS authentication.
 	Certfile string

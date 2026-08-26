@@ -140,7 +140,7 @@ func TestService_ApplyConfig(t *testing.T) {
 			name: "static field changed",
 			readConfig: func() *model.Config {
 				c := model.NewConfig()
-				c.ServiceConfig.HTTPServer = &model.HTTPServerConfig{Port: ptr.Of(model.Port(9999))}
+				c.ServiceConfig.ServerHTTP = &model.ServerConfigHTTP{Port: ptr.Of(model.Port(9999))}
 				return c
 			}(),
 			expectedStatus: http.StatusBadRequest,
