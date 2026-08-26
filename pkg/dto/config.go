@@ -40,6 +40,11 @@ func NewConfigFromModel(m *model.Config) *Config {
 func (c *Config) fromModel(m *model.Config) {
 	c.ServiceConfig.fromModel(&m.ServiceConfig)
 	backupConfig := m.BackupConfigCopy()
+	if c.ServiceConfig.ServerHTTPS != nil {
+		c.ServiceConfig.ServerHTTPS.SecretAgentConfig = ResolveSecretAgentFromModel(
+			m.ServiceConfig.ServerHTTPS.SecretAgent, backupConfig,
+		)
+	}
 
 	c.AerospikeClusters = make(map[string]*AerospikeCluster)
 	for name, a := range backupConfig.AerospikeClusters {
@@ -131,7 +136,7 @@ func (c *Config) Validate(opts ValidationOptions) error {
 		}
 	}
 
-	if err := c.ServiceConfig.Validate(); err != nil {
+	if err := c.ServiceConfig.Validate(opts); err != nil {
 		return fmt.Errorf("service validation error: %w", err)
 	}
 
@@ -147,6 +152,14 @@ func (c *Config) ToModel() (*model.Config, error) {
 		if err := modelConfig.AddSecretAgent(k, v.ToModel()); err != nil {
 			return nil, err
 		}
+	}
+	if c.ServiceConfig.ServerHTTPS != nil {
+		// Resolve the HTTPS Secret Agent after the top-level agents have been added.
+		agent, err := c.ServiceConfig.ServerHTTPS.SecretAgentConfig.ToModel(modelConfig)
+		if err != nil {
+			return nil, fmt.Errorf("invalid HTTPS server secret agent: %w", err)
+		}
+		modelConfig.ServiceConfig.ServerHTTPS.SecretAgent = agent
 	}
 
 	// storage must be added after secret agents.

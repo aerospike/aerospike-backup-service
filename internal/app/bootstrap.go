@@ -27,7 +27,7 @@ import (
 // Components group the long-running parts of the service.
 type Components struct {
 	Scheduler        quartz.Scheduler
-	HTTPServer       server.HTTPServer
+	ServerHTTP       server.HTTP
 	MetricsCollector *prometheus.MetricsCollector
 }
 
@@ -108,7 +108,7 @@ func InitComponents(
 	metricsCollector := prometheus.NewMetricsCollector(registry.GetRunningState, restoreJobs.StatusCounts)
 
 	configRetriever := service.NewConfigRetriever(catalog, pathService, operations)
-	httpService := handlers.NewService(
+	srv := handlers.NewService(
 		ctx,
 		config,
 		configApplier,
@@ -120,11 +120,11 @@ func InitComponents(
 		configurationManager,
 		nsValidator,
 	)
-	httpServer := server.NewHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService)
+	ServerHTTP := server.NewServerHTTP(ctx, config.ServiceConfig.GetServerHTTPOrDefault(), srv)
 
 	return &Components{
 		Scheduler:        scheduler,
-		HTTPServer:       httpServer,
+		ServerHTTP:       ServerHTTP,
 		MetricsCollector: metricsCollector,
 	}, nil
 }

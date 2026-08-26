@@ -277,7 +277,9 @@ type SeedNode struct {
 	HostName string `yaml:"host-name,omitempty" json:"host-name,omitempty" example:"localhost" validate:"required"`
 	// The port of the node.
 	Port Port `yaml:"port,omitempty" json:"port,omitempty" example:"3000" validate:"required,min=1,max=65535"`
-	// TLS certificate name used for secure connections (if enabled).
+	// TLS name sent as SNI and checked against the server certificate.
+	// Required when the cluster has a tls block.
+	// This is the name that takes effect for cluster connections.
 	TLSName string `yaml:"tls-name,omitempty" json:"tls-name,omitempty" example:"certName" extensions:"x-nullable"`
 }
 

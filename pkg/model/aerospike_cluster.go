@@ -113,7 +113,7 @@ type SeedNode struct {
 	HostName string
 	// The port of the node.
 	Port Port
-	// TLS certificate name used for secure connections (if enabled).
+	// TLS name sent as SNI and checked against the server certificate.
 	TLSName string
 }
 

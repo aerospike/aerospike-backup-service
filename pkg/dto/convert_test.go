@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,8 +14,8 @@ var secretAgentConfig = SecretAgentConfig{
 
 var originalConfig = &Config{
 	ServiceConfig: ServiceConfig{
-		HTTPServer: &HTTPServerConfig{
-			Address: "localhost",
+		ServerHTTP: &ServerConfigHTTP{
+			ListenerConfig: ListenerConfig{Address: "localhost"},
 		},
 		Logger: &LoggerConfig{
 			Level: "INFO",
@@ -42,7 +41,7 @@ var originalConfig = &Config{
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host2",
-						ConnectionType: saClient.ConnectionTypeTCP,
+						ConnectionType: ConnectionTypeTCP,
 					},
 				},
 			},
@@ -79,7 +78,7 @@ var originalConfig = &Config{
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host3",
-						ConnectionType: saClient.ConnectionTypeTCP,
+						ConnectionType: ConnectionTypeTCP,
 					},
 				},
 			},
@@ -102,7 +101,7 @@ var originalConfig = &Config{
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host3",
-						ConnectionType: saClient.ConnectionTypeTCP,
+						ConnectionType: ConnectionTypeTCP,
 					},
 				},
 			},
@@ -125,7 +124,7 @@ var originalConfig = &Config{
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host4",
-						ConnectionType: saClient.ConnectionTypeUDS,
+						ConnectionType: ConnectionTypeUnix,
 					},
 				},
 				Endpoint:      "http://localhost",
@@ -149,7 +148,7 @@ var originalConfig = &Config{
 	}},
 	SecretAgents: map[string]*SecretAgent{"agent1": {
 		Address:        "host",
-		ConnectionType: saClient.ConnectionTypeTCP,
+		ConnectionType: ConnectionTypeTCP,
 	}},
 }
 

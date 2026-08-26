@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestHTTPServer(t *testing.T, httpCfg *model.HTTPServerConfig) *httpServer {
+func newTestServerHTTP(t *testing.T, httpCfg *model.ServerConfigHTTP) *serverHTTP {
 	t.Helper()
 
 	svc := handlers.NewService(
@@ -22,10 +22,10 @@ func newTestHTTPServer(t *testing.T, httpCfg *model.HTTPServerConfig) *httpServe
 		nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
-	return NewHTTPServer(t.Context(), httpCfg, svc).(*httpServer)
+	return NewServerHTTP(t.Context(), httpCfg, svc).(*serverHTTP)
 }
 
-func waitForHTTPServerReady(t *testing.T, healthURL string) {
+func waitForServerHTTPReady(t *testing.T, healthURL string) {
 	t.Helper()
 
 	client := &http.Client{Timeout: 100 * time.Millisecond}
@@ -49,8 +49,8 @@ func waitForHTTPServerReady(t *testing.T, healthURL string) {
 	t.Fatalf("timed out waiting for server to start")
 }
 
-func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
-	srv := newTestHTTPServer(t, &model.HTTPServerConfig{})
+func TestNewServerHTTP_StartAndShutdown(t *testing.T) {
+	srv := newTestServerHTTP(t, &model.ServerConfigHTTP{})
 	require.NotNil(t, srv.Server)
 	require.Equal(t, 5*time.Second, srv.ReadHeaderTimeout)
 	require.Equal(t, 30*time.Second, srv.ReadTimeout)
@@ -65,7 +65,7 @@ func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
 		errCh <- srv.Serve(ln)
 	}()
 
-	waitForHTTPServerReady(t, "http://"+ln.Addr().String()+"/health")
+	waitForServerHTTPReady(t, "http://"+ln.Addr().String()+"/health")
 
 	require.NoError(t, srv.Shutdown())
 
@@ -77,12 +77,14 @@ func TestNewHTTPServer_StartAndShutdown(t *testing.T) {
 	}
 }
 
-func TestNewHTTPServer_ReadTimeoutClosesSilentClient(t *testing.T) {
+func TestNewServerHTTP_ReadTimeoutClosesSilentClient(t *testing.T) {
 	readTimeout := 100 * time.Millisecond
-	srv := newTestHTTPServer(t, &model.HTTPServerConfig{
-		// ReadHeaderTimeout of 0 falls back to ReadTimeout in net/http.
-		Timeout:     ptr.Of(time.Duration(0)),
-		ReadTimeout: ptr.Of(readTimeout),
+	srv := newTestServerHTTP(t, &model.ServerConfigHTTP{
+		ListenerConfig: model.ListenerConfig{
+			// ReadHeaderTimeout of 0 falls back to ReadTimeout in net/http.
+			Timeout:     ptr.Of(time.Duration(0)),
+			ReadTimeout: ptr.Of(readTimeout),
+		},
 	})
 	require.Equal(t, time.Duration(0), srv.ReadHeaderTimeout)
 	require.Equal(t, readTimeout, srv.ReadTimeout)
@@ -99,7 +101,7 @@ func TestNewHTTPServer_ReadTimeoutClosesSilentClient(t *testing.T) {
 		<-errCh
 	})
 
-	waitForHTTPServerReady(t, "http://"+ln.Addr().String()+"/health")
+	waitForServerHTTPReady(t, "http://"+ln.Addr().String()+"/health")
 
 	conn, err := (&net.Dialer{}).DialContext(t.Context(), "tcp", ln.Addr().String())
 	require.NoError(t, err)
