@@ -112,8 +112,9 @@ GitHub Actions side is split into two workflows: [`pre-release.yml`](../.github/
 owned, builds and promotes up to `TEST`) and [`release.yml`](../.github/workflows/release.yml) (run once the release
 is fully approved, publishes it).
 
-1. Create a release branch from `dev` (e.g. `release/v3.x.y`).
-2. Prepare the release by updating the version files:
+#### Regular release
+1. Create a release branch from `dev` (e.g. `release/3.7.0`).
+2. Prepare the release by updating the version files. For regular releases, bump the **second digit** of the Helm chart version (e.g. `2.1.0` -> `2.2.0`):
    ```bash
    NEXT_VERSION="<version>"  make release
    NEXT_HELM_CHART_VERSION="<helm-chart-version>" make helm-chart-release
@@ -127,7 +128,26 @@ is fully approved, publishes it).
    git tag "$(cat VERSION)"
    git push origin main --tags
    ```
-5. Tagging the release commit on `main` triggers `pre-release.yml`, which:
+
+#### Hotfix
+1. Create a hotfix branch from `main` (e.g. `hotfix/3.6.2`).
+2. Prepare the hotfix by updating the version files. Bump the **third digit** of both the version (e.g. `3.6.1` -> `3.6.2`) and the Helm chart version (e.g. `2.0.11` -> `2.0.12`):
+   ```bash
+   NEXT_VERSION="<version>"  make release
+   NEXT_HELM_CHART_VERSION="<helm-chart-version>" make helm-chart-release
+   git add --all
+   git commit -m "Release: "$(cat VERSION)""
+   ```
+3. **Do not merge** the hotfix branch into `main`. Tag and push the hotfix directly from the branch:
+   ```bash
+   git tag "$(cat VERSION)"
+   git push origin hotfix/3.6.2 --tags
+   ```
+
+#### Promotion and publication
+The following steps apply to both regular releases and hotfixes:
+
+1. Tagging the release commit triggers `pre-release.yml`, which:
    1. Builds the DEB/RPM packages, Helm chart, and Docker image.
    2. Signs the packages and Helm chart, and deploys everything to JFrog `DEV`.
    3. Creates a unified release bundle and automatically promotes it from `DEV` to `TEST`.
