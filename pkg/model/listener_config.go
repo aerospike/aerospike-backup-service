@@ -22,14 +22,6 @@ type ListenerConfig struct {
 	IdleTimeout *time.Duration
 }
 
-// GetDisabledOrDefault returns whether the listener is disabled.
-func (l *ListenerConfig) GetDisabledOrDefault() bool {
-	if l == nil {
-		return defaultListener.Disabled
-	}
-	return l.Disabled
-}
-
 // GetAddressOrDefault returns the value of the Address property.
 // If the property is not set, it returns the default value.
 func (l *ListenerConfig) GetAddressOrDefault() string {

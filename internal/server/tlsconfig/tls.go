@@ -2,6 +2,7 @@
 package tlsconfig
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -9,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
@@ -20,13 +22,23 @@ var secureCipherSuites = func() map[string]uint16 {
 	return suites
 }()
 
-// New builds a static server TLS configuration.
-func New(config *model.ServerConfigHTTPS) (*tls.Config, error) {
+// NewTLSConfig builds a static server TLS configuration.
+// resolver is required to resolve KeyFilePassword when it is a Secret Agent reference.
+func NewTLSConfig(
+	ctx context.Context,
+	config *model.ServerConfigHTTPS,
+	resolver secrets.Resolver,
+) (*tls.Config, error) {
 	if config == nil {
 		return nil, errors.New("HTTPS server config is required")
 	}
 
-	certificate, err := loadKeyPair(config.CertFile, config.KeyFile, config.KeyFilePassword)
+	password, err := resolver.Resolve(ctx, config.SecretAgent, config.KeyFilePassword)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve HTTPS key-file-password: %w", err)
+	}
+
+	certificate, err := loadKeyPair(config.CertFile, config.KeyFile, password)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +53,7 @@ func New(config *model.ServerConfigHTTPS) (*tls.Config, error) {
 		return nil, err
 	}
 
-	clientAuth, err := parseClientAuth(config.GetClientAuthOrDefault())
+	clientAuth, err := config.GetClientAuthOrDefault().ToTLS()
 	if err != nil {
 		return nil, err
 	}
@@ -149,17 +161,4 @@ func parseCipherSuites(names []string) ([]uint16, error) {
 	}
 
 	return result, nil
-}
-
-func parseClientAuth(clientAuth model.TLSClientAuth) (tls.ClientAuthType, error) {
-	switch clientAuth {
-	case model.TLSClientAuthNone:
-		return tls.NoClientCert, nil
-	case model.TLSClientAuthRequest:
-		return tls.RequestClientCert, nil
-	case model.TLSClientAuthRequireAndVerify:
-		return tls.RequireAndVerifyClientCert, nil
-	default:
-		return tls.NoClientCert, fmt.Errorf("unsupported TLS client authentication mode %q", clientAuth)
-	}
 }

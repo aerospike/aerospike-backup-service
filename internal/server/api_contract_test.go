@@ -34,7 +34,7 @@ func newUnconfiguredService(t *testing.T) http.Handler {
 	components, err := app.InitComponents(ctx, configPath, false)
 	require.NoError(t, err)
 
-	return components.ServerHTTP
+	return components.Servers[0]
 }
 
 func serve(t *testing.T, handler http.Handler, method, path, body string) *httptest.ResponseRecorder {

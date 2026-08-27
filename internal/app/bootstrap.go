@@ -27,7 +27,7 @@ import (
 // Components group the long-running parts of the service.
 type Components struct {
 	Scheduler        quartz.Scheduler
-	ServerHTTP       server.HTTP
+	Servers          []server.HTTP
 	MetricsCollector *prometheus.MetricsCollector
 }
 
@@ -120,11 +120,25 @@ func InitComponents(
 		configurationManager,
 		nsValidator,
 	)
-	ServerHTTP := server.NewServerHTTP(ctx, config.ServiceConfig.GetServerHTTPOrDefault(), srv)
+
+	var servers []server.HTTP
+	configHTTP := config.ServiceConfig.GetServerHTTPOrDefault()
+	if !configHTTP.Disabled {
+		servers = append(servers, server.NewServerHTTP(ctx, configHTTP, srv))
+	}
+
+	configHTTPS := config.ServiceConfig.GetServerHTTPSOrDefault()
+	if !configHTTPS.Disabled {
+		serverHTTPS, err := server.NewServerHTTPS(ctx, configHTTPS, srv, resolver)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HTTPS server: %w", err)
+		}
+		servers = append(servers, serverHTTPS)
+	}
 
 	return &Components{
 		Scheduler:        scheduler,
-		ServerHTTP:       ServerHTTP,
+		Servers:          servers,
 		MetricsCollector: metricsCollector,
 	}, nil
 }

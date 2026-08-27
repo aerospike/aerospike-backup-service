@@ -21,7 +21,7 @@ const (
 )
 
 func (e *env) metricsURL() string {
-	return e.server.URL + "/metrics"
+	return e.baseURL + "/metrics"
 }
 
 func (e *env) fetchMetricFamilies(ctx context.Context) (map[string]*dto.MetricFamily, error) {
@@ -30,7 +30,7 @@ func (e *env) fetchMetricFamilies(ctx context.Context) (map[string]*dto.MetricFa
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := e.client.Do(req)
 	if err != nil {
 		return nil, err
 	}

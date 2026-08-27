@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -73,7 +72,7 @@ func startService(configFile string, remote bool) error {
 	components.Scheduler.Start(ctx)
 	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 
-	err = runServerHTTP(ctx, components.ServerHTTP)
+	err = server.Run(ctx, components.Servers)
 
 	// stop the scheduler
 	components.Scheduler.Stop()
@@ -83,32 +82,6 @@ func startService(configFile string, remote bool) error {
 
 func systemCtx() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
-}
-
-func runServerHTTP(ctx context.Context, serverHTTP server.HTTP) error {
-	// Channel to capture server startup errors
-	errCh := make(chan error, 1)
-	go func() {
-		if err := serverHTTP.Start(); err != nil {
-			errCh <- err
-		}
-	}()
-
-	// Wait for either context cancellation or server error
-	select {
-	case err := <-errCh:
-		return fmt.Errorf("HTTP server failed: %w", err)
-	case <-ctx.Done():
-	}
-
-	if err := serverHTTP.Shutdown(); err != nil {
-		slog.Error("HTTP server shutdown failed", attr.Error(err))
-		return err
-	}
-
-	slog.Info("HTTP server shut down gracefully")
-
-	return nil
 }
 
 func main() {
