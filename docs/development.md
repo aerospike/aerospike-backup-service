@@ -114,7 +114,16 @@ is fully approved, publishes it).
      (`workflow_dispatch`, with the release version as input). It verifies the bundle was actually promoted to
      `PROD`, then downloads the already-signed artifacts straight from JFrog's `PROD`-public repos and publishes
      them as a new, immutable GitHub Release — nothing is rebuilt, re-signed, or re-checksummed at this point.
-7. If the release added commits that exist only on `main` (for example a hotfix), back-merge `main` into `dev`.
+7. Post-release actions:
+   1. **Snyk**:
+      - Add the new version to the `aerospike-applications` Snyk org (monitor the Docker image).
+      - Remove the oldest maintenance version from the same org if no longer supported.
+   2. **Slack**:
+      - Post the release announcement to the internal **`#releases`** channel.
+      - Use the link to the [prettified release notes](https://aerospike.com/docs/database/tools/backup-and-restore/backup-service/release/) if available; otherwise, use the GitHub Release link.
+      - **Important**: Remove link previews before sending to keep the channel clean.
+   3. **Email**: Send the release announcement email to the appropriate internal distribution lists.
+8. If the release added commits that exist only on `main` (for example a hotfix), back-merge `main` into `dev`.
 
 ## Reporting issues
 
