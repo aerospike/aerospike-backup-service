@@ -3,99 +3,70 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"strings"
+	"net/netip"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
-// HTTPServerConfig represents the service's HTTP server configuration.
-// @Description HTTPServerConfig represents the service's HTTP server configuration.
-type HTTPServerConfig struct {
-	// The address to listen on.
-	Address *string `yaml:"address,omitempty" json:"address,omitempty" default:"0.0.0.0" example:"0.0.0.0"`
+// ServerConfigHTTP represents the service's HTTP server configuration.
+// @Description ServerConfigHTTP represents the service's HTTP server configuration.
+type ServerConfigHTTP struct {
+	ListenerConfig `yaml:",inline"`
 	// The port to listen on.
 	Port *Port `yaml:"port,omitempty" json:"port,omitempty" default:"8080" example:"8080"`
-	// HTTP rate limiter configuration.
-	Rate *RateLimiterConfig `yaml:"rate,omitempty" json:"rate,omitempty"`
-	// ContextPath customizes path for the API endpoints.
-	ContextPath *string `yaml:"context-path,omitempty" json:"context-path,omitempty" default:"/"`
-	// Timeout for http server operations in milliseconds.
-	Timeout *int64 `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"5000"`
 }
 
 // Validate validates the HTTP server configuration.
-func (s *HTTPServerConfig) Validate() error {
+func (s *ServerConfigHTTP) Validate() error {
 	if s == nil {
 		return nil
 	}
 
-	if s.ContextPath != nil && !strings.HasPrefix(*s.ContextPath, "/") {
-		return fmt.Errorf("context-path must start with a slash: %s", *s.ContextPath)
+	if err := s.Port.Validate(); err != nil {
+		return err
 	}
-	if s.Timeout != nil && *s.Timeout < 0 {
-		return errValidationNegative("timeout", *s.Timeout)
-	}
-
-	if err := s.Rate.Validate(); err != nil {
-		return fmt.Errorf("rate-limiter validation error: %w", err)
-	}
-
-	return nil
+	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
+	return s.ListenerConfig.validate()
 }
 
-func (s *HTTPServerConfig) ToModel() *model.HTTPServerConfig {
+func (s *ServerConfigHTTP) ToModel() *model.ServerConfigHTTP {
 	if s == nil {
 		return nil
 	}
 
-	return &model.HTTPServerConfig{
-		Address:     s.Address,
-		Port:        s.Port.ToModel(),
-		Rate:        s.Rate.ToModel(),
-		ContextPath: s.ContextPath,
-		Timeout:     millisToDuration(s.Timeout),
+	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
+	return &model.ServerConfigHTTP{
+		ListenerConfig: s.ListenerConfig.toModel(),
+		Port:           s.Port.ToModel(),
 	}
 }
 
-func (s *HTTPServerConfig) fromModel(m *model.HTTPServerConfig) {
+func (s *ServerConfigHTTP) fromModel(m *model.ServerConfigHTTP) {
 	if m == nil {
 		return
 	}
-	s.Address = m.Address
+	s.ListenerConfig = newListenerFromModel(m.ListenerConfig)
 	s.Port = NewPortFromModel(m.Port)
-	if m.Rate != nil {
-		s.Rate = &RateLimiterConfig{}
-		s.Rate.fromModel(m.Rate)
-	}
-	s.ContextPath = m.ContextPath
-	s.Timeout = durationToMillis(m.Timeout)
 }
 
-// Compare HTTPServerConfig object with another and return detailed errors.
-func (s *HTTPServerConfig) Compare(other *HTTPServerConfig) error {
+// Compare ServerConfigHTTP object with another and return detailed errors.
+func (s *ServerConfigHTTP) Compare(other *ServerConfigHTTP) error {
 	if s == nil && other == nil {
 		return nil
 	}
 	if s == nil {
-		return errors.New("HTTPServer added")
+		return errors.New("ServerHTTP added")
 	}
 	if other == nil {
-		return errors.New("HTTPServer removed")
+		return errors.New("ServerHTTP removed")
 	}
 
-	var err = errors.Join(
-		comparePointers("Address", s.Address, other.Address),
+	return errors.Join(
+		//nolint:staticcheck // We want to call embedded methods with embedded struct name.
+		s.ListenerConfig.compare(other.ListenerConfig),
 		comparePointers("Port", s.Port, other.Port),
-		comparePointers("ContextPath", s.ContextPath, other.ContextPath),
-		comparePointers("Timeout", s.Timeout, other.Timeout),
 	)
-
-	if e := s.Rate.Compare(other.Rate); e != nil {
-		err = errors.Join(err, fmt.Errorf("rate changes: %w", e))
-	}
-
-	return err
 }
 
 // RateLimiterConfig represents the service's HTTP server rate limiter configuration.
@@ -105,8 +76,9 @@ type RateLimiterConfig struct {
 	Tps *int `yaml:"tps,omitempty" json:"tps,omitempty" default:"1024" example:"1024"`
 	// Rate limiter token bucket size (bursts threshold).
 	Size *int `yaml:"size,omitempty" json:"size,omitempty" default:"1024" example:"1024"`
-	// The list of ips to whitelist in rate limiting (optional).
-	// Default: allow all.
+	// The list of ips to exempt from rate limiting (optional).
+	// Default: empty list, so rate limiting applies to all clients.
+	// Use "0.0.0.0/0" to exempt all clients and effectively disable rate limiting.
 	WhiteList []string `yaml:"white-list,omitempty" json:"white-list,omitempty" extensions:"x-nullable"`
 }
 
@@ -117,6 +89,15 @@ func (r *RateLimiterConfig) Validate() error {
 	}
 	if duplicates := collections.CheckDuplicates(r.WhiteList); len(duplicates) > 0 {
 		return errValidationDuplicate("white-list", duplicates)
+	}
+	for _, entry := range r.WhiteList {
+		if _, err := netip.ParsePrefix(entry); err == nil {
+			continue
+		}
+		if _, err := netip.ParseAddr(entry); err == nil {
+			continue
+		}
+		return fmt.Errorf("white-list contains invalid ip or cidr: %s", entry)
 	}
 
 	return nil

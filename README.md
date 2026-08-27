@@ -8,7 +8,7 @@ The Aerospike Backup Service provides a set of REST API endpoints to back up and
 You can perform full and incremental backups and set different backup policies and schedules.
 There are also several monitoring endpoints to check backup information.
 
-Use the [OpenAPI generation script](build/scripts/generate-openapi.sh) (or `make openapi`) to generate an OpenAPI specification for the service.
+Use `make docs` to generate the OpenAPI specification, config schema, and README documentation for the service.
 A pre-built OpenAPI specification is available in Swagger
 format [here](https://aerospike.github.io/aerospike-backup-service/).
 
@@ -63,7 +63,8 @@ under [releases](https://github.com/aerospike/aerospike-backup-service/releases)
 # Documentation
 
 - [Installation](docs/installation.md) — binary, Docker, systemd, and building from source
-- [Configuration](docs/configuration.md) — configuration file format, scheduling, the configuration API, and FAQ
+- [Configuration](docs/configuration.md) — configuration file format, scheduling, filter expressions, the configuration API, and FAQ
+- [Security](docs/security.md) — credential resolution, Secret Agent behavior, and rotation semantics
 - [API examples](docs/api-examples.md) — example backup and restore requests and responses
 - [Monitoring](docs/monitoring.md) — Prometheus metrics, alerts, and health/readiness endpoints
 - [Linux packages](build/package/README.md) — installing and managing the DEB/RPM packages

@@ -1,17 +1,13 @@
 package model
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/backup-go/models"
-	"gopkg.in/yaml.v3"
-)
-
-const (
-	CompressNone = "NONE"
-	EncryptNone  = "NONE"
 )
 
 // BackupDetails contains information about a backup.
@@ -53,9 +49,9 @@ type BackupMetadata struct {
 	// The number of UDF files backed up.
 	UDFCount uint64 `yaml:"udf-count" json:"udf-count"`
 	// Compression specifies the compression mode used for the backup (ZSTD or NONE).
-	Compression string
+	Compression CompressionMode
 	// Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256).
-	Encryption string
+	Encryption EncryptionMode
 }
 
 // NewMetadataFromBytes creates a new Metadata object from a byte slice.
@@ -64,13 +60,11 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 		return nil, errors.New("empty metadata file")
 	}
 	var metadata BackupMetadata
-	err := yaml.Unmarshal(data, &metadata)
-	if err != nil {
+	if err := decoder.Deserialize(&metadata, bytes.NewReader(data), decoder.YAML); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
-	err = metadata.Validate()
-	if err != nil {
+	if err := metadata.Validate(); err != nil {
 		return nil, fmt.Errorf("corrupted metadata: %w", err)
 	}
 
@@ -97,11 +91,11 @@ func NewBackupMetadata(
 	from, startTime time.Time,
 	backupPolicy *BackupPolicy,
 ) BackupMetadata {
-	compression := CompressNone
+	compression := CompressionModeNone
 	if backupPolicy != nil && backupPolicy.CompressionPolicy != nil {
 		compression = backupPolicy.CompressionPolicy.Mode
 	}
-	encryption := EncryptNone
+	encryption := EncryptionModeNone
 	if backupPolicy != nil && backupPolicy.EncryptionPolicy != nil {
 		encryption = backupPolicy.EncryptionPolicy.Mode
 	}

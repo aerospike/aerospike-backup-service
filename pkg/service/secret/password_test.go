@@ -11,12 +11,12 @@ import (
 )
 
 const (
-	testdataFolder = "./testdata"
+	testdataFolder = "testdata"
 	passwordPath   = testdataFolder + "/password.txt"
 )
 
 func TestResolve(t *testing.T) {
-	resolver := NewPasswordResolver(NewResolver(t.Context()))
+	resolver := NewPasswordResolver(NewResolver())
 
 	tests := []struct {
 		name             string
@@ -29,8 +29,7 @@ func TestResolve(t *testing.T) {
 			name:      "ValidPasswordPath",
 			setupMock: func() { createFile("password") },
 			credentials: &model.Credentials{
-				User:         nil,
-				PasswordPath: ptr.Of(passwordPath),
+				PasswordPath: passwordPath,
 			},
 			expectedPassword: ptr.Of("password"),
 			expectedErr:      false,
@@ -39,8 +38,7 @@ func TestResolve(t *testing.T) {
 			name:      "ValidPasswordPathWithLF",
 			setupMock: func() { createFile("password\n") },
 			credentials: &model.Credentials{
-				User:         nil,
-				PasswordPath: ptr.Of(passwordPath),
+				PasswordPath: passwordPath,
 			},
 			expectedPassword: ptr.Of("password"),
 			expectedErr:      false,
@@ -49,8 +47,7 @@ func TestResolve(t *testing.T) {
 			name:      "ValidPasswordPathWithCRLF",
 			setupMock: func() { createFile("password\r\n") },
 			credentials: &model.Credentials{
-				User:         nil,
-				PasswordPath: ptr.Of(passwordPath),
+				PasswordPath: passwordPath,
 			},
 			expectedPassword: ptr.Of("password"),
 			expectedErr:      false,
@@ -59,8 +56,7 @@ func TestResolve(t *testing.T) {
 			name:      "InvalidPasswordPath",
 			setupMock: func() {},
 			credentials: &model.Credentials{
-				User:         nil,
-				PasswordPath: ptr.Of("not-existing.txt"),
+				PasswordPath: "not-existing.txt",
 			},
 			expectedPassword: nil,
 			expectedErr:      true,
@@ -82,7 +78,7 @@ func TestResolve(t *testing.T) {
 			name:      "PlainPassword",
 			setupMock: func() {},
 			credentials: &model.Credentials{
-				Password: ptr.Of("plain"),
+				Password: "plain",
 			},
 			expectedPassword: ptr.Of("plain"),
 			expectedErr:      false,
@@ -105,9 +101,6 @@ func TestResolve(t *testing.T) {
 		})
 	}
 }
-
-// Note: Logic for checking file caching was removed because Resolver is stateless regarding files.
-// Logic for Secret Agent caching is tested in secret_agent_test.go (if we create it).
 
 func createFile(content string) {
 	text := []byte(content)

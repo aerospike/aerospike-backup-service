@@ -2,17 +2,19 @@ package model
 
 // ServiceConfig represents the backup service configuration properties.
 type ServiceConfig struct {
-	// HTTPServer is the backup service HTTP server configuration.
-	HTTPServer *HTTPServerConfig
+	// ServerHTTP is the backup service HTTP server configuration.
+	ServerHTTP *ServerConfigHTTP
+	// ServerHTTPS is the backup service HTTPS server configuration.
+	ServerHTTPS *ServerConfigHTTPS
 	// Logger is the backup service logger configuration.
 	Logger *LoggerConfig
 	// Backup contains service-level backup settings.
 	Backup *BackupCommonConfig
 }
 
-func (c ServiceConfig) GetHTTPServerOrDefault() *HTTPServerConfig {
-	if c.HTTPServer != nil {
-		return c.HTTPServer
+func (c ServiceConfig) GetServerHTTPOrDefault() *ServerConfigHTTP {
+	if c.ServerHTTP != nil {
+		return c.ServerHTTP
 	}
 
 	return &defaultConfig.http

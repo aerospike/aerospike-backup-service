@@ -14,7 +14,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/spf13/cobra"
 )
 
@@ -65,18 +65,18 @@ func startService(configFile string, remote bool) error {
 	ctx, stop := systemCtx()
 	defer stop()
 
-	scheduler, httpService, err := app.InitComponents(ctx, configFile, remote)
+	components, err := app.InitComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
 	}
 
-	// start the scheduler only after all the initialization is done
-	scheduler.Start(ctx)
+	components.Scheduler.Start(ctx)
+	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 
-	err = runHTTPServer(ctx, httpService)
+	err = runServerHTTP(ctx, components.ServerHTTP)
 
 	// stop the scheduler
-	scheduler.Stop()
+	components.Scheduler.Stop()
 
 	return err
 }
@@ -85,13 +85,11 @@ func systemCtx() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 }
 
-func runHTTPServer(ctx context.Context, service *handlers.Service) error {
-	httpServer := server.NewHTTPServer(service)
-
+func runServerHTTP(ctx context.Context, serverHTTP server.HTTP) error {
 	// Channel to capture server startup errors
 	errCh := make(chan error, 1)
 	go func() {
-		if err := httpServer.Start(); err != nil {
+		if err := serverHTTP.Start(); err != nil {
 			errCh <- err
 		}
 	}()
@@ -103,7 +101,7 @@ func runHTTPServer(ctx context.Context, service *handlers.Service) error {
 	case <-ctx.Done():
 	}
 
-	if err := httpServer.Shutdown(); err != nil {
+	if err := serverHTTP.Shutdown(); err != nil {
 		slog.Error("HTTP server shutdown failed", attr.Error(err))
 		return err
 	}

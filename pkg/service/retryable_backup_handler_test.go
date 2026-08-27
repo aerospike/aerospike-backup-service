@@ -23,8 +23,6 @@ var retry = models.RetryPolicy{
 
 func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	stats := models.NewBackupStats()
 	mockHandler.EXPECT().Wait(gomock.Any()).Return(nil)
@@ -64,8 +62,6 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 
 func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	failedHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	successHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	stats := models.NewBackupStats()
@@ -114,8 +110,6 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 
 	waitCalled := make(chan struct{})
@@ -164,8 +158,6 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 
 func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	mockHandler.EXPECT().Wait(gomock.Any()).Return(errors.New("wait failed")).Times(3)
 
@@ -227,8 +219,6 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 
 func TestStartRetryableBackup_Cancel(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 
 	// The handler should wait until context is done, then return context.Canceled
@@ -272,4 +262,38 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 	require.Equal(t, 1, failureCount)
 	require.Equal(t, 0, successCount)
+}
+
+func TestRetryableBackupHandler_GetStats_GetMetrics(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
+	stats := models.NewBackupStats()
+	metrics := &models.Metrics{RecordsPerSecond: 42}
+
+	mockHandler.EXPECT().Wait(gomock.Any()).Return(nil)
+	mockHandler.EXPECT().GetStats().Return(stats).AnyTimes()
+	mockHandler.EXPECT().GetMetrics().Return(metrics).AnyTimes()
+
+	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
+		return mockHandler, nil
+	}
+	onSuccess := func(_ context.Context, _ *models.BackupStats) error { return nil }
+
+	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+		Start: start, OnFail: func(context.Context) {}, OnSuccess: onSuccess, OnRetry: func() {},
+	}, slog.Default())
+
+	require.NoError(t, handler.Wait(t.Context()))
+	assert.Equal(t, metrics, handler.GetMetrics())
+	assert.Equal(t, stats, handler.GetStats())
+}
+
+func TestRetryableBackupHandler_GetStats_GetMetrics_BeforeStart(t *testing.T) {
+	t.Parallel()
+
+	h := &retryableBackupHandler{}
+	assert.Nil(t, h.GetStats())
+	assert.Nil(t, h.GetMetrics())
 }

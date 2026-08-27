@@ -2,8 +2,6 @@ package dto
 
 import (
 	"errors"
-	"maps"
-	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -16,7 +14,7 @@ type BackupCommonConfig struct {
 	// * ISO (e.g. 2006-01-02T15-04-05)
 	// * EU (e.g. 02-Jan-2006-15-04-05)
 	// * US (e.g. Jan-02-2006-15-04-05)
-	TimestampFormat *string `yaml:"timestamp-format,omitempty" json:"timestamp-format,omitempty" enums:"ISO,US,EU" extensions:"x-nullable"` //nolint:lll
+	TimestampFormat TimestampFormat `yaml:"timestamp-format,omitempty" json:"timestamp-format,omitempty" extensions:"x-nullable"` //nolint:lll
 }
 
 // Validate validates the backup subsection configuration.
@@ -25,15 +23,7 @@ func (b *BackupCommonConfig) Validate() error {
 		return nil
 	}
 
-	if b.TimestampFormat != nil {
-		format := model.TimestampFormatFromString(*b.TimestampFormat)
-		if _, ok := model.TimestampFormatPresets[format]; !ok {
-			allowed := slices.Collect(maps.Keys(model.TimestampFormatPresets))
-			return errValidationInvalidValue("timestamp-format", *b.TimestampFormat, allowed)
-		}
-	}
-
-	return nil
+	return b.TimestampFormat.Validate()
 }
 
 func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
@@ -41,20 +31,11 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 		return nil
 	}
 
-	var df *model.TimestampFormat
-	if b.TimestampFormat != nil {
-		v := model.TimestampFormatFromString(*b.TimestampFormat)
-		df = &v
-	}
-
-	return &model.BackupCommonConfig{TimestampFormat: df}
+	return &model.BackupCommonConfig{TimestampFormat: b.TimestampFormat.ToModel()}
 }
 
 func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
-	if m.TimestampFormat != nil {
-		v := string(*m.TimestampFormat)
-		b.TimestampFormat = &v
-	}
+	b.TimestampFormat = NewTimestampFormatFromModel(m.TimestampFormat)
 }
 
 // Compare compares two BackupCommonConfig instances and returns detailed errors.
@@ -68,5 +49,5 @@ func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
 	if other == nil {
 		return errors.New("backup removed")
 	}
-	return comparePointers("TimestampFormat", b.TimestampFormat, other.TimestampFormat)
+	return compareValues("TimestampFormat", b.TimestampFormat, other.TimestampFormat)
 }

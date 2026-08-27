@@ -3,7 +3,6 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +19,7 @@ func TestValidSecretAgent(t *testing.T) {
 		},
 	}
 
-	err := config.validate()
+	err := config.validate(ValidationDefault)
 	require.NoError(t, err)
 }
 
@@ -31,7 +30,7 @@ func TestValidSecretAgentName(t *testing.T) {
 		SecretAgentName: agentName,
 	}
 
-	err := config.validate()
+	err := config.validate(ValidationDefault)
 	require.NoError(t, err)
 }
 
@@ -42,7 +41,7 @@ func TestMutuallyExclusive(t *testing.T) {
 		SecretAgentName: agentName,
 	}
 
-	err := config.validate()
+	err := config.validate(ValidationDefault)
 	require.ErrorIs(t, err, errMutuallyExclusive)
 }
 
@@ -56,7 +55,7 @@ func TestInvalidSecretAgent(t *testing.T) {
 		},
 	}
 
-	err := config.validate()
+	err := config.validate(ValidationDefault)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "secret-agent validation error")
 }
@@ -64,7 +63,7 @@ func TestInvalidSecretAgent(t *testing.T) {
 func TestSecretAgentConfig_Empty(t *testing.T) {
 	config := SecretAgentConfig{}
 
-	err := config.validate()
+	err := config.validate(ValidationDefault)
 	require.NoError(t, err)
 }
 
@@ -73,7 +72,7 @@ func TestNoConnectionType(t *testing.T) {
 		Address: "localhost",
 	}
 
-	err := agent.validate()
+	err := agent.validate(ValidationDefault)
 	require.Error(t, err)
 	assert.EqualError(t, err, errValidationEmptyField("connection-type").Error())
 }
@@ -84,10 +83,10 @@ func TestInvalidConnectionType(t *testing.T) {
 		Address:        "localhost",
 	}
 
-	err := agent.validate()
+	err := agent.validate(ValidationDefault)
 	require.Error(t, err)
 	assert.EqualError(t, err,
-		"invalid value validation error: 'invalid' is not a valid connection-type. Allowed values: [tcp unix]")
+		"invalid value validation error: 'invalid' is not a valid connection-type. Allowed values: [TCP UNIX]")
 }
 
 func TestMissingAddress(t *testing.T) {
@@ -95,7 +94,7 @@ func TestMissingAddress(t *testing.T) {
 		ConnectionType: "tcp",
 	}
 
-	err := agent.validate()
+	err := agent.validate(ValidationDefault)
 	require.Error(t, err)
 	assert.EqualError(t, err, errValidationEmptyField("address").Error())
 }
@@ -108,7 +107,7 @@ func TestInvalidTimeout(t *testing.T) {
 		Timeout:        &timeout,
 	}
 
-	err := agent.validate()
+	err := agent.validate(ValidationDefault)
 	require.Error(t, err)
 	assert.EqualError(t, err, errValidationNegative("timeout", -100).Error())
 }
@@ -118,17 +117,17 @@ func TestInvalidCertFile(t *testing.T) {
 		Address:        "localhost",
 		ConnectionType: "tcp",
 		ClientTLS: ClientTLS{
-			CAFile: ptr.Of("invalid-cert-file"),
+			CAFile: "invalid-cert-file",
 		},
 	}
 
-	err := agent.validate()
+	err := agent.validate(ValidationDefault)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "not found validation error: ca-file \"invalid-cert-file\"")
 }
 
 func TestSecretAgent_Nil(t *testing.T) {
 	var agent *SecretAgent
-	err := agent.validate()
+	err := agent.validate(ValidationDefault)
 	require.NoError(t, err)
 }

@@ -13,6 +13,7 @@ linters:
     - exhaustive
     - exptostd
     - fatcontext
+    - forbidigo
     - funlen
     - gocognit
     - goconst
@@ -60,6 +61,26 @@ linters:
       min-complexity: 25
     exhaustive:
       default-signifies-exhaustive: true
+    forbidigo:
+      forbid:
+        - pattern: '^json\.Marshal$'
+          msg: use decoder.Marshal instead
+        - pattern: '^json\.MarshalIndent$'
+          msg: use decoder.Marshal instead
+        - pattern: '^json\.NewEncoder$'
+          msg: use decoder.Marshal instead
+        - pattern: '^json\.Unmarshal$'
+          msg: use decoder.Deserialize instead
+        - pattern: '^json\.NewDecoder$'
+          msg: use decoder.Deserialize instead
+        - pattern: '^yaml\.Marshal$'
+          msg: use decoder.Marshal instead
+        - pattern: '^yaml\.Unmarshal$'
+          msg: use decoder.Deserialize instead
+        - pattern: '^yaml\.NewEncoder$'
+          msg: use decoder.Marshal instead
+        - pattern: '^yaml\.NewDecoder$'
+          msg: use decoder.Deserialize instead
     nlreturn:
       block-size: 10
     misspell:
@@ -82,6 +103,7 @@ linters:
             - checkPrivateReceivers
           exclude:
             - test
+        - name: unexported-return
     usetesting:
       context-background: true
       context-todo: true
@@ -94,6 +116,18 @@ linters:
       - legacy
       - std-error-handling
     rules:
+      - linters:
+          - forbidigo
+        path: pkg/dto/decoder/
+      - linters:
+          - forbidigo
+        path: build/
+      - linters:
+          - forbidigo
+        path: docs/
+      - linters:
+          - forbidigo
+        path: _test\.go
       - linters:
           - errcheck
           - funlen

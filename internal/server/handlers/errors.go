@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"mime"
@@ -9,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -66,12 +66,21 @@ func httpError(w http.ResponseWriter, err error) {
 	}
 }
 
+// writeRedactedJSON marshals v to JSON with secret fields redacted and writes it to w.
+func writeRedactedJSON(w http.ResponseWriter, v any) {
+	body, _ := decoder.Marshal(v, decoder.JSON, true)
+
+	// #nosec G705 -- body is JSON from decoder.Marshal with secret redaction, not reflected HTML
+	_, _ = w.Write(body)
+}
+
 // httpOK responds with a JSON-encoded success message and 200 status.
+// Secret fields are redacted in the response body.
 func httpOK(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	_ = json.NewEncoder(w).Encode(data)
+	writeRedactedJSON(w, data)
 }
 
 // httpAcceptedWithJobID responds with a job ID and 202 status.
@@ -102,6 +111,5 @@ func httpContent(w http.ResponseWriter, buf []byte, filename string) {
 
 	w.WriteHeader(http.StatusOK)
 
-	//nolint:gosec // G705 attachment with explicit Content-Type and nosniff; body is file bytes, not HTML document.
 	_, _ = w.Write(buf)
 }

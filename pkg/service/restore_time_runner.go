@@ -50,7 +50,9 @@ func (r *timeRestoreRunner) RestoreByTime(
 	ctx, cancel := context.WithCancel(ctx)
 	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
 	logger := slog.With(slog.Any("jobId", jobID))
-	logger.Info("New restore by time job", slog.Any("request", *request))
+	logger.Info("New restore by time job",
+		slog.String("routine", request.RoutineName),
+		slog.Any("timestamp", request.Time))
 
 	go func() {
 		err := r.restoreByTimeSync(ctx, request, jobID, logger)
@@ -173,7 +175,7 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
-			ptr.ValueOrZero(request.DestinationCluster.ClusterLabel), err)
+			request.DestinationCluster.ClusterLabel, err)
 	}
 	defer r.clientManager.Close(client)
 
@@ -227,7 +229,7 @@ func (r *timeRestoreRunner) restoreAllNamespaces(
 
 func (r *timeRestoreRunner) restoreNamespace(
 	ctx context.Context,
-	client aerospike.Restorer,
+	client aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
 	namespace string,
@@ -292,7 +294,7 @@ func prepareNamespaceRestore(
 
 func (r *timeRestoreRunner) executeNamespaceRestore(
 	ctx context.Context,
-	client aerospike.Restorer,
+	client aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
 	backups []model.BackupDetails,
@@ -334,7 +336,7 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 
 func (r *timeRestoreRunner) restoreFromPath(
 	ctx context.Context,
-	client aerospike.Restorer,
+	client aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	backupPath string,
 	storage model.Storage,

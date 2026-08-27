@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/middleware"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 const (
@@ -18,14 +19,25 @@ const (
 	shutdownTimeout = 30 * time.Second
 )
 
-// HTTPServer is the backup service HTTP server wrapper.
-type HTTPServer struct {
-	server *http.Server
+// HTTP manages the backup service HTTP server lifecycle.
+type HTTP interface {
+	http.Handler
+
+	// Start starts the HTTP server. Returns an error if the server fails to start.
+	Start() error
+	// Shutdown shuts down the HTTP server gracefully with a timeout.
+	Shutdown() error
 }
 
-// NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(service *handlers.Service) *HTTPServer {
-	serverConfig := service.HTTPServerConfig()
+// serverHTTP wraps *http.Server with Start/Shutdown lifecycle helpers.
+type serverHTTP struct {
+	*http.Server
+}
+
+var _ HTTP = (*serverHTTP)(nil)
+
+// NewServerHTTP returns a new instance of HTTP.
+func NewServerHTTP(ctx context.Context, serverConfig *model.ServerConfigHTTP, service *handlers.Service) HTTP {
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
 	// Create router
@@ -36,22 +48,30 @@ func NewHTTPServer(service *handlers.Service) *HTTPServer {
 	)
 
 	handler := middleware.Wrap(mux,
-		middleware.RateLimiter(serverConfig.GetRateOrDefault()),
 		middleware.RequestLogger(slog.Default(), []string{"health", "ready", "metrics"}),
+		middleware.RateLimiter(ctx, serverConfig.GetRateOrDefault()),
 	)
 
-	return &HTTPServer{
-		server: &http.Server{
+	return &serverHTTP{
+		Server: &http.Server{
 			Addr:              addr,
 			ReadHeaderTimeout: serverConfig.GetTimeoutOrDefault(),
+			ReadTimeout:       serverConfig.GetReadTimeoutOrDefault(),
+			WriteTimeout:      serverConfig.GetWriteTimeoutOrDefault(),
+			IdleTimeout:       serverConfig.GetIdleTimeoutOrDefault(),
 			Handler:           handler,
 		},
 	}
 }
 
+// ServeHTTP implements http.Handler so integration tests can wrap the server with httptest.
+func (s *serverHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.Handler.ServeHTTP(w, r)
+}
+
 // Start starts the HTTP server. Returns an error if the server fails to start.
-func (s *HTTPServer) Start() error {
-	err := s.server.ListenAndServe()
+func (s *serverHTTP) Start() error {
+	err := s.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
 		slog.Info("HTTP server closed", attr.Error(err))
 		return nil
@@ -60,8 +80,8 @@ func (s *HTTPServer) Start() error {
 }
 
 // Shutdown shuts down the HTTP server gracefully with a timeout.
-func (s *HTTPServer) Shutdown() error {
+func (s *serverHTTP) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
-	return s.server.Shutdown(ctx)
+	return s.Server.Shutdown(ctx)
 }

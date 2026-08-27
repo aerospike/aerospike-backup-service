@@ -3,6 +3,33 @@
 Upgrade notes and breaking changes between releases. For a terser, dated list of what shipped in each release, see
 [CHANGELOG.md](../CHANGELOG.md).
 
+## v3.6 -> v3.7
+
+This release redacts secret fields in configuration API responses and changes how secrets are updated via the REST API.
+
+#### Breaking changes
+
+- **Configuration API secret redaction** — GET endpoints (`/v1/config`, `/v1/config/clusters`, `/v1/config/storage`,
+  and related read paths) no longer return literal secret values. Literal passwords, keys, and similar fields are
+  replaced with the fixed sentinel `"[secret]"`. Secret Agent references (`secrets:...`) are still returned as-is.
+- **PUT requests must preserve the sentinel** — If you use a GET → edit other fields → PUT workflow, leave every
+  unchanged secret field as `"[secret]"`. The service treats that sentinel as “keep the stored value” and will not
+  overwrite the real secret. To change a secret, send the new literal value or a new Secret Agent reference explicitly.
+  Sending `"[secret]"` for a newly added entity (with no stored secret yet) is invalid.
+
+#### Improvements
+
+- **HTTPS listener configuration** — Optional [`service.https`](readme/dto/dto.serverconfighttps.md) defines a sibling
+  HTTPS listener (default port 8443) with TLS fields (`cert-file`, `key-file`, `min-version`, `cipher-suites`,
+  `client-ca-file`, `client-auth`). Omitting `https` keeps today's plaintext HTTP-only behavior. Both
+  [`service.http`](readme/dto/dto.serverconfighttp.md) and `service.https` use `disabled` (default `false`). At least
+  one listener must remain enabled; if both are enabled, their ports must differ. This release validates the config
+  and provides a server-safe TLS builder; wiring the HTTPS listener into process startup is a follow-up.
+- **HTTP server timeouts** — The HTTP server now bounds `ReadTimeout`, `WriteTimeout`, and `IdleTimeout` in addition
+  to the existing `timeout` (`ReadHeaderTimeout`). Defaults are 30s / 60s / 120s respectively. Configure them under
+  [`service.http`](readme/dto/dto.serverconfighttp.md) as `read-timeout`, `write-timeout`, and `idle-timeout`
+  (milliseconds). Existing configs that omit these fields pick up the new defaults automatically.
+
 ## v3.5 -> v3.6
 
 This release adds compact backups, more flexible restore-by-timestamp, performance optimizations in the record

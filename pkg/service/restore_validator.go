@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -13,9 +14,13 @@ import (
 
 var ErrRestorePrerequisitesFailed = errors.New("restore pre-requisites failed")
 
-// RestoreValidator validates restore preconditions before actual execution starts.
+// RestoreValidator checks whether a restore request can run: the backup encryption must match
+// the request policy, the destination cluster must have the target namespaces, and no routine
+// may be backing up the same cluster and namespaces at that moment.
 type RestoreValidator interface {
-	// ValidatePath validates path-restore preconditions.
+	// ValidatePath validates a restore from an explicit backup path. On top of the common checks
+	// it requires the backups to hold data and to be taken at the same time.
+	// A path without backup metadata is allowed and restored as is.
 	ValidatePath(
 		ctx context.Context,
 		request *model.RestoreRequest,
@@ -31,24 +36,26 @@ type RestoreValidator interface {
 	) error
 }
 
-type restoreValidatorImpl struct {
+type restoreValidator struct {
 	startController StartController
 	routines        routineProvider
 }
 
-// NewRestoreValidator creates a validator for restore operations.
+var _ RestoreValidator = (*restoreValidator)(nil)
+
+// NewRestoreValidator returns a RestoreValidator.
 func NewRestoreValidator(
 	startController StartController,
 	routines routineProvider,
 ) RestoreValidator {
-	return &restoreValidatorImpl{
+	return &restoreValidator{
 		startController: startController,
 		routines:        routines,
 	}
 }
 
 // ValidatePath validates path-restore preconditions.
-func (r *restoreValidatorImpl) ValidatePath(
+func (r *restoreValidator) ValidatePath(
 	ctx context.Context,
 	request *model.RestoreRequest,
 	infoGetter backup.InfoGetter,
@@ -86,7 +93,7 @@ func (r *restoreValidatorImpl) ValidatePath(
 }
 
 // ValidateTimestamp validates point-in-time restore preconditions.
-func (r *restoreValidatorImpl) ValidateTimestamp(
+func (r *restoreValidator) ValidateTimestamp(
 	ctx context.Context,
 	request *model.RestoreTimestampRequest,
 	infoGetter backup.InfoGetter,
@@ -97,7 +104,7 @@ func (r *restoreValidatorImpl) ValidateTimestamp(
 		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
 	}
 
-	sourceNamespaces := collections.Keys(backupsByNamespace)
+	sourceNamespaces := slices.Collect(maps.Keys(backupsByNamespace))
 	destinationNamespaces := destinationNamespacesForRestore(request.Policy.Namespace, sourceNamespaces)
 	if err := validateDestinationNamespaces(ctx, destinationNamespaces, infoGetter); err != nil {
 		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
@@ -112,7 +119,7 @@ func (r *restoreValidatorImpl) ValidateTimestamp(
 
 // checkRunningBackupsConflict validates the provided destination cluster and namespaces
 // against all currently active backup routines to prevent concurrent operations on the same data.
-func (r *restoreValidatorImpl) checkRunningBackupsConflict(
+func (r *restoreValidator) checkRunningBackupsConflict(
 	cluster model.AerospikeCluster,
 	destinationNamespaces []string,
 ) error {
@@ -130,8 +137,13 @@ func (r *restoreValidatorImpl) checkRunningBackupsConflict(
 		// Block if there is any overlap between the destination namespaces of the restore
 		// and the source namespaces of the running backup.
 		if overlappingNS := namespacesOverlap(destinationNamespaces, routine.Namespaces); overlappingNS != "" {
+			clusterLabel := cluster.ClusterLabel
+			if clusterLabel == "" && len(cluster.SeedNodes) > 0 {
+				clusterLabel = cluster.SeedNodes[0].String()
+			}
+
 			return fmt.Errorf("restore not allowed during backups on routine %s (cluster %s, namespace %q). "+
-				"Please cancel existing backups jobs to perform restore", routine.Name, cluster.ToString(), overlappingNS)
+				"Please cancel existing backups jobs to perform restore", routine.Name, clusterLabel, overlappingNS)
 		}
 	}
 
@@ -178,7 +190,7 @@ func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
 // validateBackupsEncryption validates that the backups encryption matches the provided policy.
 func validateBackupsEncryption(backups []model.BackupDetails, policy *model.EncryptionPolicy) error {
 	for _, b := range backups {
-		if b.Encryption == "" || b.Encryption == model.EncryptNone {
+		if b.Encryption == "" || b.Encryption == model.EncryptionModeNone {
 			continue
 		}
 		if policy == nil {
@@ -190,9 +202,9 @@ func validateBackupsEncryption(backups []model.BackupDetails, policy *model.Encr
 			return fmt.Errorf("backup is encrypted with mode '%s', "+
 				"but the provided encryption policy specifies mode '%s'", b.Encryption, policy.Mode)
 		}
-		if policy.KeyFile == nil &&
-			policy.KeyEnv == nil &&
-			policy.KeySecret == nil {
+		if policy.KeyFile == "" &&
+			policy.KeyEnv == "" &&
+			policy.KeySecret == "" {
 			return errors.New("backup is encrypted, " +
 				"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
 		}
@@ -203,8 +215,8 @@ func validateBackupsEncryption(backups []model.BackupDetails, policy *model.Encr
 
 // destinationNamespacesForRestore resolves effective destination namespaces for a restore request.
 func destinationNamespacesForRestore(remapping *model.RestoreNamespace, sourceNamespaces []string) []string {
-	if remapping != nil && remapping.Destination != nil {
-		return []string{*remapping.Destination}
+	if remapping != nil && remapping.Destination != "" {
+		return []string{remapping.Destination}
 	}
 
 	return sourceNamespaces

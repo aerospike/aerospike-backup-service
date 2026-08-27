@@ -1,0 +1,546 @@
+package main
+
+import (
+	"bytes"
+	"cmp"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"strings"
+	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	metrics "github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/yaml.v3"
+)
+
+const (
+	examplesDir   = "docs/examples"
+	readmeRelPath = "README.md"
+
+	valLocal          = "local"
+	valBackups        = "backups"
+	valAsBackupBucket = "as-backup-bucket"
+	valEuCentral1     = "eu-central-1"
+	valRoutine1       = "routine1"
+)
+
+// targetFiles lists every Markdown file that may contain generated sections
+// (DTO examples, the default config block, the metrics table, or the RBAC
+// matrix reserved below). Each file is processed independently and markers
+// that aren't present in a given file are simply left alone, so a new doc
+// (e.g. docs/security.md) only needs to be added here to opt in.
+var targetFiles = []string{
+	readmeRelPath,
+	"docs/installation.md",
+	"docs/configuration.md",
+	"docs/api-examples.md",
+	"docs/monitoring.md",
+	"docs/migration.md",
+}
+
+var allStorageTypes = map[string]dto.Storage{
+	valLocal: {
+		LocalStorage: &dto.LocalStorage{
+			Path: valBackups,
+		},
+	},
+	"aws-s3": {
+		S3Storage: &dto.S3Storage{
+			Bucket:   valAsBackupBucket,
+			Path:     valBackups,
+			S3Region: valEuCentral1,
+		},
+	},
+	"gcp-gcs": {
+		GcpStorage: &dto.GcpStorage{
+			Path:       valBackups,
+			KeyFile:    "key-file.json",
+			BucketName: "gcp-backup-bucket",
+			Endpoint:   "http://127.0.0.1:9020",
+		},
+	},
+	"azure-blob-storage": {
+		AzureStorage: &dto.AzureStorage{
+			Path:          valBackups,
+			Endpoint:      "http://127.0.0.1:6000/devstoreaccount1",
+			AccountName:   "devstoreaccount1",
+			ContainerName: "testcontainer",
+			AccountKey:    "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+		},
+	},
+}
+
+var cluster = dto.AerospikeCluster{
+	SeedNodes: []dto.SeedNode{{
+		HostName: "host.docker.internal", Port: 3000},
+	},
+	Credentials: &dto.Credentials{
+		User:     "user",
+		Password: "password",
+	},
+}
+
+var jsonExamples = map[string]any{
+	"ClustersResponse": []dto.AerospikeCluster{cluster},
+	"RoutinesResponse": map[string]dto.BackupRoutine{
+		valRoutine1: {
+			BackupPolicy:  "keepFilesPolicy",
+			SourceCluster: "absDefaultCluster",
+			Storage:       valLocal,
+			IntervalCron:  "@yearly",
+			Namespaces:    ptr.Of([]string{"test-namespace"}),
+		},
+		"routine2": {
+			BackupPolicy:     "removeFilesPolicy",
+			SourceCluster:    "absDefaultCluster",
+			Storage:          valLocal,
+			IntervalCron:     "@monthly",
+			IncrIntervalCron: "@daily",
+			Namespaces:       ptr.Of([]string{"test-namespace"}),
+			SetList:          []string{"backupSet"},
+			BinList:          []string{"backupBin"},
+		},
+	},
+	"StorageResponse": allStorageTypes,
+	"FullBackupsResponse": map[string][]dto.BackupDetails{
+		valRoutine1: {{
+			Created:             time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
+			Timestamp:           time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC).UnixMilli(),
+			Finished:            time.Date(2024, 01, 01, 12, 5, 0, 0, time.UTC),
+			Duration:            300,
+			From:                time.Time{},
+			Namespace:           "source-ns1",
+			RecordCount:         42,
+			ByteCount:           480_000,
+			FileCount:           1,
+			SecondaryIndexCount: 5,
+			UDFCount:            1,
+			Key:                 "routine1/backup/1704110400000/source-ns1",
+			Storage: &dto.Storage{
+				S3Storage: &dto.S3Storage{
+					Bucket:   valAsBackupBucket,
+					Path:     valBackups,
+					S3Region: valEuCentral1,
+				},
+			},
+			Compression: string(dto.CompressionModeZSTD),
+			Encryption:  string(dto.EncryptionModeNone),
+		},
+		},
+	},
+	"RestoreFullRequest": dto.RestoreRequest{
+		DestinationClusterConfig: dto.DestinationClusterConfig{
+			Cluster: &cluster,
+		},
+		Policy: &dto.RestorePolicy{
+			BaseRestorePolicy: dto.BaseRestorePolicy{
+				NoGeneration: ptr.Of(true),
+			},
+		},
+		StorageConfig: dto.StorageConfig{
+			Storage: &dto.Storage{
+				S3Storage: &dto.S3Storage{
+					Bucket:   valAsBackupBucket,
+					Path:     valBackups,
+					S3Region: valEuCentral1,
+				},
+			},
+		},
+		BackupDataPath: "routine1/backup/1704110400000/source-ns1",
+	},
+	"RestoreTimestampRequest": dto.RestoreTimestampRequest{
+		DestinationClusterConfig: dto.DestinationClusterConfig{
+			Name: "abs-cluster",
+		},
+		Time:    1704110400000,
+		Routine: valRoutine1,
+	},
+	"CurrentBackupResponse": dto.RoutineState{
+		Full: &dto.RunningJob{
+			TotalRecords:     100_000,
+			DoneRecords:      50_000,
+			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
+			FinishTime:       nil,
+			PercentageDone:   50,
+			EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			Duration:         1800,
+			Metrics: &dto.Metrics{
+				RecordsPerSecond:   1000,
+				KilobytesPerSecond: 30000,
+				Pipeline:           167,
+			},
+		},
+	},
+	"CurrentRestoreResponse": dto.RestoreJobStatus{
+		ReadRecords:     100_000,
+		TotalBytes:      30000000,
+		ExpiredRecords:  0,
+		SkippedRecords:  0,
+		IgnoredRecords:  0,
+		InsertedRecords: 50_000,
+		ExistedRecords:  0,
+		FresherRecords:  0,
+		IndexCount:      4,
+		UDFCount:        1,
+		ErrorsInDoubt:   0,
+		CurrentRestore: &dto.RunningJob{
+			TotalRecords:     100_000,
+			DoneRecords:      50_000,
+			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
+			FinishTime:       nil,
+			PercentageDone:   50,
+			EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			Duration:         1800,
+			Metrics: &dto.Metrics{
+				RecordsPerSecond:   1000,
+				KilobytesPerSecond: 30000,
+				Pipeline:           8192,
+			},
+		},
+		Status: dto.RestoreRunning,
+		Error:  "",
+	},
+	"CurrentRestoresResponse": map[int]dto.RestoreJobStatus{
+		12345678: {
+			ReadRecords:     100_000,
+			TotalBytes:      30000000,
+			ExpiredRecords:  0,
+			SkippedRecords:  0,
+			IgnoredRecords:  0,
+			InsertedRecords: 50_000,
+			ExistedRecords:  0,
+			FresherRecords:  0,
+			IndexCount:      4,
+			UDFCount:        1,
+			ErrorsInDoubt:   0,
+			CurrentRestore: &dto.RunningJob{
+				TotalRecords:     100_000,
+				DoneRecords:      50_000,
+				StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
+				FinishTime:       nil,
+				PercentageDone:   50,
+				Duration:         1800,
+				EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+				Metrics: &dto.Metrics{
+					RecordsPerSecond:   1000,
+					KilobytesPerSecond: 30000,
+					Pipeline:           0,
+				},
+			},
+			Status: dto.RestoreRunning,
+			Error:  "",
+		}},
+}
+
+var yamlExamples = map[string]any{
+	"Storage": allStorageTypes,
+	"RemoteConfig": dto.Storage{
+		S3Storage: &dto.S3Storage{
+			Path:     "config.yml",
+			Bucket:   valAsBackupBucket,
+			S3Region: valEuCentral1,
+		},
+	},
+}
+
+func generateReadme() {
+	// generate markdown dto descriptions from open-api
+	generateMarkdownFiles()
+	// generate example files from jsonExamples and yamlExamples
+	generateExampleFiles()
+
+	// Compute the Prometheus metrics table once; it's applied to every target
+	// file below, and only files that actually contain the <!-- Metrics -->
+	// marker are changed.
+	metricRows := extractRows()
+	writeMetricsToFile(metricRows)
+	metricsTable := renderMetricsTable(metricRows)
+
+	for _, path := range targetFiles {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			panic(fmt.Errorf("failed to read target file %q: %w", path, err))
+		}
+
+		// replace every <!-- DTONAME --> comment with a real example from jsonExamples and yamlExamples
+		content = updateDtoExamples(content)
+		// copy example configuration (with explanatory comments) to a <!-- DefaultConfig --> section
+		content = updateDefaultConfigSection(content)
+		// add the Prometheus metrics explanation table after <!-- Metrics -->
+		content = applyMetricsTable(content, metricsTable)
+		// reserved for the security plan: injects an RBAC permissions matrix after <!-- RBACMatrix -->
+		content = updateRBACMatrix(content)
+
+		//nolint:gosec // G306 target markdown files are meant to be readable by anyone building docs.
+		err = os.WriteFile(path, content, 0600)
+		if err != nil {
+			panic(fmt.Errorf("failed to write target file %q: %w", path, err))
+		}
+	}
+}
+
+func generateExampleFiles() {
+	_ = os.RemoveAll(examplesDir)
+	_ = os.MkdirAll(examplesDir, 0755)
+
+	for name, example := range jsonExamples {
+		fileName := filepath.Join(examplesDir, name+".json")
+		fileContent, err := json.MarshalIndent(example, "", "  ")
+		if err != nil {
+			panic(fmt.Errorf("failed to marshal json example %q: %w", name, err))
+		}
+		fileContent = fmt.Appendln(fileContent, "")
+		err = os.WriteFile(fileName, fileContent, 0600)
+		if err != nil {
+			panic(fmt.Errorf("failed to write json example file %q: %w", fileName, err))
+		}
+	}
+
+	for name, example := range yamlExamples {
+		fileName := filepath.Join(examplesDir, name+".yaml")
+		fileContent, err := marshalYAML(example)
+		if err != nil {
+			panic(fmt.Errorf("failed to marshal yaml example %q: %w", name, err))
+		}
+		err = os.WriteFile(fileName, fileContent, 0600)
+		if err != nil {
+			panic(fmt.Errorf("failed to write yaml example file %q: %w", fileName, err))
+		}
+	}
+}
+
+func updateDtoExamples(readme []byte) []byte {
+	// comment containing an example name (e.g.,key from jsonExamples)
+	// followed by ```json/```yaml and the example code block.
+	re := regexp.MustCompile("<!--\\s*(\\w+)\\s*-->\\s*```(json|yaml)[\\s\\S]*?```")
+
+	updatedReadme := re.ReplaceAllFunc(readme, func(match []byte) []byte {
+		submatches := re.FindSubmatch(match)
+		if len(submatches) < 3 {
+			panic(fmt.Errorf("failed to find submatch: %s", submatches))
+		}
+
+		name := string(submatches[1])
+		format := string(submatches[2])
+
+		var formattedExample []byte
+
+		var err error
+		switch format {
+		case "json":
+			example, exists := jsonExamples[name]
+			if exists {
+				formattedExample, err = json.MarshalIndent(example, "", "  ")
+			}
+		case "yaml":
+			example, exists := yamlExamples[name]
+			if exists {
+				formattedExample, err = marshalYAML(example)
+			}
+		}
+
+		if err != nil {
+			panic(fmt.Errorf("failed to parse: %w", err))
+		}
+
+		var buffer bytes.Buffer
+		fmt.Fprintf(&buffer, "<!-- %s -->\n\n```%s\n", name, format)
+		buffer.Write(formattedExample)
+		buffer.WriteString("\n```")
+
+		return buffer.Bytes()
+	})
+
+	return updatedReadme
+}
+
+func updateDefaultConfigSection(readme []byte) []byte {
+	configRe := regexp.MustCompile("<!--\\s*DefaultConfig\\s*-->\\s*```yaml[\\s\\S]*?```")
+
+	configContent, err := os.ReadFile("build/package/config/aerospike-backup-service.yml")
+	if err != nil {
+		panic(fmt.Errorf("failed to read config YAML: %w", err))
+	}
+
+	config, err := dto.NewConfigFromReader(bytes.NewReader(configContent), decoder.YAML)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse default config YAML: %w", err))
+	}
+	if err = config.Validate(dto.ValidationDefault); err != nil {
+		panic(fmt.Errorf("failed to validate default config YAML: %w", err))
+	}
+
+	return configRe.ReplaceAllFunc(readme, func(_ []byte) []byte {
+		var buffer bytes.Buffer
+		buffer.WriteString("<!-- DefaultConfig -->\n\n```yaml\n")
+		buffer.Write(configContent)
+		buffer.WriteString("\n```")
+		return buffer.Bytes()
+	})
+}
+
+// MarshalYAML marshals the input into YAML and replaces 4-space indents with 2-space indents.
+// we need this to be in sync with Goland's markdown formatter.
+func marshalYAML(v any) ([]byte, error) {
+	rawYAML, err := yaml.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	formattedYAML := strings.ReplaceAll(string(rawYAML), "    ", "  ")
+
+	return []byte(formattedYAML), nil
+}
+
+type MetricRow struct {
+	Name        string   `json:"name"`
+	Type        string   `json:"type"`
+	Description string   `json:"description"`
+	Labels      []string `json:"labels"`
+	Deprecated  bool     `json:"deprecated"`
+}
+
+// renderMetricsTable generates a Markdown table from a list of Prometheus collectors.
+func renderMetricsTable(rows []MetricRow) string {
+	maxName := len("Name")
+	maxType := len("Type")
+	maxHelp := len("Description")
+	maxLabels := len("Labels")
+	for _, r := range rows {
+		if len(r.Name) > maxName {
+			maxName = len(r.Name)
+		}
+		if len(r.Type) > maxType {
+			maxType = len(r.Type)
+		}
+		if len(r.Description) > maxHelp {
+			maxHelp = len(r.Description)
+		}
+		labelsStr := strings.Join(r.Labels, ", ")
+		if len(labelsStr) > maxLabels {
+			maxLabels = len(labelsStr)
+		}
+	}
+
+	// Adding 2 for the backticks `` around the name
+	const quotes = 2
+
+	var sb strings.Builder
+	// Header
+	fmt.Fprintf(&sb, "| %-*s | %-*s | %-*s | %-*s |\n",
+		maxName+quotes, "Name", maxType, "Type", maxHelp, "Description", maxLabels, "Labels")
+	// Separator
+	fmt.Fprintf(&sb, "|-%s-|-%s-|-%s-|-%s-|\n",
+		strings.Repeat("-", maxName+quotes),
+		strings.Repeat("-", maxType),
+		strings.Repeat("-", maxHelp),
+		strings.Repeat("-", maxLabels))
+	// Body
+	for _, r := range rows {
+		name := "`" + r.Name + "`"
+		labelsStr := strings.Join(r.Labels, ", ")
+		fmt.Fprintf(&sb, "| %-*s | %-*s | %-*s | %-*s |\n",
+			maxName+quotes, name, maxType, r.Type, maxHelp, r.Description, maxLabels, labelsStr)
+	}
+
+	return sb.String()
+}
+
+// applyMetricsTable replaces the placeholder section after <!-- Metrics -->
+// with the rendered table. Files without the marker are returned unchanged.
+func applyMetricsTable(content []byte, table string) []byte {
+	metricsRe := regexp.MustCompile(`(?s)(<!-- Metrics -->\n\n)(\|.*?\|\n)(\n)`)
+
+	return metricsRe.ReplaceAll(content, []byte("${1}"+table+"${3}"))
+}
+
+// updateRBACMatrix is a reserved extension point for the security plan's RBAC
+// work: once role/permission definitions exist, this function should replace
+// a <!-- RBACMatrix --> marker the same way applyMetricsTable does for
+// <!-- Metrics -->. It is a no-op today because no target file defines that
+// marker yet; generateReadme already invokes it, so the security plan only needs
+// to fill in the body, not add multi-file plumbing.
+func updateRBACMatrix(content []byte) []byte {
+	return content
+}
+
+func extractRows() []MetricRow {
+	var rows []MetricRow
+	// This regex extracts the name, help text, and variable labels from the
+	// description string of a Prometheus metric.
+	//nolint:lll
+	prometheusRE := regexp.MustCompile(
+		`Desc{fqName:\s*"([^"]+)",\s*help:\s*"([^"]+)",\s*unit:\s*"[^"]*",\s*constLabels:\s*{[^}]*},\s*variableLabels:\s*{([^}]*)}}`)
+
+	// Iterate over all registered metrics.
+	for _, metric := range metrics.AllMetrics {
+		ch := make(chan *prometheus.Desc, 1)
+		metric.Describe(ch)
+		close(ch)
+		for desc := range ch {
+			str := desc.String()
+			matches := prometheusRE.FindStringSubmatch(str)
+			if len(matches) != 4 {
+				panic("Failed to match Prometheus description: " + str)
+			}
+			helpText := matches[2]
+			deprecated := strings.Contains(helpText, "(Deprecated")
+
+			var labels []string
+			if matches[3] != "" {
+				labels = strings.Split(matches[3], ",")
+			}
+			rows = append(rows, MetricRow{matches[1], metricsType(metric), helpText, labels, deprecated})
+		}
+	}
+
+	// Sort rows to have non-deprecated metrics on top.
+	slices.SortFunc(rows, func(a, b MetricRow) int {
+		if a.Deprecated != b.Deprecated {
+			if a.Deprecated {
+				return 1
+			}
+
+			return -1
+		}
+
+		return cmp.Compare(a.Name, b.Name)
+	})
+
+	return rows
+}
+
+func writeMetricsToFile(rows []MetricRow) {
+	// write metrics to json file
+	jsonBytes, err := json.MarshalIndent(rows, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	err = os.WriteFile("docs/metrics.json", jsonBytes, 0600)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func metricsType(metric prometheus.Collector) string {
+	switch metric.(type) {
+	case *prometheus.CounterVec:
+		return "Counter"
+	case *prometheus.GaugeVec:
+		return "Gauge"
+	case *prometheus.HistogramVec:
+		return "Histogram"
+	case *prometheus.SummaryVec:
+		return "Summary"
+	default:
+		// Readme generator only; panic is acceptable if an unknown metric type is registered.
+		panic(fmt.Sprintf("Unknown metric type %v", metric))
+	}
+}

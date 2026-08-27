@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -12,8 +13,8 @@ type backupConfigChangeOptions struct {
 	validateNamespaces bool
 }
 
-// changeBackupConfig applies a mutation to the backup configuration DTO, validates the
-// full configuration via ToModel, and persists the result.
+// changeBackupConfig applies a mutation to the backup configuration DTO, validates and
+// converts the full configuration, and persists the result.
 // The mutate function returns routine names that should be rescheduled and rescanned.
 func (s *Service) changeBackupConfig(
 	ctx context.Context,
@@ -34,7 +35,17 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	modelConfig, err := dtoConfig.ToModel(dto.ValidationSkipTLSFiles)
+	// GET responses redact secrets as "[secret]". Before persisting a PUT, copy real secret
+	// values from the stored config into the incoming payload wherever the sentinel appears,
+	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
+	existingConfig := dto.NewConfigFromModel(s.config)
+	decoder.MergeSecrets(dtoConfig, existingConfig)
+
+	if err := dtoConfig.Validate(dto.ValidationDefault); err != nil {
+		return fmt.Errorf("failed to update configuration: %w", err)
+	}
+
+	modelConfig, err := dtoConfig.ToModel()
 	if err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}

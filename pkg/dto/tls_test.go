@@ -6,14 +6,12 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"errors"
 	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,9 +32,7 @@ func setupTestCertificates(t *testing.T) *testCertificates {
 
 	// Generate a test CA certificate
 	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("Failed to generate CA key: %v", err)
-	}
+	require.NoError(t, err, "Failed to generate CA key")
 
 	caTemplate := x509.Certificate{
 		SerialNumber: big.NewInt(1),
@@ -53,32 +49,22 @@ func setupTestCertificates(t *testing.T) *testCertificates {
 	}
 
 	caCertDER, err := x509.CreateCertificate(rand.Reader, &caTemplate, &caTemplate, &caKey.PublicKey, caKey)
-	if err != nil {
-		t.Fatalf("Failed to create CA certificate: %v", err)
-	}
+	require.NoError(t, err, "Failed to create CA certificate")
 
 	// Write CA certificate file
 	caFile := filepath.Join(tempDir, "ca.pem")
 	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCertDER})
-	if err := os.WriteFile(caFile, caPEM, 0600); err != nil {
-		t.Fatalf("Failed to write CA file: %v", err)
-	}
+	require.NoError(t, os.WriteFile(caFile, caPEM, 0600), "Failed to write CA file")
 
 	// Create CA directory and copy CA file there
 	caDir := filepath.Join(tempDir, "ca")
-	if err := os.MkdirAll(caDir, 0755); err != nil {
-		t.Fatalf("Failed to create CA directory: %v", err)
-	}
+	require.NoError(t, os.MkdirAll(caDir, 0755), "Failed to create CA directory")
 	caDirFile := filepath.Join(caDir, "ca.pem")
-	if err := os.WriteFile(caDirFile, caPEM, 0600); err != nil {
-		t.Fatalf("Failed to write CA file to directory: %v", err)
-	}
+	require.NoError(t, os.WriteFile(caDirFile, caPEM, 0600), "Failed to write CA file to directory")
 
 	// Generate client certificate and key
 	clientKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("Failed to generate client key: %v", err)
-	}
+	require.NoError(t, err, "Failed to generate client key")
 
 	clientTemplate := x509.Certificate{
 		SerialNumber: big.NewInt(2),
@@ -93,23 +79,17 @@ func setupTestCertificates(t *testing.T) *testCertificates {
 	}
 
 	clientCertDER, err := x509.CreateCertificate(rand.Reader, &clientTemplate, &caTemplate, &clientKey.PublicKey, caKey)
-	if err != nil {
-		t.Fatalf("Failed to create client certificate: %v", err)
-	}
+	require.NoError(t, err, "Failed to create client certificate")
 
 	// Write client certificate file
 	certFile := filepath.Join(tempDir, "client.pem")
 	clientCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: clientCertDER})
-	if err := os.WriteFile(certFile, clientCertPEM, 0600); err != nil {
-		t.Fatalf("Failed to write client certificate file: %v", err)
-	}
+	require.NoError(t, os.WriteFile(certFile, clientCertPEM, 0600), "Failed to write client certificate file")
 
 	// Write client key file
 	keyFile := filepath.Join(tempDir, "client-key.pem")
 	clientKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(clientKey)})
-	if err := os.WriteFile(keyFile, clientKeyPEM, 0600); err != nil {
-		t.Fatalf("Failed to write client key file: %v", err)
-	}
+	require.NoError(t, os.WriteFile(keyFile, clientKeyPEM, 0600), "Failed to write client key file")
 
 	return &testCertificates{
 		caFile:   caFile,
@@ -143,7 +123,7 @@ func TestTLS_Validate(t *testing.T) {
 			name: "valid TLS with CAFile only",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					CAFile: &certs.caFile,
+					CAFile: certs.caFile,
 				},
 			},
 			wantErr: false,
@@ -151,7 +131,7 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "valid TLS with CAPath only",
 			tls: &TLS{
-				CAPath: &certs.caDir,
+				CAPath: certs.caDir,
 			},
 			wantErr: false,
 		},
@@ -159,9 +139,9 @@ func TestTLS_Validate(t *testing.T) {
 			name: "CAFile and CAPath are mutually exclusive",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					CAFile: &certs.caFile,
+					CAFile: certs.caFile,
 				},
-				CAPath: &certs.caDir,
+				CAPath: certs.caDir,
 			},
 			wantErr: true,
 			errType: errMutuallyExclusive,
@@ -170,9 +150,9 @@ func TestTLS_Validate(t *testing.T) {
 			name: "valid complete mTLS configuration",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					Name:     ptr.Of("tls-name"),
-					Keyfile:  &certs.keyFile,
-					Certfile: &certs.certFile,
+					Name:     "tls-name",
+					Keyfile:  certs.keyFile,
+					Certfile: certs.certFile,
 				},
 			},
 			wantErr: false,
@@ -181,12 +161,12 @@ func TestTLS_Validate(t *testing.T) {
 			name: "valid mTLS with CA and password",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					CAFile:   &certs.caFile,
-					Name:     ptr.Of("tls-name"),
-					Keyfile:  &certs.keyFile,
-					Certfile: &certs.certFile,
+					CAFile:   certs.caFile,
+					Name:     "tls-name",
+					Keyfile:  certs.keyFile,
+					Certfile: certs.certFile,
 				},
-				KeyfilePassword: ptr.Of(""), // Empty password for unencrypted key
+				KeyfilePassword: "", // Empty password for unencrypted key
 			},
 			wantErr: false,
 		},
@@ -194,8 +174,8 @@ func TestTLS_Validate(t *testing.T) {
 			name: "mTLS missing name",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					Keyfile:  &certs.keyFile,
-					Certfile: &certs.certFile,
+					Keyfile:  certs.keyFile,
+					Certfile: certs.certFile,
 				},
 			},
 			wantErr: true,
@@ -205,8 +185,8 @@ func TestTLS_Validate(t *testing.T) {
 			name: "mTLS missing keyfile",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					Name:     ptr.Of("tls-name"),
-					Certfile: &certs.certFile,
+					Name:     "tls-name",
+					Certfile: certs.certFile,
 				},
 			},
 			wantErr: true,
@@ -216,8 +196,8 @@ func TestTLS_Validate(t *testing.T) {
 			name: "mTLS missing certfile",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					Name:    ptr.Of("tls-name"),
-					Keyfile: &certs.keyFile,
+					Name:    "tls-name",
+					Keyfile: certs.keyFile,
 				},
 			},
 			wantErr: true,
@@ -226,7 +206,7 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "keyfile password without keyfile",
 			tls: &TLS{
-				KeyfilePassword: ptr.Of("password"),
+				KeyfilePassword: "password",
 			},
 			wantErr: true,
 			errType: errMissingDependency,
@@ -235,7 +215,7 @@ func TestTLS_Validate(t *testing.T) {
 			name: "only name set should fail",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					Name: ptr.Of("tls-name"),
+					Name: "tls-name",
 				},
 			},
 			wantErr: true,
@@ -245,7 +225,7 @@ func TestTLS_Validate(t *testing.T) {
 			name: "only keyfile set should fail",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					Keyfile: &certs.keyFile,
+					Keyfile: certs.keyFile,
 				},
 			},
 			wantErr: true,
@@ -255,7 +235,7 @@ func TestTLS_Validate(t *testing.T) {
 			name: "only certfile set should fail",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					Certfile: &certs.certFile,
+					Certfile: certs.certFile,
 				},
 			},
 			wantErr: true,
@@ -264,8 +244,8 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "valid TLS with protocols and cipher suite",
 			tls: &TLS{
-				Protocols:   ptr.Of("TLSv1.2"),
-				CipherSuite: ptr.Of("TLS_AES_128_GCM_SHA256"),
+				Protocols:   "TLSv1.2",
+				CipherSuite: "TLS_AES_128_GCM_SHA256",
 			},
 			wantErr: false,
 		},
@@ -273,13 +253,13 @@ func TestTLS_Validate(t *testing.T) {
 			name: "complex valid configuration",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					CAFile:   &certs.caFile,
-					Name:     ptr.Of("tls-name"),
-					Keyfile:  &certs.keyFile,
-					Certfile: &certs.certFile,
+					CAFile:   certs.caFile,
+					Name:     "tls-name",
+					Keyfile:  certs.keyFile,
+					Certfile: certs.certFile,
 				},
-				Protocols:   ptr.Of("TLSv1.2"),
-				CipherSuite: ptr.Of("TLS_AES_128_GCM_SHA256"),
+				Protocols:   "TLSv1.2",
+				CipherSuite: "TLS_AES_128_GCM_SHA256",
 			},
 			wantErr: false,
 		},
@@ -287,18 +267,28 @@ func TestTLS_Validate(t *testing.T) {
 			name: "invalid CA file path",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					CAFile: ptr.Of("/nonexistent/path/ca.pem"),
+					CAFile: "/nonexistent/path/ca.pem",
 				},
 			},
 			wantErr: true,
 		},
 		{
+			name: "non-clean CA file path",
+			tls: &TLS{
+				ClientTLS: ClientTLS{
+					CAFile: "/etc//passwd",
+				},
+			},
+			wantErr: true,
+			errType: errInvalidPath,
+		},
+		{
 			name: "invalid key file path",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					Name:     ptr.Of("tls-name"),
-					Keyfile:  ptr.Of("/nonexistent/path/key.pem"),
-					Certfile: &certs.certFile,
+					Name:     "tls-name",
+					Keyfile:  "/nonexistent/path/key.pem",
+					Certfile: certs.certFile,
 				},
 			},
 			wantErr: true,
@@ -307,9 +297,9 @@ func TestTLS_Validate(t *testing.T) {
 			name: "invalid cert file path",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					Name:     ptr.Of("tls-name"),
-					Keyfile:  &certs.keyFile,
-					Certfile: ptr.Of("/nonexistent/path/cert.pem"),
+					Name:     "tls-name",
+					Keyfile:  certs.keyFile,
+					Certfile: "/nonexistent/path/cert.pem",
 				},
 			},
 			wantErr: true,
@@ -318,13 +308,13 @@ func TestTLS_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.tls.Validate()
+			err := tt.tls.Validate(ValidationDefault)
 
 			if tt.wantErr {
 				require.Error(t, err)
 
-				if tt.errType != nil && !errors.Is(err, tt.errType) {
-					t.Errorf("expected error type %v, got %v", tt.errType, err)
+				if tt.errType != nil {
+					require.ErrorIs(t, err, tt.errType)
 				}
 			} else {
 				require.NoError(t, err)
@@ -350,7 +340,7 @@ func TestTLS_validateCACertificates(t *testing.T) {
 			name: "only CAFile",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					CAFile: &certs.caFile,
+					CAFile: certs.caFile,
 				},
 			},
 			wantErr: false,
@@ -358,7 +348,7 @@ func TestTLS_validateCACertificates(t *testing.T) {
 		{
 			name: "only CAPath",
 			tls: &TLS{
-				CAPath: &certs.caDir,
+				CAPath: certs.caDir,
 			},
 			wantErr: false,
 		},
@@ -366,9 +356,9 @@ func TestTLS_validateCACertificates(t *testing.T) {
 			name: "both CAFile and CAPath",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
-					CAFile: &certs.caFile,
+					CAFile: certs.caFile,
 				},
-				CAPath: &certs.caDir,
+				CAPath: certs.caDir,
 			},
 			wantErr: true,
 		},

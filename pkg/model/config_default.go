@@ -13,29 +13,43 @@ const (
 	DefaultPartSize      = 50 * 1024 * 1024
 )
 
+// defaultListener represents the listen settings shared by the HTTP and HTTPS servers.
+var defaultListener = ListenerConfig{
+	Address: "0.0.0.0",
+	Rate: &RateLimiterConfig{
+		Tps:       ptr.Of(1024),
+		Size:      ptr.Of(1024),
+		WhiteList: []string{},
+	},
+	ContextPath:  "/",
+	Timeout:      ptr.Of(5 * time.Second),
+	ReadTimeout:  ptr.Of(30 * time.Second),
+	WriteTimeout: ptr.Of(60 * time.Second),
+	IdleTimeout:  ptr.Of(120 * time.Second),
+}
+
 // defaultConfig represents default configuration values.
 var defaultConfig = struct {
-	http          HTTPServerConfig
+	http          ServerConfigHTTP
+	https         ServerConfigHTTPS
 	logger        LoggerConfig
 	backupPolicy  BackupPolicy
 	restorePolicy RestorePolicy
-	xdrConfig     XDRConfig
 	credentials   Credentials
 }{
-	http: HTTPServerConfig{
-		Address: ptr.Of("0.0.0.0"),
-		Port:    NewPort(8080),
-		Rate: &RateLimiterConfig{
-			Tps:       ptr.Of(1024),
-			Size:      ptr.Of(1024),
-			WhiteList: []string{},
-		},
-		ContextPath: ptr.Of("/"),
-		Timeout:     ptr.Of(5 * time.Second),
+	http: ServerConfigHTTP{
+		ListenerConfig: defaultListener,
+		Port:           NewPort(8080),
+	},
+	https: ServerConfigHTTPS{
+		ListenerConfig: defaultListener,
+		Port:           NewPort(8443),
+		MinVersion:     TLSMinVersion12,
+		ClientAuth:     TLSClientAuthNone,
 	},
 	logger: LoggerConfig{
-		Level:        ptr.Of("INFO"),
-		Format:       ptr.Of("PLAIN"),
+		Level:        LogLevelInfo,
+		Format:       LogFormatPlain,
 		StdoutWriter: ptr.Of(true),
 		FileWriter: &FileLoggerConfig{
 			MaxSize:    100,
@@ -66,22 +80,8 @@ var defaultConfig = struct {
 		MaxAsyncBatches: ptr.Of(128),
 		BatchSize:       ptr.Of(128),
 	},
-	xdrConfig: XDRConfig{
-		MaxConns:        ptr.Of(100),
-		ReadTimeout:     ptr.Of(1 * time.Second),
-		WriteTimeout:    ptr.Of(1 * time.Second),
-		StartTimeout:    ptr.Of(30 * time.Second),
-		PollingPeriod:   ptr.Of(1 * time.Second),
-		ResultQueueSize: ptr.Of(256),
-		AckQueueSize:    ptr.Of(256),
-		InfoRetryPolicy: &RetryPolicy{
-			BaseTimeout: optional.Of(2 * time.Second),
-			MaxRetries:  optional.Of(5),
-			Multiplier:  ptr.Of(2.0),
-		},
-	},
 	credentials: Credentials{
-		AuthMode: ptr.Of(AuthModeInternal),
+		AuthMode: AuthModeInternal,
 	},
 }
 

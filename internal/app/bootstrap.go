@@ -2,16 +2,16 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"time"
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -24,41 +24,54 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
-// InitComponents builds the full object graph and returns scheduler and HTTP service.
+// Components group the long-running parts of the service.
+type Components struct {
+	Scheduler        quartz.Scheduler
+	ServerHTTP       server.HTTP
+	MetricsCollector *prometheus.MetricsCollector
+}
+
+// InitComponents builds the full object graph.
+// Components are wired but not started:
+// the caller decides when to run them and when to stop them.
 //
 //nolint:funlen // deliberately keep all initialization in a single function.
 func InitComponents(
 	ctx context.Context,
 	configFile string,
 	remote bool,
-) (quartz.Scheduler, *handlers.Service, error) {
-	resolver := secrets.NewResolver(ctx)
-	operations := newStorageOperations(ctx, resolver)
+) (*Components, error) {
+	resolver := secrets.NewResolver()
+	operations := newStorageOperations(resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load configuration: %w", err)
+		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	appLogger := initLogger(config)
 
 	scheduler, err := service.NewScheduler(ctx, appLogger)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
+		return nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
-	backendService := service.NewBackupBackendService(pathService, operations)
-	history := service.NewHistoryManager(backendService)
-	registry := service.NewRunningBackupsRegistry(history, config)
+	catalog := service.NewBackupCatalog(pathService, operations)
+	history := service.NewHistoryManager(catalog)
+	registry := service.NewBackupStateRegistry(history, config)
 	var routineStorage u.LockMap
-	retentionManager := service.NewBackupRetentionManager(backendService, &routineStorage)
-	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, operations)
+	retentionManager := service.NewBackupRetentionManager(catalog, &routineStorage)
+	clusterConfigWriter := service.NewClusterConfigWriter(
+		pathService,
+		operations,
+		aerospike.NewClusterConfigSource(clientManager),
+	)
 	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
-	backupExecutor := backupexecutor.NewDefaultBackupExecutor(clientManager, operations)
+	backupExecutor := backupexecutor.NewBackupExecutor(clientManager, operations)
 	startController := service.NewStartController(registry, service.NewStartDecider())
-	namespaceRunner := service.NewNamespaceBackupRunner(backupExecutor, backendService, pathService)
+	namespaceRunner := service.NewNamespaceBackupRunner(backupExecutor, catalog, pathService)
 	namespaceResolver := aerospike.NewNamespaceResolver(clientManager)
 	routineBackupRunner := service.NewRoutineBackupRunner(
 		namespaceRunner,
@@ -73,49 +86,54 @@ func InitComponents(
 		routineBackupRunner,
 	)
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
-	configApplier := service.NewDefaultConfigApplier(backupScheduler, registry, config)
+	configApplier := service.NewConfigApplier(backupScheduler, registry, config)
 
 	err = configApplier.ApplyNewConfig(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to apply new config: %w", err)
+		return nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
 
 	restoreJobs := service.NewRestoreJobsHolder()
 	restoreValidator := service.NewRestoreValidator(startController, config)
 
 	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestore(operations),
+		restoreexecutor.NewRestoreExecutor(operations),
 		clientManager,
 		restoreJobs,
-		backendService,
+		catalog,
 		&routineStorage,
 		restoreValidator,
 	)
 
-	prometheus.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
+	metricsCollector := prometheus.NewMetricsCollector(registry.GetRunningState, restoreJobs.StatusCounts)
 
-	configRetriever := service.NewConfigRetriever(backendService, pathService, operations)
-	httpService := handlers.NewService(
+	configRetriever := service.NewConfigRetriever(catalog, pathService, operations)
+	srv := handlers.NewService(
 		ctx,
 		config,
 		configApplier,
 		backupScheduler,
 		restoreMgr,
 		configRetriever,
-		backendService,
+		catalog,
 		registry,
 		configurationManager,
 		nsValidator,
 	)
+	ServerHTTP := server.NewServerHTTP(ctx, config.ServiceConfig.GetServerHTTPOrDefault(), srv)
 
-	return scheduler, httpService, nil
+	return &Components{
+		Scheduler:        scheduler,
+		ServerHTTP:       ServerHTTP,
+		MetricsCollector: metricsCollector,
+	}, nil
 }
 
-func newStorageOperations(ctx context.Context, resolver secrets.Resolver) *storage.Operations {
+func newStorageOperations(resolver secrets.Resolver) storage.Operations {
 	return storage.NewOperations(
-		storage.NewS3StorageAccessor(ctx, resolver),
-		storage.NewGcpStorageAccessor(ctx, resolver),
-		storage.NewAzureStorageAccessor(ctx, resolver),
+		storage.NewS3StorageAccessor(resolver),
+		storage.NewGcpStorageAccessor(resolver),
+		storage.NewAzureStorageAccessor(resolver),
 		storage.NewLocalStorageAccessor(),
 	)
 }
@@ -132,7 +150,7 @@ func newAerospikeLayer(resolver secrets.Resolver) (aerospike.ClientManager, aero
 func initLogger(config *model.Config) *slog.Logger {
 	logger := slog.New(log.NewHandler(config.ServiceConfig.GetLoggerOrDefault()))
 	slog.SetDefault(logger)
-	configStr, _ := json.Marshal(dto.NewConfigFromModel(config))
+	configStr, _ := decoder.Marshal(dto.NewConfigFromModel(config), decoder.JSON, true)
 	slog.Info("Aerospike Backup Service",
 		slog.String("version", backup.Version),
 		slog.String("commit", backup.CommitHash),

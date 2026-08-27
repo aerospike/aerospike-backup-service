@@ -15,9 +15,11 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"gopkg.in/yaml.v3"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
+// Manager reads and writes the whole service configuration in its backing source:
+// a local file, an HTTP endpoint, or a storage backend.
 type Manager interface {
 	// Read reads the configuration from the source.
 	Read(ctx context.Context) (*model.Config, error)
@@ -33,7 +35,7 @@ func Load(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
-	operations storageReaderWriter,
+	operations storage.Operations,
 ) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
@@ -61,11 +63,14 @@ func readConfig(
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration content: %w", err)
 	}
-	slog.Info("Service configuration:\n" + string(configBytes))
 
 	config := &dto.Config{}
 	if err := decoder.Deserialize(config, bytes.NewReader(configBytes), decoder.YAML); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
+	}
+
+	if err := config.Validate(dto.ValidationDefault); err != nil {
+		return nil, fmt.Errorf("failed to validate configuration: %w", err)
 	}
 
 	modelConfig, err := config.ToModel()
@@ -80,7 +85,7 @@ func readConfig(
 
 func writeConfig(writer io.Writer, config *model.Config) error {
 	dtoConfig := dto.NewConfigFromModel(config)
-	data, err := yaml.Marshal(dtoConfig)
+	data, err := decoder.Marshal(dtoConfig, decoder.YAML, false)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration: %w", err)
 	}
@@ -94,7 +99,7 @@ func newConfigManager(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
-	operations storageReaderWriter,
+	operations storage.Operations,
 ) (Manager, error) {
 	if remote {
 		s, err := readStorage(ctx, configFile)
@@ -116,13 +121,13 @@ func readStorage(ctx context.Context, configURI string) (model.Storage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load file content: %w", err)
 	}
-	slog.Info("Configuration storage:\n" + string(content))
+
 	configStorage := &dto.Storage{}
 	if err = decoder.Deserialize(configStorage, bytes.NewReader(content), decoder.YAML); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal storage configuration: %w", err)
 	}
 
-	if err = configStorage.Validate(); err != nil {
+	if err = configStorage.Validate(dto.ValidationDefault); err != nil {
 		return nil, fmt.Errorf("validate storage configuration error: %w", err)
 	}
 

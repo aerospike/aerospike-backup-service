@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 )
 
 // SecretAgentConfig aggregates the SecretAgent configuration.
@@ -18,15 +17,26 @@ type SecretAgentConfig struct {
 	SecretAgentName string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty" extensions:"x-nullable"`
 }
 
-func (c SecretAgentConfig) validate(opts ...ValidationOption) error {
+func (c *SecretAgentConfig) validate(opts ValidationOptions) error {
+	if c == nil {
+		return nil
+	}
 	if c.SecretAgent != nil && c.SecretAgentName != "" {
 		return errValidationMutuallyExclusive("secret-agent-name", "secret-agent")
 	}
-	if err := c.SecretAgent.validate(opts...); err != nil {
+	if err := c.SecretAgent.validate(opts); err != nil {
 		return fmt.Errorf("secret-agent validation error: %w", err)
 	}
 
 	return nil
+}
+
+func (c *SecretAgentConfig) hasSecretAgent() bool {
+	if c == nil {
+		return false
+	}
+
+	return c.SecretAgent != nil || c.SecretAgentName != ""
 }
 
 func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, error) {
@@ -61,7 +71,7 @@ type SecretAgent struct {
 	ClientTLS `yaml:",inline"`
 	// Connection type.
 	//nolint:lll
-	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp" validate:"required" enums:"tcp,unix"`
+	ConnectionType ConnectionType `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp" validate:"required"`
 	// Address of the Secret Agent.
 	Address string `yaml:"address" json:"address" example:"localhost" validate:"required"`
 	// Port the Secret Agent is running on.
@@ -78,7 +88,7 @@ func (s *SecretAgent) ToModel() *model.SecretAgent {
 	}
 
 	return &model.SecretAgent{
-		ConnectionType: s.ConnectionType,
+		ConnectionType: s.ConnectionType.ToModel(),
 		Address:        s.Address,
 		Port:           s.Port.ToModel(),
 		Timeout:        s.Timeout,
@@ -111,7 +121,7 @@ func newSecretAgentFromModel(m *model.SecretAgent) *SecretAgent {
 }
 
 func (s *SecretAgent) fromModel(m *model.SecretAgent) {
-	s.ConnectionType = m.ConnectionType
+	s.ConnectionType = NewConnectionTypeFromModel(m.ConnectionType)
 	s.Address = m.Address
 	s.Port = NewPortFromModel(m.Port)
 	s.Timeout = m.Timeout
@@ -123,7 +133,7 @@ func (s *SecretAgent) fromModel(m *model.SecretAgent) {
 }
 
 // validate validates the SecretAgent.
-func (s *SecretAgent) validate(opts ...ValidationOption) error {
+func (s *SecretAgent) validate(opts ValidationOptions) error {
 	if s == nil {
 		return nil
 	}
@@ -132,21 +142,20 @@ func (s *SecretAgent) validate(opts ...ValidationOption) error {
 		return errValidationEmptyField("address")
 	}
 
-	if s.Timeout != nil && *s.Timeout < 0 {
-		return errValidationNegative("timeout", *s.Timeout)
-	}
-
-	if err := s.Validate(opts...); err != nil {
-		return fmt.Errorf("client TLS validation: %w", err)
-	}
-
 	if s.ConnectionType == "" {
 		return errValidationEmptyField("connection-type")
 	}
 
-	if s.ConnectionType != saClient.ConnectionTypeTCP && s.ConnectionType != saClient.ConnectionTypeUDS {
-		return errValidationInvalidValue("connection-type", s.ConnectionType,
-			[]string{saClient.ConnectionTypeTCP, saClient.ConnectionTypeUDS})
+	if s.Timeout != nil && *s.Timeout < 0 {
+		return errValidationNegative("timeout", *s.Timeout)
+	}
+
+	if err := s.Validate(opts); err != nil {
+		return fmt.Errorf("client TLS validation: %w", err)
+	}
+
+	if err := s.ConnectionType.Validate(); err != nil {
+		return err
 	}
 
 	if err := s.Port.Validate(); err != nil {

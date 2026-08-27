@@ -1,15 +1,16 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
@@ -49,7 +50,7 @@ func TestAddPolicy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -71,7 +72,7 @@ func TestAddPolicy(t *testing.T) {
 }
 
 func TestReadPolicies(t *testing.T) {
-	svc := setupTestService()
+	svc := setupTestService(t)
 	svc.config = model.NewConfig()
 	_ = svc.config.AddPolicy("policy1", &model.BackupPolicy{})
 	_ = svc.config.AddPolicy("policy2", &model.BackupPolicy{})
@@ -122,7 +123,7 @@ func TestReadPolicy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			if tt.policy != nil {
 				_ = svc.config.AddPolicy(tt.policyName, tt.policy)
 			}
@@ -189,7 +190,7 @@ func TestUpdatePolicy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			entities := addValidBackupConfig(svc)
 			if tt.maxParallelScans != nil {
 				entities.cluster.MaxParallelScans = tt.maxParallelScans
@@ -243,7 +244,7 @@ func TestDeletePolicy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			_ = svc.config.AddPolicy("test-policy", &model.BackupPolicy{})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/policies/"+tt.policyName, nil)
@@ -262,7 +263,7 @@ func TestDeletePolicy(t *testing.T) {
 }
 
 func TestDeletePolicy_InUseErrorMessage(t *testing.T) {
-	svc := setupTestService()
+	svc := setupTestService(t)
 	entities := addValidBackupConfig(svc)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/policies/"+entities.policyName, nil)
@@ -278,9 +279,8 @@ func TestDeletePolicy_InUseErrorMessage(t *testing.T) {
 
 func TestUpdatePolicy_Case2_ClusterMaxSetBeforeParallelIncrease(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
-	svc := setupTestService()
+	svc := setupTestService(t)
 	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 	svc.nsValidator = mockNsValidator
 	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).Times(1)
@@ -319,12 +319,18 @@ func TestUpdatePolicy_Case2_ClusterMaxSetBeforeParallelIncrease(t *testing.T) {
 }
 
 // Helper function to setup test service with mocked dependencies.
-func setupTestService() *Service {
-	mockConfigApplier := &MockConfigApplier{}
-	mockConfigurationManager := &configurationManagerMock{}
+func setupTestService(t *testing.T) *Service {
+	t.Helper()
+
+	ctrl := gomock.NewController(t)
+	mockManager := configuration.NewMockManager(ctrl)
+	mockManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+	mockConfigApplier := service.NewMockConfigApplier(ctrl)
+	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil).AnyTimes()
 
 	return NewService(
-		context.Background(),
+		t.Context(),
 		model.NewConfig(),
 		mockConfigApplier,
 		nil,
@@ -332,7 +338,7 @@ func setupTestService() *Service {
 		nil,
 		nil,
 		nil,
-		mockConfigurationManager,
+		mockManager,
 		nil,
 	)
 }

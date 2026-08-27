@@ -14,7 +14,7 @@ import (
 // runScanBackup performs a regular scan-based backup.
 func runScanBackup(
 	ctx context.Context,
-	client aerospike.Backuper,
+	client aerospike.Client,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,
@@ -59,7 +59,7 @@ func makeBackupConfig(
 
 	backupPolicy := routine.BackupPolicy
 	config.NoRecords = ptr.ValueOrZero(backupPolicy.NoRecords)
-	if isFullBackup(timeBounds) {
+	if timeBounds.IsFullBackup() {
 		config.NoIndexes = ptr.ValueOrZero(backupPolicy.NoIndexes)
 		config.NoUDFs = ptr.ValueOrZero(backupPolicy.NoUdfs)
 	} else { // incremental backup don't include indexes or UDFs
@@ -72,7 +72,12 @@ func makeBackupConfig(
 	config.FileLimit = uint64(backupPolicy.GetFileLimitOrDefault() * megabyte) // lib expects limit in bytes.
 	config.RecordsPerSecond = ptr.ValueOrZero(backupPolicy.RecordsPerSecond)
 	config.Bandwidth = ptr.ValueOrZero(backupPolicy.Bandwidth) * megabyte // lib expects file size in bytes.
-	config.ScanPolicy = scanPolicy(backupPolicy, routine)
+	scanPolicy, err := buildScanPolicy(backupPolicy, routine)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build scan policy: %w", err)
+	}
+
+	config.ScanPolicy = scanPolicy
 	config.RackList = routine.RackList // backup only these racks
 
 	config.ModBefore = timeBounds.ToTime
@@ -88,10 +93,10 @@ func makeBackupConfig(
 	return config, nil
 }
 
-func scanPolicy(
+func buildScanPolicy(
 	backupPolicy *model.BackupPolicy,
 	routine *model.BackupRoutine,
-) *as.ScanPolicy {
+) (*as.ScanPolicy, error) {
 	scanPolicy := as.NewScanPolicy()
 	if backupPolicy.TotalTimeout != nil {
 		scanPolicy.TotalTimeout = *backupPolicy.TotalTimeout
@@ -113,7 +118,16 @@ func scanPolicy(
 		scanPolicy.ReplicaPolicy = as.MASTER
 	}
 
-	return scanPolicy
+	if routine.FilterExpression != "" {
+		exp, err := as.ExpFromBase64(routine.FilterExpression)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse filter expression: %w", err)
+		}
+
+		scanPolicy.FilterExpression = exp
+	}
+
+	return scanPolicy, nil
 }
 
 func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy {
@@ -122,7 +136,7 @@ func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy
 	}
 
 	return &backup.CompressionPolicy{
-		Mode:  policy.CompressionPolicy.Mode,
+		Mode:  policy.CompressionPolicy.Mode.String(),
 		Level: int(policy.CompressionPolicy.Level),
 	}
 }
@@ -133,9 +147,9 @@ func makeEncryptionPolicy(policy *model.BackupPolicy) *backup.EncryptionPolicy {
 	}
 
 	return &backup.EncryptionPolicy{
-		Mode:      policy.EncryptionPolicy.Mode,
-		KeyFile:   policy.EncryptionPolicy.KeyFile,
-		KeySecret: policy.EncryptionPolicy.KeySecret,
-		KeyEnv:    policy.EncryptionPolicy.KeyEnv,
+		Mode:      policy.EncryptionPolicy.Mode.String(),
+		KeyFile:   ptr.StringOrNil(policy.EncryptionPolicy.KeyFile),
+		KeySecret: ptr.StringOrNil(policy.EncryptionPolicy.KeySecret),
+		KeyEnv:    ptr.StringOrNil(policy.EncryptionPolicy.KeyEnv),
 	}
 }

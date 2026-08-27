@@ -56,7 +56,6 @@ func TestRegisterAndGetState(t *testing.T) {
 	tracker.markScanDone() // unblock getState
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	// mock full handler
 	fullBackupStats := models.NewBackupStats()
@@ -89,7 +88,6 @@ func TestClearBackup(t *testing.T) {
 	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	handler := NewMockCancelableBackupHandler(ctrl)
 	tracker.register(model.BackupTypeFull, handler)
 
@@ -113,7 +111,6 @@ func TestClearFailedBackup(t *testing.T) {
 	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	handler := NewMockCancelableBackupHandler(ctrl)
 	tracker.register(model.BackupTypeFull, handler)
 
