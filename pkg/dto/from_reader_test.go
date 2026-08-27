@@ -66,8 +66,8 @@ func TestNewBackupDetailsFromModel(t *testing.T) {
 			FileCount:           1,
 			SecondaryIndexCount: 5,
 			UDFCount:            2,
-			Compression:         model.CompressNone,
-			Encryption:          model.EncryptNone,
+			Compression:         model.CompressionModeNone,
+			Encryption:          model.EncryptionModeNone,
 		},
 		"daily/backup/key",
 		storage,
@@ -98,7 +98,7 @@ func TestBackupCommonConfig_fromModel(t *testing.T) {
 	var dtoConfig BackupCommonConfig
 	dtoConfig.fromModel(&model.BackupCommonConfig{TimestampFormat: &format})
 
-	assert.Equal(t, "ISO", dtoConfig.TimestampFormat)
+	assert.Equal(t, TimestampFormatISO, dtoConfig.TimestampFormat)
 
 	roundTrip := dtoConfig.ToModel()
 	require.NotNil(t, roundTrip.TimestampFormat)

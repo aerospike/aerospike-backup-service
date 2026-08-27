@@ -5,40 +5,55 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestAllJobStatuses(t *testing.T) {
-	t.Parallel()
-
-	assert.Equal(t, []string{"running", "success", "failure", "canceled"}, AllJobStatuses())
-}
-
-func TestParseJobStatus(t *testing.T) {
+func TestJobStatusValidate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		input      string
-		wantStatus JobStatus
-		wantOK     bool
+		name    string
+		status  JobStatus
+		wantErr bool
 	}{
-		{"running", RestoreRunning, true},
-		{"success", RestoreSuccess, true},
-		{"done", RestoreSuccess, true},
-		{"failure", RestoreFailure, true},
-		{"failed", RestoreFailure, true},
-		{"canceled", RestoreCanceled, true},
-		{"  SUCCESS  ", RestoreSuccess, true},
-		{"unknown", "", false},
-		{"", "", false},
+		{
+			name:   "running",
+			status: RestoreRunning,
+		},
+		{
+			name:   "uppercase",
+			status: "SUCCESS",
+		},
+		{
+			name:   "done alias",
+			status: "done",
+		},
+		{
+			name:   "failed alias",
+			status: "FAILED",
+		},
+		{
+			name:    "unknown",
+			status:  "unknown",
+			wantErr: true,
+		},
+		{
+			name:    "empty",
+			status:  "",
+			wantErr: true,
+		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, ok := ParseJobStatus(tt.input)
-			assert.Equal(t, tt.wantOK, ok)
-			assert.Equal(t, tt.wantStatus, got)
+			err := test.status.Validate()
+			if test.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 		})
 	}
 }
@@ -50,15 +65,18 @@ func TestJobStatus_ToModel(t *testing.T) {
 	assert.Equal(t, model.RestoreSuccess, RestoreSuccess.ToModel())
 	assert.Equal(t, model.RestoreFailure, RestoreFailure.ToModel())
 	assert.Equal(t, model.RestoreCanceled, RestoreCanceled.ToModel())
-	assert.Equal(t, model.RestoreState(-1), JobStatus("unknown").ToModel())
+	assert.Equal(t, model.RestoreRunning, JobStatus("RUNNING").ToModel())
+	assert.Equal(t, model.RestoreSuccess, JobStatus("done").ToModel())
+	assert.Equal(t, model.RestoreFailure, JobStatus("FAILED").ToModel())
+	assert.Equal(t, model.RestoreState("unknown"), JobStatus("unknown").ToModel())
 }
 
-func TestJobStatusFromModel(t *testing.T) {
+func TestNewJobStatusFromModel(t *testing.T) {
 	t.Parallel()
 
-	assert.Equal(t, RestoreRunning, JobStatusFromModel(model.RestoreRunning))
-	assert.Equal(t, RestoreSuccess, JobStatusFromModel(model.RestoreSuccess))
-	assert.Equal(t, RestoreFailure, JobStatusFromModel(model.RestoreFailure))
-	assert.Equal(t, RestoreCanceled, JobStatusFromModel(model.RestoreCanceled))
-	assert.Equal(t, JobStatus(""), JobStatusFromModel(model.RestoreState(99)))
+	assert.Equal(t, RestoreRunning, NewJobStatusFromModel(model.RestoreRunning))
+	assert.Equal(t, RestoreSuccess, NewJobStatusFromModel(model.RestoreSuccess))
+	assert.Equal(t, RestoreFailure, NewJobStatusFromModel(model.RestoreFailure))
+	assert.Equal(t, RestoreCanceled, NewJobStatusFromModel(model.RestoreCanceled))
+	assert.Equal(t, JobStatus(""), NewJobStatusFromModel(""))
 }

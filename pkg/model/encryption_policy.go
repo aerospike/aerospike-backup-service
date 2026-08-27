@@ -3,7 +3,7 @@ package model
 // EncryptionPolicy contains backup encryption information.
 type EncryptionPolicy struct {
 	// The encryption mode to be used (NONE, AES128, AES256)
-	Mode string
+	Mode EncryptionMode
 	// The path to the file containing the encryption key.
 	KeyFile string
 	// The name of the environment variable containing the encryption key.

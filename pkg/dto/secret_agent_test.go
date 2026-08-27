@@ -86,7 +86,7 @@ func TestInvalidConnectionType(t *testing.T) {
 	err := agent.validate(ValidationDefault)
 	require.Error(t, err)
 	assert.EqualError(t, err,
-		"invalid value validation error: 'invalid' is not a valid connection-type. Allowed values: [tcp unix]")
+		"invalid value validation error: 'invalid' is not a valid connection-type. Allowed values: [TCP UNIX]")
 }
 
 func TestMissingAddress(t *testing.T) {

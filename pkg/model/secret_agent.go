@@ -12,7 +12,7 @@ import (
 type SecretAgent struct {
 	ClientTLS
 	// Connection type: tcp, unix.
-	ConnectionType string
+	ConnectionType ConnectionType
 	// Address of the Secret Agent.
 	Address string
 	// Port the Secret Agent is running on.
@@ -29,7 +29,7 @@ func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
 	}
 
 	return &backup.SecretAgentConfig{
-		ConnectionType:     &s.ConnectionType,
+		ConnectionType:     s.ConnectionType.ResolveType(),
 		Address:            &s.Address,
 		Port:               (*int)(s.Port),
 		TimeoutMillisecond: s.Timeout,

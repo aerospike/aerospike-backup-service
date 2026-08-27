@@ -21,7 +21,7 @@ func (s *BackupSuite) TestBackupRestoreWithSecretAgentEncryption() {
 			secretAgentName: agent,
 		}
 		c.BackupPolicies[policyName].EncryptionPolicy = &dto.EncryptionPolicy{
-			Mode:      dto.EncryptAES128,
+			Mode:      dto.EncryptionModeAES128,
 			KeySecret: decoder.Secret(secretRef()),
 		}
 		c.BackupRoutines[routineName].SecretAgent = secretAgentName
@@ -42,7 +42,7 @@ func (s *BackupSuite) TestBackupRestoreWithSecretAgentEncryption() {
 	req.Policy = &dto.RestorePolicy{
 		BaseRestorePolicy: dto.BaseRestorePolicy{
 			EncryptionPolicy: &dto.EncryptionPolicy{
-				Mode:      dto.EncryptAES128,
+				Mode:      dto.EncryptionModeAES128,
 				KeySecret: decoder.Secret(secretRef()),
 			},
 		},

@@ -130,8 +130,8 @@ var jsonExamples = map[string]any{
 					S3Region: valEuCentral1,
 				},
 			},
-			Compression: dto.CompressZSTD,
-			Encryption:  dto.EncryptNone,
+			Compression: string(dto.CompressionModeZSTD),
+			Encryption:  string(dto.EncryptionModeNone),
 		},
 		},
 	},
@@ -250,7 +250,7 @@ var yamlExamples = map[string]any{
 	},
 }
 
-func main() {
+func generateReadme() {
 	// generate markdown dto descriptions from open-api
 	generateMarkdownFiles()
 	// generate example files from jsonExamples and yamlExamples
@@ -465,7 +465,7 @@ func applyMetricsTable(content []byte, table string) []byte {
 // work: once role/permission definitions exist, this function should replace
 // a <!-- RBACMatrix --> marker the same way applyMetricsTable does for
 // <!-- Metrics -->. It is a no-op today because no target file defines that
-// marker yet; wiring it into main() now means the security plan only needs
+// marker yet; generateReadme already invokes it, so the security plan only needs
 // to fill in the body, not add multi-file plumbing.
 func updateRBACMatrix(content []byte) []byte {
 	return content

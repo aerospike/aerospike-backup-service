@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"fmt"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -19,24 +17,25 @@ const (
 	TLSClientAuthRequireAndVerify TLSClientAuth = "require-and-verify"
 )
 
+var tlsClientAuthModes = []TLSClientAuth{
+	TLSClientAuthNone,
+	TLSClientAuthRequest,
+	TLSClientAuthRequireAndVerify,
+}
+
 // Validate checks that the client authentication mode is supported.
 func (a TLSClientAuth) Validate() error {
-	_, err := a.ToModel()
-	return err
+	if _, ok := canonicalEnum(a, tlsClientAuthModes); ok {
+		return nil
+	}
+
+	return errValidationInvalidValue("client-auth", a, tlsClientAuthModes)
 }
 
 // ToModel converts the DTO client authentication mode to the model type.
-func (a TLSClientAuth) ToModel() (model.TLSClientAuth, error) {
-	switch a {
-	case "", TLSClientAuthNone:
-		return model.TLSClientAuthNone, nil
-	case TLSClientAuthRequest:
-		return model.TLSClientAuthRequest, nil
-	case TLSClientAuthRequireAndVerify:
-		return model.TLSClientAuthRequireAndVerify, nil
-	default:
-		return "", fmt.Errorf("unsupported TLS client authentication mode %q", a)
-	}
+func (a TLSClientAuth) ToModel() model.TLSClientAuth {
+	c, _ := canonicalEnum(a, tlsClientAuthModes)
+	return model.TLSClientAuth(c)
 }
 
 // NewTLSClientAuthFromModel creates a DTO client authentication mode from the model type.

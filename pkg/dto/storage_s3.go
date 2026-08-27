@@ -26,7 +26,7 @@ type S3Storage struct {
 	// An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).
 	S3EndpointOverride string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000" extensions:"x-nullable"`
 	// The log level of the AWS S3 SDK (AWS S3 optional).
-	S3LogLevel string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enums:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
+	S3LogLevel S3LogLevel `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL"`
 	// The minimum size in bytes of individual S3 UploadParts.
 	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" extensions:"x-nullable" minimum:"5242880"`
 	// The maximum number of simultaneous requests from S3.
@@ -70,6 +70,9 @@ func (s *S3Storage) Validate(opts ValidationOptions) error {
 	if s.MaxConnsPerHost != nil && *s.MaxConnsPerHost < 0 {
 		return errValidationNegative("max-async-connections", *s.MaxConnsPerHost)
 	}
+	if err := s.S3LogLevel.Validate(); err != nil {
+		return err
+	}
 	if err := s.StorageClass.Validate(); err != nil {
 		return fmt.Errorf("invalid storage class: %w", err)
 	}
@@ -108,7 +111,7 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 		S3Region:           s.S3Region,
 		S3Profile:          s.S3Profile,
 		S3EndpointOverride: s.S3EndpointOverride,
-		S3LogLevel:         s.S3LogLevel,
+		S3LogLevel:         s.S3LogLevel.ToModel(),
 		MinPartSize:        s.MinPartSize,
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 		Auth:               auth,
@@ -123,7 +126,7 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 		S3Region:           s.S3Region,
 		S3Profile:          s.S3Profile,
 		S3EndpointOverride: s.S3EndpointOverride,
-		S3LogLevel:         s.S3LogLevel,
+		S3LogLevel:         NewS3LogLevelFromModel(s.S3LogLevel),
 		MinPartSize:        s.MinPartSize,
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 		StorageClass:       newS3StorageClassFromModel(s.StorageClass),

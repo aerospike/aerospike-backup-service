@@ -77,7 +77,7 @@ func TestCredentials_Hash(t *testing.T) {
 		t.Parallel()
 
 		withDefault := (&Credentials{User: "user"}).Hash()
-		withInternal := (&Credentials{User: "user", AuthMode: ptr.Of(AuthModeInternal)}).Hash()
+		withInternal := (&Credentials{User: "user", AuthMode: AuthModeInternal}).Hash()
 
 		require.NotEqual(t, withDefault, withInternal)
 	})

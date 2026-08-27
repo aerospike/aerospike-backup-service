@@ -2436,8 +2436,8 @@
                     },
                     "mode": {
                         "description": "The compression mode to be used (default is NONE).",
-                        "type": "string",
                         "default": "NONE",
+                        "type": "string",
                         "enum": [
                             "NONE",
                             "ZSTD"
@@ -2499,9 +2499,9 @@
                 "type": "object",
                 "properties": {
                     "auth-mode": {
-                        "description": "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
-                        "type": "string",
+                        "description": "The authentication mode (INTERNAL, EXTERNAL, PKI).",
                         "default": "INTERNAL",
+                        "type": "string",
                         "enum": [
                             "INTERNAL",
                             "EXTERNAL",
@@ -2563,8 +2563,8 @@
                     },
                     "mode": {
                         "description": "The encryption mode to be used (NONE, AES128, AES256)",
-                        "type": "string",
                         "default": "NONE",
+                        "type": "string",
                         "enum": [
                             "NONE",
                             "AES128",
@@ -2691,22 +2691,6 @@
                     }
                 }
             },
-            "dto.JobStatus": {
-                "description": "Possible states of restore jobs.",
-                "type": "string",
-                "enum": [
-                    "running",
-                    "success",
-                    "failure",
-                    "canceled"
-                ],
-                "x-enum-varnames": [
-                    "RestoreRunning",
-                    "RestoreSuccess",
-                    "RestoreFailure",
-                    "RestoreCanceled"
-                ]
-            },
             "dto.LocalStorage": {
                 "description": "LocalStorage represents the configuration for local storage.",
                 "type": "object",
@@ -2741,8 +2725,8 @@
                     },
                     "format": {
                         "description": "Format is the logger format (PLAIN, JSON).",
-                        "type": "string",
                         "default": "PLAIN",
+                        "type": "string",
                         "enum": [
                             "PLAIN",
                             "JSON"
@@ -2750,8 +2734,8 @@
                     },
                     "level": {
                         "description": "Level is the logger level.",
-                        "type": "string",
                         "default": "INFO",
+                        "type": "string",
                         "enum": [
                             "TRACE",
                             "DEBUG",
@@ -2818,8 +2802,8 @@
                 "properties": {
                     "mode": {
                         "description": "The compression mode to be used (default is NONE).",
-                        "type": "string",
                         "default": "NONE",
+                        "type": "string",
                         "enum": [
                             "NONE",
                             "ZSTD"
@@ -2899,10 +2883,12 @@
                     },
                     "status": {
                         "description": "Status of the restore job.",
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.JobStatus"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "running",
+                            "success",
+                            "failure",
+                            "canceled"
                         ]
                     },
                     "total-bytes": {
@@ -3387,8 +3373,8 @@
                     },
                     "s3-log-level": {
                         "description": "The log level of the AWS S3 SDK (AWS S3 optional).",
-                        "type": "string",
                         "default": "FATAL",
+                        "type": "string",
                         "enum": [
                             "OFF",
                             "FATAL",
@@ -3504,8 +3490,8 @@
                         "description": "Connection type.",
                         "type": "string",
                         "enum": [
-                            "tcp",
-                            "unix"
+                            "TCP",
+                            "UNIX"
                         ],
                         "example": "tcp"
                     },
@@ -3650,15 +3636,11 @@
                     "client-auth": {
                         "description": "Client certificate authentication mode.",
                         "default": "none",
+                        "type": "string",
                         "enum": [
                             "none",
                             "request",
                             "require-and-verify"
-                        ],
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.TLSClientAuth"
-                            }
                         ]
                     },
                     "client-ca-file": {
@@ -3701,10 +3683,10 @@
                             "1.2",
                             "1.3"
                         ],
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/dto.TLSMinVersion"
-                            }
+                        "type": "string",
+                        "enum": [
+                            "1.2",
+                            "1.3"
                         ]
                     },
                     "port": {
@@ -3879,32 +3861,6 @@
                         "default": "TLSv1.2"
                     }
                 }
-            },
-            "dto.TLSClientAuth": {
-                "description": "TLSClientAuth is HTTPS client-certificate authentication.",
-                "type": "string",
-                "enum": [
-                    "none",
-                    "request",
-                    "require-and-verify"
-                ],
-                "x-enum-varnames": [
-                    "TLSClientAuthNone",
-                    "TLSClientAuthRequest",
-                    "TLSClientAuthRequireAndVerify"
-                ]
-            },
-            "dto.TLSMinVersion": {
-                "description": "TLSMinVersion is the minimum accepted TLS protocol version.",
-                "type": "string",
-                "enum": [
-                    "1.2",
-                    "1.3"
-                ],
-                "x-enum-varnames": [
-                    "TLSMinVersion12",
-                    "TLSMinVersion13"
-                ]
             },
             "dto.TimestampRestorePolicy": {
                 "description": "TimestampRestorePolicy represents a policy for the point-in-time restore operation.",
