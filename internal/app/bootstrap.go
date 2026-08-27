@@ -108,7 +108,7 @@ func InitComponents(
 	metricsCollector := prometheus.NewMetricsCollector(registry.GetRunningState, restoreJobs.StatusCounts)
 
 	configRetriever := service.NewConfigRetriever(catalog, pathService, operations)
-	httpService := handlers.NewService(
+	srv := handlers.NewService(
 		ctx,
 		config,
 		configApplier,
@@ -124,12 +124,12 @@ func InitComponents(
 	var servers []server.HTTP
 	configHTTP := config.ServiceConfig.GetServerHTTPOrDefault()
 	if !configHTTP.Disabled {
-		servers = append(servers, server.NewServerHTTP(ctx, configHTTP, httpService))
+		servers = append(servers, server.NewServerHTTP(ctx, configHTTP, srv))
 	}
 
 	configHTTPS := config.ServiceConfig.GetServerHTTPSOrDefault()
 	if !configHTTPS.Disabled {
-		serverHTTPS, err := server.NewServerHTTPS(ctx, configHTTPS, httpService, resolver)
+		serverHTTPS, err := server.NewServerHTTPS(ctx, configHTTPS, srv, resolver)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 		}
