@@ -1,10 +1,12 @@
 package model
 
 import (
+	"crypto/tls"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestServerHTTPSConfigDefaults(t *testing.T) {
@@ -22,4 +24,51 @@ func TestServerHTTPSConfigDefaults(t *testing.T) {
 	assert.Nil(t, config.GetCipherSuitesOrDefault())
 	assert.Equal(t, TLSClientAuthNone, config.GetClientAuthOrDefault())
 	assert.NotNil(t, config.GetRateOrDefault())
+}
+
+func TestTLSClientAuthToTLS(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   TLSClientAuth
+		want    tls.ClientAuthType
+		wantErr string
+	}{
+		{
+			name:  "empty defaults to none",
+			value: "",
+			want:  tls.NoClientCert,
+		},
+		{
+			name:  "none",
+			value: TLSClientAuthNone,
+			want:  tls.NoClientCert,
+		},
+		{
+			name:  "request",
+			value: TLSClientAuthRequest,
+			want:  tls.RequestClientCert,
+		},
+		{
+			name:  "require-and-verify",
+			value: TLSClientAuthRequireAndVerify,
+			want:  tls.RequireAndVerifyClientCert,
+		},
+		{
+			name:    "invalid",
+			value:   "verify-if-given",
+			wantErr: "unsupported TLS client authentication mode",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := test.value.ToTLS()
+			if test.wantErr != "" {
+				require.ErrorContains(t, err, test.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
 }

@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -83,7 +84,7 @@ func (s *ServerConfigHTTPS) validateTLSConfig(opts ValidationOptions) error {
 		return err
 	}
 
-	if _, err := servertls.New(s.ToModel()); err != nil {
+	if _, err := servertls.NewTLSConfig(context.Background(), s.ToModel(), nil); err != nil {
 		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
 	}
 

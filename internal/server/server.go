@@ -15,6 +15,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/middleware"
 	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 )
 
 const (
@@ -59,8 +60,9 @@ func NewServerHTTPS(
 	ctx context.Context,
 	serverConfig *model.ServerConfigHTTPS,
 	service *handlers.Service,
+	resolver secrets.Resolver,
 ) (HTTP, error) {
-	tlsConfig, err := servertls.New(serverConfig)
+	tlsConfig, err := servertls.NewTLSConfig(ctx, serverConfig, resolver)
 	if err != nil {
 		return nil, err
 	}

@@ -127,7 +127,7 @@ func InitComponents(
 	}
 	var serverHTTPS server.HTTP
 	if config.ServiceConfig.ServerHTTPS != nil && !config.ServiceConfig.ServerHTTPS.GetDisabledOrDefault() {
-		serverHTTPS, err = server.NewServerHTTPS(ctx, config.ServiceConfig.ServerHTTPS, httpService)
+		serverHTTPS, err = server.NewServerHTTPS(ctx, config.ServiceConfig.ServerHTTPS, httpService, resolver)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 		}

@@ -14,8 +14,10 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 type testCertificateFiles struct {
@@ -79,10 +81,10 @@ func TestNew(t *testing.T) {
 	files := createTestCertificateFiles(t)
 
 	t.Run("secure defaults", func(t *testing.T) {
-		config, err := New(&model.ServerConfigHTTPS{
+		config, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
 			CertFile: files.certFile,
 			KeyFile:  files.keyFile,
-		})
+		}, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, uint16(tls.VersionTLS12), config.MinVersion)
@@ -92,14 +94,14 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("explicit secure settings and client CA", func(t *testing.T) {
-		config, err := New(&model.ServerConfigHTTPS{
+		config, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
 			CertFile:     files.certFile,
 			KeyFile:      files.keyFile,
 			MinVersion:   "1.3",
 			CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 			ClientCAFile: files.caFile,
 			ClientAuth:   model.TLSClientAuthRequireAndVerify,
-		})
+		}, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, uint16(tls.VersionTLS13), config.MinVersion)
@@ -109,47 +111,94 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("encrypted private key", func(t *testing.T) {
-		keyPEM, err := os.ReadFile(files.keyFile)
-		require.NoError(t, err)
-		keyBlock, _ := pem.Decode(keyPEM)
-		require.NotNil(t, keyBlock)
-		//nolint:staticcheck // Verify compatibility with legacy password-protected PEM keys.
-		encryptedBlock, err := x509.EncryptPEMBlock(
-			rand.Reader, keyBlock.Type, keyBlock.Bytes, []byte("password"), x509.PEMCipherAES256,
-		)
-		require.NoError(t, err)
-		encryptedKey, err := os.CreateTemp(t.TempDir(), "encrypted-key-*.pem")
-		require.NoError(t, err)
-		_, err = encryptedKey.Write(pem.EncodeToMemory(encryptedBlock))
-		require.NoError(t, err)
-		require.NoError(t, encryptedKey.Close())
+		encryptedKey := writeEncryptedKey(t, files.keyFile, "password")
 
-		config, err := New(&model.ServerConfigHTTPS{
+		config, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
 			CertFile:        files.certFile,
-			KeyFile:         encryptedKey.Name(),
+			KeyFile:         encryptedKey,
 			KeyFilePassword: "password",
-		})
+		}, nil)
 		require.NoError(t, err)
 		assert.Len(t, config.Certificates, 1)
 	})
 
 	t.Run("mismatched certificate and key", func(t *testing.T) {
 		other := createTestCertificateFiles(t)
-		_, err := New(&model.ServerConfigHTTPS{
+		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
 			CertFile: files.certFile,
 			KeyFile:  other.keyFile,
-		})
+		}, nil)
 		require.ErrorContains(t, err, "private key does not match public key")
 	})
 
 	t.Run("client authentication without CA", func(t *testing.T) {
-		_, err := New(&model.ServerConfigHTTPS{
+		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
 			CertFile:   files.certFile,
 			KeyFile:    files.keyFile,
 			ClientAuth: model.TLSClientAuthRequireAndVerify,
-		})
+		}, nil)
 		require.ErrorContains(t, err, "requires a client CA file")
 	})
+}
+
+func TestNewResolvesKeyFilePasswordThroughSecretAgent(t *testing.T) {
+	files := createTestCertificateFiles(t)
+	encryptedKey := writeEncryptedKey(t, files.keyFile, "resolved-password")
+	agent := &model.SecretAgent{Address: "127.0.0.1"}
+
+	ctrl := gomock.NewController(t)
+	resolver := secrets.NewMockResolver(ctrl)
+	resolver.EXPECT().
+		Resolve(gomock.Any(), agent, "secrets:agent1:tls-key").
+		Return("resolved-password", nil)
+
+	config, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		CertFile:        files.certFile,
+		KeyFile:         encryptedKey,
+		KeyFilePassword: "secrets:agent1:tls-key",
+		SecretAgent:     agent,
+	}, resolver)
+	require.NoError(t, err)
+	assert.Len(t, config.Certificates, 1)
+}
+
+func TestNewReturnsSecretAgentResolutionError(t *testing.T) {
+	files := createTestCertificateFiles(t)
+
+	ctrl := gomock.NewController(t)
+	resolver := secrets.NewMockResolver(ctrl)
+	resolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Any(), "secrets:agent1:tls-key").
+		Return("", assert.AnError)
+
+	_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		CertFile:        files.certFile,
+		KeyFile:         files.keyFile,
+		KeyFilePassword: "secrets:agent1:tls-key",
+		SecretAgent:     &model.SecretAgent{Address: "127.0.0.1"},
+	}, resolver)
+	require.ErrorContains(t, err, "failed to resolve HTTPS key-file-password")
+}
+
+func writeEncryptedKey(t *testing.T, keyFile, password string) string {
+	t.Helper()
+
+	keyPEM, err := os.ReadFile(keyFile)
+	require.NoError(t, err)
+	keyBlock, _ := pem.Decode(keyPEM)
+	require.NotNil(t, keyBlock)
+	//nolint:staticcheck // Verify compatibility with legacy password-protected PEM keys.
+	encryptedBlock, err := x509.EncryptPEMBlock(
+		rand.Reader, keyBlock.Type, keyBlock.Bytes, []byte(password), x509.PEMCipherAES256,
+	)
+	require.NoError(t, err)
+	encryptedKey, err := os.CreateTemp(t.TempDir(), "encrypted-key-*.pem")
+	require.NoError(t, err)
+	_, err = encryptedKey.Write(pem.EncodeToMemory(encryptedBlock))
+	require.NoError(t, err)
+	require.NoError(t, encryptedKey.Close())
+
+	return encryptedKey.Name()
 }
 
 func TestParseCipherSuitesExcludesEveryInsecureSuite(t *testing.T) {

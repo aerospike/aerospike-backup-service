@@ -1,5 +1,10 @@
 package model
 
+import (
+	"crypto/tls"
+	"fmt"
+)
+
 // TLSClientAuth identifies how the HTTPS listener authenticates client certificates.
 type TLSClientAuth string
 
@@ -11,6 +16,20 @@ const (
 	// TLSClientAuthRequireAndVerify requires and verifies a client certificate.
 	TLSClientAuthRequireAndVerify TLSClientAuth = "require-and-verify"
 )
+
+// ToTLS maps the configured mode to crypto/tls.
+func (a TLSClientAuth) ToTLS() (tls.ClientAuthType, error) {
+	switch a {
+	case "", TLSClientAuthNone:
+		return tls.NoClientCert, nil
+	case TLSClientAuthRequest:
+		return tls.RequestClientCert, nil
+	case TLSClientAuthRequireAndVerify:
+		return tls.RequireAndVerifyClientCert, nil
+	default:
+		return tls.NoClientCert, fmt.Errorf("unsupported TLS client authentication mode %q", a)
+	}
+}
 
 // TLSMinVersion is the minimum accepted TLS protocol version.
 type TLSMinVersion string
