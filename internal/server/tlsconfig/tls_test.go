@@ -1,6 +1,7 @@
 package tlsconfig
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -77,6 +78,20 @@ func createTestCertificateFiles(t *testing.T) testCertificateFiles {
 	return testCertificateFiles{certFile: certFile, keyFile: keyFile, caFile: caFile}
 }
 
+func newTestResolver(t *testing.T) secrets.Resolver {
+	t.Helper()
+
+	resolver := secrets.NewMockResolver(gomock.NewController(t))
+	resolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *model.SecretAgent, value string) (string, error) {
+			return value, nil
+		}).
+		AnyTimes()
+
+	return resolver
+}
+
 func TestNew(t *testing.T) {
 	files := createTestCertificateFiles(t)
 
@@ -84,7 +99,7 @@ func TestNew(t *testing.T) {
 		config, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
 			CertFile: files.certFile,
 			KeyFile:  files.keyFile,
-		}, nil)
+		}, newTestResolver(t))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint16(tls.VersionTLS12), config.MinVersion)
@@ -101,7 +116,7 @@ func TestNew(t *testing.T) {
 			CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 			ClientCAFile: files.caFile,
 			ClientAuth:   model.TLSClientAuthRequireAndVerify,
-		}, nil)
+		}, newTestResolver(t))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint16(tls.VersionTLS13), config.MinVersion)
@@ -117,7 +132,7 @@ func TestNew(t *testing.T) {
 			CertFile:        files.certFile,
 			KeyFile:         encryptedKey,
 			KeyFilePassword: "password",
-		}, nil)
+		}, newTestResolver(t))
 		require.NoError(t, err)
 		assert.Len(t, config.Certificates, 1)
 	})
@@ -127,7 +142,7 @@ func TestNew(t *testing.T) {
 		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
 			CertFile: files.certFile,
 			KeyFile:  other.keyFile,
-		}, nil)
+		}, newTestResolver(t))
 		require.ErrorContains(t, err, "private key does not match public key")
 	})
 
@@ -136,7 +151,7 @@ func TestNew(t *testing.T) {
 			CertFile:   files.certFile,
 			KeyFile:    files.keyFile,
 			ClientAuth: model.TLSClientAuthRequireAndVerify,
-		}, nil)
+		}, newTestResolver(t))
 		require.ErrorContains(t, err, "requires a client CA file")
 	})
 }

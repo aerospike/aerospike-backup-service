@@ -23,8 +23,7 @@ var secureCipherSuites = func() map[string]uint16 {
 }()
 
 // NewTLSConfig builds a static server TLS configuration.
-// resolver is used to resolve KeyFilePassword when it is a Secret Agent reference.
-// A nil resolver treats KeyFilePassword as a literal passphrase.
+// resolver is required to resolve KeyFilePassword when it is a Secret Agent reference.
 func NewTLSConfig(
 	ctx context.Context,
 	config *model.ServerConfigHTTPS,
@@ -36,7 +35,7 @@ func NewTLSConfig(
 
 	password, err := resolver.Resolve(ctx, config.SecretAgent, config.KeyFilePassword)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to resolve HTTPS key-file-password: %w", err)
 	}
 
 	certificate, err := loadKeyPair(config.CertFile, config.KeyFile, password)

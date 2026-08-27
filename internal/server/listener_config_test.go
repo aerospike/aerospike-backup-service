@@ -286,10 +286,7 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 
 			// Run servers concurrently using production server.Run logic.
 			srvCtx, srvCancel := context.WithCancel(t.Context())
-			errCh := make(chan error, 1)
-			go func() {
-				errCh <- server.Run(srvCtx, components.ServerHTTP, components.ServerHTTPS)
-			}()
+			errCh := startListeners(t, srvCtx, components)
 
 			if test.wantHTTP {
 				waitForListener(t, client, httpURL)
@@ -310,6 +307,97 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 	}
 }
 
+// TestConfiguredContextPathPrefixesRoutes verifies that context-path moves both
+// the system and the API routes under the configured prefix.
+func TestConfiguredContextPathPrefixesRoutes(t *testing.T) {
+	httpPort := freeListenerPort(t)
+	cfg := dto.Config{
+		ServiceConfig: dto.ServiceConfig{
+			ServerHTTP: &dto.ServerConfigHTTP{
+				ListenerConfig: dto.ListenerConfig{
+					Address:     "127.0.0.1",
+					ContextPath: "/abs",
+				},
+				Port: ptr.Of(dto.Port(httpPort)),
+			},
+		},
+	}
+
+	components := initListenerComponents(t, cfg)
+	t.Cleanup(components.Scheduler.Stop)
+
+	srvCtx, srvCancel := context.WithCancel(t.Context())
+	errCh := startListeners(t, srvCtx, components)
+
+	client := &http.Client{Timeout: time.Second}
+	prefixedURL := fmt.Sprintf("http://127.0.0.1:%d/abs", httpPort)
+	waitForListener(t, client, prefixedURL)
+	assertAPIResponse(t, client, prefixedURL)
+
+	// Nothing is registered outside the prefix, including the root handler.
+	assertStatus(t, client, fmt.Sprintf("http://127.0.0.1:%d/v1/backups/full", httpPort), http.StatusNotFound)
+
+	srvCancel()
+	require.NoError(t, <-errCh)
+}
+
+// TestHTTPSListenerNegotiatesHTTP2 verifies that the HTTPS listener advertises h2
+// through ALPN, which net/http only does when TLSConfig is attached to the server.
+func TestHTTPSListenerNegotiatesHTTP2(t *testing.T) {
+	certs := createListenerCertificates(t)
+	httpPort := freeListenerPort(t)
+	httpsPort := freeListenerPort(t)
+	cfg := dto.Config{
+		ServiceConfig: dto.ServiceConfig{
+			ServerHTTP: &dto.ServerConfigHTTP{
+				ListenerConfig: dto.ListenerConfig{
+					Address:  "127.0.0.1",
+					Disabled: true,
+				},
+				Port: ptr.Of(dto.Port(httpPort)),
+			},
+			ServerHTTPS: &dto.ServerConfigHTTPS{
+				ListenerConfig: dto.ListenerConfig{
+					Address: "127.0.0.1",
+				},
+				Port:     ptr.Of(dto.Port(httpsPort)),
+				CertFile: certs.serverCertFile,
+				KeyFile:  certs.serverKeyFile,
+			},
+		},
+	}
+
+	components := initListenerComponents(t, cfg)
+	t.Cleanup(components.Scheduler.Stop)
+
+	srvCtx, srvCancel := context.WithCancel(t.Context())
+	errCh := startListeners(t, srvCtx, components)
+
+	client := &http.Client{
+		Timeout: time.Second,
+		Transport: &http.Transport{
+			ForceAttemptHTTP2: true,
+			TLSClientConfig: &tls.Config{
+				RootCAs:    loadCertificatePool(t, certs.caFile),
+				MinVersion: tls.VersionTLS12,
+			},
+		},
+	}
+	httpsURL := fmt.Sprintf("https://127.0.0.1:%d", httpsPort)
+	waitForListener(t, client, httpsURL)
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, httpsURL+"/v1/backups/full", nil)
+	require.NoError(t, err)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "HTTP/2.0", resp.Proto)
+
+	srvCancel()
+	require.NoError(t, <-errCh)
+}
+
 func initListenerComponents(t *testing.T, cfg dto.Config) *app.Components {
 	t.Helper()
 
@@ -326,6 +414,18 @@ func initListenerComponents(t *testing.T, cfg dto.Config) *app.Components {
 	require.NoError(t, err)
 	require.NotNil(t, components)
 	return components
+}
+
+func startListeners(t *testing.T, ctx context.Context, components *app.Components) <-chan error {
+	t.Helper()
+
+	listeners := components.Servers
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- server.Run(ctx, listeners)
+	}()
+
+	return errCh
 }
 
 func waitForListener(t *testing.T, client *http.Client, baseURL string) {
@@ -363,6 +463,17 @@ func assertAPIResponse(t *testing.T, client *http.Client, baseURL string) {
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	assert.JSONEq(t, "{}", string(body))
+}
+
+func assertStatus(t *testing.T, client *http.Client, url string, wantStatus int) {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
+	require.NoError(t, err)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, wantStatus, resp.StatusCode)
 }
 
 func assertListenerUnavailable(t *testing.T, baseURL string) {

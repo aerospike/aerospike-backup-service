@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -36,7 +36,6 @@ type HTTP interface {
 // serverHTTP wraps *http.Server with Start/Shutdown lifecycle helpers.
 type serverHTTP struct {
 	*http.Server
-	tlsConfig *tls.Config
 }
 
 var _ HTTP = (*serverHTTP)(nil)
@@ -44,12 +43,8 @@ var _ HTTP = (*serverHTTP)(nil)
 // NewServerHTTP returns a new instance of HTTP.
 func NewServerHTTP(ctx context.Context, serverConfig *model.ServerConfigHTTP, service *handlers.Service) HTTP {
 	return newServerHTTP(ctx,
+		&serverConfig.ListenerConfig,
 		fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault()),
-		serverConfig.GetRateOrDefault(),
-		serverConfig.GetTimeoutOrDefault(),
-		serverConfig.GetReadTimeoutOrDefault(),
-		serverConfig.GetWriteTimeoutOrDefault(),
-		serverConfig.GetIdleTimeoutOrDefault(),
 		service,
 		nil,
 	)
@@ -68,12 +63,8 @@ func NewServerHTTPS(
 	}
 
 	return newServerHTTP(ctx,
+		&serverConfig.ListenerConfig,
 		fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault()),
-		serverConfig.GetRateOrDefault(),
-		serverConfig.GetTimeoutOrDefault(),
-		serverConfig.GetReadTimeoutOrDefault(),
-		serverConfig.GetWriteTimeoutOrDefault(),
-		serverConfig.GetIdleTimeoutOrDefault(),
 		service,
 		tlsConfig,
 	), nil
@@ -81,38 +72,47 @@ func NewServerHTTPS(
 
 func newServerHTTP(
 	ctx context.Context,
+	listener *model.ListenerConfig,
 	addr string,
-	rate *model.RateLimiterConfig,
-	readHeaderTimeout time.Duration,
-	readTimeout time.Duration,
-	writeTimeout time.Duration,
-	idleTimeout time.Duration,
 	service *handlers.Service,
 	tlsConfig *tls.Config,
 ) HTTP {
-	// Create router
+	sysPath := normalizeContextPath(listener.GetContextPathOrDefault())
 	mux := NewServeMux(
-		"/"+restAPIVersion,
-		"/",
+		sysPath+restAPIVersion,
+		sysPath,
 		service,
 	)
 
 	handler := middleware.Wrap(mux,
 		middleware.RequestLogger(slog.Default(), []string{"health", "ready", "metrics"}),
-		middleware.RateLimiter(ctx, rate),
+		middleware.RateLimiter(ctx, listener.GetRateOrDefault()),
 	)
 
 	return &serverHTTP{
 		Server: &http.Server{
 			Addr:              addr,
-			ReadHeaderTimeout: readHeaderTimeout,
-			ReadTimeout:       readTimeout,
-			WriteTimeout:      writeTimeout,
-			IdleTimeout:       idleTimeout,
+			ReadHeaderTimeout: listener.GetTimeoutOrDefault(),
+			ReadTimeout:       listener.GetReadTimeoutOrDefault(),
+			WriteTimeout:      listener.GetWriteTimeoutOrDefault(),
+			IdleTimeout:       listener.GetIdleTimeoutOrDefault(),
 			Handler:           handler,
+			TLSConfig:         tlsConfig,
 		},
-		tlsConfig: tlsConfig,
 	}
+}
+
+// normalizeContextPath returns the context path bounded by slashes so route
+// patterns can be appended to it directly.
+func normalizeContextPath(contextPath string) string {
+	if !strings.HasPrefix(contextPath, "/") {
+		contextPath = "/" + contextPath
+	}
+	if !strings.HasSuffix(contextPath, "/") {
+		contextPath += "/"
+	}
+
+	return contextPath
 }
 
 // ServeHTTP implements http.Handler so integration tests can wrap the server with httptest.
@@ -122,16 +122,13 @@ func (s *serverHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Start starts the HTTP server. Returns an error if the server fails to start.
 func (s *serverHTTP) Start() error {
-	if s.tlsConfig == nil {
+	if s.TLSConfig == nil {
 		return s.startHTTP()
 	}
 
-	listener, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", s.Addr)
-	if err != nil {
-		return err
-	}
-	tlsListener := tls.NewListener(listener, s.tlsConfig)
-	err = s.Serve(tlsListener)
+	// The key pair is already loaded into TLSConfig, so no certificate files are
+	// passed here. Serving through net/http also negotiates HTTP/2.
+	err := s.ListenAndServeTLS("", "")
 	if errors.Is(err, http.ErrServerClosed) {
 		slog.Info("HTTPS server closed", attr.Error(err))
 		return nil
@@ -156,22 +153,11 @@ func (s *serverHTTP) Shutdown() error {
 	return s.Server.Shutdown(ctx)
 }
 
-// Run starts all non-nil HTTP/HTTPS servers concurrently and blocks until the context is canceled
+// Run starts the given HTTP/HTTPS servers concurrently and blocks until the context is canceled
 // or one of the servers encounters an error, then shuts all servers down gracefully.
-func Run(ctx context.Context, servers ...HTTP) error {
-	activeServers := make([]HTTP, 0, len(servers))
+func Run(ctx context.Context, servers []HTTP) error {
+	errCh := make(chan error, len(servers))
 	for _, srv := range servers {
-		if srv != nil {
-			activeServers = append(activeServers, srv)
-		}
-	}
-	if len(activeServers) == 0 {
-		return errors.New("no HTTP servers configured")
-	}
-
-	// Channel to capture server startup errors
-	errCh := make(chan error, len(activeServers))
-	for _, srv := range activeServers {
 		go func() {
 			errCh <- srv.Start()
 		}()
@@ -181,10 +167,10 @@ func Run(ctx context.Context, servers ...HTTP) error {
 	select {
 	case err := <-errCh:
 		if err != nil {
-			for _, srv := range activeServers {
+			for _, srv := range servers {
 				_ = srv.Shutdown()
 			}
-			for range len(activeServers) - 1 {
+			for range len(servers) - 1 {
 				<-errCh
 			}
 			return fmt.Errorf("HTTP server failed: %w", err)
@@ -193,7 +179,7 @@ func Run(ctx context.Context, servers ...HTTP) error {
 	}
 
 	var shutdownErr error
-	for _, srv := range activeServers {
+	for _, srv := range servers {
 		if err := srv.Shutdown(); err != nil {
 			slog.Error("HTTP server shutdown failed", attr.Error(err))
 			if shutdownErr == nil {
@@ -201,7 +187,7 @@ func Run(ctx context.Context, servers ...HTTP) error {
 			}
 		}
 	}
-	for range len(activeServers) {
+	for range len(servers) {
 		<-errCh
 	}
 	if shutdownErr != nil {

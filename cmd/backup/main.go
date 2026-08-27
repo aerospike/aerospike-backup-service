@@ -72,7 +72,7 @@ func startService(configFile string, remote bool) error {
 	components.Scheduler.Start(ctx)
 	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 
-	err = server.Run(ctx, components.ServerHTTP, components.ServerHTTPS)
+	err = server.Run(ctx, components.Servers)
 
 	// stop the scheduler
 	components.Scheduler.Stop()

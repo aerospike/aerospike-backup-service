@@ -12,7 +12,6 @@ import (
 func TestServerHTTPSConfigDefaults(t *testing.T) {
 	config := &ServerConfigHTTPS{}
 
-	assert.False(t, config.GetDisabledOrDefault())
 	assert.Equal(t, "0.0.0.0", config.GetAddressOrDefault())
 	assert.Equal(t, Port(8443), config.GetPortOrDefault())
 	assert.Equal(t, "/", config.GetContextPathOrDefault())

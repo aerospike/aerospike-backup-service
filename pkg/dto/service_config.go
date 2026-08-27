@@ -48,7 +48,7 @@ func (c *ServiceConfig) validateListeners() error {
 		return errors.New("service.http and service.https cannot both be disabled")
 	}
 	if httpEnabled && httpsEnabled {
-		httpPort := model.ServiceConfig{ServerHTTP: c.ServerHTTP.ToModel()}.GetServerHTTPOrDefault().GetPortOrDefault()
+		httpPort := c.ServerHTTP.ToModel().GetPortOrDefault()
 		httpsPort := c.ServerHTTPS.ToModel().GetPortOrDefault()
 		if httpPort == httpsPort {
 			return fmt.Errorf("service.http and service.https cannot use the same port %d", httpPort)

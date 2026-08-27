@@ -8,6 +8,7 @@ import (
 
 	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
@@ -84,7 +85,7 @@ func (s *ServerConfigHTTPS) validateTLSConfig(opts ValidationOptions) error {
 		return err
 	}
 
-	if _, err := servertls.NewTLSConfig(context.Background(), s.ToModel(), nil); err != nil {
+	if _, err := servertls.NewTLSConfig(context.Background(), s.ToModel(), secrets.NewResolver()); err != nil {
 		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
 	}
 

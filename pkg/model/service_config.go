@@ -20,6 +20,14 @@ func (c ServiceConfig) GetServerHTTPOrDefault() *ServerConfigHTTP {
 	return &defaultConfig.http
 }
 
+func (c ServiceConfig) GetServerHTTPSOrDefault() *ServerConfigHTTPS {
+	if c.ServerHTTPS != nil {
+		return c.ServerHTTPS
+	}
+
+	return &defaultConfig.https
+}
+
 func (c ServiceConfig) GetLoggerOrDefault() *LoggerConfig {
 	if c.Logger != nil {
 		return c.Logger

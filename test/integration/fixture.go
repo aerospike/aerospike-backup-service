@@ -48,7 +48,7 @@ func (s *Suite) setupEnv(customize ...func(*dto.Config)) *env {
 	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	t.Cleanup(func() { components.Scheduler.Stop() })
 
-	srv := httptest.NewServer(components.ServerHTTP)
+	srv := httptest.NewServer(components.Servers[0]) // only http sever is configured.
 	t.Cleanup(srv.Close)
 
 	return &env{
