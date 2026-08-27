@@ -40,7 +40,7 @@ func (s *Suite) waitForMetricBackupSuccessEvent(e *env, backupType model.BackupT
 		time.Sleep(pollInterval)
 	}
 
-	s.Require().Failf("timed out waiting for %s backup success event", string(backupType))
+	s.Failf("timed out waiting for %s backup success event", string(backupType))
 }
 
 func (s *Suite) assertMetricBackupSuccessEventCount(e *env, backupType model.BackupType, want float64) {
@@ -93,12 +93,12 @@ func (s *Suite) assertMetricLastSuccessfulBackup(e *env, backupType model.Backup
 
 		if time.Now().After(deadline) {
 			if !ok {
-				s.Require().Failf("timed out waiting for last successful backup metric",
+				s.Failf("timed out waiting for last successful backup metric",
 					"metric %q with routine=%q type=%q not found after %s",
 					lastSuccessfulBackupTimestampMetric, routineName, backupType, backupTimeout)
 			}
 
-			s.Require().Failf("timed out waiting for last successful backup metric",
+			s.Failf("timed out waiting for last successful backup metric",
 				"metric %q with routine=%q type=%q: got %d, want %d after %s",
 				lastSuccessfulBackupTimestampMetric, routineName, backupType, int64(value), wantUnix, backupTimeout)
 		}

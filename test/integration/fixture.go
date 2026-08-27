@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -18,7 +19,8 @@ import (
 // env is a running backup service instance under test.
 type env struct {
 	backupDir string
-	server    *httptest.Server
+	baseURL   string
+	client    *http.Client
 }
 
 // setupEnv starts a backup service against the suite's Aerospike container. Each customize
@@ -26,11 +28,24 @@ type env struct {
 // field without this harness needing to know about it.
 func (s *Suite) setupEnv(customize ...func(*dto.Config)) *env {
 	t := s.T()
-	ctx := t.Context()
 
 	backupDir := t.TempDir()
+	components := s.initComponents(s.baseConfig(backupDir), customize...)
 
-	config := s.baseConfig(backupDir)
+	srv := httptest.NewServer(components.Servers[0]) // only http server is configured.
+	t.Cleanup(srv.Close)
+
+	return &env{
+		backupDir: backupDir,
+		baseURL:   srv.URL,
+		client:    srv.Client(),
+	}
+}
+
+func (s *Suite) initComponents(config *dto.Config, customize ...func(*dto.Config)) *app.Components {
+	t := s.T()
+	ctx := t.Context()
+
 	for _, fn := range customize {
 		fn(config)
 	}
@@ -48,13 +63,7 @@ func (s *Suite) setupEnv(customize ...func(*dto.Config)) *env {
 	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	t.Cleanup(func() { components.Scheduler.Stop() })
 
-	srv := httptest.NewServer(components.Servers[0]) // only http sever is configured.
-	t.Cleanup(srv.Close)
-
-	return &env{
-		backupDir: backupDir,
-		server:    srv,
-	}
+	return components
 }
 
 // baseConfig is a minimal working configuration: one cluster, one local storage, one policy and
