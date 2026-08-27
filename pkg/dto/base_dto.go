@@ -1,6 +1,8 @@
 package dto
 
 import (
+	"strings"
+
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -35,4 +37,21 @@ func ConvertStorageMapToDTO(modelMap map[string]model.Storage, config *model.Bac
 		result[key] = NewStorageFromModel(s, config)
 	}
 	return result
+}
+
+// canonicalEnum maps v to an allowed value, ignoring case and surrounding space.
+// Empty or whitespace-only input returns the zero value and true.
+func canonicalEnum[T ~string](v T, allowed []T) (T, bool) {
+	s := strings.TrimSpace(string(v))
+	if s == "" {
+		var zero T
+		return zero, true
+	}
+	for _, a := range allowed {
+		if strings.EqualFold(s, string(a)) {
+			return a, true
+		}
+	}
+
+	return v, false
 }

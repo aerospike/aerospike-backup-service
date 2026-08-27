@@ -188,38 +188,22 @@ lint:
 lint-fix:
 	golangci-lint run --fix ./...
 
-# openapi: runs swag over handlers/DTOs, then swagger2openapi, producing docs/docs.go,
-#   docs/openapi.json, and docs/config.schema.json. Requires Docker and Node (npx).
-.PHONY: openapi
-openapi:
-	$(WORKSPACE)/build/scripts/generate-openapi.sh
+# docs: generates OpenAPI artifacts, config schema, README sections, DTO markdown,
+#   examples, and metrics.json in one pass. Requires Go and Node (npx).
+.PHONY: docs
+docs:
+	cd $(WORKSPACE) && $(GO) run ./build/docs
 
-# Ensure committed OpenAPI artifacts match the output of openapi (no hand-edits, no stale docs).
-.PHONY: openapi-check
-openapi-check: openapi
-	@git diff --exit-code -- docs/docs.go docs/openapi.json docs/config.schema.json \
-		|| (echo "OpenAPI artifacts are out of date. Run 'make openapi' and commit the changes." && exit 1)
-	@UNTRACKED=$$(git ls-files --others --exclude-standard docs/docs.go docs/openapi.json docs/config.schema.json); \
-	if [ -n "$$UNTRACKED" ]; then \
-		echo "Untracked OpenAPI artifacts found — these should be committed:"; \
-		echo "$$UNTRACKED"; \
-		exit 1; \
-	fi
+DOCS_GENERATED := docs/docs.go docs/openapi.json docs/config.schema.json \
+	README.md docs/installation.md docs/configuration.md docs/api-examples.md \
+	docs/monitoring.md docs/migration.md docs/examples/ docs/readme/dto/ docs/metrics.json
 
-# readme: runs build/readme (Go). Reads docs/openapi.json, writes generated sections in README.md and the
-#   other Markdown files listed in targetFiles (build/readme/readme_generator.go), plus docs/examples/*,
-#   docs/readme/dto/*, and docs/metrics.json. Committed files must match (see readme-check).
-.PHONY: readme
-readme:
-	$(GO) run ./build/readme
-
-README_GENERATED_TARGETS := README.md docs/installation.md docs/configuration.md docs/api-examples.md docs/monitoring.md docs/migration.md
-
-.PHONY: readme-check
-readme-check: readme
-	@git diff --exit-code -- $(README_GENERATED_TARGETS) docs/examples/ docs/readme/dto/ docs/metrics.json \
-		|| (echo "README / examples / docs are out of date. Run 'make readme' and commit the changes." && exit 1)
-	@UNTRACKED=$$(git ls-files --others --exclude-standard 'docs/examples/' 'docs/readme/dto/' 'docs/metrics.json'); \
+# Ensure committed generated docs match the output of docs (no hand-edits, no stale docs).
+.PHONY: docs-check
+docs-check: docs
+	@git diff --exit-code -- $(DOCS_GENERATED) \
+		|| (echo "Generated docs are out of date. Run 'make docs' and commit the changes." && exit 1)
+	@UNTRACKED=$$(git ls-files --others --exclude-standard $(DOCS_GENERATED)); \
 	if [ -n "$$UNTRACKED" ]; then \
 		echo "Untracked generated doc files found — these should be committed:"; \
 		echo "$$UNTRACKED"; \
@@ -232,11 +216,11 @@ tidy:
 
 # Verify generated artifacts are committed and up to date (for CI).
 .PHONY: generated-check
-generated-check: mocks-check openapi-check readme-check
+generated-check: mocks-check docs-check
 
 # Full local PR checklist.
 .PHONY: pr
-pr: tidy mocks-check format lint-fix test openapi readme
+pr: tidy mocks-check format lint-fix test docs
 
 .PHONY: release
 release: service-release helm-chart-release

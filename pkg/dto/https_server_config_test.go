@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -200,7 +199,7 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 				KeyFile:    certs.keyFile,
 				ClientAuth: "verify-if-given",
 			},
-			wantErr: "client authentication",
+			wantErr: "client-auth",
 		},
 		{
 			name: "secret agent password reference with agent",
@@ -271,7 +270,7 @@ func TestServerHTTPSConfigToModelAndFromModel(t *testing.T) {
 		SecretAgentConfig: SecretAgentConfig{
 			SecretAgent: &SecretAgent{
 				Address:        "localhost",
-				ConnectionType: saClient.ConnectionTypeTCP,
+				ConnectionType: ConnectionTypeTCP,
 			},
 		},
 	}
@@ -366,7 +365,7 @@ func TestServerHTTPSConfigToModel_ResolvesSecretAgentName(t *testing.T) {
 		SecretAgents: map[string]*SecretAgent{
 			"agent1": {
 				Address:        "localhost",
-				ConnectionType: saClient.ConnectionTypeTCP,
+				ConnectionType: ConnectionTypeTCP,
 			},
 		},
 	}

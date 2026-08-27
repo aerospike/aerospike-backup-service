@@ -190,7 +190,7 @@ func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
 // validateBackupsEncryption validates that the backups encryption matches the provided policy.
 func validateBackupsEncryption(backups []model.BackupDetails, policy *model.EncryptionPolicy) error {
 	for _, b := range backups {
-		if b.Encryption == "" || b.Encryption == model.EncryptNone {
+		if b.Encryption == "" || b.Encryption == model.EncryptionModeNone {
 			continue
 		}
 		if policy == nil {

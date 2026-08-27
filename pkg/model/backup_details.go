@@ -10,11 +10,6 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-const (
-	CompressNone = "NONE"
-	EncryptNone  = "NONE"
-)
-
 // BackupDetails contains information about a backup.
 type BackupDetails struct {
 	BackupMetadata // Backup metadata that is stored in metadata.yaml file
@@ -54,9 +49,9 @@ type BackupMetadata struct {
 	// The number of UDF files backed up.
 	UDFCount uint64 `yaml:"udf-count" json:"udf-count"`
 	// Compression specifies the compression mode used for the backup (ZSTD or NONE).
-	Compression string
+	Compression CompressionMode
 	// Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256).
-	Encryption string
+	Encryption EncryptionMode
 }
 
 // NewMetadataFromBytes creates a new Metadata object from a byte slice.
@@ -96,11 +91,11 @@ func NewBackupMetadata(
 	from, startTime time.Time,
 	backupPolicy *BackupPolicy,
 ) BackupMetadata {
-	compression := CompressNone
+	compression := CompressionModeNone
 	if backupPolicy != nil && backupPolicy.CompressionPolicy != nil {
 		compression = backupPolicy.CompressionPolicy.Mode
 	}
-	encryption := EncryptNone
+	encryption := EncryptionModeNone
 	if backupPolicy != nil && backupPolicy.EncryptionPolicy != nil {
 		encryption = backupPolicy.EncryptionPolicy.Mode
 	}

@@ -8,32 +8,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTLSClientAuthToModel(t *testing.T) {
+func TestTLSClientAuthValidate(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		value   TLSClientAuth
-		want    model.TLSClientAuth
 		wantErr bool
 	}{
 		{
-			name:  "empty defaults to none",
-			value: "",
-			want:  model.TLSClientAuthNone,
-		},
-		{
 			name:  "none",
 			value: TLSClientAuthNone,
-			want:  model.TLSClientAuthNone,
 		},
 		{
-			name:  "request",
-			value: TLSClientAuthRequest,
-			want:  model.TLSClientAuthRequest,
+			name:  "empty",
+			value: "",
 		},
 		{
-			name:  "require-and-verify",
-			value: TLSClientAuthRequireAndVerify,
-			want:  model.TLSClientAuthRequireAndVerify,
+			name:  "mixed case",
+			value: "Require-And-Verify",
 		},
 		{
 			name:    "invalid",
@@ -44,18 +37,25 @@ func TestTLSClientAuthToModel(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := test.value.ToModel()
+			t.Parallel()
+
+			err := test.value.Validate()
 			if test.wantErr {
 				require.Error(t, err)
-				require.Error(t, test.value.Validate())
 				return
 			}
 			require.NoError(t, err)
-			require.NoError(t, test.value.Validate())
-			assert.Equal(t, test.want, got)
-			if test.value != "" {
-				assert.Equal(t, test.value, NewTLSClientAuthFromModel(got))
-			}
 		})
 	}
+}
+
+func TestTLSClientAuthToModel(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, model.TLSClientAuth(""), TLSClientAuth("").ToModel())
+	assert.Equal(t, model.TLSClientAuthNone, TLSClientAuthNone.ToModel())
+	assert.Equal(t, model.TLSClientAuthRequest, TLSClientAuthRequest.ToModel())
+	assert.Equal(t, model.TLSClientAuthRequireAndVerify, TLSClientAuthRequireAndVerify.ToModel())
+	assert.Equal(t, model.TLSClientAuthRequireAndVerify, TLSClientAuth("Require-And-Verify").ToModel())
+	assert.Equal(t, TLSClientAuthRequireAndVerify, NewTLSClientAuthFromModel(model.TLSClientAuthRequireAndVerify))
 }

@@ -35,12 +35,12 @@ func TestBackupServiceConfig_Validate_PropagatesLoggerError(t *testing.T) {
 
 	err := cfg.Validate(ValidationDefault)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "invalid logger level")
+	require.Contains(t, err.Error(), "is not a valid level")
 }
 
 func TestBackupServiceConfig_Validate_InvalidTimestampFormat(t *testing.T) {
 	cfg := &ServiceConfig{
-		Backup: &BackupCommonConfig{TimestampFormat: "UK"},
+		Backup: &BackupCommonConfig{TimestampFormat: TimestampFormat("UK")},
 	}
 
 	err := cfg.Validate(ValidationDefault)
@@ -49,13 +49,23 @@ func TestBackupServiceConfig_Validate_InvalidTimestampFormat(t *testing.T) {
 }
 
 func TestBackupServiceConfig_Validate_ValidTimestampFormats(t *testing.T) {
-	for _, v := range []string{"ISO", "US", "EU", "iso", "us", "eu"} {
+	for _, v := range []TimestampFormat{"", TimestampFormatISO, TimestampFormatUS, TimestampFormatEU} {
 		cfg := &ServiceConfig{
 			Backup: &BackupCommonConfig{TimestampFormat: v},
 		}
 		err := cfg.Validate(ValidationDefault)
 		require.NoError(t, err)
 	}
+}
+
+func TestBackupServiceConfig_Validate_CaseInsensitiveEnums(t *testing.T) {
+	cfg := &ServiceConfig{
+		Logger: &LoggerConfig{Level: "info", Format: "json"},
+		Backup: &BackupCommonConfig{TimestampFormat: "iso"},
+	}
+
+	err := cfg.Validate(ValidationDefault)
+	require.NoError(t, err)
 }
 
 func TestServiceConfigValidateListeners(t *testing.T) {

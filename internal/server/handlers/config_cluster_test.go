@@ -10,7 +10,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -230,7 +229,7 @@ func TestUpdateAerospikeCluster_PreservesSecretOnRoundTrip(t *testing.T) {
 		Credentials: &model.Credentials{
 			User:     "testUser",
 			Password: realPassword,
-			AuthMode: ptr.Of(model.AuthModeInternal),
+			AuthMode: model.AuthModeInternal,
 		},
 	}
 	require.NoError(t, svc.config.AddCluster("test-cluster", clusterModel))

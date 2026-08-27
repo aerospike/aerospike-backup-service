@@ -61,7 +61,7 @@ secret-agents:
   secret-agent: # <--- Custom secret agent name
     address: localhost
     port: 5000
-    connection-type: tcp
+    connection-type: TCP
 
 storage:
   s3: # <--- Custom storage name

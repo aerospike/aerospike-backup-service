@@ -75,7 +75,7 @@ func (f *clientFactory) clientPolicy(ctx context.Context, c *model.AerospikeClus
 			return nil, err
 		}
 		policy.Password = ptr.ValueOrZero(password)
-		policy.AuthMode = resolveAuth(c.Credentials)
+		policy.AuthMode = c.Credentials.AuthModeOrDefault().ResolveAuth()
 	}
 	if c.ConnTimeout != nil {
 		policy.Timeout = *c.ConnTimeout
@@ -111,19 +111,6 @@ func (f *clientFactory) resolveClusterPassword(
 	}
 
 	return password, nil
-}
-
-func resolveAuth(creds *model.Credentials) as.AuthMode {
-	switch creds.AuthModeOrDefault() {
-	case model.AuthModeInternal:
-		return as.AuthModeInternal
-	case model.AuthModeExternal:
-		return as.AuthModeExternal
-	case model.AuthModePKI:
-		return as.AuthModePKI
-	default:
-		return as.AuthModeInternal
-	}
 }
 
 func isPKIAuthMode(creds *model.Credentials) bool {

@@ -161,47 +161,47 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 	tests := []struct {
 		name              string
 		policy            model.RestorePolicy
-		backupEncryption  string
-		backupCompression string
+		backupEncryption  model.EncryptionMode
+		backupCompression model.CompressionMode
 		shouldSucceed     bool
 	}{
 		{
 			name:              "sets compression policy from backup",
 			policy:            model.RestorePolicy{},
-			backupCompression: "ZSTD",
+			backupCompression: model.CompressionModeZSTD,
 			shouldSucceed:     true,
 		},
 		{
 			name:             "fails when encrypted backup has no policy",
 			policy:           model.RestorePolicy{},
-			backupEncryption: "AES128",
+			backupEncryption: model.EncryptionModeAES128,
 			shouldSucceed:    false,
 		},
 		{
 			name: "fails when encryption mode mismatches",
 			policy: model.RestorePolicy{
-				EncryptionPolicy: &model.EncryptionPolicy{Mode: "AES256"},
+				EncryptionPolicy: &model.EncryptionPolicy{Mode: model.EncryptionModeAES256},
 			},
-			backupEncryption: "AES128",
+			backupEncryption: model.EncryptionModeAES128,
 			shouldSucceed:    false,
 		},
 		{
 			name: "fails when encryption key is missing",
 			policy: model.RestorePolicy{
-				EncryptionPolicy: &model.EncryptionPolicy{Mode: "AES128"},
+				EncryptionPolicy: &model.EncryptionPolicy{Mode: model.EncryptionModeAES128},
 			},
-			backupEncryption: "AES128",
+			backupEncryption: model.EncryptionModeAES128,
 			shouldSucceed:    false,
 		},
 		{
 			name: "succeeds with valid encryption policy",
 			policy: model.RestorePolicy{
 				EncryptionPolicy: &model.EncryptionPolicy{
-					Mode:   "AES128",
+					Mode:   model.EncryptionModeAES128,
 					KeyEnv: "AES_KEY",
 				},
 			},
-			backupEncryption: "AES128",
+			backupEncryption: model.EncryptionModeAES128,
 			shouldSucceed:    true,
 		},
 	}

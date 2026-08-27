@@ -157,7 +157,7 @@ func TestRestoreRequest_Validate_PolicySecretRefWithoutAgent(t *testing.T) {
 		Policy: &RestorePolicy{
 			BaseRestorePolicy: BaseRestorePolicy{
 				EncryptionPolicy: &EncryptionPolicy{
-					Mode:      EncryptAES256,
+					Mode:      EncryptionModeAES256,
 					KeySecret: "secrets:resource:key",
 				},
 			},
@@ -178,7 +178,7 @@ func TestRestoreTimestampRequest_Validate_PolicySecretRefWithoutInlineAgent(t *t
 		Policy: &TimestampRestorePolicy{
 			BaseRestorePolicy: BaseRestorePolicy{
 				EncryptionPolicy: &EncryptionPolicy{
-					Mode:      EncryptAES256,
+					Mode:      EncryptionModeAES256,
 					KeySecret: "secrets:resource:key",
 				},
 			},

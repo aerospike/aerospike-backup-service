@@ -1695,6 +1695,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.AuthMode": {
+            "description": "AuthMode is the Aerospike cluster authentication mode.",
+            "type": "string",
+            "enum": [
+                "INTERNAL",
+                "EXTERNAL",
+                "PKI"
+            ],
+            "x-enum-varnames": [
+                "AuthModeInternal",
+                "AuthModeExternal",
+                "AuthModePKI"
+            ]
+        },
         "dto.AzureStorage": {
             "description": "AzureStorage represents the configuration for Azure Blob storage.",
             "type": "object",
@@ -1808,11 +1822,10 @@ const docTemplate = `{
             "properties": {
                 "timestamp-format": {
                     "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
-                    "type": "string",
-                    "enum": [
-                        "ISO",
-                        "US",
-                        "EU"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.TimestampFormat"
+                        }
                     ],
                     "x-nullable": true
                 }
@@ -2140,6 +2153,18 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.CompressionMode": {
+            "description": "CompressionMode identifies the compression algorithm used for backup files.",
+            "type": "string",
+            "enum": [
+                "NONE",
+                "ZSTD"
+            ],
+            "x-enum-varnames": [
+                "CompressionModeNone",
+                "CompressionModeZSTD"
+            ]
+        },
         "dto.CompressionPolicy": {
             "description": "CompressionPolicy contains backup compression information.",
             "type": "object",
@@ -2153,11 +2178,11 @@ const docTemplate = `{
                 },
                 "mode": {
                     "description": "The compression mode to be used (default is NONE).",
-                    "type": "string",
                     "default": "NONE",
-                    "enum": [
-                        "NONE",
-                        "ZSTD"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.CompressionMode"
+                        }
                     ]
                 }
             }
@@ -2211,18 +2236,29 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ConnectionType": {
+            "description": "ConnectionType is the Secret Agent connection type.",
+            "type": "string",
+            "enum": [
+                "TCP",
+                "UNIX"
+            ],
+            "x-enum-varnames": [
+                "ConnectionTypeTCP",
+                "ConnectionTypeUnix"
+            ]
+        },
         "dto.Credentials": {
             "description": "Credentials represents authentication details to the Aerospike cluster.",
             "type": "object",
             "properties": {
                 "auth-mode": {
-                    "description": "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
-                    "type": "string",
+                    "description": "The authentication mode (INTERNAL, EXTERNAL, PKI).",
                     "default": "INTERNAL",
-                    "enum": [
-                        "INTERNAL",
-                        "EXTERNAL",
-                        "PKI"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.AuthMode"
+                        }
                     ]
                 },
                 "password": {
@@ -2258,6 +2294,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.EncryptionMode": {
+            "description": "EncryptionMode identifies the encryption algorithm used for backup files.",
+            "type": "string",
+            "enum": [
+                "NONE",
+                "AES128",
+                "AES256"
+            ],
+            "x-enum-varnames": [
+                "EncryptionModeNone",
+                "EncryptionModeAES128",
+                "EncryptionModeAES256"
+            ]
+        },
         "dto.EncryptionPolicy": {
             "description": "EncryptionPolicy contains backup encryption information.",
             "type": "object",
@@ -2280,12 +2330,11 @@ const docTemplate = `{
                 },
                 "mode": {
                     "description": "The encryption mode to be used (NONE, AES128, AES256)",
-                    "type": "string",
                     "default": "NONE",
-                    "enum": [
-                        "NONE",
-                        "AES128",
-                        "AES256"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.EncryptionMode"
+                        }
                     ]
                 }
             }
@@ -2444,6 +2493,38 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.LogFormat": {
+            "description": "LogFormat is the logger format.",
+            "type": "string",
+            "enum": [
+                "PLAIN",
+                "JSON"
+            ],
+            "x-enum-varnames": [
+                "LogFormatPlain",
+                "LogFormatJSON"
+            ]
+        },
+        "dto.LogLevel": {
+            "description": "LogLevel is the logger level.",
+            "type": "string",
+            "enum": [
+                "TRACE",
+                "DEBUG",
+                "INFO",
+                "WARN",
+                "WARNING",
+                "ERROR"
+            ],
+            "x-enum-varnames": [
+                "LogLevelTrace",
+                "LogLevelDebug",
+                "LogLevelInfo",
+                "LogLevelWarn",
+                "LogLevelWarning",
+                "LogLevelError"
+            ]
+        },
         "dto.LoggerConfig": {
             "description": "LoggerConfig represents the backup service logger configuration.",
             "type": "object",
@@ -2458,24 +2539,20 @@ const docTemplate = `{
                 },
                 "format": {
                     "description": "Format is the logger format (PLAIN, JSON).",
-                    "type": "string",
                     "default": "PLAIN",
-                    "enum": [
-                        "PLAIN",
-                        "JSON"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LogFormat"
+                        }
                     ]
                 },
                 "level": {
                     "description": "Level is the logger level.",
-                    "type": "string",
                     "default": "INFO",
-                    "enum": [
-                        "TRACE",
-                        "DEBUG",
-                        "INFO",
-                        "WARN",
-                        "WARNING",
-                        "ERROR"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LogLevel"
+                        }
                     ]
                 },
                 "stdout-writer": {
@@ -2535,11 +2612,11 @@ const docTemplate = `{
             "properties": {
                 "mode": {
                     "description": "The compression mode to be used (default is NONE).",
-                    "type": "string",
                     "default": "NONE",
-                    "enum": [
-                        "NONE",
-                        "ZSTD"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.CompressionMode"
+                        }
                     ]
                 }
             }
@@ -3059,6 +3136,28 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.S3LogLevel": {
+            "description": "S3LogLevel controls the verbosity of the AWS SDK logging.",
+            "type": "string",
+            "enum": [
+                "OFF",
+                "FATAL",
+                "ERROR",
+                "WARN",
+                "INFO",
+                "DEBUG",
+                "TRACE"
+            ],
+            "x-enum-varnames": [
+                "S3LogLevelOff",
+                "S3LogLevelFatal",
+                "S3LogLevelError",
+                "S3LogLevelWarn",
+                "S3LogLevelInfo",
+                "S3LogLevelDebug",
+                "S3LogLevelTrace"
+            ]
+        },
         "dto.S3Storage": {
             "description": "S3Storage represents the configuration for S3 storage.",
             "type": "object",
@@ -3104,16 +3203,11 @@ const docTemplate = `{
                 },
                 "s3-log-level": {
                     "description": "The log level of the AWS S3 SDK (AWS S3 optional).",
-                    "type": "string",
                     "default": "FATAL",
-                    "enum": [
-                        "OFF",
-                        "FATAL",
-                        "ERROR",
-                        "WARN",
-                        "INFO",
-                        "DEBUG",
-                        "TRACE"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.S3LogLevel"
+                        }
                     ]
                 },
                 "s3-profile": {
@@ -3219,10 +3313,10 @@ const docTemplate = `{
                 },
                 "connection-type": {
                     "description": "Connection type.",
-                    "type": "string",
-                    "enum": [
-                        "tcp",
-                        "unix"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.ConnectionType"
+                        }
                     ],
                     "example": "tcp"
                 },
@@ -3367,11 +3461,6 @@ const docTemplate = `{
                 "client-auth": {
                     "description": "Client certificate authentication mode.",
                     "default": "none",
-                    "enum": [
-                        "none",
-                        "request",
-                        "require-and-verify"
-                    ],
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.TLSClientAuth"
@@ -3621,6 +3710,20 @@ const docTemplate = `{
             "x-enum-varnames": [
                 "TLSMinVersion12",
                 "TLSMinVersion13"
+            ]
+        },
+        "dto.TimestampFormat": {
+            "description": "TimestampFormat is the encoding for backup dates in file paths.",
+            "type": "string",
+            "enum": [
+                "ISO",
+                "US",
+                "EU"
+            ],
+            "x-enum-varnames": [
+                "TimestampFormatISO",
+                "TimestampFormatUS",
+                "TimestampFormatEU"
             ]
         },
         "dto.TimestampRestorePolicy": {

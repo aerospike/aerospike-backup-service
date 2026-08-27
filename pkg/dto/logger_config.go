@@ -3,7 +3,6 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -12,31 +11,25 @@ import (
 // @Description LoggerConfig represents the backup service logger configuration.
 type LoggerConfig struct {
 	// Level is the logger level.
-	Level string `yaml:"level,omitempty" json:"level,omitempty" default:"INFO" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
+	Level LogLevel `yaml:"level,omitempty" json:"level,omitempty" default:"INFO"`
 	// Format is the logger format (PLAIN, JSON).
-	Format string `yaml:"format,omitempty" json:"format,omitempty" default:"PLAIN" enums:"PLAIN,JSON"`
+	Format LogFormat `yaml:"format,omitempty" json:"format,omitempty" default:"PLAIN"`
 	// Whether to enable logging to the standard output.
 	StdoutWriter *bool `yaml:"stdout-writer,omitempty" json:"stdout-writer,omitempty" default:"true"`
 	// File writer logging configuration.
 	FileWriter *FileLoggerConfig `yaml:"file-writer,omitempty" json:"file-writer,omitempty" default:""`
 }
 
-//nolint:goconst
-var (
-	validLoggerLevels      = []string{"TRACE", "DEBUG", "INFO", "WARN", "WARNING", "ERROR"}
-	supportedLoggerFormats = []string{"PLAIN", "JSON"}
-)
-
 // Validate validates the logger configuration.
 func (l *LoggerConfig) Validate() error {
 	if l == nil {
 		return nil
 	}
-	if l.Level != "" && !slices.Contains(validLoggerLevels, l.Level) {
-		return fmt.Errorf("invalid logger level: %s", l.Level)
+	if err := l.Level.Validate(); err != nil {
+		return err
 	}
-	if l.Format != "" && !slices.Contains(supportedLoggerFormats, l.Format) {
-		return fmt.Errorf("invalid logger format: %s", l.Format)
+	if err := l.Format.Validate(); err != nil {
+		return err
 	}
 	if err := l.FileWriter.Validate(); err != nil {
 		return err
@@ -51,16 +44,16 @@ func (l *LoggerConfig) ToModel() *model.LoggerConfig {
 	}
 
 	return &model.LoggerConfig{
-		Level:        l.Level,
-		Format:       l.Format,
+		Level:        l.Level.ToModel(),
+		Format:       l.Format.ToModel(),
 		StdoutWriter: l.StdoutWriter,
 		FileWriter:   l.FileWriter.ToModel(),
 	}
 }
 
 func (l *LoggerConfig) fromModel(m *model.LoggerConfig) {
-	l.Level = m.Level
-	l.Format = m.Format
+	l.Level = NewLogLevelFromModel(m.Level)
+	l.Format = NewLogFormatFromModel(m.Format)
 	l.StdoutWriter = m.StdoutWriter
 	if m.FileWriter != nil {
 		l.FileWriter = &FileLoggerConfig{}

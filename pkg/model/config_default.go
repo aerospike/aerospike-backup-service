@@ -57,8 +57,8 @@ var defaultConfig = struct {
 		ClientAuth: TLSClientAuthNone,
 	},
 	logger: LoggerConfig{
-		Level:        "INFO",
-		Format:       "PLAIN",
+		Level:        LogLevelInfo,
+		Format:       LogFormatPlain,
 		StdoutWriter: ptr.Of(true),
 		FileWriter: &FileLoggerConfig{
 			MaxSize:    100,
@@ -90,7 +90,7 @@ var defaultConfig = struct {
 		BatchSize:       ptr.Of(128),
 	},
 	credentials: Credentials{
-		AuthMode: ptr.Of(AuthModeInternal),
+		AuthMode: AuthModeInternal,
 	},
 }
 

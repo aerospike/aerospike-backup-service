@@ -41,3 +41,13 @@ func TestNewStatusFilterFromString_Invalid(t *testing.T) {
 	_, err := NewStatusFilterFromString("bogus-status")
 	require.Error(t, err)
 }
+
+func TestNewStatusFilterFromString_CaseInsensitive(t *testing.T) {
+	t.Parallel()
+
+	filter, err := NewStatusFilterFromString("RUNNING,done")
+	require.NoError(t, err)
+	assert.True(t, filter.Matches(model.RestoreRunning))
+	assert.True(t, filter.Matches(model.RestoreSuccess))
+	assert.False(t, filter.Matches(model.RestoreFailure))
+}

@@ -3,9 +3,9 @@ package model
 // LoggerConfig represents the backup service logger configuration.
 type LoggerConfig struct {
 	// Level is the logger level.
-	Level string
+	Level LogLevel
 	// Format is the logger format (PLAIN, JSON).
-	Format string
+	Format LogFormat
 	// Whether to enable logging to the standard output.
 	StdoutWriter *bool
 	// File writer logging configuration.
@@ -14,7 +14,7 @@ type LoggerConfig struct {
 
 // GetLevelOrDefault returns the value of the Level property.
 // If the property is not set, it returns the default value.
-func (l *LoggerConfig) GetLevelOrDefault() string {
+func (l *LoggerConfig) GetLevelOrDefault() LogLevel {
 	if l.Level != "" {
 		return l.Level
 	}
@@ -23,7 +23,7 @@ func (l *LoggerConfig) GetLevelOrDefault() string {
 
 // GetFormatOrDefault returns the value of the Format property.
 // If the property is not set, it returns the default value.
-func (l *LoggerConfig) GetFormatOrDefault() string {
+func (l *LoggerConfig) GetFormatOrDefault() LogFormat {
 	if l.Format != "" {
 		return l.Format
 	}
