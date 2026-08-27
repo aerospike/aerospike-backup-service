@@ -133,19 +133,19 @@ is fully approved, publishes it).
    3. Creates a unified release bundle and automatically promotes it from `DEV` to `TEST`.
 6. QE/developers pull the artifacts from JFrog `TEST` and validate them. Once they pass, the release bundle is
    promoted from `TEST` to `STAGE`, either by dispatching
-   [`promote-to-preview.yml`](../.github/workflows/promote-to-preview.yml) with `environment: STAGE` or manually via the
+   [`promote-to-preview.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/promote-to-preview.yml) with `environment: STAGE` or manually via the
    [JFrog UI](https://aerospike.jfrog.io/ui/artifactory/release-lifecycle/aerospike-backup-service?repoKey=database-release-bundles-v2).
 7. A PM or EM reviews the release and promotes the release bundle from `STAGE` to `PREVIEW`, either by dispatching
-   [`promote-to-preview.yml`](../.github/workflows/promote-to-preview.yml) with `environment: PREVIEW` or manually via the same
+   [`promote-to-preview.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/promote-to-preview.yml) with `environment: PREVIEW` or manually via the same
    [JFrog UI](https://aerospike.jfrog.io/ui/artifactory/release-lifecycle/aerospike-backup-service?repoKey=database-release-bundles-v2)
    link.
 8. A PM or EM promotes the release bundle from `PREVIEW` to `PROD`, either by dispatching
-   [`promote-to-prod.yml`](../.github/workflows/promote-to-prod.yml) or manually via the same JFrog UI link. This is
+   [`promote-to-prod.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/promote-to-prod.yml) or manually via the same JFrog UI link. This is
    the gate that makes a release public.
 9. Once the bundle is on `PROD`:
    - Docker Hub mirroring happens automatically and externally (JFrog's existing promotion webhook feeds
      `artifact-publisher`) — nothing to trigger here.
-   - A dev or PM/EM manually runs `release.yml`
+   - A dev or PM/EM manually runs [`release.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/release.yml)
      (`workflow_dispatch`, with the release version as input). It verifies the bundle was actually promoted to
      `PROD`, then downloads the already-signed artifacts straight from JFrog's `PROD`-public repos and publishes
      them as a new, immutable GitHub Release — nothing is rebuilt, re-signed, or re-checksummed at this point.
