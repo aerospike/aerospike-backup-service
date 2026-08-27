@@ -18,6 +18,30 @@ jobs:
         with:
           egress-policy: audit
 
+      # Gates the whole workflow: every other job needs this one. The triggering tag and the
+      # VERSION file are independent inputs, but every JFrog path and image tag below is derived
+      # from VERSION alone. When they disagree this pipeline publishes over whatever release
+      # VERSION names -- which is how tagging v3.5.1 off a commit still reading v3.5.0
+      # overwrote the released 3.5.0 packages.
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          ref: ${{ github.ref }}
+
+      - name: Verify VERSION matches the tag
+        run: |
+          if [ ! -f VERSION ]; then
+            echo "::error::VERSION file not found at ${GITHUB_REF_NAME}."
+            exit 1
+          fi
+          PACKAGE_VERSION=$(cat VERSION)
+          if [ "$PACKAGE_VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::VERSION file says '$PACKAGE_VERSION' but the tag is '$GITHUB_REF_NAME'. Bump VERSION on the release branch and re-tag."
+            exit 1
+          fi
+          echo "VERSION matches the tag: $PACKAGE_VERSION"
+
       - name: Check if release exists
         id: check-release
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
