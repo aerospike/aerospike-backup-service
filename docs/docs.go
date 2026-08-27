@@ -3461,11 +3461,6 @@ const docTemplate = `{
                 "client-auth": {
                     "description": "Client certificate authentication mode.",
                     "default": "none",
-                    "enum": [
-                        "none",
-                        "request",
-                        "require-and-verify"
-                    ],
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.TLSClientAuth"
