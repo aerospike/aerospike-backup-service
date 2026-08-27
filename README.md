@@ -70,3 +70,4 @@ under [releases](https://github.com/aerospike/aerospike-backup-service/releases)
 - [Helm chart](helm/aerospike-backup-service) — deploying to Kubernetes
 - [Changelog](CHANGELOG.md) — notable changes by release
 - [Migration Guide](docs/migration.md) — breaking changes and upgrade notes between releases
+- [Development Guide](docs/development.md) — building from source, testing, and cutting a release

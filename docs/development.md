@@ -85,20 +85,10 @@ through releases and hotfixes.
 
 ### Cutting a release
 
-Releases move through JFrog's promotion stages (`DEV -> TEST -> STAGE -> PROD`) before anything is made public. The
+Releases move through JFrog's promotion stages (`DEV -> TEST -> STAGE -> PREVIEW -> PROD`) before anything is made public. The
 GitHub Actions side is split into two workflows: [`pre-release.yml`](../.github/workflows/pre-release.yml) (developer
 owned, builds and promotes up to `TEST`) and [`release.yml`](../.github/workflows/release.yml) (run once the release
 is fully approved, publishes it).
-
-> **Transitional note (this branch only):** `pre-release-legacy.yml`/`release-legacy.yml` also exist on
-> `switch-to-sharedworkflows`. They're the previous, proven JFrog-direct pipeline (targets the
-> `ecosystem` JFrog project instead of `database`), kept only as a safety-net/comparison path while the
-> shared-workflows pipeline described here is being trusted. Unlike the workflows above, they trigger
-> manually only (`workflow_dispatch`) rather than on every tag push/release, so they don't
-> double-build/double-publish by default — dispatch them explicitly (e.g.
-> `gh workflow run "Create Aerospike Backup Service Pre Release (Legacy)" -f tag=v3.x.y`) when you want
-> a comparison run. They aren't meant to be merged — delete them outright once this branch merges into
-> `main`.
 
 1. Open a pull request from `dev` into `main` and merge it.
 2. Tag the release commit on `main`: `git tag v3.x.y && git push origin v3.x.y`. This triggers `pre-release.yml`,
@@ -108,20 +98,23 @@ is fully approved, publishes it).
    3. Creates a unified release bundle and automatically promotes it from `DEV` to `TEST`.
 3. QE/developers pull the artifacts from JFrog `TEST` and validate them. Once they pass, the release bundle is
    promoted from `TEST` to `STAGE`, either by dispatching
-   [`promote-to-stage.yml`](../.github/workflows/promote-to-stage.yml) or manually via the
+   [`promote-to-preview.yml`](../.github/workflows/promote-to-preview.yml) with `environment: STAGE` or manually via the
    [JFrog UI](https://aerospike.jfrog.io/ui/artifactory/release-lifecycle/aerospike-backup-service?repoKey=database-release-bundles-v2).
-4. A PM or EM reviews the release and promotes the release bundle from `STAGE` to `PROD`, either by dispatching
-   [`promote-to-prod.yml`](../.github/workflows/promote-to-prod.yml) or manually via the same
+4. A PM or EM reviews the release and promotes the release bundle from `STAGE` to `PREVIEW`, either by dispatching
+   [`promote-to-preview.yml`](../.github/workflows/promote-to-preview.yml) with `environment: PREVIEW` or manually via the same
    [JFrog UI](https://aerospike.jfrog.io/ui/artifactory/release-lifecycle/aerospike-backup-service?repoKey=database-release-bundles-v2)
-   link. This is the gate that makes a release public; automation intentionally stops before this step.
-5. Once the bundle is on `PROD`:
+   link.
+5. A PM or EM promotes the release bundle from `PREVIEW` to `PROD`, either by dispatching
+   [`promote-to-prod.yml`](../.github/workflows/promote-to-prod.yml) or manually via the same JFrog UI link. This is
+   the gate that makes a release public; automation intentionally stops before this step.
+6. Once the bundle is on `PROD`:
    - Docker Hub mirroring happens automatically and externally (JFrog's existing promotion webhook feeds
      `artifact-publisher`) — nothing to trigger here.
-   - Someone with repo access (not necessarily the same PM/EM from step 4) manually runs `release.yml`
+   - Someone with repo access (not necessarily the same PM/EM from step 5) manually runs `release.yml`
      (`workflow_dispatch`, with the release version as input). It verifies the bundle was actually promoted to
      `PROD`, then downloads the already-signed artifacts straight from JFrog's `PROD`-public repos and publishes
      them as a new, immutable GitHub Release — nothing is rebuilt, re-signed, or re-checksummed at this point.
-6. If the release added commits that exist only on `main` (for example a hotfix), back-merge `main` into `dev`.
+7. If the release added commits that exist only on `main` (for example a hotfix), back-merge `main` into `dev`.
 
 ## Reporting issues
 

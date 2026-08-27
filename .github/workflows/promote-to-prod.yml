@@ -3,15 +3,15 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Release bundle version currently in STAGE to promote to PROD (e.g. v3.7.0)
+        description: Release bundle version currently in PREVIEW to promote to PROD (e.g. v3.7.0)
         required: true
         type: string
 
 permissions:
   contents: read
 
-# Promotes an already-created release bundle (in the "database" JFrog project) from STAGE to PROD.
-# Intended to be run by a PM/EM once they've reviewed the release. This is an alternative to doing
+# Promotes an already-created release bundle (in the "database" JFrog project) from PREVIEW to PROD.
+# Intended to be run by a PM/EM once they've reviewed the release for GA. This is an alternative to doing
 # the same promotion via the JFrog UI -- either works. No GitHub-side approval gate is enforced here
 # -- anyone who can trigger workflow_dispatch on this repo can run this, so treat it the same as
 # JFrog UI access: this is the gate that makes a release public, only run it once actually approved.

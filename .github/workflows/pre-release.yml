@@ -425,5 +425,5 @@ jobs:
             echo "| Bundle version | \`${BUNDLE_VERSION}\` |"
             echo "| JFrog project | \`${{ vars.JF_PROJECT }}\` |"
             echo ""
-            echo "Next: QE validates the artifacts from JFrog TEST, then promotes to STAGE via the JFrog UI."
+            echo "Next: QE validates the artifacts from JFrog TEST, then promotes to STAGE via promote-to-preview.yml (environment STAGE) or the JFrog UI."
           } >> "$GITHUB_STEP_SUMMARY"
