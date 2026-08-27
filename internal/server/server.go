@@ -16,6 +16,7 @@ import (
 	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -123,7 +124,7 @@ func (s *serverHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Start starts the HTTP server. Returns an error if the server fails to start.
 func (s *serverHTTP) Start() error {
 	if s.TLSConfig == nil {
-		return s.startHTTP()
+		return s.wrapStartError("HTTP", s.startHTTP())
 	}
 
 	// The key pair is already loaded into TLSConfig, so no certificate files are
@@ -134,7 +135,7 @@ func (s *serverHTTP) Start() error {
 		return nil
 	}
 
-	return err
+	return s.wrapStartError("HTTPS", err)
 }
 
 func (s *serverHTTP) startHTTP() error {
@@ -146,6 +147,13 @@ func (s *serverHTTP) startHTTP() error {
 	return err
 }
 
+func (s *serverHTTP) wrapStartError(scheme string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%s listener %s: %w", scheme, s.Addr, err)
+}
+
 // Shutdown shuts down the HTTP server gracefully with a timeout.
 func (s *serverHTTP) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
@@ -154,47 +162,36 @@ func (s *serverHTTP) Shutdown() error {
 }
 
 // Run starts the given HTTP/HTTPS servers concurrently and blocks until the context is canceled
-// or one of the servers encounters an error, then shuts all servers down gracefully.
+// or one of the servers stops on its own, then shuts all servers down gracefully.
 func Run(ctx context.Context, servers []HTTP) error {
-	errCh := make(chan error, len(servers))
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var group errgroup.Group
 	for _, srv := range servers {
-		go func() {
-			errCh <- srv.Start()
-		}()
+		group.Go(func() error {
+			// A listener that stops on its own brings the remaining ones down with it.
+			defer cancel()
+			return srv.Start()
+		})
 	}
 
-	// Wait for either context cancellation or server error
-	select {
-	case err := <-errCh:
-		if err != nil {
-			for _, srv := range servers {
-				_ = srv.Shutdown()
-			}
-			for range len(servers) - 1 {
-				<-errCh
-			}
-			return fmt.Errorf("HTTP server failed: %w", err)
-		}
-	case <-ctx.Done():
-	}
+	<-ctx.Done()
 
 	var shutdownErr error
 	for _, srv := range servers {
 		if err := srv.Shutdown(); err != nil {
 			slog.Error("HTTP server shutdown failed", attr.Error(err))
-			if shutdownErr == nil {
-				shutdownErr = err
-			}
+			shutdownErr = errors.Join(shutdownErr, err)
 		}
 	}
-	for range len(servers) {
-		<-errCh
-	}
-	if shutdownErr != nil {
-		return shutdownErr
+
+	// Shutdown makes every Start return, so Wait reports the failure that stopped the service.
+	if err := errors.Join(group.Wait(), shutdownErr); err != nil {
+		return err
 	}
 
-	slog.Info("HTTP server shut down gracefully")
+	slog.Info("HTTP servers shut down gracefully")
 
 	return nil
 }

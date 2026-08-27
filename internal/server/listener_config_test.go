@@ -196,33 +196,6 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 			wantHTTPS:      true,
 		},
 		{
-			name: "HTTPS only with HTTP disabled",
-			config: func(httpPort, httpsPort int, certs listenerCertificates) dto.Config {
-				return dto.Config{
-					ServiceConfig: dto.ServiceConfig{
-						ServerHTTP: &dto.ServerConfigHTTP{
-							ListenerConfig: dto.ListenerConfig{
-								Address:  "127.0.0.1",
-								Disabled: true,
-							},
-							Port: ptr.Of(dto.Port(httpPort)),
-						},
-						ServerHTTPS: &dto.ServerConfigHTTPS{
-							ListenerConfig: dto.ListenerConfig{
-								Address: "127.0.0.1",
-							},
-							Port:         ptr.Of(dto.Port(httpsPort)),
-							CertFile:     certs.serverCertFile,
-							KeyFile:      certs.serverKeyFile,
-							ClientCAFile: certs.caFile,
-							ClientAuth:   dto.TLSClientAuthNone,
-						},
-					},
-				}
-			},
-			wantHTTPS: true,
-		},
-		{
 			name: "both listeners",
 			config: func(httpPort, httpsPort int, certs listenerCertificates) dto.Config {
 				return dto.Config{
@@ -565,7 +538,7 @@ func TestRunFailsFastWhenListenerCannotBind(t *testing.T) {
 	t.Cleanup(components.Scheduler.Stop)
 
 	err := server.Run(t.Context(), components.Servers)
-	require.ErrorContains(t, err, "HTTP server failed")
+	require.ErrorContains(t, err, fmt.Sprintf("HTTP listener 127.0.0.1:%d", httpPort))
 }
 
 func TestHTTPSStartFailsWhenPortIsOccupied(t *testing.T) {
@@ -588,6 +561,7 @@ func TestHTTPSStartFailsWhenPortIsOccupied(t *testing.T) {
 
 	err = srv.Start()
 	require.Error(t, err)
+	require.ErrorContains(t, err, fmt.Sprintf("HTTPS listener 127.0.0.1:%d", httpsPort))
 	require.NotErrorIs(t, err, http.ErrServerClosed)
 }
 

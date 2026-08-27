@@ -1,9 +1,11 @@
 package server
 
 import (
+	"errors"
 	"io"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,6 +14,21 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
+
+type stubServer struct {
+	start    func() error
+	shutdown func() error
+}
+
+func (s stubServer) ServeHTTP(http.ResponseWriter, *http.Request) {}
+
+func (s stubServer) Start() error {
+	return s.start()
+}
+
+func (s stubServer) Shutdown() error {
+	return s.shutdown()
+}
 
 func newTestServerHTTP(t *testing.T, httpCfg *model.ServerConfigHTTP) *serverHTTP {
 	t.Helper()
@@ -118,4 +135,84 @@ func TestNewServerHTTP_ReadTimeoutClosesSilentClient(t *testing.T) {
 	require.ErrorIs(t, err, io.EOF)
 	require.Less(t, elapsed, time.Second, "server should close the connection near ReadTimeout")
 	require.GreaterOrEqual(t, elapsed, readTimeout/2)
+}
+
+func TestRunDoesNotDeadlockWhenServerExitsCleanly(t *testing.T) {
+	started := make(chan struct{})
+	stop := make(chan struct{})
+
+	servers := []HTTP{
+		stubServer{
+			start:    func() error { return nil },
+			shutdown: func() error { return nil },
+		},
+		stubServer{
+			start: func() error {
+				close(started)
+				<-stop
+				return nil
+			},
+			shutdown: func() error {
+				close(stop)
+				return nil
+			},
+		},
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(t.Context(), servers)
+	}()
+
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for the blocking server to start")
+	}
+
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run deadlocked after a listener returned nil from Start")
+	}
+}
+
+func TestRunStopsEveryListenerWhenOneFails(t *testing.T) {
+	stop := make(chan struct{})
+	var shutdowns atomic.Int32
+
+	servers := []HTTP{
+		stubServer{
+			start:    func() error { return errors.New("bind: address already in use") },
+			shutdown: func() error { shutdowns.Add(1); return nil },
+		},
+		stubServer{
+			start: func() error {
+				<-stop
+				return nil
+			},
+			shutdown: func() error {
+				shutdowns.Add(1)
+				close(stop)
+				return nil
+			},
+		},
+	}
+
+	err := Run(t.Context(), servers)
+	require.ErrorContains(t, err, "bind: address already in use")
+	require.Equal(t, int32(2), shutdowns.Load())
+}
+
+func TestRunReportsShutdownFailure(t *testing.T) {
+	servers := []HTTP{
+		stubServer{
+			start:    func() error { return nil },
+			shutdown: func() error { return errors.New("shutdown timed out") },
+		},
+	}
+
+	err := Run(t.Context(), servers)
+	require.ErrorContains(t, err, "shutdown timed out")
 }

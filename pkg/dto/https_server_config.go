@@ -80,7 +80,6 @@ func (s *ServerConfigHTTPS) validateTLSConfig(opts ValidationOptions) error {
 	if s.CertFile == "" || s.KeyFile == "" {
 		return nil
 	}
-	// Secret Agent references are resolved at runtime; they cannot be used to decrypt the key here.
 	if err := s.KeyFilePassword.Validate(s.hasSecretAgent()); err != nil {
 		return err
 	}
