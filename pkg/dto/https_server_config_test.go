@@ -41,12 +41,30 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid TLS 1.3 and secure cipher suite",
+			config: &ServerConfigHTTPS{
+				CertFile:     certs.certFile,
+				KeyFile:      certs.keyFile,
+				MinVersion:   "1.3",
+				CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+			},
+		},
+		{
 			name: "valid mutual TLS",
 			config: &ServerConfigHTTPS{
 				CertFile:     certs.certFile,
 				KeyFile:      certs.keyFile,
 				ClientCAFile: certs.caFile,
 				ClientAuth:   "require-and-verify",
+			},
+		},
+		{
+			name: "valid request client certificate",
+			config: &ServerConfigHTTPS{
+				CertFile:     certs.certFile,
+				KeyFile:      certs.keyFile,
+				ClientCAFile: certs.caFile,
+				ClientAuth:   "request",
 			},
 		},
 		{
@@ -58,6 +76,11 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			options: ValidationSkipTLSFiles,
 		},
 		{
+			name:    "enabled without certificate or key",
+			config:  &ServerConfigHTTPS{},
+			wantErr: "cert-file",
+		},
+		{
 			name:    "missing certificate",
 			config:  &ServerConfigHTTPS{KeyFile: certs.keyFile},
 			wantErr: "cert-file",
@@ -66,6 +89,65 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			name:    "missing key",
 			config:  &ServerConfigHTTPS{CertFile: certs.certFile},
 			wantErr: "key-file",
+		},
+		{
+			name: "invalid port",
+			config: &ServerConfigHTTPS{
+				Port:     ptr.Of(Port(99999)),
+				CertFile: certs.certFile,
+				KeyFile:  certs.keyFile,
+			},
+			wantErr: "port number",
+		},
+		{
+			name: "context path without leading slash",
+			config: &ServerConfigHTTPS{
+				ListenerConfig: ListenerConfig{ContextPath: "abs"},
+				CertFile:       certs.certFile,
+				KeyFile:        certs.keyFile,
+			},
+			wantErr: "context-path",
+		},
+		{
+			name: "disabled with certificate and no key",
+			config: &ServerConfigHTTPS{
+				ListenerConfig: ListenerConfig{Disabled: true},
+				CertFile:       certs.certFile,
+			},
+			wantErr: "key-file",
+		},
+		{
+			name: "disabled with key and no certificate",
+			config: &ServerConfigHTTPS{
+				ListenerConfig: ListenerConfig{Disabled: true},
+				KeyFile:        certs.keyFile,
+			},
+			wantErr: "cert-file",
+		},
+		{
+			name: "key-file-password without key",
+			config: &ServerConfigHTTPS{
+				ListenerConfig:  ListenerConfig{Disabled: true},
+				KeyFilePassword: "password",
+			},
+			wantErr: "key-file",
+		},
+		{
+			name: "dirty certificate path",
+			config: &ServerConfigHTTPS{
+				CertFile: "/tmp/../server.pem",
+				KeyFile:  certs.keyFile,
+			},
+			wantErr: "cert-file",
+		},
+		{
+			name: "dirty client CA path",
+			config: &ServerConfigHTTPS{
+				CertFile:     certs.certFile,
+				KeyFile:      certs.keyFile,
+				ClientCAFile: "/tmp/../ca.pem",
+			},
+			wantErr: "client-ca-file",
 		},
 		{
 			name: "mismatched certificate and key",
@@ -296,4 +378,19 @@ func TestServerHTTPSConfigToModel_ResolvesSecretAgentName(t *testing.T) {
 	require.NotNil(t, modelConfig.ServiceConfig.ServerHTTPS)
 	require.NotNil(t, modelConfig.ServiceConfig.ServerHTTPS.SecretAgent)
 	assert.Equal(t, "localhost", modelConfig.ServiceConfig.ServerHTTPS.SecretAgent.Address)
+}
+
+func TestServerHTTPSConfigNilReceiver(t *testing.T) {
+	var config *ServerConfigHTTPS
+
+	require.NoError(t, config.Validate(ValidationDefault))
+	assert.Nil(t, config.ToModel())
+
+	roundTrip := &ServerConfigHTTPS{}
+	roundTrip.fromModel(nil)
+	assert.Equal(t, &ServerConfigHTTPS{}, roundTrip)
+
+	require.NoError(t, config.Compare(nil))
+	require.EqualError(t, config.Compare(&ServerConfigHTTPS{}), "ServerHTTPS added")
+	require.EqualError(t, (&ServerConfigHTTPS{}).Compare(nil), "ServerHTTPS removed")
 }

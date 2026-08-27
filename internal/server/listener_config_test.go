@@ -20,8 +20,11 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -398,6 +401,196 @@ func TestHTTPSListenerNegotiatesHTTP2(t *testing.T) {
 	require.NoError(t, <-errCh)
 }
 
+func TestConfiguredHTTPSContextPathPrefixesRoutes(t *testing.T) {
+	certs := createListenerCertificates(t)
+	httpPort := freeListenerPort(t)
+	httpsPort := freeListenerPort(t)
+	cfg := httpsOnlyConfig(httpPort, httpsPort, certs)
+	cfg.ServiceConfig.ServerHTTPS.ContextPath = "/abs"
+
+	components := initListenerComponents(t, cfg)
+	t.Cleanup(components.Scheduler.Stop)
+
+	srvCtx, srvCancel := context.WithCancel(t.Context())
+	errCh := startListeners(t, srvCtx, components)
+
+	client := httpsClient(t, certs, false)
+	prefixedURL := fmt.Sprintf("https://127.0.0.1:%d/abs", httpsPort)
+	waitForListener(t, client, prefixedURL)
+	assertAPIResponse(t, client, prefixedURL)
+	assertStatus(t, client, fmt.Sprintf("https://127.0.0.1:%d/v1/backups/full", httpsPort), http.StatusNotFound)
+
+	srvCancel()
+	require.NoError(t, <-errCh)
+}
+
+func TestHTTPSRequestClientCertificateAllowsAnonymousClient(t *testing.T) {
+	certs := createListenerCertificates(t)
+	httpPort := freeListenerPort(t)
+	httpsPort := freeListenerPort(t)
+	cfg := httpsOnlyConfig(httpPort, httpsPort, certs)
+	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = certs.caFile
+	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequest
+
+	components := initListenerComponents(t, cfg)
+	t.Cleanup(components.Scheduler.Stop)
+
+	srvCtx, srvCancel := context.WithCancel(t.Context())
+	errCh := startListeners(t, srvCtx, components)
+
+	client := httpsClient(t, certs, false)
+	httpsURL := fmt.Sprintf("https://127.0.0.1:%d", httpsPort)
+	waitForListener(t, client, httpsURL)
+	assertAPIResponse(t, client, httpsURL)
+
+	srvCancel()
+	require.NoError(t, <-errCh)
+}
+
+func TestHTTPSRequireAndVerifyRejectsMissingClientCertificate(t *testing.T) {
+	certs := createListenerCertificates(t)
+	httpPort := freeListenerPort(t)
+	httpsPort := freeListenerPort(t)
+	cfg := httpsOnlyConfig(httpPort, httpsPort, certs)
+	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = certs.caFile
+	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequireAndVerify
+
+	components := initListenerComponents(t, cfg)
+	t.Cleanup(components.Scheduler.Stop)
+
+	srvCtx, srvCancel := context.WithCancel(t.Context())
+	errCh := startListeners(t, srvCtx, components)
+
+	httpsURL := fmt.Sprintf("https://127.0.0.1:%d", httpsPort)
+	waitForTCP(t, fmt.Sprintf("127.0.0.1:%d", httpsPort))
+
+	anonymous := httpsClient(t, certs, false)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, httpsURL+"/health", nil)
+	require.NoError(t, err)
+	resp, err := anonymous.Do(req)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	require.Error(t, err)
+
+	authenticated := httpsClient(t, certs, true)
+	waitForListener(t, authenticated, httpsURL)
+	assertAPIResponse(t, authenticated, httpsURL)
+
+	srvCancel()
+	require.NoError(t, <-errCh)
+}
+
+func TestHTTPSRequireAndVerifyRejectsUntrustedClientCertificate(t *testing.T) {
+	certs := createListenerCertificates(t)
+	other := createListenerCertificates(t)
+	httpPort := freeListenerPort(t)
+	httpsPort := freeListenerPort(t)
+	cfg := httpsOnlyConfig(httpPort, httpsPort, certs)
+	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = certs.caFile
+	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequireAndVerify
+
+	components := initListenerComponents(t, cfg)
+	t.Cleanup(components.Scheduler.Stop)
+
+	srvCtx, srvCancel := context.WithCancel(t.Context())
+	errCh := startListeners(t, srvCtx, components)
+
+	httpsURL := fmt.Sprintf("https://127.0.0.1:%d", httpsPort)
+	waitForTCP(t, fmt.Sprintf("127.0.0.1:%d", httpsPort))
+
+	untrusted := &http.Client{
+		Timeout: time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: loadCertificatePool(t, certs.caFile),
+				Certificates: []tls.Certificate{
+					loadKeyPair(t, other.clientCertFile, other.clientKeyFile),
+				},
+				MinVersion: tls.VersionTLS12,
+			},
+		},
+	}
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, httpsURL+"/health", nil)
+	require.NoError(t, err)
+	resp, err := untrusted.Do(req)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	require.Error(t, err)
+
+	authenticated := httpsClient(t, certs, true)
+	waitForListener(t, authenticated, httpsURL)
+	assertAPIResponse(t, authenticated, httpsURL)
+
+	srvCancel()
+	require.NoError(t, <-errCh)
+}
+
+func TestNewServerHTTPSReturnsTLSConfigError(t *testing.T) {
+	_, err := server.NewServerHTTPS(
+		t.Context(),
+		&model.ServerConfigHTTPS{
+			CertFile: filepath.Join(t.TempDir(), "missing.pem"),
+			KeyFile:  filepath.Join(t.TempDir(), "missing-key.pem"),
+		},
+		newListenerHandler(t),
+		secrets.NewResolver(),
+	)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "failed to load HTTPS certificate and key")
+}
+
+func TestRunFailsFastWhenListenerCannotBind(t *testing.T) {
+	certs := createListenerCertificates(t)
+	occupied := occupyPort(t)
+	httpPort := occupied.Addr().(*net.TCPAddr).Port
+	httpsPort := freeListenerPort(t)
+	cfg := dto.Config{
+		ServiceConfig: dto.ServiceConfig{
+			ServerHTTP: &dto.ServerConfigHTTP{
+				ListenerConfig: dto.ListenerConfig{Address: "127.0.0.1"},
+				Port:           ptr.Of(dto.Port(httpPort)),
+			},
+			ServerHTTPS: &dto.ServerConfigHTTPS{
+				ListenerConfig: dto.ListenerConfig{Address: "127.0.0.1"},
+				Port:           ptr.Of(dto.Port(httpsPort)),
+				CertFile:       certs.serverCertFile,
+				KeyFile:        certs.serverKeyFile,
+			},
+		},
+	}
+
+	components := initListenerComponents(t, cfg)
+	t.Cleanup(components.Scheduler.Stop)
+
+	err := server.Run(t.Context(), components.Servers)
+	require.ErrorContains(t, err, "HTTP server failed")
+}
+
+func TestHTTPSStartFailsWhenPortIsOccupied(t *testing.T) {
+	certs := createListenerCertificates(t)
+	occupied := occupyPort(t)
+	httpsPort := occupied.Addr().(*net.TCPAddr).Port
+
+	srv, err := server.NewServerHTTPS(
+		t.Context(),
+		&model.ServerConfigHTTPS{
+			ListenerConfig: model.ListenerConfig{Address: "127.0.0.1"},
+			Port:           ptr.Of(model.Port(httpsPort)),
+			CertFile:       certs.serverCertFile,
+			KeyFile:        certs.serverKeyFile,
+		},
+		newListenerHandler(t),
+		secrets.NewResolver(),
+	)
+	require.NoError(t, err)
+
+	err = srv.Start()
+	require.Error(t, err)
+	require.NotErrorIs(t, err, http.ErrServerClosed)
+}
+
 func initListenerComponents(t *testing.T, cfg dto.Config) *app.Components {
 	t.Helper()
 
@@ -426,6 +619,84 @@ func startListeners(t *testing.T, ctx context.Context, components *app.Component
 	}()
 
 	return errCh
+}
+
+func httpsOnlyConfig(httpPort, httpsPort int, certs listenerCertificates) dto.Config {
+	return dto.Config{
+		ServiceConfig: dto.ServiceConfig{
+			ServerHTTP: &dto.ServerConfigHTTP{
+				ListenerConfig: dto.ListenerConfig{
+					Address:  "127.0.0.1",
+					Disabled: true,
+				},
+				Port: ptr.Of(dto.Port(httpPort)),
+			},
+			ServerHTTPS: &dto.ServerConfigHTTPS{
+				ListenerConfig: dto.ListenerConfig{
+					Address: "127.0.0.1",
+				},
+				Port:     ptr.Of(dto.Port(httpsPort)),
+				CertFile: certs.serverCertFile,
+				KeyFile:  certs.serverKeyFile,
+			},
+		},
+	}
+}
+
+func httpsClient(t *testing.T, certs listenerCertificates, sendClientCert bool) *http.Client {
+	t.Helper()
+
+	tlsConfig := &tls.Config{
+		RootCAs:    loadCertificatePool(t, certs.caFile),
+		MinVersion: tls.VersionTLS12,
+	}
+	if sendClientCert {
+		tlsConfig.Certificates = []tls.Certificate{
+			loadKeyPair(t, certs.clientCertFile, certs.clientKeyFile),
+		}
+	}
+
+	return &http.Client{
+		Timeout: time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+}
+
+func waitForTCP(t *testing.T, addr string) {
+	t.Helper()
+
+	dialer := &net.Dialer{Timeout: 100 * time.Millisecond}
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		conn, err := dialer.DialContext(t.Context(), "tcp", addr)
+		if err == nil {
+			_ = conn.Close()
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for TCP listener %s", addr)
+}
+
+func occupyPort(t *testing.T) net.Listener {
+	t.Helper()
+
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = listener.Close() })
+	return listener
+}
+
+func newListenerHandler(t *testing.T) *handlers.Service {
+	t.Helper()
+
+	return handlers.NewService(
+		t.Context(),
+		model.NewConfig(),
+		nil, nil, nil, nil, nil, nil, nil, nil,
+	)
 }
 
 func waitForListener(t *testing.T, client *http.Client, baseURL string) {
