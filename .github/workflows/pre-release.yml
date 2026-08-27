@@ -52,6 +52,16 @@ jobs:
           fi
           PACKAGE_VERSION=$(cat VERSION)
 
+          # The triggering tag and the VERSION file are independent inputs, but every JFrog
+          # path, image tag and bundle version below is derived from VERSION alone. When they
+          # disagree this pipeline silently republishes over whatever release VERSION names
+          # rather than the one being tagged -- which is how tagging v3.5.1 off a commit still
+          # reading v3.5.0 overwrote the released 3.5.0 packages.
+          if [ "$PACKAGE_VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::VERSION file says '$PACKAGE_VERSION' but the tag is '$GITHUB_REF_NAME'. Bump VERSION on the release branch and re-tag."
+            exit 1
+          fi
+
           echo "Reading Helm chart version from Chart.yaml..."
           CHART_FILE="helm/aerospike-backup-service/Chart.yaml"
           if [ ! -f "$CHART_FILE" ]; then
