@@ -140,7 +140,7 @@ func InitComponents(
 	certReloader := servertls.NoReload()
 	configHTTPS := config.ServiceConfig.GetServerHTTPSOrDefault()
 	if !configHTTPS.Disabled {
-		httpsServer, reloader, err := newHTTPSServer(ctx, configHTTPS, resolver, srv)
+		httpsServer, reloader, err := newServerHTTPS(ctx, configHTTPS, srv, resolver)
 		if err != nil {
 			return nil, err
 		}
@@ -156,11 +156,11 @@ func InitComponents(
 	}, nil
 }
 
-func newHTTPSServer(
+func newServerHTTPS(
 	ctx context.Context,
 	configHTTPS *model.ServerConfigHTTPS,
-	resolver secrets.Resolver,
 	srv *handlers.Service,
+	resolver secrets.Resolver,
 ) (server.HTTP, servertls.Reloader, error) {
 	reloader := servertls.NewCertificateReloader(
 		configHTTPS, resolver, servertls.DefaultWatchInterval,
