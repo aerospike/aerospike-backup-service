@@ -44,6 +44,8 @@ func TestWatcherDoesNotCallbackWhenUnchanged(t *testing.T) {
 }
 
 func TestWatcherRetriesAfterCallbackError(t *testing.T) {
+	// A failed onChange must not consume the new fingerprint; the next tick retries
+	// without another write.
 	path := writeTempFile(t, "v1")
 	var calls atomic.Int32
 
@@ -63,6 +65,7 @@ func TestWatcherRetriesAfterCallbackError(t *testing.T) {
 }
 
 func TestWatcherDetectsSizeChangeWithoutMtimeBump(t *testing.T) {
+	// Same mtime, longer contents: size is the only signal.
 	path := writeTempFile(t, "ab")
 	info, err := os.Stat(path)
 	require.NoError(t, err)

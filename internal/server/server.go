@@ -121,8 +121,9 @@ func (s *serverHTTP) Start() error {
 		return s.wrapStartError("HTTP", s.startHTTP())
 	}
 
-	// The key pair is already loaded into TLSConfig, so no certificate files are
-	// passed here. Serving through net/http also negotiates HTTP/2.
+	// Empty paths: the pair comes from TLSConfig.GetCertificate on each handshake.
+	// Passing cert/key files here would pin a static pair and ignore rotation.
+	// Serving through net/http also negotiates HTTP/2.
 	err := s.ListenAndServeTLS("", "")
 	if errors.Is(err, http.ErrServerClosed) {
 		slog.Info("HTTPS server closed", attr.Error(err))

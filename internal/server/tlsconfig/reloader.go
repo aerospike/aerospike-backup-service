@@ -31,11 +31,10 @@ var _ Reloader = (*CertificateReloader)(nil)
 var _ Reloader = noOpReloader{}
 
 // CertificateReloader serves the HTTPS key pair and swaps it when cert-file or key-file change.
-// ClientCAs from client-ca-file are not watched; rotating that file still requires a restart.
 type CertificateReloader struct {
 	config   *model.ServerConfigHTTPS
 	resolver secrets.Resolver
-	watchers []*reload.Watcher
+	watchers []reload.Watcher
 	current  atomic.Pointer[tls.Certificate]
 	mu       sync.Mutex
 }
@@ -52,7 +51,10 @@ func NewCertificateReloader(
 		config:   config,
 		resolver: resolver,
 	}
-	reloader.watchers = []*reload.Watcher{
+	// The unit of serving is a matched tls.Certificate (cert PEM + key), not two
+	// independent files. Reloading a half would handshake with new-cert/old-key
+	// (or the reverse). Either path changing therefore re-reads both files via Load.
+	reloader.watchers = []reload.Watcher{
 		reload.New(config.CertFile, interval, reloader.Load),
 		reload.New(config.KeyFile, interval, reloader.Load),
 	}
@@ -80,6 +82,8 @@ func (r *CertificateReloader) Load(ctx context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// A mid-rewrite mismatch fails the parse; that does not Store, so the last good pair
+	// stays in service until both files load together.
 	certificate, err := LoadKeyPair(ctx, r.config, r.resolver)
 	if err != nil {
 		return err

@@ -11,6 +11,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 )
 
+// fingerprint is mtime plus size. Mtime is the usual signal (atomic rename, cert-manager).
+// Size catches a rewrite that keeps the old timestamp (cp -p, second-granularity FS).
 type fingerprint struct {
 	modTime time.Time
 	size    int64
@@ -20,8 +22,15 @@ func (a fingerprint) equal(b fingerprint) bool {
 	return a.modTime.Equal(b.modTime) && a.size == b.size
 }
 
+type Watcher interface {
+	// Start begins polling in a background goroutine until ctx is canceled.
+	Start(ctx context.Context)
+}
+
+var _ Watcher = (*watcher)(nil)
+
 // Watcher polls a single file path's modification time and size and invokes onChange when either changes.
-type Watcher struct {
+type watcher struct {
 	path     string
 	interval time.Duration
 	onChange func(ctx context.Context) error
@@ -31,8 +40,9 @@ type Watcher struct {
 }
 
 // New returns a Watcher that polls path every interval and calls onChange when the file changes.
-// The baseline fingerprint is taken here so Start cannot miss a rewrite that happened after New.
-func New(path string, interval time.Duration, onChange func(ctx context.Context) error) *Watcher {
+// The baseline is taken here, not in Start, so a rewrite between construction and Start is
+// still seen on the first tick.
+func New(path string, interval time.Duration, onChange func(ctx context.Context) error) Watcher {
 	if interval <= 0 {
 		interval = time.Second
 	}
@@ -42,7 +52,7 @@ func New(path string, interval time.Duration, onChange func(ctx context.Context)
 		slog.Error("failed to stat watched file", slog.String("path", path), attr.Error(err))
 	}
 
-	return &Watcher{
+	return &watcher{
 		path:     path,
 		interval: interval,
 		onChange: onChange,
@@ -52,13 +62,13 @@ func New(path string, interval time.Duration, onChange func(ctx context.Context)
 
 // Start begins polling in a background goroutine until ctx is canceled.
 // It is safe to call more than once; later calls are ignored.
-func (w *Watcher) Start(ctx context.Context) {
+func (w *watcher) Start(ctx context.Context) {
 	w.startOnce.Do(func() {
 		go w.loop(ctx)
 	})
 }
 
-func (w *Watcher) loop(ctx context.Context) {
+func (w *watcher) loop(ctx context.Context) {
 	ticker := time.NewTicker(w.interval)
 	defer ticker.Stop()
 
@@ -72,7 +82,7 @@ func (w *Watcher) loop(ctx context.Context) {
 	}
 }
 
-func (w *Watcher) poll(ctx context.Context) {
+func (w *watcher) poll(ctx context.Context) {
 	fp, err := fileFingerprint(w.path)
 	if err != nil {
 		slog.Error("failed to stat watched file", slog.String("path", w.path), attr.Error(err))
@@ -84,6 +94,7 @@ func (w *Watcher) poll(ctx context.Context) {
 	}
 
 	if err := w.onChange(ctx); err != nil {
+		// Leave last unchanged so the next tick retries.
 		slog.Error("file change callback failed", slog.String("path", w.path), attr.Error(err))
 		return
 	}

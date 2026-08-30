@@ -94,6 +94,8 @@ func TestHTTPSHandshakeServesRotatedCertificate(t *testing.T) {
 	require.NoError(t, os.WriteFile(files.certFile, []byte("broken"), 0o600))
 	bumpFileMtime(t, files.certFile)
 
+	// Fail closed: the broken rewrite must not become the served pair, and
+	// handshakes must still succeed with the last good cert (not drop the listener).
 	require.Never(t, func() bool {
 		serial, err := handshakeSerial(addr)
 		return err == nil && serial.Cmp(rotated) != 0

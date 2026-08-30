@@ -27,8 +27,7 @@ import (
 
 // Components group the long-running parts of the service.
 // Every field is always a non-nil interface after InitComponents succeeds. A component that
-// has nothing to do (for example CertReloader when HTTPS is disabled) is still
-// constructed as a no-op rather than left nil, so callers never nil-check.
+// has nothing to do is still constructed as a no-op rather than left nil, so callers never nil-check.
 type Components struct {
 	Scheduler        quartz.Scheduler
 	Servers          []server.HTTP
@@ -40,13 +39,11 @@ type Components struct {
 // Components are created and wired but not started: no goroutines, listeners, or
 // watchers run here. The caller decides when to Start/Stop them.
 //
-// Collaborators (other components) are non-nil interfaces, for example
-// service.NewBackupCatalog(pathService, operations). If a collaborator is unused
+// Collaborators (other components) are non-nil interfaces. If a collaborator is unused
 // or a feature is disabled, pass a no-op implementation, never nil, and do not add
 // nil-receiver guards.
 //
-// Configuration and other data values stay as values, for example
-// service.NewPathService(timestampFormat). Do not wrap those in interfaces.
+// Configuration and other data values stay as values. Do not wrap those in interfaces.
 //
 //nolint:funlen // deliberately keep all initialization in a single function.
 func InitComponents(
@@ -168,7 +165,7 @@ func newHTTPSServer(
 	reloader := servertls.NewCertificateReloader(
 		configHTTPS, resolver, servertls.DefaultWatchInterval,
 	)
-	if err := reloader.Load(ctx); err != nil { // initial TLS keys load
+	if err := reloader.Load(ctx); err != nil { // initial TLS keys load.
 		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 	}
 
