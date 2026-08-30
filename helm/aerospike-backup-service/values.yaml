@@ -219,7 +219,9 @@ serviceAccount:
   # Specifies whether a service account should be created
   create: true
   # Automatically mount a ServiceAccount's API credentials?
-  automount: true
+  # False: ABS does not call the Kubernetes API. Pod spec also sets
+  # automountServiceAccountToken: false.
+  automount: false
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
@@ -230,13 +232,21 @@ podLabels: {}
 podSecurityContext: {}
 # fsGroup: 2000
 
-securityContext: {}
-# capabilities:
-#   drop:
-#   - ALL
-# readOnlyRootFilesystem: true
-# runAsNonRoot: true
-# runAsUser: 1000
+# Container securityContext is hardened by default (BKRS-302).
+# Override via values if a writable local-storage or log path is required
+# (readOnlyRootFilesystem: true needs an extraVolumeMount with readOnly: false).
+# Full override guidance belongs in docs/security.md (BKRS-295 / p5-deploy-docs).
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  # Matches USER absuser (uid 65532) in the official image.
+  runAsUser: 65532
+  seccompProfile:
+    type: RuntimeDefault
 
 service:
   type: ClusterIP
@@ -294,6 +304,16 @@ volumes: []
 #     optional: false
 
 # Additional volumeMounts on the output Deployment definition.
+# For local-storage or a file log under readOnlyRootFilesystem, mount a
+# writable volume and set readOnly: false (see BKRS-295 / docs/security.md).
+# Example:
+# volumes:
+#   - name: local-storage
+#     emptyDir: {}
+# extraVolumeMounts:
+#   - name: local-storage
+#     mountPath: /backup
+#     readOnly: false
 extraVolumeMounts: []
 # - name: foo
 #   mountPath: "/etc/foo"

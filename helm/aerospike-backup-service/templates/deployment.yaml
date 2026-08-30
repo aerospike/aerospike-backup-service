@@ -31,6 +31,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "aerospike-backup-service.serviceAccountName" . }}
+      automountServiceAccountToken: false
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       {{- if not .Values.configmap.create }}
@@ -74,24 +75,28 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
             - name: aerospike-backup-service-config
               mountPath: /etc/aerospike-backup-service
           {{- if .Values.extraVolumeMounts }}
           {{- range .Values.extraVolumeMounts }}
             - name: {{ .name }}
               mountPath: {{ .mountPath }}
-              readOnly: {{ .readOnly | default true }}
+              readOnly: {{ if kindIs "bool" .readOnly }}{{ .readOnly }}{{ else }}true{{ end }}
           {{- end }}
           {{- end }}
           {{- if .Values.extraSecretVolumeMounts }}
           {{- range .Values.extraSecretVolumeMounts }}
             - name: {{ .name }}
               mountPath: {{ .mountPath }}
-              readOnly: {{ .readOnly | default true }}
+              readOnly: {{ if kindIs "bool" .readOnly }}{{ .readOnly }}{{ else }}true{{ end }}
               subPath: {{ .subPath }}
           {{- end }}
           {{- end }}
       volumes:
+        - name: tmp
+          emptyDir: {}
         - name: aerospike-backup-service-config
         {{- if .Values.configmap.create }}
           configMap:
