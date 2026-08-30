@@ -33,7 +33,7 @@ type Components struct {
 	Scheduler        quartz.Scheduler
 	Servers          []server.HTTP
 	MetricsCollector *prometheus.MetricsCollector
-	CertReloader     *servertls.CertificateReloader
+	CertReloader     servertls.Reloader
 }
 
 // InitComponents builds the full object graph.
@@ -143,17 +143,12 @@ func InitComponents(
 	certReloader := servertls.NoReload()
 	configHTTPS := config.ServiceConfig.GetServerHTTPSOrDefault()
 	if !configHTTPS.Disabled {
-		certReloader = servertls.NewCertificateReloader(configHTTPS, resolver, servertls.DefaultWatchInterval)
-		if err := certReloader.Load(ctx); err != nil {
-			return nil, fmt.Errorf("failed to create HTTPS server: %w", err)
-		}
-
-		tlsConfig, err := servertls.NewTLSConfig(configHTTPS, certReloader.GetCertificate)
+		httpsServer, reloader, err := newHTTPSServer(ctx, configHTTPS, resolver, srv)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create HTTPS server: %w", err)
+			return nil, err
 		}
-		serverHTTPS := server.NewServerHTTPS(ctx, configHTTPS, srv, tlsConfig)
-		servers = append(servers, serverHTTPS)
+		certReloader = reloader
+		servers = append(servers, httpsServer)
 	}
 
 	return &Components{
@@ -162,6 +157,27 @@ func InitComponents(
 		MetricsCollector: metricsCollector,
 		CertReloader:     certReloader,
 	}, nil
+}
+
+func newHTTPSServer(
+	ctx context.Context,
+	configHTTPS *model.ServerConfigHTTPS,
+	resolver secrets.Resolver,
+	srv *handlers.Service,
+) (server.HTTP, servertls.Reloader, error) {
+	reloader := servertls.NewCertificateReloader(
+		configHTTPS, resolver, servertls.DefaultWatchInterval,
+	)
+	if err := reloader.Load(ctx); err != nil { // initial TLS keys load
+		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
+	}
+
+	tlsConfig, err := servertls.NewTLSConfig(configHTTPS, reloader.GetCertificate)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
+	}
+
+	return server.NewServerHTTPS(ctx, configHTTPS, srv, tlsConfig), reloader, nil
 }
 
 func newStorageOperations(resolver secrets.Resolver) storage.Operations {

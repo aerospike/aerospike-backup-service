@@ -43,7 +43,7 @@ func TestWatcherDoesNotCallbackWhenUnchanged(t *testing.T) {
 	require.Never(t, func() bool { return calls.Load() > 0 }, 100*time.Millisecond, 10*time.Millisecond)
 }
 
-func TestWatcherKeepsPollingAfterCallbackError(t *testing.T) {
+func TestWatcherRetriesAfterCallbackError(t *testing.T) {
 	path := writeTempFile(t, "v1")
 	var calls atomic.Int32
 
@@ -58,11 +58,27 @@ func TestWatcherKeepsPollingAfterCallbackError(t *testing.T) {
 
 	require.NoError(t, os.WriteFile(path, []byte("v2"), 0o600))
 	bumpMtime(t, path)
-	require.Eventually(t, func() bool { return calls.Load() >= 1 }, time.Second, 10*time.Millisecond)
 
-	require.NoError(t, os.WriteFile(path, []byte("v3"), 0o600))
-	bumpMtime(t, path)
 	require.Eventually(t, func() bool { return calls.Load() >= 2 }, time.Second, 10*time.Millisecond)
+}
+
+func TestWatcherDetectsSizeChangeWithoutMtimeBump(t *testing.T) {
+	path := writeTempFile(t, "ab")
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	frozen := info.ModTime()
+
+	var calls atomic.Int32
+	watcher := New(path, 20*time.Millisecond, func(context.Context) error {
+		calls.Add(1)
+		return nil
+	})
+	watcher.Start(t.Context())
+
+	require.NoError(t, os.WriteFile(path, []byte("abcdef"), 0o600))
+	require.NoError(t, os.Chtimes(path, frozen, frozen))
+
+	require.Eventually(t, func() bool { return calls.Load() >= 1 }, time.Second, 10*time.Millisecond)
 }
 
 func writeTempFile(t *testing.T, contents string) string {

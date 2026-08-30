@@ -81,18 +81,33 @@ func TestHTTPSHandshakeServesRotatedCertificate(t *testing.T) {
 	replacement := createTestCertificateFiles(t)
 	overwriteKeyPair(t, files, replacement)
 
+	var rotated *big.Int
 	require.Eventually(t, func() bool {
 		serial, err := handshakeSerial(addr)
-		return err == nil && serial.Cmp(original) != 0
+		if err != nil || serial.Cmp(original) == 0 {
+			return false
+		}
+		rotated = serial
+		return true
 	}, time.Second, 20*time.Millisecond)
 
 	require.NoError(t, os.WriteFile(files.certFile, []byte("broken"), 0o600))
 	bumpFileMtime(t, files.certFile)
 
-	time.Sleep(80 * time.Millisecond)
+	require.Never(t, func() bool {
+		serial, err := handshakeSerial(addr)
+		return err == nil && serial.Cmp(rotated) != 0
+	}, 150*time.Millisecond, 10*time.Millisecond)
+
 	afterBroken, err := handshakeSerial(addr)
 	require.NoError(t, err)
-	require.NotEqual(t, 0, afterBroken.Cmp(original), "should still serve the rotated cert after a broken rewrite")
+	require.Equal(t, 0, afterBroken.Cmp(rotated), "should keep serving the last good cert after a broken rewrite")
+}
+
+func TestNoReloadIsANoOp(t *testing.T) {
+	reloader := NoReload()
+	require.NoError(t, reloader.Load(t.Context()))
+	require.NotPanics(t, func() { reloader.Start(t.Context()) })
 }
 
 func startReloadingConfig(t *testing.T, files testCertificateFiles) *tls.Config {
