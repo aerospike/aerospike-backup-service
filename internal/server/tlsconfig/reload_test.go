@@ -29,6 +29,36 @@ func TestGetCertificateReloadsOnFileChange(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 }
 
+func TestGetCertificateReloadsOnKeyFileChange(t *testing.T) {
+	files := createTestCertificateFiles(t)
+	tlsCfg := startReloadingConfig(t, files)
+	original := leafSerial(t, servedCertificate(t, tlsCfg))
+	certInfo, err := os.Stat(files.certFile)
+	require.NoError(t, err)
+
+	replacement := createTestCertificateFiles(t)
+	overwriteKeyPair(t, files, replacement)
+	require.NoError(t, os.Chtimes(files.certFile, certInfo.ModTime(), certInfo.ModTime()))
+	bumpFileMtime(t, files.keyFile)
+
+	require.Eventually(t, func() bool {
+		return leafSerial(t, servedCertificate(t, tlsCfg)).Cmp(original) != 0
+	}, time.Second, 10*time.Millisecond)
+}
+
+func TestGetCertificateKeepsLastGoodOnInvalidKeyFile(t *testing.T) {
+	files := createTestCertificateFiles(t)
+	tlsCfg := startReloadingConfig(t, files)
+	original := leafSerial(t, servedCertificate(t, tlsCfg))
+
+	require.NoError(t, os.WriteFile(files.keyFile, []byte("not a private key"), 0o600))
+	bumpFileMtime(t, files.keyFile)
+
+	require.Never(t, func() bool {
+		return leafSerial(t, servedCertificate(t, tlsCfg)).Cmp(original) != 0
+	}, 150*time.Millisecond, 10*time.Millisecond)
+}
+
 func TestGetCertificateKeepsLastGoodOnInvalidPair(t *testing.T) {
 	files := createTestCertificateFiles(t)
 	tlsCfg := startReloadingConfig(t, files)

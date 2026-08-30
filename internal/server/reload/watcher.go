@@ -22,6 +22,7 @@ func (a fingerprint) equal(b fingerprint) bool {
 	return a.modTime.Equal(b.modTime) && a.size == b.size
 }
 
+// Watcher polls a file and invokes a callback when the file's mtime or size changes.
 type Watcher interface {
 	// Start begins polling in a background goroutine until ctx is canceled.
 	Start(ctx context.Context)
@@ -29,7 +30,6 @@ type Watcher interface {
 
 var _ Watcher = (*watcher)(nil)
 
-// Watcher polls a single file path's modification time and size and invokes onChange when either changes.
 type watcher struct {
 	path     string
 	interval time.Duration
@@ -39,14 +39,12 @@ type watcher struct {
 	startOnce sync.Once
 }
 
+const defaultInterval = 10 * time.Second
+
 // New returns a Watcher that polls path every interval and calls onChange when the file changes.
 // The baseline is taken here, not in Start, so a rewrite between construction and Start is
 // still seen on the first tick.
 func New(path string, interval time.Duration, onChange func(ctx context.Context) error) Watcher {
-	if interval <= 0 {
-		interval = time.Second
-	}
-
 	last, err := fileFingerprint(path)
 	if err != nil {
 		slog.Error("failed to stat watched file", slog.String("path", path), attr.Error(err))
@@ -99,7 +97,17 @@ func (w *watcher) poll(ctx context.Context) {
 		return
 	}
 
-	w.last = fp
+	after, err := fileFingerprint(w.path)
+	if err != nil {
+		slog.Error("failed to stat watched file", slog.String("path", w.path), attr.Error(err))
+		return
+	}
+	if !after.equal(fp) {
+		// Rewritten during the callback: keep last so the next tick reloads.
+		return
+	}
+
+	w.last = after
 }
 
 func fileFingerprint(path string) (fingerprint, error) {

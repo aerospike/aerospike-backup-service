@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -82,14 +83,26 @@ func (r *CertificateReloader) Load(ctx context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// A mid-rewrite mismatch fails the parse; that does not Store, so the last good pair
-	// stays in service until both files load together.
+	// Disk I/O and Secret Agent stay under this lock so two watchers cannot interleave
+	// half-applied pairs. GetCertificate reads the atomic pointer and is not blocked.
 	certificate, err := LoadKeyPair(ctx, r.config, r.resolver)
 	if err != nil {
 		return err
 	}
 
+	rotated := r.current.Load() != nil
 	r.current.Store(&certificate)
+	if rotated {
+		slog.Info("rotated HTTPS certificate",
+			slog.String("certFile", r.config.CertFile),
+			slog.String("keyFile", r.config.KeyFile),
+		)
+	} else {
+		slog.Info("loaded HTTPS certificate",
+			slog.String("certFile", r.config.CertFile),
+			slog.String("keyFile", r.config.KeyFile),
+		)
+	}
 
 	return nil
 }

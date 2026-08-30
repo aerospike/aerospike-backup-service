@@ -64,6 +64,48 @@ func TestWatcherRetriesAfterCallbackError(t *testing.T) {
 	require.Eventually(t, func() bool { return calls.Load() >= 2 }, time.Second, 10*time.Millisecond)
 }
 
+func TestWatcherReloadsWhenFileChangesDuringCallback(t *testing.T) {
+	// A rewrite during onChange must not be stored as the baseline; the next tick retries.
+	path := writeTempFile(t, "v1")
+	var calls atomic.Int32
+
+	watcher := New(path, 20*time.Millisecond, func(context.Context) error {
+		n := calls.Add(1)
+		if n == 1 {
+			require.NoError(t, os.WriteFile(path, []byte("v3-longer"), 0o600))
+			bumpMtime(t, path)
+		}
+		return nil
+	})
+	watcher.Start(t.Context())
+
+	require.NoError(t, os.WriteFile(path, []byte("v2"), 0o600))
+	bumpMtime(t, path)
+
+	require.Eventually(t, func() bool { return calls.Load() >= 2 }, time.Second, 10*time.Millisecond)
+}
+
+func TestWatcherStopsPollingWhenContextCanceled(t *testing.T) {
+	path := writeTempFile(t, "v1")
+	var calls atomic.Int32
+	ctx, cancel := context.WithCancel(t.Context())
+
+	watcher := New(path, 20*time.Millisecond, func(context.Context) error {
+		calls.Add(1)
+		return nil
+	})
+	watcher.Start(ctx)
+
+	cancel()
+	require.Never(t, func() bool { return calls.Load() > 0 }, 80*time.Millisecond, 10*time.Millisecond)
+
+	n := calls.Load()
+	require.NoError(t, os.WriteFile(path, []byte("v2"), 0o600))
+	bumpMtime(t, path)
+
+	require.Never(t, func() bool { return calls.Load() > n }, 100*time.Millisecond, 10*time.Millisecond)
+}
+
 func TestWatcherDetectsSizeChangeWithoutMtimeBump(t *testing.T) {
 	// Same mtime, longer contents: size is the only signal.
 	path := writeTempFile(t, "ab")

@@ -3445,7 +3445,7 @@ const docTemplate = `{
                     "example": "0.0.0.0"
                 },
                 "cert-file": {
-                    "description": "Path to the HTTPS server certificate in PEM format.",
+                    "description": "Path to the HTTPS server certificate in PEM format.\nRewriting this file at the same path reloads the served key pair without a restart; changing the path requires a restart.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "/path/to/server.pem"
@@ -3468,7 +3468,7 @@ const docTemplate = `{
                     ]
                 },
                 "client-ca-file": {
-                    "description": "Path to trusted client CA certificates in PEM format.",
+                    "description": "Path to trusted client CA certificates in PEM format.\nThis file is read at startup only; replacing it requires a restart.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "/path/to/client-ca.pem"
@@ -3489,7 +3489,7 @@ const docTemplate = `{
                     "default": 120000
                 },
                 "key-file": {
-                    "description": "Path to the HTTPS server private key in PEM format.",
+                    "description": "Path to the HTTPS server private key in PEM format.\nRewriting this file at the same path reloads the served key pair without a restart; changing the path requires a restart.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "/path/to/server-key.pem"
