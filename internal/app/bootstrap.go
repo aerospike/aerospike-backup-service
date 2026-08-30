@@ -10,6 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -25,15 +26,27 @@ import (
 )
 
 // Components group the long-running parts of the service.
+// Every field is always a non-nil interface after InitComponents succeeds. A component that
+// has nothing to do (for example CertReloader when HTTPS is disabled) is still
+// constructed as a no-op rather than left nil, so callers never nil-check.
 type Components struct {
 	Scheduler        quartz.Scheduler
 	Servers          []server.HTTP
 	MetricsCollector *prometheus.MetricsCollector
+	CertReloader     *servertls.CertificateReloader
 }
 
 // InitComponents builds the full object graph.
-// Components are wired but not started:
-// the caller decides when to run them and when to stop them.
+// Components are created and wired but not started: no goroutines, listeners, or
+// watchers run here. The caller decides when to Start/Stop them.
+//
+// Collaborators (other components) are non-nil interfaces, for example
+// service.NewBackupCatalog(pathService, operations). If a collaborator is unused
+// or a feature is disabled, pass a no-op implementation, never nil, and do not add
+// nil-receiver guards.
+//
+// Configuration and other data values stay as values, for example
+// service.NewPathService(timestampFormat). Do not wrap those in interfaces.
 //
 //nolint:funlen // deliberately keep all initialization in a single function.
 func InitComponents(
@@ -127,12 +140,19 @@ func InitComponents(
 		servers = append(servers, server.NewServerHTTP(ctx, configHTTP, srv))
 	}
 
+	certReloader := servertls.NoReload()
 	configHTTPS := config.ServiceConfig.GetServerHTTPSOrDefault()
 	if !configHTTPS.Disabled {
-		serverHTTPS, err := server.NewServerHTTPS(ctx, configHTTPS, srv, resolver)
+		certReloader = servertls.NewCertificateReloader(configHTTPS, resolver, servertls.DefaultWatchInterval)
+		if err := certReloader.Load(ctx); err != nil {
+			return nil, fmt.Errorf("failed to create HTTPS server: %w", err)
+		}
+
+		tlsConfig, err := servertls.NewTLSConfig(configHTTPS, certReloader.GetCertificate)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 		}
+		serverHTTPS := server.NewServerHTTPS(ctx, configHTTPS, srv, tlsConfig)
 		servers = append(servers, serverHTTPS)
 	}
 
@@ -140,6 +160,7 @@ func InitComponents(
 		Scheduler:        scheduler,
 		Servers:          servers,
 		MetricsCollector: metricsCollector,
+		CertReloader:     certReloader,
 	}, nil
 }
 

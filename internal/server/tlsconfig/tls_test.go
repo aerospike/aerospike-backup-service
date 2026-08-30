@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"math/big"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
@@ -46,9 +47,13 @@ func createTestCertificateFiles(t *testing.T) testCertificateFiles {
 
 	serverKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
+	serial, err := rand.Int(rand.Reader, big.NewInt(1<<62))
+	require.NoError(t, err)
 	serverTemplate := &x509.Certificate{
-		SerialNumber: big.NewInt(2),
+		SerialNumber: serial,
 		Subject:      pkix.Name{CommonName: "localhost"},
+		DNSNames:     []string{"localhost"},
+		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
 		NotBefore:    time.Now().Add(-time.Hour),
 		NotAfter:     time.Now().Add(time.Hour),
 		KeyUsage:     x509.KeyUsageDigitalSignature,
@@ -92,24 +97,55 @@ func newTestResolver(t *testing.T) secrets.Resolver {
 	return resolver
 }
 
+// loadTLSConfig performs the caller-side sequence: load the key pair, then build the config.
+func loadTLSConfig(t *testing.T, cfg *model.ServerConfigHTTPS, resolver secrets.Resolver) (*tls.Config, error) {
+	t.Helper()
+
+	reloader := NewCertificateReloader(cfg, resolver, DefaultWatchInterval)
+	if err := reloader.Load(t.Context()); err != nil {
+		return nil, err
+	}
+
+	return NewTLSConfig(cfg, reloader.GetCertificate)
+}
+
+func requireTLSConfig(t *testing.T, cfg *model.ServerConfigHTTPS, resolver secrets.Resolver) *tls.Config {
+	t.Helper()
+
+	tlsCfg, err := loadTLSConfig(t, cfg, resolver)
+	require.NoError(t, err)
+
+	return tlsCfg
+}
+
+func servedCertificate(t *testing.T, config *tls.Config) *tls.Certificate {
+	t.Helper()
+
+	cert, err := config.GetCertificate(&tls.ClientHelloInfo{})
+	require.NoError(t, err)
+	require.NotNil(t, cert)
+
+	return cert
+}
+
 func TestNew(t *testing.T) {
 	files := createTestCertificateFiles(t)
 
 	t.Run("secure defaults", func(t *testing.T) {
-		config, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		config := requireTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile: files.certFile,
 			KeyFile:  files.keyFile,
 		}, newTestResolver(t))
-		require.NoError(t, err)
 
 		assert.Equal(t, uint16(tls.VersionTLS12), config.MinVersion)
 		assert.Nil(t, config.CipherSuites)
 		assert.Equal(t, tls.NoClientCert, config.ClientAuth)
-		assert.Len(t, config.Certificates, 1)
+		assert.NotNil(t, servedCertificate(t, config))
+		assert.Nil(t, config.Certificates)
 	})
 
 	t.Run("explicit secure settings and client CA", func(t *testing.T) {
-		config, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		config := requireTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:     files.certFile,
 			KeyFile:      files.keyFile,
 			MinVersion:   "1.3",
@@ -117,7 +153,6 @@ func TestNew(t *testing.T) {
 			ClientCAFile: files.caFile,
 			ClientAuth:   model.TLSClientAuthRequireAndVerify,
 		}, newTestResolver(t))
-		require.NoError(t, err)
 
 		assert.Equal(t, uint16(tls.VersionTLS13), config.MinVersion)
 		assert.Equal(t, []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}, config.CipherSuites)
@@ -128,18 +163,17 @@ func TestNew(t *testing.T) {
 	t.Run("encrypted private key", func(t *testing.T) {
 		encryptedKey := writeEncryptedKey(t, files.keyFile, "password")
 
-		config, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		config := requireTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:        files.certFile,
 			KeyFile:         encryptedKey,
 			KeyFilePassword: "password",
 		}, newTestResolver(t))
-		require.NoError(t, err)
-		assert.Len(t, config.Certificates, 1)
+		assert.NotNil(t, servedCertificate(t, config))
 	})
 
 	t.Run("mismatched certificate and key", func(t *testing.T) {
 		other := createTestCertificateFiles(t)
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile: files.certFile,
 			KeyFile:  other.keyFile,
 		}, newTestResolver(t))
@@ -147,7 +181,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("client authentication without CA", func(t *testing.T) {
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:   files.certFile,
 			KeyFile:    files.keyFile,
 			ClientAuth: model.TLSClientAuthRequireAndVerify,
@@ -155,13 +189,8 @@ func TestNew(t *testing.T) {
 		require.ErrorContains(t, err, "requires a client CA file")
 	})
 
-	t.Run("nil config", func(t *testing.T) {
-		_, err := NewTLSConfig(t.Context(), nil, newTestResolver(t))
-		require.ErrorContains(t, err, "HTTPS server config is required")
-	})
-
 	t.Run("missing certificate", func(t *testing.T) {
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile: filepath.Join(t.TempDir(), "missing.pem"),
 			KeyFile:  files.keyFile,
 		}, newTestResolver(t))
@@ -169,7 +198,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("unsupported minimum version", func(t *testing.T) {
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:   files.certFile,
 			KeyFile:    files.keyFile,
 			MinVersion: "1.1",
@@ -178,7 +207,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("unsupported cipher suite", func(t *testing.T) {
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:     files.certFile,
 			KeyFile:      files.keyFile,
 			CipherSuites: []string{"NOT_A_SUITE"},
@@ -187,7 +216,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("unsupported client authentication", func(t *testing.T) {
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:   files.certFile,
 			KeyFile:    files.keyFile,
 			ClientAuth: "verify-if-given",
@@ -196,18 +225,17 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("password-protected unencrypted key", func(t *testing.T) {
-		config, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		config := requireTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:        files.certFile,
 			KeyFile:         files.keyFile,
 			KeyFilePassword: "unused",
 		}, newTestResolver(t))
-		require.NoError(t, err)
-		assert.Len(t, config.Certificates, 1)
+		assert.NotNil(t, servedCertificate(t, config))
 	})
 
 	t.Run("wrong key password", func(t *testing.T) {
 		encryptedKey := writeEncryptedKey(t, files.keyFile, "password")
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:        files.certFile,
 			KeyFile:         encryptedKey,
 			KeyFilePassword: "wrong",
@@ -216,7 +244,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("missing certificate with password", func(t *testing.T) {
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:        filepath.Join(t.TempDir(), "missing.pem"),
 			KeyFile:         files.keyFile,
 			KeyFilePassword: "password",
@@ -225,7 +253,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("missing key with password", func(t *testing.T) {
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:        files.certFile,
 			KeyFile:         filepath.Join(t.TempDir(), "missing-key.pem"),
 			KeyFilePassword: "password",
@@ -236,7 +264,7 @@ func TestNew(t *testing.T) {
 	t.Run("non-PEM key with password", func(t *testing.T) {
 		keyFile := filepath.Join(t.TempDir(), "not-pem.key")
 		require.NoError(t, os.WriteFile(keyFile, []byte("not a pem block"), 0o600))
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:        files.certFile,
 			KeyFile:         keyFile,
 			KeyFilePassword: "password",
@@ -246,7 +274,7 @@ func TestNew(t *testing.T) {
 
 	t.Run("password with mismatched key pair", func(t *testing.T) {
 		other := createTestCertificateFiles(t)
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:        files.certFile,
 			KeyFile:         other.keyFile,
 			KeyFilePassword: "unused",
@@ -255,7 +283,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("missing client CA file", func(t *testing.T) {
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:     files.certFile,
 			KeyFile:      files.keyFile,
 			ClientCAFile: filepath.Join(t.TempDir(), "missing-ca.pem"),
@@ -267,7 +295,7 @@ func TestNew(t *testing.T) {
 	t.Run("client CA file with no certificates", func(t *testing.T) {
 		caFile := filepath.Join(t.TempDir(), "empty-ca.pem")
 		require.NoError(t, os.WriteFile(caFile, []byte("not a certificate"), 0o600))
-		_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 			CertFile:     files.certFile,
 			KeyFile:      files.keyFile,
 			ClientCAFile: caFile,
@@ -288,14 +316,13 @@ func TestNewResolvesKeyFilePasswordThroughSecretAgent(t *testing.T) {
 		Resolve(gomock.Any(), agent, "secrets:agent1:tls-key").
 		Return("resolved-password", nil)
 
-	config, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+	config := requireTLSConfig(t, &model.ServerConfigHTTPS{
 		CertFile:        files.certFile,
 		KeyFile:         encryptedKey,
 		KeyFilePassword: "secrets:agent1:tls-key",
 		SecretAgent:     agent,
 	}, resolver)
-	require.NoError(t, err)
-	assert.Len(t, config.Certificates, 1)
+	assert.NotNil(t, servedCertificate(t, config))
 }
 
 func TestNewReturnsSecretAgentResolutionError(t *testing.T) {
@@ -307,7 +334,7 @@ func TestNewReturnsSecretAgentResolutionError(t *testing.T) {
 		Resolve(gomock.Any(), gomock.Any(), "secrets:agent1:tls-key").
 		Return("", assert.AnError)
 
-	_, err := NewTLSConfig(t.Context(), &model.ServerConfigHTTPS{
+	_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
 		CertFile:        files.certFile,
 		KeyFile:         files.keyFile,
 		KeyFilePassword: "secrets:agent1:tls-key",

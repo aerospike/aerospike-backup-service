@@ -84,7 +84,17 @@ func (s *ServerConfigHTTPS) validateTLSConfig(opts ValidationOptions) error {
 		return err
 	}
 
-	if _, err := servertls.NewTLSConfig(context.Background(), s.ToModel(), secrets.NewResolver()); err != nil {
+	serverConfig := s.ToModel()
+	reloader := servertls.NewCertificateReloader(
+		serverConfig,
+		secrets.NewResolver(),
+		servertls.DefaultWatchInterval,
+	)
+	if err := reloader.Load(context.Background()); err != nil {
+		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
+	}
+
+	if _, err := servertls.NewTLSConfig(serverConfig, reloader.GetCertificate); err != nil {
 		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
 	}
 

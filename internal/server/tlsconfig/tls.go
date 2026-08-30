@@ -2,7 +2,6 @@
 package tlsconfig
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -10,7 +9,6 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
@@ -22,27 +20,12 @@ var secureCipherSuites = func() map[string]uint16 {
 	return suites
 }()
 
-// NewTLSConfig builds a static server TLS configuration.
-// resolver is required to resolve KeyFilePassword when it is a Secret Agent reference.
+// NewTLSConfig builds a server TLS configuration that asks getCertificate for the key pair on
+// every handshake, so a rotated pair is picked up without rebuilding the configuration.
 func NewTLSConfig(
-	ctx context.Context,
 	config *model.ServerConfigHTTPS,
-	resolver secrets.Resolver,
+	getCertificate func(*tls.ClientHelloInfo) (*tls.Certificate, error),
 ) (*tls.Config, error) {
-	if config == nil {
-		return nil, errors.New("HTTPS server config is required")
-	}
-
-	password, err := resolver.Resolve(ctx, config.SecretAgent, config.KeyFilePassword)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve HTTPS key-file-password: %w", err)
-	}
-
-	certificate, err := loadKeyPair(config.CertFile, config.KeyFile, password)
-	if err != nil {
-		return nil, err
-	}
-
 	minVersion, err := parseMinVersion(config.GetMinVersionOrDefault())
 	if err != nil {
 		return nil, err
@@ -62,9 +45,9 @@ func NewTLSConfig(
 	}
 
 	result := &tls.Config{
-		MinVersion:   minVersion,
-		CipherSuites: cipherSuites,
-		Certificates: []tls.Certificate{certificate},
+		MinVersion:     minVersion,
+		CipherSuites:   cipherSuites,
+		GetCertificate: getCertificate,
 	}
 
 	if config.ClientCAFile != "" {

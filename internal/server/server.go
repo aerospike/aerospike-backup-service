@@ -13,9 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/middleware"
-	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -52,23 +50,19 @@ func NewServerHTTP(ctx context.Context, serverConfig *model.ServerConfigHTTP, se
 }
 
 // NewServerHTTPS returns a new instance of an HTTPS server.
+// The TLS configuration is built by the caller.
 func NewServerHTTPS(
 	ctx context.Context,
 	serverConfig *model.ServerConfigHTTPS,
 	service *handlers.Service,
-	resolver secrets.Resolver,
-) (HTTP, error) {
-	tlsConfig, err := servertls.NewTLSConfig(ctx, serverConfig, resolver)
-	if err != nil {
-		return nil, err
-	}
-
+	tlsConfig *tls.Config,
+) HTTP {
 	return newServerHTTP(ctx,
 		&serverConfig.ListenerConfig,
 		fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault()),
 		service,
 		tlsConfig,
-	), nil
+	)
 }
 
 func newServerHTTP(
