@@ -45,6 +45,16 @@ const defaultInterval = 10 * time.Second
 // The baseline is taken here, not in Start, so a rewrite between construction and Start is
 // still seen on the first tick.
 func New(path string, interval time.Duration, onChange func(ctx context.Context) error) Watcher {
+	// A non-positive interval panics time.NewTicker.
+	if interval <= 0 {
+		slog.Warn("invalid file watch interval, using default",
+			slog.Duration("requested", interval),
+			slog.Duration("default", defaultInterval),
+			slog.String("path", path),
+		)
+		interval = defaultInterval
+	}
+
 	last, err := fileFingerprint(path)
 	if err != nil {
 		slog.Error("failed to stat watched file", slog.String("path", path), attr.Error(err))

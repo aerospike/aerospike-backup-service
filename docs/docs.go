@@ -3468,7 +3468,7 @@ const docTemplate = `{
                     ]
                 },
                 "client-ca-file": {
-                    "description": "Path to trusted client CA certificates in PEM format.\nThis file is read at startup only; replacing it requires a restart.",
+                    "description": "Path to trusted client CA certificates in PEM format.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "/path/to/client-ca.pem"
