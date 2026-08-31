@@ -3,17 +3,18 @@ package tlsconfig
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	clienttls "github.com/aerospike/aerospike-backup-service/v3/pkg/tlsconfig"
 )
 
-// Prober validates TLS material needed by a running service.
+// Prober validates TLS material in a service config that is not owned by Reloader.
+// HTTPS key-pair fail-fast is Reloader.Load, not this interface.
 type Prober interface {
-	// ProbeConfig validates HTTPS and Aerospike cluster TLS material in a service config.
-	ProbeConfig(ctx context.Context, config *model.Config) error
+	// Probe loads the TLS material of every Secret Agent and Aerospike cluster
+	// without opening network connections.
+	Probe(ctx context.Context, config *model.Config) error
 }
 
 type prober struct {
@@ -27,26 +28,30 @@ func NewProber(resolver secrets.Resolver) Prober {
 	return &prober{resolver: resolver}
 }
 
-// ProbeConfig loads all configured TLS material without starting listeners or watchers.
-func (p *prober) ProbeConfig(ctx context.Context, config *model.Config) error {
-	if config.ServiceConfig.ServerHTTPS != nil {
-		if err := p.probeHTTPS(ctx, config.ServiceConfig.ServerHTTPS); err != nil {
-			return err
+// Probe loads the TLS material of every Secret Agent and Aerospike cluster
+// without opening network connections.
+func (p *prober) Probe(ctx context.Context, config *model.Config) error {
+	backupConfig := config.BackupConfigCopy()
+
+	for name, agent := range backupConfig.SecretAgents {
+		if err := probeSecretAgent(agent); err != nil {
+			return fmt.Errorf("secret agent %q TLS validation failed: %w", name, err)
 		}
 	}
 
-	backupConfig := config.BackupConfigCopy()
-	names := make([]string, 0, len(backupConfig.AerospikeClusters))
-	for name := range backupConfig.AerospikeClusters {
-		names = append(names, name)
+	if https := config.ServiceConfig.ServerHTTPS; https != nil {
+		if err := probeSecretAgent(https.SecretAgent); err != nil {
+			return fmt.Errorf("secret agent of the HTTPS listener TLS validation failed: %w", err)
+		}
 	}
-	slices.Sort(names)
 
-	for _, name := range names {
-		cluster := backupConfig.AerospikeClusters[name]
+	for name, cluster := range backupConfig.AerospikeClusters {
 		var agent *model.SecretAgent
 		if cluster.Credentials != nil {
 			agent = cluster.Credentials.SecretAgent
+		}
+		if err := probeSecretAgent(agent); err != nil {
+			return fmt.Errorf("secret agent of cluster %q TLS validation failed: %w", name, err)
 		}
 		if err := p.probeCluster(ctx, cluster, agent); err != nil {
 			return fmt.Errorf("cluster %q TLS validation failed: %w", name, err)
@@ -56,25 +61,20 @@ func (p *prober) ProbeConfig(ctx context.Context, config *model.Config) error {
 	return nil
 }
 
-// probeHTTPS verifies that the configured HTTPS key pair and client CA can be loaded.
-// Disabled listeners are not probed: those files are unused until HTTPS is enabled.
-func (p *prober) probeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS) error {
-	if config.Disabled || config.CertFile == "" || config.KeyFile == "" {
+// probeSecretAgent verifies that an agent's CA and client key pair can be loaded.
+// An agent without TLS files talks plaintext and has nothing to load.
+func probeSecretAgent(agent *model.SecretAgent) error {
+	if agent == nil || !hasClientTLSFiles(agent.ClientTLS) {
 		return nil
 	}
 
-	password, err := p.resolver.Resolve(ctx, config.SecretAgent, config.KeyFilePassword)
-	if err != nil {
-		return fmt.Errorf("HTTPS TLS validation failed: failed to resolve HTTPS key-file-password: %w", err)
-	}
-	if _, err = loadKeyPair(config.CertFile, config.KeyFile, password); err != nil {
-		return fmt.Errorf("HTTPS TLS validation failed: %w", err)
-	}
-	if _, err := NewTLSConfig(config, nil); err != nil {
-		return fmt.Errorf("HTTPS TLS validation failed: %w", err)
-	}
+	_, err := clienttls.NewTLSConfig(&model.TLS{ClientTLS: agent.ClientTLS})
 
-	return nil
+	return err
+}
+
+func hasClientTLSFiles(tls model.ClientTLS) bool {
+	return tls.CAFile != "" || tls.Certfile != "" || tls.Keyfile != ""
 }
 
 // probeCluster verifies that a cluster's CA and client key pair can be loaded.
@@ -84,7 +84,7 @@ func (p *prober) probeCluster(
 	cluster *model.AerospikeCluster,
 	agent *model.SecretAgent,
 ) error {
-	if cluster.TLS == nil {
+	if cluster == nil || cluster.TLS == nil {
 		return nil
 	}
 

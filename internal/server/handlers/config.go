@@ -60,7 +60,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
-	if err := s.tlsProber.ProbeConfig(r.Context(), newConfigModel); err != nil {
+	if err := s.tlsProber.Probe(r.Context(), newConfigModel); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -99,7 +99,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		httpError(w, fmt.Errorf("failed to read configuration: %w", err))
 		return
 	}
-	if err := s.tlsProber.ProbeConfig(r.Context(), config); err != nil {
+	if err := s.tlsProber.Probe(r.Context(), config); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}

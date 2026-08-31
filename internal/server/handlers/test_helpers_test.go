@@ -9,7 +9,7 @@ import (
 
 func newMockTLSProber(ctrl *gomock.Controller) *servertls.MockProber {
 	prober := servertls.NewMockProber(ctrl)
-	prober.EXPECT().ProbeConfig(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	prober.EXPECT().Probe(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	return prober
 }
 

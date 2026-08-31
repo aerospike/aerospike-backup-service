@@ -52,7 +52,7 @@ func Load(
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read configuration: %w", err)
 	}
-	if err := tlsProber.ProbeConfig(ctx, config); err != nil {
+	if err := tlsProber.Probe(ctx, config); err != nil {
 		return nil, nil, fmt.Errorf("failed to validate TLS configuration: %w", err)
 	}
 

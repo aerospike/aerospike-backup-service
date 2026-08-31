@@ -49,7 +49,7 @@ func (s *Service) changeBackupConfig(
 	if err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
-	if err := s.tlsProber.ProbeConfig(ctx, modelConfig); err != nil {
+	if err := s.tlsProber.Probe(ctx, modelConfig); err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 

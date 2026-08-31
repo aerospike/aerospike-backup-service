@@ -41,16 +41,16 @@ func (m *MockProber) EXPECT() *MockProberMockRecorder {
 	return m.recorder
 }
 
-// ProbeConfig mocks base method.
-func (m *MockProber) ProbeConfig(ctx context.Context, config *model.Config) error {
+// Probe mocks base method.
+func (m *MockProber) Probe(ctx context.Context, config *model.Config) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProbeConfig", ctx, config)
+	ret := m.ctrl.Call(m, "Probe", ctx, config)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// ProbeConfig indicates an expected call of ProbeConfig.
-func (mr *MockProberMockRecorder) ProbeConfig(ctx, config any) *gomock.Call {
+// Probe indicates an expected call of Probe.
+func (mr *MockProberMockRecorder) Probe(ctx, config any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProbeConfig", reflect.TypeOf((*MockProber)(nil).ProbeConfig), ctx, config)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Probe", reflect.TypeOf((*MockProber)(nil).Probe), ctx, config)
 }

@@ -63,7 +63,7 @@ func TestInitComponents_MissingTLSFiles(t *testing.T) {
 
 	components, err := InitComponents(t.Context(), configPath, false)
 
-	require.ErrorContains(t, err, "failed to validate TLS configuration")
+	require.ErrorContains(t, err, "failed to create HTTPS server")
 	require.Nil(t, components)
 }
 
