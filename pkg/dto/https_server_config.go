@@ -1,12 +1,14 @@
 package dto
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 
 	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
@@ -30,8 +32,10 @@ type ServerConfigHTTPS struct {
 	// The port to listen on.
 	Port *Port `yaml:"port,omitempty" json:"port,omitempty" default:"8443" example:"8443"`
 	// Path to the HTTPS server certificate in PEM format.
+	// Rewriting this file at the same path reloads the served key pair without a restart; changing the path requires a restart.
 	CertFile string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/server.pem" extensions:"x-nullable"`
 	// Path to the HTTPS server private key in PEM format.
+	// Rewriting this file at the same path reloads the served key pair without a restart; changing the path requires a restart.
 	KeyFile string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/server-key.pem" extensions:"x-nullable"`
 	// Passphrase for an encrypted HTTPS server private key.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
@@ -78,12 +82,16 @@ func (s *ServerConfigHTTPS) validateTLSConfig(opts ValidationOptions) error {
 	if s.CertFile == "" || s.KeyFile == "" {
 		return nil
 	}
-	// Secret Agent references are resolved at runtime; they cannot be used to decrypt the key here.
 	if err := s.KeyFilePassword.Validate(s.hasSecretAgent()); err != nil {
 		return err
 	}
 
-	if _, err := servertls.New(s.ToModel()); err != nil {
+	serverConfig := s.ToModel()
+	if _, err := servertls.LoadKeyPair(context.Background(), serverConfig, secrets.NewResolver()); err != nil {
+		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
+	}
+
+	if _, err := servertls.NewTLSConfig(serverConfig, nil); err != nil {
 		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
 	}
 

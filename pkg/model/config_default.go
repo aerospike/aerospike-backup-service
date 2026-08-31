@@ -42,10 +42,19 @@ var defaultConfig = struct {
 		Port:           NewPort(8080),
 	},
 	https: ServerConfigHTTPS{
-		ListenerConfig: defaultListener,
-		Port:           NewPort(8443),
-		MinVersion:     TLSMinVersion12,
-		ClientAuth:     TLSClientAuthNone,
+		ListenerConfig: ListenerConfig{
+			Disabled:     true,
+			Address:      defaultListener.Address,
+			Rate:         defaultListener.Rate,
+			ContextPath:  defaultListener.ContextPath,
+			Timeout:      defaultListener.Timeout,
+			ReadTimeout:  defaultListener.ReadTimeout,
+			WriteTimeout: defaultListener.WriteTimeout,
+			IdleTimeout:  defaultListener.IdleTimeout,
+		},
+		Port:       NewPort(8443),
+		MinVersion: TLSMinVersion12,
+		ClientAuth: TLSClientAuthNone,
 	},
 	logger: LoggerConfig{
 		Level:        LogLevelInfo,

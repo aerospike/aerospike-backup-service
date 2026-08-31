@@ -20,17 +20,12 @@ var secureCipherSuites = func() map[string]uint16 {
 	return suites
 }()
 
-// New builds a static server TLS configuration.
-func New(config *model.ServerConfigHTTPS) (*tls.Config, error) {
-	if config == nil {
-		return nil, errors.New("HTTPS server config is required")
-	}
-
-	certificate, err := loadKeyPair(config.CertFile, config.KeyFile, config.KeyFilePassword)
-	if err != nil {
-		return nil, err
-	}
-
+// NewTLSConfig builds a server TLS configuration that asks getCertificate for the key pair on
+// every handshake, so a rotated pair is picked up without rebuilding the configuration.
+func NewTLSConfig(
+	config *model.ServerConfigHTTPS,
+	getCertificate func(*tls.ClientHelloInfo) (*tls.Certificate, error),
+) (*tls.Config, error) {
 	minVersion, err := parseMinVersion(config.GetMinVersionOrDefault())
 	if err != nil {
 		return nil, err
@@ -41,7 +36,7 @@ func New(config *model.ServerConfigHTTPS) (*tls.Config, error) {
 		return nil, err
 	}
 
-	clientAuth, err := parseClientAuth(config.GetClientAuthOrDefault())
+	clientAuth, err := config.GetClientAuthOrDefault().ToTLS()
 	if err != nil {
 		return nil, err
 	}
@@ -50,9 +45,9 @@ func New(config *model.ServerConfigHTTPS) (*tls.Config, error) {
 	}
 
 	result := &tls.Config{
-		MinVersion:   minVersion,
-		CipherSuites: cipherSuites,
-		Certificates: []tls.Certificate{certificate},
+		MinVersion:     minVersion,
+		CipherSuites:   cipherSuites,
+		GetCertificate: getCertificate,
 	}
 
 	if config.ClientCAFile != "" {
@@ -149,17 +144,4 @@ func parseCipherSuites(names []string) ([]uint16, error) {
 	}
 
 	return result, nil
-}
-
-func parseClientAuth(clientAuth model.TLSClientAuth) (tls.ClientAuthType, error) {
-	switch clientAuth {
-	case model.TLSClientAuthNone:
-		return tls.NoClientCert, nil
-	case model.TLSClientAuthRequest:
-		return tls.RequestClientCert, nil
-	case model.TLSClientAuthRequireAndVerify:
-		return tls.RequireAndVerifyClientCert, nil
-	default:
-		return tls.NoClientCert, fmt.Errorf("unsupported TLS client authentication mode %q", clientAuth)
-	}
 }

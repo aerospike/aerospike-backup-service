@@ -24,12 +24,12 @@ const (
 
 // fullBackupsURL is the ad-hoc full backup endpoint of the routine created by baseConfig.
 func (e *env) fullBackupsURL() string {
-	return fmt.Sprintf("%s/v1/backups/full/%s", e.server.URL, routineName)
+	return fmt.Sprintf("%s/v1/backups/full/%s", e.baseURL, routineName)
 }
 
 // incrementalBackupsURL is the ad-hoc incremental backup endpoint of the routine created by baseConfig.
 func (e *env) incrementalBackupsURL() string {
-	return fmt.Sprintf("%s/v1/backups/incremental/%s", e.server.URL, routineName)
+	return fmt.Sprintf("%s/v1/backups/incremental/%s", e.baseURL, routineName)
 }
 
 // triggerFullBackup asks the service to run a full backup now.
@@ -37,14 +37,14 @@ func (s *Suite) triggerFullBackup(e *env) {
 	req, err := http.NewRequestWithContext(s.T().Context(), http.MethodPost, e.fullBackupsURL(), nil)
 	s.Require().NoError(err)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := e.client.Do(req)
 	s.Require().NoError(err)
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		body, _ := io.ReadAll(resp.Body)
-		s.Require().Failf("failed to trigger full backup", "status %d: %s", resp.StatusCode, body)
+		s.Failf("failed to trigger full backup", "status %d: %s", resp.StatusCode, body)
 	}
 }
 
@@ -53,14 +53,14 @@ func (s *Suite) triggerIncrementalBackup(e *env) {
 	req, err := http.NewRequestWithContext(s.T().Context(), http.MethodPost, e.incrementalBackupsURL(), nil)
 	s.Require().NoError(err)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := e.client.Do(req)
 	s.Require().NoError(err)
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		body, _ := io.ReadAll(resp.Body)
-		s.Require().Failf("failed to trigger incremental backup", "status %d: %s", resp.StatusCode, body)
+		s.Failf("failed to trigger incremental backup", "status %d: %s", resp.StatusCode, body)
 	}
 }
 
@@ -72,7 +72,7 @@ func (s *Suite) waitForIncrementalBackup(e *env, want int) dto.BackupDetails {
 		// Fail fast if there are any failure events for this routine
 		failCount, _, err := e.backupFailureEventCount(s.T().Context(), model.BackupTypeIncremental)
 		if err == nil && failCount > 0 {
-			s.Require().Failf("incremental backup failed", "aerospike_backup_service_backup_events_total outcome=failure is %f (> 0)", failCount)
+			s.Failf("incremental backup failed", "aerospike_backup_service_backup_events_total outcome=failure is %f (> 0)", failCount)
 		}
 
 		backups := s.getIncrementalBackups(e)
@@ -81,7 +81,7 @@ func (s *Suite) waitForIncrementalBackup(e *env, want int) dto.BackupDetails {
 		}
 
 		if time.Now().After(deadline) {
-			s.Require().Failf("timed out waiting for incremental backup",
+			s.Failf("timed out waiting for incremental backup",
 				"routine %q reported %d incremental backups after %s, want %d",
 				routineName, len(backups), backupTimeout, want)
 		}
@@ -95,14 +95,14 @@ func (s *Suite) getIncrementalBackups(e *env) []dto.BackupDetails {
 	req, err := http.NewRequestWithContext(s.T().Context(), http.MethodGet, e.incrementalBackupsURL(), nil)
 	s.Require().NoError(err)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := e.client.Do(req)
 	s.Require().NoError(err)
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		s.Require().Failf("failed to fetch incremental backups", "status %d: %s", resp.StatusCode, body)
+		s.Failf("failed to fetch incremental backups", "status %d: %s", resp.StatusCode, body)
 	}
 
 	var backups []dto.BackupDetails
@@ -139,14 +139,14 @@ func (s *Suite) getFullBackups(e *env) []dto.BackupDetails {
 	req, err := http.NewRequestWithContext(s.T().Context(), http.MethodGet, e.fullBackupsURL(), nil)
 	s.Require().NoError(err)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := e.client.Do(req)
 	s.Require().NoError(err)
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		s.Require().Failf("failed to fetch full backups", "status %d: %s", resp.StatusCode, body)
+		s.Failf("failed to fetch full backups", "status %d: %s", resp.StatusCode, body)
 	}
 
 	var backups []dto.BackupDetails
@@ -157,17 +157,17 @@ func (s *Suite) getFullBackups(e *env) []dto.BackupDetails {
 
 // restoreURL returns the ad-hoc restore endpoint.
 func (e *env) restoreURL() string {
-	return e.server.URL + "/v1/restore/full"
+	return e.baseURL + "/v1/restore/full"
 }
 
 // restoreTimestampURL returns the restore-by-timestamp endpoint.
 func (e *env) restoreTimestampURL() string {
-	return e.server.URL + "/v1/restore/timestamp"
+	return e.baseURL + "/v1/restore/timestamp"
 }
 
 // restoreStatusURL returns the restore status endpoint.
 func (e *env) restoreStatusURL(jobID int64) string {
-	return fmt.Sprintf("%s/v1/restore/status/%d", e.server.URL, jobID)
+	return fmt.Sprintf("%s/v1/restore/status/%d", e.baseURL, jobID)
 }
 
 func (s *Suite) restoreByTimestamp(e *env, timestamp time.Time) dto.RestoreJobStatus {
@@ -215,7 +215,7 @@ func (s *Suite) triggerRestoreByTimestamp(e *env, request dto.RestoreTimestampRe
 	s.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := e.client.Do(req)
 	s.Require().NoError(err)
 	defer resp.Body.Close()
 
@@ -239,7 +239,7 @@ func (s *Suite) triggerRestore(e *env, request dto.RestoreRequest) int64 {
 	s.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := e.client.Do(req)
 	s.Require().NoError(err)
 	defer resp.Body.Close()
 
@@ -262,14 +262,14 @@ func (s *Suite) waitForRestore(e *env, jobID int64) dto.RestoreJobStatus {
 		req, err := http.NewRequestWithContext(s.T().Context(), http.MethodGet, e.restoreStatusURL(jobID), nil)
 		s.Require().NoError(err)
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := e.client.Do(req)
 		s.Require().NoError(err)
 
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			s.Require().Failf("failed to fetch restore status", "status %d: %s", resp.StatusCode, body)
+			s.Failf("failed to fetch restore status", "status %d: %s", resp.StatusCode, body)
 		}
 
 		var status dto.RestoreJobStatus
@@ -281,7 +281,7 @@ func (s *Suite) waitForRestore(e *env, jobID int64) dto.RestoreJobStatus {
 		}
 
 		if time.Now().After(deadline) {
-			s.Require().Failf("timed out waiting for restore", "job %d was still running after %s", jobID, backupTimeout)
+			s.Failf("timed out waiting for restore", "job %d was still running after %s", jobID, backupTimeout)
 		}
 
 		time.Sleep(pollInterval)

@@ -19,6 +19,7 @@ The time at which a credential change takes effect depends on the type of creden
 * **Storage credentials:** Changes take effect when the service refreshes its storage connection, which can take up to 10 minutes.
 * **Cluster passwords:** Changes take effect when the existing connection is no longer in use and a new connection is established.
 * **Encryption keys:** A new key is used when a new backup job starts.
+* **HTTPS server certificate and key** (`service.https` `cert-file` and `key-file`): Rewrite the files at the **same paths**. The service polls both files every 10 seconds and serves a successfully loaded pair on new TLS handshakes without restarting and without dropping in-flight connections. Changing the configured paths is a static-field change and requires a restart. An invalid replacement pair (parse failure or cert/key mismatch) is ignored: the last good certificate stays in service.
 
 ## Secret Agent Availability
 
