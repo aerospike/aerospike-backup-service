@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -14,7 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/spf13/cobra"
 )
 
@@ -65,52 +64,25 @@ func startService(configFile string, remote bool) error {
 	ctx, stop := systemCtx()
 	defer stop()
 
-	scheduler, httpService, err := app.InitComponents(ctx, configFile, remote)
+	components, err := app.InitComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
 	}
 
-	// start the scheduler only after all the initialization is done
-	scheduler.Start(ctx)
+	components.Scheduler.Start(ctx)
+	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
+	components.CertReloader.Start(ctx)
 
-	err = runHTTPServer(ctx, httpService)
+	err = server.Run(ctx, components.Servers)
 
 	// stop the scheduler
-	scheduler.Stop()
+	components.Scheduler.Stop()
 
 	return err
 }
 
 func systemCtx() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
-}
-
-func runHTTPServer(ctx context.Context, service *handlers.Service) error {
-	httpServer := server.NewHTTPServer(service)
-
-	// Channel to capture server startup errors
-	errCh := make(chan error, 1)
-	go func() {
-		if err := httpServer.Start(); err != nil {
-			errCh <- err
-		}
-	}()
-
-	// Wait for either context cancellation or server error
-	select {
-	case err := <-errCh:
-		return fmt.Errorf("HTTP server failed: %w", err)
-	case <-ctx.Done():
-	}
-
-	if err := httpServer.Shutdown(); err != nil {
-		slog.Error("HTTP server shutdown failed", attr.Error(err))
-		return err
-	}
-
-	slog.Info("HTTP server shut down gracefully")
-
-	return nil
 }
 
 func main() {

@@ -1,10 +1,8 @@
 package dto
 
 import (
-	"os"
-	"slices"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // ClientTLS represents the TLS configuration options relevant for client-side connections.
@@ -13,51 +11,67 @@ import (
 //nolint:lll
 type ClientTLS struct {
 	// Path to a trusted CA certificate file in PEM format.
-	CAFile *string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/ca.pem" extensions:"x-nullable"`
-	// TLSName used for server certificate verification (ServerName for SNI).
-	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"example.com" extensions:"x-nullable"`
+	CAFile string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/ca.pem" extensions:"x-nullable"`
+	// TLS ServerName (SNI) for verifying the peer certificate.
+	Name string `yaml:"name,omitempty" json:"name,omitempty" example:"example.com" extensions:"x-nullable"`
 	// Path to a client certificate file for mutual TLS authentication.
-	Certfile *string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/cert.pem" extensions:"x-nullable"`
+	Certfile string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/cert.pem" extensions:"x-nullable"`
 	// Path to a client private key file for mutual TLS authentication.
-	Keyfile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/key.pem" extensions:"x-nullable"`
+	Keyfile string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/key.pem" extensions:"x-nullable"`
 }
 
+const (
+	caField   = "ca-file"
+	certField = "cert-file"
+	keyField  = "key-file"
+	nameField = "name"
+)
+
 // Validate validates the ClientTLS configuration.
-func (c *ClientTLS) Validate(opts ...ValidationOption) error {
+//
+// ca-file is optional and independent: it trusts the server certificate.
+// cert-file and key-file identify this client (mTLS). name must be set with
+// them; for cluster connections SNI still comes from seed-nodes[].tls-name.
+func (c *ClientTLS) Validate(opts ValidationOptions) error {
 	if c == nil {
 		return nil
 	}
 
-	if !slices.Contains(opts, ValidationSkipTLSFiles) {
-		if err := verifyFilesExist(c); err != nil {
+	if !opts.Has(ValidationSkipTLSFiles) {
+		if err := c.validatePaths(); err != nil {
+			return err
+		}
+
+		if err := c.verifyFilesExist(); err != nil {
 			return err
 		}
 	}
 
-	if c.Certfile != nil {
-		if c.Keyfile == nil {
-			return errValidationRequires("cert-file", "key-file")
+	// mTLS: cert-file, key-file, and name must be set together.
+	if c.Certfile != "" {
+		if c.Keyfile == "" {
+			return errValidationRequires(certField, keyField)
 		}
-		if c.Name == nil {
-			return errValidationRequires("cert-file", "name")
-		}
-	}
-
-	if c.Keyfile != nil {
-		if c.Certfile == nil {
-			return errValidationRequires("key-file", "cert-file")
-		}
-		if c.Name == nil {
-			return errValidationRequires("key-file", "name")
+		if c.Name == "" {
+			return errValidationRequires(certField, nameField)
 		}
 	}
 
-	if c.Name != nil {
-		if c.Certfile == nil {
-			return errValidationRequires("name", "cert-file")
+	if c.Keyfile != "" {
+		if c.Certfile == "" {
+			return errValidationRequires(keyField, certField)
 		}
-		if c.Keyfile == nil {
-			return errValidationRequires("name", "key-file")
+		if c.Name == "" {
+			return errValidationRequires(keyField, nameField)
+		}
+	}
+
+	if c.Name != "" {
+		if c.Certfile == "" {
+			return errValidationRequires(nameField, certField)
+		}
+		if c.Keyfile == "" {
+			return errValidationRequires(nameField, keyField)
 		}
 	}
 
@@ -77,22 +91,28 @@ func (c *ClientTLS) ToModel() model.ClientTLS {
 	}
 }
 
-func verifyFilesExist(c *ClientTLS) error {
-	if c.CAFile != nil {
-		if _, err := os.Stat(*c.CAFile); err != nil {
-			return errValidationNotFound("ca-file", *c.CAFile)
+func (c *ClientTLS) validatePaths() error {
+	for field, path := range map[string]string{
+		caField:   c.CAFile,
+		certField: c.Certfile,
+		keyField:  c.Keyfile,
+	} {
+		if err := safepath.ValidateClean(path); err != nil {
+			return errValidationInvalidPath(field, path, err)
 		}
 	}
 
-	if c.Certfile != nil {
-		if _, err := os.Stat(*c.Certfile); err != nil {
-			return errValidationNotFound("cert-file", *c.Certfile)
-		}
-	}
+	return nil
+}
 
-	if c.Keyfile != nil {
-		if _, err := os.Stat(*c.Keyfile); err != nil {
-			return errValidationNotFound("key-file", *c.Keyfile)
+func (c *ClientTLS) verifyFilesExist() error {
+	for field, path := range map[string]string{
+		caField:   c.CAFile,
+		certField: c.Certfile,
+		keyField:  c.Keyfile,
+	} {
+		if err := safepath.EnsureFileExists(path); err != nil {
+			return errValidationNotFound(field, path)
 		}
 	}
 

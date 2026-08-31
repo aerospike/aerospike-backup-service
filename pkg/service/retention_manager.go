@@ -11,14 +11,16 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
-// RetentionManager defines the interface for deleting old backups.
-type RetentionManager interface {
-	// Run runs the retention manager. It deletes old backups based on the configured retention policy.
-	deleteOldBackups(ctx context.Context, routine *model.BackupRoutine) error
+// BackupRetentionManager deletes the backups that fall outside a routine's retention policy.
+type BackupRetentionManager interface {
+	// ApplyRetention deletes backups that exceed the routine's configured retention limits.
+	// It does nothing when the routine has no retention policy, or when the routine's
+	// storage is already locked by another delete or restore.
+	ApplyRetention(ctx context.Context, routine *model.BackupRoutine) error
 }
 
-type RetentionManagerImpl struct {
-	backendService BackupReaderWriter
+type backupRetentionManager struct {
+	catalog BackupCatalog
 
 	// Lock per routine. The restore service reads backup data,
 	// while the retention manager deletes backup data.
@@ -26,19 +28,19 @@ type RetentionManagerImpl struct {
 	routineStorage *collections.LockMap
 }
 
-var _ RetentionManager = (*RetentionManagerImpl)(nil)
+var _ BackupRetentionManager = (*backupRetentionManager)(nil)
 
 func NewBackupRetentionManager(
-	backendService BackupReaderWriter,
+	catalog BackupCatalog,
 	routineStorage *collections.LockMap,
-) *RetentionManagerImpl {
-	return &RetentionManagerImpl{
-		backendService: backendService,
+) BackupRetentionManager {
+	return &backupRetentionManager{
+		catalog:        catalog,
 		routineStorage: routineStorage,
 	}
 }
 
-func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routine *model.BackupRoutine) error {
+func (e *backupRetentionManager) ApplyRetention(ctx context.Context, routine *model.BackupRoutine) error {
 	policy := routine.BackupPolicy.RetentionPolicy
 	if policy.IsEmpty() {
 		return nil // Retention policy is not enabled, do nothing.
@@ -50,7 +52,7 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routine *mo
 	}
 	defer mu.Unlock()
 
-	fullBackups, err := e.backendService.GetBackups(ctx, NewFullBackupFilter(routine))
+	fullBackups, err := e.catalog.GetBackups(ctx, NewFullBackupFilter(routine))
 	if err != nil {
 		return fmt.Errorf("failed to get full backups: %w", err)
 	}
@@ -75,7 +77,7 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routine *mo
 	return nil
 }
 
-func (e *RetentionManagerImpl) deleteFullBackups(
+func (e *backupRetentionManager) deleteFullBackups(
 	ctx context.Context,
 	timestamps []time.Time,
 	retainCount int,
@@ -92,7 +94,7 @@ func (e *RetentionManagerImpl) deleteFullBackups(
 		if !b.Created.Before(earliest) {
 			continue
 		}
-		if err := e.backendService.Delete(ctx, routine, extractBackupDirFromKey(b.Key)); err != nil {
+		if err := e.catalog.Delete(ctx, routine, extractBackupDirFromKey(b.Key)); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", b.Key, err))
 		}
 	}
@@ -100,12 +102,12 @@ func (e *RetentionManagerImpl) deleteFullBackups(
 	return errs
 }
 
-func (e *RetentionManagerImpl) deleteIncrementalBackups(
+func (e *backupRetentionManager) deleteIncrementalBackups(
 	ctx context.Context, timestamps []time.Time, retainCount int, routine *model.BackupRoutine,
 ) error {
 	if retainCount == 0 { // Delete all incremental backups.
 		path := backupRootPath(routine.Name, model.BackupTypeIncremental)
-		return e.backendService.Delete(ctx, routine, path)
+		return e.catalog.Delete(ctx, routine, path)
 	}
 
 	if len(timestamps) <= retainCount {
@@ -113,14 +115,14 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 	}
 
 	earliest := timestamps[len(timestamps)-retainCount]
-	incrBackups, err := e.backendService.GetBackups(ctx, NewIncrementalBackupFilter(routine).WithToTime(earliest))
+	incrBackups, err := e.catalog.GetBackups(ctx, NewIncrementalBackupFilter(routine).WithToTime(earliest))
 	if err != nil {
 		return fmt.Errorf("failed to fetch incremental backups: %w", err)
 	}
 
 	var errs error
 	for _, b := range incrBackups {
-		if err := e.backendService.Delete(ctx, routine, extractBackupDirFromKey(b.Key)); err != nil {
+		if err := e.catalog.Delete(ctx, routine, extractBackupDirFromKey(b.Key)); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", b.Key, err))
 		}
 	}

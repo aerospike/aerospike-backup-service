@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,11 +14,11 @@ var secretAgentConfig = SecretAgentConfig{
 
 var originalConfig = &Config{
 	ServiceConfig: ServiceConfig{
-		HTTPServer: &HTTPServerConfig{
-			Address: ptr.Of("localhost"),
+		ServerHTTP: &ServerConfigHTTP{
+			ListenerConfig: ListenerConfig{Address: "localhost"},
 		},
 		Logger: &LoggerConfig{
-			Level: ptr.Of("INFO"),
+			Level: "INFO",
 			FileWriter: &FileLoggerConfig{
 				Filename: "log",
 			},
@@ -29,26 +28,26 @@ var originalConfig = &Config{
 		"cluster1": {
 			SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 			Credentials: &Credentials{
-				User:              ptr.Of("tester"),
-				Password:          ptr.Of("psw"),
+				User:              "tester",
+				Password:          "psw",
 				SecretAgentConfig: secretAgentConfig,
 			},
 		},
 		"cluster2": {
 			SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 			Credentials: &Credentials{
-				User:     ptr.Of("tester"),
-				Password: ptr.Of("psw"),
+				User:     "tester",
+				Password: "psw",
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host2",
-						ConnectionType: saClient.ConnectionTypeTCP,
+						ConnectionType: ConnectionTypeTCP,
 					},
 				},
 			},
 		},
 		"cluster3": {
-			ClusterLabel: ptr.Of("No credentials"),
+			ClusterLabel: "No credentials",
 			SeedNodes:    []SeedNode{{HostName: "host", Port: 80}},
 		},
 	},
@@ -57,16 +56,16 @@ var originalConfig = &Config{
 			S3Storage: &S3Storage{
 				Bucket:          "bucket",
 				S3Region:        "region",
-				AccessKeyID:     ptr.Of("id"),
-				SecretAccessKey: ptr.Of("key"),
+				AccessKeyID:     "id",
+				SecretAccessKey: "key",
 			},
 		},
 		"aws 1": { // secret agent by name
 			S3Storage: &S3Storage{
 				Bucket:            "bucket",
 				S3Region:          "region",
-				AccessKeyID:       ptr.Of("id"),
-				SecretAccessKey:   ptr.Of("key"),
+				AccessKeyID:       "id",
+				SecretAccessKey:   "key",
 				SecretAgentConfig: secretAgentConfig,
 			},
 		},
@@ -74,12 +73,12 @@ var originalConfig = &Config{
 			S3Storage: &S3Storage{
 				Bucket:          "bucket2",
 				S3Region:        "region2",
-				AccessKeyID:     ptr.Of("id2"),
-				SecretAccessKey: ptr.Of("key2"),
+				AccessKeyID:     "id2",
+				SecretAccessKey: "key2",
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host3",
-						ConnectionType: saClient.ConnectionTypeTCP,
+						ConnectionType: ConnectionTypeTCP,
 					},
 				},
 			},
@@ -102,7 +101,7 @@ var originalConfig = &Config{
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host3",
-						ConnectionType: saClient.ConnectionTypeTCP,
+						ConnectionType: ConnectionTypeTCP,
 					},
 				},
 			},
@@ -125,7 +124,7 @@ var originalConfig = &Config{
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host4",
-						ConnectionType: saClient.ConnectionTypeUDS,
+						ConnectionType: ConnectionTypeUnix,
 					},
 				},
 				Endpoint:      "http://localhost",
@@ -149,13 +148,15 @@ var originalConfig = &Config{
 	}},
 	SecretAgents: map[string]*SecretAgent{"agent1": {
 		Address:        "host",
-		ConnectionType: saClient.ConnectionTypeTCP,
+		ConnectionType: ConnectionTypeTCP,
 	}},
 }
 
 func TestConfigModelConversionIsLossless(t *testing.T) {
 	configJSON, _ := json.MarshalIndent(originalConfig, "", "    ")
 	t.Logf("\nOriginal config:\n%s\n", string(configJSON))
+
+	require.NoError(t, originalConfig.Validate(ValidationDefault))
 
 	// Convert the Config to a model.Config
 	modelConfig, err := originalConfig.ToModel()
@@ -170,7 +171,7 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 
 func TestConfigValidation(t *testing.T) {
 	configJSON, _ := json.Marshal(originalConfig)
-	require.NoError(t, originalConfig.Validate())
+	require.NoError(t, originalConfig.Validate(ValidationDefault))
 	configJSONAfter, _ := json.Marshal(originalConfig)
 	require.JSONEq(t, string(configJSON), string(configJSONAfter), "validation should not change the config")
 }

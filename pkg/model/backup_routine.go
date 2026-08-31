@@ -35,6 +35,8 @@ type BackupRoutine struct {
 	PartitionList string
 	// NodeList contains a list of nodes to back up.
 	NodeList []string
+	// Base64 encoded filter expression used in each scan call for partial backup.
+	FilterExpression string
 	// Whether this routine is disabled and should not run.
 	Disabled bool
 }

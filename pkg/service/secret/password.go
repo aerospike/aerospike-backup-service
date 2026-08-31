@@ -5,20 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
-// PasswordResolver resolves password from either a file, a literal value,
-// or via a Secret Agent.
+// PasswordResolver derives an Aerospike password from credentials: a literal value,
+// a password file, or a Secret Agent reference resolved through [Resolver].
 type PasswordResolver interface {
 	// Resolve resolves the password from the credentials.
 	Resolve(ctx context.Context, creds *model.Credentials) (*string, error)
 }
 
-type passwordResolverImpl struct {
+type passwordResolver struct {
 	resolver Resolver
 }
 
@@ -26,23 +26,23 @@ type passwordResolverImpl struct {
 // to resolve Secret Agent-backed values. Passing nil disables Secret Agent
 // resolution (password is treated as a literal).
 func NewPasswordResolver(resolver Resolver) PasswordResolver {
-	return &passwordResolverImpl{resolver: resolver}
+	return &passwordResolver{resolver: resolver}
 }
 
 // Resolve resolves the password from the credentials.
 // It handles reading from file or using the Secret Agent.
-func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credentials) (*string, error) {
+func (r passwordResolver) Resolve(ctx context.Context, creds *model.Credentials) (*string, error) {
 	if creds == nil {
 		return nil, nil
 	}
 
 	// 1) Resolve Path (file)
-	if creds.PasswordPath != nil {
-		data, err := os.ReadFile(*creds.PasswordPath)
+	if creds.PasswordPath != "" {
+		data, err := safepath.ReadFile(creds.PasswordPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read password from password-path %s: %w", *creds.PasswordPath, err)
+			return nil, errors.New("failed to read password from password-path")
 		}
-		slog.Debug("Successfully read password", slog.String("path", *creds.PasswordPath))
+		slog.Debug("Successfully read password from password-path")
 
 		// Strip only line-ending characters to preserve meaningful spaces.
 		password := strings.TrimRight(string(data), "\r\n")
@@ -51,8 +51,8 @@ func (r passwordResolverImpl) Resolve(ctx context.Context, creds *model.Credenti
 	}
 
 	// 2) Resolve (literal or secret-agent reference)
-	if creds.Password != nil {
-		password, err := r.resolver.Resolve(ctx, creds.SecretAgent, *creds.Password)
+	if creds.Password != "" {
+		password, err := r.resolver.Resolve(ctx, creds.SecretAgent, creds.Password)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read password from secret agent: %w", err)
 		}

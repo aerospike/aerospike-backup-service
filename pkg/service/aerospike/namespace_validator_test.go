@@ -5,10 +5,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/backup-go/mocks"
-	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -17,19 +14,18 @@ type testEnv struct {
 	ctrl              *gomock.Controller
 	mockClientManager *MockClientManager
 	mockClient        *MockClient
-	mockInfoGetter    *mocks.MockInfoGetter
+	mockInfoGetter    *MockInfoGetter
 }
 
 func newTestEnv(t *testing.T) *testEnv {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	return &testEnv{
 		ctrl:              ctrl,
 		mockClientManager: NewMockClientManager(ctrl),
 		mockClient:        NewMockClient(ctrl),
-		mockInfoGetter:    mocks.NewMockInfoGetter(t),
+		mockInfoGetter:    NewMockInfoGetter(ctrl),
 	}
 }
 
@@ -37,7 +33,7 @@ func newTestEnv(t *testing.T) *testEnv {
 func (e *testEnv) expectSingleClusterFetch(c *model.AerospikeCluster, namespaces []string, err error) {
 	e.mockClient.EXPECT().InfoClient().Return(e.mockInfoGetter).AnyTimes()
 	e.mockClientManager.EXPECT().GetClient(gomock.Any(), c, gomock.Any(), gomock.Any()).Return(e.mockClient, nil)
-	e.mockInfoGetter.EXPECT().GetNamespacesList(mock.Anything).Return(namespaces, err)
+	e.mockInfoGetter.EXPECT().GetNamespacesList(gomock.Any()).Return(namespaces, err)
 
 	e.mockClientManager.EXPECT().Close(e.mockClient)
 }
@@ -53,11 +49,11 @@ func expectPerCluster(
 ) {
 	t.Helper()
 	client := NewMockClient(ctrl)
-	info := mocks.NewMockInfoGetter(t)
+	info := NewMockInfoGetter(ctrl)
 
 	mgr.EXPECT().GetClient(gomock.Any(), c, gomock.Any(), gomock.Any()).Return(client, nil)
 	client.EXPECT().InfoClient().Return(info)
-	info.EXPECT().GetNamespacesList(mock.Anything).Return(returned, err)
+	info.EXPECT().GetNamespacesList(gomock.Any()).Return(returned, err)
 	mgr.EXPECT().Close(client)
 }
 
@@ -72,7 +68,7 @@ func TestFindMissingByRoutine_MissingDetected_SingleFetchForSharedCluster(t *tes
 
 	env.expectSingleClusterFetch(cluster, []string{"foo"}, nil)
 
-	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
+	nv := &namespaceValidator{clientManager: env.mockClientManager}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Len(t, got, 2)
@@ -87,7 +83,7 @@ func TestFindMissingByRoutine_NoNamespaces_NoFetch(t *testing.T) {
 		"empty": {SourceCluster: cluster, Namespaces: nil},
 	}
 
-	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
+	nv := &namespaceValidator{clientManager: env.mockClientManager}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Empty(t, got)
@@ -105,7 +101,7 @@ func TestFindMissingByRoutine_FetchError_SkipsCluster(t *testing.T) {
 		Return(nil, errors.New("boom")).
 		Times(1)
 
-	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
+	nv := &namespaceValidator{clientManager: env.mockClientManager}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Empty(t, got)
@@ -120,7 +116,7 @@ func TestFindMissingByRoutine_InfoError_SkipsCluster(t *testing.T) {
 
 	env.expectSingleClusterFetch(cluster, nil, errors.New("info failed"))
 
-	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
+	nv := &namespaceValidator{clientManager: env.mockClientManager}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Empty(t, got)
@@ -128,11 +124,10 @@ func TestFindMissingByRoutine_InfoError_SkipsCluster(t *testing.T) {
 
 func TestFindMissingByRoutine_TwoClusters_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mgr := NewMockClientManager(ctrl)
-	a := &model.AerospikeCluster{ClusterLabel: ptr.String("A")}
-	b := &model.AerospikeCluster{ClusterLabel: ptr.String("B")}
+	a := &model.AerospikeCluster{ClusterLabel: "A"}
+	b := &model.AerospikeCluster{ClusterLabel: "B"}
 
 	routines := map[string]*model.BackupRoutine{
 		"r1": {SourceCluster: a, Namespaces: []string{"ns1"}},
@@ -142,7 +137,7 @@ func TestFindMissingByRoutine_TwoClusters_OK(t *testing.T) {
 	expectPerCluster(t, ctrl, mgr, a, []string{"ns1"}, nil)
 	expectPerCluster(t, ctrl, mgr, b, []string{"ns2"}, nil)
 
-	nv := &NamespaceValidatorImpl{clientManager: mgr}
+	nv := &namespaceValidator{clientManager: mgr}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Empty(t, got)
@@ -150,11 +145,10 @@ func TestFindMissingByRoutine_TwoClusters_OK(t *testing.T) {
 
 func TestFindMissingByRoutine_TwoClusters_Fail(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mgr := NewMockClientManager(ctrl)
-	a := &model.AerospikeCluster{ClusterLabel: ptr.String("A")}
-	b := &model.AerospikeCluster{ClusterLabel: ptr.String("B")}
+	a := &model.AerospikeCluster{ClusterLabel: "A"}
+	b := &model.AerospikeCluster{ClusterLabel: "B"}
 
 	routines := map[string]*model.BackupRoutine{
 		"r1": {SourceCluster: a, Namespaces: []string{"ns2"}},
@@ -164,7 +158,7 @@ func TestFindMissingByRoutine_TwoClusters_Fail(t *testing.T) {
 	expectPerCluster(t, ctrl, mgr, a, []string{"ns1"}, nil)
 	expectPerCluster(t, ctrl, mgr, b, []string{"ns2"}, nil)
 
-	nv := &NamespaceValidatorImpl{clientManager: mgr}
+	nv := &namespaceValidator{clientManager: mgr}
 	got := nv.findMissingNamespaces(t.Context(), routines)
 
 	require.Len(t, got, 2)

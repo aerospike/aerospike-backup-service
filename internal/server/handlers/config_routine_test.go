@@ -9,6 +9,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -40,7 +41,7 @@ func TestAddRoutine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			_ = svc.config.AddPolicy("test-policy", &model.BackupPolicy{})
 
 			req := httptest.NewRequestWithContext(
@@ -63,7 +64,7 @@ func TestAddRoutine(t *testing.T) {
 }
 
 func TestReadRoutines(t *testing.T) {
-	svc := setupTestService()
+	svc := setupTestService(t)
 	svc.config = model.NewConfig()
 	_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 	_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "routine2"})
@@ -112,7 +113,7 @@ func TestReadRoutine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			if tt.routine != nil {
 				_ = svc.config.AddRoutine(tt.routine)
 			}
@@ -157,7 +158,7 @@ func TestUpdateRoutine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -206,7 +207,7 @@ func TestDeleteRoutine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "test-routine"})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/routines/"+tt.routineName, nil)
@@ -254,7 +255,7 @@ func TestEnableRoutine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			if tt.addRoutine {
 				addValidBackupRoutine(svc, tt.routineName, true)
 			}
@@ -313,12 +314,11 @@ func TestDisableRoutine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
-			mockRegistry := NewMockRunningBackupsRegistry(ctrl)
+			mockRegistry := service.NewMockBackupStateRegistry(ctrl)
 			mockRegistry.EXPECT().Cancel(tt.routineName).Times(tt.expectedCancelRuns)
 
-			svc := setupTestService()
+			svc := setupTestService(t)
 			svc.registry = mockRegistry
 			addValidBackupRoutine(svc, "test-routine", false)
 

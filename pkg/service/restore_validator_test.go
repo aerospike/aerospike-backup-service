@@ -20,13 +20,12 @@ func (f fakeInfoGetter) GetNamespacesList(_ context.Context) ([]string, error) {
 
 func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
-	config := NewMockroutineProvider(ctrl)
+	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
 	routines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",
@@ -61,13 +60,12 @@ func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) 
 
 func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
-	config := NewMockroutineProvider(ctrl)
+	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
 	routines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",
@@ -102,13 +100,12 @@ func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) 
 
 func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
-	config := NewMockroutineProvider(ctrl)
+	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
 	routines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",
@@ -141,13 +138,12 @@ func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
 
 func TestRestoreValidator_BlocksTimeRestoreOnPendingBackupStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	startController := NewMockStartController(ctrl)
-	config := NewMockroutineProvider(ctrl)
+	config := NewmockRoutineProvider(ctrl)
 
 	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: &clusterLabel}
+	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
 	routines := map[string]*model.BackupRoutine{
 		"routine-1": {
 			Name:          "routine-1",

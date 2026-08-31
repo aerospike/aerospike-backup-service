@@ -8,6 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -16,7 +17,7 @@ import (
 //nolint:lll
 type AerospikeCluster struct {
 	// The cluster name. Optional: used only in logs and error messages.
-	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster" extensions:"x-nullable"`
+	ClusterLabel string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster" extensions:"x-nullable"`
 	// The seed nodes details.
 	SeedNodes []SeedNode `yaml:"seed-nodes,omitempty" json:"seed-nodes,omitempty" validate:"required"`
 	// The connection timeout in milliseconds.
@@ -39,7 +40,7 @@ type AerospikeCluster struct {
 }
 
 // Validate validates the Aerospike cluster entity.
-func (a *AerospikeCluster) Validate(opts ...ValidationOption) error {
+func (a *AerospikeCluster) Validate(opts ValidationOptions) error {
 	if a == nil {
 		return errors.New("cluster is not specified")
 	}
@@ -50,9 +51,13 @@ func (a *AerospikeCluster) Validate(opts ...ValidationOption) error {
 		return errValidationDuplicate("seed-nodes", duplicates)
 	}
 
-	withTLS := a.TLS != nil
+	nodeOpts := opts
+	if a.TLS != nil {
+		nodeOpts = opts.With(ValidationWithTLS)
+	}
+
 	for _, node := range a.SeedNodes {
-		if err := node.Validate(withTLS); err != nil {
+		if err := node.Validate(nodeOpts); err != nil {
 			return err
 		}
 	}
@@ -60,11 +65,16 @@ func (a *AerospikeCluster) Validate(opts ...ValidationOption) error {
 		return err
 	}
 
-	if err := a.Credentials.Validate(opts...); err != nil {
+	if err := a.Credentials.Validate(opts); err != nil {
 		return fmt.Errorf("credentials validation error: %w", err)
 	}
 
-	if err := a.TLS.Validate(opts...); err != nil {
+	tlsOpts := opts
+	if a.Credentials != nil && a.Credentials.hasSecretAgent() {
+		tlsOpts = opts.With(ValidationWithSecretAgent)
+	}
+
+	if err := a.TLS.Validate(tlsOpts); err != nil {
 		return fmt.Errorf("tls validation error: %w", err)
 	}
 
@@ -118,7 +128,7 @@ func NewClusterFromReader(r io.Reader, format decoder.SerializationFormat) (*Aer
 		return nil, err
 	}
 
-	if err := a.Validate(); err != nil {
+	if err := a.Validate(ValidationDefault); err != nil {
 		return nil, err
 	}
 
@@ -188,46 +198,57 @@ func (a *AerospikeCluster) seedNodesToModel() []model.SeedNode {
 type Credentials struct {
 	SecretAgentConfig `yaml:",inline"`
 	// The username for the cluster authentication.
-	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"  extensions:"x-nullable"`
+	User string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"  extensions:"x-nullable"`
 	// The password for the cluster authentication.
-	// It can be either plain text or path into the secret agent.
-	Password *string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"  extensions:"x-nullable"`
+	// This is sensitive information. Can be a path in secret agent or an actual value.
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	Password secret `yaml:"password,omitempty" json:"password,omitempty" format:"password" extensions:"x-nullable"`
 	// The file path with the password string.
-	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
-	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
-	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL"`
+	PasswordPath string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
+	// The authentication mode (INTERNAL, EXTERNAL, PKI).
+	AuthMode AuthMode `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" default:"INTERNAL"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
 	c.User = m.User
-	c.Password = m.Password
+	c.Password = secret(m.Password)
 	c.PasswordPath = m.PasswordPath
-	c.AuthMode = m.AuthMode.String()
+	c.AuthMode = NewAuthModeFromModel(m.AuthMode)
 
 	c.SecretAgentConfig = ResolveSecretAgentFromModel(m.SecretAgent, config)
 }
 
 // Validate validates the credentials configuration.
-func (c *Credentials) Validate(opts ...ValidationOption) error {
+func (c *Credentials) Validate(opts ValidationOptions) error {
 	if c == nil {
 		return nil
 	}
 
-	hasAuth := c.Password != nil || c.PasswordPath != nil
+	hasAuth := c.Password != "" || c.PasswordPath != ""
 
-	if hasAuth && c.User == nil {
+	if hasAuth && c.User == "" {
 		return errors.New("username is required when using authentication")
 	}
 
-	if c.Password != nil && c.PasswordPath != nil {
+	if c.Password != "" && c.PasswordPath != "" {
 		return errValidationMutuallyExclusive("password", "password-path")
 	}
 
-	if _, err := model.ParseAuthMode(c.AuthMode); err != nil {
+	if err := safepath.ValidateClean(c.PasswordPath); err != nil {
+		return fmt.Errorf("%w: invalid password-path", errInvalidPath)
+	}
+
+	if err := c.AuthMode.Validate(); err != nil {
 		return err
 	}
+
+	withAgent := c.hasSecretAgent()
+	if err := c.Password.Validate(withAgent); err != nil {
+		return errValidationSecret("password", err)
+	}
+
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-	return c.SecretAgentConfig.validate(opts...)
+	return c.SecretAgentConfig.validate(opts)
 }
 
 func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) {
@@ -240,16 +261,11 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 		return nil, err
 	}
 
-	authMode, err := model.ParseAuthMode(c.AuthMode)
-	if err != nil {
-		return nil, err
-	}
-
 	return &model.Credentials{
 		User:         c.User,
-		Password:     c.Password,
+		Password:     string(c.Password),
 		PasswordPath: c.PasswordPath,
-		AuthMode:     authMode,
+		AuthMode:     c.AuthMode.ToModel(),
 		SecretAgent:  agent,
 	}, nil
 }
@@ -261,13 +277,15 @@ type SeedNode struct {
 	HostName string `yaml:"host-name,omitempty" json:"host-name,omitempty" example:"localhost" validate:"required"`
 	// The port of the node.
 	Port Port `yaml:"port,omitempty" json:"port,omitempty" example:"3000" validate:"required,min=1,max=65535"`
-	// TLS certificate name used for secure connections (if enabled).
+	// TLS name sent as SNI and checked against the server certificate.
+	// Required when the cluster has a tls block.
+	// This is the name that takes effect for cluster connections.
 	TLSName string `yaml:"tls-name,omitempty" json:"tls-name,omitempty" example:"certName" extensions:"x-nullable"`
 }
 
 // Validate validates the SeedNode entity.
-func (node *SeedNode) Validate(withTLS bool) error {
-	if withTLS && node.TLSName == "" {
+func (node *SeedNode) Validate(opts ValidationOptions) error {
+	if opts.Has(ValidationWithTLS) && node.TLSName == "" {
 		return errValidationEmptyField("tls-name")
 	}
 	if node.HostName == "" {

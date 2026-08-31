@@ -11,10 +11,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/validation"
 )
 
-func (s *Service) ConfigActionHandler(_ http.ResponseWriter, _ *http.Request) {
-
-}
-
 // ReadConfig
 // @Summary     Returns the configuration for the service.
 // @ID	        readConfig
@@ -46,6 +42,16 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	oldConfig := dto.NewConfigFromModel(s.config)
 	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
 		httpError(w, errBadRequest(fmt.Errorf("static configuration has changed: %w", err)))
+		return
+	}
+
+	// GET responses redact secrets as "[secret]". Before persisting a PUT, copy real secret
+	// values from the stored config into the incoming payload wherever the sentinel appears,
+	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
+	decoder.MergeSecrets(newConfig, oldConfig)
+
+	if err := newConfig.Validate(dto.ValidationDefault); err != nil {
+		httpError(w, errBadRequest(err))
 		return
 	}
 
@@ -104,6 +110,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		httpError(w, err)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)

@@ -1,0 +1,490 @@
+package service
+
+import (
+	"context"
+	"path"
+	"testing"
+	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+)
+
+const (
+	routineName   = "test-routine"
+	testNamespace = "test-ns"
+)
+
+func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
+	catalog, pathService, routine := setupLocalBackupCatalog(t)
+
+	// Create backups with different timestamps
+	times := []time.Time{
+		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 4, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 5, 0, 0, 0, 0, time.UTC),
+	}
+
+	for _, tm := range times {
+		backupPath := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, tm)
+
+		metadata := model.BackupMetadata{
+			Created:   tm,
+			Finished:  tm,
+			Namespace: testNamespace,
+		}
+
+		err := catalog.WriteBackupMetadata(t.Context(), routine, backupPath, metadata)
+		require.NoError(t, err)
+	}
+
+	// Expect all backups are returned without filters
+	backups, err := catalog.GetBackups(t.Context(), NewFullBackupFilter(routine))
+	require.NoError(t, err)
+	require.Len(t, backups, 5)
+	assert.Equal(t, "test-routine/backup/1609459200000/data/test-ns", backups[0].Key)
+
+	// Test FromTime filter
+	fromFilter := NewFullBackupFilter(routine).WithFromTime(times[2]) // From Jan 3
+	fromBackups, err := catalog.GetBackups(t.Context(), fromFilter)
+	require.NoError(t, err)
+	require.Len(t, fromBackups, 3) // Should return Jan 3, 4, 5
+	assert.Equal(t, times[2], fromBackups[0].Created)
+	assert.Equal(t, times[3], fromBackups[1].Created)
+	assert.Equal(t, times[4], fromBackups[2].Created)
+
+	// Test ToTime filter
+	toFilter := NewFullBackupFilter(routine).WithToTime(times[2]) // Up to Jan 3
+	toBackups, err := catalog.GetBackups(t.Context(), toFilter)
+	require.NoError(t, err)
+	require.Len(t, toBackups, 3) // Should return Jan 1, 2, 3
+	assert.Equal(t, times[0], toBackups[0].Created)
+	assert.Equal(t, times[1], toBackups[1].Created)
+	assert.Equal(t, times[2], toBackups[2].Created)
+
+	// Test both FromTime and ToTime
+	rangeFilter := NewFullBackupFilter(routine).
+		WithFromTime(times[1]). // From Jan 2
+		WithToTime(times[3])    // To Jan 4
+	rangeBackups, err := catalog.GetBackups(t.Context(), rangeFilter)
+	require.NoError(t, err)
+	require.Len(t, rangeBackups, 3) // Should return Jan 2, 3, 4
+	assert.Equal(t, times[1], rangeBackups[0].Created)
+	assert.Equal(t, times[2], rangeBackups[1].Created)
+	assert.Equal(t, times[3], rangeBackups[2].Created)
+
+	// Test TimeBounds
+	timeBounds := model.TimeBounds{
+		FromTime: &times[1], // From Jan 2
+		ToTime:   &times[3], // To Jan 4
+	}
+	boundsFilter := NewFullBackupFilter(routine).WithTimeBounds(timeBounds)
+	boundsBackups, err := catalog.GetBackups(t.Context(), boundsFilter)
+	require.NoError(t, err)
+	require.Len(t, boundsBackups, 3) // Should return Jan 2, 3, 4
+	assert.Equal(t, times[1], boundsBackups[0].Created)
+	assert.Equal(t, times[2], boundsBackups[1].Created)
+	assert.Equal(t, times[3], boundsBackups[2].Created)
+
+	// Test Last() with time filters
+	lastRangeFilter := NewFullBackupFilter(routine).
+		WithFromTime(times[1]). // From Jan 2
+		WithToTime(times[3]).   // To Jan 4
+		Last()
+	lastRangeBackups, err := catalog.GetBackups(t.Context(), lastRangeFilter)
+	require.NoError(t, err)
+	require.Len(t, lastRangeBackups, 1) // Should return only Jan 4
+	assert.Equal(t, times[3], lastRangeBackups[0].Created)
+}
+
+func TestWithToTime(t *testing.T) {
+	catalog, pathService, routine := setupLocalBackupCatalog(t)
+
+	created := time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
+	toTime := created
+
+	backupPath := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, created)
+	metadata := model.BackupMetadata{
+		Created:   created,
+		Finished:  created.Add(1 * time.Hour), // finished after toTime
+		Namespace: testNamespace,
+	}
+	err := catalog.WriteBackupMetadata(t.Context(), routine, backupPath, metadata)
+	require.NoError(t, err)
+
+	// WithToTime: backup must be finished by toTime; this one finishes later, so excluded
+	backups, err := catalog.GetBackups(t.Context(), NewFullBackupFilter(routine).WithToTime(toTime.Add(10*time.Minute)))
+	require.NoError(t, err)
+	require.Empty(t, backups)
+
+	// Same backup with Finished <= toTime is included
+	metadata.Finished = created.Add(1 * time.Minute)
+	err = catalog.WriteBackupMetadata(t.Context(), routine, backupPath, metadata)
+	require.NoError(t, err)
+	backups, err = catalog.GetBackups(t.Context(), NewFullBackupFilter(routine).WithToTime(toTime.Add(10*time.Minute)))
+	require.NoError(t, err)
+	require.Len(t, backups, 1)
+	assert.Equal(t, created, backups[0].Created)
+	assert.Equal(t, metadata.Finished, backups[0].Finished)
+}
+
+func TestWithTimeBounds(t *testing.T) {
+	catalog, pathService, routine := setupLocalBackupCatalog(t)
+
+	jan2 := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
+	jan3 := time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
+	jan4 := time.Date(2021, 1, 4, 0, 0, 0, 0, time.UTC)
+
+	for _, tm := range []time.Time{jan2, jan3, jan4} {
+		path := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, tm)
+		err := catalog.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
+			Created:   tm,
+			Finished:  tm,
+			Namespace: testNamespace,
+		})
+		require.NoError(t, err)
+	}
+
+	// WithTimeBounds(FromTime=Jan2, ToTime=Jan4): Jan 2, 3, 4
+	bounds := model.TimeBounds{FromTime: &jan2, ToTime: &jan4}
+	backups, err := catalog.GetBackups(t.Context(), NewFullBackupFilter(routine).WithTimeBounds(bounds))
+	require.NoError(t, err)
+	require.Len(t, backups, 3)
+	assert.Equal(t, jan2, backups[0].Created)
+	assert.Equal(t, jan3, backups[1].Created)
+	assert.Equal(t, jan4, backups[2].Created)
+
+	// WithTimeBounds(FromTime=nil, ToTime=Jan3): Jan 2, 3
+	boundsToOnly := model.TimeBounds{ToTime: &jan3}
+	backups, err = catalog.GetBackups(t.Context(), NewFullBackupFilter(routine).WithTimeBounds(boundsToOnly))
+	require.NoError(t, err)
+	require.Len(t, backups, 2)
+	assert.Equal(t, jan2, backups[0].Created)
+	assert.Equal(t, jan3, backups[1].Created)
+
+	// WithTimeBounds(FromTime=Jan3, ToTime=nil): Jan 3, 4
+	boundsFromOnly := model.TimeBounds{FromTime: &jan3}
+	backups, err = catalog.GetBackups(t.Context(), NewFullBackupFilter(routine).WithTimeBounds(boundsFromOnly))
+	require.NoError(t, err)
+	require.Len(t, backups, 2)
+	assert.Equal(t, jan3, backups[0].Created)
+	assert.Equal(t, jan4, backups[1].Created)
+
+	// PathFilter with WithTimeBounds
+	pathFilter := NewPathFilter("test-routine/backup", routine.Storage).WithTimeBounds(bounds)
+	backups, err = catalog.GetBackups(t.Context(), pathFilter)
+	require.NoError(t, err)
+	require.Len(t, backups, 3)
+}
+
+func TestGetBackupsReturnsSortedByCreated(t *testing.T) {
+	catalog, pathService, routine := setupLocalBackupCatalog(t)
+
+	pathTimes := []time.Time{
+		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
+	}
+	createdTimes := []time.Time{
+		time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	for i, pathTime := range pathTimes {
+		path := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, pathTime)
+		err := catalog.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
+			Created:   createdTimes[i],
+			Finished:  createdTimes[i],
+			Namespace: testNamespace,
+		})
+		require.NoError(t, err)
+	}
+
+	backups, err := catalog.GetBackups(t.Context(), NewFullBackupFilter(routine))
+	require.NoError(t, err)
+	require.Len(t, backups, 3)
+	assert.Equal(t, createdTimes[1], backups[0].Created)
+	assert.Equal(t, createdTimes[2], backups[1].Created)
+	assert.Equal(t, createdTimes[0], backups[2].Created)
+}
+
+func TestLocalDeleteBackup(t *testing.T) {
+	catalog, pathService, routine := setupLocalBackupCatalog(t)
+
+	// Create backup
+	created := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	backupPath := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, created)
+
+	metadata := model.BackupMetadata{
+		Created:   created,
+		Finished:  created,
+		Namespace: testNamespace,
+	}
+
+	err := catalog.WriteBackupMetadata(t.Context(), routine, backupPath, metadata)
+	require.NoError(t, err)
+
+	// Verify backup exists
+	filter := NewFullBackupFilter(routine)
+	backups, err := catalog.GetBackups(t.Context(), filter)
+	require.NoError(t, err)
+	require.Len(t, backups, 1)
+
+	// Delete backup
+	err = catalog.Delete(t.Context(), routine, backupPath)
+	require.NoError(t, err)
+
+	// Verify backup no longer exists
+	backups, err = catalog.GetBackups(t.Context(), filter)
+	require.NoError(t, err)
+	assert.Empty(t, backups)
+}
+
+func TestIncrementalBackup(t *testing.T) {
+	catalog, pathService, routine := setupLocalBackupCatalog(t)
+
+	// First create a full backup as baseline
+	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	fullBackupPath := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, fullBackupTime)
+
+	fullMetadata := model.BackupMetadata{
+		Created:     fullBackupTime,
+		Finished:    fullBackupTime,
+		Namespace:   testNamespace,
+		RecordCount: 1000,
+		ByteCount:   10240,
+		FileCount:   5,
+	}
+
+	err := catalog.WriteBackupMetadata(t.Context(), routine, fullBackupPath, fullMetadata)
+	require.NoError(t, err)
+
+	// Now create an incremental backup
+	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
+	incrementalPath := pathService.GetBackupPath(
+		routineName,
+		model.BackupTypeIncremental,
+		testNamespace,
+		incrementalTime,
+	)
+
+	incMetadata := model.BackupMetadata{
+		Created:     incrementalTime,
+		Finished:    incrementalTime,
+		From:        fullBackupTime,
+		Namespace:   testNamespace,
+		RecordCount: 200,
+		ByteCount:   2048,
+		FileCount:   2,
+	}
+
+	err = catalog.WriteBackupMetadata(t.Context(), routine, incrementalPath, incMetadata)
+	require.NoError(t, err)
+
+	// Test fetching only incremental backups
+	filter := NewIncrementalBackupFilter(routine)
+	backups, err := catalog.GetBackups(t.Context(), filter)
+
+	// Verify
+	require.NoError(t, err)
+	require.Len(t, backups, 1)
+	assert.Equal(t, uint64(200), backups[0].RecordCount)
+	assert.Equal(t, incrementalTime, backups[0].Created)
+	assert.Equal(t, fullBackupTime, backups[0].From)
+	assert.Equal(t, "test-routine/incremental/1609545600000/data/test-ns", backups[0].Key)
+
+	// Test with time filter for incremental
+	timeFilter := NewIncrementalBackupFilter(routine).WithFromTime(fullBackupTime)
+	timeBackups, err := catalog.GetBackups(t.Context(), timeFilter)
+	require.NoError(t, err)
+	require.Len(t, timeBackups, 1)
+	assert.Equal(t, "test-routine/incremental/1609545600000/data/test-ns", timeBackups[0].Key)
+
+	// Verify independent from full backups
+	fullFilter := NewFullBackupFilter(routine)
+	fullBackups, err := catalog.GetBackups(t.Context(), fullFilter)
+	require.NoError(t, err)
+	require.Len(t, fullBackups, 1)
+	assert.Equal(t, fullBackupTime, fullBackups[0].Created)
+	assert.Equal(t, "test-routine/backup/1609459200000/data/test-ns", fullBackups[0].Key)
+}
+
+func TestLastBackupsReadsOnlyLatestTimestampMetadataFiles(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pathService := NewPathService(nil)
+	routine := &model.BackupRoutine{
+		Name:    routineName,
+		Storage: &model.LocalStorage{Path: "/backups"},
+	}
+
+	fullTimes := []time.Time{
+		time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+	}
+	latestFullTime := fullTimes[1]
+	incrementalTimes := []time.Time{
+		time.Date(2021, 1, 2, 1, 0, 0, 0, time.UTC),
+		time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
+	}
+
+	fullFiles := []string{
+		metadataPath(pathService, model.BackupTypeFull, testNamespace, fullTimes[0]),
+		metadataPath(pathService, model.BackupTypeFull, testNamespace, fullTimes[1]),
+		metadataPath(pathService, model.BackupTypeFull, "other-ns", latestFullTime),
+	}
+	incFiles := []string{
+		metadataPath(pathService, model.BackupTypeIncremental, testNamespace, incrementalTimes[0]),
+		metadataPath(pathService, model.BackupTypeIncremental, testNamespace, incrementalTimes[1]),
+	}
+	contents := map[string][]byte{
+		fullFiles[0]: metadataYAML(t, model.BackupMetadata{
+			Created: fullTimes[0], Finished: fullTimes[0], Namespace: testNamespace,
+		}),
+		fullFiles[1]: metadataYAML(t, model.BackupMetadata{
+			Created: latestFullTime, Finished: latestFullTime, Namespace: testNamespace,
+		}),
+		fullFiles[2]: metadataYAML(t, model.BackupMetadata{
+			Created: latestFullTime, Finished: latestFullTime, Namespace: "other-ns",
+		}),
+		incFiles[0]: metadataYAML(t, model.BackupMetadata{
+			Created: incrementalTimes[0], Finished: incrementalTimes[0],
+			From: latestFullTime, Namespace: testNamespace,
+		}),
+		incFiles[1]: metadataYAML(t, model.BackupMetadata{
+			Created: incrementalTimes[1], Finished: incrementalTimes[1],
+			From: latestFullTime, Namespace: testNamespace,
+		}),
+	}
+	readFile := func(_ context.Context, _ model.Storage, filePath string) ([]byte, error) {
+		data, ok := contents[filePath]
+		require.True(t, ok, filePath)
+		return data, nil
+	}
+
+	operations := storage.NewMockOperations(ctrl)
+	operations.EXPECT().
+		ReadFileNames(
+			gomock.Any(),
+			routine.Storage,
+			backupRootPath(routineName, model.BackupTypeFull),
+			metadataFile,
+			nil,
+		).
+		Return(fullFiles, nil)
+	operations.EXPECT().
+		ReadFileNames(
+			gomock.Any(),
+			routine.Storage,
+			backupRootPath(routineName, model.BackupTypeIncremental),
+			metadataFile,
+			gomock.Any(),
+		).
+		Return(incFiles, nil)
+	operations.EXPECT().ReadFile(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(readFile).Times(2)
+	operations.EXPECT().ReadFile(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(readFile).Times(1)
+
+	catalog := NewBackupCatalog(pathService, operations)
+
+	backups, err := catalog.GetBackups(t.Context(), NewFullBackupFilter(routine).Last())
+	require.NoError(t, err)
+	require.Len(t, backups, 2)
+	assert.Equal(t, latestFullTime, backups[0].Created)
+	assert.Equal(t, latestFullTime, backups[1].Created)
+	assert.ElementsMatch(t, []string{testNamespace, "other-ns"}, []string{backups[0].Namespace, backups[1].Namespace})
+
+	backups, err = catalog.GetBackups(t.Context(),
+		NewIncrementalBackupFilter(routine).WithFromTime(latestFullTime).Last())
+	require.NoError(t, err)
+	require.Len(t, backups, 1)
+	assert.Equal(t, incrementalTimes[1], backups[0].Created)
+}
+
+func metadataPath(pathService PathService, backupType model.BackupType, namespace string, timestamp time.Time) string {
+	return path.Join(pathService.GetBackupPath(routineName, backupType, namespace, timestamp), metadataFile)
+}
+
+func metadataYAML(t *testing.T, md model.BackupMetadata) []byte {
+	t.Helper()
+	data, err := decoder.Marshal(md, decoder.YAML, false)
+	require.NoError(t, err)
+	return data
+}
+
+func TestReadPath(t *testing.T) {
+	catalog, pathService, routine := setupLocalBackupCatalog(t)
+
+	// First create a full backup as baseline
+	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	fullBackupPath := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, fullBackupTime)
+
+	fullMetadata := model.BackupMetadata{
+		Created:   fullBackupTime,
+		Finished:  fullBackupTime,
+		Namespace: testNamespace,
+	}
+
+	err := catalog.WriteBackupMetadata(t.Context(), routine, fullBackupPath, fullMetadata)
+	require.NoError(t, err)
+
+	// Now create an incremental backup
+	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
+	incrementalPath := pathService.GetBackupPath(
+		routineName,
+		model.BackupTypeIncremental,
+		testNamespace,
+		incrementalTime,
+	)
+
+	incMetadata := model.BackupMetadata{
+		Created:   incrementalTime,
+		Finished:  incrementalTime,
+		From:      fullBackupTime,
+		Namespace: testNamespace,
+	}
+
+	err = catalog.WriteBackupMetadata(t.Context(), routine, incrementalPath, incMetadata)
+	require.NoError(t, err)
+
+	backups, err := catalog.GetBackups(t.Context(), NewPathFilter("test-routine", routine.Storage))
+	require.NoError(t, err)
+	require.Len(t, backups, 2)
+
+	backups, err = catalog.GetBackups(t.Context(), NewPathFilter("test-routine/backup", routine.Storage))
+	require.NoError(t, err)
+	require.Len(t, backups, 1)
+
+	backups, err = catalog.GetBackups(t.Context(), NewPathFilter("test-routine/incremental", routine.Storage))
+	require.NoError(t, err)
+	require.Len(t, backups, 1)
+
+	backups, err = catalog.GetBackups(t.Context(), NewPathFilter("test-routine/wrong-path", routine.Storage))
+	require.NoError(t, err)
+	require.Empty(t, backups)
+
+	backups, err = catalog.GetBackups(t.Context(), NewPathFilter("wrong-path", routine.Storage))
+	require.NoError(t, err)
+	require.Empty(t, backups)
+}
+
+// Setup test helpers for local storage tests.
+func setupLocalBackupCatalog(t *testing.T) (BackupCatalog, PathService, *model.BackupRoutine) {
+	t.Helper()
+
+	routine := &model.BackupRoutine{
+		Name: "test-routine",
+		Storage: &model.LocalStorage{
+			Path: t.TempDir(),
+		},
+	}
+
+	pathService := NewPathService(nil)
+	return NewBackupCatalog(pathService,
+		storage.NewOperations(storage.NewLocalStorageAccessor())), pathService, routine
+}

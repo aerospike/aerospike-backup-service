@@ -10,32 +10,28 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/mocks"
-	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
 var cluster = &model.AerospikeCluster{
-	ClusterLabel: ptr.String("test"),
+	ClusterLabel: "test",
 }
 
 var cluster2 = &model.AerospikeCluster{
-	ClusterLabel: ptr.String("test2"),
+	ClusterLabel: "test2",
 }
 
 func Test_GetClient(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
-	mockAsClient := mocks.NewMockAerospikeClient(t)
+	mockAsClient := NewMockAerospikeClient(ctrl)
 	mockBackupClient := NewMockClient(ctrl)
 
-	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil).Times(2)
+	infoGetter := NewMockInfoGetter(ctrl)
+	infoGetter.EXPECT().GetStatus(gomock.Any()).Return("ok", nil).Times(2)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter).Times(2)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
@@ -60,15 +56,14 @@ func Test_GetClient(t *testing.T) {
 
 func Test_GetClientParallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
-	mockAsClient := mocks.NewMockAerospikeClient(t)
+	mockAsClient := NewMockAerospikeClient(ctrl)
 
 	mockBackupClient := NewMockClient(ctrl)
 
-	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil).Times(2)
+	infoGetter := NewMockInfoGetter(ctrl)
+	infoGetter.EXPECT().GetStatus(gomock.Any()).Return("ok", nil).Times(2)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter).Times(2)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).
@@ -107,17 +102,16 @@ func Test_GetClientParallel(t *testing.T) {
 
 func Test_GetTwoClients(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	clientFactory := NewMockClientFactory(ctrl)
-	mockAsClient := mocks.NewMockAerospikeClient(t)
+	mockAsClient := NewMockAerospikeClient(ctrl)
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil).Times(2)
 
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ backup.AerospikeClient, _ ...backup.ClientOpt) (Client, error) {
 			client := NewMockClient(ctrl)
 
-			infoGetter := mocks.NewMockInfoGetter(t)
-			infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil)
+			infoGetter := NewMockInfoGetter(ctrl)
+			infoGetter.EXPECT().GetStatus(gomock.Any()).Return("ok", nil)
 			client.EXPECT().InfoClient().Return(infoGetter)
 
 			return client, nil
@@ -138,18 +132,17 @@ func Test_GetTwoClients(t *testing.T) {
 
 func Test_GetClient_UnhealthyConnection(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
-	mockAsClient := mocks.NewMockAerospikeClient(t)
+	mockAsClient := NewMockAerospikeClient(ctrl)
 
 	mockBackupClient := NewMockClient(ctrl)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
 
-	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus(mock.Anything).Return("fail", nil)
+	infoGetter := NewMockInfoGetter(ctrl)
+	infoGetter.EXPECT().GetStatus(gomock.Any()).Return("fail", nil)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
 
 	clientManager := NewClientManager(
@@ -166,7 +159,6 @@ func Test_GetClient_UnhealthyConnection(t *testing.T) {
 
 func Test_CreateClient_Errors(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
 	aeroCluster := &model.AerospikeCluster{}
@@ -186,17 +178,16 @@ func Test_CreateClient_Errors(t *testing.T) {
 
 func Test_Close(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
-	mockAsClient := mocks.NewMockAerospikeClient(t)
+	mockAsClient := NewMockAerospikeClient(ctrl)
 	mockAsClient.EXPECT().Close()
 
 	mockBackupClient := NewMockClient(ctrl)
 	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient).AnyTimes()
 
-	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil)
+	infoGetter := NewMockInfoGetter(ctrl)
+	infoGetter.EXPECT().GetStatus(gomock.Any()).Return("ok", nil)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
@@ -216,22 +207,21 @@ func Test_Close(t *testing.T) {
 	time.Sleep(150 * time.Millisecond) // Wait for timer to fire
 
 	assertClientExists(t, clientManager, cluster, false)
-	assert.Zero(t, clientManager.clients.Size())
+	assert.Zero(t, clientCacheSize(clientManager))
 }
 
 func Test_Close_Multiple(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
-	mockAsClient := mocks.NewMockAerospikeClient(t)
+	mockAsClient := NewMockAerospikeClient(ctrl)
 	mockAsClient.EXPECT().Close()
 
 	mockBackupClient := NewMockClient(ctrl)
 	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient).Times(2)
 
-	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil).Times(2)
+	infoGetter := NewMockInfoGetter(ctrl)
+	infoGetter.EXPECT().GetStatus(gomock.Any()).Return("ok", nil).Times(2)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter).Times(2)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
@@ -259,10 +249,9 @@ func Test_Close_Multiple(t *testing.T) {
 
 func Test_Close_CancelOnReuse(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
-	mockAsClient := mocks.NewMockAerospikeClient(t)
+	mockAsClient := NewMockAerospikeClient(ctrl)
 
 	mockBackupClient := NewMockClient(ctrl)
 	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient)
@@ -270,8 +259,8 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil).Times(2)
 
-	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil).Times(2)
+	infoGetter := NewMockInfoGetter(ctrl)
+	infoGetter.EXPECT().GetStatus(gomock.Any()).Return("ok", nil).Times(2)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter).Times(2)
 
 	clientManager := NewClientManager(
@@ -299,7 +288,6 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 
 func Test_Close_NotExisting(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	clientFactory := NewMockClientFactory(ctrl)
 	clientManager := NewClientManager(
@@ -307,7 +295,7 @@ func Test_Close_NotExisting(t *testing.T) {
 		10*time.Second,
 	)
 
-	aeroClient := mocks.NewMockAerospikeClient(t)
+	aeroClient := NewMockAerospikeClient(ctrl)
 	aeroClient.EXPECT().Close()
 
 	client := NewMockClient(ctrl)
@@ -315,14 +303,16 @@ func Test_Close_NotExisting(t *testing.T) {
 	aeroClient.EXPECT().Cluster().Return(&aerospike.Cluster{})
 
 	clientManager.Close(client)
-
-	aeroClient.AssertExpectations(t)
 }
 
-func assertClientExists(t *testing.T, clientManager *ClientManagerImpl,
+func assertClientExists(t *testing.T, manager ClientManager,
 	cl *model.AerospikeCluster, shouldExist bool) {
 	t.Helper()
 
-	_, exists := clientManager.clients.Load(cl.Hash())
+	_, exists := manager.(*clientManager).clients.Load(cl.Hash())
 	assert.Equal(t, shouldExist, exists)
+}
+
+func clientCacheSize(manager ClientManager) int {
+	return manager.(*clientManager).clients.Size()
 }

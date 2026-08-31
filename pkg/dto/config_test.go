@@ -1,9 +1,10 @@
 package dto
 
 import (
-	"errors"
+	"strings"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
@@ -46,16 +47,14 @@ func validConfig() *Config {
 func NewLocalAerospikeCluster() *AerospikeCluster {
 	return &AerospikeCluster{
 		SeedNodes:   []SeedNode{{HostName: "localhost", Port: 3000}},
-		Credentials: &Credentials{User: ptr.Of("tester"), Password: ptr.Of("psw")},
+		Credentials: &Credentials{User: "tester", Password: "psw"},
 	}
 }
 
 func TestValidConfigValidation(t *testing.T) {
 	config := validConfig()
 
-	if err := config.Validate(); err != nil {
-		t.Errorf("Expected no validation error, but got: %v", err)
-	}
+	require.NoError(t, config.Validate(ValidationDefault))
 }
 
 func TestInvalidClusterReference(t *testing.T) {
@@ -65,13 +64,9 @@ func TestInvalidClusterReference(t *testing.T) {
 
 	_, err := config.ToModel()
 
-	if err == nil {
-		t.Fatalf("Expected validation error, but got none.")
-	}
-	expectedError := errValidationNotFound("routine1", "nonExistentCluster")
-	if errors.Is(err, expectedError) {
-		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
-	}
+	require.Error(t, err)
+	require.ErrorIs(t, err, errNotFound)
+	require.ErrorContains(t, err, "nonExistentCluster")
 }
 
 func TestInvalidBackupPolicyReference(t *testing.T) {
@@ -80,13 +75,9 @@ func TestInvalidBackupPolicyReference(t *testing.T) {
 	routine.BackupPolicy = "nonExistentPolicy"
 
 	_, err := config.ToModel()
-	if err == nil {
-		t.Fatalf("Expected validation error, but got none.")
-	}
-	expectedError := errValidationNotFound("routine1", "nonExistentPolicy")
-	if errors.Is(err, expectedError) {
-		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
-	}
+	require.Error(t, err)
+	require.ErrorIs(t, err, errNotFound)
+	require.ErrorContains(t, err, "nonExistentPolicy")
 }
 
 func TestInvalidStorageReference(t *testing.T) {
@@ -95,13 +86,9 @@ func TestInvalidStorageReference(t *testing.T) {
 	routine.Storage = "nonExistentStorage"
 
 	_, err := config.ToModel()
-	if err == nil {
-		t.Fatalf("Expected validation error, but got none.")
-	}
-	expectedError := errValidationNotFound("routine1", "nonExistentStorage")
-	if errors.Is(err, expectedError) {
-		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
-	}
+	require.Error(t, err)
+	require.ErrorIs(t, err, errNotFound)
+	require.ErrorContains(t, err, "nonExistentStorage")
 }
 
 func TestInvalidTlsFile(t *testing.T) {
@@ -111,16 +98,35 @@ func TestInvalidTlsFile(t *testing.T) {
 	cluster.SeedNodes[0].TLSName = "tls name"
 	cluster.TLS = &TLS{
 		ClientTLS: ClientTLS{
-			Name:     ptr.Of("tls name"),
-			Keyfile:  ptr.Of("path to key file"),
-			Certfile: ptr.Of("path to cert file"),
-			CAFile:   ptr.Of("path to ca file"),
+			Name:     "tls name",
+			Keyfile:  "path to key file",
+			Certfile: "path to cert file",
+			CAFile:   "path to ca file",
 		},
 	}
 
-	_, err := config.ToModel()
+	err := config.Validate(ValidationDefault)
 	require.Error(t, err)
 
-	_, err = config.ToModel(ValidationSkipTLSFiles)
+	require.NoError(t, config.Validate(ValidationSkipTLSFiles))
+	_, err = config.ToModel()
 	require.NoError(t, err)
+}
+
+func TestNewConfigFromReader(t *testing.T) {
+	t.Parallel()
+
+	yamlConfig := `
+service:
+`
+	cfg, err := NewConfigFromReader(strings.NewReader(yamlConfig), decoder.YAML)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+}
+
+func TestNewConfigFromReader_InvalidYAML(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewConfigFromReader(strings.NewReader("service: [1,2"), decoder.YAML)
+	require.Error(t, err)
 }

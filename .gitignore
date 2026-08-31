@@ -11,21 +11,31 @@
 # Test binary, built with `go test -c`
 *.test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
+# Code coverage profiles and other test artifacts
 *.out
+coverage.*
+*.coverprofile
+profile.cov
+
+# Go workspace file
+go.work
+go.work.sum
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
+# Editor/IDE
 .idea
 .vscode
 .DS_Store
+.cursor
 
+# Targets and temps
 lib/
 target/
 testout/
 tmp/
 **/nfpm-*-*.yaml
 
-# Go workspace file
-go.work
+# env file
+.env

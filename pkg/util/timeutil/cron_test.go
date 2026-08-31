@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCheckCron_MatchingDaily(t *testing.T) {
@@ -41,4 +42,14 @@ func TestCheckCron_SubSecondMismatch(t *testing.T) {
 
 	// This should not match, as fire time is 15:00:00.000
 	assert.False(t, IsCronFireTime(cronExpr, testTime), "Expected false due to nanosecond mismatch")
+}
+
+func TestNextTrigger(t *testing.T) {
+	next, err := NextTrigger("@daily")
+	require.NoError(t, err)
+	assert.True(t, next.After(time.Now()))
+
+	nextHour, err := NextTrigger("0 0 * * * *")
+	require.NoError(t, err)
+	assert.True(t, nextHour.After(time.Now()))
 }

@@ -1,19 +1,15 @@
 package model
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"sort"
+	"slices"
 	"time"
-
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 type AerospikeCluster struct {
 	// The cluster name.
-	ClusterLabel *string
+	ClusterLabel string
 	// The seed nodes details.
 	SeedNodes []SeedNode
 	// The connection timeout.
@@ -31,107 +27,84 @@ type AerospikeCluster struct {
 }
 
 // GetUser safely returns the username.
-func (c *AerospikeCluster) GetUser() *string {
+func (c *AerospikeCluster) GetUser() string {
 	if c.Credentials != nil {
 		return c.Credentials.User
 	}
-	return nil
+	return ""
 }
 
 // GetPassword returns the configured password.
 // Note: This returns the raw password configuration. If using Secret Agent or file path,
 // this needs to be resolved by the service layer.
-func (c *AerospikeCluster) GetPassword() *string {
+func (c *AerospikeCluster) GetPassword() string {
 	if c.Credentials == nil {
-		return nil
+		return ""
 	}
 	return c.Credentials.Password
 }
 
-// Hash returns a unique string identifier for the AerospikeCluster.
-func (c *AerospikeCluster) Hash() string {
-	nodeStrings := make([]string, len(c.SeedNodes))
-	for i, node := range c.SeedNodes {
-		nodeStrings[i] = node.String()
-	}
-	sort.Strings(nodeStrings)
-
-	// Build a slice of all fields to be hashed.
-	hashData := []any{
-		ptr.ValueOrZero(c.ClusterLabel),
-		nodeStrings,
-		ptr.ValueOrZero(c.ConnTimeout).String(),
-		ptr.ValueOrZero(c.UseServicesAlternate),
-		c.Credentials.String(),
-		c.TLS.String(),
-		ptr.ValueOrZero(c.MaxParallelScans),
-		c.PreferRacks,
-	}
-
-	hasher := sha256.New()
-	_, _ = fmt.Fprintf(hasher, "%v", hashData)
-
-	return hex.EncodeToString(hasher.Sum(nil))
-}
-
-// ToString returns a user-friendly cluster identifier.
-// It prefers ClusterLabel; if missing, it uses a stable first seed node string.
-func (c *AerospikeCluster) ToString() string {
+// Hash returns a unique identifier for the AerospikeCluster.
+func (c *AerospikeCluster) Hash() uint64 {
 	if c == nil {
-		return ""
+		return 0
 	}
 
-	if label := ptr.ValueOrZero(c.ClusterLabel); label != "" {
-		return label
+	nodeHashes := make([]uint64, len(c.SeedNodes))
+	for i, node := range c.SeedNodes {
+		nodeHashes[i] = node.Hash()
 	}
+	slices.Sort(nodeHashes)
 
-	if len(c.SeedNodes) > 0 {
-		nodeStrings := make([]string, len(c.SeedNodes))
-		for i, node := range c.SeedNodes {
-			nodeStrings[i] = node.String()
-		}
-		sort.Strings(nodeStrings)
-		return nodeStrings[0]
-	}
-
-	return ""
+	return hashValues(
+		c.ClusterLabel,
+		nodeHashes,
+		c.ConnTimeout,
+		c.UseServicesAlternate,
+		c.Credentials.Hash(),
+		c.TLS.Hash(),
+		c.MaxParallelScans,
+		c.PreferRacks,
+	)
 }
 
 // Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
 	// The username for the cluster authentication.
-	User *string
+	User string
 	// The password for the cluster authentication.
 	// It can be either plain text or path into the secret agent.
-	Password *string
+	Password string
 	// The file path with the password string, will take precedence over the password field.
-	PasswordPath *string
-	// The authentication mode (INTERNAL, EXTERNAL, PKI). Nil means unset.
-	AuthMode *AuthMode
+	PasswordPath string
+	// The authentication mode (INTERNAL, EXTERNAL, PKI).
+	AuthMode AuthMode
 	// The name of the configured Secret Agent to use for authentication.
 	SecretAgent *SecretAgent
 }
 
 // AuthModeOrDefault returns the configured auth mode, or the default when unset.
 func (c *Credentials) AuthModeOrDefault() AuthMode {
-	if c == nil || c.AuthMode == nil || *c.AuthMode == "" {
-		return *defaultConfig.credentials.AuthMode
+	if c == nil || c.AuthMode == "" {
+		return defaultConfig.credentials.AuthMode
 	}
 
-	return *c.AuthMode
+	return c.AuthMode
 }
 
-// String returns a string representation of the Credentials.
-func (c *Credentials) String() string {
+// Hash returns a unique identifier for the Credentials.
+func (c *Credentials) Hash() uint64 {
 	if c == nil {
-		return ""
+		return 0
 	}
-	return fmt.Sprintf("%v:%v:%v:%v:%v",
-		ptr.ValueOrZero(c.User),
-		ptr.ValueOrZero(c.Password),
-		ptr.ValueOrZero(c.PasswordPath),
-		c.AuthModeOrDefault(),
-		c.SecretAgent.String())
+
+	return hashValues(
+		c.User,
+		c.Password,
+		c.PasswordPath,
+		c.AuthMode,
+		c.SecretAgent.Hash(),
+	)
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.
@@ -140,8 +113,13 @@ type SeedNode struct {
 	HostName string
 	// The port of the node.
 	Port Port
-	// TLS certificate name used for secure connections (if enabled).
+	// TLS name sent as SNI and checked against the server certificate.
 	TLSName string
+}
+
+// Hash returns a unique identifier for the SeedNode.
+func (s SeedNode) Hash() uint64 {
+	return hashValues(s.HostName, s.TLSName, s.Port)
 }
 
 // String returns a string representation of the SeedNode.

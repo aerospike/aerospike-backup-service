@@ -95,7 +95,7 @@ func TestRestorePolicy_Validate_Duplicates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.policy.Validate()
+			err := tt.policy.Validate(ValidationDefault)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.wantErr)
 		})
@@ -120,7 +120,7 @@ func TestAerospikeCluster_Validate_Duplicates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.cluster.Validate()
+			err := tt.cluster.Validate(ValidationDefault)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.wantErr)
 		})

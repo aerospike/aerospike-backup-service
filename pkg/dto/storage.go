@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // Storage represents the configuration for a backup storage details.
@@ -22,8 +24,20 @@ type Storage struct {
 	AzureStorage *AzureStorage `yaml:"azure-storage,omitempty" json:"azure-storage,omitempty"`
 }
 
+func validateObjectStoragePath(path string) error {
+	if path != "" {
+		if !filepath.IsLocal(path) {
+			return fmt.Errorf("storage path must be local: %q", path)
+		}
+		if err := safepath.ValidateClean(path); err != nil {
+			return fmt.Errorf("storage path: %w", err)
+		}
+	}
+	return nil
+}
+
 // Validate checks if the Storage is valid.
-func (s *Storage) Validate(opts ...ValidationOption) error {
+func (s *Storage) Validate(opts ValidationOptions) error {
 	if s == nil {
 		return errors.New("storage is not specified")
 	}
@@ -54,7 +68,7 @@ func (s *Storage) Validate(opts ...ValidationOption) error {
 		return fmt.Errorf("multiple storage types specified (%d). Exactly one storage type should be specified", count)
 	}
 
-	return validStorage.Validate(opts...)
+	return validStorage.Validate(opts)
 }
 
 // ToModel converts the Storage DTO to its corresponding model.
@@ -106,7 +120,7 @@ func NewStorageFromReader(r io.Reader, format decoder.SerializationFormat) (*Sto
 		return nil, err
 	}
 
-	if err := s.Validate(); err != nil {
+	if err := s.Validate(ValidationDefault); err != nil {
 		return nil, err
 	}
 
