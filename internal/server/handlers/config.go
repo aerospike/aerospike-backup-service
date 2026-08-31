@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -61,7 +60,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
-	if err := servertls.ProbeConfig(r.Context(), newConfigModel, s.secretResolver); err != nil {
+	if err := s.tlsProber.ProbeConfig(r.Context(), newConfigModel); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -100,7 +99,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		httpError(w, fmt.Errorf("failed to read configuration: %w", err))
 		return
 	}
-	if err := servertls.ProbeConfig(r.Context(), config, s.secretResolver); err != nil {
+	if err := s.tlsProber.ProbeConfig(r.Context(), config); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}

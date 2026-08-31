@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -50,7 +49,7 @@ func (s *Service) changeBackupConfig(
 	if err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
-	if err := servertls.ProbeConfig(ctx, modelConfig, s.secretResolver); err != nil {
+	if err := s.tlsProber.ProbeConfig(ctx, modelConfig); err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 

@@ -12,7 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -341,6 +340,6 @@ func setupTestService(t *testing.T) *Service {
 		nil,
 		mockManager,
 		nil,
-		secrets.NewResolver(),
+		newMockTLSProber(ctrl),
 	)
 }

@@ -5,10 +5,10 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 )
 
 // Service holds all dependencies required to access business logic from endpoints.
@@ -23,7 +23,7 @@ type Service struct {
 	registry             service.BackupStateRegistry
 	configurationManager configuration.Manager
 	nsValidator          aerospike.NamespaceValidator
-	secretResolver       secrets.Resolver
+	tlsProber            servertls.Prober
 
 	changeConfigLock sync.Mutex
 }
@@ -39,7 +39,7 @@ func NewService(
 	registry service.BackupStateRegistry,
 	configurationManager configuration.Manager,
 	nsValidator aerospike.NamespaceValidator,
-	secretResolver secrets.Resolver,
+	tlsProber servertls.Prober,
 ) *Service {
 	return &Service{
 		sysCtx:               ctx,
@@ -52,6 +52,6 @@ func NewService(
 		registry:             registry,
 		configurationManager: configurationManager,
 		nsValidator:          nsValidator,
-		secretResolver:       secretResolver,
+		tlsProber:            tlsProber,
 	}
 }

@@ -52,10 +52,11 @@ func InitComponents(
 	remote bool,
 ) (*Components, error) {
 	resolver := secrets.NewResolver()
+	tlsProber := servertls.NewProber(resolver)
 	operations := newStorageOperations(resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 
-	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations, resolver)
+	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations, tlsProber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -129,7 +130,7 @@ func InitComponents(
 		registry,
 		configurationManager,
 		nsValidator,
-		resolver,
+		tlsProber,
 	)
 
 	var servers []server.HTTP

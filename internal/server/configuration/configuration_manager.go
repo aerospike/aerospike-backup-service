@@ -16,7 +16,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
@@ -38,7 +37,7 @@ func Load(
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
 	operations storage.Operations,
-	resolver secrets.Resolver,
+	tlsProber servertls.Prober,
 ) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
@@ -53,7 +52,7 @@ func Load(
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read configuration: %w", err)
 	}
-	if err := servertls.ProbeConfig(ctx, config, resolver); err != nil {
+	if err := tlsProber.ProbeConfig(ctx, config); err != nil {
 		return nil, nil, fmt.Errorf("failed to validate TLS configuration: %w", err)
 	}
 

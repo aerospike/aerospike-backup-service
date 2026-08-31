@@ -10,14 +10,33 @@ import (
 	clienttls "github.com/aerospike/aerospike-backup-service/v3/pkg/tlsconfig"
 )
 
-// ProbeConfig loads all configured TLS material without starting listeners or watchers.
-func ProbeConfig(ctx context.Context, config *model.Config, resolver secrets.Resolver) error {
-	if config == nil {
-		return nil
-	}
+// Prober validates TLS material needed by a running service.
+type Prober interface {
+	// ProbeConfig validates HTTPS and Aerospike cluster TLS material in a service config.
+	ProbeConfig(ctx context.Context, config *model.Config) error
+	// ProbeHTTPS validates the key pair and client CA for an enabled HTTPS listener.
+	ProbeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS) error
+	// ProbeCluster validates CA and client certificate material for an Aerospike cluster.
+	ProbeCluster(ctx context.Context, cluster *model.AerospikeCluster, agent *model.SecretAgent) error
+}
 
-	if err := ProbeHTTPS(ctx, config.ServiceConfig.ServerHTTPS, resolver); err != nil {
-		return err
+type prober struct {
+	resolver secrets.Resolver
+}
+
+var _ Prober = (*prober)(nil)
+
+// NewProber returns a TLS material prober.
+func NewProber(resolver secrets.Resolver) Prober {
+	return &prober{resolver: resolver}
+}
+
+// ProbeConfig loads all configured TLS material without starting listeners or watchers.
+func (p *prober) ProbeConfig(ctx context.Context, config *model.Config) error {
+	if config.ServiceConfig.ServerHTTPS != nil {
+		if err := p.ProbeHTTPS(ctx, config.ServiceConfig.ServerHTTPS); err != nil {
+			return err
+		}
 	}
 
 	backupConfig := config.BackupConfigCopy()
@@ -30,10 +49,10 @@ func ProbeConfig(ctx context.Context, config *model.Config, resolver secrets.Res
 	for _, name := range names {
 		cluster := backupConfig.AerospikeClusters[name]
 		var agent *model.SecretAgent
-		if cluster != nil && cluster.Credentials != nil {
+		if cluster.Credentials != nil {
 			agent = cluster.Credentials.SecretAgent
 		}
-		if err := ProbeCluster(ctx, cluster, agent, resolver); err != nil {
+		if err := p.ProbeCluster(ctx, cluster, agent); err != nil {
 			return fmt.Errorf("cluster %q TLS validation failed: %w", name, err)
 		}
 	}
@@ -43,12 +62,12 @@ func ProbeConfig(ctx context.Context, config *model.Config, resolver secrets.Res
 
 // ProbeHTTPS verifies that the configured HTTPS key pair and client CA can be loaded.
 // Disabled listeners are not probed: those files are unused until HTTPS is enabled.
-func ProbeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS, resolver secrets.Resolver) error {
-	if config == nil || config.Disabled || config.CertFile == "" || config.KeyFile == "" {
+func (p *prober) ProbeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS) error {
+	if config.Disabled || config.CertFile == "" || config.KeyFile == "" {
 		return nil
 	}
 
-	if _, err := LoadKeyPair(ctx, config, resolver); err != nil {
+	if _, err := LoadKeyPair(ctx, config, p.resolver); err != nil {
 		return fmt.Errorf("HTTPS TLS validation failed: %w", err)
 	}
 	if _, err := NewTLSConfig(config, nil); err != nil {
@@ -60,19 +79,18 @@ func ProbeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS, resolver s
 
 // ProbeCluster verifies that a cluster's CA and client key pair can be loaded.
 // Secret values are resolved into a copy so the model never retains plaintext.
-func ProbeCluster(
+func (p *prober) ProbeCluster(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
 	agent *model.SecretAgent,
-	resolver secrets.Resolver,
 ) error {
-	if cluster == nil || cluster.TLS == nil {
+	if cluster.TLS == nil {
 		return nil
 	}
 
 	tlsConfig := *cluster.TLS
 	if tlsConfig.KeyfilePassword != "" {
-		password, err := resolver.Resolve(ctx, agent, tlsConfig.KeyfilePassword)
+		password, err := p.resolver.Resolve(ctx, agent, tlsConfig.KeyfilePassword)
 		if err != nil {
 			return fmt.Errorf("failed to resolve key-file-password: %w", err)
 		}

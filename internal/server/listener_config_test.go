@@ -675,7 +675,7 @@ func newListenerHandler(t *testing.T) *handlers.Service {
 		t.Context(),
 		model.NewConfig(),
 		nil, nil, nil, nil, nil, nil, nil, nil,
-		secrets.NewResolver(),
+		servertls.NewProber(secrets.NewResolver()),
 	)
 }
 

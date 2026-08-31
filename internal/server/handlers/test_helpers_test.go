@@ -1,9 +1,18 @@
 package handlers
 
 import (
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"go.uber.org/mock/gomock"
 )
+
+func newMockTLSProber(ctrl *gomock.Controller) *servertls.MockProber {
+	prober := servertls.NewMockProber(ctrl)
+	prober.EXPECT().ProbeConfig(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	prober.EXPECT().ProbeCluster(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	return prober
+}
 
 type validTestBackupEntities struct {
 	policyName  string

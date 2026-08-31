@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -58,8 +57,8 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
-	if err := servertls.ProbeCluster(
-		r.Context(), &restoreRequest.DestinationCluster, restoreRequest.SecretAgent, s.secretResolver,
+	if err := s.tlsProber.ProbeCluster(
+		r.Context(), &restoreRequest.DestinationCluster, restoreRequest.SecretAgent,
 	); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -102,8 +101,8 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
-	if err := servertls.ProbeCluster(
-		r.Context(), &restoreRequest.DestinationCluster, restoreRequest.SecretAgent, s.secretResolver,
+	if err := s.tlsProber.ProbeCluster(
+		r.Context(), &restoreRequest.DestinationCluster, restoreRequest.SecretAgent,
 	); err != nil {
 		httpError(w, errBadRequest(err))
 		return
