@@ -1,14 +1,10 @@
 package dto
 
 import (
-	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 
-	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
@@ -52,7 +48,7 @@ type ServerConfigHTTPS struct {
 }
 
 // Validate validates the HTTPS server configuration.
-func (s *ServerConfigHTTPS) Validate(opts ValidationOptions) error {
+func (s *ServerConfigHTTPS) Validate() error {
 	if s == nil {
 		return nil
 	}
@@ -68,31 +64,8 @@ func (s *ServerConfigHTTPS) Validate(opts ValidationOptions) error {
 		return err
 	}
 
-	if err := s.SecretAgentConfig.validate(opts); err != nil {
+	if err := s.SecretAgentConfig.validate(); err != nil {
 		return err
-	}
-
-	return s.validateTLSConfig(opts)
-}
-
-func (s *ServerConfigHTTPS) validateTLSConfig(opts ValidationOptions) error {
-	if opts.Has(ValidationSkipTLSFiles) {
-		return nil
-	}
-	if s.CertFile == "" || s.KeyFile == "" {
-		return nil
-	}
-	if err := s.KeyFilePassword.Validate(s.hasSecretAgent()); err != nil {
-		return err
-	}
-
-	serverConfig := s.ToModel()
-	if _, err := servertls.LoadKeyPair(context.Background(), serverConfig, secrets.NewResolver()); err != nil {
-		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
-	}
-
-	if _, err := servertls.NewTLSConfig(serverConfig, nil); err != nil {
-		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
 	}
 
 	return nil

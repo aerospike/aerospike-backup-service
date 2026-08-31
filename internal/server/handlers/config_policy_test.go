@@ -340,5 +340,6 @@ func setupTestService(t *testing.T) *Service {
 		nil,
 		mockManager,
 		nil,
+		newMockTLSProber(ctrl),
 	)
 }

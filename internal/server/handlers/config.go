@@ -50,13 +50,17 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
 	decoder.MergeSecrets(newConfig, oldConfig)
 
-	if err := newConfig.Validate(dto.ValidationDefault); err != nil {
+	if err := newConfig.Validate(); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
 
 	newConfigModel, err := newConfig.ToModel()
 	if err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
+	if err := s.tlsProber.Probe(r.Context(), newConfigModel); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -93,6 +97,10 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	config, err := s.configurationManager.Read(r.Context())
 	if err != nil {
 		httpError(w, fmt.Errorf("failed to read configuration: %w", err))
+		return
+	}
+	if err := s.tlsProber.Probe(r.Context(), config); err != nil {
+		httpError(w, errBadRequest(err))
 		return
 	}
 

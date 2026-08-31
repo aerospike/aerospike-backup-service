@@ -45,6 +45,7 @@ func newConfigTestService(t *testing.T) (*Service, *gomock.Controller) {
 		sysCtx:      t.Context(),
 		config:      model.NewConfig(),
 		nsValidator: mockNsValidator,
+		tlsProber:   newMockTLSProber(ctrl),
 	}, ctrl
 }
 

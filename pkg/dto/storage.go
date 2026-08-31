@@ -37,7 +37,7 @@ func validateObjectStoragePath(path string) error {
 }
 
 // Validate checks if the Storage is valid.
-func (s *Storage) Validate(opts ValidationOptions) error {
+func (s *Storage) Validate() error {
 	if s == nil {
 		return errors.New("storage is not specified")
 	}
@@ -68,7 +68,7 @@ func (s *Storage) Validate(opts ValidationOptions) error {
 		return fmt.Errorf("multiple storage types specified (%d). Exactly one storage type should be specified", count)
 	}
 
-	return validStorage.Validate(opts)
+	return validStorage.Validate()
 }
 
 // ToModel converts the Storage DTO to its corresponding model.
@@ -120,7 +120,7 @@ func NewStorageFromReader(r io.Reader, format decoder.SerializationFormat) (*Sto
 		return nil, err
 	}
 
-	if err := s.Validate(ValidationDefault); err != nil {
+	if err := s.Validate(); err != nil {
 		return nil, err
 	}
 

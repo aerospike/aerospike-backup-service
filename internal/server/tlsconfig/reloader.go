@@ -85,7 +85,11 @@ func (r *CertificateReloader) Load(ctx context.Context) error {
 
 	// Disk I/O and Secret Agent stay under this lock so two watchers cannot interleave
 	// half-applied pairs. GetCertificate reads the atomic pointer and is not blocked.
-	certificate, err := LoadKeyPair(ctx, r.config, r.resolver)
+	password, err := r.resolver.Resolve(ctx, r.config.SecretAgent, r.config.KeyFilePassword)
+	if err != nil {
+		return fmt.Errorf("failed to resolve HTTPS key-file-password: %w", err)
+	}
+	certificate, err := loadKeyPair(r.config.CertFile, r.config.KeyFile, password)
 	if err != nil {
 		return err
 	}
@@ -122,18 +126,4 @@ func (r *CertificateReloader) Start(ctx context.Context) {
 	for _, watcher := range r.watchers {
 		watcher.Start(ctx)
 	}
-}
-
-// LoadKeyPair resolves the key-file password and loads the certificate and key from disk.
-func LoadKeyPair(
-	ctx context.Context,
-	config *model.ServerConfigHTTPS,
-	resolver secrets.Resolver,
-) (tls.Certificate, error) {
-	password, err := resolver.Resolve(ctx, config.SecretAgent, config.KeyFilePassword)
-	if err != nil {
-		return tls.Certificate{}, fmt.Errorf("failed to resolve HTTPS key-file-password: %w", err)
-	}
-
-	return loadKeyPair(config.CertFile, config.KeyFile, password)
 }

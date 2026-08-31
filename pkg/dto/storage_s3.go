@@ -47,7 +47,7 @@ type S3Storage struct {
 const s3MinUploadPartSize = 5 * 1024 * 1024 // 5 MiB
 
 // Validate checks if the S3Storage is valid.
-func (s *S3Storage) Validate(opts ValidationOptions) error {
+func (s *S3Storage) Validate() error {
 	if s.Bucket == "" {
 		return errValidationEmptyField("bucket")
 	}
@@ -86,7 +86,7 @@ func (s *S3Storage) Validate(opts ValidationOptions) error {
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-	return s.SecretAgentConfig.validate(opts)
+	return s.SecretAgentConfig.validate()
 }
 
 func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {

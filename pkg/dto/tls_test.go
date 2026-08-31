@@ -250,6 +250,21 @@ func TestTLS_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "unsupported TLS protocol",
+			tls:     &TLS{Protocols: "TLSv1.3"},
+			wantErr: true,
+		},
+		{
+			name:    "unknown cipher suite",
+			tls:     &TLS{CipherSuite: "NOT_A_CIPHER"},
+			wantErr: true,
+		},
+		{
+			name:    "empty cipher suite list",
+			tls:     &TLS{CipherSuite: " : "},
+			wantErr: true,
+		},
+		{
 			name: "complex valid configuration",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
@@ -264,13 +279,13 @@ func TestTLS_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "invalid CA file path",
+			name: "unavailable CA file is structurally valid",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
 					CAFile: "/nonexistent/path/ca.pem",
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "non-clean CA file path",
@@ -283,7 +298,7 @@ func TestTLS_Validate(t *testing.T) {
 			errType: errInvalidPath,
 		},
 		{
-			name: "invalid key file path",
+			name: "unavailable key file is structurally valid",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
 					Name:     "tls-name",
@@ -291,10 +306,10 @@ func TestTLS_Validate(t *testing.T) {
 					Certfile: certs.certFile,
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
-			name: "invalid cert file path",
+			name: "unavailable cert file is structurally valid",
 			tls: &TLS{
 				ClientTLS: ClientTLS{
 					Name:     "tls-name",
@@ -302,7 +317,7 @@ func TestTLS_Validate(t *testing.T) {
 					Certfile: "/nonexistent/path/cert.pem",
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 

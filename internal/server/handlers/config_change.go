@@ -41,12 +41,15 @@ func (s *Service) changeBackupConfig(
 	existingConfig := dto.NewConfigFromModel(s.config)
 	decoder.MergeSecrets(dtoConfig, existingConfig)
 
-	if err := dtoConfig.Validate(dto.ValidationDefault); err != nil {
+	if err := dtoConfig.Validate(); err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
 	modelConfig, err := dtoConfig.ToModel()
 	if err != nil {
+		return fmt.Errorf("failed to update configuration: %w", err)
+	}
+	if err := s.tlsProber.Probe(ctx, modelConfig); err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
