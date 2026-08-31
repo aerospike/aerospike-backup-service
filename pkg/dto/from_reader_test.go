@@ -193,10 +193,10 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 		assert.Equal(t, "America/New_York", routine.ScheduleTimezone)
 	})
 
-	t.Run("configured keyword is canonicalized", func(t *testing.T) {
-		routine := NewRoutineFromModel(newRoutine("UTC", time.UTC), config)
+	t.Run("configured keyword is preserved", func(t *testing.T) {
+		routine := NewRoutineFromModel(newRoutine("utc", time.UTC), config)
 		require.NotNil(t, routine)
-		assert.Equal(t, "UTC", routine.ScheduleTimezone)
+		assert.Equal(t, "utc", routine.ScheduleTimezone)
 	})
 }
 

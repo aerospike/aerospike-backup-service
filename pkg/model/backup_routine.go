@@ -27,8 +27,8 @@ type BackupRoutine struct {
 	// after DTO conversion. Inherited from service.backup.schedule-timezone when
 	// ConfiguredTimezone is empty.
 	Timezone *time.Location
-	// ConfiguredTimezone is this routine's own canonical schedule-timezone.
-	// Empty means the routine inherits the service default
+	// ConfiguredTimezone is this routine's schedule-timezone as configured.
+	// A blank value means the routine inherits the service default.
 	ConfiguredTimezone string
 	// The list of the namespaces to back up (optional, empty list implies backup up whole cluster).
 	Namespaces []string

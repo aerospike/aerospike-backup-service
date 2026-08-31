@@ -170,7 +170,7 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 		require.NoError(t, err)
 		routine := modelConfig.Routines()["routine1"]
 		assert.Equal(t, ny.String(), routine.Timezone.String())
-		assert.Empty(t, routine.ConfiguredTimezone)
+		assert.Equal(t, " \t ", routine.ConfiguredTimezone)
 	})
 
 	t.Run("routine override wins", func(t *testing.T) {
@@ -221,6 +221,12 @@ func TestConfig_ScheduleTimezoneRoundTrip(t *testing.T) {
 			name:             "explicit UTC survives against UTC default",
 			serviceTimezone:  "",
 			routineTimezone:  "UTC",
+			expectedResolved: "UTC",
+		},
+		{
+			name:             "configured keyword casing survives",
+			serviceTimezone:  "local",
+			routineTimezone:  "utc",
 			expectedResolved: "UTC",
 		},
 		{

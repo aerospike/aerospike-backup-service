@@ -9,8 +9,8 @@ type BackupCommonConfig struct {
 	// Timezone is the resolved default timezone for evaluating backup cron
 	// expressions. Not nil after DTO conversion.
 	Timezone *time.Location
-	// ConfiguredTimezone is the canonical service-level schedule-timezone.
-	// Empty means the setting was omitted and UTC is used.
+	// ConfiguredTimezone is the service-level schedule-timezone as configured.
+	// A blank value uses UTC.
 	ConfiguredTimezone string
 }
 

@@ -123,11 +123,11 @@ func TestBackupRoutine_ToModel_BlankTimezoneUsesDefault(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, time.UTC, m.Timezone)
-		assert.Empty(t, m.ConfiguredTimezone)
+		assert.Equal(t, timezone, m.ConfiguredTimezone)
 	}
 }
 
-func TestBackupRoutine_ToModel_CanonicalizesConfiguredTimezone(t *testing.T) {
+func TestBackupRoutine_ToModel_PreservesConfiguredTimezone(t *testing.T) {
 	t.Parallel()
 
 	routineDTO := &BackupRoutine{
@@ -145,7 +145,7 @@ func TestBackupRoutine_ToModel_CanonicalizesConfiguredTimezone(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, time.UTC, m.Timezone)
-	assert.Equal(t, "UTC", m.ConfiguredTimezone)
+	assert.Equal(t, "utc", m.ConfiguredTimezone)
 }
 
 func TestBackupRoutine_ToModel_PolicyNotFound(t *testing.T) {
