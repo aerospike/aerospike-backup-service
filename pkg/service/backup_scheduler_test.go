@@ -49,6 +49,17 @@ func TestScheduleRoutines(t *testing.T) {
 			},
 			expectedCalls: 1, // One call for full backup only
 		},
+		{
+			name: "named timezone still schedules",
+			routines: map[string]*model.BackupRoutine{
+				"ny-routine": {
+					Name:             "ny-routine",
+					IntervalCron:     "0 0 2 * * *",
+					ScheduleTimezone: "America/New_York",
+				},
+			},
+			expectedCalls: 1,
+		},
 	}
 
 	for _, tt := range tests {

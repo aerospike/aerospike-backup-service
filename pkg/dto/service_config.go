@@ -115,3 +115,11 @@ func (c *ServiceConfig) Compare(other ServiceConfig) error {
 
 	return err
 }
+
+func (c *ServiceConfig) scheduleTimezoneOrUTC() string {
+	if c.Backup != nil && c.Backup.ScheduleTimezone != "" {
+		return c.Backup.ScheduleTimezone
+	}
+
+	return model.DefaultScheduleTimezone
+}

@@ -130,3 +130,27 @@ func TestNewConfigFromReader_InvalidYAML(t *testing.T) {
 	_, err := NewConfigFromReader(strings.NewReader("service: [1,2"), decoder.YAML)
 	require.Error(t, err)
 }
+
+func TestConfig_ScheduleTimezoneInheritAndOverride(t *testing.T) {
+	t.Parallel()
+
+	base := validConfig()
+	base.ServiceConfig.Backup = &BackupCommonConfig{ScheduleTimezone: "America/New_York"}
+	base.BackupRoutines["routine1"].ScheduleTimezone = ""
+	base.BackupRoutines["routine2"].ScheduleTimezone = "UTC"
+
+	modelConfig, err := base.ToModel()
+	require.NoError(t, err)
+
+	inherited := modelConfig.Routines()["routine1"]
+	require.Equal(t, "America/New_York", inherited.ScheduleTimezone)
+	require.Equal(t, "America/New_York", inherited.CronLocation().String())
+
+	overridden := modelConfig.Routines()["routine2"]
+	require.Equal(t, "UTC", overridden.ScheduleTimezone)
+	require.Equal(t, "UTC", overridden.CronLocation().String())
+
+	roundTrip := NewConfigFromModel(modelConfig)
+	require.Empty(t, roundTrip.BackupRoutines["routine1"].ScheduleTimezone)
+	require.Equal(t, "UTC", roundTrip.BackupRoutines["routine2"].ScheduleTimezone)
+}

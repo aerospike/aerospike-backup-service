@@ -269,6 +269,7 @@ POST {{baseUrl}}/v1/restore/timestamp`](https://aerospike.github.io/aerospike-ba
 Request is almost identical to [restore by path](#direct-restore-using-a-specific-backup), but instead of
 `backup-data-path`
 should provide a pair `time` and `routine`.
+`time` is epoch milliseconds (an absolute instant); `schedule-timezone` does not change how it is interpreted.
 
 Optional overrides:
 - `destination` / `destination-name` overrides destination cluster from routine.

@@ -3,6 +3,7 @@ package model
 import (
 	"bytes"
 	"encoding/gob"
+	"time"
 )
 
 // BackupRoutine represents a scheduled backup operation routine.
@@ -22,6 +23,9 @@ type BackupRoutine struct {
 	IntervalCron string
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string
+	// ScheduleTimezone is the resolved timezone for evaluating cron expressions
+	// (UTC, Local, or an IANA name). Empty is treated as UTC.
+	ScheduleTimezone string
 	// The list of the namespaces to back up (optional, empty list implies backup up whole cluster).
 	Namespaces []string
 	// The list of backup set names (optional, an empty list implies backing up all sets).
@@ -73,4 +77,19 @@ func (r *BackupRoutine) Copy() *BackupRoutine {
 	}
 
 	return &out
+}
+
+// CronLocation is the timezone used to evaluate this routine's cron expressions.
+// Invalid values fall back to UTC; they are rejected during config conversion.
+func (r *BackupRoutine) CronLocation() *time.Location {
+	if r == nil {
+		return time.UTC
+	}
+
+	loc, err := ParseScheduleTimezone(r.ScheduleTimezone)
+	if err != nil {
+		return time.UTC
+	}
+
+	return loc
 }

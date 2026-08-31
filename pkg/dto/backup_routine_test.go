@@ -65,6 +65,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 		NodeList:         []string{"node1"},
 		FilterExpression: "k1EDpHRlc3Q=",
 		Disabled:         true,
+		ScheduleTimezone: "America/New_York",
 	}
 
 	config := &model.BackupConfig{
@@ -99,6 +100,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 	assert.Equal(t, []string{"node1"}, m.NodeList)
 	assert.Equal(t, "k1EDpHRlc3Q=", m.FilterExpression)
 	assert.True(t, m.Disabled)
+	assert.Equal(t, "America/New_York", m.ScheduleTimezone)
 }
 
 func TestBackupRoutine_ToModel_PolicyNotFound(t *testing.T) {
@@ -560,4 +562,26 @@ func TestValidateFileLimit(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBackupRoutine_Validate_ScheduleTimezone(t *testing.T) {
+	t.Parallel()
+
+	valid := &BackupRoutine{
+		SourceCluster:    "cluster1",
+		Storage:          "storage1",
+		IntervalCron:     "@daily",
+		Namespaces:       &[]string{"ns1"},
+		ScheduleTimezone: "America/New_York",
+	}
+	require.NoError(t, valid.Validate())
+
+	invalid := &BackupRoutine{
+		SourceCluster:    "cluster1",
+		Storage:          "storage1",
+		IntervalCron:     "@daily",
+		Namespaces:       &[]string{"ns1"},
+		ScheduleTimezone: "EST",
+	}
+	require.ErrorContains(t, invalid.Validate(), "EST")
 }

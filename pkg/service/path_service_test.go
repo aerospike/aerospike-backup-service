@@ -78,3 +78,18 @@ func TestExtractBackupDirFromKey(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatTimestampSuffixIsUTC(t *testing.T) {
+	format := model.TimestampFormatEU
+	pathService := NewPathService(&format)
+	utcTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	offsetTime := utcTime.In(time.FixedZone("UTC-5", -5*3600))
+
+	got := pathService.GetTimestampPath("routine", offsetTime, model.BackupTypeFull)
+	utcSuffix := utcTime.Format(model.TimestampFormatPresets[format])
+	localSuffix := offsetTime.Format(model.TimestampFormatPresets[format])
+
+	assert.Contains(t, got, utcSuffix)
+	assert.NotEqual(t, utcSuffix, localSuffix)
+	assert.NotContains(t, got, localSuffix)
+}

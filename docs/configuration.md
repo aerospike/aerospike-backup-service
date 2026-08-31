@@ -28,6 +28,35 @@ Quartz uses either:
 * Shorthand expressions for common schedules:
   `@hourly`, `@daily`, `@weekly`, `@monthly`, `@yearly`
 
+Cron expressions are evaluated in **UTC** unless you set `schedule-timezone`.
+Accepted values:
+
+* omitted or `UTC` — Coordinated Universal Time (the default; existing configs are unchanged)
+* `Local` — the timezone of the host running the service (`TZ` or `/etc/localtime`)
+* an IANA name such as `America/New_York` — useful in containers, which typically run in UTC
+
+`UTC` and `Local` are case-insensitive; IANA names are case-sensitive. Abbreviations such as
+`EST` and POSIX `TZ` strings are rejected at startup.
+
+Set a service-wide default under `service.backup` (requires a restart) or override it on a
+routine (can be changed through the routine API):
+
+```yaml
+service:
+  backup:
+    schedule-timezone: America/New_York
+
+backup-routines:
+  nightly:
+    interval-cron: "0 0 2 * * ?"   # 02:00 in America/New_York
+    schedule-timezone: UTC         # optional per-routine override
+```
+
+Backup folder names and the optional `timestamp-format` suffix stay UTC regardless of
+`schedule-timezone`. Daylight saving applies to `Local` and IANA zones: a daily 02:30
+schedule does not fire on the spring-forward day when 02:30 does not exist locally, and
+may fire twice on the fall-back day. Use UTC when a schedule must run exactly once per day.
+
 **📆 Quartz Cron Expression Examples for Backup Scheduling**
 
 | Schedule Description                | Cron Expression       | Use Case                                                             |
@@ -252,6 +281,13 @@ For more complex logic (metadata filters, list/map operations, geo filters, etc.
 [Aerospike Expressions documentation](https://aerospike.com/docs/develop/expressions/).
 
 ## FAQ
+
+### What timezone do backup schedules use?
+
+Backup cron expressions are evaluated in UTC by default. Set `schedule-timezone` to `UTC`,
+`Local`, or an IANA name such as `America/New_York` on `service.backup` (service-wide default;
+requires a restart) or on a routine (overrides the default). Backup paths and the
+`timestamp-format` suffix remain UTC for every timezone setting.
 
 ### What happens when a backup doesn't finish before another starts (for the same routine)?
 

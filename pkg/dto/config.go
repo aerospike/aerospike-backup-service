@@ -199,6 +199,8 @@ func (c *Config) ToModel() (*model.Config, error) {
 			return nil, fmt.Errorf("invalid backup routine %q: %w", k, err)
 		}
 
+		inheritScheduleTimezone(toModel, c.ServiceConfig.scheduleTimezoneOrUTC())
+
 		if err := modelConfig.AddRoutine(toModel); err != nil {
 			return nil, err
 		}
@@ -215,4 +217,10 @@ func (c *Config) backupPolicyHasSecretAgent(policyName string) bool {
 	}
 
 	return false
+}
+
+func inheritScheduleTimezone(routine *model.BackupRoutine, defaultTimezone string) {
+	if routine.ScheduleTimezone == "" {
+		routine.ScheduleTimezone = defaultTimezone
+	}
 }

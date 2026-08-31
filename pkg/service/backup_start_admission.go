@@ -152,6 +152,6 @@ func (a *startController) buildStartFacts(routine *model.BackupRoutine, now time
 		IncrementalRunningNow: incrRunning,
 		// History still comes from registry.
 		HasCompletedFull: !state.LastRunTime.NoFullBackup(),
-		FullScheduledNow: timeutil.IsCronFireTime(routine.IntervalCron, now),
+		FullScheduledNow: timeutil.IsCronFireTime(routine.IntervalCron, now, routine.CronLocation()),
 	}
 }

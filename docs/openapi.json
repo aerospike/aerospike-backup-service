@@ -2089,6 +2089,12 @@
                 "description": "BackupCommonConfig represents service-level backup settings.",
                 "type": "object",
                 "properties": {
+                    "schedule-timezone": {
+                        "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nAbbreviations such as EST and POSIX TZ strings are not accepted.\nChanging this service-level default requires a restart.",
+                        "type": "string",
+                        "example": "America/New_York",
+                        "nullable": true
+                    },
                     "timestamp-format": {
                         "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
                         "type": "string",
@@ -2394,6 +2400,12 @@
                         "items": {
                             "type": "integer"
                         },
+                        "nullable": true
+                    },
+                    "schedule-timezone": {
+                        "description": "Timezone for evaluating this routine's cron expressions (optional).\nAccepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.\nWhen omitted, the routine inherits service.backup.schedule-timezone.\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.",
+                        "type": "string",
+                        "example": "America/New_York",
                         "nullable": true
                     },
                     "secret-agent": {

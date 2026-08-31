@@ -15,6 +15,12 @@ type BackupCommonConfig struct {
 	// * EU (e.g. 02-Jan-2006-15-04-05)
 	// * US (e.g. Jan-02-2006-15-04-05)
 	TimestampFormat TimestampFormat `yaml:"timestamp-format,omitempty" json:"timestamp-format,omitempty" extensions:"x-nullable"` //nolint:lll
+	// Timezone for evaluating backup cron expressions (optional).
+	// Accepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.
+	// Keywords UTC and Local are case-insensitive; IANA names are case-sensitive.
+	// Abbreviations such as EST and POSIX TZ strings are not accepted.
+	// Changing this service-level default requires a restart.
+	ScheduleTimezone string `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"` //nolint:lll
 }
 
 // Validate validates the backup subsection configuration.
@@ -23,7 +29,15 @@ func (b *BackupCommonConfig) Validate() error {
 		return nil
 	}
 
-	return b.TimestampFormat.Validate()
+	if err := b.TimestampFormat.Validate(); err != nil {
+		return err
+	}
+
+	if _, err := model.ParseScheduleTimezone(b.ScheduleTimezone); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
@@ -31,11 +45,15 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 		return nil
 	}
 
-	return &model.BackupCommonConfig{TimestampFormat: b.TimestampFormat.ToModel()}
+	return &model.BackupCommonConfig{
+		TimestampFormat:  b.TimestampFormat.ToModel(),
+		ScheduleTimezone: b.ScheduleTimezone,
+	}
 }
 
 func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
 	b.TimestampFormat = NewTimestampFormatFromModel(m.TimestampFormat)
+	b.ScheduleTimezone = m.ScheduleTimezone
 }
 
 // Compare compares two BackupCommonConfig instances and returns detailed errors.
@@ -49,5 +67,8 @@ func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
 	if other == nil {
 		return errors.New("backup removed")
 	}
-	return compareValues("TimestampFormat", b.TimestampFormat, other.TimestampFormat)
+	return errors.Join(
+		compareValues("TimestampFormat", b.TimestampFormat, other.TimestampFormat),
+		compareValues("ScheduleTimezone", b.ScheduleTimezone, other.ScheduleTimezone),
+	)
 }

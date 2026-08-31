@@ -58,6 +58,51 @@ func TestBackupServiceConfig_Validate_ValidTimestampFormats(t *testing.T) {
 	}
 }
 
+func TestBackupServiceConfig_Validate_ScheduleTimezone(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		value   string
+		wantErr string
+	}{
+		{name: "omitted", value: ""},
+		{name: "utc", value: "UTC"},
+		{name: "local", value: "local"},
+		{name: "iana", value: "America/New_York"},
+		{name: "EST rejected", value: "EST", wantErr: "EST"},
+		{name: "unknown name", value: "Not/AZone", wantErr: "Not/AZone"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := &ServiceConfig{
+				Backup: &BackupCommonConfig{ScheduleTimezone: tt.value},
+			}
+			err := cfg.Validate(ValidationDefault)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestBackupCommonConfig_Compare_ScheduleTimezone(t *testing.T) {
+	t.Parallel()
+
+	current := &BackupCommonConfig{ScheduleTimezone: "UTC"}
+	other := &BackupCommonConfig{ScheduleTimezone: "America/New_York"}
+
+	err := current.Compare(other)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "ScheduleTimezone changed")
+}
+
 func TestBackupServiceConfig_Validate_CaseInsensitiveEnums(t *testing.T) {
 	cfg := &ServiceConfig{
 		Logger: &LoggerConfig{Level: "info", Format: "json"},

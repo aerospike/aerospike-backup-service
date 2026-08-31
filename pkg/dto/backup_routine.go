@@ -34,6 +34,11 @@ type BackupRoutine struct {
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron" example:"0 0 * * * *" validate:"required"`
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string `yaml:"incr-interval-cron,omitempty" json:"incr-interval-cron,omitempty" example:"*/10 * * * * *" extensions:"x-nullable"`
+	// Timezone for evaluating this routine's cron expressions (optional).
+	// Accepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.
+	// When omitted, the routine inherits service.backup.schedule-timezone.
+	// Keywords UTC and Local are case-insensitive; IANA names are case-sensitive.
+	ScheduleTimezone string `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"`
 	// The list of namespaces to back up.
 	// If empty, the entire cluster is backed up.
 	// The order of namespaces does not determine the backup execution or completion order.
@@ -106,6 +111,9 @@ func (r *BackupRoutine) Validate() error {
 		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
+	}
+	if _, err := model.ParseScheduleTimezone(r.ScheduleTimezone); err != nil {
+		return err
 	}
 	for i, rack := range r.RackList {
 		if rack < 0 {
@@ -282,12 +290,9 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		return nil, err
 	}
 
-	var secretAgent *model.SecretAgent
-	if r.SecretAgent != "" {
-		secretAgent, found = config.SecretAgents[r.SecretAgent]
-		if !found {
-			return nil, errValidationNotFound("secret agent", r.SecretAgent)
-		}
+	secretAgent, err := resolveRoutineSecretAgent(r.SecretAgent, config.SecretAgents)
+	if err != nil {
+		return nil, err
 	}
 
 	return &model.BackupRoutine{
@@ -298,6 +303,7 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		SecretAgent:      secretAgent,
 		IntervalCron:     r.IntervalCron,
 		IncrIntervalCron: r.IncrIntervalCron,
+		ScheduleTimezone: r.ScheduleTimezone,
 		Namespaces:       *r.Namespaces,
 		SetList:          r.SetList,
 		BinList:          r.BinList,
@@ -338,6 +344,19 @@ func validateFileLimit(policy *model.BackupPolicy, storage model.Storage) error 
 	return nil
 }
 
+func resolveRoutineSecretAgent(name string, agents map[string]*model.SecretAgent) (*model.SecretAgent, error) {
+	if name == "" {
+		return nil, nil
+	}
+
+	agent, found := agents[name]
+	if !found {
+		return nil, errValidationNotFound("secret agent", name)
+	}
+
+	return agent, nil
+}
+
 func resolveBackupPolicy(name string, policies map[string]*model.BackupPolicy) (*model.BackupPolicy, error) {
 	if name == "" {
 		return &model.BackupPolicy{}, nil
@@ -371,11 +390,11 @@ func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRo
 	}
 
 	b := &BackupRoutine{}
-	b.fromModel(m, config.BackupConfigCopy())
+	b.fromModel(m, config.BackupConfigCopy(), config.ServiceConfig.GetBackupCommonOrDefault().ScheduleTimezone)
 	return b
 }
 
-func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupConfig) {
+func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupConfig, serviceScheduleTimezone string) {
 	r.BackupPolicy = findKeyByValue(config.BackupPolicies, m.BackupPolicy)
 	r.SourceCluster = findKeyByValue(config.AerospikeClusters, m.SourceCluster)
 	r.Storage = findStorageKey(config.Storage, m.Storage)
@@ -384,6 +403,9 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	}
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
+	if !model.ScheduleTimezonesEqual(m.ScheduleTimezone, serviceScheduleTimezone) {
+		r.ScheduleTimezone = m.ScheduleTimezone
+	}
 	r.Namespaces = &m.Namespaces
 	r.SetList = m.SetList
 	r.BinList = m.BinList

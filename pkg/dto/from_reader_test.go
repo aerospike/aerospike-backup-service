@@ -96,13 +96,18 @@ func TestNewBackupDetailsFromModel(t *testing.T) {
 func TestBackupCommonConfig_fromModel(t *testing.T) {
 	format := model.TimestampFormatISO
 	var dtoConfig BackupCommonConfig
-	dtoConfig.fromModel(&model.BackupCommonConfig{TimestampFormat: &format})
+	dtoConfig.fromModel(&model.BackupCommonConfig{
+		TimestampFormat:  &format,
+		ScheduleTimezone: "America/New_York",
+	})
 
 	assert.Equal(t, TimestampFormatISO, dtoConfig.TimestampFormat)
+	assert.Equal(t, "America/New_York", dtoConfig.ScheduleTimezone)
 
 	roundTrip := dtoConfig.ToModel()
 	require.NotNil(t, roundTrip.TimestampFormat)
 	assert.Equal(t, model.TimestampFormatISO, *roundTrip.TimestampFormat)
+	assert.Equal(t, "America/New_York", roundTrip.ScheduleTimezone)
 }
 
 func TestNewRoutineFromModel(t *testing.T) {
@@ -133,6 +138,40 @@ func TestNewRoutineFromModel(t *testing.T) {
 	require.NotNil(t, routine.Namespaces)
 	assert.Equal(t, []string{"ns1"}, *routine.Namespaces)
 	assert.True(t, routine.Disabled)
+}
+
+func TestNewRoutineFromModel_OmitsInheritedScheduleTimezone(t *testing.T) {
+	policy := &model.BackupPolicy{}
+	cluster := &model.AerospikeCluster{}
+	storage := &model.LocalStorage{Path: "/tmp"}
+
+	config := model.NewConfig()
+	config.ServiceConfig.Backup = &model.BackupCommonConfig{ScheduleTimezone: "America/New_York"}
+	require.NoError(t, config.AddPolicy("policy1", policy))
+	require.NoError(t, config.AddCluster("cluster1", cluster))
+	require.NoError(t, config.AddStorage("storage1", storage))
+
+	inherited := NewRoutineFromModel(&model.BackupRoutine{
+		BackupPolicy:     policy,
+		SourceCluster:    cluster,
+		Storage:          storage,
+		IntervalCron:     "@hourly",
+		Namespaces:       []string{"ns1"},
+		ScheduleTimezone: "America/New_York",
+	}, config)
+	require.NotNil(t, inherited)
+	assert.Empty(t, inherited.ScheduleTimezone)
+
+	overridden := NewRoutineFromModel(&model.BackupRoutine{
+		BackupPolicy:     policy,
+		SourceCluster:    cluster,
+		Storage:          storage,
+		IntervalCron:     "@hourly",
+		Namespaces:       []string{"ns1"},
+		ScheduleTimezone: "UTC",
+	}, config)
+	require.NotNil(t, overridden)
+	assert.Equal(t, "UTC", overridden.ScheduleTimezone)
 }
 
 func TestNewClusterFromReader_InvalidYAML(t *testing.T) {

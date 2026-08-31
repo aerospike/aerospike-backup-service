@@ -58,6 +58,9 @@ backupServiceConfig: {}
 #       maxage: <max-days-retain-logs> # Optional default: 0
 #       maxbackups: <backup-logfiles> # Optional default: 0
 #       compress: <true/false> # Optional default: false
+#   backup:
+#     timestamp-format: <ISO|EU|US> # Optional. Human-readable UTC timestamp suffix in backup paths
+#     schedule-timezone: <UTC|Local|IANA> # Optional timezone for cron evaluation. Default: UTC. Changing this requires a restart.
 #
 # aerospike-clusters:
 #   <cluster-name>: # At least one service is required
@@ -194,6 +197,7 @@ backupServiceConfig: {}
 #     secret-agent: <secret-agent> # Optional Secret Agent configuration for the routine
 #     interval-cron: <interval-cron> # Mandatory interval for full backup as a cron expression string
 #     incr-interval-cron: <incr-interval-cron> # Optional interval for incremental backup as a cron expression string
+#     schedule-timezone: <UTC|Local|IANA> # Optional. Overrides service.backup.schedule-timezone for this routine. Default: inherit.
 #     namespaces: [ <namespace-name> ] # Mandatory list of the namespaces to back up default: empty list
 #     set-list: [ <set-names> ] # Optional list of backup set names default: empty list
 #     bin-list: [ <bin-names> ] # Optional list of backup bin names default: empty list
