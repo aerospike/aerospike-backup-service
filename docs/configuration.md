@@ -55,7 +55,8 @@ backup-routines:
 Backup folder names and the optional `timestamp-format` suffix stay UTC regardless of
 `schedule-timezone`. Daylight saving applies to `Local` and IANA zones: a daily 02:30
 schedule does not fire on the spring-forward day when 02:30 does not exist locally, and
-may fire twice on the fall-back day. Use UTC when a schedule must run exactly once per day.
+daily schedules in the repeated fall-back hour fire once. Use UTC to avoid DST-driven
+variations in the elapsed time between runs.
 
 **📆 Quartz Cron Expression Examples for Backup Scheduling**
 

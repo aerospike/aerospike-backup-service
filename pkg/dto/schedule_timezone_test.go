@@ -86,3 +86,12 @@ func TestParseScheduleTimezone(t *testing.T) {
 		})
 	}
 }
+
+func TestParseScheduleTimezoneErrorUsesDocumentedNames(t *testing.T) {
+	t.Parallel()
+
+	_, err := parseTimezone("EST")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "use UTC, Local")
+}

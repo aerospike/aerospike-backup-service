@@ -8,8 +8,10 @@ import (
 )
 
 const (
-	scheduleTimezoneUTC   = "utc"
-	scheduleTimezoneLocal = "local"
+	scheduleTimezoneUTC       = "utc"
+	scheduleTimezoneLocal     = "local"
+	scheduleTimezoneUTCName   = "UTC"
+	scheduleTimezoneLocalName = "Local"
 )
 
 // parseTimezone turns a schedule-timezone config string into a location.
@@ -28,8 +30,8 @@ func parseTimezone(s string) (*time.Location, error) {
 			return nil, fmt.Errorf(
 				"invalid schedule-timezone %q: use %s, %s, or an IANA name such as America/New_York",
 				s,
-				scheduleTimezoneUTC,
-				scheduleTimezoneLocal,
+				scheduleTimezoneUTCName,
+				scheduleTimezoneLocalName,
 			)
 		}
 
