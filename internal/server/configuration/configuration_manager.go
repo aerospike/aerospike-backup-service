@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -36,6 +37,7 @@ func Load(
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
 	operations storage.Operations,
+	tlsProber servertls.Prober,
 ) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
@@ -49,6 +51,9 @@ func Load(
 	config, err := manager.Read(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read configuration: %w", err)
+	}
+	if err := tlsProber.Probe(ctx, config); err != nil {
+		return nil, nil, fmt.Errorf("failed to validate TLS configuration: %w", err)
 	}
 
 	return config, manager, nil
@@ -69,7 +74,7 @@ func readConfig(
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 
-	if err := config.Validate(dto.ValidationDefault); err != nil {
+	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("failed to validate configuration: %w", err)
 	}
 
@@ -127,7 +132,7 @@ func readStorage(ctx context.Context, configURI string) (model.Storage, error) {
 		return nil, fmt.Errorf("failed to unmarshal storage configuration: %w", err)
 	}
 
-	if err = configStorage.Validate(dto.ValidationDefault); err != nil {
+	if err = configStorage.Validate(); err != nil {
 		return nil, fmt.Errorf("validate storage configuration error: %w", err)
 	}
 

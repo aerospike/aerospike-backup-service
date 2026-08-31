@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -22,6 +23,7 @@ type Service struct {
 	registry             service.BackupStateRegistry
 	configurationManager configuration.Manager
 	nsValidator          aerospike.NamespaceValidator
+	tlsProber            servertls.Prober
 
 	changeConfigLock sync.Mutex
 }
@@ -37,6 +39,7 @@ func NewService(
 	registry service.BackupStateRegistry,
 	configurationManager configuration.Manager,
 	nsValidator aerospike.NamespaceValidator,
+	tlsProber servertls.Prober,
 ) *Service {
 	return &Service{
 		sysCtx:               ctx,
@@ -49,5 +52,6 @@ func NewService(
 		registry:             registry,
 		configurationManager: configurationManager,
 		nsValidator:          nsValidator,
+		tlsProber:            tlsProber,
 	}
 }

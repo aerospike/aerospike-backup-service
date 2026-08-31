@@ -1,12 +1,22 @@
 package dto
 
 import (
-	"fmt"
+	"crypto/tls"
+	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
+
+const clusterTLSProtocol12 = "TLSv1.2"
+
+var clusterCipherSuites = func() map[string]bool {
+	result := make(map[string]bool)
+	for _, suite := range append(tls.CipherSuites(), tls.InsecureCipherSuites()...) {
+		result[suite.Name] = true
+	}
+	return result
+}()
 
 // TLS represents the Aerospike cluster TLS configuration options.
 // @Description TLS represents the Aerospike cluster TLS configuration options.
@@ -39,7 +49,7 @@ func (t *TLS) Validate(opts ValidationOptions) error {
 		return nil // TLS is optional
 	}
 
-	if err := t.ClientTLS.Validate(opts); err != nil {
+	if err := t.ClientTLS.Validate(); err != nil {
 		return err
 	}
 
@@ -55,7 +65,7 @@ func (t *TLS) Validate(opts ValidationOptions) error {
 		return err
 	}
 
-	return t.validateTLSConfig(opts)
+	return t.validateTLSFields()
 }
 
 func (t *TLS) validatePaths() error {
@@ -89,14 +99,29 @@ func (t *TLS) validateKeyfilePassword(opts ValidationOptions) error {
 	return nil
 }
 
-// validateTLSConfig attempts to create a TLS config to catch low-level issues.
-func (t *TLS) validateTLSConfig(opts ValidationOptions) error {
-	if opts.Has(ValidationSkipTLSFiles) {
-		return nil
+func (t *TLS) validateTLSFields() error {
+	for protocol := range strings.FieldsSeq(t.Protocols) {
+		if protocol != clusterTLSProtocol12 {
+			return errValidationInvalidValue("protocols", protocol, []string{clusterTLSProtocol12})
+		}
 	}
 
-	if _, err := tlsconfig.NewTLSConfig(t.toModel()); err != nil {
-		return fmt.Errorf("tls %w: %w", errValidation, err)
+	if t.CipherSuite == "" {
+		return nil
+	}
+	found := false
+	for suite := range strings.SplitSeq(t.CipherSuite, ":") {
+		suite = strings.TrimSpace(suite)
+		if suite == "" {
+			continue
+		}
+		found = true
+		if !clusterCipherSuites[suite] {
+			return errValidationInvalidValue("cipher-suite", suite, "known Go TLS cipher suites")
+		}
+	}
+	if !found {
+		return errValidationInvalidValue("cipher-suite", t.CipherSuite, "known Go TLS cipher suites")
 	}
 
 	return nil

@@ -40,7 +40,7 @@ type AerospikeCluster struct {
 }
 
 // Validate validates the Aerospike cluster entity.
-func (a *AerospikeCluster) Validate(opts ValidationOptions) error {
+func (a *AerospikeCluster) Validate() error {
 	if a == nil {
 		return errors.New("cluster is not specified")
 	}
@@ -51,9 +51,9 @@ func (a *AerospikeCluster) Validate(opts ValidationOptions) error {
 		return errValidationDuplicate("seed-nodes", duplicates)
 	}
 
-	nodeOpts := opts
+	nodeOpts := ValidationDefault
 	if a.TLS != nil {
-		nodeOpts = opts.With(ValidationWithTLS)
+		nodeOpts = ValidationWithTLS
 	}
 
 	for _, node := range a.SeedNodes {
@@ -65,13 +65,13 @@ func (a *AerospikeCluster) Validate(opts ValidationOptions) error {
 		return err
 	}
 
-	if err := a.Credentials.Validate(opts); err != nil {
+	if err := a.Credentials.Validate(); err != nil {
 		return fmt.Errorf("credentials validation error: %w", err)
 	}
 
-	tlsOpts := opts
+	tlsOpts := ValidationDefault
 	if a.Credentials != nil && a.Credentials.hasSecretAgent() {
-		tlsOpts = opts.With(ValidationWithSecretAgent)
+		tlsOpts = ValidationWithSecretAgent
 	}
 
 	if err := a.TLS.Validate(tlsOpts); err != nil {
@@ -128,7 +128,7 @@ func NewClusterFromReader(r io.Reader, format decoder.SerializationFormat) (*Aer
 		return nil, err
 	}
 
-	if err := a.Validate(ValidationDefault); err != nil {
+	if err := a.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -219,7 +219,7 @@ func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig
 }
 
 // Validate validates the credentials configuration.
-func (c *Credentials) Validate(opts ValidationOptions) error {
+func (c *Credentials) Validate() error {
 	if c == nil {
 		return nil
 	}
@@ -248,7 +248,7 @@ func (c *Credentials) Validate(opts ValidationOptions) error {
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-	return c.SecretAgentConfig.validate(opts)
+	return c.SecretAgentConfig.validate()
 }
 
 func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) {

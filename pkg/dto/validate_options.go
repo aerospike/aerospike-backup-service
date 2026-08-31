@@ -9,13 +9,9 @@ const (
 )
 
 const (
-	// ValidationSkipTLSFiles skips filesystem existence checks for TLS certificate and key paths.
-	// Used by pkg/validation for offline validation where TLS files are not on disk.
-	ValidationSkipTLSFiles ValidationOptions = 1 << iota
-
 	// ValidationAllowEmpty permits optional override fields to be omitted.
 	// Used by RestoreTimestampRequest via DestinationClusterConfig and StorageConfig.
-	ValidationAllowEmpty
+	ValidationAllowEmpty ValidationOptions = 1 << iota
 
 	// ValidationWithSecretAgent enables secret-agent reference validation for secret fields on DTOs
 	// that do not embed SecretAgentConfig (for example EncryptionPolicy and TLS).
@@ -29,9 +25,4 @@ const (
 // Has reports whether all bits in flags are set in o.
 func (o ValidationOptions) Has(flags ValidationOptions) bool {
 	return o&flags == flags
-}
-
-// With returns o with flags set.
-func (o ValidationOptions) With(flags ValidationOptions) ValidationOptions {
-	return o | flags
 }
