@@ -13,9 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/middleware"
-	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -52,23 +50,19 @@ func NewServerHTTP(ctx context.Context, serverConfig *model.ServerConfigHTTP, se
 }
 
 // NewServerHTTPS returns a new instance of an HTTPS server.
+// The TLS configuration is built by the caller.
 func NewServerHTTPS(
 	ctx context.Context,
 	serverConfig *model.ServerConfigHTTPS,
 	service *handlers.Service,
-	resolver secrets.Resolver,
-) (HTTP, error) {
-	tlsConfig, err := servertls.NewTLSConfig(ctx, serverConfig, resolver)
-	if err != nil {
-		return nil, err
-	}
-
+	tlsConfig *tls.Config,
+) HTTP {
 	return newServerHTTP(ctx,
 		&serverConfig.ListenerConfig,
 		fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault()),
 		service,
 		tlsConfig,
-	), nil
+	)
 }
 
 func newServerHTTP(
@@ -127,8 +121,9 @@ func (s *serverHTTP) Start() error {
 		return s.wrapStartError("HTTP", s.startHTTP())
 	}
 
-	// The key pair is already loaded into TLSConfig, so no certificate files are
-	// passed here. Serving through net/http also negotiates HTTP/2.
+	// Empty paths: the pair comes from TLSConfig.GetCertificate on each handshake.
+	// Passing cert/key files here would pin a static pair and ignore rotation.
+	// Serving through net/http also negotiates HTTP/2.
 	err := s.ListenAndServeTLS("", "")
 	if errors.Is(err, http.ErrServerClosed) {
 		slog.Info("HTTPS server closed", attr.Error(err))

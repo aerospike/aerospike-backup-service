@@ -21,6 +21,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -500,16 +501,17 @@ func TestHTTPSRequireAndVerifyRejectsUntrustedClientCertificate(t *testing.T) {
 	require.NoError(t, <-errCh)
 }
 
-func TestNewServerHTTPSReturnsTLSConfigError(t *testing.T) {
-	_, err := server.NewServerHTTPS(
-		t.Context(),
+func TestCertificateReloaderLoadReturnsErrorForMissingKeyPair(t *testing.T) {
+	reloader := servertls.NewCertificateReloader(
 		&model.ServerConfigHTTPS{
 			CertFile: filepath.Join(t.TempDir(), "missing.pem"),
 			KeyFile:  filepath.Join(t.TempDir(), "missing-key.pem"),
 		},
-		newListenerHandler(t),
 		secrets.NewResolver(),
+		servertls.DefaultWatchInterval,
 	)
+
+	err := reloader.Load(t.Context())
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed to load HTTPS certificate and key")
 }
@@ -546,18 +548,19 @@ func TestHTTPSStartFailsWhenPortIsOccupied(t *testing.T) {
 	occupied := occupyPort(t)
 	httpsPort := occupied.Addr().(*net.TCPAddr).Port
 
-	srv, err := server.NewServerHTTPS(
-		t.Context(),
-		&model.ServerConfigHTTPS{
-			ListenerConfig: model.ListenerConfig{Address: "127.0.0.1"},
-			Port:           ptr.Of(model.Port(httpsPort)),
-			CertFile:       certs.serverCertFile,
-			KeyFile:        certs.serverKeyFile,
-		},
-		newListenerHandler(t),
-		secrets.NewResolver(),
-	)
+	serverConfig := &model.ServerConfigHTTPS{
+		ListenerConfig: model.ListenerConfig{Address: "127.0.0.1"},
+		Port:           ptr.Of(model.Port(httpsPort)),
+		CertFile:       certs.serverCertFile,
+		KeyFile:        certs.serverKeyFile,
+	}
+	reloader := servertls.NewCertificateReloader(serverConfig, secrets.NewResolver(), servertls.DefaultWatchInterval)
+	require.NoError(t, reloader.Load(t.Context()))
+
+	tlsConfig, err := servertls.NewTLSConfig(serverConfig, reloader.GetCertificate)
 	require.NoError(t, err)
+
+	srv := server.NewServerHTTPS(t.Context(), serverConfig, newListenerHandler(t), tlsConfig)
 
 	err = srv.Start()
 	require.Error(t, err)
@@ -585,6 +588,8 @@ func initListenerComponents(t *testing.T, cfg dto.Config) *app.Components {
 
 func startListeners(t *testing.T, ctx context.Context, components *app.Components) <-chan error {
 	t.Helper()
+
+	components.CertReloader.Start(ctx)
 
 	listeners := components.Servers
 	errCh := make(chan error, 1)

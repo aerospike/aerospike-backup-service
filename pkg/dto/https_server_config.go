@@ -32,8 +32,10 @@ type ServerConfigHTTPS struct {
 	// The port to listen on.
 	Port *Port `yaml:"port,omitempty" json:"port,omitempty" default:"8443" example:"8443"`
 	// Path to the HTTPS server certificate in PEM format.
+	// Rewriting this file at the same path reloads the served key pair without a restart; changing the path requires a restart.
 	CertFile string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/server.pem" extensions:"x-nullable"`
 	// Path to the HTTPS server private key in PEM format.
+	// Rewriting this file at the same path reloads the served key pair without a restart; changing the path requires a restart.
 	KeyFile string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/server-key.pem" extensions:"x-nullable"`
 	// Passphrase for an encrypted HTTPS server private key.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
@@ -84,7 +86,12 @@ func (s *ServerConfigHTTPS) validateTLSConfig(opts ValidationOptions) error {
 		return err
 	}
 
-	if _, err := servertls.NewTLSConfig(context.Background(), s.ToModel(), secrets.NewResolver()); err != nil {
+	serverConfig := s.ToModel()
+	if _, err := servertls.LoadKeyPair(context.Background(), serverConfig, secrets.NewResolver()); err != nil {
+		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
+	}
+
+	if _, err := servertls.NewTLSConfig(serverConfig, nil); err != nil {
 		return fmt.Errorf("HTTPS TLS %w: %w", errValidation, err)
 	}
 

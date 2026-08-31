@@ -71,6 +71,7 @@ func startService(configFile string, remote bool) error {
 
 	components.Scheduler.Start(ctx)
 	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
+	components.CertReloader.Start(ctx)
 
 	err = server.Run(ctx, components.Servers)
 

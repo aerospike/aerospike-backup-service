@@ -23,8 +23,9 @@ This release redacts secret fields in configuration API responses and changes ho
   HTTPS listener (default port 8443) with TLS fields (`cert-file`, `key-file`, `min-version`, `cipher-suites`,
   `client-ca-file`, `client-auth`). Omitting `https` keeps today's plaintext HTTP-only behavior. Both
   [`service.http`](readme/dto/dto.serverconfighttp.md) and `service.https` use `disabled` (default `false`). At least
-  one listener must remain enabled; if both are enabled, their ports must differ. This release validates the config
-  and provides a server-safe TLS builder; wiring the HTTPS listener into process startup is a follow-up.
+  one listener must remain enabled; if both are enabled, their ports must differ. Rewriting `cert-file` and
+  `key-file` at the same paths reloads the served HTTPS key pair without a restart; see
+  [Credential Rotation](security.md#credential-rotation). `client-ca-file` is not reloaded at runtime.
 - **HTTP server timeouts** — The HTTP server now bounds `ReadTimeout`, `WriteTimeout`, and `IdleTimeout` in addition
   to the existing `timeout` (`ReadHeaderTimeout`). Defaults are 30s / 60s / 120s respectively. Configure them under
   [`service.http`](readme/dto/dto.serverconfighttp.md) as `read-timeout`, `write-timeout`, and `idle-timeout`

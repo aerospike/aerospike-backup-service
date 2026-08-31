@@ -61,6 +61,7 @@ func (s *Suite) initComponents(config *dto.Config, customize ...func(*dto.Config
 
 	components.Scheduler.Start(ctx)
 	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
+	components.CertReloader.Start(ctx)
 	t.Cleanup(func() { components.Scheduler.Stop() })
 
 	return components
