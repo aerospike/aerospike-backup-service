@@ -63,7 +63,11 @@ func (p *prober) probeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS
 		return nil
 	}
 
-	if _, err := LoadKeyPair(ctx, config, p.resolver); err != nil {
+	password, err := p.resolver.Resolve(ctx, config.SecretAgent, config.KeyFilePassword)
+	if err != nil {
+		return fmt.Errorf("HTTPS TLS validation failed: failed to resolve HTTPS key-file-password: %w", err)
+	}
+	if _, err = loadKeyPair(config.CertFile, config.KeyFile, password); err != nil {
 		return fmt.Errorf("HTTPS TLS validation failed: %w", err)
 	}
 	if _, err := NewTLSConfig(config, nil); err != nil {
