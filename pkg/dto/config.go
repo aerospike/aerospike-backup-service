@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"cmp"
 	"fmt"
 	"io"
 
@@ -196,12 +195,10 @@ func (c *Config) ToModel() (*model.Config, error) {
 	defaultTimezone := modelConfig.ServiceConfig.GetBackupCommonOrDefault().GetTimezoneOrDefault()
 	// routines must be added after storage, secret agents and policies.
 	for k, v := range c.BackupRoutines {
-		toModel, err := v.ToModel(backupConfig, k)
+		toModel, err := v.ToModel(backupConfig, k, defaultTimezone)
 		if err != nil {
 			return nil, fmt.Errorf("invalid backup routine %q: %w", k, err)
 		}
-
-		toModel.Timezone = cmp.Or(toModel.Timezone, defaultTimezone)
 
 		if err := modelConfig.AddRoutine(toModel); err != nil {
 			return nil, err

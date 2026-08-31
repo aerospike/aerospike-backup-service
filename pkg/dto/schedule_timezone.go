@@ -12,11 +12,11 @@ const (
 	scheduleTimezoneLocal = "local"
 )
 
-// ParseTimezone turns a schedule-timezone config string into a location.
+// parseTimezone turns a schedule-timezone config string into a location.
 // Empty or "utc" (any case) is UTC. "local" (any case) is the host timezone.
 // Any other value is an IANA name (case-sensitive). Abbreviations such as EST
 // and POSIX TZ strings are rejected.
-func ParseTimezone(s string) (*time.Location, error) {
+func parseTimezone(s string) (*time.Location, error) {
 	s = strings.TrimSpace(s)
 	switch strings.ToLower(s) {
 	case "", scheduleTimezoneUTC:

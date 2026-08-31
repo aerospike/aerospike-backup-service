@@ -6,6 +6,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -112,7 +113,7 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
 	}
-	if _, err := ParseTimezone(r.ScheduleTimezone); err != nil {
+	if _, err := parseTimezone(r.ScheduleTimezone); err != nil {
 		return err
 	}
 	for i, rack := range r.RackList {
@@ -253,7 +254,11 @@ func isValidPartitionID(entry string) bool {
 	return err == nil && id >= 0 && id <= 4095
 }
 
-func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model.BackupRoutine, error) {
+func (r *BackupRoutine) ToModel(
+	config *model.BackupConfig,
+	name string,
+	defaultTimezone *time.Location,
+) (*model.BackupRoutine, error) {
 	policy, err := resolveBackupPolicy(r.BackupPolicy, config.BackupPolicies)
 	if err != nil {
 		return nil, err
@@ -288,7 +293,7 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		return nil, err
 	}
 
-	timezone, _ := ParseTimezone(r.ScheduleTimezone)
+	timezone, configuredTimezone := resolveRoutineTimezone(r.ScheduleTimezone, defaultTimezone)
 
 	return &model.BackupRoutine{
 		Name:               name,
@@ -299,7 +304,7 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		IntervalCron:       r.IntervalCron,
 		IncrIntervalCron:   r.IncrIntervalCron,
 		Timezone:           timezone,
-		ConfiguredTimezone: r.ScheduleTimezone,
+		ConfiguredTimezone: configuredTimezone,
 		Namespaces:         *r.Namespaces,
 		SetList:            r.SetList,
 		BinList:            r.BinList,
@@ -309,6 +314,19 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		FilterExpression:   r.FilterExpression,
 		Disabled:           r.Disabled,
 	}, nil
+}
+
+func resolveRoutineTimezone(
+	configured string,
+	defaultTimezone *time.Location,
+) (*time.Location, string) {
+	configured = strings.TrimSpace(configured)
+	if configured == "" {
+		return defaultTimezone, ""
+	}
+
+	timezone, _ := parseTimezone(configured)
+	return timezone, timezone.String()
 }
 
 func (r *BackupRoutine) validateRacks(cluster *model.AerospikeCluster) error {

@@ -67,7 +67,7 @@ func TestParseScheduleTimezone(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ParseTimezone(tt.input)
+			got, err := parseTimezone(tt.input)
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.wantErr)
