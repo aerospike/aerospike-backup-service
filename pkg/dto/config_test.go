@@ -3,9 +3,11 @@ package dto
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -131,26 +133,115 @@ func TestNewConfigFromReader_InvalidYAML(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestConfig_ScheduleTimezoneInheritAndOverride(t *testing.T) {
+func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 	t.Parallel()
 
-	base := validConfig()
-	base.ServiceConfig.Backup = &BackupCommonConfig{ScheduleTimezone: "America/New_York"}
-	base.BackupRoutines["routine1"].ScheduleTimezone = ""
-	base.BackupRoutines["routine2"].ScheduleTimezone = "UTC"
-
-	modelConfig, err := base.ToModel()
+	ny, err := time.LoadLocation("America/New_York")
 	require.NoError(t, err)
 
-	inherited := modelConfig.Routines()["routine1"]
-	require.Equal(t, "America/New_York", inherited.ScheduleTimezone)
-	require.Equal(t, "America/New_York", inherited.CronLocation().String())
+	t.Run("defaults to UTC", func(t *testing.T) {
+		t.Parallel()
 
-	overridden := modelConfig.Routines()["routine2"]
-	require.Equal(t, "UTC", overridden.ScheduleTimezone)
-	require.Equal(t, "UTC", overridden.CronLocation().String())
+		modelConfig, err := validConfig().ToModel()
+		require.NoError(t, err)
+		assert.Equal(t, time.UTC, modelConfig.Routines()["routine1"].Timezone)
+	})
 
-	roundTrip := NewConfigFromModel(modelConfig)
-	require.Empty(t, roundTrip.BackupRoutines["routine1"].ScheduleTimezone)
-	require.Equal(t, "UTC", roundTrip.BackupRoutines["routine2"].ScheduleTimezone)
+	t.Run("inherits service timezone", func(t *testing.T) {
+		t.Parallel()
+
+		config := validConfig()
+		config.ServiceConfig.Backup = &BackupCommonConfig{ScheduleTimezone: "America/New_York"}
+
+		modelConfig, err := config.ToModel()
+		require.NoError(t, err)
+		assert.Equal(t, ny.String(), modelConfig.Routines()["routine1"].Timezone.String())
+		assert.Equal(t, ny.String(), modelConfig.Routines()["routine2"].Timezone.String())
+	})
+
+	t.Run("routine override wins", func(t *testing.T) {
+		t.Parallel()
+
+		config := validConfig()
+		config.ServiceConfig.Backup = &BackupCommonConfig{ScheduleTimezone: "America/New_York"}
+		config.BackupRoutines["routine1"].ScheduleTimezone = "UTC"
+
+		modelConfig, err := config.ToModel()
+		require.NoError(t, err)
+		assert.Equal(t, time.UTC, modelConfig.Routines()["routine1"].Timezone)
+		assert.Equal(t, ny.String(), modelConfig.Routines()["routine2"].Timezone.String())
+	})
+}
+
+// TestConfig_ScheduleTimezoneRoundTrip asserts that Config -> model -> Config preserves
+// both the configured spelling and the resolved location, so a read-modify-write cycle
+// neither drops an explicit value nor bakes in an inherited one.
+func TestConfig_ScheduleTimezoneRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		serviceTimezone  string
+		routineTimezone  string
+		expectedResolved string
+	}{
+		{
+			name:             "routine inherits service default",
+			serviceTimezone:  "America/New_York",
+			routineTimezone:  "",
+			expectedResolved: "America/New_York",
+		},
+		{
+			name:             "explicit value matching service default survives",
+			serviceTimezone:  "America/New_York",
+			routineTimezone:  "America/New_York",
+			expectedResolved: "America/New_York",
+		},
+		{
+			name:             "explicit UTC survives against non-UTC default",
+			serviceTimezone:  "America/New_York",
+			routineTimezone:  "UTC",
+			expectedResolved: "UTC",
+		},
+		{
+			name:             "explicit UTC survives against UTC default",
+			serviceTimezone:  "",
+			routineTimezone:  "UTC",
+			expectedResolved: "UTC",
+		},
+		{
+			name:             "everything omitted stays omitted",
+			serviceTimezone:  "",
+			routineTimezone:  "",
+			expectedResolved: "UTC",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			config := validConfig()
+			if tt.serviceTimezone != "" {
+				config.ServiceConfig.Backup = &BackupCommonConfig{ScheduleTimezone: tt.serviceTimezone}
+			}
+			config.BackupRoutines["routine1"].ScheduleTimezone = tt.routineTimezone
+
+			modelConfig, err := config.ToModel()
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedResolved, modelConfig.Routines()["routine1"].Timezone.String())
+
+			roundTrip := NewConfigFromModel(modelConfig)
+			require.NotNil(t, roundTrip)
+			assert.Equal(t, tt.routineTimezone, roundTrip.BackupRoutines["routine1"].ScheduleTimezone,
+				"configured routine value must survive the round trip verbatim")
+			assert.Equal(t, config.ServiceConfig.Backup, roundTrip.ServiceConfig.Backup)
+
+			// Reconverting must resolve to the same location: the omit/keep decision
+			// has to be a fixpoint, not just behaviourally equivalent once.
+			remodeled, err := roundTrip.ToModel()
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedResolved, remodeled.Routines()["routine1"].Timezone.String())
+		})
+	}
 }

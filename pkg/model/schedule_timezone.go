@@ -10,8 +10,6 @@ import (
 const (
 	scheduleTimezoneUTC   = "utc"
 	scheduleTimezoneLocal = "local"
-	// DefaultScheduleTimezone is used when schedule-timezone is omitted.
-	DefaultScheduleTimezone = "UTC"
 )
 
 // ParseScheduleTimezone turns a schedule-timezone config string into a location.
@@ -38,16 +36,4 @@ func ParseScheduleTimezone(s string) (*time.Location, error) {
 
 		return loc, nil
 	}
-}
-
-// ScheduleTimezonesEqual reports whether two schedule-timezone values resolve to
-// the same location (empty and "UTC" are equal).
-func ScheduleTimezonesEqual(a, b string) bool {
-	locA, errA := ParseScheduleTimezone(a)
-	locB, errB := ParseScheduleTimezone(b)
-	if errA != nil || errB != nil {
-		return a == b
-	}
-
-	return locA.String() == locB.String()
 }

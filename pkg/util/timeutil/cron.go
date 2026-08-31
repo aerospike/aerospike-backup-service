@@ -10,10 +10,6 @@ import (
 
 // IsCronFireTime returns true if the given timestamp exactly matches a scheduled fire time.
 func IsCronFireTime(cronExpr string, t time.Time, loc *time.Location) bool {
-	if loc == nil {
-		loc = time.UTC
-	}
-
 	trigger, err := quartz.NewCronTriggerWithLoc(cronExpr, loc)
 	if err != nil {
 		slog.Error("Failed to parse cron expression", attr.Error(err))
@@ -31,10 +27,6 @@ func IsCronFireTime(cronExpr string, t time.Time, loc *time.Location) bool {
 
 // NextTrigger returns the next scheduled fire time for the given cron expression.
 func NextTrigger(cron string, loc *time.Location) (time.Time, error) {
-	if loc == nil {
-		loc = time.UTC
-	}
-
 	trigger, err := quartz.NewCronTriggerWithLoc(cron, loc)
 	if err != nil {
 		return time.Time{}, err

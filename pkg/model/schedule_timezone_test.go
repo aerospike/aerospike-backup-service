@@ -87,12 +87,14 @@ func TestParseScheduleTimezone(t *testing.T) {
 	}
 }
 
-func TestScheduleTimezonesEqual(t *testing.T) {
+func TestBackupCommonConfig_GetTimezoneOrDefault(t *testing.T) {
 	t.Parallel()
 
-	assert.True(t, ScheduleTimezonesEqual("", "UTC"))
-	assert.True(t, ScheduleTimezonesEqual("utc", "UTC"))
-	assert.True(t, ScheduleTimezonesEqual("America/New_York", "America/New_York"))
-	assert.False(t, ScheduleTimezonesEqual("", "America/New_York"))
-	assert.False(t, ScheduleTimezonesEqual("UTC", "local"))
+	assert.Equal(t, time.UTC, (*BackupCommonConfig)(nil).GetTimezoneOrDefault())
+	assert.Equal(t, time.UTC, (&BackupCommonConfig{}).GetTimezoneOrDefault())
+
+	timezone := (&BackupCommonConfig{
+		ScheduleTimezone: "America/New_York",
+	}).GetTimezoneOrDefault()
+	assert.Equal(t, "America/New_York", timezone.String())
 }

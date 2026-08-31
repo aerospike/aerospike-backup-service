@@ -23,9 +23,15 @@ type BackupRoutine struct {
 	IntervalCron string
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string
-	// ScheduleTimezone is the resolved timezone for evaluating cron expressions
-	// (UTC, Local, or an IANA name). Empty is treated as UTC.
-	ScheduleTimezone string
+	// Timezone is the resolved timezone for evaluating cron expressions. Not nil
+	// after DTO conversion. Inherited from service.backup.schedule-timezone when
+	// ConfiguredTimezone is empty.
+	Timezone *time.Location
+	// ConfiguredTimezone is this routine's own schedule-timezone as written in the
+	// configuration. Empty means the routine inherits the service default. It exists
+	// so converting back to DTO preserves an explicit value without baking in an
+	// inherited one, and is never used to evaluate schedules.
+	ConfiguredTimezone string
 	// The list of the namespaces to back up (optional, empty list implies backup up whole cluster).
 	Namespaces []string
 	// The list of backup set names (optional, an empty list implies backing up all sets).
@@ -58,6 +64,48 @@ func init() {
 	gob.Register(&AzureSharedKeyAuth{})
 }
 
+// backupRoutineGob is BackupRoutine without Timezone. gob cannot encode
+// time.Location (no exported fields), so Copy() round-trips through this type.
+type backupRoutineGob struct {
+	Name               string
+	BackupPolicy       *BackupPolicy
+	SourceCluster      *AerospikeCluster
+	Storage            Storage
+	SecretAgent        *SecretAgent
+	IntervalCron       string
+	IncrIntervalCron   string
+	ConfiguredTimezone string
+	Namespaces         []string
+	SetList            []string
+	BinList            []string
+	RackList           []int
+	PartitionList      string
+	NodeList           []string
+	FilterExpression   string
+	Disabled           bool
+}
+
+func toBackupRoutineGob(r *BackupRoutine) backupRoutineGob {
+	return backupRoutineGob{
+		Name:               r.Name,
+		BackupPolicy:       r.BackupPolicy,
+		SourceCluster:      r.SourceCluster,
+		Storage:            r.Storage,
+		SecretAgent:        r.SecretAgent,
+		IntervalCron:       r.IntervalCron,
+		IncrIntervalCron:   r.IncrIntervalCron,
+		ConfiguredTimezone: r.ConfiguredTimezone,
+		Namespaces:         r.Namespaces,
+		SetList:            r.SetList,
+		BinList:            r.BinList,
+		RackList:           r.RackList,
+		PartitionList:      r.PartitionList,
+		NodeList:           r.NodeList,
+		FilterExpression:   r.FilterExpression,
+		Disabled:           r.Disabled,
+	}
+}
+
 // Copy returns a deep copy of the BackupRoutine.
 // Long-running backup/restore operations must work on an immutable routine snapshot.
 // A shallow copy would still share nested pointers/slices and could observe config changes mid-run.
@@ -67,29 +115,32 @@ func (r *BackupRoutine) Copy() *BackupRoutine {
 	}
 
 	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(r); err != nil {
+	if err := gob.NewEncoder(&buf).Encode(toBackupRoutineGob(r)); err != nil {
 		panic(err) // if happens, registered failed types in init()
 	}
 
-	var out BackupRoutine
-	if err := gob.NewDecoder(&buf).Decode(&out); err != nil {
+	var copied backupRoutineGob
+	if err := gob.NewDecoder(&buf).Decode(&copied); err != nil {
 		panic(err) // should never happen
 	}
 
-	return &out
-}
-
-// CronLocation is the timezone used to evaluate this routine's cron expressions.
-// Invalid values fall back to UTC; they are rejected during config conversion.
-func (r *BackupRoutine) CronLocation() *time.Location {
-	if r == nil {
-		return time.UTC
+	return &BackupRoutine{
+		Name:               copied.Name,
+		BackupPolicy:       copied.BackupPolicy,
+		SourceCluster:      copied.SourceCluster,
+		Storage:            copied.Storage,
+		SecretAgent:        copied.SecretAgent,
+		IntervalCron:       copied.IntervalCron,
+		IncrIntervalCron:   copied.IncrIntervalCron,
+		Timezone:           r.Timezone, // immutable; shared pointer is safe
+		ConfiguredTimezone: copied.ConfiguredTimezone,
+		Namespaces:         copied.Namespaces,
+		SetList:            copied.SetList,
+		BinList:            copied.BinList,
+		RackList:           copied.RackList,
+		PartitionList:      copied.PartitionList,
+		NodeList:           copied.NodeList,
+		FilterExpression:   copied.FilterExpression,
+		Disabled:           copied.Disabled,
 	}
-
-	loc, err := ParseScheduleTimezone(r.ScheduleTimezone)
-	if err != nil {
-		return time.UTC
-	}
-
-	return loc
 }

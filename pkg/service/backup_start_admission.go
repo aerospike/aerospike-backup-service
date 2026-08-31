@@ -61,16 +61,16 @@ func NewStartController(
 	}
 }
 
-func (a *startController) TryStart(
+func (s *startController) TryStart(
 	routine *model.BackupRoutine,
 	now time.Time,
 	backupType model.BackupType,
 ) (func(), error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	facts := a.buildStartFacts(routine, now)
-	if err := a.startDecider.CanStart(backupType, routine.BackupPolicy, facts); err != nil {
+	facts := s.buildStartFacts(routine, now)
+	if err := s.startDecider.CanStart(backupType, routine.BackupPolicy, facts); err != nil {
 		return nil, fmt.Errorf("%w: %w", errBackupSkipped, err)
 	}
 
@@ -79,69 +79,69 @@ func (a *startController) TryStart(
 		routineName: routine.Name,
 		backupType:  backupType,
 	}
-	a.tokenToReservation[tokenID] = key
-	a.activeReservations[key]++
+	s.tokenToReservation[tokenID] = key
+	s.activeReservations[key]++
 
 	return func() {
-		a.release(tokenID)
+		s.release(tokenID)
 	}, nil
 }
 
 // HasBackupRunning reports whether a full or incremental backup is active for the routine.
-func (a *startController) HasBackupRunning(routine *model.BackupRoutine) bool {
-	state := a.registry.GetRoutineState(routine)
+func (s *startController) HasBackupRunning(routine *model.BackupRoutine) bool {
+	state := s.registry.GetRoutineState(routine)
 	if state.Full != nil || state.Incremental != nil {
 		return true
 	}
 
-	return a.hasPendingStart(routine.Name, model.BackupTypeFull) ||
-		a.hasPendingStart(routine.Name, model.BackupTypeIncremental)
+	return s.hasPendingStart(routine.Name, model.BackupTypeFull) ||
+		s.hasPendingStart(routine.Name, model.BackupTypeIncremental)
 }
 
-func (a *startController) hasPendingStart(routineName string, backupType model.BackupType) bool {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+func (s *startController) hasPendingStart(routineName string, backupType model.BackupType) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	return a.hasPendingStartLocked(reservationKey{
+	return s.hasPendingStartLocked(reservationKey{
 		routineName: routineName,
 		backupType:  backupType,
 	})
 }
 
-func (a *startController) hasPendingStartLocked(key reservationKey) bool {
-	return a.activeReservations[key] > 0
+func (s *startController) hasPendingStartLocked(key reservationKey) bool {
+	return s.activeReservations[key] > 0
 }
 
 // release clears one reservation by token.
 //
 // This operation is idempotent: unknown or already-released tokens are ignored.
 // Multiple reservations for the same routine/type are tracked by a reference count.
-func (a *startController) release(tokenID TokenID) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+func (s *startController) release(tokenID TokenID) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	key, ok := a.tokenToReservation[tokenID]
+	key, ok := s.tokenToReservation[tokenID]
 	if !ok {
 		return
 	}
-	delete(a.tokenToReservation, tokenID)
+	delete(s.tokenToReservation, tokenID)
 
-	count := a.activeReservations[key]
+	count := s.activeReservations[key]
 	if count <= 1 {
-		delete(a.activeReservations, key)
+		delete(s.activeReservations, key)
 		return
 	}
-	a.activeReservations[key] = count - 1
+	s.activeReservations[key] = count - 1
 }
 
 // buildStartFacts composes admission facts.
-func (a *startController) buildStartFacts(routine *model.BackupRoutine, now time.Time) StartFacts {
-	state := a.registry.GetRoutineState(routine)
-	fullRunning := a.hasPendingStartLocked(reservationKey{
+func (s *startController) buildStartFacts(routine *model.BackupRoutine, now time.Time) StartFacts {
+	state := s.registry.GetRoutineState(routine)
+	fullRunning := s.hasPendingStartLocked(reservationKey{
 		routineName: routine.Name,
 		backupType:  model.BackupTypeFull,
 	})
-	incrRunning := a.hasPendingStartLocked(reservationKey{
+	incrRunning := s.hasPendingStartLocked(reservationKey{
 		routineName: routine.Name,
 		backupType:  model.BackupTypeIncremental,
 	})
@@ -152,6 +152,6 @@ func (a *startController) buildStartFacts(routine *model.BackupRoutine, now time
 		IncrementalRunningNow: incrRunning,
 		// History still comes from registry.
 		HasCompletedFull: !state.LastRunTime.NoFullBackup(),
-		FullScheduledNow: timeutil.IsCronFireTime(routine.IntervalCron, now, routine.CronLocation()),
+		FullScheduledNow: timeutil.IsCronFireTime(routine.IntervalCron, now, routine.Timezone),
 	}
 }

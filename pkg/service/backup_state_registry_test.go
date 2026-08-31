@@ -32,7 +32,8 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 	registry.getTracker(routineName).markScanDone() // no need to scan history
 
 	stat := registry.GetRoutineState(&model.BackupRoutine{
-		Name: routineName,
+		Name:     routineName,
+		Timezone: time.UTC,
 	})
 
 	assert.NotNil(t, stat.Full)
@@ -61,6 +62,7 @@ func TestHistoryScan(t *testing.T) {
 	stat := registry.GetRoutineState(&model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
+		Timezone:     time.UTC,
 	})
 	assert.NotNil(t, stat.Full)
 	assert.Equal(t, uint64(100), stat.Full.TotalRecords)
@@ -84,6 +86,7 @@ func TestFinishFull(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
+		Timezone:     time.UTC,
 	}
 
 	registry.BackupStarted(routineName, model.BackupTypeFull, handler)
@@ -113,6 +116,7 @@ func TestFinishIncremental(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
+		Timezone:     time.UTC,
 	}
 
 	registry.BackupStarted(routineName, model.BackupTypeIncremental, handler)
@@ -137,6 +141,7 @@ func TestCanceledHistoryScanKeepsPreviousLastRun(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
+		Timezone:     time.UTC,
 	}
 	registry.getTracker(routineName).setLastRun(previous)
 	registry.getTracker(routineName).markScanDone()
@@ -159,10 +164,12 @@ func TestGetAllCurrentStats(t *testing.T) {
 		routine1: {
 			Name:         routine1,
 			IntervalCron: "@daily",
+			Timezone:     time.UTC,
 		},
 		routine2: {
 			Name:         routine2,
 			IntervalCron: "@daily",
+			Timezone:     time.UTC,
 		},
 	}).AnyTimes()
 

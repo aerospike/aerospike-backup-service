@@ -6,6 +6,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -295,24 +296,49 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		return nil, err
 	}
 
+	timezone, err := parseOptionalScheduleTimezone(r.ScheduleTimezone)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.toModel(name, policy, cluster, storage, secretAgent, timezone), nil
+}
+
+func (r *BackupRoutine) toModel(
+	name string,
+	policy *model.BackupPolicy,
+	cluster *model.AerospikeCluster,
+	storage model.Storage,
+	secretAgent *model.SecretAgent,
+	timezone *time.Location,
+) *model.BackupRoutine {
 	return &model.BackupRoutine{
-		Name:             name,
-		BackupPolicy:     policy,
-		SourceCluster:    cluster,
-		Storage:          storage,
-		SecretAgent:      secretAgent,
-		IntervalCron:     r.IntervalCron,
-		IncrIntervalCron: r.IncrIntervalCron,
-		ScheduleTimezone: r.ScheduleTimezone,
-		Namespaces:       *r.Namespaces,
-		SetList:          r.SetList,
-		BinList:          r.BinList,
-		RackList:         r.RackList,
-		PartitionList:    r.PartitionList,
-		NodeList:         r.NodeList,
-		FilterExpression: r.FilterExpression,
-		Disabled:         r.Disabled,
-	}, nil
+		Name:               name,
+		BackupPolicy:       policy,
+		SourceCluster:      cluster,
+		Storage:            storage,
+		SecretAgent:        secretAgent,
+		IntervalCron:       r.IntervalCron,
+		IncrIntervalCron:   r.IncrIntervalCron,
+		Timezone:           timezone,
+		ConfiguredTimezone: r.ScheduleTimezone,
+		Namespaces:         *r.Namespaces,
+		SetList:            r.SetList,
+		BinList:            r.BinList,
+		RackList:           r.RackList,
+		PartitionList:      r.PartitionList,
+		NodeList:           r.NodeList,
+		FilterExpression:   r.FilterExpression,
+		Disabled:           r.Disabled,
+	}
+}
+
+func parseOptionalScheduleTimezone(value string) (*time.Location, error) {
+	if value == "" {
+		return nil, nil
+	}
+
+	return model.ParseScheduleTimezone(value)
 }
 
 func validateFileLimit(policy *model.BackupPolicy, storage model.Storage) error {
@@ -390,11 +416,12 @@ func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRo
 	}
 
 	b := &BackupRoutine{}
-	b.fromModel(m, config.BackupConfigCopy(), config.ServiceConfig.GetBackupCommonOrDefault().ScheduleTimezone)
+	b.fromModel(m, config.BackupConfigCopy())
+
 	return b
 }
 
-func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupConfig, serviceScheduleTimezone string) {
+func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupConfig) {
 	r.BackupPolicy = findKeyByValue(config.BackupPolicies, m.BackupPolicy)
 	r.SourceCluster = findKeyByValue(config.AerospikeClusters, m.SourceCluster)
 	r.Storage = findStorageKey(config.Storage, m.Storage)
@@ -403,9 +430,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	}
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
-	if !model.ScheduleTimezonesEqual(m.ScheduleTimezone, serviceScheduleTimezone) {
-		r.ScheduleTimezone = m.ScheduleTimezone
-	}
+	r.ScheduleTimezone = m.ConfiguredTimezone
 	r.Namespaces = &m.Namespaces
 	r.SetList = m.SetList
 	r.BinList = m.BinList

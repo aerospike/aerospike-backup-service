@@ -253,8 +253,7 @@ func (r *backupStateRegistry) Cancel(routineName string) {
 }
 
 func nextBackup(routine *model.BackupRoutine) (*model.BackupTime, error) {
-	loc := routine.CronLocation()
-	nextFullBackup, err := timeutil.NextTrigger(routine.IntervalCron, loc)
+	nextFullBackup, err := timeutil.NextTrigger(routine.IntervalCron, routine.Timezone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse full backup cron: %w", err)
 	}
@@ -263,7 +262,7 @@ func nextBackup(routine *model.BackupRoutine) (*model.BackupTime, error) {
 		return model.NewFullBackupTime(nextFullBackup), nil
 	}
 
-	nextIncrementalBackup, err := timeutil.NextTrigger(routine.IncrIntervalCron, loc)
+	nextIncrementalBackup, err := timeutil.NextTrigger(routine.IncrIntervalCron, routine.Timezone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse incremental backup cron: %w", err)
 	}

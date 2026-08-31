@@ -29,6 +29,7 @@ func testRoutine() *model.BackupRoutine {
 			WithClusterConfig: ptr.Of(true),
 		},
 		IntervalCron: "@daily",
+		Timezone:     time.UTC,
 		Namespaces:   []string{"ns1", "ns2"},
 	}
 }

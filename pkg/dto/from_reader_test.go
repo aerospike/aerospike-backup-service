@@ -140,7 +140,7 @@ func TestNewRoutineFromModel(t *testing.T) {
 	assert.True(t, routine.Disabled)
 }
 
-func TestNewRoutineFromModel_OmitsInheritedScheduleTimezone(t *testing.T) {
+func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 	policy := &model.BackupPolicy{}
 	cluster := &model.AerospikeCluster{}
 	storage := &model.LocalStorage{Path: "/tmp"}
@@ -151,27 +151,43 @@ func TestNewRoutineFromModel_OmitsInheritedScheduleTimezone(t *testing.T) {
 	require.NoError(t, config.AddCluster("cluster1", cluster))
 	require.NoError(t, config.AddStorage("storage1", storage))
 
-	inherited := NewRoutineFromModel(&model.BackupRoutine{
-		BackupPolicy:     policy,
-		SourceCluster:    cluster,
-		Storage:          storage,
-		IntervalCron:     "@hourly",
-		Namespaces:       []string{"ns1"},
-		ScheduleTimezone: "America/New_York",
-	}, config)
-	require.NotNil(t, inherited)
-	assert.Empty(t, inherited.ScheduleTimezone)
+	newRoutine := func(configured string, resolved *time.Location) *model.BackupRoutine {
+		return &model.BackupRoutine{
+			BackupPolicy:       policy,
+			SourceCluster:      cluster,
+			Storage:            storage,
+			IntervalCron:       "@hourly",
+			Namespaces:         []string{"ns1"},
+			Timezone:           resolved,
+			ConfiguredTimezone: configured,
+		}
+	}
 
-	overridden := NewRoutineFromModel(&model.BackupRoutine{
-		BackupPolicy:     policy,
-		SourceCluster:    cluster,
-		Storage:          storage,
-		IntervalCron:     "@hourly",
-		Namespaces:       []string{"ns1"},
-		ScheduleTimezone: "UTC",
-	}, config)
-	require.NotNil(t, overridden)
-	assert.Equal(t, "UTC", overridden.ScheduleTimezone)
+	ny := config.ServiceConfig.Backup.GetTimezoneOrDefault()
+
+	t.Run("inherited value is omitted", func(t *testing.T) {
+		routine := NewRoutineFromModel(newRoutine("", ny), config)
+		require.NotNil(t, routine)
+		assert.Empty(t, routine.ScheduleTimezone)
+	})
+
+	t.Run("explicit value differing from default is kept", func(t *testing.T) {
+		routine := NewRoutineFromModel(newRoutine("UTC", time.UTC), config)
+		require.NotNil(t, routine)
+		assert.Equal(t, "UTC", routine.ScheduleTimezone)
+	})
+
+	t.Run("explicit value matching default is kept", func(t *testing.T) {
+		routine := NewRoutineFromModel(newRoutine("America/New_York", ny), config)
+		require.NotNil(t, routine)
+		assert.Equal(t, "America/New_York", routine.ScheduleTimezone)
+	})
+
+	t.Run("configured spelling is preserved", func(t *testing.T) {
+		routine := NewRoutineFromModel(newRoutine("utc", time.UTC), config)
+		require.NotNil(t, routine)
+		assert.Equal(t, "utc", routine.ScheduleTimezone)
+	})
 }
 
 func TestNewClusterFromReader_InvalidYAML(t *testing.T) {

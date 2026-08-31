@@ -100,7 +100,23 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 	assert.Equal(t, []string{"node1"}, m.NodeList)
 	assert.Equal(t, "k1EDpHRlc3Q=", m.FilterExpression)
 	assert.True(t, m.Disabled)
-	assert.Equal(t, "America/New_York", m.ScheduleTimezone)
+	assert.Equal(t, "America/New_York", m.Timezone.String())
+}
+
+func TestBackupRoutine_ToModel_EmptyTimezoneIsNil(t *testing.T) {
+	routineDTO := &BackupRoutine{
+		SourceCluster: "cluster1",
+		Storage:       "storage1",
+		IntervalCron:  "cron",
+		Namespaces:    &[]string{"ns1"},
+	}
+
+	m, err := routineDTO.ToModel(&model.BackupConfig{
+		AerospikeClusters: map[string]*model.AerospikeCluster{"cluster1": {}},
+		Storage:           map[string]model.Storage{"storage1": &model.LocalStorage{}},
+	}, "r")
+	require.NoError(t, err)
+	assert.Nil(t, m.Timezone)
 }
 
 func TestBackupRoutine_ToModel_PolicyNotFound(t *testing.T) {

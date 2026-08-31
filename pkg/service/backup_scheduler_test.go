@@ -23,6 +23,7 @@ func TestScheduleRoutines(t *testing.T) {
 					Name:             "routine",
 					IntervalCron:     "0 0 * * * *",
 					IncrIntervalCron: "0 */6 * * * *",
+					Timezone:         time.UTC,
 				},
 			},
 			expectedCalls: 2, // One for full backup, one for incremental
@@ -45,6 +46,7 @@ func TestScheduleRoutines(t *testing.T) {
 				"full-only": {
 					Name:         "full-only",
 					IntervalCron: "0 0 * * * *",
+					Timezone:     time.UTC,
 				},
 			},
 			expectedCalls: 1, // One call for full backup only
@@ -53,9 +55,9 @@ func TestScheduleRoutines(t *testing.T) {
 			name: "named timezone still schedules",
 			routines: map[string]*model.BackupRoutine{
 				"ny-routine": {
-					Name:             "ny-routine",
-					IntervalCron:     "0 0 2 * * *",
-					ScheduleTimezone: "America/New_York",
+					Name:         "ny-routine",
+					IntervalCron: "0 0 2 * * *",
+					Timezone:     time.FixedZone("America/New_York", -4*60*60),
 				},
 			},
 			expectedCalls: 1,
@@ -87,6 +89,39 @@ func TestScheduleRoutines(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestScheduleRoutines_UsesRoutineTimezone(t *testing.T) {
+	location, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+
+	ctrl := gomock.NewController(t)
+	scheduler := NewMockJobScheduler(ctrl)
+	scheduler.EXPECT().ScheduleJob(
+		gomock.Cond(func(detail *quartz.JobDetail) bool {
+			job, ok := detail.Job().(*backupJob)
+			return ok && job.routine.Timezone == location
+		}),
+		gomock.Cond(func(trigger quartz.Trigger) bool {
+			after := time.Date(2025, 7, 20, 0, 0, 0, 0, time.UTC)
+			next, triggerErr := trigger.NextFireTime(after.UnixNano())
+			if triggerErr != nil {
+				return false
+			}
+
+			return time.Unix(0, next).Equal(time.Date(2025, 7, 20, 4, 0, 0, 0, time.UTC))
+		}),
+	).Return(nil)
+
+	backupScheduler := NewBackupScheduler(
+		scheduler,
+		NewBackupOrchestrator(nil, nil, nil, nil, nil),
+	)
+	require.NoError(t, backupScheduler.ScheduleRoutines([]*model.BackupRoutine{{
+		Name:         "ny-timezone",
+		IntervalCron: "@daily",
+		Timezone:     location,
+	}}))
 }
 
 func TestBackupScheduler_DeleteJob(t *testing.T) {

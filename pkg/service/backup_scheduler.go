@@ -49,8 +49,14 @@ type BackupScheduler struct {
 var _ AdHocScheduler = (*BackupScheduler)(nil)
 
 // NewBackupScheduler returns a BackupScheduler.
-func NewBackupScheduler(scheduler JobScheduler, orchestrator BackupOrchestrator) *BackupScheduler {
-	return &BackupScheduler{scheduler: scheduler, orchestrator: orchestrator}
+func NewBackupScheduler(
+	scheduler JobScheduler,
+	orchestrator BackupOrchestrator,
+) *BackupScheduler {
+	return &BackupScheduler{
+		scheduler:    scheduler,
+		orchestrator: orchestrator,
+	}
 }
 
 // DeleteJob removes a scheduled job (e.g. when clearing periodic jobs on config change).
@@ -80,7 +86,8 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 		newBackupJob(s.orchestrator, routine, model.BackupTypeFull),
 		jobKey(routine.Name, model.BackupTypeFull),
 	)
-	if err := s.scheduleCronJob(routine.IntervalCron, routine.CronLocation(), fullJob); err != nil {
+
+	if err := s.scheduleCronJob(routine.IntervalCron, routine.Timezone, fullJob); err != nil {
 		return fmt.Errorf("failed to schedule full backup: %w", err)
 	}
 
@@ -93,7 +100,7 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 		newBackupJob(s.orchestrator, routine, model.BackupTypeIncremental),
 		jobKey(routine.Name, model.BackupTypeIncremental),
 	)
-	if err := s.scheduleCronJob(routine.IncrIntervalCron, routine.CronLocation(), incrementalJob); err != nil {
+	if err := s.scheduleCronJob(routine.IncrIntervalCron, routine.Timezone, incrementalJob); err != nil {
 		return fmt.Errorf("failed to schedule incremental backup: %w", err)
 	}
 

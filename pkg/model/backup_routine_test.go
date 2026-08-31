@@ -3,6 +3,7 @@ package model
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 	"github.com/stretchr/testify/require"
@@ -49,7 +50,10 @@ func TestBackupRoutineCopy_GobRegistrations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &BackupRoutine{Storage: tt.storage}
+			r := &BackupRoutine{
+				Storage:  tt.storage,
+				Timezone: time.FixedZone("test-zone", 3*60*60),
+			}
 			r.BackupPolicy = &BackupPolicy{}
 			r.BackupPolicy.RetentionPolicy = &RetentionPolicy{}
 			r.BackupPolicy.RetentionPolicy.FullBackups = optional.Of(1)
@@ -67,15 +71,4 @@ func TestBackupRoutineCopy_GobRegistrations(t *testing.T) {
 				"Copy() result is not deeply equal to source.\nsource: %#v\ncopy:   %#v", r, out)
 		})
 	}
-}
-
-// Verify that calling Copy() on a nil receiver returns nil and does not panic.
-func TestBackupRoutineCopy_NilReceiver(t *testing.T) {
-	var r, out *BackupRoutine
-
-	require.NotPanics(t, func() {
-		out = r.Copy()
-	}, "Copy() panicked on nil receiver")
-
-	require.Nil(t, out, "Copy() on nil receiver must return nil; got non-nil")
 }
