@@ -35,6 +35,15 @@ func TestProbeHTTPS(t *testing.T) {
 		}, newTestResolver(t))
 		require.ErrorContains(t, err, "private key does not match public key")
 	})
+
+	t.Run("disabled skips missing files", func(t *testing.T) {
+		err := ProbeHTTPS(t.Context(), &model.ServerConfigHTTPS{
+			ListenerConfig: model.ListenerConfig{Disabled: true},
+			CertFile:       filepath.Join(t.TempDir(), "missing.pem"),
+			KeyFile:        filepath.Join(t.TempDir(), "missing-key.pem"),
+		}, newTestResolver(t))
+		require.NoError(t, err)
+	})
 }
 
 func TestProbeCluster(t *testing.T) {

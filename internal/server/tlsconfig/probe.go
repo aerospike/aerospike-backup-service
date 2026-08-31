@@ -42,8 +42,9 @@ func ProbeConfig(ctx context.Context, config *model.Config, resolver secrets.Res
 }
 
 // ProbeHTTPS verifies that the configured HTTPS key pair and client CA can be loaded.
+// Disabled listeners are not probed: those files are unused until HTTPS is enabled.
 func ProbeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS, resolver secrets.Resolver) error {
-	if config == nil || config.CertFile == "" || config.KeyFile == "" {
+	if config == nil || config.Disabled || config.CertFile == "" || config.KeyFile == "" {
 		return nil
 	}
 

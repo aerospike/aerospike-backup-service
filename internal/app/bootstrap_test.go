@@ -66,3 +66,22 @@ func TestInitComponents_MissingTLSFiles(t *testing.T) {
 	require.ErrorContains(t, err, "failed to validate TLS configuration")
 	require.Nil(t, components)
 }
+
+func TestInitComponents_DisabledHTTPSDoesNotRequireTLSFiles(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	config := `service:
+  https:
+    disabled: true
+    cert-file: /missing/server.pem
+    key-file: /missing/server-key.pem
+`
+	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	components, err := InitComponents(ctx, configPath, false)
+	require.NoError(t, err)
+	require.NotNil(t, components)
+	t.Cleanup(components.Scheduler.Stop)
+}
