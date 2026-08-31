@@ -95,10 +95,14 @@ func TestNewBackupDetailsFromModel(t *testing.T) {
 
 func TestBackupCommonConfig_fromModel(t *testing.T) {
 	format := model.TimestampFormatISO
+	timezone, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+
 	var dtoConfig BackupCommonConfig
 	dtoConfig.fromModel(&model.BackupCommonConfig{
-		TimestampFormat:  &format,
-		ScheduleTimezone: "America/New_York",
+		TimestampFormat:    &format,
+		Timezone:           timezone,
+		ConfiguredTimezone: "America/New_York",
 	})
 
 	assert.Equal(t, TimestampFormatISO, dtoConfig.TimestampFormat)
@@ -107,7 +111,8 @@ func TestBackupCommonConfig_fromModel(t *testing.T) {
 	roundTrip := dtoConfig.ToModel()
 	require.NotNil(t, roundTrip.TimestampFormat)
 	assert.Equal(t, model.TimestampFormatISO, *roundTrip.TimestampFormat)
-	assert.Equal(t, "America/New_York", roundTrip.ScheduleTimezone)
+	assert.Equal(t, timezone.String(), roundTrip.Timezone.String())
+	assert.Equal(t, "America/New_York", roundTrip.ConfiguredTimezone)
 }
 
 func TestNewRoutineFromModel(t *testing.T) {
@@ -146,7 +151,12 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 	storage := &model.LocalStorage{Path: "/tmp"}
 
 	config := model.NewConfig()
-	config.ServiceConfig.Backup = &model.BackupCommonConfig{ScheduleTimezone: "America/New_York"}
+	timezone, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+	config.ServiceConfig.Backup = &model.BackupCommonConfig{
+		Timezone:           timezone,
+		ConfiguredTimezone: "America/New_York",
+	}
 	require.NoError(t, config.AddPolicy("policy1", policy))
 	require.NoError(t, config.AddCluster("cluster1", cluster))
 	require.NoError(t, config.AddStorage("storage1", storage))
@@ -183,10 +193,10 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 		assert.Equal(t, "America/New_York", routine.ScheduleTimezone)
 	})
 
-	t.Run("configured spelling is preserved", func(t *testing.T) {
-		routine := NewRoutineFromModel(newRoutine("utc", time.UTC), config)
+	t.Run("configured keyword is canonicalized", func(t *testing.T) {
+		routine := NewRoutineFromModel(newRoutine("UTC", time.UTC), config)
 		require.NotNil(t, routine)
-		assert.Equal(t, "utc", routine.ScheduleTimezone)
+		assert.Equal(t, "UTC", routine.ScheduleTimezone)
 	})
 }
 

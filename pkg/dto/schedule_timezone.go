@@ -1,4 +1,4 @@
-package model
+package dto
 
 import (
 	"fmt"
@@ -12,11 +12,11 @@ const (
 	scheduleTimezoneLocal = "local"
 )
 
-// ParseScheduleTimezone turns a schedule-timezone config string into a location.
+// ParseTimezone turns a schedule-timezone config string into a location.
 // Empty or "utc" (any case) is UTC. "local" (any case) is the host timezone.
 // Any other value is an IANA name (case-sensitive). Abbreviations such as EST
 // and POSIX TZ strings are rejected.
-func ParseScheduleTimezone(s string) (*time.Location, error) {
+func ParseTimezone(s string) (*time.Location, error) {
 	s = strings.TrimSpace(s)
 	switch strings.ToLower(s) {
 	case "", scheduleTimezoneUTC:
@@ -25,15 +25,14 @@ func ParseScheduleTimezone(s string) (*time.Location, error) {
 		return time.Local, nil
 	default:
 		if !strings.Contains(s, "/") {
-			return nil, fmt.Errorf("invalid schedule-timezone %q: use %s, %s, or an IANA name such as America/New_York",
-				s, scheduleTimezoneUTC, scheduleTimezoneLocal)
+			return nil, fmt.Errorf(
+				"invalid schedule-timezone %q: use %s, %s, or an IANA name such as America/New_York",
+				s,
+				scheduleTimezoneUTC,
+				scheduleTimezoneLocal,
+			)
 		}
 
-		loc, err := time.LoadLocation(s)
-		if err != nil {
-			return nil, fmt.Errorf("invalid schedule-timezone %q: %w", s, err)
-		}
-
-		return loc, nil
+		return time.LoadLocation(s)
 	}
 }

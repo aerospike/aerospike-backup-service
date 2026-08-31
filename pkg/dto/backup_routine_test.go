@@ -2,6 +2,7 @@ package dto
 
 import (
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
@@ -103,12 +104,37 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 	assert.Equal(t, "America/New_York", m.Timezone.String())
 }
 
-func TestBackupRoutine_ToModel_EmptyTimezoneIsNil(t *testing.T) {
+func TestBackupRoutine_ToModel_BlankTimezoneIsNil(t *testing.T) {
+	t.Parallel()
+
+	for _, timezone := range []string{"", " \t "} {
+		routineDTO := &BackupRoutine{
+			SourceCluster:    "cluster1",
+			Storage:          "storage1",
+			IntervalCron:     "cron",
+			Namespaces:       &[]string{"ns1"},
+			ScheduleTimezone: timezone,
+		}
+
+		m, err := routineDTO.ToModel(&model.BackupConfig{
+			AerospikeClusters: map[string]*model.AerospikeCluster{"cluster1": {}},
+			Storage:           map[string]model.Storage{"storage1": &model.LocalStorage{}},
+		}, "r")
+		require.NoError(t, err)
+		assert.Nil(t, m.Timezone)
+		assert.Empty(t, m.ConfiguredTimezone)
+	}
+}
+
+func TestBackupRoutine_ToModel_CanonicalizesConfiguredTimezone(t *testing.T) {
+	t.Parallel()
+
 	routineDTO := &BackupRoutine{
-		SourceCluster: "cluster1",
-		Storage:       "storage1",
-		IntervalCron:  "cron",
-		Namespaces:    &[]string{"ns1"},
+		SourceCluster:    "cluster1",
+		Storage:          "storage1",
+		IntervalCron:     "cron",
+		Namespaces:       &[]string{"ns1"},
+		ScheduleTimezone: "utc",
 	}
 
 	m, err := routineDTO.ToModel(&model.BackupConfig{
@@ -116,7 +142,8 @@ func TestBackupRoutine_ToModel_EmptyTimezoneIsNil(t *testing.T) {
 		Storage:           map[string]model.Storage{"storage1": &model.LocalStorage{}},
 	}, "r")
 	require.NoError(t, err)
-	assert.Nil(t, m.Timezone)
+	assert.Equal(t, time.UTC, m.Timezone)
+	assert.Equal(t, "UTC", m.ConfiguredTimezone)
 }
 
 func TestBackupRoutine_ToModel_PolicyNotFound(t *testing.T) {

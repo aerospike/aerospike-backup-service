@@ -159,6 +159,20 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 		assert.Equal(t, ny.String(), modelConfig.Routines()["routine2"].Timezone.String())
 	})
 
+	t.Run("whitespace routine timezone inherits service timezone", func(t *testing.T) {
+		t.Parallel()
+
+		config := validConfig()
+		config.ServiceConfig.Backup = &BackupCommonConfig{ScheduleTimezone: "America/New_York"}
+		config.BackupRoutines["routine1"].ScheduleTimezone = " \t "
+
+		modelConfig, err := config.ToModel()
+		require.NoError(t, err)
+		routine := modelConfig.Routines()["routine1"]
+		assert.Equal(t, ny.String(), routine.Timezone.String())
+		assert.Empty(t, routine.ConfiguredTimezone)
+	})
+
 	t.Run("routine override wins", func(t *testing.T) {
 		t.Parallel()
 
@@ -174,7 +188,7 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 }
 
 // TestConfig_ScheduleTimezoneRoundTrip asserts that Config -> model -> Config preserves
-// both the configured spelling and the resolved location, so a read-modify-write cycle
+// both an explicit configured value and the resolved location, so a read-modify-write cycle
 // neither drops an explicit value nor bakes in an inherited one.
 func TestConfig_ScheduleTimezoneRoundTrip(t *testing.T) {
 	t.Parallel()
@@ -234,7 +248,7 @@ func TestConfig_ScheduleTimezoneRoundTrip(t *testing.T) {
 			roundTrip := NewConfigFromModel(modelConfig)
 			require.NotNil(t, roundTrip)
 			assert.Equal(t, tt.routineTimezone, roundTrip.BackupRoutines["routine1"].ScheduleTimezone,
-				"configured routine value must survive the round trip verbatim")
+				"configured routine value must survive the round trip")
 			assert.Equal(t, config.ServiceConfig.Backup, roundTrip.ServiceConfig.Backup)
 
 			// Reconverting must resolve to the same location: the omit/keep decision

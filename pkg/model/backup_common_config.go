@@ -6,22 +6,19 @@ import "time"
 type BackupCommonConfig struct {
 	// TimestampFormat for human-readable dates in path.
 	TimestampFormat *TimestampFormat
-	// ScheduleTimezone is the default timezone for evaluating backup cron
-	// expressions (UTC, Local, or an IANA name). Empty means UTC.
-	ScheduleTimezone string
+	// Timezone is the resolved default timezone for evaluating backup cron
+	// expressions. Not nil after DTO conversion.
+	Timezone *time.Location
+	// ConfiguredTimezone is the canonical service-level schedule-timezone.
+	// Empty means the setting was omitted and UTC is used.
+	ConfiguredTimezone string
 }
 
-// GetTimezoneOrDefault returns the parsed schedule timezone, defaulting to UTC.
-// Invalid values are rejected during DTO validation.
+// GetTimezoneOrDefault returns the resolved schedule timezone, defaulting to UTC.
 func (c *BackupCommonConfig) GetTimezoneOrDefault() *time.Location {
-	if c == nil {
+	if c == nil || c.Timezone == nil {
 		return time.UTC
 	}
 
-	timezone, err := ParseScheduleTimezone(c.ScheduleTimezone)
-	if err != nil {
-		return time.UTC
-	}
-
-	return timezone
+	return c.Timezone
 }

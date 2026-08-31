@@ -6,7 +6,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -113,7 +112,7 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
 	}
-	if _, err := model.ParseScheduleTimezone(r.ScheduleTimezone); err != nil {
+	if _, err := ParseTimezone(r.ScheduleTimezone); err != nil {
 		return err
 	}
 	for i, rack := range r.RackList {
@@ -266,16 +265,9 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 	}
 
 	// Enforce mutual exclusivity between routine-level selectors and cluster-level prefer-racks
-	if len(cluster.PreferRacks) > 0 {
-		if len(r.RackList) > 0 {
-			return nil, errValidationMutuallyExclusive(rackListField, preferRacksField)
-		}
-		if len(r.PartitionList) > 0 {
-			return nil, errValidationMutuallyExclusive(partitionListField, preferRacksField)
-		}
-		if len(r.NodeList) > 0 {
-			return nil, errValidationMutuallyExclusive(nodeListField, preferRacksField)
-		}
+
+	if err := r.validateRacks(cluster); err != nil {
+		return nil, err
 	}
 
 	if err := ValidateBackupPolicyParallelism(policy, cluster); err != nil {
@@ -296,22 +288,8 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		return nil, err
 	}
 
-	timezone, err := parseOptionalScheduleTimezone(r.ScheduleTimezone)
-	if err != nil {
-		return nil, err
-	}
+	timezone, _ := ParseTimezone(r.ScheduleTimezone)
 
-	return r.toModel(name, policy, cluster, storage, secretAgent, timezone), nil
-}
-
-func (r *BackupRoutine) toModel(
-	name string,
-	policy *model.BackupPolicy,
-	cluster *model.AerospikeCluster,
-	storage model.Storage,
-	secretAgent *model.SecretAgent,
-	timezone *time.Location,
-) *model.BackupRoutine {
 	return &model.BackupRoutine{
 		Name:               name,
 		BackupPolicy:       policy,
@@ -330,15 +308,25 @@ func (r *BackupRoutine) toModel(
 		NodeList:           r.NodeList,
 		FilterExpression:   r.FilterExpression,
 		Disabled:           r.Disabled,
-	}
+	}, nil
 }
 
-func parseOptionalScheduleTimezone(value string) (*time.Location, error) {
-	if value == "" {
-		return nil, nil
+func (r *BackupRoutine) validateRacks(cluster *model.AerospikeCluster) error {
+	if len(cluster.PreferRacks) == 0 {
+		return nil
 	}
 
-	return model.ParseScheduleTimezone(value)
+	if len(r.RackList) > 0 {
+		return errValidationMutuallyExclusive(rackListField, preferRacksField)
+	}
+	if len(r.PartitionList) > 0 {
+		return errValidationMutuallyExclusive(partitionListField, preferRacksField)
+	}
+	if len(r.NodeList) > 0 {
+		return errValidationMutuallyExclusive(nodeListField, preferRacksField)
+	}
+
+	return nil
 }
 
 func validateFileLimit(policy *model.BackupPolicy, storage model.Storage) error {
