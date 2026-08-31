@@ -14,10 +14,6 @@ import (
 type Prober interface {
 	// ProbeConfig validates HTTPS and Aerospike cluster TLS material in a service config.
 	ProbeConfig(ctx context.Context, config *model.Config) error
-	// ProbeHTTPS validates the key pair and client CA for an enabled HTTPS listener.
-	ProbeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS) error
-	// ProbeCluster validates CA and client certificate material for an Aerospike cluster.
-	ProbeCluster(ctx context.Context, cluster *model.AerospikeCluster, agent *model.SecretAgent) error
 }
 
 type prober struct {
@@ -34,7 +30,7 @@ func NewProber(resolver secrets.Resolver) Prober {
 // ProbeConfig loads all configured TLS material without starting listeners or watchers.
 func (p *prober) ProbeConfig(ctx context.Context, config *model.Config) error {
 	if config.ServiceConfig.ServerHTTPS != nil {
-		if err := p.ProbeHTTPS(ctx, config.ServiceConfig.ServerHTTPS); err != nil {
+		if err := p.probeHTTPS(ctx, config.ServiceConfig.ServerHTTPS); err != nil {
 			return err
 		}
 	}
@@ -52,7 +48,7 @@ func (p *prober) ProbeConfig(ctx context.Context, config *model.Config) error {
 		if cluster.Credentials != nil {
 			agent = cluster.Credentials.SecretAgent
 		}
-		if err := p.ProbeCluster(ctx, cluster, agent); err != nil {
+		if err := p.probeCluster(ctx, cluster, agent); err != nil {
 			return fmt.Errorf("cluster %q TLS validation failed: %w", name, err)
 		}
 	}
@@ -60,9 +56,9 @@ func (p *prober) ProbeConfig(ctx context.Context, config *model.Config) error {
 	return nil
 }
 
-// ProbeHTTPS verifies that the configured HTTPS key pair and client CA can be loaded.
+// probeHTTPS verifies that the configured HTTPS key pair and client CA can be loaded.
 // Disabled listeners are not probed: those files are unused until HTTPS is enabled.
-func (p *prober) ProbeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS) error {
+func (p *prober) probeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS) error {
 	if config.Disabled || config.CertFile == "" || config.KeyFile == "" {
 		return nil
 	}
@@ -77,9 +73,9 @@ func (p *prober) ProbeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS
 	return nil
 }
 
-// ProbeCluster verifies that a cluster's CA and client key pair can be loaded.
+// probeCluster verifies that a cluster's CA and client key pair can be loaded.
 // Secret values are resolved into a copy so the model never retains plaintext.
-func (p *prober) ProbeCluster(
+func (p *prober) probeCluster(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
 	agent *model.SecretAgent,

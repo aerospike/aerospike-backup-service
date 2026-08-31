@@ -10,10 +10,10 @@ import (
 
 func TestProbeHTTPS(t *testing.T) {
 	files := createTestCertificateFiles(t)
-	prober := NewProber(newTestResolver(t))
+	prober := &prober{resolver: newTestResolver(t)}
 
 	t.Run("valid", func(t *testing.T) {
-		err := prober.ProbeHTTPS(t.Context(), &model.ServerConfigHTTPS{
+		err := prober.probeHTTPS(t.Context(), &model.ServerConfigHTTPS{
 			CertFile: files.certFile,
 			KeyFile:  files.keyFile,
 		})
@@ -21,7 +21,7 @@ func TestProbeHTTPS(t *testing.T) {
 	})
 
 	t.Run("missing certificate", func(t *testing.T) {
-		err := prober.ProbeHTTPS(t.Context(), &model.ServerConfigHTTPS{
+		err := prober.probeHTTPS(t.Context(), &model.ServerConfigHTTPS{
 			CertFile: filepath.Join(t.TempDir(), "missing.pem"),
 			KeyFile:  files.keyFile,
 		})
@@ -30,7 +30,7 @@ func TestProbeHTTPS(t *testing.T) {
 
 	t.Run("mismatched key pair", func(t *testing.T) {
 		other := createTestCertificateFiles(t)
-		err := prober.ProbeHTTPS(t.Context(), &model.ServerConfigHTTPS{
+		err := prober.probeHTTPS(t.Context(), &model.ServerConfigHTTPS{
 			CertFile: files.certFile,
 			KeyFile:  other.keyFile,
 		})
@@ -38,7 +38,7 @@ func TestProbeHTTPS(t *testing.T) {
 	})
 
 	t.Run("disabled skips missing files", func(t *testing.T) {
-		err := prober.ProbeHTTPS(t.Context(), &model.ServerConfigHTTPS{
+		err := prober.probeHTTPS(t.Context(), &model.ServerConfigHTTPS{
 			ListenerConfig: model.ListenerConfig{Disabled: true},
 			CertFile:       filepath.Join(t.TempDir(), "missing.pem"),
 			KeyFile:        filepath.Join(t.TempDir(), "missing-key.pem"),
@@ -49,10 +49,10 @@ func TestProbeHTTPS(t *testing.T) {
 
 func TestProbeCluster(t *testing.T) {
 	files := createTestCertificateFiles(t)
-	prober := NewProber(newTestResolver(t))
+	prober := &prober{resolver: newTestResolver(t)}
 
 	t.Run("valid", func(t *testing.T) {
-		err := prober.ProbeCluster(t.Context(), &model.AerospikeCluster{
+		err := prober.probeCluster(t.Context(), &model.AerospikeCluster{
 			TLS: &model.TLS{ClientTLS: model.ClientTLS{
 				CAFile:   files.caFile,
 				Certfile: files.certFile,
@@ -63,7 +63,7 @@ func TestProbeCluster(t *testing.T) {
 	})
 
 	t.Run("missing CA", func(t *testing.T) {
-		err := prober.ProbeCluster(t.Context(), &model.AerospikeCluster{
+		err := prober.probeCluster(t.Context(), &model.AerospikeCluster{
 			TLS: &model.TLS{ClientTLS: model.ClientTLS{
 				CAFile: filepath.Join(t.TempDir(), "missing.pem"),
 			}},
@@ -73,7 +73,7 @@ func TestProbeCluster(t *testing.T) {
 
 	t.Run("mismatched key pair", func(t *testing.T) {
 		other := createTestCertificateFiles(t)
-		err := prober.ProbeCluster(t.Context(), &model.AerospikeCluster{
+		err := prober.probeCluster(t.Context(), &model.AerospikeCluster{
 			TLS: &model.TLS{ClientTLS: model.ClientTLS{
 				Certfile: files.certFile,
 				Keyfile:  other.keyFile,

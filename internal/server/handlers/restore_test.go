@@ -53,7 +53,6 @@ func TestService_RestoreHandlers(t *testing.T) {
 				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
-				tlsProber:      newMockTLSProber(ctrl),
 			}
 
 			body := marshalToString(dto.RestoreRequest{
@@ -146,7 +145,6 @@ func TestService_restoreByPath(t *testing.T) {
 				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
-				tlsProber:      newMockTLSProber(ctrl),
 			}
 
 			req := httptest.NewRequestWithContext(
@@ -241,7 +239,6 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
-				tlsProber:      newMockTLSProber(ctrl),
 			}
 
 			req := httptest.NewRequestWithContext(

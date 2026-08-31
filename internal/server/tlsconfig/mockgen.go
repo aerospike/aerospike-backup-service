@@ -41,20 +41,6 @@ func (m *MockProber) EXPECT() *MockProberMockRecorder {
 	return m.recorder
 }
 
-// ProbeCluster mocks base method.
-func (m *MockProber) ProbeCluster(ctx context.Context, cluster *model.AerospikeCluster, agent *model.SecretAgent) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProbeCluster", ctx, cluster, agent)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ProbeCluster indicates an expected call of ProbeCluster.
-func (mr *MockProberMockRecorder) ProbeCluster(ctx, cluster, agent any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProbeCluster", reflect.TypeOf((*MockProber)(nil).ProbeCluster), ctx, cluster, agent)
-}
-
 // ProbeConfig mocks base method.
 func (m *MockProber) ProbeConfig(ctx context.Context, config *model.Config) error {
 	m.ctrl.T.Helper()
@@ -67,18 +53,4 @@ func (m *MockProber) ProbeConfig(ctx context.Context, config *model.Config) erro
 func (mr *MockProberMockRecorder) ProbeConfig(ctx, config any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProbeConfig", reflect.TypeOf((*MockProber)(nil).ProbeConfig), ctx, config)
-}
-
-// ProbeHTTPS mocks base method.
-func (m *MockProber) ProbeHTTPS(ctx context.Context, config *model.ServerConfigHTTPS) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProbeHTTPS", ctx, config)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ProbeHTTPS indicates an expected call of ProbeHTTPS.
-func (mr *MockProberMockRecorder) ProbeHTTPS(ctx, config any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProbeHTTPS", reflect.TypeOf((*MockProber)(nil).ProbeHTTPS), ctx, config)
 }

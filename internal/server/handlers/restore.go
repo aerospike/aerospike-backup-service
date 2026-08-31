@@ -57,12 +57,6 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
-	if err := s.tlsProber.ProbeCluster(
-		r.Context(), &restoreRequest.DestinationCluster, restoreRequest.SecretAgent,
-	); err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
 
 	jobID, err := s.restoreManager.Restore(s.sysCtx, restoreRequest)
 	if err != nil {
@@ -98,12 +92,6 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 
 	restoreRequest, err := request.ToModel(s.config)
 	if err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-	if err := s.tlsProber.ProbeCluster(
-		r.Context(), &restoreRequest.DestinationCluster, restoreRequest.SecretAgent,
-	); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
