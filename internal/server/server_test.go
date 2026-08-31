@@ -11,6 +11,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
@@ -37,6 +38,7 @@ func newTestServerHTTP(t *testing.T, httpCfg *model.ServerConfigHTTP) *serverHTT
 		t.Context(),
 		model.NewConfig(),
 		nil, nil, nil, nil, nil, nil, nil, nil,
+		secrets.NewResolver(),
 	)
 
 	return NewServerHTTP(t.Context(), httpCfg, svc).(*serverHTTP)

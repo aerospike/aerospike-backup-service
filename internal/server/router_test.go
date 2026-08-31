@@ -7,6 +7,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,6 +18,7 @@ func newTestServeMux(t *testing.T) *http.ServeMux {
 		t.Context(),
 		model.NewConfig(),
 		nil, nil, nil, nil, nil, nil, nil, nil,
+		secrets.NewResolver(),
 	)
 
 	return NewServeMux("/v1", "/", svc)

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -47,13 +48,19 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
-	if err = request.Validate(dto.ValidationDefault); err != nil {
+	if err = request.Validate(); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
 
 	restoreRequest, err := request.ToModel(s.config)
 	if err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
+	if err := servertls.ProbeCluster(
+		r.Context(), &restoreRequest.DestinationCluster, restoreRequest.SecretAgent, s.secretResolver,
+	); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -85,13 +92,19 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
-	if err = request.Validate(dto.ValidationDefault); err != nil {
+	if err = request.Validate(); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
 
 	restoreRequest, err := request.ToModel(s.config)
 	if err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
+	if err := servertls.ProbeCluster(
+		r.Context(), &restoreRequest.DestinationCluster, restoreRequest.SecretAgent, s.secretResolver,
+	); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}

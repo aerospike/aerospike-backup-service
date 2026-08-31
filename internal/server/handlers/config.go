@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -50,13 +51,17 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
 	decoder.MergeSecrets(newConfig, oldConfig)
 
-	if err := newConfig.Validate(dto.ValidationDefault); err != nil {
+	if err := newConfig.Validate(); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
 
 	newConfigModel, err := newConfig.ToModel()
 	if err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
+	if err := servertls.ProbeConfig(r.Context(), newConfigModel, s.secretResolver); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -93,6 +98,10 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	config, err := s.configurationManager.Read(r.Context())
 	if err != nil {
 		httpError(w, fmt.Errorf("failed to read configuration: %w", err))
+		return
+	}
+	if err := servertls.ProbeConfig(r.Context(), config, s.secretResolver); err != nil {
+		httpError(w, errBadRequest(err))
 		return
 	}
 

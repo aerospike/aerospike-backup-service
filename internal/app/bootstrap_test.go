@@ -51,3 +51,18 @@ func TestInitComponents_InvalidConfig(t *testing.T) {
 	require.ErrorContains(t, err, "failed to load configuration")
 	require.Nil(t, components)
 }
+
+func TestInitComponents_MissingTLSFiles(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	config := `service:
+  https:
+    cert-file: /missing/server.pem
+    key-file: /missing/server-key.pem
+`
+	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
+
+	components, err := InitComponents(t.Context(), configPath, false)
+
+	require.ErrorContains(t, err, "failed to validate TLS configuration")
+	require.Nil(t, components)
+}

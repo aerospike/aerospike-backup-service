@@ -120,7 +120,7 @@ func TestAerospikeCluster_Validate_Duplicates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.cluster.Validate(ValidationDefault)
+			err := tt.cluster.Validate()
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.wantErr)
 		})

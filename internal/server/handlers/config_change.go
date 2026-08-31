@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -41,12 +42,15 @@ func (s *Service) changeBackupConfig(
 	existingConfig := dto.NewConfigFromModel(s.config)
 	decoder.MergeSecrets(dtoConfig, existingConfig)
 
-	if err := dtoConfig.Validate(dto.ValidationDefault); err != nil {
+	if err := dtoConfig.Validate(); err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
 	modelConfig, err := dtoConfig.ToModel()
 	if err != nil {
+		return fmt.Errorf("failed to update configuration: %w", err)
+	}
+	if err := servertls.ProbeConfig(ctx, modelConfig, s.secretResolver); err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
