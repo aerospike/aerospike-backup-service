@@ -293,7 +293,7 @@ func (r *BackupRoutine) ToModel(
 		return nil, err
 	}
 
-	timezone, configuredTimezone := resolveRoutineTimezone(r.ScheduleTimezone, defaultTimezone)
+	timezone := resolveRoutineTimezone(r.ScheduleTimezone, defaultTimezone)
 
 	return &model.BackupRoutine{
 		Name:               name,
@@ -304,7 +304,7 @@ func (r *BackupRoutine) ToModel(
 		IntervalCron:       r.IntervalCron,
 		IncrIntervalCron:   r.IncrIntervalCron,
 		Timezone:           timezone,
-		ConfiguredTimezone: configuredTimezone,
+		ConfiguredTimezone: r.ScheduleTimezone,
 		Namespaces:         *r.Namespaces,
 		SetList:            r.SetList,
 		BinList:            r.BinList,
@@ -319,14 +319,14 @@ func (r *BackupRoutine) ToModel(
 func resolveRoutineTimezone(
 	configured string,
 	defaultTimezone *time.Location,
-) (*time.Location, string) {
+) *time.Location {
 	configured = strings.TrimSpace(configured)
 	if configured == "" {
-		return defaultTimezone, ""
+		return defaultTimezone
 	}
 
 	timezone, _ := parseTimezone(configured)
-	return timezone, timezone.String()
+	return timezone
 }
 
 func (r *BackupRoutine) validateRacks(cluster *model.AerospikeCluster) error {

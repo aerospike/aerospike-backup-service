@@ -2,7 +2,6 @@ package dto
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -47,15 +46,11 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 	}
 
 	timezone, _ := parseTimezone(b.ScheduleTimezone)
-	configuredTimezone := strings.TrimSpace(b.ScheduleTimezone)
-	if configuredTimezone != "" {
-		configuredTimezone = timezone.String()
-	}
 
 	return &model.BackupCommonConfig{
 		TimestampFormat:    b.TimestampFormat.ToModel(),
 		Timezone:           timezone,
-		ConfiguredTimezone: configuredTimezone,
+		ConfiguredTimezone: b.ScheduleTimezone,
 	}
 }
 
