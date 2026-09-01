@@ -67,7 +67,7 @@ func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest
 }
 
 // Validate validates the restore operation request.
-func (r *RestoreRequest) Validate(opts ValidationOptions) error {
+func (r *RestoreRequest) Validate() error {
 	if len(r.BackupDataPath) == 0 {
 		return errValidationEmptyField("backup-data-path")
 	}
@@ -77,20 +77,21 @@ func (r *RestoreRequest) Validate(opts ValidationOptions) error {
 	if err := safepath.ValidateClean(r.BackupDataPath); err != nil {
 		return fmt.Errorf("%w: backup-data-path: %w", errValidation, err)
 	}
-	if err := r.DestinationClusterConfig.Validate(opts); err != nil {
+	if err := r.DestinationClusterConfig.Validate(ValidationDefault); err != nil {
 		return err
 	}
-	if err := r.StorageConfig.Validate(opts); err != nil {
+	if err := r.StorageConfig.Validate(ValidationDefault); err != nil {
 		return err
 	}
 	//nolint:staticcheck // We want to explicitly call secret agent validation.
-	if err := r.SecretAgentConfig.validate(opts); err != nil {
+	if err := r.SecretAgentConfig.validate(); err != nil {
 		return err
 	}
+	policyOpts := ValidationDefault
 	if r.hasSecretAgent() {
-		opts = opts.With(ValidationWithSecretAgent)
+		policyOpts = ValidationWithSecretAgent
 	}
-	if err := r.Policy.Validate(opts); err != nil {
+	if err := r.Policy.Validate(policyOpts); err != nil {
 		return err
 	}
 
@@ -98,22 +99,22 @@ func (r *RestoreRequest) Validate(opts ValidationOptions) error {
 }
 
 // Validate validates the restore operation request.
-func (r *RestoreTimestampRequest) Validate(opts ValidationOptions) error {
+func (r *RestoreTimestampRequest) Validate() error {
 	// Storage is an optional override; if omitted, it will be resolved from routine.
-	if err := r.StorageConfig.Validate(opts.With(ValidationAllowEmpty)); err != nil {
+	if err := r.StorageConfig.Validate(ValidationAllowEmpty); err != nil {
 		return err
 	}
 	// Destination is an optional override; if omitted, it will be resolved from routine.
-	if err := r.DestinationClusterConfig.Validate(opts.With(ValidationAllowEmpty)); err != nil {
+	if err := r.DestinationClusterConfig.Validate(ValidationAllowEmpty); err != nil {
 		return err
 	}
 	// Secret agent is an optional override; if omitted, it will be resolved from routine.
 	//nolint:staticcheck // We want to explicitly call secret agent validation.
-	if err := r.SecretAgentConfig.validate(opts); err != nil {
+	if err := r.SecretAgentConfig.validate(); err != nil {
 		return err
 	}
 	// Secret agent may also come from the referenced routine at ToModel time.
-	if err := r.Policy.Validate(opts.With(ValidationWithSecretAgent)); err != nil {
+	if err := r.Policy.Validate(ValidationWithSecretAgent); err != nil {
 		return err
 	}
 	if r.Time == 0 {
@@ -228,7 +229,7 @@ func (c *DestinationClusterConfig) Validate(opts ValidationOptions) error {
 		return errValidationMutuallyExclusive("destination", "destination-name")
 	}
 	if c.Cluster != nil {
-		if err := c.Cluster.Validate(opts); err != nil {
+		if err := c.Cluster.Validate(); err != nil {
 			return err
 		}
 	}
@@ -276,7 +277,7 @@ func (c *StorageConfig) Validate(opts ValidationOptions) error {
 		return errValidationMutuallyExclusive("source", "source-name")
 	}
 	if c.Storage != nil {
-		if err := c.Storage.Validate(opts); err != nil {
+		if err := c.Storage.Validate(); err != nil {
 			return err
 		}
 	}

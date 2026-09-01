@@ -32,19 +32,13 @@ const (
 // ca-file is optional and independent: it trusts the server certificate.
 // cert-file and key-file identify this client (mTLS). name must be set with
 // them; for cluster connections SNI still comes from seed-nodes[].tls-name.
-func (c *ClientTLS) Validate(opts ValidationOptions) error {
+func (c *ClientTLS) Validate() error {
 	if c == nil {
 		return nil
 	}
 
-	if !opts.Has(ValidationSkipTLSFiles) {
-		if err := c.validatePaths(); err != nil {
-			return err
-		}
-
-		if err := c.verifyFilesExist(); err != nil {
-			return err
-		}
+	if err := c.validatePaths(); err != nil {
+		return err
 	}
 
 	// mTLS: cert-file, key-file, and name must be set together.
@@ -99,20 +93,6 @@ func (c *ClientTLS) validatePaths() error {
 	} {
 		if err := safepath.ValidateClean(path); err != nil {
 			return errValidationInvalidPath(field, path, err)
-		}
-	}
-
-	return nil
-}
-
-func (c *ClientTLS) verifyFilesExist() error {
-	for field, path := range map[string]string{
-		caField:   c.CAFile,
-		certField: c.Certfile,
-		keyField:  c.Keyfile,
-	} {
-		if err := safepath.EnsureFileExists(path); err != nil {
-			return errValidationNotFound(field, path)
 		}
 	}
 

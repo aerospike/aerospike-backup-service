@@ -20,11 +20,11 @@ type ServiceConfig struct {
 	Backup *BackupCommonConfig `yaml:"backup,omitempty" json:"backup,omitempty"`
 }
 
-func (c *ServiceConfig) Validate(opts ValidationOptions) error {
+func (c *ServiceConfig) Validate() error {
 	if err := c.ServerHTTP.Validate(); err != nil {
 		return fmt.Errorf("`http` validation error: %w", err)
 	}
-	if err := c.ServerHTTPS.Validate(opts); err != nil {
+	if err := c.ServerHTTPS.Validate(); err != nil {
 		return fmt.Errorf("`https` validation error: %w", err)
 	}
 	if err := c.validateListeners(); err != nil {

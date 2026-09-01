@@ -85,7 +85,7 @@ func NewConfigFromReader(r io.Reader, format decoder.SerializationFormat) (*Conf
 // Validate validates the configuration.
 //
 //nolint:gocognit
-func (c *Config) Validate(opts ValidationOptions) error {
+func (c *Config) Validate() error {
 	for name, routine := range c.BackupRoutines {
 		if name == "" {
 			return errValidationEmptyField("routine name")
@@ -99,7 +99,7 @@ func (c *Config) Validate(opts ValidationOptions) error {
 		if name == "" {
 			return errValidationEmptyField("storage name")
 		}
-		if err := storage.Validate(opts); err != nil {
+		if err := storage.Validate(); err != nil {
 			return fmt.Errorf("storage '%s' validation error: %w", name, err)
 		}
 	}
@@ -108,7 +108,7 @@ func (c *Config) Validate(opts ValidationOptions) error {
 		if name == "" {
 			return errValidationEmptyField("cluster name")
 		}
-		if err := cluster.Validate(opts); err != nil {
+		if err := cluster.Validate(); err != nil {
 			return fmt.Errorf("cluster '%s' validation error: %w", name, err)
 		}
 	}
@@ -117,9 +117,9 @@ func (c *Config) Validate(opts ValidationOptions) error {
 		if name == "" {
 			return errValidationEmptyField("policy name")
 		}
-		policyOpts := opts
+		policyOpts := ValidationDefault
 		if c.backupPolicyHasSecretAgent(name) {
-			policyOpts = opts.With(ValidationWithSecretAgent)
+			policyOpts = ValidationWithSecretAgent
 		}
 
 		if err := policy.Validate(policyOpts); err != nil {
@@ -131,12 +131,12 @@ func (c *Config) Validate(opts ValidationOptions) error {
 		if name == "" {
 			return errValidationEmptyField("secret agent name")
 		}
-		if err := agent.validate(opts); err != nil {
+		if err := agent.validate(); err != nil {
 			return fmt.Errorf("secret agent '%s' validation error: %w", name, err)
 		}
 	}
 
-	if err := c.ServiceConfig.Validate(opts); err != nil {
+	if err := c.ServiceConfig.Validate(); err != nil {
 		return fmt.Errorf("service validation error: %w", err)
 	}
 

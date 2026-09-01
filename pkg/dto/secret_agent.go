@@ -17,14 +17,14 @@ type SecretAgentConfig struct {
 	SecretAgentName string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty" extensions:"x-nullable"`
 }
 
-func (c *SecretAgentConfig) validate(opts ValidationOptions) error {
+func (c *SecretAgentConfig) validate() error {
 	if c == nil {
 		return nil
 	}
 	if c.SecretAgent != nil && c.SecretAgentName != "" {
 		return errValidationMutuallyExclusive("secret-agent-name", "secret-agent")
 	}
-	if err := c.SecretAgent.validate(opts); err != nil {
+	if err := c.SecretAgent.validate(); err != nil {
 		return fmt.Errorf("secret-agent validation error: %w", err)
 	}
 
@@ -133,7 +133,7 @@ func (s *SecretAgent) fromModel(m *model.SecretAgent) {
 }
 
 // validate validates the SecretAgent.
-func (s *SecretAgent) validate(opts ValidationOptions) error {
+func (s *SecretAgent) validate() error {
 	if s == nil {
 		return nil
 	}
@@ -150,7 +150,7 @@ func (s *SecretAgent) validate(opts ValidationOptions) error {
 		return errValidationNegative("timeout", *s.Timeout)
 	}
 
-	if err := s.Validate(opts); err != nil {
+	if err := s.Validate(); err != nil {
 		return fmt.Errorf("client TLS validation: %w", err)
 	}
 

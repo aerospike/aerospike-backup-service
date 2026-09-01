@@ -373,7 +373,7 @@ func updateDefaultConfigSection(readme []byte) []byte {
 	if err != nil {
 		panic(fmt.Errorf("failed to parse default config YAML: %w", err))
 	}
-	if err = config.Validate(dto.ValidationDefault); err != nil {
+	if err = config.Validate(); err != nil {
 		panic(fmt.Errorf("failed to validate default config YAML: %w", err))
 	}
 

@@ -17,7 +17,6 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 	tests := []struct {
 		name    string
 		config  *ServerConfigHTTPS
-		options ValidationOptions
 		wantErr string
 	}{
 		{
@@ -72,7 +71,6 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 				CertFile: "/not/available/server.pem",
 				KeyFile:  "/not/available/server-key.pem",
 			},
-			options: ValidationSkipTLSFiles,
 		},
 		{
 			name:    "enabled without certificate or key",
@@ -149,21 +147,19 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			wantErr: "client-ca-file",
 		},
 		{
-			name: "mismatched certificate and key",
+			name: "mismatched certificate and key is structurally valid",
 			config: &ServerConfigHTTPS{
 				CertFile: certs.certFile,
 				KeyFile:  otherCerts.keyFile,
 			},
-			wantErr: "private key does not match public key",
 		},
 		{
-			name: "disabled with mismatched certificate and key",
+			name: "disabled with mismatched certificate and key is structurally valid",
 			config: &ServerConfigHTTPS{
 				ListenerConfig: ListenerConfig{Disabled: true},
 				CertFile:       certs.certFile,
 				KeyFile:        otherCerts.keyFile,
 			},
-			wantErr: "private key does not match public key",
 		},
 		{
 			name: "client authentication without CA",
@@ -237,7 +233,7 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := test.config.Validate(test.options)
+			err := test.config.Validate()
 			if test.wantErr == "" {
 				require.NoError(t, err)
 				return
@@ -370,7 +366,7 @@ func TestServerHTTPSConfigToModel_ResolvesSecretAgentName(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, config.Validate(ValidationDefault))
+	require.NoError(t, config.Validate())
 
 	modelConfig, err := config.ToModel()
 	require.NoError(t, err)
@@ -382,7 +378,7 @@ func TestServerHTTPSConfigToModel_ResolvesSecretAgentName(t *testing.T) {
 func TestServerHTTPSConfigNilReceiver(t *testing.T) {
 	var config *ServerConfigHTTPS
 
-	require.NoError(t, config.Validate(ValidationDefault))
+	require.NoError(t, config.Validate())
 	assert.Nil(t, config.ToModel())
 
 	roundTrip := &ServerConfigHTTPS{}
