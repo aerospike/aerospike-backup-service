@@ -2360,6 +2360,16 @@
                         "example": "*/10 * * * * *",
                         "nullable": true
                     },
+                    "incr-mode": {
+                        "description": "The mode for incremental backups (optional, default is differential).",
+                        "type": "string",
+                        "enum": [
+                            "differential",
+                            "cumulative"
+                        ],
+                        "example": "differential",
+                        "nullable": true
+                    },
                     "interval-cron": {
                         "description": "The interval for full backup as a cron expression string.\nCron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format",
                         "type": "string",

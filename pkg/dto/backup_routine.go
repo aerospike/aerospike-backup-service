@@ -34,6 +34,8 @@ type BackupRoutine struct {
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron" example:"0 0 * * * *" validate:"required"`
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string `yaml:"incr-interval-cron,omitempty" json:"incr-interval-cron,omitempty" example:"*/10 * * * * *" extensions:"x-nullable"`
+	// The mode for incremental backups (optional, default is differential).
+	IncrMode IncrMode `yaml:"incr-mode,omitempty" json:"incr-mode,omitempty" example:"differential" extensions:"x-nullable"`
 	// The list of namespaces to back up.
 	// If empty, the entire cluster is backed up.
 	// The order of namespaces does not determine the backup execution or completion order.
@@ -106,6 +108,9 @@ func (r *BackupRoutine) Validate() error {
 		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
+	}
+	if err := r.IncrMode.Validate(); err != nil {
+		return err
 	}
 	for i, rack := range r.RackList {
 		if rack < 0 {
@@ -298,6 +303,7 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		SecretAgent:      secretAgent,
 		IntervalCron:     r.IntervalCron,
 		IncrIntervalCron: r.IncrIntervalCron,
+		IncrMode:         r.IncrMode.ToModel(),
 		Namespaces:       *r.Namespaces,
 		SetList:          r.SetList,
 		BinList:          r.BinList,
@@ -384,6 +390,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	}
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
+	r.IncrMode = NewIncrModeFromModel(m.IncrMode)
 	r.Namespaces = &m.Namespaces
 	r.SetList = m.SetList
 	r.BinList = m.BinList

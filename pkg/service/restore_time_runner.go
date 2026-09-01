@@ -8,6 +8,7 @@ import (
 	"maps"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -131,16 +132,38 @@ func buildRestoreChainsByNamespace(
 	chains := make(map[string][]model.BackupDetails, len(latestFullByNamespace))
 	for ns, full := range latestFullByNamespace {
 		chains[ns] = append(chains[ns], full)
+
+		// Sort incrementals descending by Created
+		slices.SortFunc(incrementalsByNamespace[ns], func(a, b model.BackupDetails) int {
+			return b.Created.Compare(a.Created)
+		})
+
+		var filteredIncr []model.BackupDetails
+		var coveredUntil time.Time
+
 		for _, incr := range incrementalsByNamespace[ns] {
 			// Apply only incrementals strictly newer than the selected full backup.
 			if !incr.Created.After(full.Created) {
 				continue
 			}
-			chains[ns] = append(chains[ns], incr)
+
+			// If this incremental is covered by a newer one, skip it.
+			if !coveredUntil.IsZero() && !incr.Created.After(coveredUntil) {
+				continue
+			}
+
+			filteredIncr = append(filteredIncr, incr)
+
+			if !incr.From.IsZero() {
+				if coveredUntil.IsZero() || incr.From.Before(coveredUntil) {
+					coveredUntil = incr.From
+				}
+			}
 		}
-		slices.SortFunc(chains[ns], func(a, b model.BackupDetails) int {
-			return a.Created.Compare(b.Created)
-		})
+
+		// Append filtered incrementals in chronological order
+		slices.Reverse(filteredIncr)
+		chains[ns] = append(chains[ns], filteredIncr...)
 	}
 
 	return chains

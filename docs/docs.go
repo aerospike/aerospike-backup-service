@@ -2090,6 +2090,16 @@ const docTemplate = `{
                     "x-nullable": true,
                     "example": "*/10 * * * * *"
                 },
+                "incr-mode": {
+                    "description": "The mode for incremental backups (optional, default is differential).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.IncrMode"
+                        }
+                    ],
+                    "x-nullable": true,
+                    "example": "differential"
+                },
                 "interval-cron": {
                     "description": "The interval for full backup as a cron expression string.\nCron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format",
                     "type": "string",
@@ -2456,6 +2466,18 @@ const docTemplate = `{
                     "x-nullable": true
                 }
             }
+        },
+        "dto.IncrMode": {
+            "description": "IncrMode represents the mode for incremental backups.",
+            "type": "string",
+            "enum": [
+                "differential",
+                "cumulative"
+            ],
+            "x-enum-varnames": [
+                "IncrModeDifferential",
+                "IncrModeCumulative"
+            ]
         },
         "dto.JobStatus": {
             "description": "Possible states of restore jobs.",
