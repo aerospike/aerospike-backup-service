@@ -65,7 +65,7 @@ func (r *timeRestoreRunner) RestoreByTime(
 
 // findBackupsToRestore returns list of backups for each namespace, sorted by creation date. First is full backup.
 func (r *timeRestoreRunner) findBackupsToRestore(
-	ctx context.Context, request *model.RestoreTimestampRequest,
+	ctx context.Context, request *model.RestoreTimestampRequest, logger *slog.Logger,
 ) (map[string][]model.BackupDetails, error) {
 	fullBackups, err := r.backupReader.GetBackups(ctx, // find all full backups completed by given restore request time.
 		newRoutineBackupFilter(request.RoutineName, request.Storage, model.BackupTypeFull).
@@ -99,7 +99,7 @@ func (r *timeRestoreRunner) findBackupsToRestore(
 
 	incrementalsByNamespace := splitByNamespace(incrementalBackups)
 
-	return buildRestoreChainsByNamespace(latestFullByNamespace, incrementalsByNamespace), nil
+	return buildRestoreChainsByNamespace(latestFullByNamespace, incrementalsByNamespace, logger), nil
 }
 
 // latestBackupsByNamespace picks the newest backup per namespace from the provided list.
@@ -128,17 +128,20 @@ func earliestSelectedFullBackup(selectedFullByNamespace map[string]model.BackupD
 func buildRestoreChainsByNamespace(
 	latestFullByNamespace map[string]model.BackupDetails,
 	incrementalsByNamespace map[string][]model.BackupDetails,
+	logger *slog.Logger,
 ) map[string][]model.BackupDetails {
 	chains := make(map[string][]model.BackupDetails, len(latestFullByNamespace))
 	for ns, full := range latestFullByNamespace {
 		chains[ns] = append(chains[ns], full)
-		chains[ns] = append(chains[ns], filterIncrementals(full, incrementalsByNamespace[ns])...)
+		chains[ns] = append(chains[ns], filterIncrementals(full, incrementalsByNamespace[ns], logger)...)
 	}
 
 	return chains
 }
 
-func filterIncrementals(full model.BackupDetails, incrementals []model.BackupDetails) []model.BackupDetails {
+func filterIncrementals(
+	full model.BackupDetails, incrementals []model.BackupDetails, logger *slog.Logger,
+) []model.BackupDetails {
 	// Sort incrementals descending by Created
 	slices.SortFunc(incrementals, func(a, b model.BackupDetails) int {
 		return b.Created.Compare(a.Created)
@@ -158,12 +161,29 @@ func filterIncrementals(full model.BackupDetails, incrementals []model.BackupDet
 			continue
 		}
 
+		if !coveredUntil.IsZero() && incr.Created.Before(coveredUntil) {
+			logger.Warn("Gap detected in incremental backup chain",
+				slog.Time("gapStart", incr.Created),
+				slog.Time("gapEnd", coveredUntil),
+				slog.String("namespace", incr.Namespace))
+		}
+
 		filteredIncr = append(filteredIncr, incr)
 
 		if !incr.From.IsZero() {
 			if coveredUntil.IsZero() || incr.From.Before(coveredUntil) {
 				coveredUntil = incr.From
 			}
+		}
+	}
+
+	if len(filteredIncr) > 0 {
+		oldestIncr := filteredIncr[len(filteredIncr)-1]
+		if full.Created.Before(oldestIncr.From) {
+			logger.Warn("Gap detected between full backup and first incremental",
+				slog.Time("gapStart", full.Created),
+				slog.Time("gapEnd", oldestIncr.From),
+				slog.String("namespace", full.Namespace))
 		}
 	}
 
@@ -194,7 +214,7 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 	routineStorageLock.RLock()
 	defer routineStorageLock.RUnlock()
 
-	backupsByNamespace, err := r.findBackupsToRestore(ctx, request)
+	backupsByNamespace, err := r.findBackupsToRestore(ctx, request, logger)
 	if err != nil {
 		return err
 	}
