@@ -81,7 +81,7 @@ func TestBackupServiceConfig_Validate_ScheduleTimezone(t *testing.T) {
 			cfg := &ServiceConfig{
 				Backup: &BackupCommonConfig{ScheduleTimezone: tt.value},
 			}
-			err := cfg.Validate(ValidationDefault)
+			err := cfg.Validate()
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tt.wantErr)
