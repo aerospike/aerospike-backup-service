@@ -147,8 +147,8 @@ func buildRestoreChainsByNamespace(
 				continue
 			}
 
-			// If this incremental is covered by a newer one, skip it.
-			if !coveredUntil.IsZero() && !incr.Created.After(coveredUntil) {
+			// If this incremental is fully covered by newer ones, skip it.
+			if !coveredUntil.IsZero() && !incr.From.Before(coveredUntil) {
 				continue
 			}
 
