@@ -161,36 +161,50 @@ func filterIncrementals(
 			continue
 		}
 
-		if !coveredUntil.IsZero() && incr.Created.Before(coveredUntil) {
-			logger.Warn("Gap detected in incremental backup chain",
-				slog.Time("gapStart", incr.Created),
-				slog.Time("gapEnd", coveredUntil),
-				slog.String("namespace", incr.Namespace))
-		}
+		checkIncrementalGap(logger, incr, coveredUntil)
 
 		filteredIncr = append(filteredIncr, incr)
-
-		if !incr.From.IsZero() {
-			if coveredUntil.IsZero() || incr.From.Before(coveredUntil) {
-				coveredUntil = incr.From
-			}
-		}
+		coveredUntil = updateCoveredUntil(coveredUntil, incr.From)
 	}
 
-	if len(filteredIncr) > 0 {
-		oldestIncr := filteredIncr[len(filteredIncr)-1]
-		if full.Created.Before(oldestIncr.From) {
-			logger.Warn("Gap detected between full backup and first incremental",
-				slog.Time("gapStart", full.Created),
-				slog.Time("gapEnd", oldestIncr.From),
-				slog.String("namespace", full.Namespace))
-		}
-	}
+	checkFullBackupGap(logger, full, filteredIncr)
 
 	// Append filtered incrementals in chronological order
 	slices.Reverse(filteredIncr)
 
 	return filteredIncr
+}
+
+func checkIncrementalGap(logger *slog.Logger, incr model.BackupDetails, coveredUntil time.Time) {
+	if !coveredUntil.IsZero() && incr.Created.Before(coveredUntil) {
+		logger.Warn("Gap detected in incremental backup chain",
+			slog.Time("gapStart", incr.Created),
+			slog.Time("gapEnd", coveredUntil),
+			slog.String("namespace", incr.Namespace))
+	}
+}
+
+func updateCoveredUntil(current, incrFrom time.Time) time.Time {
+	if incrFrom.IsZero() {
+		return current
+	}
+	if current.IsZero() || incrFrom.Before(current) {
+		return incrFrom
+	}
+	return current
+}
+
+func checkFullBackupGap(logger *slog.Logger, full model.BackupDetails, filteredIncr []model.BackupDetails) {
+	if len(filteredIncr) == 0 {
+		return
+	}
+	oldestIncr := filteredIncr[len(filteredIncr)-1]
+	if full.Created.Before(oldestIncr.From) {
+		logger.Warn("Gap detected between full backup and first incremental",
+			slog.Time("gapStart", full.Created),
+			slog.Time("gapEnd", oldestIncr.From),
+			slog.String("namespace", full.Namespace))
+	}
 }
 
 func splitByNamespace(backups []model.BackupDetails) map[string][]model.BackupDetails {
