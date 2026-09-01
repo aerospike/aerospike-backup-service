@@ -286,7 +286,7 @@ with different behaviors for full and incremental backups:
       The service uses a scan operation with no lower time boundary (modAfter = 0).
 
 * **Incremental Backups:**:
-    * Only capture records that have been modified since the last successful backup. The behavior depends on the `incr-mode` setting in the routine:
+    * Only capture records that have been modified since the last successful backup. The behavior depends on the `incr-mode` setting in the backup policy:
         - **Differential (default)**: Captures records modified since the last successful backup (full or incremental).
         - **Cumulative**: Captures records modified since the last successful full backup.
       The service tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp
