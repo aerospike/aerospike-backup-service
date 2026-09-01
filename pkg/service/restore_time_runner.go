@@ -133,14 +133,16 @@ func buildRestoreChainsByNamespace(
 	chains := make(map[string][]model.BackupDetails, len(latestFullByNamespace))
 	for ns, full := range latestFullByNamespace {
 		chains[ns] = append(chains[ns], full)
-		chains[ns] = append(chains[ns], filterIncrementals(full, incrementalsByNamespace[ns], logger)...)
+		chains[ns] = append(chains[ns], filterIncrementals(full, incrementalsByNamespace[ns])...)
 	}
+
+	checkGaps(chains, logger)
 
 	return chains
 }
 
 func filterIncrementals(
-	full model.BackupDetails, incrementals []model.BackupDetails, logger *slog.Logger,
+	full model.BackupDetails, incrementals []model.BackupDetails,
 ) []model.BackupDetails {
 	// Sort incrementals descending by Created
 	slices.SortFunc(incrementals, func(a, b model.BackupDetails) int {
@@ -161,13 +163,9 @@ func filterIncrementals(
 			continue
 		}
 
-		checkIncrementalGap(logger, incr, coveredUntil)
-
 		filteredIncr = append(filteredIncr, incr)
 		coveredUntil = updateCoveredUntil(coveredUntil, incr.From)
 	}
-
-	checkFullBackupGap(logger, full, filteredIncr)
 
 	// Append filtered incrementals in chronological order
 	slices.Reverse(filteredIncr)
@@ -175,12 +173,28 @@ func filterIncrementals(
 	return filteredIncr
 }
 
-func checkIncrementalGap(logger *slog.Logger, incr model.BackupDetails, coveredUntil time.Time) {
-	if !coveredUntil.IsZero() && incr.Created.Before(coveredUntil) {
-		logger.Warn("Gap detected in incremental backup chain",
-			slog.Time("gapStart", incr.Created),
-			slog.Time("gapEnd", coveredUntil),
-			slog.String("namespace", incr.Namespace))
+func checkGaps(chains map[string][]model.BackupDetails, logger *slog.Logger) {
+	for ns, chain := range chains {
+		if len(chain) < 2 {
+			continue
+		}
+
+		for i := 0; i < len(chain)-1; i++ {
+			prev := chain[i]
+			next := chain[i+1]
+
+			if prev.Created.Before(next.From) {
+				msg := "Gap detected in incremental backup chain"
+				if i == 0 {
+					msg = "Gap detected between full backup and first incremental"
+				}
+
+				logger.Warn(msg,
+					slog.Time("gapStart", prev.Created),
+					slog.Time("gapEnd", next.From),
+					slog.String("namespace", ns))
+			}
+		}
 	}
 }
 
@@ -192,19 +206,6 @@ func updateCoveredUntil(current, incrFrom time.Time) time.Time {
 		return incrFrom
 	}
 	return current
-}
-
-func checkFullBackupGap(logger *slog.Logger, full model.BackupDetails, filteredIncr []model.BackupDetails) {
-	if len(filteredIncr) == 0 {
-		return
-	}
-	oldestIncr := filteredIncr[len(filteredIncr)-1]
-	if full.Created.Before(oldestIncr.From) {
-		logger.Warn("Gap detected between full backup and first incremental",
-			slog.Time("gapStart", full.Created),
-			slog.Time("gapEnd", oldestIncr.From),
-			slog.String("namespace", full.Namespace))
-	}
 }
 
 func splitByNamespace(backups []model.BackupDetails) map[string][]model.BackupDetails {
