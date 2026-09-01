@@ -20,11 +20,12 @@ var secureCipherSuites = func() map[string]uint16 {
 	return suites
 }()
 
-// NewTLSConfig builds a server TLS configuration that asks getCertificate for the key pair on
-// every handshake, so a rotated pair is picked up without rebuilding the configuration.
+// NewTLSConfig builds a server TLS configuration. It reads no TLS material itself:
+// dynamic supplies the key pair and, for mTLS, the client CA pool on every handshake,
+// so rotated files are picked up without rebuilding the configuration.
 func NewTLSConfig(
 	config *model.ServerConfigHTTPS,
-	getCertificate func(*tls.ClientHelloInfo) (*tls.Certificate, error),
+	dynamic DynamicTLS,
 ) (*tls.Config, error) {
 	minVersion, err := parseMinVersion(config.GetMinVersionOrDefault())
 	if err != nil {
@@ -47,16 +48,15 @@ func NewTLSConfig(
 	result := &tls.Config{
 		MinVersion:     minVersion,
 		CipherSuites:   cipherSuites,
-		GetCertificate: getCertificate,
+		GetCertificate: dynamic.GetCertificate,
 	}
 
 	if config.ClientCAFile != "" {
-		result.ClientCAs, err = loadClientCAs(config.ClientCAFile)
-		if err != nil {
-			return nil, err
-		}
 		result.ClientAuth = clientAuth
+		result.GetConfigForClient = dynamic.GetConfigForClient
 	}
+
+	dynamic.SetBaseConfig(result)
 
 	return result, nil
 }

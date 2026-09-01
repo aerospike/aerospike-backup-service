@@ -20,6 +20,7 @@ The time at which a credential change takes effect depends on the type of creden
 * **Cluster passwords:** Changes take effect when the existing connection is no longer in use and a new connection is established.
 * **Encryption keys:** A new key is used when a new backup job starts.
 * **HTTPS server certificate and key** (`service.https` `cert-file` and `key-file`): Rewrite the files at the **same paths**. The service polls both files every 10 seconds and serves a successfully loaded pair on new TLS handshakes without restarting and without dropping in-flight connections. Changing the configured paths is a static-field change and requires a restart. An invalid replacement pair (parse failure or cert/key mismatch) is ignored: the last good certificate stays in service.
+* **HTTPS client CA bundle** (`service.https` `client-ca-file`, when mTLS is enabled): Rewrite the file at the **same path** to rotate which client certificates are trusted. The service polls every 10 seconds and applies the new pool to new handshakes without a restart. Append the new CA before removing the old one so clients can migrate gradually. An invalid replacement bundle is ignored and the last good pool stays in service.
 
 ## Secret Agent Availability
 

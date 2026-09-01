@@ -167,11 +167,11 @@ func newServerHTTPS(
 	reloader := servertls.NewCertificateReloader(
 		configHTTPS, resolver, servertls.DefaultWatchInterval,
 	)
-	if err := reloader.Load(ctx); err != nil { // initial TLS keys load.
+	if err := reloader.Load(ctx); err != nil { // initial TLS material load.
 		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 	}
 
-	tlsConfig, err := servertls.NewTLSConfig(configHTTPS, reloader.GetCertificate)
+	tlsConfig, err := servertls.NewTLSConfig(configHTTPS, reloader)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 	}

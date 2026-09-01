@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"math/big"
 	"net"
 	"net/http"
@@ -80,24 +81,7 @@ func TestHTTPSHandshakeServesRotatedCertificate(t *testing.T) {
 	files := createTestCertificateFiles(t)
 	tlsCfg := startReloadingConfig(t, files)
 
-	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-
-	srv := &http.Server{
-		Handler:           http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }),
-		TLSConfig:         tlsCfg,
-		ReadHeaderTimeout: time.Second,
-	}
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- srv.ServeTLS(ln, "", "")
-	}()
-	t.Cleanup(func() {
-		_ = srv.Close()
-		<-errCh
-	})
-
-	addr := ln.Addr().String()
+	addr := startHTTPSServer(t, tlsCfg)
 	var original *big.Int
 	require.Eventually(t, func() bool {
 		serial, err := handshakeSerial(addr)
@@ -142,18 +126,130 @@ func TestNoReloadIsANoOp(t *testing.T) {
 	require.NotPanics(t, func() { reloader.Start(t.Context()) })
 }
 
+func TestClientCAReloadAcceptsNewClientAndRejectsOld(t *testing.T) {
+	files := createTestCertificateFiles(t)
+	tlsCfg := startReloadingMTLSConfig(t, files)
+
+	addr := startHTTPSServer(t, tlsCfg)
+	require.NoError(t, mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile))
+
+	replacement := createTestCertificateFiles(t)
+	require.NoError(t, os.WriteFile(files.caFile, readFile(t, replacement.caFile), 0o600))
+	bumpFileMtime(t, files.caFile)
+
+	require.Eventually(t, func() bool {
+		return mtlsGet(addr, replacement.clientCertFile, replacement.clientKeyFile, replacement.caFile) == nil
+	}, time.Second, 20*time.Millisecond)
+
+	require.Error(t, mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile))
+}
+
+func TestClientCAKeepsLastGoodOnInvalidFile(t *testing.T) {
+	files := createTestCertificateFiles(t)
+	tlsCfg := startReloadingMTLSConfig(t, files)
+
+	addr := startHTTPSServer(t, tlsCfg)
+	require.NoError(t, mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile))
+
+	require.NoError(t, os.WriteFile(files.caFile, []byte("not a ca bundle"), 0o600))
+	bumpFileMtime(t, files.caFile)
+
+	require.Never(t, func() bool {
+		return mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile) != nil
+	}, 150*time.Millisecond, 10*time.Millisecond)
+}
+
 func startReloadingConfig(t *testing.T, files testCertificateFiles) *tls.Config {
 	t.Helper()
 
 	config := &model.ServerConfigHTTPS{CertFile: files.certFile, KeyFile: files.keyFile}
+	return startReloadingConfigWithModel(t, config)
+}
+
+func startReloadingMTLSConfig(t *testing.T, files testCertificateFiles) *tls.Config {
+	t.Helper()
+
+	config := &model.ServerConfigHTTPS{
+		CertFile:     files.certFile,
+		KeyFile:      files.keyFile,
+		ClientCAFile: files.caFile,
+		ClientAuth:   model.TLSClientAuthRequireAndVerify,
+	}
+	return startReloadingConfigWithModel(t, config)
+}
+
+func startReloadingConfigWithModel(t *testing.T, config *model.ServerConfigHTTPS) *tls.Config {
+	t.Helper()
+
 	reloader := NewCertificateReloader(config, newTestResolver(t), 20*time.Millisecond)
 	require.NoError(t, reloader.Load(t.Context()))
 
-	tlsCfg, err := NewTLSConfig(config, reloader.GetCertificate)
+	tlsCfg, err := NewTLSConfig(config, reloader)
 	require.NoError(t, err)
 	reloader.Start(t.Context())
 
 	return tlsCfg
+}
+
+func startHTTPSServer(t *testing.T, tlsCfg *tls.Config) string {
+	t.Helper()
+
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	srv := &http.Server{
+		Handler:           http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }),
+		TLSConfig:         tlsCfg,
+		ReadHeaderTimeout: time.Second,
+	}
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.ServeTLS(ln, "", "")
+	}()
+	t.Cleanup(func() {
+		_ = srv.Close()
+		<-errCh
+	})
+
+	return ln.Addr().String()
+}
+
+func mtlsGet(addr, clientCertFile, clientKeyFile, _ string) error {
+	clientCert, err := tls.LoadX509KeyPair(clientCertFile, clientKeyFile)
+	if err != nil {
+		return err
+	}
+	client := &http.Client{
+		Timeout: time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, //nolint:gosec // test verifies client certificate acceptance only
+				Certificates:       []tls.Certificate{clientCert},
+				MinVersion:         tls.VersionTLS12,
+			},
+		},
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://"+addr, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func readFile(t *testing.T, path string) []byte {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	return data
 }
 
 func overwriteKeyPair(t *testing.T, dest, src testCertificateFiles) {

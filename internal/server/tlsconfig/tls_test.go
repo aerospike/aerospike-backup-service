@@ -23,9 +23,11 @@ import (
 )
 
 type testCertificateFiles struct {
-	certFile string
-	keyFile  string
-	caFile   string
+	certFile       string
+	keyFile        string
+	caFile         string
+	clientCertFile string
+	clientKeyFile  string
 }
 
 func createTestCertificateFiles(t *testing.T) testCertificateFiles {
@@ -80,7 +82,40 @@ func createTestCertificateFiles(t *testing.T) testCertificateFiles {
 		0600,
 	))
 
-	return testCertificateFiles{certFile: certFile, keyFile: keyFile, caFile: caFile}
+	clientKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	clientSerial, err := rand.Int(rand.Reader, big.NewInt(1<<62))
+	require.NoError(t, err)
+	clientTemplate := &x509.Certificate{
+		SerialNumber: clientSerial,
+		Subject:      pkix.Name{CommonName: "client"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+	clientDER, err := x509.CreateCertificate(
+		rand.Reader, clientTemplate, caTemplate, &clientKey.PublicKey, caKey,
+	)
+	require.NoError(t, err)
+	clientCertFile := filepath.Join(dir, "client.pem")
+	clientKeyFile := filepath.Join(dir, "client-key.pem")
+	require.NoError(t, os.WriteFile(
+		clientCertFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: clientDER}), 0600,
+	))
+	require.NoError(t, os.WriteFile(
+		clientKeyFile,
+		pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(clientKey)}),
+		0600,
+	))
+
+	return testCertificateFiles{
+		certFile:       certFile,
+		keyFile:        keyFile,
+		caFile:         caFile,
+		clientCertFile: clientCertFile,
+		clientKeyFile:  clientKeyFile,
+	}
 }
 
 func newTestResolver(t *testing.T) secrets.Resolver {
@@ -97,16 +132,16 @@ func newTestResolver(t *testing.T) secrets.Resolver {
 	return resolver
 }
 
-// loadTLSConfig performs the caller-side sequence: load the key pair, then build the config.
+// loadTLSConfig performs the caller-side sequence: load TLS material, then build the config.
 func loadTLSConfig(t *testing.T, cfg *model.ServerConfigHTTPS, resolver secrets.Resolver) (*tls.Config, error) {
 	t.Helper()
 
-	reloader := NewCertificateReloader(cfg, resolver, DefaultWatchInterval)
-	if err := reloader.Load(t.Context()); err != nil {
+	loader := NewCertificateLoader(cfg, resolver)
+	if err := loader.Load(t.Context()); err != nil {
 		return nil, err
 	}
 
-	return NewTLSConfig(cfg, reloader.GetCertificate)
+	return NewTLSConfig(cfg, loader)
 }
 
 func requireTLSConfig(t *testing.T, cfg *model.ServerConfigHTTPS, resolver secrets.Resolver) *tls.Config {
@@ -157,7 +192,11 @@ func TestNew(t *testing.T) {
 		assert.Equal(t, uint16(tls.VersionTLS13), config.MinVersion)
 		assert.Equal(t, []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}, config.CipherSuites)
 		assert.Equal(t, tls.RequireAndVerifyClientCert, config.ClientAuth)
-		assert.NotNil(t, config.ClientCAs)
+		assert.Nil(t, config.ClientCAs)
+		clientConfig, err := config.GetConfigForClient(&tls.ClientHelloInfo{})
+		require.NoError(t, err)
+		require.NotNil(t, clientConfig)
+		assert.NotNil(t, clientConfig.ClientCAs)
 	})
 
 	t.Run("encrypted private key", func(t *testing.T) {

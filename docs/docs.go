@@ -3468,7 +3468,7 @@ const docTemplate = `{
                     ]
                 },
                 "client-ca-file": {
-                    "description": "Path to trusted client CA certificates in PEM format.",
+                    "description": "Path to trusted client CA certificates in PEM format.\nRewriting this file at the same path reloads the mTLS trust pool without a restart; changing the path requires a restart.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "/path/to/client-ca.pem"
