@@ -105,6 +105,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          # The "Latest release" decision below compares this tag against every other release
+          # tag, which a tags-less checkout would not see.
+          fetch-tags: true
           ref: ${{ env.BUNDLE_VERSION }}
 
       - name: Resolve Helm chart version
@@ -192,6 +195,42 @@ jobs:
           echo "Final release-assets tree:"
           find release-assets -type f | sort
 
+      # GitHub's create-release API defaults make_latest to true for any non-prerelease, so
+      # publishing a hotfix for an older line would repoint the repository's "Latest release"
+      # backwards. Decide it the same way pre-release.yml decides the Docker `latest` tag, so
+      # the two pointers cannot disagree.
+      - name: Resolve GitHub "Latest release" flag
+        id: release-latest
+        run: |
+          set -euo pipefail
+          current="${BUNDLE_VERSION#v}"
+
+          # Final releases only: pre-release tags (v3.7.0-rc1) and one-off test tags must not
+          # get a say in which release is newest.
+          versions="$(
+            { git tag --list 'v*'; echo "v${current}"; } \
+              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sed 's/^v//' \
+              | sort -uV
+          )"
+          highest_overall="$(echo "$versions" | tail -n1)"
+
+          if [ "$current" = "$highest_overall" ]; then
+            make_latest=true
+          else
+            make_latest=false
+          fi
+          echo "MAKE_LATEST=$make_latest" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### GitHub \"Latest release\" flag"
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Publishing | \`$current\` |"
+            echo "| Highest release overall | \`$highest_overall\` |"
+            echo "| \`make_latest\` | \`$make_latest\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Publish GitHub Release
         uses: step-security/action-gh-release@d2093dbdaf0c6507874908247e14bbc4dee6a72d # v3.0.1
         with:
@@ -199,6 +238,7 @@ jobs:
           tag_name: ${{ env.BUNDLE_VERSION }}
           draft: false
           prerelease: false
+          make_latest: ${{ steps.release-latest.outputs.MAKE_LATEST }}
           body: |
             See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ env.BUNDLE_VERSION }}/CHANGELOG.md) for details on this release, and [docs/migration.md](https://github.com/${{ github.repository }}/blob/${{ env.BUNDLE_VERSION }}/docs/migration.md) for upgrade/breaking-change notes.
           files: |

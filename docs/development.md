@@ -112,12 +112,32 @@ GitHub Actions side is split into two workflows: [`pre-release.yml`](../.github/
 owned, builds and promotes up to `TEST`) and [`release.yml`](../.github/workflows/release.yml) (run once the release
 is fully approved, publishes it).
 
+#### Chart versioning
+
+A Helm repository serves whichever chart carries the highest version, so the chart version is a
+moving pointer just like the Docker `latest` tag. It must therefore sort in the same order as the
+app versions it ships. The rule, in force from `v3.7.0`:
+
+| Release | App version | Chart version |
+|---------|-------------|---------------|
+| New minor line | `v3.7.0` | `2.1.0` (chart **minor** advances) |
+| Hotfix on that line | `v3.7.1` | `2.1.1` (chart **patch** mirrors the app patch) |
+| Next minor line | `v3.8.0` | `2.2.0` |
+
+Because a hotfix stays on its own line's chart minor, a fix released for an older line can never
+overtake a newer release. This is what went wrong before the rule existed: `v3.5.1` was cut after
+`v3.6.2` and took chart `2.0.13`, above `v3.6.2`'s `2.0.12`, so `helm install` with no `--version`
+served the older service. [`pre-release.yml`](../.github/workflows/pre-release.yml) now rejects any
+chart version that breaks the ordering, reuses a version already published, or whose patch does not
+match the app patch.
+
 #### Regular release
 1. Create a release branch from `dev` (e.g. `release/3.7.0`).
-2. Prepare the release by updating the version files. For regular releases, bump the **second digit** of the Helm chart version (e.g. `2.1.0` -> `2.2.0`):
+2. Prepare the release by updating the version files. Pass both versions in one invocation --
+   `make release` writes `VERSION` and then stamps the chart from it, so splitting the two leaves
+   `Chart.yaml` describing a release that does not exist yet:
    ```bash
-   NEXT_VERSION="<version>"  make release
-   NEXT_HELM_CHART_VERSION="<helm-chart-version>" make helm-chart-release
+   NEXT_VERSION="<version>" NEXT_HELM_CHART_VERSION="<helm-chart-version>" make release
    git add --all
    git commit -m "Release: "$(cat VERSION)""
    ```
@@ -131,10 +151,11 @@ is fully approved, publishes it).
 
 #### Hotfix
 1. Create a hotfix branch from `main` (e.g. `hotfix/3.6.2`).
-2. Prepare the hotfix by updating the version files. Bump the **third digit** of both the version (e.g. `3.6.1` -> `3.6.2`) and the Helm chart version (e.g. `2.0.11` -> `2.0.12`):
+2. Prepare the hotfix by updating the version files. Bump the **third digit** of both the version
+   (e.g. `3.7.0` -> `3.7.1`) and the Helm chart version (e.g. `2.1.0` -> `2.1.1`), keeping the chart
+   on the minor already assigned to that app minor line -- see [Chart versioning](#chart-versioning):
    ```bash
-   NEXT_VERSION="<version>"  make release
-   NEXT_HELM_CHART_VERSION="<helm-chart-version>" make helm-chart-release
+   NEXT_VERSION="<version>" NEXT_HELM_CHART_VERSION="<helm-chart-version>" make release
    git add --all
    git commit -m "Release: "$(cat VERSION)""
    ```

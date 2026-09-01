@@ -1,6 +1,20 @@
 #!/bin/bash -e
-WORKSPACE="$(git rev-parse --show-toplevel)"
 NEXT_VERSION="$1"
+
+# Without an argument the sed calls below rewrite every occurrence of the current version to
+# the empty string, quietly corrupting VERSION, info.go and the compose file.
+if [ -z "$NEXT_VERSION" ]; then
+  echo "release: NEXT_VERSION is required, e.g." >&2
+  echo "  NEXT_VERSION=v3.7.0 NEXT_HELM_CHART_VERSION=2.1.0 make release" >&2
+  exit 1
+fi
+
+if ! echo "$NEXT_VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo "release: '$NEXT_VERSION' is not a vX.Y.Z version." >&2
+  exit 1
+fi
+
+WORKSPACE="$(git rev-parse --show-toplevel)"
 PREV_VERSION="$(cat "$WORKSPACE"/VERSION)"
 
 PREV_IMAGE_TAG="${PREV_VERSION#v}"

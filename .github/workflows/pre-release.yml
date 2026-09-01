@@ -137,6 +137,112 @@ jobs:
             echo "| Helm build ID | \`${BUILD_ID_BASE}-helm\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Deleting and re-pushing a tag that already shipped sends this whole pipeline back over
+      # artifacts customers already have, since everything below is addressed by version rather
+      # than by build ID. A published GitHub Release is the marker that the version went GA, so
+      # refuse before anything is built. Draft and prerelease entries do not count: absctl's
+      # GoReleaser leg creates one of those on every tag push, and this repo may carry drafts.
+      - name: Reject re-release of a published version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGE_VERSION: ${{ steps.metadata.outputs.PACKAGE_VERSION }}
+        run: |
+          set -euo pipefail
+          release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${PACKAGE_VERSION}" 2>/dev/null || true)"
+          if [ -z "$release_json" ]; then
+            echo "No GitHub Release for ${PACKAGE_VERSION}; safe to build."
+            exit 0
+          fi
+
+          is_draft="$(printf '%s' "$release_json" | jq -r '.draft // false')"
+          is_prerelease="$(printf '%s' "$release_json" | jq -r '.prerelease // false')"
+          if [ "$is_draft" = "false" ] && [ "$is_prerelease" = "false" ]; then
+            echo "::error::${PACKAGE_VERSION} already has a published GitHub Release, so it has shipped. Cut a new version instead of re-tagging; re-running this pipeline would overwrite the released artifacts."
+            exit 1
+          fi
+          echo "GitHub Release for ${PACKAGE_VERSION} exists but is draft=${is_draft} prerelease=${is_prerelease}; not yet GA, safe to build."
+
+      # A Helm repository serves whichever chart carries the highest semver, which makes the
+      # chart version a moving pointer in exactly the way the Docker `latest` tag is. Because
+      # the chart version used to be bumped once per release in wall-clock order rather than in
+      # app-version order, hotfix v3.5.1 shipped chart 2.0.13 while the newer v3.6.2 sat on
+      # 2.0.12 -- so `helm install` with no --version served the older service.
+      #
+      # Convention from v3.7.0 onward: the chart minor advances once per app minor line and the
+      # chart patch mirrors the app patch (v3.7.0 -> 2.1.0, v3.7.1 -> 2.1.1, v3.8.0 -> 2.2.0).
+      # A hotfix on an older line then lands on that line's lower chart minor and cannot
+      # overtake a newer release. Tags below the cutover predate the rule and are held only to
+      # the ordering invariant.
+      - name: Validate Helm chart version
+        id: chart-guard
+        env:
+          PACKAGE_VERSION: ${{ steps.metadata.outputs.PACKAGE_VERSION }}
+          HELM_VERSION: ${{ steps.metadata.outputs.HELM_VERSION }}
+        run: |
+          set -euo pipefail
+          CHART_FILE="helm/aerospike-backup-service/Chart.yaml"
+          CUTOVER="3.7.0"
+          app="${PACKAGE_VERSION#v}"
+          chart="$HELM_VERSION"
+
+          if ! echo "$chart" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Chart version '$chart' is not a bare X.Y.Z semver."
+            exit 1
+          fi
+
+          # True when $1 sorts strictly below $2.
+          lower() {
+            [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$1" ]
+          }
+
+          fail=0
+          while read -r tag; do
+            [ -n "$tag" ] || continue
+            other_app="${tag#v}"
+            # Skip this release's own tag so a re-run does not flag itself as a duplicate.
+            [ "$other_app" != "$app" ] || continue
+
+            other_file="$(git show "${tag}:${CHART_FILE}" 2>/dev/null || true)"
+            [ -n "$other_file" ] || continue
+            other_chart="$(printf '%s\n' "$other_file" | yq '.version' | tr -d '\n')"
+            case "$other_chart" in ''|null) continue ;; esac
+
+            if [ "$other_chart" = "$chart" ]; then
+              echo "::error::Chart $chart is already published by $tag (app $other_app). Publishing it again would overwrite that chart."
+              fail=1
+              continue
+            fi
+            if lower "$other_app" "$app" && ! lower "$other_chart" "$chart"; then
+              echo "::error::Ordering violation: older app $other_app ships chart $other_chart, which does not sort below this release's chart $chart."
+              fail=1
+            fi
+            if lower "$app" "$other_app" && ! lower "$chart" "$other_chart"; then
+              echo "::error::Ordering violation: newer app $other_app ships chart $other_chart, which does not sort above this release's chart $chart."
+              fail=1
+            fi
+          done <<< "$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)"
+
+          if ! lower "$app" "$CUTOVER"; then
+            app_patch="${app##*.}"
+            chart_patch="${chart##*.}"
+            if [ "$chart_patch" != "$app_patch" ]; then
+              echo "::error::From v${CUTOVER} the chart patch must mirror the app patch: app $app needs a chart ending in .${app_patch}, got $chart."
+              fail=1
+            fi
+          fi
+
+          if [ "$fail" -ne 0 ]; then
+            {
+              echo "### Helm chart version rejected"
+              echo ""
+              echo "App \`$app\` cannot ship chart \`$chart\`. See the errors above and bump"
+              echo "\`$CHART_FILE\` with \`NEXT_HELM_CHART_VERSION=... make helm-chart-release\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "Chart $chart is consistent with app $app."
+
       # Left to its default, reusable_docker-build-deploy.yaml publishes `{version}`, `{major}`
       # and `latest` next to the immutable tag. Both of those are moving tags, and a hotfix off
       # an older line must not drag them backwards: shipping v2.9.5 after v3.0.0 is out would
@@ -187,6 +293,64 @@ jobs:
               echo "This is the newest release, so \`latest\` moves to it."
             else
               echo "Newer releases exist, so \`latest\` is withheld from this build."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Clear the DEV bundle so a re-run cannot quietly overwrite a released version
+  # ---------------------------------------------------------------------------
+  #
+  # Every artifact below is addressed by version, not by build ID, so re-running this workflow
+  # for a tag that already shipped redeploys over the previous bits. A promoted bundle also
+  # locks the dev-local artifacts it references, which turns that re-run into an opaque
+  # permission failure part-way through deploy.
+  #
+  # Deleting the DEV bundle first makes re-running an un-promoted release safe. The action's own
+  # guard refuses to delete a bundle already promoted to TEST, STAGE, PREVIEW, INTERNAL or PROD,
+  # so the job fails fast in exactly the case where a re-run must not replace what QE or
+  # customers already have.
+
+  delete-existing-bundle:
+    needs: [prepare]
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Login to JFrog
+        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        env:
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
+        with:
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
+
+      - name: Delete existing DEV release bundle
+        id: delete-bundle
+        uses: aerospike/shared-workflows/.github/actions/delete-release-bundle@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+        with:
+          bundle-name: aerospike-backup-service
+          version: ${{ needs.prepare.outputs.package_version }}
+          jf-project: ${{ vars.JF_PROJECT }}
+
+      - name: Summarize
+        if: always()
+        env:
+          EXISTED: ${{ steps.delete-bundle.outputs.existed }}
+          BUNDLE_VERSION: ${{ needs.prepare.outputs.package_version }}
+        run: |
+          {
+            echo "### DEV release bundle pre-flight"
+            if [ "$EXISTED" = "true" ]; then
+              echo "Removed the existing DEV bundle for \`${BUNDLE_VERSION}\` so this run can redeploy it."
+            else
+              echo "No existing bundle for \`${BUNDLE_VERSION}\`; nothing to clear."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -284,7 +448,7 @@ jobs:
       gpg-key-pass: ${{ secrets.GPG_PASS }}
 
   deploy-packages:
-    needs: [prepare, sign-packages]
+    needs: [prepare, sign-packages, delete-existing-bundle]
     # reusable_deploy-artifacts.yaml's nested `deploy` job declares actions: write at job
     # scope (for the optional Maven bundle-metadata upload, unused here). GitHub's static
     # validation requires it to be granted by the caller even though it's never exercised.
@@ -354,7 +518,7 @@ jobs:
       gpg-key-pass: ${{ secrets.GPG_PASS }}
 
   deploy-helm:
-    needs: [prepare, sign-helm]
+    needs: [prepare, sign-helm, delete-existing-bundle]
     # See note on deploy-packages: reusable_deploy-artifacts.yaml's nested `deploy` job
     # requires actions: write to be granted by the caller, even though it's unused here.
     permissions:
@@ -375,7 +539,7 @@ jobs:
   # ---------------------------------------------------------------------------
 
   build-docker-image:
-    needs: [prepare]
+    needs: [prepare, delete-existing-bundle]
     # reusable_docker-build-deploy.yaml declares no top-level permissions, but its nested
     # `build` and `merge` jobs request packages: write (build+merge) and attestations: write
     # (merge, for SLSA provenance) at job scope. GitHub validates these nested requests too.
