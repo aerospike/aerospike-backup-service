@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	metrics "github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
@@ -43,6 +44,7 @@ var targetFiles = []string{
 	"docs/api-examples.md",
 	"docs/monitoring.md",
 	"docs/migration.md",
+	"docs/security.md",
 }
 
 var allStorageTypes = map[string]dto.Storage{
@@ -277,6 +279,8 @@ func generateReadme() {
 		content = applyMetricsTable(content, metricsTable)
 		// reserved for the security plan: injects an RBAC permissions matrix after <!-- RBACMatrix -->
 		content = updateRBACMatrix(content)
+		// keep the documented TLS reload interval synchronized with the runtime constant
+		content = updateTLSReloadInterval(content)
 
 		//nolint:gosec // G306 target markdown files are meant to be readable by anyone building docs.
 		err = os.WriteFile(path, content, 0600)
@@ -469,6 +473,16 @@ func applyMetricsTable(content []byte, table string) []byte {
 // to fill in the body, not add multi-file plumbing.
 func updateRBACMatrix(content []byte) []byte {
 	return content
+}
+
+func updateTLSReloadInterval(content []byte) []byte {
+	intervalRe := regexp.MustCompile(`<!-- TLSReloadInterval -->.*?<!-- /TLSReloadInterval -->`)
+	replacement := fmt.Sprintf(
+		"<!-- TLSReloadInterval -->%s<!-- /TLSReloadInterval -->",
+		servertls.WatchInterval.String(),
+	)
+
+	return intervalRe.ReplaceAll(content, []byte(replacement))
 }
 
 func extractRows() []MetricRow {

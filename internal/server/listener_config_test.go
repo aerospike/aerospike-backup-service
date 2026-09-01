@@ -508,7 +508,7 @@ func TestCertificateReloaderLoadReturnsErrorForMissingKeyPair(t *testing.T) {
 			KeyFile:  filepath.Join(t.TempDir(), "missing-key.pem"),
 		},
 		secrets.NewResolver(),
-		servertls.DefaultWatchInterval,
+		servertls.WatchInterval,
 	)
 
 	err := reloader.Load(t.Context())
@@ -554,7 +554,7 @@ func TestHTTPSStartFailsWhenPortIsOccupied(t *testing.T) {
 		CertFile:       certs.serverCertFile,
 		KeyFile:        certs.serverKeyFile,
 	}
-	reloader := servertls.NewCertificateReloader(serverConfig, secrets.NewResolver(), servertls.DefaultWatchInterval)
+	reloader := servertls.NewCertificateReloader(serverConfig, secrets.NewResolver(), servertls.WatchInterval)
 	require.NoError(t, reloader.Load(t.Context()))
 
 	tlsConfig, err := servertls.NewTLSConfig(serverConfig, reloader)

@@ -16,8 +16,8 @@ import (
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 )
 
-// DefaultWatchInterval is how often TLS files are polled for rotation.
-const DefaultWatchInterval = 10 * time.Second
+// WatchInterval is how often TLS files are polled for rotation.
+const WatchInterval = 10 * time.Second
 
 // Reloader loads the HTTPS TLS material and can watch it for rotation.
 type Reloader interface {
