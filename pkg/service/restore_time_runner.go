@@ -132,41 +132,45 @@ func buildRestoreChainsByNamespace(
 	chains := make(map[string][]model.BackupDetails, len(latestFullByNamespace))
 	for ns, full := range latestFullByNamespace {
 		chains[ns] = append(chains[ns], full)
-
-		// Sort incrementals descending by Created
-		slices.SortFunc(incrementalsByNamespace[ns], func(a, b model.BackupDetails) int {
-			return b.Created.Compare(a.Created)
-		})
-
-		var filteredIncr []model.BackupDetails
-		var coveredUntil time.Time
-
-		for _, incr := range incrementalsByNamespace[ns] {
-			// Apply only incrementals strictly newer than the selected full backup.
-			if !incr.Created.After(full.Created) {
-				continue
-			}
-
-			// If this incremental is fully covered by newer ones, skip it.
-			if !coveredUntil.IsZero() && !incr.From.Before(coveredUntil) {
-				continue
-			}
-
-			filteredIncr = append(filteredIncr, incr)
-
-			if !incr.From.IsZero() {
-				if coveredUntil.IsZero() || incr.From.Before(coveredUntil) {
-					coveredUntil = incr.From
-				}
-			}
-		}
-
-		// Append filtered incrementals in chronological order
-		slices.Reverse(filteredIncr)
-		chains[ns] = append(chains[ns], filteredIncr...)
+		chains[ns] = append(chains[ns], filterIncrementals(full, incrementalsByNamespace[ns])...)
 	}
 
 	return chains
+}
+
+func filterIncrementals(full model.BackupDetails, incrementals []model.BackupDetails) []model.BackupDetails {
+	// Sort incrementals descending by Created
+	slices.SortFunc(incrementals, func(a, b model.BackupDetails) int {
+		return b.Created.Compare(a.Created)
+	})
+
+	var filteredIncr []model.BackupDetails
+	var coveredUntil time.Time
+
+	for _, incr := range incrementals {
+		// Apply only incrementals strictly newer than the selected full backup.
+		if !incr.Created.After(full.Created) {
+			continue
+		}
+
+		// If this incremental is fully covered by newer ones, skip it.
+		if !coveredUntil.IsZero() && !incr.From.Before(coveredUntil) {
+			continue
+		}
+
+		filteredIncr = append(filteredIncr, incr)
+
+		if !incr.From.IsZero() {
+			if coveredUntil.IsZero() || incr.From.Before(coveredUntil) {
+				coveredUntil = incr.From
+			}
+		}
+	}
+
+	// Append filtered incrementals in chronological order
+	slices.Reverse(filteredIncr)
+
+	return filteredIncr
 }
 
 func splitByNamespace(backups []model.BackupDetails) map[string][]model.BackupDetails {
