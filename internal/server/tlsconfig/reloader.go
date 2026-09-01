@@ -30,14 +30,14 @@ type Reloader interface {
 }
 
 var (
-	_ Reloader = (*CertificateReloader)(nil)
+	_ Reloader = (*certificateReloader)(nil)
 	_ Reloader = noOpReloader{}
 )
 
-// CertificateReloader is the single point that reads HTTPS TLS material from disk.
+// certificateReloader is the single point that reads HTTPS TLS material from disk.
 // It swaps the key pair when cert-file or key-file change and, when client-ca-file
 // is set, swaps the mTLS trust pool served through GetConfigForClient.
-type CertificateReloader struct {
+type certificateReloader struct {
 	config    *model.ServerConfigHTTPS
 	resolver  secrets.Resolver
 	watchers  []reload.Watcher
@@ -54,8 +54,11 @@ func NewCertificateReloader(
 	config *model.ServerConfigHTTPS,
 	resolver secrets.Resolver,
 	interval time.Duration,
-) *CertificateReloader {
-	reloader := NewCertificateLoader(config, resolver)
+) DynamicTLS {
+	reloader := &certificateReloader{
+		config:   config,
+		resolver: resolver,
+	}
 	// The unit of serving is a matched tls.Certificate (cert PEM + key), not two
 	// independent files. Reloading a half would handshake with new-cert/old-key
 	// (or the reverse). Either path changing therefore re-reads both key-pair files.
@@ -70,15 +73,6 @@ func NewCertificateReloader(
 	}
 
 	return reloader
-}
-
-// NewCertificateLoader returns a reloader that reads the same TLS material but never
-// watches it. Configuration validation uses it to exercise the listener's load path.
-func NewCertificateLoader(config *model.ServerConfigHTTPS, resolver secrets.Resolver) *CertificateReloader {
-	return &CertificateReloader{
-		config:   config,
-		resolver: resolver,
-	}
 }
 
 // NoReload returns a reloader that does nothing, for listeners that serve plaintext.
@@ -103,7 +97,7 @@ func (noOpReloader) GetConfigForClient(*tls.ClientHelloInfo) (*tls.Config, error
 }
 
 // Load reads the key pair and the client CA pool and serves them to new handshakes.
-func (r *CertificateReloader) Load(ctx context.Context) error {
+func (r *certificateReloader) Load(ctx context.Context) error {
 	if err := r.loadKeyPair(ctx); err != nil {
 		return err
 	}
@@ -111,7 +105,7 @@ func (r *CertificateReloader) Load(ctx context.Context) error {
 	return r.loadClientCAs(ctx)
 }
 
-func (r *CertificateReloader) loadKeyPair(ctx context.Context) error {
+func (r *certificateReloader) loadKeyPair(ctx context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -140,7 +134,7 @@ func (r *CertificateReloader) loadKeyPair(ctx context.Context) error {
 	return nil
 }
 
-func (r *CertificateReloader) loadClientCAs(_ context.Context) error {
+func (r *certificateReloader) loadClientCAs(_ context.Context) error {
 	if r.config.ClientCAFile == "" {
 		return nil
 	}
@@ -164,12 +158,12 @@ func (r *CertificateReloader) loadClientCAs(_ context.Context) error {
 }
 
 // SetBaseConfig stores the listener tls.Config template cloned by GetConfigForClient.
-func (r *CertificateReloader) SetBaseConfig(config *tls.Config) {
+func (r *certificateReloader) SetBaseConfig(config *tls.Config) {
 	r.baseTLS.Store(config)
 }
 
 // GetCertificate returns the currently loaded key pair, for tls.Config.GetCertificate.
-func (r *CertificateReloader) GetCertificate(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+func (r *certificateReloader) GetCertificate(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 	certificate := r.current.Load()
 	if certificate == nil {
 		return nil, errors.New("HTTPS certificate is not loaded")
@@ -180,7 +174,7 @@ func (r *CertificateReloader) GetCertificate(*tls.ClientHelloInfo) (*tls.Certifi
 
 // GetConfigForClient returns a shallow clone carrying the current client CA pool.
 // ClientCAs on the serving tls.Config must not be mutated; this hook is the safe path.
-func (r *CertificateReloader) GetConfigForClient(*tls.ClientHelloInfo) (*tls.Config, error) {
+func (r *certificateReloader) GetConfigForClient(*tls.ClientHelloInfo) (*tls.Config, error) {
 	base := r.baseTLS.Load()
 	if base == nil {
 		return nil, errors.New("HTTPS TLS configuration is not bound")
@@ -200,7 +194,7 @@ func (r *CertificateReloader) GetConfigForClient(*tls.ClientHelloInfo) (*tls.Con
 }
 
 // Start polls the watched TLS files until ctx is canceled.
-func (r *CertificateReloader) Start(ctx context.Context) {
+func (r *certificateReloader) Start(ctx context.Context) {
 	for _, watcher := range r.watchers {
 		watcher.Start(ctx)
 	}
