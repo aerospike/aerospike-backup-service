@@ -32,7 +32,7 @@ type Components struct {
 	Scheduler        quartz.Scheduler
 	Servers          []server.HTTP
 	MetricsCollector *prometheus.MetricsCollector
-	CertReloader     servertls.Reloader
+	TLSProvider      servertls.TLSProvider
 }
 
 // InitComponents builds the full object graph.
@@ -139,14 +139,14 @@ func InitComponents(
 		servers = append(servers, server.NewServerHTTP(ctx, configHTTP, srv))
 	}
 
-	certReloader := servertls.NoReload()
+	tlsProvider := servertls.NoReload()
 	configHTTPS := config.ServiceConfig.GetServerHTTPSOrDefault()
 	if !configHTTPS.Disabled {
 		httpsServer, reloader, err := newServerHTTPS(ctx, configHTTPS, srv, resolver)
 		if err != nil {
 			return nil, err
 		}
-		certReloader = reloader
+		tlsProvider = reloader
 		servers = append(servers, httpsServer)
 	}
 
@@ -154,7 +154,7 @@ func InitComponents(
 		Scheduler:        scheduler,
 		Servers:          servers,
 		MetricsCollector: metricsCollector,
-		CertReloader:     certReloader,
+		TLSProvider:      tlsProvider,
 	}, nil
 }
 
@@ -163,10 +163,8 @@ func newServerHTTPS(
 	configHTTPS *model.ServerConfigHTTPS,
 	srv *handlers.Service,
 	resolver secrets.Resolver,
-) (server.HTTP, servertls.Reloader, error) {
-	reloader := servertls.NewCertificateReloader(
-		configHTTPS, resolver, servertls.WatchInterval,
-	)
+) (server.HTTP, servertls.TLSProvider, error) {
+	reloader := servertls.NewCertificateProvider(configHTTPS, resolver)
 	if err := reloader.Load(ctx); err != nil { // initial TLS material load.
 		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 	}

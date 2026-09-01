@@ -214,7 +214,7 @@ func startReloadingMTLSConfig(t *testing.T, files testCertificateFiles) *tls.Con
 func startReloadingConfigWithModel(t *testing.T, config *model.ServerConfigHTTPS) *tls.Config {
 	t.Helper()
 
-	reloader := NewCertificateReloader(config, newTestResolver(t), 20*time.Millisecond)
+	reloader := newCertificateProvider(config, newTestResolver(t), 20*time.Millisecond)
 	require.NoError(t, reloader.Load(t.Context()))
 
 	tlsCfg, err := NewTLSConfig(config, reloader)

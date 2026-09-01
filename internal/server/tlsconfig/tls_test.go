@@ -136,16 +136,15 @@ func newTestResolver(t *testing.T) secrets.Resolver {
 func loadTLSConfig(t *testing.T, cfg *model.ServerConfigHTTPS, resolver secrets.Resolver) (*tls.Config, error) {
 	t.Helper()
 
-	var r DynamicTLS = &certificateReloader{
-		cfg:      cfg,
+	var provider TLSProvider = &certificateReloader{
+		config:   cfg,
 		resolver: resolver,
 	}
-	loader := r
-	if err := loader.Load(t.Context()); err != nil {
+	if err := provider.Load(t.Context()); err != nil {
 		return nil, err
 	}
 
-	return NewTLSConfig(cfg, loader)
+	return NewTLSConfig(cfg, provider)
 }
 
 func requireTLSConfig(t *testing.T, cfg *model.ServerConfigHTTPS, resolver secrets.Resolver) *tls.Config {
