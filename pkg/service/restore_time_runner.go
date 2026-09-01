@@ -65,7 +65,7 @@ func (r *timeRestoreRunner) RestoreByTime(
 
 // findBackupsToRestore returns list of backups for each namespace, sorted by creation date. First is full backup.
 func (r *timeRestoreRunner) findBackupsToRestore(
-	ctx context.Context, request *model.RestoreTimestampRequest, logger *slog.Logger,
+	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (map[string][]model.BackupDetails, error) {
 	fullBackups, err := r.backupReader.GetBackups(ctx, // find all full backups completed by given restore request time.
 		newRoutineBackupFilter(request.RoutineName, request.Storage, model.BackupTypeFull).
@@ -99,7 +99,7 @@ func (r *timeRestoreRunner) findBackupsToRestore(
 
 	incrementalsByNamespace := splitByNamespace(incrementalBackups)
 
-	return buildRestoreChainsByNamespace(latestFullByNamespace, incrementalsByNamespace, logger), nil
+	return buildRestoreChainsByNamespace(latestFullByNamespace, incrementalsByNamespace), nil
 }
 
 // latestBackupsByNamespace picks the newest backup per namespace from the provided list.
@@ -128,15 +128,12 @@ func earliestSelectedFullBackup(selectedFullByNamespace map[string]model.BackupD
 func buildRestoreChainsByNamespace(
 	latestFullByNamespace map[string]model.BackupDetails,
 	incrementalsByNamespace map[string][]model.BackupDetails,
-	logger *slog.Logger,
 ) map[string][]model.BackupDetails {
 	chains := make(map[string][]model.BackupDetails, len(latestFullByNamespace))
 	for ns, full := range latestFullByNamespace {
 		chains[ns] = append(chains[ns], full)
 		chains[ns] = append(chains[ns], filterIncrementals(full, incrementalsByNamespace[ns])...)
 	}
-
-	checkGaps(chains, logger)
 
 	return chains
 }
@@ -173,31 +170,6 @@ func filterIncrementals(
 	return filteredIncr
 }
 
-func checkGaps(chains map[string][]model.BackupDetails, logger *slog.Logger) {
-	for ns, chain := range chains {
-		if len(chain) < 2 {
-			continue
-		}
-
-		for i := 0; i < len(chain)-1; i++ {
-			prev := chain[i]
-			next := chain[i+1]
-
-			if prev.Created.Before(next.From) {
-				msg := "Gap detected in incremental backup chain"
-				if i == 0 {
-					msg = "Gap detected between full backup and first incremental"
-				}
-
-				logger.Warn(msg,
-					slog.Time("gapStart", prev.Created),
-					slog.Time("gapEnd", next.From),
-					slog.String("namespace", ns))
-			}
-		}
-	}
-}
-
 func updateCoveredUntil(current, incrFrom time.Time) time.Time {
 	if incrFrom.IsZero() {
 		return current
@@ -229,10 +201,12 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 	routineStorageLock.RLock()
 	defer routineStorageLock.RUnlock()
 
-	backupsByNamespace, err := r.findBackupsToRestore(ctx, request, logger)
+	backupsByNamespace, err := r.findBackupsToRestore(ctx, request)
 	if err != nil {
 		return err
 	}
+
+	checkGaps(backupsByNamespace, logger)
 
 	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
 	if err != nil {
@@ -251,6 +225,32 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 	}
 
 	return r.restoreAllNamespaces(ctx, client, request, jobID, backupsByNamespace, logger)
+}
+
+// checkGaps checks that there are no gaps between full backups and incremental backups.
+func checkGaps(chains map[string][]model.BackupDetails, logger *slog.Logger) {
+	for ns, chain := range chains {
+		if len(chain) < 2 {
+			continue
+		}
+
+		for i := 0; i < len(chain)-1; i++ {
+			prev := chain[i]
+			next := chain[i+1]
+
+			if prev.Created.Before(next.From) {
+				msg := "Gap detected in incremental backup chain"
+				if i == 0 {
+					msg = "Gap detected between full backup and first incremental"
+				}
+
+				logger.Warn(msg,
+					slog.Time("gapStart", prev.Created),
+					slog.Time("gapEnd", next.From),
+					slog.String("namespace", ns))
+			}
+		}
+	}
 }
 
 func (r *timeRestoreRunner) restoreAllNamespaces(

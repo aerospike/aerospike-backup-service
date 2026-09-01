@@ -93,8 +93,8 @@ func (p *backupOrchestrator) runBackupInternal(
 		Type:      backupType,
 		StartTime: now,
 		TimeBounds: model.TimeBounds{
-			FromTime: p.getFromTime(routine, backupType),
-			ToTime:   p.getToTime(routine, now),
+			FromTime: p.backupFromTime(routine, backupType),
+			ToTime:   p.backupToTime(routine, now),
 		},
 	}
 	backupHandler, err := p.routineRunner.Run(ctx, routine, runSpec, logger)
@@ -113,7 +113,7 @@ func (p *backupOrchestrator) runBackupInternal(
 	return nil
 }
 
-func (p *backupOrchestrator) getToTime(routine *model.BackupRoutine, now time.Time) *time.Time {
+func (p *backupOrchestrator) backupToTime(routine *model.BackupRoutine, now time.Time) *time.Time {
 	if routine.BackupPolicy.IsSealedOrDefault() {
 		return &now
 	}
@@ -121,7 +121,7 @@ func (p *backupOrchestrator) getToTime(routine *model.BackupRoutine, now time.Ti
 	return nil
 }
 
-func (p *backupOrchestrator) getFromTime(routine *model.BackupRoutine, backupType model.BackupType) *time.Time {
+func (p *backupOrchestrator) backupFromTime(routine *model.BackupRoutine, backupType model.BackupType) *time.Time {
 	if backupType == model.BackupTypeFull {
 		return nil
 	}
