@@ -83,7 +83,7 @@ func (p *backupOrchestrator) runBackupInternal(
 		logger.Info(
 			"incremental backup started",
 			slog.Time("now", now),
-			slog.String("incr-mode", string(routine.BackupPolicy.GetIncrModeOrDefault())),
+			slog.String("incrMode", string(routine.BackupPolicy.GetIncrModeOrDefault())),
 		)
 	} else {
 		logger.Info("full backup started", slog.Time("now", now))
