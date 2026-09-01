@@ -502,7 +502,7 @@ func TestHTTPSRequireAndVerifyRejectsUntrustedClientCertificate(t *testing.T) {
 }
 
 func TestCertificateReloaderLoadReturnsErrorForMissingKeyPair(t *testing.T) {
-	reloader := servertls.NewCertificateProvider(
+	tlsProvider := servertls.NewCertificateProvider(
 		&model.ServerConfigHTTPS{
 			CertFile: filepath.Join(t.TempDir(), "missing.pem"),
 			KeyFile:  filepath.Join(t.TempDir(), "missing-key.pem"),
@@ -510,7 +510,7 @@ func TestCertificateReloaderLoadReturnsErrorForMissingKeyPair(t *testing.T) {
 		secrets.NewResolver(),
 	)
 
-	err := reloader.Load(t.Context())
+	err := tlsProvider.Load(t.Context())
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed to load HTTPS certificate and key")
 }
@@ -553,10 +553,10 @@ func TestHTTPSStartFailsWhenPortIsOccupied(t *testing.T) {
 		CertFile:       certs.serverCertFile,
 		KeyFile:        certs.serverKeyFile,
 	}
-	reloader := servertls.NewCertificateProvider(serverConfig, secrets.NewResolver())
-	require.NoError(t, reloader.Load(t.Context()))
+	tlsProvider := servertls.NewCertificateProvider(serverConfig, secrets.NewResolver())
+	require.NoError(t, tlsProvider.Load(t.Context()))
 
-	tlsConfig, err := servertls.NewTLSConfig(serverConfig, reloader)
+	tlsConfig, err := servertls.NewTLSConfig(serverConfig, tlsProvider)
 	require.NoError(t, err)
 
 	srv := server.NewServerHTTPS(t.Context(), serverConfig, newListenerHandler(t), tlsConfig)

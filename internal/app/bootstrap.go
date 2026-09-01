@@ -164,17 +164,17 @@ func newServerHTTPS(
 	srv *handlers.Service,
 	resolver secrets.Resolver,
 ) (server.HTTP, servertls.TLSProvider, error) {
-	reloader := servertls.NewCertificateProvider(configHTTPS, resolver)
-	if err := reloader.Load(ctx); err != nil { // initial TLS material load.
+	tlsProvider := servertls.NewCertificateProvider(configHTTPS, resolver)
+	if err := tlsProvider.Load(ctx); err != nil { // initial TLS material load.
 		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 	}
 
-	tlsConfig, err := servertls.NewTLSConfig(configHTTPS, reloader)
+	tlsConfig, err := servertls.NewTLSConfig(configHTTPS, tlsProvider)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 	}
 
-	return server.NewServerHTTPS(ctx, configHTTPS, srv, tlsConfig), reloader, nil
+	return server.NewServerHTTPS(ctx, configHTTPS, srv, tlsConfig), tlsProvider, nil
 }
 
 func newStorageOperations(resolver secrets.Resolver) storage.Operations {
