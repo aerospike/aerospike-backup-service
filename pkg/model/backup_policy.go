@@ -83,7 +83,7 @@ func (p *BackupPolicy) GetIncrModeOrDefault() IncrMode {
 		return p.IncrMode
 	}
 
-	return IncrModeDifferential
+	return defaultConfig.backupPolicy.IncrMode
 }
 
 func (p *BackupPolicy) UseCompressionOrDefault() bool {
