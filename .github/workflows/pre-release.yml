@@ -24,6 +24,7 @@ jobs:
       go_version: ${{ steps.metadata.outputs.GO_VERSION }}
       packages_build_id: ${{ steps.metadata.outputs.PACKAGES_BUILD_ID }}
       helm_build_id: ${{ steps.metadata.outputs.HELM_BUILD_ID }}
+      docker_versions_override: ${{ steps.docker-tags.outputs.VERSIONS_OVERRIDE }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -34,6 +35,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          # The moving-tag decision below compares this release against every other release
+          # tag, which a tags-less checkout would not see.
+          fetch-tags: true
           ref: ${{ github.ref }}
 
       - name: Set up Go
@@ -131,6 +135,59 @@ jobs:
             echo "| Go toolchain version | \`$GO_VERSION\` |"
             echo "| Packages build ID | \`${BUILD_ID_BASE}-packages\` |"
             echo "| Helm build ID | \`${BUILD_ID_BASE}-helm\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Left to its default, reusable_docker-build-deploy.yaml publishes `{version}`, `{major}`
+      # and `latest` next to the immutable tag. Both of those are moving tags, and a hotfix off
+      # an older line must not drag them backwards: shipping v2.9.5 after v3.0.0 is out would
+      # otherwise repoint `latest` at the 2.x image. Compute the moving tags this release has
+      # actually earned and pass them explicitly.
+      - name: Resolve Docker moving tags
+        id: docker-tags
+        env:
+          PACKAGE_VERSION: ${{ steps.metadata.outputs.PACKAGE_VERSION }}
+        run: |
+          set -euo pipefail
+          current="${PACKAGE_VERSION#v}"
+          major="${current%%.*}"
+
+          # Final releases only. Pre-release tags (v3.7.0-rc1) and one-off test tags must not
+          # get a say in which release owns `latest`. The tag being built is folded in because
+          # it is not guaranteed to be among the fetched refs yet.
+          versions="$(
+            { git tag --list 'v*'; echo "v${current}"; } \
+              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sed 's/^v//' \
+              | sort -uV
+          )"
+
+          highest_overall="$(echo "$versions" | tail -n1)"
+          highest_in_major="$(echo "$versions" | grep -E "^${major}\." | tail -n1)"
+
+          overrides="$current"
+          if [ "$current" = "$highest_in_major" ]; then
+            overrides="${overrides},${major}"
+          fi
+          if [ "$current" = "$highest_overall" ]; then
+            overrides="${overrides},latest"
+          fi
+
+          echo "VERSIONS_OVERRIDE=$overrides" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Docker moving tags"
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Releasing | \`$current\` |"
+            echo "| Highest release overall | \`$highest_overall\` |"
+            echo "| Highest release in \`$major.x\` | \`$highest_in_major\` |"
+            echo "| Tags published (besides the immutable tag) | \`$overrides\` |"
+            echo ""
+            if [ "$current" = "$highest_overall" ]; then
+              echo "This is the newest release, so \`latest\` moves to it."
+            else
+              echo "Newer releases exist, so \`latest\` is withheld from this build."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
@@ -341,6 +398,7 @@ jobs:
       image-name: aerospike-backup-service
       app-name: Aerospike Backup Service
       app-version: ${{ needs.prepare.outputs.package_version }}
+      versions-override: ${{ needs.prepare.outputs.docker_versions_override }}
       context: .
       file: Dockerfile
       build-args-json: >-
