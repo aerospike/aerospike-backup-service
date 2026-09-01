@@ -14,8 +14,8 @@ import (
 // Since the mode is cumulative, the second incremental should cover the first one.
 func (s *BackupSuite) TestRestoreByTimestampCumulativeWorkflow() {
 	e := s.setupEnv(func(c *dto.Config) {
-		r := s.testRoutine(c)
-		r.IncrMode = string(model.IncrModeCumulative)
+		p := c.BackupPolicies[policyName]
+		p.IncrMode = dto.IncrModeCumulative
 	})
 
 	var fullBackup, incrBackup1, incrBackup2 dto.BackupDetails

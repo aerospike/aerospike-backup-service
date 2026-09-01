@@ -32,7 +32,7 @@ func (m IncrMode) Validate() error {
 // ToModel converts the DTO incremental mode to the model type.
 func (m IncrMode) ToModel() model.IncrMode {
 	if m == "" {
-		return model.IncrModeDifferential
+		return ""
 	}
 	c, _ := canonicalEnum(m, incrModes)
 	return model.IncrMode(c)
@@ -40,8 +40,5 @@ func (m IncrMode) ToModel() model.IncrMode {
 
 // NewIncrModeFromModel creates a DTO incremental mode from the model type.
 func NewIncrModeFromModel(m model.IncrMode) IncrMode {
-	if m == "" {
-		return IncrModeDifferential
-	}
 	return IncrMode(m)
 }

@@ -52,6 +52,8 @@ type BackupPolicy struct {
 	Compact *bool
 	// Allows incremental backups to run concurrently.
 	ConcurrentIncremental *bool
+	// The mode for incremental backups.
+	IncrMode IncrMode
 	// Enables built-in compression during scan operation.
 	UseCompression *bool
 	// Maximum number of concurrent requests to server nodes.
@@ -74,6 +76,14 @@ func (p *BackupPolicy) AllowConcurrentIncremental() bool {
 	}
 
 	return *defaultConfig.backupPolicy.ConcurrentIncremental
+}
+
+func (p *BackupPolicy) GetIncrModeOrDefault() IncrMode {
+	if p != nil && p.IncrMode != "" {
+		return p.IncrMode
+	}
+
+	return IncrModeDifferential
 }
 
 func (p *BackupPolicy) UseCompressionOrDefault() bool {

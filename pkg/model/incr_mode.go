@@ -9,11 +9,3 @@ const (
 	// IncrModeCumulative backs up data since the last successful full backup.
 	IncrModeCumulative IncrMode = "cumulative"
 )
-
-// String returns the string representation of the IncrMode.
-func (m IncrMode) String() string {
-	if m == "" {
-		return string(IncrModeDifferential)
-	}
-	return string(m)
-}

@@ -22,8 +22,6 @@ type BackupRoutine struct {
 	IntervalCron string
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string
-	// The mode for incremental backups (optional, default is differential).
-	IncrMode IncrMode
 	// The list of the namespaces to back up (optional, empty list implies backup up whole cluster).
 	Namespaces []string
 	// The list of backup set names (optional, an empty list implies backing up all sets).

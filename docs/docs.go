@@ -1965,6 +1965,16 @@ const docTemplate = `{
                     "type": "integer",
                     "default": 250
                 },
+                "incr-mode": {
+                    "description": "The mode for incremental backups (optional, default is differential).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.IncrMode"
+                        }
+                    ],
+                    "x-nullable": true,
+                    "example": "differential"
+                },
                 "max-concurrent-nodes": {
                     "description": "Maximum number of concurrent requests to server nodes.\nDefault is to issue requests to all server nodes in parallel.",
                     "type": "integer",
@@ -2089,16 +2099,6 @@ const docTemplate = `{
                     "type": "string",
                     "x-nullable": true,
                     "example": "*/10 * * * * *"
-                },
-                "incr-mode": {
-                    "description": "The mode for incremental backups (optional, default is differential).",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.IncrMode"
-                        }
-                    ],
-                    "x-nullable": true,
-                    "example": "differential"
                 },
                 "interval-cron": {
                     "description": "The interval for full backup as a cron expression string.\nCron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format",

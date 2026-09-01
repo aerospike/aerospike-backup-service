@@ -57,9 +57,6 @@ func (p *backupOrchestrator) Backup(
 	backupType model.BackupType,
 ) {
 	logger := slog.With(attr.Routine(routine.Name))
-	if backupType == model.BackupTypeIncremental {
-		logger = logger.With(slog.String("incr-mode", routine.IncrMode.String()))
-	}
 	release, err := p.startController.TryStart(routine, now, backupType)
 	if err != nil {
 		p.outcomeReporter.Report(routine.Name, backupType, now, 0, err, logger)
@@ -82,7 +79,15 @@ func (p *backupOrchestrator) runBackupInternal(
 	backupType model.BackupType,
 	logger *slog.Logger,
 ) error {
-	logger.Info(string(backupType)+" backup started", slog.Time("now", now))
+	if backupType == model.BackupTypeIncremental {
+		logger.Info(
+			"incremental backup started",
+			slog.Time("now", now),
+			slog.String("incr-mode", string(routine.BackupPolicy.GetIncrModeOrDefault())),
+		)
+	} else {
+		logger.Info("full backup started", slog.Time("now", now))
+	}
 
 	runSpec := model.BackupRunSpec{
 		Type:       backupType,
@@ -117,7 +122,7 @@ func (p *backupOrchestrator) createTimeBounds(
 	)
 
 	if backupType == model.BackupTypeIncremental {
-		if routine.IncrMode == model.IncrModeCumulative {
+		if routine.BackupPolicy.GetIncrModeOrDefault() == model.IncrModeCumulative {
 			fromTime = p.registry.GetRoutineState(routine).LastRunTime.FullBackupTime()
 		} else {
 			fromTime = p.registry.GetRoutineState(routine).LastRunTime.LatestRun()
