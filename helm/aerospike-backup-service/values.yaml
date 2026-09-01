@@ -185,6 +185,7 @@ backupServiceConfig: {}
 #       level: <level> # Optional compression level default: 0
 #     sealed: <true/false> # Optional determines whether backup should include keys updated during the backup process default: false
 #     concurrent-incremental: <true/false> #Allows incremental backups to run concurrently.
+#     incr-mode: <incr-mode> # Optional mode for incremental backups (differential or cumulative)
 #
 # backup-routines:
 #   <routine-name>:
@@ -194,7 +195,6 @@ backupServiceConfig: {}
 #     secret-agent: <secret-agent> # Optional Secret Agent configuration for the routine
 #     interval-cron: <interval-cron> # Mandatory interval for full backup as a cron expression string
 #     incr-interval-cron: <incr-interval-cron> # Optional interval for incremental backup as a cron expression string
-#     incr-mode: <incr-mode> # Optional mode for incremental backups (differential or cumulative)
 #     namespaces: [ <namespace-name> ] # Mandatory list of the namespaces to back up default: empty list
 #     set-list: [ <set-names> ] # Optional list of backup set names default: empty list
 #     bin-list: [ <bin-names> ] # Optional list of backup bin names default: empty list
