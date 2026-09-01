@@ -185,6 +185,7 @@ backupServiceConfig: {}
 #       level: <level> # Optional compression level default: 0
 #     sealed: <true/false> # Optional determines whether backup should include keys updated during the backup process default: false
 #     concurrent-incremental: <true/false> #Allows incremental backups to run concurrently.
+#     incr-mode: <incr-mode> # Optional mode for incremental backups (differential or cumulative)
 #
 # backup-routines:
 #   <routine-name>:

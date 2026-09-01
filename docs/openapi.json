@@ -2235,6 +2235,16 @@
                         "type": "integer",
                         "default": 250
                     },
+                    "incr-mode": {
+                        "description": "The mode for incremental backups (optional, default is differential).",
+                        "type": "string",
+                        "enum": [
+                            "differential",
+                            "cumulative"
+                        ],
+                        "example": "differential",
+                        "nullable": true
+                    },
                     "max-concurrent-nodes": {
                         "description": "Maximum number of concurrent requests to server nodes.\nDefault is to issue requests to all server nodes in parallel.",
                         "type": "integer",
