@@ -1,15 +1,19 @@
 package tlsconfig
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"net"
 	"net/http"
 	"os"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -134,29 +138,58 @@ func TestClientCAReloadAcceptsNewClientAndRejectsOld(t *testing.T) {
 	require.NoError(t, mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile))
 
 	replacement := createTestCertificateFiles(t)
-	require.NoError(t, os.WriteFile(files.caFile, readFile(t, replacement.caFile), 0o600))
+	overlapBundle := append(readFile(t, files.caFile), readFile(t, replacement.caFile)...)
+	require.NoError(t, os.WriteFile(files.caFile, overlapBundle, 0o600))
 	bumpFileMtime(t, files.caFile)
 
 	require.Eventually(t, func() bool {
 		return mtlsGet(addr, replacement.clientCertFile, replacement.clientKeyFile, replacement.caFile) == nil
 	}, time.Second, 20*time.Millisecond)
+	require.NoError(t, mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile))
 
-	require.Error(t, mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile))
+	require.NoError(t, os.WriteFile(files.caFile, readFile(t, replacement.caFile), 0o600))
+	bumpFileMtime(t, files.caFile)
+	require.Eventually(t, func() bool {
+		return mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile) != nil
+	}, time.Second, 20*time.Millisecond)
+	require.NoError(t, mtlsGet(addr, replacement.clientCertFile, replacement.clientKeyFile, replacement.caFile))
 }
 
-func TestClientCAKeepsLastGoodOnInvalidFile(t *testing.T) {
+func TestClientCAKeepsLastGoodOnInvalidFileAndRecovers(t *testing.T) {
+	logs := &lockedLogBuffer{}
+	originalLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(originalLogger) })
+
 	files := createTestCertificateFiles(t)
 	tlsCfg := startReloadingMTLSConfig(t, files)
 
 	addr := startHTTPSServer(t, tlsCfg)
 	require.NoError(t, mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile))
 
-	require.NoError(t, os.WriteFile(files.caFile, []byte("not a ca bundle"), 0o600))
+	replacement := createTestCertificateFiles(t)
+	partiallyInvalidBundle := append(
+		readFile(t, replacement.caFile),
+		[]byte("\n-----BEGIN CERTIFICATE-----\ntruncated\n")...,
+	)
+	require.NoError(t, os.WriteFile(files.caFile, partiallyInvalidBundle, 0o600))
 	bumpFileMtime(t, files.caFile)
 
-	require.Never(t, func() bool {
-		return mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile) != nil
-	}, 150*time.Millisecond, 10*time.Millisecond)
+	require.Eventually(t, func() bool {
+		return strings.Contains(logs.String(), "level=ERROR") &&
+			strings.Contains(logs.String(), "file change callback failed")
+	}, time.Second, 10*time.Millisecond)
+
+	require.NoError(t, mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile))
+	require.Error(t, mtlsGet(addr, replacement.clientCertFile, replacement.clientKeyFile, replacement.caFile))
+
+	require.NoError(t, os.WriteFile(files.caFile, readFile(t, replacement.caFile), 0o600))
+	bumpFileMtime(t, files.caFile)
+
+	require.Eventually(t, func() bool {
+		return mtlsGet(addr, replacement.clientCertFile, replacement.clientKeyFile, replacement.caFile) == nil
+	}, time.Second, 20*time.Millisecond)
+	require.Error(t, mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile))
 }
 
 func startReloadingConfig(t *testing.T, files testCertificateFiles) *tls.Config {
@@ -306,4 +339,23 @@ func handshakeSerial(addr string) (*big.Int, error) {
 	}
 
 	return certs[0].SerialNumber, nil
+}
+
+type lockedLogBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *lockedLogBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.buf.Write(p)
+}
+
+func (b *lockedLogBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.buf.String()
 }

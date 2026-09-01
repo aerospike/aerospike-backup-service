@@ -342,6 +342,22 @@ func TestNew(t *testing.T) {
 		}, newTestResolver(t))
 		require.ErrorContains(t, err, "contains no certificates")
 	})
+
+	t.Run("client CA file with a valid certificate and malformed trailing certificate", func(t *testing.T) {
+		caFile := filepath.Join(t.TempDir(), "partially-invalid-ca.pem")
+		caPEM, err := os.ReadFile(files.caFile)
+		require.NoError(t, err)
+		caPEM = append(caPEM, []byte("\n-----BEGIN CERTIFICATE-----\ntruncated\n")...)
+		require.NoError(t, os.WriteFile(caFile, caPEM, 0o600)) //nolint:gosec // test tempdir
+
+		_, err = loadTLSConfig(t, &model.ServerConfigHTTPS{
+			CertFile:     files.certFile,
+			KeyFile:      files.keyFile,
+			ClientCAFile: caFile,
+			ClientAuth:   model.TLSClientAuthRequest,
+		}, newTestResolver(t))
+		require.ErrorContains(t, err, "contains an invalid certificate PEM block")
+	})
 }
 
 func TestNewResolvesKeyFilePasswordThroughSecretAgent(t *testing.T) {

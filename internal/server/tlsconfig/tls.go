@@ -2,6 +2,7 @@
 package tlsconfig
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -111,7 +112,34 @@ func loadClientCAs(path string) (*x509.CertPool, error) {
 	}
 
 	pool := x509.NewCertPool()
-	if !pool.AppendCertsFromPEM(caPEM) {
+	certificateCount := 0
+	remaining := caPEM
+	for {
+		remaining = bytes.TrimSpace(remaining)
+		if len(remaining) == 0 {
+			break
+		}
+		if !bytes.HasPrefix(remaining, []byte("-----BEGIN CERTIFICATE-----")) {
+			if certificateCount == 0 {
+				return nil, fmt.Errorf("client CA file %q contains no certificates", path)
+			}
+			return nil, fmt.Errorf("client CA file %q contains invalid data after a certificate", path)
+		}
+
+		block, rest := pem.Decode(remaining)
+		if block == nil {
+			return nil, fmt.Errorf("client CA file %q contains an invalid certificate PEM block", path)
+		}
+		certificate, parseErr := x509.ParseCertificate(block.Bytes)
+		if parseErr != nil {
+			return nil, fmt.Errorf("client CA file %q contains an invalid certificate: %w", path, parseErr)
+		}
+
+		pool.AddCert(certificate)
+		certificateCount++
+		remaining = rest
+	}
+	if certificateCount == 0 {
 		return nil, fmt.Errorf("client CA file %q contains no certificates", path)
 	}
 

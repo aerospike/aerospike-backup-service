@@ -58,10 +58,10 @@ func NewCertificateReloader(
 	reloader := NewCertificateLoader(config, resolver)
 	// The unit of serving is a matched tls.Certificate (cert PEM + key), not two
 	// independent files. Reloading a half would handshake with new-cert/old-key
-	// (or the reverse). Either path changing therefore re-reads both files via Load.
+	// (or the reverse). Either path changing therefore re-reads both key-pair files.
 	reloader.watchers = []reload.Watcher{
-		reload.New(config.CertFile, interval, reloader.Load),
-		reload.New(config.KeyFile, interval, reloader.Load),
+		reload.New(config.CertFile, interval, reloader.loadKeyPair),
+		reload.New(config.KeyFile, interval, reloader.loadKeyPair),
 	}
 	if config.ClientCAFile != "" {
 		reloader.watchers = append(reloader.watchers,
