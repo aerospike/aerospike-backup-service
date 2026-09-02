@@ -249,8 +249,8 @@ func TestVerifyClientLeaf(t *testing.T) {
 		VerifiedChains: [][]*x509.Certificate{{pki.clients[1].cert, pki.caCert}},
 	}
 
-	require.ErrorIs(t, verifyClientLeaf(revokedState, index, now), errCertificateRevoked)
-	require.NoError(t, verifyClientLeaf(trustedState, index, now))
+	require.ErrorIs(t, index.verifyClientLeaf(revokedState, now), errCertificateRevoked)
+	require.NoError(t, index.verifyClientLeaf(trustedState, now))
 }
 
 func TestVerifyClientLeafFailClosed(t *testing.T) {
@@ -265,7 +265,7 @@ func TestVerifyClientLeafFailClosed(t *testing.T) {
 		pki.writeCRL(t, path, nil, now.Add(-2*time.Hour), now.Add(-time.Minute), 1, true)
 		index, err := loadCRLs(path)
 		require.NoError(t, err)
-		require.ErrorIs(t, verifyClientLeaf(leafState, index, now), errCRLExpired)
+		require.ErrorIs(t, index.verifyClientLeaf(leafState, now), errCRLExpired)
 	})
 
 	t.Run("future ThisUpdate", func(t *testing.T) {
@@ -273,7 +273,7 @@ func TestVerifyClientLeafFailClosed(t *testing.T) {
 		pki.writeCRL(t, path, nil, now.Add(time.Hour), now.Add(2*time.Hour), 1, true)
 		index, err := loadCRLs(path)
 		require.NoError(t, err)
-		require.ErrorIs(t, verifyClientLeaf(leafState, index, now), errCRLNotYetValid)
+		require.ErrorIs(t, index.verifyClientLeaf(leafState, now), errCRLNotYetValid)
 	})
 
 	t.Run("no matching issuer", func(t *testing.T) {
@@ -282,7 +282,7 @@ func TestVerifyClientLeafFailClosed(t *testing.T) {
 		other.writeCRL(t, path, nil, now.Add(-time.Minute), now.Add(time.Hour), 1, true)
 		index, err := loadCRLs(path)
 		require.NoError(t, err)
-		require.ErrorIs(t, verifyClientLeaf(leafState, index, now), errCRLNotFound)
+		require.ErrorIs(t, index.verifyClientLeaf(leafState, now), errCRLNotFound)
 	})
 
 	t.Run("CRL signed by another CA with the same subject", func(t *testing.T) {
@@ -292,11 +292,11 @@ func TestVerifyClientLeafFailClosed(t *testing.T) {
 		index, err := loadCRLs(path)
 		require.NoError(t, err)
 		require.Equal(t, string(pki.clients[0].cert.RawIssuer), string(other.caCert.RawSubject))
-		require.ErrorIs(t, verifyClientLeaf(leafState, index, now), errCRLNotFound)
+		require.ErrorIs(t, index.verifyClientLeaf(leafState, now), errCRLNotFound)
 	})
 
 	t.Run("no verified chain", func(t *testing.T) {
-		require.ErrorIs(t, verifyClientLeaf(tls.ConnectionState{}, &crlIndex{}, now), errNoVerifiedChain)
+		require.ErrorIs(t, (&crlIndex{}).verifyClientLeaf(tls.ConnectionState{}, now), errNoVerifiedChain)
 	})
 }
 
@@ -319,7 +319,7 @@ func TestVerifyPrefersHigherCRLNumber(t *testing.T) {
 	state := tls.ConnectionState{
 		VerifiedChains: [][]*x509.Certificate{{pki.clients[0].cert, pki.caCert}},
 	}
-	require.NoError(t, verifyClientLeaf(state, index, now))
+	require.NoError(t, index.verifyClientLeaf(state, now))
 }
 
 func TestLoadTLSConfigMissingCRLFile(t *testing.T) {
@@ -410,7 +410,7 @@ func TestVerifyClientLeafWithIntermediateCA(t *testing.T) {
 		index, err := loadCRLs(rcrlPath)
 		require.NoError(t, err)
 
-		require.ErrorIs(t, verifyClientLeaf(state, index, now), errCRLNotFound)
+		require.ErrorIs(t, index.verifyClientLeaf(state, now), errCRLNotFound)
 	})
 
 	t.Run("fails when intermediate CA certificate is revoked", func(t *testing.T) {
@@ -427,7 +427,7 @@ func TestVerifyClientLeafWithIntermediateCA(t *testing.T) {
 		index, err := loadCRLs(bundlePath)
 		require.NoError(t, err)
 
-		require.ErrorIs(t, verifyClientLeaf(state, index, now), errCertificateRevoked)
+		require.ErrorIs(t, index.verifyClientLeaf(state, now), errCertificateRevoked)
 	})
 
 	t.Run("fails when leaf certificate is revoked", func(t *testing.T) {
@@ -444,7 +444,7 @@ func TestVerifyClientLeafWithIntermediateCA(t *testing.T) {
 		index, err := loadCRLs(bundlePath)
 		require.NoError(t, err)
 
-		require.ErrorIs(t, verifyClientLeaf(state, index, now), errCertificateRevoked)
+		require.ErrorIs(t, index.verifyClientLeaf(state, now), errCertificateRevoked)
 	})
 
 	t.Run("passes when nothing is revoked and both CRLs are present", func(t *testing.T) {
@@ -461,6 +461,6 @@ func TestVerifyClientLeafWithIntermediateCA(t *testing.T) {
 		index, err := loadCRLs(bundlePath)
 		require.NoError(t, err)
 
-		require.NoError(t, verifyClientLeaf(state, index, now))
+		require.NoError(t, index.verifyClientLeaf(state, now))
 	})
 }

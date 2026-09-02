@@ -2,6 +2,7 @@ package tlsconfig
 
 import (
 	"bytes"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -126,20 +127,77 @@ func serialKey(serial *big.Int) string {
 	return serial.String()
 }
 
-func (i *crlIndex) logStale(err error) {
+// ClientCertificateVerifier validates an already verified client TLS connection.
+type ClientCertificateVerifier interface {
+	// Verify rejects a TLS connection that violates the verifier's policy.
+	Verify(tls.ConnectionState) error
+}
+
+// Verify rejects client leaf certificates that are revoked by this CRL index.
+func (idx *crlIndex) Verify(state tls.ConnectionState) error {
+	return idx.verifyClientLeaf(state, time.Now())
+}
+
+func (idx *crlIndex) verifyClientLeaf(state tls.ConnectionState, now time.Time) error {
+	if len(state.VerifiedChains) == 0 {
+		return errNoVerifiedChain
+	}
+
+	var last error
+	for _, chain := range state.VerifiedChains {
+		err := idx.verifyLeafAgainstChain(chain, now)
+		if err == nil {
+			return nil
+		}
+		last = err
+	}
+
+	return last
+}
+
+func (idx *crlIndex) verifyLeafAgainstChain(chain []*x509.Certificate, now time.Time) error {
+	if len(chain) < 2 {
+		return errCRLNotFound
+	}
+
+	// Verify every certificate in the chain except the root trust anchor (chain[len(chain)-1])
+	for i := 0; i < len(chain)-1; i++ {
+		cert := chain[i]
+		issuer := chain[i+1]
+
+		candidates := idx.byRawIssuer[string(cert.RawIssuer)]
+		chosen := selectIssuerCRL(candidates, issuer)
+		if chosen == nil {
+			return fmt.Errorf("%w: issuer %q", errCRLNotFound, issuer.Subject.String())
+		}
+
+		if err := crlFreshness(chosen.list, now); err != nil {
+			idx.logStale(err)
+			return err
+		}
+
+		if _, revoked := chosen.revokedSerials[serialKey(cert.SerialNumber)]; revoked {
+			return fmt.Errorf("%w: serial %s", errCertificateRevoked, cert.SerialNumber)
+		}
+	}
+
+	return nil
+}
+
+func (idx *crlIndex) logStale(err error) {
 	switch {
-	case errors.Is(err, errCRLExpired) && i.expiredOnce.CompareAndSwap(false, true):
+	case errors.Is(err, errCRLExpired) && idx.expiredOnce.CompareAndSwap(false, true):
 		slog.Error("HTTPS client CRL is expired; rejecting mTLS clients until a current CRL is loaded")
-	case errors.Is(err, errCRLNotYetValid) && i.notYetValidOnce.CompareAndSwap(false, true):
+	case errors.Is(err, errCRLNotYetValid) && idx.notYetValidOnce.CompareAndSwap(false, true):
 		slog.Error("HTTPS client CRL is not yet valid; rejecting mTLS clients until a current CRL is loaded")
 	}
 }
 
-func (i *crlIndex) logStaleIfNeeded(now time.Time) {
-	for _, lists := range i.byRawIssuer {
+func (idx *crlIndex) logStaleIfNeeded(now time.Time) {
+	for _, lists := range idx.byRawIssuer {
 		for _, candidate := range lists {
 			if err := crlFreshness(candidate.list, now); err != nil {
-				i.logStale(err)
+				idx.logStale(err)
 				return
 			}
 		}
