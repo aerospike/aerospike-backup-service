@@ -87,7 +87,7 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 		jobKey(routine.Name, model.BackupTypeFull),
 	)
 
-	if err := s.scheduleCronJob(routine.IntervalCron, routine.Timezone, fullJob); err != nil {
+	if err := s.scheduleCronJob(routine.IntervalCron, routine.Timezone.ResolvedLocation(), fullJob); err != nil {
 		return fmt.Errorf("failed to schedule full backup: %w", err)
 	}
 
@@ -100,7 +100,7 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 		newBackupJob(s.orchestrator, routine, model.BackupTypeIncremental),
 		jobKey(routine.Name, model.BackupTypeIncremental),
 	)
-	if err := s.scheduleCronJob(routine.IncrIntervalCron, routine.Timezone, incrementalJob); err != nil {
+	if err := s.scheduleCronJob(routine.IncrIntervalCron, routine.Timezone.ResolvedLocation(), incrementalJob); err != nil {
 		return fmt.Errorf("failed to schedule incremental backup: %w", err)
 	}
 

@@ -33,8 +33,8 @@ func (b *BackupCommonConfig) Validate() error {
 		return err
 	}
 
-	if _, err := parseTimezone(b.ScheduleTimezone); err != nil {
-		return err
+	if _, err := model.ParseScheduleTimezone(b.ScheduleTimezone); err != nil {
+		return errValidationInvalidValue("schedule-timezone", b.ScheduleTimezone, "UTC, Local, or a valid IANA timezone name")
 	}
 
 	return nil
@@ -45,18 +45,15 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 		return nil
 	}
 
-	timezone, _ := parseTimezone(b.ScheduleTimezone)
-
 	return &model.BackupCommonConfig{
-		TimestampFormat:    b.TimestampFormat.ToModel(),
-		Timezone:           timezone,
-		ConfiguredTimezone: b.ScheduleTimezone,
+		TimestampFormat: b.TimestampFormat.ToModel(),
+		Timezone:        model.NewServiceLocation(b.ScheduleTimezone),
 	}
 }
 
 func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
 	b.TimestampFormat = NewTimestampFormatFromModel(m.TimestampFormat)
-	b.ScheduleTimezone = m.ConfiguredTimezone
+	b.ScheduleTimezone = m.Timezone.Configured
 }
 
 // Compare compares two BackupCommonConfig instances and returns detailed errors.

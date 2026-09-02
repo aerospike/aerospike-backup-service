@@ -6,7 +6,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -113,8 +112,8 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
 	}
-	if _, err := parseTimezone(r.ScheduleTimezone); err != nil {
-		return err
+	if _, err := model.ParseScheduleTimezone(r.ScheduleTimezone); err != nil {
+		return errValidationInvalidValue("schedule-timezone", r.ScheduleTimezone, "UTC, Local, or a valid IANA timezone name")
 	}
 	for i, rack := range r.RackList {
 		if rack < 0 {
@@ -257,7 +256,7 @@ func isValidPartitionID(entry string) bool {
 func (r *BackupRoutine) ToModel(
 	config *model.BackupConfig,
 	name string,
-	defaultTimezone *time.Location,
+	serviceTimezone model.Location,
 ) (*model.BackupRoutine, error) {
 	policy, err := resolveBackupPolicy(r.BackupPolicy, config.BackupPolicies)
 	if err != nil {
@@ -293,40 +292,27 @@ func (r *BackupRoutine) ToModel(
 		return nil, err
 	}
 
-	timezone := resolveRoutineTimezone(r.ScheduleTimezone, defaultTimezone)
-
 	return &model.BackupRoutine{
-		Name:               name,
-		BackupPolicy:       policy,
-		SourceCluster:      cluster,
-		Storage:            storage,
-		SecretAgent:        secretAgent,
-		IntervalCron:       r.IntervalCron,
-		IncrIntervalCron:   r.IncrIntervalCron,
-		Timezone:           timezone,
-		ConfiguredTimezone: r.ScheduleTimezone,
-		Namespaces:         *r.Namespaces,
-		SetList:            r.SetList,
-		BinList:            r.BinList,
-		RackList:           r.RackList,
-		PartitionList:      r.PartitionList,
-		NodeList:           r.NodeList,
-		FilterExpression:   r.FilterExpression,
-		Disabled:           r.Disabled,
+		Name:             name,
+		BackupPolicy:     policy,
+		SourceCluster:    cluster,
+		Storage:          storage,
+		SecretAgent:      secretAgent,
+		IntervalCron:     r.IntervalCron,
+		IncrIntervalCron: r.IncrIntervalCron,
+		Timezone: model.NewRoutineLocation(
+			r.ScheduleTimezone,
+			serviceTimezone,
+		),
+		Namespaces:       *r.Namespaces,
+		SetList:          r.SetList,
+		BinList:          r.BinList,
+		RackList:         r.RackList,
+		PartitionList:    r.PartitionList,
+		NodeList:         r.NodeList,
+		FilterExpression: r.FilterExpression,
+		Disabled:         r.Disabled,
 	}, nil
-}
-
-func resolveRoutineTimezone(
-	configured string,
-	defaultTimezone *time.Location,
-) *time.Location {
-	configured = strings.TrimSpace(configured)
-	if configured == "" {
-		return defaultTimezone
-	}
-
-	timezone, _ := parseTimezone(configured)
-	return timezone
 }
 
 func (r *BackupRoutine) validateRacks(cluster *model.AerospikeCluster) error {
@@ -436,7 +422,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	}
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
-	r.ScheduleTimezone = m.ConfiguredTimezone
+	r.ScheduleTimezone = m.Timezone.Configured
 	r.Namespaces = &m.Namespaces
 	r.SetList = m.SetList
 	r.BinList = m.BinList

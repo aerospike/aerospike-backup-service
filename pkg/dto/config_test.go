@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -142,7 +143,8 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 
 		modelConfig, err := validConfig().ToModel()
 		require.NoError(t, err)
-		assert.Equal(t, time.UTC, modelConfig.Routines()["routine1"].Timezone)
+		assert.Equal(t, model.DefaultScheduleTimezone, modelConfig.Routines()["routine1"].Timezone.ResolvedLocation())
+		assert.Equal(t, model.LocationSourceUTC, modelConfig.Routines()["routine1"].Timezone.Source)
 	})
 
 	t.Run("inherits service timezone", func(t *testing.T) {
@@ -153,8 +155,10 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 
 		modelConfig, err := config.ToModel()
 		require.NoError(t, err)
-		assert.Equal(t, ny.String(), modelConfig.Routines()["routine1"].Timezone.String())
-		assert.Equal(t, ny.String(), modelConfig.Routines()["routine2"].Timezone.String())
+		assert.Equal(t, ny.String(), modelConfig.Routines()["routine1"].Timezone.ResolvedLocation().String())
+		assert.Equal(t, model.LocationSourceService, modelConfig.Routines()["routine1"].Timezone.Source)
+		assert.Equal(t, ny.String(), modelConfig.Routines()["routine2"].Timezone.ResolvedLocation().String())
+		assert.Equal(t, model.LocationSourceService, modelConfig.Routines()["routine2"].Timezone.Source)
 	})
 
 	t.Run("whitespace routine timezone inherits service timezone", func(t *testing.T) {
@@ -167,8 +171,9 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 		modelConfig, err := config.ToModel()
 		require.NoError(t, err)
 		routine := modelConfig.Routines()["routine1"]
-		assert.Equal(t, ny.String(), routine.Timezone.String())
-		assert.Equal(t, " \t ", routine.ConfiguredTimezone)
+		assert.Equal(t, ny.String(), routine.Timezone.ResolvedLocation().String())
+		assert.Equal(t, " \t ", routine.Timezone.Configured)
+		assert.Equal(t, model.LocationSourceService, routine.Timezone.Source)
 	})
 
 	t.Run("routine override wins", func(t *testing.T) {
@@ -180,8 +185,10 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 
 		modelConfig, err := config.ToModel()
 		require.NoError(t, err)
-		assert.Equal(t, time.UTC, modelConfig.Routines()["routine1"].Timezone)
-		assert.Equal(t, ny.String(), modelConfig.Routines()["routine2"].Timezone.String())
+		assert.Equal(t, model.DefaultScheduleTimezone, modelConfig.Routines()["routine1"].Timezone.ResolvedLocation())
+		assert.Equal(t, model.LocationSourceRoutine, modelConfig.Routines()["routine1"].Timezone.Source)
+		assert.Equal(t, ny.String(), modelConfig.Routines()["routine2"].Timezone.ResolvedLocation().String())
+		assert.Equal(t, model.LocationSourceService, modelConfig.Routines()["routine2"].Timezone.Source)
 	})
 }
 
@@ -247,7 +254,7 @@ func TestConfig_ScheduleTimezoneRoundTrip(t *testing.T) {
 
 			modelConfig, err := config.ToModel()
 			require.NoError(t, err)
-			assert.Equal(t, tt.expectedResolved, modelConfig.Routines()["routine1"].Timezone.String())
+			assert.Equal(t, tt.expectedResolved, modelConfig.Routines()["routine1"].Timezone.ResolvedLocation().String())
 
 			roundTrip := NewConfigFromModel(modelConfig)
 			require.NotNil(t, roundTrip)
@@ -259,7 +266,7 @@ func TestConfig_ScheduleTimezoneRoundTrip(t *testing.T) {
 			// has to be a fixpoint, not just behaviourally equivalent once.
 			remodeled, err := roundTrip.ToModel()
 			require.NoError(t, err)
-			assert.Equal(t, tt.expectedResolved, remodeled.Routines()["routine1"].Timezone.String())
+			assert.Equal(t, tt.expectedResolved, remodeled.Routines()["routine1"].Timezone.ResolvedLocation().String())
 		})
 	}
 }

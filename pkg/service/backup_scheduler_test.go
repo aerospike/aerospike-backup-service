@@ -23,7 +23,7 @@ func TestScheduleRoutines(t *testing.T) {
 					Name:             "routine",
 					IntervalCron:     "0 0 * * * *",
 					IncrIntervalCron: "0 */6 * * * *",
-					Timezone:         time.UTC,
+					Timezone:         model.NewServiceLocation(""),
 				},
 			},
 			expectedCalls: 2, // One for full backup, one for incremental
@@ -46,7 +46,7 @@ func TestScheduleRoutines(t *testing.T) {
 				"full-only": {
 					Name:         "full-only",
 					IntervalCron: "0 0 * * * *",
-					Timezone:     time.UTC,
+					Timezone:     model.NewServiceLocation(""),
 				},
 			},
 			expectedCalls: 1, // One call for full backup only
@@ -57,7 +57,7 @@ func TestScheduleRoutines(t *testing.T) {
 				"ny-routine": {
 					Name:         "ny-routine",
 					IntervalCron: "0 0 2 * * *",
-					Timezone:     time.FixedZone("America/New_York", -4*60*60),
+					Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
 				},
 			},
 			expectedCalls: 1,
@@ -100,7 +100,7 @@ func TestScheduleRoutines_UsesRoutineTimezone(t *testing.T) {
 	scheduler.EXPECT().ScheduleJob(
 		gomock.Cond(func(detail *quartz.JobDetail) bool {
 			job, ok := detail.Job().(*backupJob)
-			return ok && job.routine.Timezone == location
+			return ok && job.routine.Timezone.ResolvedLocation().String() == location.String()
 		}),
 		gomock.Cond(func(trigger quartz.Trigger) bool {
 			after := time.Date(2025, 7, 20, 0, 0, 0, 0, time.UTC)
@@ -120,7 +120,7 @@ func TestScheduleRoutines_UsesRoutineTimezone(t *testing.T) {
 	require.NoError(t, backupScheduler.ScheduleRoutines([]*model.BackupRoutine{{
 		Name:         "ny-timezone",
 		IntervalCron: "@daily",
-		Timezone:     location,
+		Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
 	}}))
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/stretchr/testify/require"
@@ -32,7 +31,7 @@ func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T
 	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
 		Name:         "routine-1",
 		IntervalCron: "0 0 * * * *",
-		Timezone:     time.UTC,
+		Timezone:     model.NewServiceLocation(""),
 	}))
 	cfg.PopInvalidatedRoutineNames()
 	cfg.InvalidateRoutines([]string{"routine-1"})
@@ -88,7 +87,7 @@ func TestConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
 	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
 		Name:         "routine-1",
 		IntervalCron: "not-a-cron",
-		Timezone:     time.UTC,
+		Timezone:     model.NewServiceLocation(""),
 	}))
 	cfg.PopInvalidatedRoutineNames()
 	cfg.InvalidateRoutines([]string{"routine-1"})
@@ -113,7 +112,7 @@ func TestConfigApplier_ApplyNewConfig_ScheduleJobError(t *testing.T) {
 	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
 		Name:         "routine-1",
 		IntervalCron: "0 0 * * * *",
-		Timezone:     time.UTC,
+		Timezone:     model.NewServiceLocation(""),
 	}))
 	cfg.PopInvalidatedRoutineNames()
 	cfg.InvalidateRoutines([]string{"routine-1"})

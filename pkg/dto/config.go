@@ -192,10 +192,10 @@ func (c *Config) ToModel() (*model.Config, error) {
 	}
 
 	backupConfig := modelConfig.BackupConfigCopy()
-	defaultTimezone := modelConfig.ServiceConfig.GetBackupCommonOrDefault().GetTimezoneOrDefault()
+	serviceTimezone := modelConfig.ServiceConfig.GetBackupCommonOrDefault().Timezone
 	// routines must be added after storage, secret agents and policies.
 	for k, v := range c.BackupRoutines {
-		toModel, err := v.ToModel(backupConfig, k, defaultTimezone)
+		toModel, err := v.ToModel(backupConfig, k, serviceTimezone)
 		if err != nil {
 			return nil, fmt.Errorf("invalid backup routine %q: %w", k, err)
 		}

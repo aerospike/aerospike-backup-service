@@ -3,7 +3,6 @@ package model
 import (
 	"bytes"
 	"encoding/gob"
-	"time"
 )
 
 // BackupRoutine represents a scheduled backup operation routine.
@@ -23,13 +22,9 @@ type BackupRoutine struct {
 	IntervalCron string
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string
-	// Timezone is the resolved timezone for evaluating cron expressions. Not nil
-	// after DTO conversion. Inherited from service.backup.schedule-timezone when
-	// ConfiguredTimezone is empty.
-	Timezone *time.Location
-	// ConfiguredTimezone is this routine's schedule-timezone as configured.
-	// A blank value means the routine inherits the service default.
-	ConfiguredTimezone string
+	// Timezone is this routine's schedule timezone. Resolved is inherited from
+	// service.backup.schedule-timezone when Configured is empty.
+	Timezone Location
 	// The list of the namespaces to back up (optional, empty list implies backup up whole cluster).
 	Namespaces []string
 	// The list of backup set names (optional, an empty list implies backing up all sets).
@@ -62,8 +57,8 @@ func init() {
 	gob.Register(&AzureSharedKeyAuth{})
 }
 
-// backupRoutineGob is BackupRoutine without Timezone. gob cannot encode
-// time.Location (no exported fields), so Copy() round-trips through this type.
+// backupRoutineGob is BackupRoutine without the resolved timezone. gob cannot
+// encode time.Location (no exported fields), so Copy() round-trips through this type.
 type backupRoutineGob struct {
 	Name               string
 	BackupPolicy       *BackupPolicy
@@ -72,7 +67,8 @@ type backupRoutineGob struct {
 	SecretAgent        *SecretAgent
 	IntervalCron       string
 	IncrIntervalCron   string
-	ConfiguredTimezone string
+	TimezoneConfigured string
+	TimezoneSource     LocationSource
 	Namespaces         []string
 	SetList            []string
 	BinList            []string
@@ -92,7 +88,8 @@ func toBackupRoutineGob(r *BackupRoutine) backupRoutineGob {
 		SecretAgent:        r.SecretAgent,
 		IntervalCron:       r.IntervalCron,
 		IncrIntervalCron:   r.IncrIntervalCron,
-		ConfiguredTimezone: r.ConfiguredTimezone,
+		TimezoneConfigured: r.Timezone.Configured,
+		TimezoneSource:     r.Timezone.Source,
 		Namespaces:         r.Namespaces,
 		SetList:            r.SetList,
 		BinList:            r.BinList,
@@ -123,22 +120,25 @@ func (r *BackupRoutine) Copy() *BackupRoutine {
 	}
 
 	return &BackupRoutine{
-		Name:               copied.Name,
-		BackupPolicy:       copied.BackupPolicy,
-		SourceCluster:      copied.SourceCluster,
-		Storage:            copied.Storage,
-		SecretAgent:        copied.SecretAgent,
-		IntervalCron:       copied.IntervalCron,
-		IncrIntervalCron:   copied.IncrIntervalCron,
-		Timezone:           r.Timezone, // immutable; shared pointer is safe
-		ConfiguredTimezone: copied.ConfiguredTimezone,
-		Namespaces:         copied.Namespaces,
-		SetList:            copied.SetList,
-		BinList:            copied.BinList,
-		RackList:           copied.RackList,
-		PartitionList:      copied.PartitionList,
-		NodeList:           copied.NodeList,
-		FilterExpression:   copied.FilterExpression,
-		Disabled:           copied.Disabled,
+		Name:             copied.Name,
+		BackupPolicy:     copied.BackupPolicy,
+		SourceCluster:    copied.SourceCluster,
+		Storage:          copied.Storage,
+		SecretAgent:      copied.SecretAgent,
+		IntervalCron:     copied.IntervalCron,
+		IncrIntervalCron: copied.IncrIntervalCron,
+		Timezone: Location{
+			resolved:   r.Timezone.resolved, // immutable; shared pointer is safe
+			Configured: copied.TimezoneConfigured,
+			Source:     copied.TimezoneSource,
+		},
+		Namespaces:       copied.Namespaces,
+		SetList:          copied.SetList,
+		BinList:          copied.BinList,
+		RackList:         copied.RackList,
+		PartitionList:    copied.PartitionList,
+		NodeList:         copied.NodeList,
+		FilterExpression: copied.FilterExpression,
+		Disabled:         copied.Disabled,
 	}
 }
