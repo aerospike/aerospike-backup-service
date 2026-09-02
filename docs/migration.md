@@ -24,8 +24,10 @@ This release redacts secret fields in configuration API responses and changes ho
   `client-ca-file`, `client-auth`). Omitting `https` keeps today's plaintext HTTP-only behavior. Both
   [`service.http`](readme/dto/dto.serverconfighttp.md) and `service.https` use `disabled` (default `false`). At least
   one listener must remain enabled; if both are enabled, their ports must differ. Rewriting `cert-file`,
-  `key-file`, and `client-ca-file` at the same paths reloads HTTPS TLS material without a restart; see
-  [Credential Rotation](security.md#credential-rotation).
+  `key-file`, `client-ca-file`, and `crl-file` at the same paths reloads HTTPS TLS material without a restart; see
+  [Credential Rotation](security.md#credential-rotation). `crl-file` requires `client-ca-file` and
+  `client-auth: require-and-verify`. A missing matching CRL, or an expired or future-dated CRL, rejects
+  the client handshake. OCSP is not supported.
 - **HTTP server timeouts** — The HTTP server now bounds `ReadTimeout`, `WriteTimeout`, and `IdleTimeout` in addition
   to the existing `timeout` (`ReadHeaderTimeout`). Defaults are 30s / 60s / 120s respectively. Configure them under
   [`service.http`](readme/dto/dto.serverconfighttp.md) as `read-timeout`, `write-timeout`, and `idle-timeout`

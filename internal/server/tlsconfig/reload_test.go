@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -190,6 +191,123 @@ func TestClientCAKeepsLastGoodOnInvalidFileAndRecovers(t *testing.T) {
 		return mtlsGet(addr, replacement.clientCertFile, replacement.clientKeyFile, replacement.caFile) == nil
 	}, time.Second, 20*time.Millisecond)
 	require.Error(t, mtlsGet(addr, files.clientCertFile, files.clientKeyFile, files.caFile))
+}
+
+func TestCRLRejectsRevokedClientAndAcceptsOther(t *testing.T) {
+	pki := createTestPKI(t, 2)
+	crlFile := filepath.Join(t.TempDir(), "client.crl")
+	pki.writeCRL(
+		t, crlFile, []*big.Int{pki.clients[0].cert.SerialNumber},
+		time.Now().Add(-time.Minute), time.Now().Add(time.Hour), 1, true,
+	)
+	tlsCfg := startReloadingConfigWithModel(t, &model.ServerConfigHTTPS{
+		CertFile:     pki.certFile,
+		KeyFile:      pki.keyFile,
+		ClientCAFile: pki.caFile,
+		CRLFile:      crlFile,
+		ClientAuth:   model.TLSClientAuthRequireAndVerify,
+	})
+	addr := startHTTPSServer(t, tlsCfg)
+
+	require.Error(t, mtlsGet(addr, pki.clients[0].certFile, pki.clients[0].keyFile, pki.caFile))
+	require.NoError(t, mtlsGet(addr, pki.clients[1].certFile, pki.clients[1].keyFile, pki.caFile))
+}
+
+func TestExpiredCRLRejectsAllClients(t *testing.T) {
+	logs := &lockedLogBuffer{}
+	originalLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(originalLogger) })
+
+	pki := createTestPKI(t, 1)
+	crlFile := filepath.Join(t.TempDir(), "expired.crl")
+	pki.writeCRL(t, crlFile, nil, time.Now().Add(-2*time.Hour), time.Now().Add(-time.Minute), 1, true)
+	tlsCfg := startReloadingConfigWithModel(t, &model.ServerConfigHTTPS{
+		CertFile:     pki.certFile,
+		KeyFile:      pki.keyFile,
+		ClientCAFile: pki.caFile,
+		CRLFile:      crlFile,
+		ClientAuth:   model.TLSClientAuthRequireAndVerify,
+	})
+	addr := startHTTPSServer(t, tlsCfg)
+
+	require.Error(t, mtlsGet(addr, pki.clients[0].certFile, pki.clients[0].keyFile, pki.caFile))
+	require.Contains(t, logs.String(), "HTTPS client CRL is expired")
+}
+
+func TestCRLReloadRevokesPreviouslyAcceptedClient(t *testing.T) {
+	pki := createTestPKI(t, 1)
+	crlFile := filepath.Join(t.TempDir(), "client.crl")
+	pki.writeCRL(t, crlFile, nil, time.Now().Add(-time.Minute), time.Now().Add(time.Hour), 1, true)
+	tlsCfg := startReloadingConfigWithModel(t, &model.ServerConfigHTTPS{
+		CertFile:     pki.certFile,
+		KeyFile:      pki.keyFile,
+		ClientCAFile: pki.caFile,
+		CRLFile:      crlFile,
+		ClientAuth:   model.TLSClientAuthRequireAndVerify,
+	})
+	addr := startHTTPSServer(t, tlsCfg)
+	require.NoError(t, mtlsGet(addr, pki.clients[0].certFile, pki.clients[0].keyFile, pki.caFile))
+
+	pki.writeCRL(
+		t, crlFile, []*big.Int{pki.clients[0].cert.SerialNumber},
+		time.Now().Add(-time.Minute), time.Now().Add(time.Hour), 2, true,
+	)
+	bumpFileMtime(t, crlFile)
+
+	require.Eventually(t, func() bool {
+		return mtlsGet(addr, pki.clients[0].certFile, pki.clients[0].keyFile, pki.caFile) != nil
+	}, time.Second, 20*time.Millisecond)
+}
+
+func TestCRLKeepsLastGoodOnInvalidFile(t *testing.T) {
+	pki := createTestPKI(t, 1)
+	crlFile := filepath.Join(t.TempDir(), "client.crl")
+	pki.writeCRL(t, crlFile, nil, time.Now().Add(-time.Minute), time.Now().Add(time.Hour), 1, true)
+	tlsCfg := startReloadingConfigWithModel(t, &model.ServerConfigHTTPS{
+		CertFile:     pki.certFile,
+		KeyFile:      pki.keyFile,
+		ClientCAFile: pki.caFile,
+		CRLFile:      crlFile,
+		ClientAuth:   model.TLSClientAuthRequireAndVerify,
+	})
+	addr := startHTTPSServer(t, tlsCfg)
+	require.NoError(t, mtlsGet(addr, pki.clients[0].certFile, pki.clients[0].keyFile, pki.caFile))
+
+	require.NoError(t, os.WriteFile(crlFile, []byte("not a crl"), 0o600))
+	bumpFileMtime(t, crlFile)
+
+	require.Never(t, func() bool {
+		return mtlsGet(addr, pki.clients[0].certFile, pki.clients[0].keyFile, pki.caFile) != nil
+	}, 150*time.Millisecond, 10*time.Millisecond)
+
+	pki.writeCRL(
+		t, crlFile, []*big.Int{pki.clients[0].cert.SerialNumber},
+		time.Now().Add(-time.Minute), time.Now().Add(time.Hour), 2, true,
+	)
+	bumpFileMtime(t, crlFile)
+	require.Eventually(t, func() bool {
+		return mtlsGet(addr, pki.clients[0].certFile, pki.clients[0].keyFile, pki.caFile) != nil
+	}, time.Second, 20*time.Millisecond)
+}
+
+func TestCRLDisablesSessionTickets(t *testing.T) {
+	pki := createTestPKI(t, 1)
+	crlFile := filepath.Join(t.TempDir(), "client.crl")
+	pki.writeCRL(t, crlFile, nil, time.Now().Add(-time.Minute), time.Now().Add(time.Hour), 1, true)
+	tlsCfg := startReloadingConfigWithModel(t, &model.ServerConfigHTTPS{
+		CertFile:     pki.certFile,
+		KeyFile:      pki.keyFile,
+		ClientCAFile: pki.caFile,
+		CRLFile:      crlFile,
+		ClientAuth:   model.TLSClientAuthRequireAndVerify,
+	})
+
+	require.True(t, tlsCfg.SessionTicketsDisabled)
+	clientCfg, err := tlsCfg.GetConfigForClient(&tls.ClientHelloInfo{})
+	require.NoError(t, err)
+	require.True(t, clientCfg.SessionTicketsDisabled)
+	require.NotNil(t, clientCfg.VerifyConnection)
 }
 
 func startReloadingConfig(t *testing.T, files testCertificateFiles) *tls.Config {

@@ -22,8 +22,8 @@ var secureCipherSuites = func() map[string]uint16 {
 }()
 
 // NewTLSConfig builds a server TLS configuration. It reads no TLS material itself:
-// provider supplies the key pair and, for mTLS, the client CA pool on every handshake,
-// so rotated files are picked up without rebuilding the configuration.
+// provider supplies the key pair and, for mTLS, the client CA pool and CRLs on every
+// handshake, so rotated files are picked up without rebuilding the configuration.
 func NewTLSConfig(
 	config *model.ServerConfigHTTPS,
 	provider TLSProvider,
@@ -45,6 +45,9 @@ func NewTLSConfig(
 	if clientAuth != tls.NoClientCert && config.ClientCAFile == "" {
 		return nil, errors.New("TLS client authentication requires a client CA file")
 	}
+	if config.CRLFile != "" && clientAuth != tls.RequireAndVerifyClientCert {
+		return nil, errors.New("TLS certificate revocation requires require-and-verify client authentication")
+	}
 
 	result := &tls.Config{
 		MinVersion:     minVersion,
@@ -53,23 +56,56 @@ func NewTLSConfig(
 	}
 
 	if config.ClientCAFile != "" {
-		result.ClientAuth = clientAuth
-		result.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
-			pool, poolErr := provider.ClientCAs()
-			if poolErr != nil {
-				return nil, poolErr
-			}
-
-			// Clone per handshake instead of mutating the live configuration.
-			clone := result.Clone()
-			clone.ClientCAs = pool
-			clone.GetConfigForClient = nil
-
-			return clone, nil
-		}
+		attachClientAuth(result, config, provider, clientAuth)
 	}
 
 	return result, nil
+}
+
+func attachClientAuth(
+	result *tls.Config,
+	config *model.ServerConfigHTTPS,
+	provider TLSProvider,
+	clientAuth tls.ClientAuthType,
+) {
+	result.ClientAuth = clientAuth
+	if config.CRLFile != "" {
+		// Session resumption skips certificate re-verification; disable it so
+		// a newly loaded CRL applies to every connection.
+		result.SessionTicketsDisabled = true
+	}
+	result.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
+		pool, verifier, poolErr := provider.ClientAuth()
+		if poolErr != nil {
+			return nil, poolErr
+		}
+
+		// Clone per handshake instead of mutating the live configuration.
+		clone := result.Clone()
+		clone.ClientCAs = pool
+		clone.GetConfigForClient = nil
+		if err := attachCRLVerification(clone, config, verifier); err != nil {
+			return nil, err
+		}
+
+		return clone, nil
+	}
+}
+
+func attachCRLVerification(
+	clone *tls.Config,
+	config *model.ServerConfigHTTPS,
+	verifier ClientCertificateVerifier,
+) error {
+	if config.CRLFile == "" {
+		return nil
+	}
+	if verifier == nil {
+		return errors.New("HTTPS client CRL is not loaded")
+	}
+	clone.VerifyConnection = verifier.Verify
+
+	return nil
 }
 
 func loadKeyPair(certFile, keyFile, password string) (tls.Certificate, error) {

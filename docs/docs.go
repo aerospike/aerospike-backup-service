@@ -3512,6 +3512,12 @@ const docTemplate = `{
                     "type": "string",
                     "default": "/"
                 },
+                "crl-file": {
+                    "description": "Path to one DER-encoded CRL or one or more PEM-encoded CRLs for client certificates.\nRewriting this file at the same path reloads revocation state without a restart; changing the path requires a restart.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/client.crl"
+                },
                 "disabled": {
                     "description": "Disabled controls whether the listener is disabled.",
                     "type": "boolean",

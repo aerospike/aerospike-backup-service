@@ -16,7 +16,10 @@ var secureServerCipherSuites = func() map[string]bool {
 	return result
 }()
 
-const clientCAField = "client-ca-file"
+const (
+	clientCAField = "client-ca-file"
+	crlField      = "crl-file"
+)
 
 // ServerConfigHTTPS represents the service's HTTPS server configuration.
 // @Description ServerConfigHTTPS represents the service's HTTPS server configuration.
@@ -44,6 +47,9 @@ type ServerConfigHTTPS struct {
 	// Path to trusted client CA certificates in PEM format.
 	// Rewriting this file at the same path reloads the mTLS trust pool without a restart; changing the path requires a restart.
 	ClientCAFile string `yaml:"client-ca-file,omitempty" json:"client-ca-file,omitempty" example:"/path/to/client-ca.pem" extensions:"x-nullable"`
+	// Path to one DER-encoded CRL or one or more PEM-encoded CRLs for client certificates.
+	// Rewriting this file at the same path reloads revocation state without a restart; changing the path requires a restart.
+	CRLFile string `yaml:"crl-file,omitempty" json:"crl-file,omitempty" example:"/path/to/client.crl" extensions:"x-nullable"`
 	// Client certificate authentication mode.
 	ClientAuth TLSClientAuth `yaml:"client-auth,omitempty" json:"client-auth,omitempty" default:"none"`
 }
@@ -98,6 +104,7 @@ func (s *ServerConfigHTTPS) validateTLSFields() error {
 		certField:     s.CertFile,
 		keyField:      s.KeyFile,
 		clientCAField: s.ClientCAFile,
+		crlField:      s.CRLFile,
 	} {
 		if err := safepath.ValidateClean(path); err != nil {
 			return errValidationInvalidPath(field, path, err)
@@ -116,9 +123,24 @@ func (s *ServerConfigHTTPS) validateTLSFields() error {
 	if err := s.ClientAuth.Validate(); err != nil {
 		return err
 	}
-	clientAuth := s.ClientAuth.ToModel()
+
+	return s.validateClientAuth(s.ClientAuth.ToModel())
+}
+
+func (s *ServerConfigHTTPS) validateClientAuth(clientAuth model.TLSClientAuth) error {
 	if clientAuth != "" && clientAuth != model.TLSClientAuthNone && s.ClientCAFile == "" {
 		return errValidationRequires("client-auth", clientCAField)
+	}
+	if s.CRLFile == "" {
+		return nil
+	}
+	if s.ClientCAFile == "" {
+		return errValidationRequires(crlField, clientCAField)
+	}
+	if clientAuth != model.TLSClientAuthRequireAndVerify {
+		return errValidationInvalidValue(
+			crlField, clientAuth, "client-auth "+string(model.TLSClientAuthRequireAndVerify),
+		)
 	}
 
 	return nil
@@ -144,6 +166,7 @@ func (s *ServerConfigHTTPS) ToModel() *model.ServerConfigHTTPS {
 		MinVersion:      minVersion,
 		CipherSuites:    s.CipherSuites,
 		ClientCAFile:    s.ClientCAFile,
+		CRLFile:         s.CRLFile,
 		ClientAuth:      clientAuth,
 	}
 }
@@ -161,6 +184,7 @@ func (s *ServerConfigHTTPS) fromModel(m *model.ServerConfigHTTPS) {
 	s.MinVersion = NewTLSMinVersionFromModel(m.MinVersion)
 	s.CipherSuites = m.CipherSuites
 	s.ClientCAFile = m.ClientCAFile
+	s.CRLFile = m.CRLFile
 	s.ClientAuth = NewTLSClientAuthFromModel(m.ClientAuth)
 	s.SecretAgent = newSecretAgentFromModel(m.SecretAgent)
 }
@@ -192,6 +216,7 @@ func (s *ServerConfigHTTPS) Compare(other *ServerConfigHTTPS) error {
 		compareValues("MinVersion", s.MinVersion, other.MinVersion),
 		compareSlices("CipherSuites", s.CipherSuites, other.CipherSuites),
 		compareValues("ClientCAFile", s.ClientCAFile, other.ClientCAFile),
+		compareValues("CRLFile", s.CRLFile, other.CRLFile),
 		compareValues("ClientAuth", s.ClientAuth, other.ClientAuth),
 		compareValues("SecretAgentName", s.SecretAgentName, other.SecretAgentName),
 	)

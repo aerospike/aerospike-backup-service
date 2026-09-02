@@ -200,6 +200,7 @@ func TestNew(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, clientConfig)
 		assert.NotNil(t, clientConfig.ClientCAs)
+		assert.Nil(t, clientConfig.VerifyConnection)
 	})
 
 	t.Run("encrypted private key", func(t *testing.T) {
