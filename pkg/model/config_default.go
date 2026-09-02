@@ -78,6 +78,7 @@ var defaultConfig = struct {
 		Compact:               ptr.Of(false),
 		UseCompression:        ptr.Of(false),
 		ConcurrentIncremental: ptr.Of(false),
+		IncrMode:              IncrModeDifferential,
 	},
 	restorePolicy: RestorePolicy{
 		Parallel: ptr.Of(8),

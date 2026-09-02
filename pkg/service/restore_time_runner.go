@@ -8,6 +8,7 @@ import (
 	"maps"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -131,19 +132,52 @@ func buildRestoreChainsByNamespace(
 	chains := make(map[string][]model.BackupDetails, len(latestFullByNamespace))
 	for ns, full := range latestFullByNamespace {
 		chains[ns] = append(chains[ns], full)
-		for _, incr := range incrementalsByNamespace[ns] {
-			// Apply only incrementals strictly newer than the selected full backup.
-			if !incr.Created.After(full.Created) {
-				continue
-			}
-			chains[ns] = append(chains[ns], incr)
-		}
-		slices.SortFunc(chains[ns], func(a, b model.BackupDetails) int {
-			return a.Created.Compare(b.Created)
-		})
+		chains[ns] = append(chains[ns], filterIncrementals(full, incrementalsByNamespace[ns])...)
 	}
 
 	return chains
+}
+
+func filterIncrementals(
+	full model.BackupDetails, incrementals []model.BackupDetails,
+) []model.BackupDetails {
+	// Sort incrementals descending by Created
+	slices.SortFunc(incrementals, func(a, b model.BackupDetails) int {
+		return b.Created.Compare(a.Created)
+	})
+
+	var filteredIncr []model.BackupDetails
+	var coveredUntil time.Time
+
+	for _, incr := range incrementals {
+		// Apply only incrementals strictly newer than the selected full backup.
+		if !incr.Created.After(full.Created) {
+			continue
+		}
+
+		// If this incremental is fully covered by newer ones, skip it.
+		if !coveredUntil.IsZero() && !incr.From.Before(coveredUntil) {
+			continue
+		}
+
+		filteredIncr = append(filteredIncr, incr)
+		coveredUntil = updateCoveredUntil(coveredUntil, incr.From)
+	}
+
+	// Append filtered incrementals in chronological order
+	slices.Reverse(filteredIncr)
+
+	return filteredIncr
+}
+
+func updateCoveredUntil(current, incrFrom time.Time) time.Time {
+	if incrFrom.IsZero() {
+		return current
+	}
+	if current.IsZero() || incrFrom.Before(current) {
+		return incrFrom
+	}
+	return current
 }
 
 func splitByNamespace(backups []model.BackupDetails) map[string][]model.BackupDetails {
@@ -172,6 +206,8 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 		return err
 	}
 
+	checkGaps(backupsByNamespace, logger)
+
 	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
@@ -189,6 +225,32 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 	}
 
 	return r.restoreAllNamespaces(ctx, client, request, jobID, backupsByNamespace, logger)
+}
+
+// checkGaps checks that there are no gaps between full backups and incremental backups.
+func checkGaps(chains map[string][]model.BackupDetails, logger *slog.Logger) {
+	for ns, chain := range chains {
+		if len(chain) < 2 {
+			continue
+		}
+
+		for i := 0; i < len(chain)-1; i++ {
+			prev := chain[i]
+			next := chain[i+1]
+
+			if prev.Created.Before(next.From) {
+				msg := "Gap detected in incremental backup chain"
+				if i == 0 {
+					msg = "Gap detected between full backup and first incremental"
+				}
+
+				logger.Warn(msg,
+					slog.Time("gapStart", prev.Created),
+					slog.Time("gapEnd", next.From),
+					slog.String("namespace", ns))
+			}
+		}
+	}
 }
 
 func (r *timeRestoreRunner) restoreAllNamespaces(

@@ -107,6 +107,9 @@ func (s *Suite) baseConfig(backupDir string) *dto.Config {
 }
 
 // testRoutine returns the routine from baseConfig, for use inside setupEnv customize functions.
+func (s *Suite) testRoutine(config *dto.Config) *dto.BackupRoutine {
+	return config.BackupRoutines[routineName]
+}
 
 // seedRecords writes one record per age into the set that tests back up.
 func (s *Suite) seedRecords(ages []int) {
