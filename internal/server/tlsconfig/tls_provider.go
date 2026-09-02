@@ -21,27 +21,46 @@ const WatchInterval = 10 * time.Second
 
 // TLSProvider loads, watches, and supplies TLS material for HTTPS handshakes.
 type TLSProvider interface {
-	// Load reads the key pair and, when configured, the client CA pool.
+	// Load reads the key pair and, when configured, the client CA pool and CRLs.
 	// The first call must succeed; later failures keep the last good material.
 	Load(ctx context.Context) error
 	// Start watches the TLS files until ctx is canceled.
 	Start(ctx context.Context)
 	// GetCertificate returns the server key pair for a TLS handshake.
 	GetCertificate(*tls.ClientHelloInfo) (*tls.Certificate, error)
-	// ClientCAs returns the current immutable client CA pool.
-	ClientCAs() (*x509.CertPool, error)
+	// ClientAuth returns the current client CA pool and optional revocation verifier.
+	ClientAuth() (*x509.CertPool, ClientCertificateVerifier, error)
+}
+
+type clientAuthState struct {
+	clientCAs *x509.CertPool
+	crls      *crlIndex
+}
+
+func (s *clientAuthState) withClientCAs(pool *x509.CertPool) *clientAuthState {
+	if s == nil {
+		return &clientAuthState{clientCAs: pool}
+	}
+	return &clientAuthState{clientCAs: pool, crls: s.crls}
+}
+
+func (s *clientAuthState) withCRLs(crls *crlIndex) *clientAuthState {
+	if s == nil {
+		return &clientAuthState{crls: crls}
+	}
+	return &clientAuthState{clientCAs: s.clientCAs, crls: crls}
 }
 
 // certificateReloader is the single point that reads HTTPS TLS material from disk.
 // It swaps the key pair when cert-file or key-file change and, when client-ca-file
-// is set, swaps the mTLS trust pool served through GetConfigForClient.
+// is set, swaps the mTLS trust pool and optional CRL index served through GetConfigForClient.
 type certificateReloader struct {
-	config    *model.ServerConfigHTTPS
-	resolver  secrets.Resolver
-	watchers  []reload.Watcher
-	current   atomic.Pointer[tls.Certificate]
-	clientCAs atomic.Pointer[x509.CertPool]
-	mu        sync.Mutex
+	config     *model.ServerConfigHTTPS
+	resolver   secrets.Resolver
+	watchers   []reload.Watcher
+	current    atomic.Pointer[tls.Certificate]
+	clientAuth atomic.Pointer[clientAuthState]
+	mu         sync.Mutex
 }
 
 var (
@@ -81,6 +100,11 @@ func newCertificateProvider(
 			reload.New(config.ClientCAFile, interval, reloader.loadClientCAs),
 		)
 	}
+	if config.CRLFile != "" {
+		reloader.watchers = append(reloader.watchers,
+			reload.New(config.CRLFile, interval, reloader.loadCRLs),
+		)
+	}
 
 	return reloader
 }
@@ -100,17 +124,20 @@ func (noOpReloader) GetCertificate(*tls.ClientHelloInfo) (*tls.Certificate, erro
 	return nil, errors.New("HTTPS certificate is not loaded")
 }
 
-func (noOpReloader) ClientCAs() (*x509.CertPool, error) {
-	return nil, errors.New("HTTPS client CA pool is not loaded")
+func (noOpReloader) ClientAuth() (*x509.CertPool, ClientCertificateVerifier, error) {
+	return nil, nil, errors.New("HTTPS client CA pool is not loaded")
 }
 
-// Load reads the key pair and the client CA pool and serves them to new handshakes.
+// Load reads the key pair, client CA pool, and CRLs and serves them to new handshakes.
 func (r *certificateReloader) Load(ctx context.Context) error {
 	if err := r.loadKeyPair(ctx); err != nil {
 		return err
 	}
+	if err := r.loadClientCAs(ctx); err != nil {
+		return err
+	}
 
-	return r.loadClientCAs(ctx)
+	return r.loadCRLs(ctx)
 }
 
 func (r *certificateReloader) loadKeyPair(ctx context.Context) error {
@@ -156,11 +183,37 @@ func (r *certificateReloader) loadClientCAs(_ context.Context) error {
 	}
 
 	message := "loaded HTTPS client CA pool"
-	if r.clientCAs.Load() != nil {
+	current := r.clientAuth.Load()
+	if current != nil && current.clientCAs != nil {
 		message = "rotated HTTPS client CA pool"
 	}
-	r.clientCAs.Store(pool)
+	r.clientAuth.Store(current.withClientCAs(pool))
 	slog.Info(message, slog.String("clientCaFile", r.config.ClientCAFile))
+
+	return nil
+}
+
+func (r *certificateReloader) loadCRLs(_ context.Context) error {
+	if r.config.CRLFile == "" {
+		return nil
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	index, err := loadCRLs(r.config.CRLFile)
+	if err != nil {
+		return err
+	}
+	index.logStaleIfNeeded(time.Now())
+
+	message := "loaded HTTPS client CRL"
+	current := r.clientAuth.Load()
+	if current != nil && current.crls != nil {
+		message = "rotated HTTPS client CRL"
+	}
+	r.clientAuth.Store(current.withCRLs(index))
+	slog.Info(message, slog.String("crlFile", r.config.CRLFile))
 
 	return nil
 }
@@ -175,14 +228,14 @@ func (r *certificateReloader) GetCertificate(*tls.ClientHelloInfo) (*tls.Certifi
 	return certificate, nil
 }
 
-// ClientCAs returns the current immutable client CA pool.
-func (r *certificateReloader) ClientCAs() (*x509.CertPool, error) {
-	pool := r.clientCAs.Load()
-	if pool == nil {
-		return nil, errors.New("HTTPS client CA pool is not loaded")
+// ClientAuth returns the current immutable client CA pool and revocation verifier.
+func (r *certificateReloader) ClientAuth() (*x509.CertPool, ClientCertificateVerifier, error) {
+	state := r.clientAuth.Load()
+	if state == nil || state.clientCAs == nil {
+		return nil, nil, errors.New("HTTPS client CA pool is not loaded")
 	}
 
-	return pool, nil
+	return state.clientCAs, state.crls, nil
 }
 
 // Start polls the watched TLS files until ctx is canceled.

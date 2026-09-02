@@ -57,6 +57,16 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid mutual TLS with CRL",
+			config: &ServerConfigHTTPS{
+				CertFile:     certs.certFile,
+				KeyFile:      certs.keyFile,
+				ClientCAFile: certs.caFile,
+				CRLFile:      "/path/to/client.crl",
+				ClientAuth:   "require-and-verify",
+			},
+		},
+		{
 			name: "valid request client certificate",
 			config: &ServerConfigHTTPS{
 				CertFile:     certs.certFile,
@@ -147,6 +157,17 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			wantErr: "client-ca-file",
 		},
 		{
+			name: "dirty CRL path",
+			config: &ServerConfigHTTPS{
+				CertFile:     certs.certFile,
+				KeyFile:      certs.keyFile,
+				ClientCAFile: certs.caFile,
+				CRLFile:      "/tmp/../client.crl",
+				ClientAuth:   "require-and-verify",
+			},
+			wantErr: "crl-file",
+		},
+		{
 			name: "mismatched certificate and key is structurally valid",
 			config: &ServerConfigHTTPS{
 				CertFile: certs.certFile,
@@ -169,6 +190,27 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 				ClientAuth: "request",
 			},
 			wantErr: "client-ca-file",
+		},
+		{
+			name: "CRL without client CA",
+			config: &ServerConfigHTTPS{
+				CertFile:   certs.certFile,
+				KeyFile:    certs.keyFile,
+				CRLFile:    "/path/to/client.crl",
+				ClientAuth: "require-and-verify",
+			},
+			wantErr: "client-ca-file",
+		},
+		{
+			name: "CRL without require-and-verify",
+			config: &ServerConfigHTTPS{
+				CertFile:     certs.certFile,
+				KeyFile:      certs.keyFile,
+				ClientCAFile: certs.caFile,
+				CRLFile:      "/path/to/client.crl",
+				ClientAuth:   "request",
+			},
+			wantErr: "crl-file",
 		},
 		{
 			name: "invalid minimum version",
@@ -262,6 +304,7 @@ func TestServerHTTPSConfigToModelAndFromModel(t *testing.T) {
 		MinVersion:      "1.3",
 		CipherSuites:    []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 		ClientCAFile:    "/ca.pem",
+		CRLFile:         "/crl.pem",
 		ClientAuth:      "require-and-verify",
 		SecretAgentConfig: SecretAgentConfig{
 			SecretAgent: &SecretAgent{
@@ -296,6 +339,7 @@ func TestServerHTTPSConfigCompareReportsEveryField(t *testing.T) {
 		MinVersion:      "1.2",
 		CipherSuites:    []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 		ClientCAFile:    "ca",
+		CRLFile:         "crl",
 		ClientAuth:      "none",
 		SecretAgentConfig: SecretAgentConfig{
 			SecretAgentName: "agent-a",
@@ -319,6 +363,7 @@ func TestServerHTTPSConfigCompareReportsEveryField(t *testing.T) {
 		MinVersion:      "1.3",
 		CipherSuites:    []string{"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"},
 		ClientCAFile:    "new-ca",
+		CRLFile:         "new-crl",
 		ClientAuth:      "require-and-verify",
 		SecretAgentConfig: SecretAgentConfig{
 			SecretAgentName: "agent-b",
@@ -328,11 +373,11 @@ func TestServerHTTPSConfigCompareReportsEveryField(t *testing.T) {
 	err := current.Compare(other)
 	require.Error(t, err)
 	lines := strings.Split(err.Error(), "\n")
-	assert.Len(t, lines, 17)
+	assert.Len(t, lines, 18)
 	for _, field := range []string{
 		"Disabled", "Address", "Port", "rate changes", "ContextPath", "Timeout", "ReadTimeout", "WriteTimeout",
 		"IdleTimeout", "CertFile", "KeyFile", "KeyFilePassword", "MinVersion", "CipherSuites",
-		"ClientCAFile", "ClientAuth", "SecretAgentName",
+		"ClientCAFile", "CRLFile", "ClientAuth", "SecretAgentName",
 	} {
 		assert.Contains(t, err.Error(), field)
 	}
