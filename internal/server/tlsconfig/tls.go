@@ -62,6 +62,9 @@ func NewTLSConfig(
 	return result, nil
 }
 
+// attachClientAuth configures client certificate authentication (mTLS) on the base
+// TLS configuration. To support hot-reloading of trust stores and CRL files without
+// connection disruption, it dynamically hooks into the GetConfigForClient callback.
 func attachClientAuth(
 	result *tls.Config,
 	config *model.ServerConfigHTTPS,
@@ -70,8 +73,9 @@ func attachClientAuth(
 ) {
 	result.ClientAuth = clientAuth
 	if config.CRLFile != "" {
-		// Session resumption skips certificate re-verification; disable it so
-		// a newly loaded CRL applies to every connection.
+		// Session ticket resumption bypasses the full TLS handshake and certificate
+		// verification callbacks. We must disable it when CRL checks are active to
+		// guarantee that every new connection validates against the latest CRL state.
 		result.SessionTicketsDisabled = true
 	}
 	result.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
@@ -80,7 +84,9 @@ func attachClientAuth(
 			return nil, poolErr
 		}
 
-		// Clone per handshake instead of mutating the live configuration.
+		// Since Go's tls.Config is shared across all concurrent handshakes, we must
+		// clone the base configuration per connection before applying hot-reloaded
+		// ClientCAs and VerifyConnection callbacks to prevent concurrent map writes.
 		clone := result.Clone()
 		clone.ClientCAs = pool
 		clone.GetConfigForClient = nil
@@ -92,6 +98,8 @@ func attachClientAuth(
 	}
 }
 
+// attachCRLVerification mounts our custom CRL-based revocation checker onto the
+// connection-specific cloned TLS configuration.
 func attachCRLVerification(
 	clone *tls.Config,
 	config *model.ServerConfigHTTPS,
@@ -103,6 +111,9 @@ func attachCRLVerification(
 	if verifier == nil {
 		return errors.New("HTTPS client CRL is not loaded")
 	}
+	// We bind to VerifyConnection rather than VerifyPeerCertificate because VerifyConnection
+	// is executed after Go's crypto/tls has successfully established a cryptographic chain
+	// of trust. This guarantees that our verifier receives pre-verified certificate chains.
 	clone.VerifyConnection = verifier.Verify
 
 	return nil
