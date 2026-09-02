@@ -300,10 +300,7 @@ func (r *BackupRoutine) ToModel(
 		SecretAgent:      secretAgent,
 		IntervalCron:     r.IntervalCron,
 		IncrIntervalCron: r.IncrIntervalCron,
-		Timezone: model.NewRoutineLocation(
-			r.ScheduleTimezone,
-			serviceTimezone,
-		),
+		Timezone:         model.NewRoutineLocation(r.ScheduleTimezone, serviceTimezone),
 		Namespaces:       *r.Namespaces,
 		SetList:          r.SetList,
 		BinList:          r.BinList,
