@@ -49,8 +49,14 @@ type BackupScheduler struct {
 var _ AdHocScheduler = (*BackupScheduler)(nil)
 
 // NewBackupScheduler returns a BackupScheduler.
-func NewBackupScheduler(scheduler JobScheduler, orchestrator BackupOrchestrator) *BackupScheduler {
-	return &BackupScheduler{scheduler: scheduler, orchestrator: orchestrator}
+func NewBackupScheduler(
+	scheduler JobScheduler,
+	orchestrator BackupOrchestrator,
+) *BackupScheduler {
+	return &BackupScheduler{
+		scheduler:    scheduler,
+		orchestrator: orchestrator,
+	}
 }
 
 // DeleteJob removes a scheduled job (e.g. when clearing periodic jobs on config change).
@@ -80,7 +86,9 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 		newBackupJob(s.orchestrator, routine, model.BackupTypeFull),
 		jobKey(routine.Name, model.BackupTypeFull),
 	)
-	if err := s.scheduleCronJob(routine.IntervalCron, fullJob); err != nil {
+
+	location := routine.Timezone.ResolvedLocation()
+	if err := s.scheduleCronJob(routine.IntervalCron, location, fullJob); err != nil {
 		return fmt.Errorf("failed to schedule full backup: %w", err)
 	}
 
@@ -93,7 +101,7 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 		newBackupJob(s.orchestrator, routine, model.BackupTypeIncremental),
 		jobKey(routine.Name, model.BackupTypeIncremental),
 	)
-	if err := s.scheduleCronJob(routine.IncrIntervalCron, incrementalJob); err != nil {
+	if err := s.scheduleCronJob(routine.IncrIntervalCron, location, incrementalJob); err != nil {
 		return fmt.Errorf("failed to schedule incremental backup: %w", err)
 	}
 
@@ -101,8 +109,8 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 }
 
 // scheduleCronJob attaches a cron trigger to jobDetail and schedules it on the underlying Quartz scheduler.
-func (s *BackupScheduler) scheduleCronJob(interval string, jobDetail *quartz.JobDetail) error {
-	cronTrigger, err := quartz.NewCronTrigger(interval)
+func (s *BackupScheduler) scheduleCronJob(interval string, loc *time.Location, jobDetail *quartz.JobDetail) error {
+	cronTrigger, err := quartz.NewCronTriggerWithLoc(interval, loc)
 	if err != nil {
 		return err
 	}

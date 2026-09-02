@@ -71,7 +71,7 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 				FullRunningNow:        tt.routineState.Full != nil,
 				IncrementalRunningNow: tt.routineState.Incremental != nil,
 				HasCompletedFull:      !tt.routineState.LastRunTime.NoFullBackup(),
-				FullScheduledNow:      timeutil.IsCronFireTime("@daily", tt.now),
+				FullScheduledNow:      timeutil.IsCronFireTime("@daily", tt.now, time.UTC),
 			}
 
 			decider := NewStartDecider()

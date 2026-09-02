@@ -13,6 +13,8 @@ const (
 	DefaultPartSize      = 50 * 1024 * 1024
 )
 
+var DefaultScheduleTimezone = time.UTC
+
 // defaultListener represents the listen settings shared by the HTTP and HTTPS servers.
 var defaultListener = ListenerConfig{
 	Address: "0.0.0.0",
