@@ -502,16 +502,15 @@ func TestHTTPSRequireAndVerifyRejectsUntrustedClientCertificate(t *testing.T) {
 }
 
 func TestCertificateReloaderLoadReturnsErrorForMissingKeyPair(t *testing.T) {
-	reloader := servertls.NewCertificateReloader(
+	tlsProvider := servertls.NewCertificateProvider(
 		&model.ServerConfigHTTPS{
 			CertFile: filepath.Join(t.TempDir(), "missing.pem"),
 			KeyFile:  filepath.Join(t.TempDir(), "missing-key.pem"),
 		},
 		secrets.NewResolver(),
-		servertls.DefaultWatchInterval,
 	)
 
-	err := reloader.Load(t.Context())
+	err := tlsProvider.Load(t.Context())
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed to load HTTPS certificate and key")
 }
@@ -554,10 +553,10 @@ func TestHTTPSStartFailsWhenPortIsOccupied(t *testing.T) {
 		CertFile:       certs.serverCertFile,
 		KeyFile:        certs.serverKeyFile,
 	}
-	reloader := servertls.NewCertificateReloader(serverConfig, secrets.NewResolver(), servertls.DefaultWatchInterval)
-	require.NoError(t, reloader.Load(t.Context()))
+	tlsProvider := servertls.NewCertificateProvider(serverConfig, secrets.NewResolver())
+	require.NoError(t, tlsProvider.Load(t.Context()))
 
-	tlsConfig, err := servertls.NewTLSConfig(serverConfig, reloader.GetCertificate)
+	tlsConfig, err := servertls.NewTLSConfig(serverConfig, tlsProvider)
 	require.NoError(t, err)
 
 	srv := server.NewServerHTTPS(t.Context(), serverConfig, newListenerHandler(t), tlsConfig)
@@ -589,7 +588,7 @@ func initListenerComponents(t *testing.T, cfg dto.Config) *app.Components {
 func startListeners(t *testing.T, ctx context.Context, components *app.Components) <-chan error {
 	t.Helper()
 
-	components.CertReloader.Start(ctx)
+	components.TLSProvider.Start(ctx)
 
 	listeners := components.Servers
 	errCh := make(chan error, 1)
