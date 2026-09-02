@@ -40,21 +40,25 @@ func verifyLeafAgainstChain(chain []*x509.Certificate, index *crlIndex, now time
 		return errCRLNotFound
 	}
 
-	leaf := chain[0]
-	issuer := chain[1]
-	candidates := index.byRawIssuer[string(leaf.RawIssuer)]
-	chosen := selectIssuerCRL(candidates, issuer)
-	if chosen == nil {
-		return fmt.Errorf("%w: issuer %q", errCRLNotFound, issuer.Subject.String())
-	}
+	// Verify every certificate in the chain except the root trust anchor (chain[len(chain)-1])
+	for i := 0; i < len(chain)-1; i++ {
+		cert := chain[i]
+		issuer := chain[i+1]
 
-	if err := crlFreshness(chosen.list, now); err != nil {
-		index.logStale(err)
-		return err
-	}
+		candidates := index.byRawIssuer[string(cert.RawIssuer)]
+		chosen := selectIssuerCRL(candidates, issuer)
+		if chosen == nil {
+			return fmt.Errorf("%w: issuer %q", errCRLNotFound, issuer.Subject.String())
+		}
 
-	if _, revoked := chosen.revokedSerials[serialKey(leaf.SerialNumber)]; revoked {
-		return fmt.Errorf("%w: serial %s", errCertificateRevoked, leaf.SerialNumber)
+		if err := crlFreshness(chosen.list, now); err != nil {
+			index.logStale(err)
+			return err
+		}
+
+		if _, revoked := chosen.revokedSerials[serialKey(cert.SerialNumber)]; revoked {
+			return fmt.Errorf("%w: serial %s", errCertificateRevoked, cert.SerialNumber)
+		}
 	}
 
 	return nil

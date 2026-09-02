@@ -333,3 +333,134 @@ func TestLoadTLSConfigMissingCRLFile(t *testing.T) {
 	}, newTestResolver(t))
 	require.ErrorContains(t, err, "failed to read client CRL file")
 }
+
+func TestVerifyClientLeafWithIntermediateCA(t *testing.T) {
+	pki := createTestPKI(t, 1)
+	now := time.Now()
+	dir := t.TempDir()
+
+	// 1. Create intermediate CA
+	icaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	ski := make([]byte, 20)
+	_, err = rand.Read(ski)
+	require.NoError(t, err)
+	icaTemplate := &x509.Certificate{
+		SerialNumber:          big.NewInt(2),
+		Subject:               pkix.Name{CommonName: "intermediate CA"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		SubjectKeyId:          ski,
+	}
+	icaDER, err := x509.CreateCertificate(rand.Reader, icaTemplate, pki.caCert, &icaKey.PublicKey, pki.caKey)
+	require.NoError(t, err)
+	icaCert, err := x509.ParseCertificate(icaDER)
+	require.NoError(t, err)
+
+	// 2. Create client certificate issued by intermediate CA
+	clientKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	clientSerial, err := rand.Int(rand.Reader, big.NewInt(1<<62))
+	require.NoError(t, err)
+	clientTemplate := &x509.Certificate{
+		SerialNumber: clientSerial,
+		Subject:      pkix.Name{CommonName: "ica-client"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+	clientDER, err := x509.CreateCertificate(rand.Reader, clientTemplate, icaCert, &clientKey.PublicKey, icaKey)
+	require.NoError(t, err)
+	clientCert, err := x509.ParseCertificate(clientDER)
+	require.NoError(t, err)
+
+	// We now have chain: clientCert (0) -> icaCert (1) -> caCert (2)
+	chain := []*x509.Certificate{clientCert, icaCert, pki.caCert}
+	state := tls.ConnectionState{
+		VerifiedChains: [][]*x509.Certificate{chain},
+	}
+
+	// Helper to write CRL for intermediate CA
+	writeICACRL := func(path string, revoked []*big.Int, number int64) {
+		entries := make([]x509.RevocationListEntry, 0, len(revoked))
+		for _, serial := range revoked {
+			entries = append(entries, x509.RevocationListEntry{
+				SerialNumber:   serial,
+				RevocationTime: now.Add(-time.Minute),
+			})
+		}
+		der, err := x509.CreateRevocationList(rand.Reader, &x509.RevocationList{
+			Number:                    big.NewInt(number),
+			ThisUpdate:                now.Add(-time.Minute),
+			NextUpdate:                now.Add(time.Hour),
+			RevokedCertificateEntries: entries,
+		}, icaCert, icaKey)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(path, pem.EncodeToMemory(&pem.Block{Type: pemCRLType, Bytes: der}), 0o600))
+	}
+
+	t.Run("fails when missing intermediate CRL", func(t *testing.T) {
+		rcrlPath := filepath.Join(dir, "root-only.pem")
+		pki.writeCRL(t, rcrlPath, nil, now.Add(-time.Minute), now.Add(time.Hour), 1, true)
+
+		index, err := loadCRLs(rcrlPath)
+		require.NoError(t, err)
+
+		require.ErrorIs(t, verifyClientLeaf(state, index, now), errCRLNotFound)
+	})
+
+	t.Run("fails when intermediate CA certificate is revoked", func(t *testing.T) {
+		rcrlPath := filepath.Join(dir, "root-crl.pem")
+		pki.writeCRL(t, rcrlPath, []*big.Int{icaCert.SerialNumber}, now.Add(-time.Minute), now.Add(time.Hour), 1, true)
+
+		icrlPath := filepath.Join(dir, "ica-crl.pem")
+		writeICACRL(icrlPath, nil, 1)
+
+		bundlePath := filepath.Join(dir, "bundle-revoked-ica.pem")
+		bundle := append(readFile(t, rcrlPath), readFile(t, icrlPath)...)
+		require.NoError(t, os.WriteFile(bundlePath, bundle, 0o600))
+
+		index, err := loadCRLs(bundlePath)
+		require.NoError(t, err)
+
+		require.ErrorIs(t, verifyClientLeaf(state, index, now), errCertificateRevoked)
+	})
+
+	t.Run("fails when leaf certificate is revoked", func(t *testing.T) {
+		rcrlPath := filepath.Join(dir, "root-crl-ok.pem")
+		pki.writeCRL(t, rcrlPath, nil, now.Add(-time.Minute), now.Add(time.Hour), 1, true)
+
+		icrlPath := filepath.Join(dir, "ica-crl-revoked-leaf.pem")
+		writeICACRL(icrlPath, []*big.Int{clientCert.SerialNumber}, 1)
+
+		bundlePath := filepath.Join(dir, "bundle-revoked-leaf.pem")
+		bundle := append(readFile(t, rcrlPath), readFile(t, icrlPath)...)
+		require.NoError(t, os.WriteFile(bundlePath, bundle, 0o600))
+
+		index, err := loadCRLs(bundlePath)
+		require.NoError(t, err)
+
+		require.ErrorIs(t, verifyClientLeaf(state, index, now), errCertificateRevoked)
+	})
+
+	t.Run("passes when nothing is revoked and both CRLs are present", func(t *testing.T) {
+		rcrlPath := filepath.Join(dir, "root-ok.pem")
+		pki.writeCRL(t, rcrlPath, nil, now.Add(-time.Minute), now.Add(time.Hour), 1, true)
+
+		icrlPath := filepath.Join(dir, "ica-ok.pem")
+		writeICACRL(icrlPath, nil, 1)
+
+		bundlePath := filepath.Join(dir, "bundle-all-ok.pem")
+		bundle := append(readFile(t, rcrlPath), readFile(t, icrlPath)...)
+		require.NoError(t, os.WriteFile(bundlePath, bundle, 0o600))
+
+		index, err := loadCRLs(bundlePath)
+		require.NoError(t, err)
+
+		require.NoError(t, verifyClientLeaf(state, index, now))
+	})
+}

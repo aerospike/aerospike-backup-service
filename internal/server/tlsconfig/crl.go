@@ -123,7 +123,7 @@ func serialKey(serial *big.Int) string {
 		return ""
 	}
 
-	return string(serial.Bytes())
+	return serial.String()
 }
 
 func (i *crlIndex) logStale(err error) {
