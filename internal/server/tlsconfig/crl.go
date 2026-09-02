@@ -133,6 +133,8 @@ type ClientCertificateVerifier interface {
 	Verify(tls.ConnectionState) error
 }
 
+var _ ClientCertificateVerifier = (*crlIndex)(nil)
+
 // Verify rejects client leaf certificates that are revoked by this CRL index.
 func (idx *crlIndex) Verify(state tls.ConnectionState) error {
 	return idx.verifyClientLeaf(state, time.Now())
