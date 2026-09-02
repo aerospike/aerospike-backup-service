@@ -1965,6 +1965,16 @@ const docTemplate = `{
                     "type": "integer",
                     "default": 250
                 },
+                "incr-mode": {
+                    "description": "The mode for incremental backups (optional, default is differential).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.IncrMode"
+                        }
+                    ],
+                    "x-nullable": true,
+                    "example": "differential"
+                },
                 "max-concurrent-nodes": {
                     "description": "Maximum number of concurrent requests to server nodes.\nDefault is to issue requests to all server nodes in parallel.",
                     "type": "integer",
@@ -2456,6 +2466,18 @@ const docTemplate = `{
                     "x-nullable": true
                 }
             }
+        },
+        "dto.IncrMode": {
+            "description": "IncrMode represents the mode for incremental backups.",
+            "type": "string",
+            "enum": [
+                "differential",
+                "cumulative"
+            ],
+            "x-enum-varnames": [
+                "IncrModeDifferential",
+                "IncrModeCumulative"
+            ]
         },
         "dto.JobStatus": {
             "description": "Possible states of restore jobs.",
