@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseScheduleTimezone(t *testing.T) {
+func TestParseTimezone(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -32,7 +32,7 @@ func TestParseScheduleTimezone(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ParseScheduleTimezone(tt.input)
+			got, err := ParseTimezone(tt.input)
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tt.wantErr)
@@ -71,7 +71,7 @@ func TestNewServiceLocation(t *testing.T) {
 
 		location := NewServiceLocation("")
 		assert.Nil(t, location.resolved)
-		assert.Equal(t, LocationSourceUTC, location.Source)
+		assert.Equal(t, LocationSourceDefault, location.Source)
 		assert.Same(t, DefaultScheduleTimezone, location.ResolvedLocation())
 	})
 
@@ -110,7 +110,7 @@ func TestNewRoutineLocation(t *testing.T) {
 		t.Parallel()
 
 		location := NewRoutineLocation("", NewServiceLocation(""))
-		assert.Equal(t, LocationSourceUTC, location.Source)
+		assert.Equal(t, LocationSourceDefault, location.Source)
 		assert.Nil(t, location.resolved)
 		assert.Same(t, DefaultScheduleTimezone, location.ResolvedLocation())
 	})

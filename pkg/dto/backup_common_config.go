@@ -33,7 +33,7 @@ func (b *BackupCommonConfig) Validate() error {
 		return err
 	}
 
-	if _, err := model.ParseScheduleTimezone(b.ScheduleTimezone); err != nil {
+	if _, err := model.ParseTimezone(b.ScheduleTimezone); err != nil {
 		return errValidationInvalidValue("schedule-timezone", b.ScheduleTimezone, "UTC, Local, or a valid IANA timezone name")
 	}
 

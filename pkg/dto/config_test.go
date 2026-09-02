@@ -144,7 +144,7 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 		modelConfig, err := validConfig().ToModel()
 		require.NoError(t, err)
 		assert.Equal(t, model.DefaultScheduleTimezone, modelConfig.Routines()["routine1"].Timezone.ResolvedLocation())
-		assert.Equal(t, model.LocationSourceUTC, modelConfig.Routines()["routine1"].Timezone.Source)
+		assert.Equal(t, model.LocationSourceDefault, modelConfig.Routines()["routine1"].Timezone.Source)
 	})
 
 	t.Run("inherits service timezone", func(t *testing.T) {
