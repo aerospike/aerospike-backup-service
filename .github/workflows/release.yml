@@ -1,259 +1,263 @@
-name: Promote Images to DockerHub
+name: Publish Aerospike Backup Service Release (Shared Workflows)
+
 on:
-  release:
-    types:
-      - released
   workflow_dispatch:
+    inputs:
+      version:
+        description: Release version to publish (must match a release bundle already promoted to PROD, e.g. v3.7.0)
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+# This workflow is run manually, once the release bundle has already been promoted all the way to
+# JFrog PROD via the JFrog UI by a PM/EM (see docs/development.md "Cutting a release" -- gates past
+# TEST are product-owned and intentionally not automated in CI). It never promotes anything itself;
+# it only verifies the PROD promotion happened, then republishes the already-signed artifacts as an
+# immutable GitHub Release. Nothing is rebuilt, re-signed, or re-checksummed here -- JFrog is the
+# source of truth. Docker Hub mirroring is handled entirely externally by artifact-publisher
+# (https://aerospike.atlassian.net/wiki/spaces/DevOps/pages/4648566799), triggered by JFrog's own
+# promotion webhook -- no job for it lives in this workflow.
+#
+# All `vars.JF_*` used below are dedicated to this pipeline (targets the "database" JFrog
+# project) and are independent of the unprefixed `vars.*` used by release-legacy.yml
+# (targets "ecosystem") — never share values between the two.
+
 jobs:
-  promote-to-jfrog-prod-env:
+  verify-prod-promotion:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-24.04
+    env:
+      BUNDLE_NAME: ${{ github.event.repository.name }}
+      BUNDLE_VERSION: ${{ github.event.inputs.version }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
 
+      - name: Login to JFrog
+        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        env:
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
+        with:
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
+
+      - name: Check release bundle is promoted to PROD
+        env:
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
+        run: |
+          set -euxo pipefail
+          if [ -z "${BUNDLE_VERSION}" ]; then
+            echo "::error::version input is required (e.g. v3.7.0)."
+            exit 1
+          fi
+
+          echo "Checking promotion history for ${BUNDLE_NAME}:${BUNDLE_VERSION} (project: ${JF_PROJECT})..."
+          RESPONSE=$(jf rt curl -s "/lifecycle/api/v2/promotion/records/${BUNDLE_NAME}/${BUNDLE_VERSION}?project=${JF_PROJECT}")
+          echo "$RESPONSE" | jq .
+
+          COMPLETED_PROD=$(echo "$RESPONSE" | jq '[.promotions[]? | select(.environment == "PROD" and .status == "COMPLETED")] | length')
+          if [ "$COMPLETED_PROD" -lt 1 ]; then
+            echo "::error::Release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} has no COMPLETED promotion to PROD. Have a PM/EM promote it via the JFrog UI, then re-run this workflow."
+            exit 1
+          fi
+
+          echo "Confirmed: ${BUNDLE_NAME}:${BUNDLE_VERSION} is promoted to PROD."
+
+      - name: Summarize verification
+        if: always()
+        run: |
+          {
+            echo "### PROD promotion check"
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Bundle name | \`${BUNDLE_NAME}\` |"
+            echo "| Bundle version | \`${BUNDLE_VERSION}\` |"
+            echo "| JFrog project | \`${{ vars.JF_PROJECT }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-github-release:
+    needs: [verify-prod-promotion]
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-24.04
+    env:
+      BUNDLE_NAME: ${{ github.event.repository.name }}
+      BUNDLE_VERSION: ${{ github.event.inputs.version }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      # Needed only to read the Helm chart's own version out of Chart.yaml at this tag --
+      # the chart's version is tracked independently of the package version (see prepare's
+      # HELM_VERSION vs PACKAGE_VERSION in pre-release.yml), so it can't be derived from
+      # BUNDLE_VERSION alone.
       - name: Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
+          # The "Latest release" decision below compares this tag against every other release
+          # tag, which a tags-less checkout would not see.
           fetch-tags: true
+          ref: ${{ env.BUNDLE_VERSION }}
+
+      - name: Resolve Helm chart version
+        id: helm-version
+        run: |
+          set -euo pipefail
+          CHART_FILE="helm/aerospike-backup-service/Chart.yaml"
+          if [ ! -f "$CHART_FILE" ]; then
+            echo "Chart file not found at $CHART_FILE" >&2
+            exit 1
+          fi
+          HELM_VERSION=$(yq '.version' "$CHART_FILE" | tr -d '\n')
+          if [ -z "$HELM_VERSION" ]; then
+            echo "Failed to extract Helm chart version." >&2
+            exit 1
+          fi
+          echo "HELM_VERSION=$HELM_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Login to JFrog
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
-          JF_URL: ${{ vars.ARTIFACTORY_URL }}
-          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
-
-      - name: Set up Docker Buildx
-        uses: step-security/setup-buildx-action@a4709e2865773e1792246433e8eb922f9743a875 # v4.2.0
-
-      - name: Login to DockerHub
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
         with:
-          registry: docker.io
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
-      - name: Get Metadata
+      - name: Download signed artifacts from JFrog PROD
+        env:
+          HELM_VERSION: ${{ steps.helm-version.outputs.HELM_VERSION }}
+          DEB_REPO: ${{ vars.JF_ARTIFACTORY_DEB_PROD }}
+          RPM_REPO: ${{ vars.JF_ARTIFACTORY_RPM_PROD }}
+          HELM_REPO: ${{ vars.JF_ARTIFACTORY_HELM_PROD }}
         run: |
-          echo "Getting latest Git tag..."
-          TAG_COMMIT=$(git rev-list --tags --max-count=1 || true)
+          set -euxo pipefail
+          # jf rt search's --bundle filter turned out not to reliably list release-bundle
+          # members on our JFrog instance (verified empty against a real, promoted bundle;
+          # same for --build, the bundle signature API, and release-bundle-export). Instead,
+          # filter each PROD-public repo directly by the "version" property that
+          # reusable_deploy-artifacts.yaml stamps on every artifact it deploys -- verified
+          # live to return exact, reliable matches with full metadata (including sha256).
+          mkdir -p release-assets
 
-          if [ -n "$TAG_COMMIT" ]; then
-            LATEST_TAG=$(git describe --tags "$TAG_COMMIT" 2>/dev/null || true)
-          fi
+          echo "Searching ${DEB_REPO} for version=${BUNDLE_VERSION}..."
+          jf rt search "${DEB_REPO}/**" --props "version=${BUNDLE_VERSION}" > deb-artifacts.json
+          echo "Searching ${RPM_REPO} for version=${BUNDLE_VERSION}..."
+          jf rt search "${RPM_REPO}/**" --props "version=${BUNDLE_VERSION}" > rpm-artifacts.json
+          echo "Searching ${HELM_REPO} for version=${HELM_VERSION}..."
+          jf rt search "${HELM_REPO}/**" --props "version=${HELM_VERSION}" > helm-artifacts.json
 
-          if [ -z "$LATEST_TAG" ]; then
-            echo "No Git tag found. Trying to read VERSION file..."
-            if [ -f VERSION ]; then
-              LATEST_TAG=$(cat VERSION)
-              echo "Read version from VERSION file: $LATEST_TAG"
-            fi
-          fi
+          jq -s 'add' deb-artifacts.json rpm-artifacts.json helm-artifacts.json > bundle-artifacts.json
+          cat bundle-artifacts.json
 
-          if [ -z "$LATEST_TAG" ]; then
-            echo "No valid version found"
+          jq -r '.[].path' bundle-artifacts.json > artifact-paths.txt
+          if [ ! -s artifact-paths.txt ]; then
+            echo "::error::No package/Helm artifacts found for ${BUNDLE_NAME}:${BUNDLE_VERSION} (helm ${HELM_VERSION}) in ${DEB_REPO}, ${RPM_REPO}, or ${HELM_REPO}." >&2
             exit 1
           fi
-          
-          
-          BUNDLE_NAME="${GITHUB_REPOSITORY##*/}"
-          echo "Setting BUNDLE_NAME=$BUNDLE_NAME"
-          echo "BUNDLE_NAME=$BUNDLE_NAME" >> $GITHUB_ENV
-          echo "Setting BUNDLE_VERSION=$LATEST_TAG"
-          echo "BUNDLE_VERSION=$LATEST_TAG" >> $GITHUB_ENV
-          echo "Setting IMAGE_TAG=${LATEST_TAG#v}"
-          echo "IMAGE_TAG=${LATEST_TAG#v}" >> $GITHUB_ENV
 
-      - name: Check Bundle was successfully created in JFrog
-        id: check-bundle
-        env:
-          BUNDLE_NAME: ${{ env.BUNDLE_NAME }}
-          BUNDLE_VERSION: ${{ env.BUNDLE_VERSION }}
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
-          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
-          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          echo "Artifacts to download:"
+          cat artifact-paths.txt
+
+          while IFS= read -r artifact_path; do
+            jf rt download "${artifact_path}" release-assets/ --flat=true
+            # GPG/prov signature files are deterministic siblings of the primary artifact and
+            # don't carry their own "version" property, so fetch them by direct sibling path
+            # instead of a second search.
+            jf rt download "${artifact_path}.asc" release-assets/ --flat=true --fail-no-op=false || true
+            jf rt download "${artifact_path}.prov" release-assets/ --flat=true --fail-no-op=false || true
+          done < artifact-paths.txt
+
+      - name: Write checksums from JFrog metadata
         run: |
-          echo "Checking if the release bundle exists in JFrog..."
-
-          URL="$JF_URL/lifecycle/api/v2/release_bundle/signatures/${BUNDLE_NAME}/${BUNDLE_VERSION}?project=${JF_PROJECT}"
-          echo "Querying URL: $URL"
-
-          HTTP_STATUS=$(curl --request GET \
-            --header "Authorization: Bearer ${JF_ACCESS_TOKEN}" \
-            --silent \
-            --show-error \
-            --output /dev/null \
-            --write-out "%{http_code}" \
-            "$URL")
-
-          if [ "$HTTP_STATUS" -ne 200 ]; then
-            echo "Bundle not found or request failed with HTTP status $HTTP_STATUS"
-            echo "found=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "Release bundle $BUNDLE_NAME:$BUNDLE_VERSION exists in JFrog (HTTP $HTTP_STATUS)"
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Promote to JFrog PROD Environment
-        if: steps.check-bundle.outputs.found == 'true'
-        env:
-          BUNDLE_NAME: ${{ env.BUNDLE_NAME }}
-          BUNDLE_VERSION: ${{ env.BUNDLE_VERSION }}
-          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
-          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
-        run: |
-          
-          TARGET_ENV="PROD"
-          
-          echo "Starting promotion of release bundle to JFrog $TARGET_ENV environment..."
-          
-          jfrog release-bundle-promote "$BUNDLE_NAME" "$BUNDLE_VERSION" \
-            --signing-key="aerospike" \
-            --project="$JF_PROJECT" \
-            "$TARGET_ENV"
-          
-          if [ $? -ne 0 ]; then
-            echo "Failed to promote $BUNDLE_NAME:$BUNDLE_VERSION release bundle to $TARGET_ENV"
-            exit 1
-          else
-            echo "Successfully promoted $BUNDLE_NAME:$BUNDLE_VERSION to $TARGET_ENV"
-          fi
-
-      - name: Wait for Docker image to be available in JFrog registry
-        if: steps.check-bundle.outputs.found == 'true'
-        env:
-          JF_REGISTRY: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
-          IMAGE_REPO: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
-          IMAGE_NAME: ${{ env.BUNDLE_NAME }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-
-        run: |
-          IMAGE="$JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG"
-          MAX_RETRIES=4
-          RETRY_DELAY=15
-      
-          echo "Checking for Docker image: $IMAGE"
-          for i in $(seq 1 $MAX_RETRIES); do
-            if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
-              echo "Image found on attempt $i"
-              exit 0
-            else
-              echo "Attempt $i failed. Image not found or unreachable."
-              if [ "$i" -lt "$MAX_RETRIES" ]; then
-                echo "Retrying in $RETRY_DELAY seconds..."
-                sleep $RETRY_DELAY
-              fi
-            fi
+          set -euxo pipefail
+          # JFrog already computes and stores a sha256 for every artifact (visible in
+          # bundle-artifacts.json above) -- write out that recorded checksum instead of
+          # re-hashing the downloaded file locally, so the .sha256 we publish is JFrog's own
+          # recorded value for this immutable artifact, not something recomputed here.
+          jq -r '.[] | select(.path | test("\\.(deb|rpm)$")) | "\(.path)\t\(.sha256)"' bundle-artifacts.json |
+          while IFS=$'\t' read -r artifact_path sha256; do
+            filename="$(basename "$artifact_path")"
+            echo "$sha256" > "release-assets/${filename}.sha256"
           done
-      
-          echo "Image $IMAGE not found after $MAX_RETRIES attempts over $((MAX_RETRIES * RETRY_DELAY)) seconds."
-          exit 1
-      
-      - name: Promote to DockerHub using docker image tools
-        if: steps.check-bundle.outputs.found == 'true'
-        id: promote-to-dockerhub
-        env:
-          JF_REGISTRY: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
-          IMAGE_REPO: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
-          IMAGE_NAME: ${{ env.BUNDLE_NAME }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          ORG: "aerospike"
+
+          echo "Final release-assets tree:"
+          find release-assets -type f | sort
+
+      # GitHub's create-release API defaults make_latest to true for any non-prerelease, so
+      # publishing a hotfix for an older line would repoint the repository's "Latest release"
+      # backwards. Decide it the same way pre-release.yml decides the Docker `latest` tag, so
+      # the two pointers cannot disagree.
+      - name: Resolve GitHub "Latest release" flag
+        id: release-latest
         run: |
+          set -euo pipefail
+          current="${BUNDLE_VERSION#v}"
 
-          SOURCE_IMAGE="$JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG"
-          TARGET_IMAGE_VERSION_TAG="$ORG/$IMAGE_NAME:$IMAGE_TAG"
-          TARGET_IMAGE_LATEST_TAG="$ORG/$IMAGE_NAME:latest"
+          # Final releases only: pre-release tags (v3.7.0-rc1) and one-off test tags must not
+          # get a say in which release is newest.
+          versions="$(
+            { git tag --list 'v*'; echo "v${current}"; } \
+              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sed 's/^v//' \
+              | sort -uV
+          )"
+          highest_overall="$(echo "$versions" | tail -n1)"
 
-          echo "Promoting image from: $SOURCE_IMAGE"
-          echo "Target tags: $TARGET_IMAGE_VERSION_TAG, $TARGET_IMAGE_LATEST_TAG"
-
-          echo "Creating promoted image manifest with both version and latest tags..."
-          if docker buildx imagetools create "$SOURCE_IMAGE" \
-            --tag "$TARGET_IMAGE_VERSION_TAG" \
-            --tag "$TARGET_IMAGE_LATEST_TAG"; then
-
-                echo "Promotion with latest tag succeeded."
-                echo "status=success" >> "$GITHUB_OUTPUT"
+          if [ "$current" = "$highest_overall" ]; then
+            make_latest=true
           else
-                echo "Promotion failed."
-                echo "status=failure" >> "$GITHUB_OUTPUT"
+            make_latest=false
           fi
+          echo "MAKE_LATEST=$make_latest" >> "$GITHUB_OUTPUT"
 
-      - name: Get Tag Commit
-        if: steps.check-bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
-        env:
-          TAG: ${{ env.BUNDLE_VERSION }}
-        run: |
-          TAG_COMMIT=$(git rev-list -n 1 $TAG)
-          if [ -z "$TAG_COMMIT" ]; then
-            echo "No valid commit hash for a tag"
-            exit 1
-          fi
-          
-          echo "Setting TAG_COMMIT=$TAG_COMMIT"
-          echo "TAG_COMMIT=$TAG_COMMIT" >> $GITHUB_ENV
+          {
+            echo "### GitHub \"Latest release\" flag"
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Publishing | \`$current\` |"
+            echo "| Highest release overall | \`$highest_overall\` |"
+            echo "| \`make_latest\` | \`$make_latest\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Download Aerospike Backup Service OCI Archive
-        if: steps.check-bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
-        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
+      - name: Publish GitHub Release
+        uses: step-security/action-gh-release@d2093dbdaf0c6507874908247e14bbc4dee6a72d # v3.0.1
         with:
-          workflow: pre-release.yml
-          name: abs-image
-          path: ./abs-image
-          commit: ${{ env.TAG_COMMIT }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ env.BUNDLE_VERSION }}
+          draft: false
+          prerelease: false
+          make_latest: ${{ steps.release-latest.outputs.MAKE_LATEST }}
+          body: |
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ env.BUNDLE_VERSION }}/CHANGELOG.md) for details on this release, and [docs/migration.md](https://github.com/${{ github.repository }}/blob/${{ env.BUNDLE_VERSION }}/docs/migration.md) for upgrade/breaking-change notes.
+          files: |
+            release-assets/**/*.rpm
+            release-assets/**/*.deb
+            release-assets/**/*.deb.asc
+            release-assets/**/*.rpm.asc
+            release-assets/**/*.sha256
+            release-assets/**/*.tgz
+            release-assets/**/*.tgz.prov
 
-      - name: Install Skopeo
-        if: steps.check-bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
-        uses: warjiang/setup-skopeo@71776e03c10d767c04af8924fe5a67763f9b3d34 # v0.1.3
-        with:
-          version: v1.19.0
-
-      - name: Push OCI Archive to DockerHub
-        if: steps.check-bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
-        env:
-          IMAGE_NAME: ${{ env.BUNDLE_NAME }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Summarize published release
+        if: always()
         run: |
-          echo "Starting DockerHub push from OCI Archive..."
-          echo "Image Name : $IMAGE_NAME"
-          echo "Image Tag  : $IMAGE_TAG"
-          
-          echo "Verifying OCI archive content at ./abs-image/abs-image.tar"
-          if [ ! -f ./abs-image/abs-image.tar ]; then
-            echo "Archive file not found: ./abs-image/abs-image.tar"
-            exit 1
-          fi
-          
-          echo "Listing contents of OCI archive:"
-          tar -tf ./abs-image/abs-image.tar || {
-            echo "Failed to list archive contents."
-            exit 1
-          }
-          
-          echo "Initiating image push via skopeo to DockerHub..."
-          
-          for TAG in "$IMAGE_TAG" "latest"; do
-            echo "Pushing tag: $TAG"
-            skopeo copy --all \
-              --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
-              oci-archive:./abs-image/abs-image.tar \
-              docker://docker.io/aerospike/$IMAGE_NAME:$TAG
-          
-            SKOPEO_STATUS=$?
-            if [ $SKOPEO_STATUS -ne 0 ]; then
-              echo "skopeo copy for tag '$TAG' failed with exit code $SKOPEO_STATUS"
-              exit $SKOPEO_STATUS
-            fi
-          done
-          
-          echo "OCI archive successfully pushed to DockerHub with both '$IMAGE_TAG' and 'latest' tags."
+          {
+            echo "### Published GitHub Release"
+            echo "Tag: \`${BUNDLE_VERSION}\`"
+            echo ""
+            echo '```'
+            find release-assets -type f | sort
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

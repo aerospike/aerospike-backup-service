@@ -1,0 +1,108 @@
+name: Seed and verify Aerospike records
+description: >
+  Seeds a deterministic number of records into an Aerospike namespace, or counts existing
+  records, using the official aerospike/aerospike-tools image (aql for writes, asinfo for the
+  authoritative object count) rather than assuming aql/asinfo are present in whatever server
+  image is already running. Works against a bare host:port (local/docker mode) or, when
+  kubectl-namespace is set, against a cluster reached via a short-lived kubectl-run tools pod.
+
+inputs:
+  mode:
+    description: "'seed' to insert records, 'count' to read back the object count"
+    required: true
+  namespace:
+    description: Aerospike namespace to seed/count (e.g. test)
+    required: true
+  set-name:
+    description: Aerospike set name to use for seeded records
+    required: false
+    default: smoketest
+  record-count:
+    description: Number of records to seed (only used when mode=seed)
+    required: false
+    default: "1000"
+  host:
+    description: "Aerospike host:port to connect to (local/docker mode only)"
+    required: false
+    default: "127.0.0.1:3000"
+  kubectl-namespace:
+    description: If set, run against a cluster via a kubectl-run aerospike-tools pod in this k8s namespace instead of docker
+    required: false
+    default: ""
+  aerospike-k8s-host:
+    description: "Aerospike host:port reachable from inside the cluster (kubectl mode only)"
+    required: false
+    default: ""
+
+outputs:
+  record_count:
+    description: Object count reported by asinfo for the namespace (mode=count only)
+    value: ${{ steps.run.outputs.record_count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Ensure tools pod (kubectl mode only)
+      if: inputs.kubectl-namespace != ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        NS="${{ inputs.kubectl-namespace }}"
+        if ! kubectl get pod aerospike-tools-verify -n "$NS" >/dev/null 2>&1; then
+          kubectl run aerospike-tools-verify -n "$NS" \
+            --image=aerospike/aerospike-tools:latest \
+            --restart=Never \
+            --command -- sleep 3600
+        fi
+        kubectl wait --for=condition=Ready pod/aerospike-tools-verify -n "$NS" --timeout=120s
+
+    - name: Seed or count records
+      id: run
+      shell: bash
+      run: |
+        set -euo pipefail
+        MODE="${{ inputs.mode }}"
+        NS_AS="${{ inputs.namespace }}"
+        SET_NAME="${{ inputs.set-name }}"
+        COUNT="${{ inputs.record-count }}"
+        KUBECTL_NS="${{ inputs.kubectl-namespace }}"
+
+        if [ -n "$KUBECTL_NS" ]; then
+          AS_HOST="${{ inputs.aerospike-k8s-host }}"
+          run_aql() { kubectl exec -n "$KUBECTL_NS" aerospike-tools-verify -- aql -h "$AS_HOST" "$@"; }
+          run_asinfo() { kubectl exec -n "$KUBECTL_NS" aerospike-tools-verify -- asinfo -h "$AS_HOST" "$@"; }
+          cp_in() { kubectl cp "$1" "$KUBECTL_NS/aerospike-tools-verify:$2"; }
+        else
+          AS_HOST="${{ inputs.host }}"
+          run_aql() { docker run --rm --network host -v "$SEED_FILE_HOST:/tmp/seed.aql:ro" aerospike/aerospike-tools:latest aql -h "$AS_HOST" "$@"; }
+          run_asinfo() { docker run --rm --network host aerospike/aerospike-tools:latest asinfo -h "$AS_HOST" "$@"; }
+          cp_in() { :; } # no-op, docker mode mounts the file directly
+        fi
+
+        if [ "$MODE" = "seed" ]; then
+          SEED_FILE_HOST="$(mktemp)"
+          for i in $(seq 1 "$COUNT"); do
+            echo "insert into ${NS_AS}.${SET_NAME} (PK, val) values ('smoke-${i}', ${i})"
+          done > "$SEED_FILE_HOST"
+
+          if [ -n "$KUBECTL_NS" ]; then
+            cp_in "$SEED_FILE_HOST" "/tmp/seed.aql"
+            kubectl exec -n "$KUBECTL_NS" aerospike-tools-verify -- aql -h "$AS_HOST" -f /tmp/seed.aql
+          else
+            run_aql -f /tmp/seed.aql
+          fi
+
+          echo "Seeded ${COUNT} records into ${NS_AS}.${SET_NAME}."
+        elif [ "$MODE" = "count" ]; then
+          RESPONSE="$(run_asinfo -v "namespace/${NS_AS}")"
+          OBJECTS="$(echo "$RESPONSE" | tr ';' '\n' | grep '^objects=' | cut -d= -f2)"
+          if [ -z "$OBJECTS" ]; then
+            echo "::error::Could not parse objects= from asinfo response: $RESPONSE"
+            exit 1
+          fi
+          echo "Namespace ${NS_AS} object count: ${OBJECTS}"
+          echo "record_count=${OBJECTS}" >> "$GITHUB_OUTPUT"
+        else
+          echo "::error::Unknown mode '${MODE}' (expected 'seed' or 'count')"
+          exit 1
+        fi

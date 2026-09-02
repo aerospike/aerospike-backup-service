@@ -1,0 +1,207 @@
+# Post-release functional smoke test: spins up Aerospike + MinIO, seeds real records, runs the
+# released aerospike-backup-service Docker image against them (reusing the existing
+# build/docker-compose/aerospike-backup-service.yml config as-is), triggers a real backup to
+# MinIO, truncates the namespace, restores, and verifies the record count matches. amd64 only --
+# architecture coverage already lives in post-release-verify-artifacts.yml's install matrix; this
+# workflow is about functional correctness, which isn't architecture-dependent.
+
+name: Post-Release Verify Functional
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Released version to smoke-test (e.g. v3.7.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  RECORD_COUNT: 1000
+  NAMESPACE: test
+  ROUTINE: minioKeepFilesRoutine
+  BUCKET: as-backup-bucket
+
+jobs:
+  backup-restore-smoke-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          ref: ${{ inputs.version }}
+
+      - name: Login to JFrog
+        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        env:
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_PROJECT: ${{ vars.JF_PROJECT }}
+        with:
+          oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
+          oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
+
+      - name: Create shared Docker network
+        run: docker network create abs-smoke-net
+
+      - name: Start Aerospike
+        run: |
+          docker run -d --name aerospike-cluster --network abs-smoke-net \
+            --network-alias aerospike-cluster \
+            -p 3000-3002:3000-3002 \
+            aerospike/aerospike-server-enterprise:8.1
+          for i in $(seq 1 20); do
+            if docker exec aerospike-cluster asinfo -p 3000 -v build >/dev/null 2>&1; then break; fi
+            [ "$i" -eq 20 ] && { echo "::error::Aerospike never became ready"; docker logs aerospike-cluster; exit 1; }
+            sleep 3
+          done
+
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio --network abs-smoke-net \
+            --network-alias minio \
+            -p 9000:9000 -p 9001:9001 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:latest server /data --console-address :9001
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:9000/minio/health/live >/dev/null 2>&1; then break; fi
+            [ "$i" -eq 20 ] && { echo "::error::MinIO never became ready"; docker logs minio; exit 1; }
+            sleep 3
+          done
+          docker run --rm --network abs-smoke-net minio/mc \
+            sh -c "mc alias set myminio http://minio:9000 minioadmin minioadmin && mc mb myminio/${{ env.BUCKET }} && mc anonymous set public myminio/${{ env.BUCKET }}"
+
+      - name: Seed records and verify seed count
+        id: seed
+        uses: ./.github/actions/seed-and-verify-aerospike
+        with:
+          mode: seed
+          namespace: ${{ env.NAMESPACE }}
+          record-count: ${{ env.RECORD_COUNT }}
+          host: 127.0.0.1:3000
+
+      - name: Confirm seeded count before proceeding
+        uses: ./.github/actions/seed-and-verify-aerospike
+        id: seed-count
+        with:
+          mode: count
+          namespace: ${{ env.NAMESPACE }}
+          host: 127.0.0.1:3000
+
+      - name: Fail fast if seeding itself didn't work
+        run: |
+          if [ "${{ steps.seed-count.outputs.record_count }}" != "${{ env.RECORD_COUNT }}" ]; then
+            echo "::error::Expected ${{ env.RECORD_COUNT }} records after seeding, got ${{ steps.seed-count.outputs.record_count }}"
+            exit 1
+          fi
+
+      - name: Pull released image and run aerospike-backup-service
+        run: |
+          set -euo pipefail
+          IMAGE_REF="${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}/aerospike-backup-service:${{ inputs.version }}"
+          docker pull "$IMAGE_REF"
+          docker run -d --name abs --network abs-smoke-net \
+            -p 8080:8080 \
+            -v "$(pwd)/build/docker-compose/aerospike-backup-service.yml:/etc/aerospike-backup-service/aerospike-backup-service.yml:ro" \
+            "$IMAGE_REF"
+
+      - name: Wait for aerospike-backup-service to be healthy and ready
+        run: |
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:8080/health && curl -sf http://127.0.0.1:8080/ready; then break; fi
+            [ "$i" -eq 20 ] && { echo "::error::ABS never became ready"; docker logs abs; exit 1; }
+            sleep 3
+          done
+
+      - name: Trigger full backup
+        run: |
+          curl -sf -X POST "http://127.0.0.1:8080/v1/backups/full/${{ env.ROUTINE }}"
+
+      - name: Poll for backup completion
+        id: backup
+        uses: ./.github/actions/poll-abs-job
+        with:
+          base-url: http://127.0.0.1:8080
+          kind: backup
+          routine: ${{ env.ROUTINE }}
+
+      - name: Verify backup files landed in MinIO (independent of the ABS API's own say-so)
+        run: |
+          docker run --rm --network abs-smoke-net minio/mc \
+            sh -c "mc alias set myminio http://minio:9000 minioadmin minioadmin && mc ls --recursive myminio/${{ env.BUCKET }}/minioStorage" | tee minio-ls.txt
+          [ -s minio-ls.txt ] || { echo "::error::No objects found under minioStorage in MinIO after backup"; exit 1; }
+
+      - name: Truncate namespace before restore
+        run: |
+          docker run --rm --network host aerospike/aerospike-tools:latest \
+            asinfo -h 127.0.0.1:3000 -v "truncate-namespace:namespace=${{ env.NAMESPACE }}"
+
+      - name: Confirm namespace is empty before restore
+        id: pre-restore-count
+        uses: ./.github/actions/seed-and-verify-aerospike
+        with:
+          mode: count
+          namespace: ${{ env.NAMESPACE }}
+          host: 127.0.0.1:3000
+
+      - name: Fail if truncate didn't work
+        run: |
+          if [ "${{ steps.pre-restore-count.outputs.record_count }}" != "0" ]; then
+            echo "::error::Namespace ${{ env.NAMESPACE }} still has ${{ steps.pre-restore-count.outputs.record_count }} records after truncate -- restore verification would be meaningless"
+            exit 1
+          fi
+
+      - name: Trigger restore
+        id: restore
+        run: |
+          set -euo pipefail
+          RESPONSE="$(curl -sf -X POST "http://127.0.0.1:8080/v1/restore/full" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "destination-name": "absCluster1",
+              "source-name": "minioStorage",
+              "backup-data-path": "${{ steps.backup.outputs.backup-data-path }}",
+              "policy": {}
+            }')"
+          echo "$RESPONSE"
+          JOB_ID="$(echo "$RESPONSE" | jq -r '.["job-id"] // .jobId // .id')"
+          echo "job-id=${JOB_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Poll for restore completion
+        uses: ./.github/actions/poll-abs-job
+        with:
+          base-url: http://127.0.0.1:8080
+          kind: restore
+          job-id: ${{ steps.restore.outputs.job-id }}
+
+      - name: Verify record count matches the original seed
+        id: final-count
+        uses: ./.github/actions/seed-and-verify-aerospike
+        with:
+          mode: count
+          namespace: ${{ env.NAMESPACE }}
+          host: 127.0.0.1:3000
+
+      - name: Assert final count
+        run: |
+          if [ "${{ steps.final-count.outputs.record_count }}" != "${{ env.RECORD_COUNT }}" ]; then
+            echo "::error::Expected ${{ env.RECORD_COUNT }} records after restore, got ${{ steps.final-count.outputs.record_count }}"
+            exit 1
+          fi
+          echo "Backup/restore smoke test passed: ${{ env.RECORD_COUNT }} records survived a full backup+restore round trip."
+
+      - name: Dump ABS logs on failure
+        if: failure()
+        run: docker logs abs || true
+
+      - name: Teardown
+        if: always()
+        run: |
+          docker rm -f abs aerospike-cluster minio 2>/dev/null || true
+          docker network rm abs-smoke-net 2>/dev/null || true

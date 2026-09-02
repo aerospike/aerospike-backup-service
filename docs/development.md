@@ -107,10 +107,99 @@ through releases and hotfixes.
 
 ### Cutting a release
 
-1. Open a pull request from `dev` into `main` and merge it.
-2. Tag the release commit on `main`: `git tag v3.x.y && git push origin v3.x.y`. The pre-release workflow runs on the
-   tag push.
-3. If the release added commits that exist only on `main` (for example a hotfix), back-merge `main` into `dev`.
+Releases move through JFrog's promotion stages (`DEV -> TEST -> STAGE -> PREVIEW -> PROD`) before anything is made public. The
+GitHub Actions side is split into two workflows: [`pre-release.yml`](../.github/workflows/pre-release.yml) (developer
+owned, builds and promotes up to `TEST`) and [`release.yml`](../.github/workflows/release.yml) (run once the release
+is fully approved, publishes it).
+
+#### Chart versioning
+
+A Helm repository serves whichever chart carries the highest version, so the chart version is a
+moving pointer just like the Docker `latest` tag. It must therefore sort in the same order as the
+app versions it ships. The rule, in force from `v3.7.0`:
+
+| Release | App version | Chart version |
+|---------|-------------|---------------|
+| New minor line | `v3.7.0` | `2.1.0` (chart **minor** advances) |
+| Hotfix on that line | `v3.7.1` | `2.1.1` (chart **patch** mirrors the app patch) |
+| Next minor line | `v3.8.0` | `2.2.0` |
+
+Because a hotfix stays on its own line's chart minor, a fix released for an older line can never
+overtake a newer release. This is what went wrong before the rule existed: `v3.5.1` was cut after
+`v3.6.2` and took chart `2.0.13`, above `v3.6.2`'s `2.0.12`, so `helm install` with no `--version`
+served the older service. [`pre-release.yml`](../.github/workflows/pre-release.yml) now rejects any
+chart version that breaks the ordering, reuses a version already published, or whose patch does not
+match the app patch.
+
+#### Regular release
+1. Create a release branch from `dev` (e.g. `release/3.7.0`).
+2. Prepare the release by updating the version files. Pass both versions in one invocation --
+   `make release` writes `VERSION` and then stamps the chart from it, so splitting the two leaves
+   `Chart.yaml` describing a release that does not exist yet:
+   ```bash
+   NEXT_VERSION="<version>" NEXT_HELM_CHART_VERSION="<helm-chart-version>" make release
+   git add --all
+   git commit -m "Release: "$(cat VERSION)""
+   ```
+3. Open a pull request from your release branch into `main` and merge it.
+4. After the PR is merged, tag the release on `main`:
+   ```bash
+   git checkout main && git pull origin main
+   git tag "$(cat VERSION)"
+   git push origin main --tags
+   ```
+
+#### Hotfix
+1. Create a hotfix branch from `main` (e.g. `hotfix/3.6.2`).
+2. Prepare the hotfix by updating the version files. Bump the **third digit** of both the version
+   (e.g. `3.7.0` -> `3.7.1`) and the Helm chart version (e.g. `2.1.0` -> `2.1.1`), keeping the chart
+   on the minor already assigned to that app minor line -- see [Chart versioning](#chart-versioning):
+   ```bash
+   NEXT_VERSION="<version>" NEXT_HELM_CHART_VERSION="<helm-chart-version>" make release
+   git add --all
+   git commit -m "Release: "$(cat VERSION)""
+   ```
+3. **Do not merge** the hotfix branch into `main`. Tag and push the hotfix directly from the branch:
+   ```bash
+   git tag "$(cat VERSION)"
+   git push origin hotfix/3.6.2 --tags
+   ```
+
+#### Promotion and publication
+The following steps apply to both regular releases and hotfixes:
+
+1. Tagging the release commit triggers `pre-release.yml`, which:
+   1. Builds the DEB/RPM packages, Helm chart, and Docker image.
+   2. Signs the packages and Helm chart, and deploys everything to JFrog `DEV`.
+   3. Creates a unified release bundle and automatically promotes it from `DEV` to `TEST`.
+6. QE/developers pull the artifacts from JFrog `TEST` and validate them. Once they pass, the release bundle is
+   promoted from `TEST` to `STAGE`, either by dispatching
+   [`promote-to-preview.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/promote-to-preview.yml) with `environment: STAGE` or manually via the
+   [JFrog UI](https://aerospike.jfrog.io/ui/artifactory/release-lifecycle/aerospike-backup-service?repoKey=database-release-bundles-v2).
+7. A PM or EM reviews the release and promotes the release bundle from `STAGE` to `PREVIEW`, either by dispatching
+   [`promote-to-preview.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/promote-to-preview.yml) with `environment: PREVIEW` or manually via the same
+   [JFrog UI](https://aerospike.jfrog.io/ui/artifactory/release-lifecycle/aerospike-backup-service?repoKey=database-release-bundles-v2)
+   link.
+8. A PM or EM promotes the release bundle from `PREVIEW` to `PROD`, either by dispatching
+   [`promote-to-prod.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/promote-to-prod.yml) or manually via the same JFrog UI link. This is
+   the gate that makes a release public.
+9. Once the bundle is on `PROD`:
+   - Docker Hub mirroring happens automatically and externally (JFrog's existing promotion webhook feeds
+     `artifact-publisher`) — nothing to trigger here.
+   - A dev or PM/EM manually runs [`release.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/release.yml)
+     (`workflow_dispatch`, with the release version as input). It verifies the bundle was actually promoted to
+     `PROD`, then downloads the already-signed artifacts straight from JFrog's `PROD`-public repos and publishes
+     them as a new, immutable GitHub Release — nothing is rebuilt, re-signed, or re-checksummed at this point.
+10. Post-release actions:
+   1. **Snyk**:
+      - Add the new version to the `aerospike-applications` Snyk org (monitor the Docker image).
+      - Remove the oldest maintenance version from the same org if no longer supported.
+   2. **Slack**:
+      - Post the release announcement to the internal **`#releases`** channel.
+      - Use the link to the [prettified release notes](https://aerospike.com/docs/database/tools/backup-and-restore/backup-service/release/) if available; otherwise, use the GitHub Release link.
+      - **Important**: Remove link previews before sending to keep the channel clean (hover over the preview and click the **'x'** in the top-right corner). See [this guide](https://aerospike.atlassian.net/wiki/spaces/RE/pages/2540339350/Message+Slack+releases+Internal+Channel) for more info.
+   3. **Email**: Send the release announcement email to the appropriate internal distribution lists. See [this guide](https://aerospike.atlassian.net/wiki/spaces/RE/pages/2543124552/Send+email+of+the+Release+Notes+to+the+releases+aerospike.com+distribution+list) for more info.
+11. If the release added commits that exist only on `main` (for example a hotfix), back-merge `main` into `dev`.
 
 ## Reporting issues
 
