@@ -42,6 +42,7 @@ type ServerConfigHTTPS struct {
 	// Allowed TLS cipher suite names. An empty list uses Go's secure defaults.
 	CipherSuites []string `yaml:"cipher-suites,omitempty" json:"cipher-suites,omitempty" extensions:"x-nullable"`
 	// Path to trusted client CA certificates in PEM format.
+	// Rewriting this file at the same path reloads the mTLS trust pool without a restart; changing the path requires a restart.
 	ClientCAFile string `yaml:"client-ca-file,omitempty" json:"client-ca-file,omitempty" example:"/path/to/client-ca.pem" extensions:"x-nullable"`
 	// Client certificate authentication mode.
 	ClientAuth TLSClientAuth `yaml:"client-auth,omitempty" json:"client-auth,omitempty" default:"none"`

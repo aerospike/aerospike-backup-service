@@ -9,8 +9,8 @@ import (
 	clienttls "github.com/aerospike/aerospike-backup-service/v3/pkg/tlsconfig"
 )
 
-// Prober validates TLS material in a service config that is not owned by Reloader.
-// HTTPS key-pair fail-fast is Reloader.Load, not this interface.
+// Prober validates TLS material in a service config that is not owned by TLSProvider.
+// HTTPS key-pair fail-fast is TLSProvider.Load, not this interface.
 type Prober interface {
 	// Probe loads the TLS material of every Secret Agent and Aerospike cluster
 	// without opening network connections.

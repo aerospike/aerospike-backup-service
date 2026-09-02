@@ -24,7 +24,7 @@ func TestInitComponents_MinimalConfig(t *testing.T) {
 
 	require.NotNil(t, components.Scheduler)
 	require.NotNil(t, components.MetricsCollector)
-	require.NotNil(t, components.CertReloader)
+	require.NotNil(t, components.TLSProvider)
 	require.Len(t, components.Servers, 1)
 
 	components.Scheduler.Start(ctx)

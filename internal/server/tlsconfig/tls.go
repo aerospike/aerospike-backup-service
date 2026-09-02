@@ -2,6 +2,7 @@
 package tlsconfig
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -20,11 +21,12 @@ var secureCipherSuites = func() map[string]uint16 {
 	return suites
 }()
 
-// NewTLSConfig builds a server TLS configuration that asks getCertificate for the key pair on
-// every handshake, so a rotated pair is picked up without rebuilding the configuration.
+// NewTLSConfig builds a server TLS configuration. It reads no TLS material itself:
+// provider supplies the key pair and, for mTLS, the client CA pool on every handshake,
+// so rotated files are picked up without rebuilding the configuration.
 func NewTLSConfig(
 	config *model.ServerConfigHTTPS,
-	getCertificate func(*tls.ClientHelloInfo) (*tls.Certificate, error),
+	provider TLSProvider,
 ) (*tls.Config, error) {
 	minVersion, err := parseMinVersion(config.GetMinVersionOrDefault())
 	if err != nil {
@@ -47,15 +49,24 @@ func NewTLSConfig(
 	result := &tls.Config{
 		MinVersion:     minVersion,
 		CipherSuites:   cipherSuites,
-		GetCertificate: getCertificate,
+		GetCertificate: provider.GetCertificate,
 	}
 
 	if config.ClientCAFile != "" {
-		result.ClientCAs, err = loadClientCAs(config.ClientCAFile)
-		if err != nil {
-			return nil, err
-		}
 		result.ClientAuth = clientAuth
+		result.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
+			pool, poolErr := provider.ClientCAs()
+			if poolErr != nil {
+				return nil, poolErr
+			}
+
+			// Clone per handshake instead of mutating the live configuration.
+			clone := result.Clone()
+			clone.ClientCAs = pool
+			clone.GetConfigForClient = nil
+
+			return clone, nil
+		}
 	}
 
 	return result, nil
@@ -111,7 +122,34 @@ func loadClientCAs(path string) (*x509.CertPool, error) {
 	}
 
 	pool := x509.NewCertPool()
-	if !pool.AppendCertsFromPEM(caPEM) {
+	certificateCount := 0
+	remaining := caPEM
+	for {
+		remaining = bytes.TrimSpace(remaining)
+		if len(remaining) == 0 {
+			break
+		}
+		if !bytes.HasPrefix(remaining, []byte("-----BEGIN CERTIFICATE-----")) {
+			if certificateCount == 0 {
+				return nil, fmt.Errorf("client CA file %q contains no certificates", path)
+			}
+			return nil, fmt.Errorf("client CA file %q contains invalid data after a certificate", path)
+		}
+
+		block, rest := pem.Decode(remaining)
+		if block == nil {
+			return nil, fmt.Errorf("client CA file %q contains an invalid certificate PEM block", path)
+		}
+		certificate, parseErr := x509.ParseCertificate(block.Bytes)
+		if parseErr != nil {
+			return nil, fmt.Errorf("client CA file %q contains an invalid certificate: %w", path, parseErr)
+		}
+
+		pool.AddCert(certificate)
+		certificateCount++
+		remaining = rest
+	}
+	if certificateCount == 0 {
 		return nil, fmt.Errorf("client CA file %q contains no certificates", path)
 	}
 
