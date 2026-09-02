@@ -33,8 +33,8 @@ func (b *BackupCommonConfig) Validate() error {
 		return err
 	}
 
-	if _, err := model.ParseTimezone(b.ScheduleTimezone); err != nil {
-		return errValidationInvalidValue("schedule-timezone", b.ScheduleTimezone, "UTC, Local, or a valid IANA timezone name")
+	if err := validateScheduleTimezone(b.ScheduleTimezone); err != nil {
+		return err
 	}
 
 	return nil
@@ -71,4 +71,12 @@ func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
 		compareValues("TimestampFormat", b.TimestampFormat, other.TimestampFormat),
 		compareValues("ScheduleTimezone", b.ScheduleTimezone, other.ScheduleTimezone),
 	)
+}
+
+func validateScheduleTimezone(value string) error {
+	if _, err := model.ParseTimezone(value); err != nil {
+		return errValidationInvalidValue("schedule-timezone", value, "UTC, Local, or a valid IANA timezone name")
+	}
+
+	return nil
 }

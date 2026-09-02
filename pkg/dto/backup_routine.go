@@ -112,8 +112,8 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
 	}
-	if _, err := model.ParseTimezone(r.ScheduleTimezone); err != nil {
-		return errValidationInvalidValue("schedule-timezone", r.ScheduleTimezone, "UTC, Local, or a valid IANA timezone name")
+	if err := validateScheduleTimezone(r.ScheduleTimezone); err != nil {
+		return err
 	}
 	for i, rack := range r.RackList {
 		if rack < 0 {
