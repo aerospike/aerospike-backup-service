@@ -106,6 +106,14 @@ func TestNewRoutineLocation(t *testing.T) {
 		assert.Equal(t, "America/New_York", location.ResolvedLocation().String())
 	})
 
+	t.Run("whitespace inherits service timezone and source", func(t *testing.T) {
+		t.Parallel()
+
+		location := NewRoutineLocation(" \t ", service)
+		assert.Equal(t, LocationSourceService, location.Source)
+		assert.Equal(t, "America/New_York", location.ResolvedLocation().String())
+	})
+
 	t.Run("inherits UTC when service defaults to UTC", func(t *testing.T) {
 		t.Parallel()
 

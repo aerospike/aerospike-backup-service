@@ -40,6 +40,41 @@ func (l Location) ResolvedLocation() *time.Location {
 	return l.resolved
 }
 
+// NewServiceLocation builds a service-level Location.
+func NewServiceLocation(configured string) Location {
+	return newLocation(configured, LocationSourceService, Location{Source: LocationSourceDefault})
+}
+
+// NewRoutineLocation builds a routine-level Location.
+// When configured is blank, the routine inherits service's resolved timezone and source.
+func NewRoutineLocation(configured string, service Location) Location {
+	return newLocation(configured, LocationSourceRoutine, service)
+}
+
+// newLocation builds a Location. When configured is blank, resolved and Source are taken from parent.
+func newLocation(configured string, source LocationSource, parent Location) Location {
+	if scheduleTimezoneUnset(configured) {
+		return Location{
+			resolved:   parent.resolved,
+			Configured: configured,
+			Source:     parent.Source,
+		}
+	}
+
+	// Safe to ignore errors: dto validation uses ParseTimezone first.
+	resolved, _ := ParseTimezone(configured)
+
+	return Location{
+		resolved:   resolved,
+		Configured: configured,
+		Source:     source,
+	}
+}
+
+func scheduleTimezoneUnset(configured string) bool {
+	return strings.TrimSpace(configured) == ""
+}
+
 // ParseTimezone resolves a schedule-timezone config value.
 // Empty returns nil.
 // UTC and Local keywords are case-insensitive; IANA names are case-sensitive. Abbreviations such as EST are rejected.
@@ -64,47 +99,4 @@ func ParseTimezone(configured string) (*time.Location, error) {
 	}
 
 	return time.LoadLocation(trimmed)
-}
-
-// NewServiceLocation builds a service-level Location.
-func NewServiceLocation(configured string) Location {
-	// Safe to ignore errors: dto validation uses ParseTimezone first.
-	resolved, _ := ParseTimezone(configured)
-
-	return Location{
-		resolved:   resolved,
-		Configured: configured,
-		Source:     locationSource(configured, LocationSourceService, LocationSourceDefault),
-	}
-}
-
-// NewRoutineLocation builds a routine-level Location.
-// When configured is blank, the routine inherits service's resolved timezone and source.
-func NewRoutineLocation(configured string, service Location) Location {
-	if strings.TrimSpace(configured) == "" {
-		return Location{
-			resolved:   service.resolved,
-			Configured: configured,
-			Source:     locationSource(configured, LocationSourceRoutine, service.Source),
-		}
-	}
-
-	// Safe to ignore errors: dto validation uses ParseTimezone first.
-	resolved, _ := ParseTimezone(configured)
-
-	return Location{
-		resolved:   resolved,
-		Configured: configured,
-		Source:     locationSource(configured, LocationSourceRoutine, LocationSourceDefault),
-	}
-}
-
-// locationSource returns the source for this configuration level.
-// When configured is blank, inherited is used; if inherited is also blank, UTC is used.
-func locationSource(configuredTZ string, explicit, inherited LocationSource) LocationSource {
-	if strings.TrimSpace(configuredTZ) != "" {
-		return explicit
-	}
-
-	return inherited
 }
