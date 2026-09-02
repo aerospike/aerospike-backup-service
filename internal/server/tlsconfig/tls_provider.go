@@ -37,6 +37,20 @@ type clientAuthState struct {
 	crls      *crlIndex
 }
 
+func (s *clientAuthState) withClientCAs(pool *x509.CertPool) *clientAuthState {
+	if s == nil {
+		return &clientAuthState{clientCAs: pool}
+	}
+	return &clientAuthState{clientCAs: pool, crls: s.crls}
+}
+
+func (s *clientAuthState) withCRLs(crls *crlIndex) *clientAuthState {
+	if s == nil {
+		return &clientAuthState{crls: crls}
+	}
+	return &clientAuthState{clientCAs: s.clientCAs, crls: crls}
+}
+
 // certificateReloader is the single point that reads HTTPS TLS material from disk.
 // It swaps the key pair when cert-file or key-file change and, when client-ca-file
 // is set, swaps the mTLS trust pool and optional CRL index served through GetConfigForClient.
@@ -169,10 +183,11 @@ func (r *certificateReloader) loadClientCAs(_ context.Context) error {
 	}
 
 	message := "loaded HTTPS client CA pool"
-	if current := r.clientAuth.Load(); current != nil && current.clientCAs != nil {
+	current := r.clientAuth.Load()
+	if current != nil && current.clientCAs != nil {
 		message = "rotated HTTPS client CA pool"
 	}
-	r.storeClientAuth(pool, r.currentCRLs())
+	r.clientAuth.Store(current.withClientCAs(pool))
 	slog.Info(message, slog.String("clientCaFile", r.config.ClientCAFile))
 
 	return nil
@@ -193,33 +208,14 @@ func (r *certificateReloader) loadCRLs(_ context.Context) error {
 	index.logStaleIfNeeded(time.Now())
 
 	message := "loaded HTTPS client CRL"
-	if current := r.clientAuth.Load(); current != nil && current.crls != nil {
+	current := r.clientAuth.Load()
+	if current != nil && current.crls != nil {
 		message = "rotated HTTPS client CRL"
 	}
-	r.storeClientAuth(r.currentClientCAs(), index)
+	r.clientAuth.Store(current.withCRLs(index))
 	slog.Info(message, slog.String("crlFile", r.config.CRLFile))
 
 	return nil
-}
-
-func (r *certificateReloader) currentClientCAs() *x509.CertPool {
-	if current := r.clientAuth.Load(); current != nil {
-		return current.clientCAs
-	}
-
-	return nil
-}
-
-func (r *certificateReloader) currentCRLs() *crlIndex {
-	if current := r.clientAuth.Load(); current != nil {
-		return current.crls
-	}
-
-	return nil
-}
-
-func (r *certificateReloader) storeClientAuth(pool *x509.CertPool, crls *crlIndex) {
-	r.clientAuth.Store(&clientAuthState{clientCAs: pool, crls: crls})
 }
 
 // GetCertificate returns the currently loaded key pair, for tls.Config.GetCertificate.
