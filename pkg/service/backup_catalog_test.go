@@ -142,8 +142,8 @@ func TestWithTimeBounds(t *testing.T) {
 	jan4 := time.Date(2021, 1, 4, 0, 0, 0, 0, time.UTC)
 
 	for _, tm := range []time.Time{jan2, jan3, jan4} {
-		path := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, tm)
-		err := catalog.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
+		backupPath := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, tm)
+		err := catalog.WriteBackupMetadata(t.Context(), routine, backupPath, model.BackupMetadata{
 			Created:   tm,
 			Finished:  tm,
 			Namespace: testNamespace,
@@ -198,8 +198,8 @@ func TestGetBackupsReturnsSortedByCreated(t *testing.T) {
 	}
 
 	for i, pathTime := range pathTimes {
-		path := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, pathTime)
-		err := catalog.WriteBackupMetadata(t.Context(), routine, path, model.BackupMetadata{
+		backupPath := pathService.GetBackupPath(routineName, model.BackupTypeFull, testNamespace, pathTime)
+		err := catalog.WriteBackupMetadata(t.Context(), routine, backupPath, model.BackupMetadata{
 			Created:   createdTimes[i],
 			Finished:  createdTimes[i],
 			Namespace: testNamespace,

@@ -847,7 +847,7 @@ func freeListenerPort(t *testing.T) int {
 	// port briefly, then use it for the service under test.
 	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 	return listener.Addr().(*net.TCPAddr).Port
 }
 

@@ -59,7 +59,7 @@ func generateMarkdownTable(dtoName string) string {
 	var sb strings.Builder
 
 	// Add header for the DTO
-	fmt.Fprintf(&sb, "## %s\n%s\n\n", dtoName, schema.Description)
+	_, _ = fmt.Fprintf(&sb, "## %s\n%s\n\n", dtoName, schema.Description)
 
 	if len(rows) > 0 {
 		sb.WriteString(writeRows(rows))
@@ -67,13 +67,13 @@ func generateMarkdownTable(dtoName string) string {
 
 	var legend strings.Builder
 	if len(schema.Required) > 0 {
-		fmt.Fprintf(&legend, "\n%s = Required field", requiredMarker)
+		_, _ = fmt.Fprintf(&legend, "\n%s = Required field", requiredMarker)
 	}
 	if hasRedactedField(rows) {
 		if legend.Len() > 0 {
 			legend.WriteString("\n")
 		}
-		fmt.Fprintf(&legend, "%s = Redacted in API responses", redactedMarker)
+		_, _ = fmt.Fprintf(&legend, "%s = Redacted in API responses", redactedMarker)
 	}
 	sb.WriteString(legend.String())
 
@@ -81,7 +81,7 @@ func generateMarkdownTable(dtoName string) string {
 		if legend.Len() > 0 {
 			sb.WriteString("\n")
 		}
-		fmt.Fprintf(&sb, "Possible values: %s.\n", joinEnumValues(schema.Enum))
+		_, _ = fmt.Fprintf(&sb, "Possible values: %s.\n", joinEnumValues(schema.Enum))
 	}
 
 	return sb.String()
@@ -94,33 +94,33 @@ func writeRows(rows []Row) string {
 
 	maxName, maxHelp, maxDefault, maxPossibleValues := determineColumsWidth(rows)
 	// Write header
-	fmt.Fprintf(&sb, "| %-*s | %-*s ", maxName, "Field", maxHelp, "Description")
+	_, _ = fmt.Fprintf(&sb, "| %-*s | %-*s ", maxName, "Field", maxHelp, "Description")
 	if hasDefaultColumn {
-		fmt.Fprintf(&sb, "| %-*s ", maxDefault, "Default Value")
+		_, _ = fmt.Fprintf(&sb, "| %-*s ", maxDefault, "Default Value")
 	}
 	if hasPossibleValuesColumn {
-		fmt.Fprintf(&sb, "| %-*s ", maxPossibleValues, "Possible Values")
+		_, _ = fmt.Fprintf(&sb, "| %-*s ", maxPossibleValues, "Possible Values")
 	}
 	sb.WriteString("|\n")
 
 	// Write separator
-	fmt.Fprintf(&sb, "|-%s-|-%s-", strings.Repeat("-", maxName), strings.Repeat("-", maxHelp))
+	_, _ = fmt.Fprintf(&sb, "|-%s-|-%s-", strings.Repeat("-", maxName), strings.Repeat("-", maxHelp))
 	if hasDefaultColumn {
-		fmt.Fprintf(&sb, "|-%s-", strings.Repeat("-", maxDefault))
+		_, _ = fmt.Fprintf(&sb, "|-%s-", strings.Repeat("-", maxDefault))
 	}
 	if hasPossibleValuesColumn {
-		fmt.Fprintf(&sb, "|-%s-", strings.Repeat("-", maxPossibleValues))
+		_, _ = fmt.Fprintf(&sb, "|-%s-", strings.Repeat("-", maxPossibleValues))
 	}
 	sb.WriteString("|\n")
 
 	// Write rows
 	for _, r := range rows {
-		fmt.Fprintf(&sb, "| %-*s | %-*s ", maxName, r.Name, maxHelp, r.Help)
+		_, _ = fmt.Fprintf(&sb, "| %-*s | %-*s ", maxName, r.Name, maxHelp, r.Help)
 		if hasDefaultColumn {
-			fmt.Fprintf(&sb, "| %-*s ", maxDefault, r.Default)
+			_, _ = fmt.Fprintf(&sb, "| %-*s ", maxDefault, r.Default)
 		}
 		if hasPossibleValuesColumn {
-			fmt.Fprintf(&sb, "| %-*s ", maxPossibleValues, r.PossibleValues)
+			_, _ = fmt.Fprintf(&sb, "| %-*s ", maxPossibleValues, r.PossibleValues)
 		}
 		sb.WriteString("|\n")
 	}

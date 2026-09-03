@@ -72,7 +72,8 @@ func (s *Suite) waitForIncrementalBackup(e *env, want int) dto.BackupDetails {
 		// Fail fast if there are any failure events for this routine
 		failCount, _, err := e.backupFailureEventCount(s.T().Context(), model.BackupTypeIncremental)
 		if err == nil && failCount > 0 {
-			s.Failf("incremental backup failed", "aerospike_backup_service_backup_events_total outcome=failure is %f (> 0)", failCount)
+			s.Failf("incremental backup failed",
+				"aerospike_backup_service_backup_events_total outcome=failure is %f (> 0)", failCount)
 		}
 
 		backups := s.getIncrementalBackups(e)

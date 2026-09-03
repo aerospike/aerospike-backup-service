@@ -355,7 +355,7 @@ func updateDtoExamples(readme []byte) []byte {
 		}
 
 		var buffer bytes.Buffer
-		fmt.Fprintf(&buffer, "<!-- %s -->\n\n```%s\n", name, format)
+		_, _ = fmt.Fprintf(&buffer, "<!-- %s -->\n\n```%s\n", name, format)
 		buffer.Write(formattedExample)
 		buffer.WriteString("\n```")
 
@@ -438,10 +438,10 @@ func renderMetricsTable(rows []MetricRow) string {
 
 	var sb strings.Builder
 	// Header
-	fmt.Fprintf(&sb, "| %-*s | %-*s | %-*s | %-*s |\n",
+	_, _ = fmt.Fprintf(&sb, "| %-*s | %-*s | %-*s | %-*s |\n",
 		maxName+quotes, "Name", maxType, "Type", maxHelp, "Description", maxLabels, "Labels")
 	// Separator
-	fmt.Fprintf(&sb, "|-%s-|-%s-|-%s-|-%s-|\n",
+	_, _ = fmt.Fprintf(&sb, "|-%s-|-%s-|-%s-|-%s-|\n",
 		strings.Repeat("-", maxName+quotes),
 		strings.Repeat("-", maxType),
 		strings.Repeat("-", maxHelp),
@@ -450,7 +450,7 @@ func renderMetricsTable(rows []MetricRow) string {
 	for _, r := range rows {
 		name := "`" + r.Name + "`"
 		labelsStr := strings.Join(r.Labels, ", ")
-		fmt.Fprintf(&sb, "| %-*s | %-*s | %-*s | %-*s |\n",
+		_, _ = fmt.Fprintf(&sb, "| %-*s | %-*s | %-*s | %-*s |\n",
 			maxName+quotes, name, maxType, r.Type, maxHelp, r.Description, maxLabels, labelsStr)
 	}
 
