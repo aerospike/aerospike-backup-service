@@ -18,14 +18,12 @@ import (
 
 func TestBackupReporter_Report_Success(t *testing.T) {
 	reporter := NewBackupReporter()
-	start := time.Now()
 	duration := 2 * time.Minute
 
 	before := backupEventCount(t)
 	reporter.Report(
 		"routine-success",
 		model.BackupTypeFull,
-		start,
 		duration,
 		nil,
 		slog.New(slog.DiscardHandler),
@@ -40,7 +38,6 @@ func TestBackupReporter_Report_Skipped(t *testing.T) {
 	reporter.Report(
 		"routine-skip",
 		model.BackupTypeIncremental,
-		time.Now(),
 		time.Minute,
 		fmt.Errorf("wrapped: %w", errBackupSkipped),
 		slog.New(slog.DiscardHandler),
@@ -55,7 +52,6 @@ func TestBackupReporter_Report_Canceled(t *testing.T) {
 	reporter.Report(
 		"routine-cancel",
 		model.BackupTypeFull,
-		time.Now(),
 		30*time.Second,
 		context.Canceled,
 		slog.New(slog.DiscardHandler),
@@ -70,7 +66,6 @@ func TestBackupReporter_Report_DeadlineExceeded(t *testing.T) {
 	reporter.Report(
 		"routine-deadline",
 		model.BackupTypeFull,
-		time.Now(),
 		30*time.Second,
 		context.DeadlineExceeded,
 		slog.New(slog.DiscardHandler),
@@ -86,7 +81,6 @@ func TestBackupReporter_Report_GenericFailure(t *testing.T) {
 	reporter.Report(
 		"routine-fail",
 		model.BackupTypeFull,
-		time.Now(),
 		time.Minute,
 		errors.New("backup failed"),
 		logger,
@@ -104,7 +98,6 @@ func TestBackupReporter_Report_AerospikeFailure(t *testing.T) {
 	reporter.Report(
 		"routine-as-fail",
 		model.BackupTypeIncremental,
-		time.Now(),
 		time.Minute,
 		aerr,
 		logger,
