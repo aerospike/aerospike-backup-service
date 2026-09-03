@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/big"
 	"net"
@@ -123,6 +124,174 @@ func TestHTTPSHandshakeServesRotatedCertificate(t *testing.T) {
 	afterBroken, err := handshakeSerial(addr)
 	require.NoError(t, err)
 	require.Equal(t, 0, afterBroken.Cmp(rotated), "should keep serving the last good cert after a broken rewrite")
+}
+
+type inFlightResult struct {
+	body       string
+	statusCode int
+	err        error
+}
+
+func startDualInFlightServers(
+	t *testing.T,
+	tlsCfg *tls.Config,
+	inFlightStartedHTTP, inFlightStartedHTTPS, releaseInFlight chan struct{},
+) (string, string) {
+	t.Helper()
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/in-flight" {
+			if r.TLS != nil {
+				close(inFlightStartedHTTPS)
+			} else {
+				close(inFlightStartedHTTP)
+			}
+			<-releaseInFlight
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	httpLn, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	httpSrv := &http.Server{
+		Handler:           handler,
+		ReadHeaderTimeout: time.Second,
+	}
+	httpErrCh := make(chan error, 1)
+	go func() { httpErrCh <- httpSrv.Serve(httpLn) }()
+	t.Cleanup(func() {
+		_ = httpSrv.Close()
+		<-httpErrCh
+	})
+
+	httpsLn, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	httpsSrv := &http.Server{
+		Handler:           handler,
+		TLSConfig:         tlsCfg,
+		ReadHeaderTimeout: time.Second,
+	}
+	httpsErrCh := make(chan error, 1)
+	go func() { httpsErrCh <- httpsSrv.ServeTLS(httpsLn, "", "") }()
+	t.Cleanup(func() {
+		_ = httpsSrv.Close()
+		<-httpsErrCh
+	})
+
+	return httpLn.Addr().String(), httpsLn.Addr().String()
+}
+
+func fetchInFlightAsync(ctx context.Context, client *http.Client, url string) <-chan inFlightResult {
+	resCh := make(chan inFlightResult, 1)
+	go func() {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			resCh <- inFlightResult{err: err}
+			return
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			resCh <- inFlightResult{err: err}
+			return
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		resCh <- inFlightResult{body: string(body), statusCode: resp.StatusCode, err: err}
+	}()
+	return resCh
+}
+
+func TestCertificateReloadDoesNotDropInFlightRequests(t *testing.T) {
+	files := createTestCertificateFiles(t)
+	tlsCfg := startReloadingConfig(t, files)
+
+	inFlightStartedHTTP := make(chan struct{})
+	inFlightStartedHTTPS := make(chan struct{})
+	releaseInFlight := make(chan struct{})
+
+	httpAddr, httpsAddr := startDualInFlightServers(
+		t, tlsCfg, inFlightStartedHTTP, inFlightStartedHTTPS, releaseInFlight,
+	)
+
+	httpsClient := &http.Client{
+		Timeout: 5 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, //nolint:gosec // test checks in-flight request completion
+				MinVersion:         tls.VersionTLS12,
+			},
+		},
+	}
+	httpClient := &http.Client{Timeout: 5 * time.Second}
+
+	var originalSerial *big.Int
+	require.Eventually(t, func() bool {
+		serial, err := handshakeSerial(httpsAddr)
+		if err != nil {
+			return false
+		}
+		originalSerial = serial
+		return true
+	}, time.Second, 10*time.Millisecond)
+
+	httpResCh := fetchInFlightAsync(t.Context(), httpClient, "http://"+httpAddr+"/in-flight")
+	httpsResCh := fetchInFlightAsync(t.Context(), httpsClient, "https://"+httpsAddr+"/in-flight")
+
+	select {
+	case <-inFlightStartedHTTP:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for in-flight HTTP request to start")
+	}
+
+	select {
+	case <-inFlightStartedHTTPS:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for in-flight HTTPS request to start")
+	}
+
+	replacement := createTestCertificateFiles(t)
+	overwriteKeyPair(t, files, replacement)
+
+	close(releaseInFlight)
+
+	select {
+	case res := <-httpResCh:
+		require.NoError(t, res.err)
+		require.Equal(t, http.StatusOK, res.statusCode)
+		require.Equal(t, "ok", res.body)
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for in-flight HTTP request to finish")
+	}
+
+	select {
+	case res := <-httpsResCh:
+		require.NoError(t, res.err)
+		require.Equal(t, http.StatusOK, res.statusCode)
+		require.Equal(t, "ok", res.body)
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for in-flight HTTPS request to finish")
+	}
+
+	var rotatedSerial *big.Int
+	require.Eventually(t, func() bool {
+		serial, err := handshakeSerial(httpsAddr)
+		if err != nil || serial.Cmp(originalSerial) == 0 {
+			return false
+		}
+		rotatedSerial = serial
+		return true
+	}, time.Second, 20*time.Millisecond)
+	require.NotNil(t, rotatedSerial)
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+httpAddr+"/health", nil)
+	require.NoError(t, err)
+	resp, err := httpClient.Do(req)
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestNoReloadIsANoOp(t *testing.T) {

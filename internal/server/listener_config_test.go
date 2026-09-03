@@ -32,6 +32,8 @@ import (
 )
 
 type listenerCertificates struct {
+	caCert         *x509.Certificate
+	caKey          *rsa.PrivateKey
 	caFile         string
 	serverCertFile string
 	serverKeyFile  string
@@ -501,6 +503,101 @@ func TestHTTPSRequireAndVerifyRejectsUntrustedClientCertificate(t *testing.T) {
 	require.NoError(t, <-errCh)
 }
 
+func TestHTTPSRequireAndVerifyRejectsExpiredClientCertificate(t *testing.T) {
+	certs := createListenerCertificates(t)
+	httpPort := freeListenerPort(t)
+	httpsPort := freeListenerPort(t)
+	cfg := httpsOnlyConfig(httpPort, httpsPort, certs)
+	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = certs.caFile
+	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequireAndVerify
+
+	components := initListenerComponents(t, cfg)
+	t.Cleanup(components.Scheduler.Stop)
+
+	srvCtx, srvCancel := context.WithCancel(t.Context())
+	errCh := startListeners(t, srvCtx, components)
+
+	httpsURL := fmt.Sprintf("https://127.0.0.1:%d", httpsPort)
+	waitForTCP(t, fmt.Sprintf("127.0.0.1:%d", httpsPort))
+
+	expiredCertFile, expiredKeyFile := createExpiredClientCertificate(t, t.TempDir(), certs.caCert, certs.caKey)
+	expiredClient := &http.Client{
+		Timeout: time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: loadCertificatePool(t, certs.caFile),
+				Certificates: []tls.Certificate{
+					loadKeyPair(t, expiredCertFile, expiredKeyFile),
+				},
+				MinVersion: tls.VersionTLS12,
+			},
+		},
+	}
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, httpsURL+"/health", nil)
+	require.NoError(t, err)
+	resp, err := expiredClient.Do(req)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	require.Error(t, err)
+
+	authenticated := httpsClient(t, certs, true)
+	waitForListener(t, authenticated, httpsURL)
+	assertAPIResponse(t, authenticated, httpsURL)
+
+	srvCancel()
+	require.NoError(t, <-errCh)
+}
+
+func TestHTTPSRejectsExpiredServerCertificate(t *testing.T) {
+	certs := createListenerCertificates(t)
+	httpPort := freeListenerPort(t)
+	httpsPort := freeListenerPort(t)
+	cfg := httpsOnlyConfig(httpPort, httpsPort, certs)
+
+	dir := t.TempDir()
+	serverKey := generateRSAKey(t)
+	serverTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(5),
+		Subject:      pkix.Name{CommonName: "localhost"},
+		DNSNames:     []string{"localhost"},
+		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
+		NotBefore:    time.Now().Add(-2 * time.Hour),
+		NotAfter:     time.Now().Add(-time.Hour),
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+	}
+	serverDER, err := x509.CreateCertificate(
+		rand.Reader, serverTemplate, certs.caCert, &serverKey.PublicKey, certs.caKey,
+	)
+	require.NoError(t, err)
+	cfg.ServiceConfig.ServerHTTPS.CertFile = writePEM(t, dir, "server.pem", "CERTIFICATE", serverDER)
+	cfg.ServiceConfig.ServerHTTPS.KeyFile = writePEM(
+		t, dir, "server-key.pem", "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(serverKey),
+	)
+
+	components := initListenerComponents(t, cfg)
+	t.Cleanup(components.Scheduler.Stop)
+
+	srvCtx, srvCancel := context.WithCancel(t.Context())
+	errCh := startListeners(t, srvCtx, components)
+
+	httpsURL := fmt.Sprintf("https://127.0.0.1:%d", httpsPort)
+	waitForTCP(t, fmt.Sprintf("127.0.0.1:%d", httpsPort))
+
+	client := httpsClient(t, certs, false)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, httpsURL+"/health", nil)
+	require.NoError(t, err)
+	resp, err := client.Do(req)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	require.Error(t, err)
+
+	srvCancel()
+	require.NoError(t, <-errCh)
+}
+
 func TestCertificateReloaderLoadReturnsErrorForMissingKeyPair(t *testing.T) {
 	tlsProvider := servertls.NewCertificateProvider(
 		&model.ServerConfigHTTPS{
@@ -772,6 +869,8 @@ func createListenerCertificates(t *testing.T) listenerCertificates {
 	}
 	caDER, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &caKey.PublicKey, caKey)
 	require.NoError(t, err)
+	caCert, err := x509.ParseCertificate(caDER)
+	require.NoError(t, err)
 	caFile := writePEM(t, dir, "ca.pem", "CERTIFICATE", caDER)
 
 	serverKey := generateRSAKey(t)
@@ -785,7 +884,7 @@ func createListenerCertificates(t *testing.T) listenerCertificates {
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 	}
-	serverDER, err := x509.CreateCertificate(rand.Reader, serverTemplate, caTemplate, &serverKey.PublicKey, caKey)
+	serverDER, err := x509.CreateCertificate(rand.Reader, serverTemplate, caCert, &serverKey.PublicKey, caKey)
 	require.NoError(t, err)
 	serverCertFile := writePEM(t, dir, "server.pem", "CERTIFICATE", serverDER)
 	serverKeyFile := writePEM(t, dir, "server-key.pem", "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(serverKey))
@@ -799,12 +898,47 @@ func createListenerCertificates(t *testing.T) listenerCertificates {
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 	}
-	clientDER, err := x509.CreateCertificate(rand.Reader, clientTemplate, caTemplate, &clientKey.PublicKey, caKey)
+	clientDER, err := x509.CreateCertificate(rand.Reader, clientTemplate, caCert, &clientKey.PublicKey, caKey)
 	require.NoError(t, err)
 	clientCertFile := writePEM(t, dir, "client.pem", "CERTIFICATE", clientDER)
 	clientKeyFile := writePEM(t, dir, "client-key.pem", "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(clientKey))
 
-	return listenerCertificates{caFile, serverCertFile, serverKeyFile, clientCertFile, clientKeyFile}
+	return listenerCertificates{
+		caCert:         caCert,
+		caKey:          caKey,
+		caFile:         caFile,
+		serverCertFile: serverCertFile,
+		serverKeyFile:  serverKeyFile,
+		clientCertFile: clientCertFile,
+		clientKeyFile:  clientKeyFile,
+	}
+}
+
+func createExpiredClientCertificate(
+	t *testing.T,
+	dir string,
+	caCert *x509.Certificate,
+	caKey *rsa.PrivateKey,
+) (string, string) {
+	t.Helper()
+
+	clientKey := generateRSAKey(t)
+	clientTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(4),
+		Subject:      pkix.Name{CommonName: "expired-client"},
+		NotBefore:    time.Now().Add(-2 * time.Hour),
+		NotAfter:     time.Now().Add(-time.Hour),
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+	}
+	clientDER, err := x509.CreateCertificate(rand.Reader, clientTemplate, caCert, &clientKey.PublicKey, caKey)
+	require.NoError(t, err)
+	clientCertFile := writePEM(t, dir, "expired-client.pem", "CERTIFICATE", clientDER)
+	clientKeyFile := writePEM(
+		t, dir, "expired-client-key.pem", "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(clientKey),
+	)
+
+	return clientCertFile, clientKeyFile
 }
 
 func generateRSAKey(t *testing.T) *rsa.PrivateKey {
