@@ -7,7 +7,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
@@ -47,8 +46,8 @@ func (a *AerospikeCluster) Validate() error {
 	if len(a.SeedNodes) == 0 {
 		return errors.New("seed nodes are not specified")
 	}
-	if duplicates := collections.CheckDuplicates(a.SeedNodes); len(duplicates) > 0 {
-		return errValidationDuplicate("seed-nodes", duplicates)
+	if err := validateUnique("seed-nodes", a.SeedNodes); err != nil {
+		return err
 	}
 
 	nodeOpts := ValidationDefault
@@ -78,8 +77,8 @@ func (a *AerospikeCluster) Validate() error {
 		return fmt.Errorf("tls validation error: %w", err)
 	}
 
-	if duplicates := collections.CheckDuplicates(a.PreferRacks); len(duplicates) > 0 {
-		return errValidationDuplicate("prefer-racks", duplicates)
+	if err := validateUnique("prefer-racks", a.PreferRacks); err != nil {
+		return err
 	}
 	for i, rack := range a.PreferRacks {
 		if rack < 0 {
