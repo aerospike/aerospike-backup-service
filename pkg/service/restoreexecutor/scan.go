@@ -6,6 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
@@ -17,9 +18,9 @@ const megabyte = 1_048_576
 
 func runScanRestore(
 	ctx context.Context,
-	client aerospike.Restorer,
+	client aerospike.Client,
 	request *model.RestoreRequest,
-	operations storageReader,
+	operations storage.Operations,
 ) (RestoreHandler, error) {
 	reader, err := operations.CreateDirReader(
 		ctx,
@@ -56,8 +57,8 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 
 	if restoreRequest.Policy.Namespace != nil {
 		config.Namespace = &backup.RestoreNamespaceConfig{
-			Source:      restoreRequest.Policy.Namespace.Source,
-			Destination: restoreRequest.Policy.Namespace.Destination,
+			Source:      ptr.StringOrNil(restoreRequest.Policy.Namespace.Source),
+			Destination: ptr.StringOrNil(restoreRequest.Policy.Namespace.Destination),
 		}
 	}
 
@@ -70,16 +71,16 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 
 	if restoreRequest.Policy.CompressionPolicy != nil {
 		config.CompressionPolicy = &backup.CompressionPolicy{
-			Mode:  restoreRequest.Policy.CompressionPolicy.Mode,
+			Mode:  restoreRequest.Policy.CompressionPolicy.Mode.String(),
 			Level: int(restoreRequest.Policy.CompressionPolicy.Level),
 		}
 	}
 	if restoreRequest.Policy.EncryptionPolicy != nil {
 		config.EncryptionPolicy = &backup.EncryptionPolicy{
-			Mode:      restoreRequest.Policy.EncryptionPolicy.Mode,
-			KeyFile:   restoreRequest.Policy.EncryptionPolicy.KeyFile,
-			KeySecret: restoreRequest.Policy.EncryptionPolicy.KeySecret,
-			KeyEnv:    restoreRequest.Policy.EncryptionPolicy.KeyEnv,
+			Mode:      restoreRequest.Policy.EncryptionPolicy.Mode.String(),
+			KeyFile:   ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyFile),
+			KeySecret: ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeySecret),
+			KeyEnv:    ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyEnv),
 		}
 	}
 

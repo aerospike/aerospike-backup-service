@@ -8,7 +8,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/backup-go/mocks"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -41,7 +40,7 @@ type testRestoreEnv struct {
 	ctrl              *gomock.Controller
 	mockRestore       *restoreexecutor.MockRestore
 	mockClientManager *aerospike.MockClientManager
-	infoGetter        *mocks.MockInfoGetter
+	infoGetter        *aerospike.MockInfoGetter
 	mockBackupReader  *MockBackupReader
 	jobsHolder        *RestoreJobsHolder
 	restoreValidator  *MockRestoreValidator
@@ -52,7 +51,7 @@ type testRestoreEnv struct {
 func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	infoGetter := mocks.NewMockInfoGetter(t)
+	infoGetter := aerospike.NewMockInfoGetter(ctrl)
 
 	mockRestore := restoreexecutor.NewMockRestore(ctrl)
 	mockClientManager := aerospike.NewMockClientManager(ctrl)

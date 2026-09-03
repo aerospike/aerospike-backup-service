@@ -10,8 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
-// httpConfigurationManager implements the Manager interface,
-// performing I/O operations via the HTTP(S) protocol.
+// httpConfigurationManager reads the service configuration over HTTP(S). Writing is not supported.
 type httpConfigurationManager struct {
 	configURL   string
 	nsValidator aerospike.NamespaceValidator

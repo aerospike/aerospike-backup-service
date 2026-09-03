@@ -1,9 +1,28 @@
 package dto
 
-// ValidationOption holds configuration for validation behavior.
-type ValidationOption int
+// ValidationOptions configures optional validation behavior passed through Validate methods.
+type ValidationOptions uint
 
 const (
-	ValidationSkipTLSFiles ValidationOption = iota
-	ValidationAllowEmpty
+	// ValidationDefault is the zero value: full validation with no optional flags enabled.
+	ValidationDefault ValidationOptions = 0
 )
+
+const (
+	// ValidationAllowEmpty permits optional override fields to be omitted.
+	// Used by RestoreTimestampRequest via DestinationClusterConfig and StorageConfig.
+	ValidationAllowEmpty ValidationOptions = 1 << iota
+
+	// ValidationWithSecretAgent enables secret-agent reference validation for secret fields on DTOs
+	// that do not embed SecretAgentConfig (for example EncryptionPolicy and TLS).
+	ValidationWithSecretAgent
+
+	// ValidationWithTLS requires tls-name on seed nodes when the cluster has a TLS block configured.
+	// Set by AerospikeCluster when validating SeedNode entries.
+	ValidationWithTLS
+)
+
+// Has reports whether all bits in flags are set in o.
+func (o ValidationOptions) Has(flags ValidationOptions) bool {
+	return o&flags == flags
+}

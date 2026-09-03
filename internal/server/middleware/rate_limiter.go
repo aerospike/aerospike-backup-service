@@ -1,74 +1,89 @@
 package middleware
 
 import (
+	"context"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/netip"
-	"strings"
 	"sync"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"golang.org/x/time/rate"
 )
 
-func RateLimiter(config *model.RateLimiterConfig) Middleware {
+const (
+	defaultLimiterIdleTTL         = 10 * time.Minute
+	defaultLimiterCleanupInterval = 1 * time.Minute
+)
+
+var allowAnyPrefix = netip.MustParsePrefix("0.0.0.0/0")
+
+func RateLimiter(ctx context.Context, config *model.RateLimiterConfig) Middleware {
 	limiters := NewIPRateLimiter(
+		ctx,
 		rate.Limit(config.GetTpsOrDefault()),
 		config.GetSizeOrDefault(),
+		defaultLimiterIdleTTL,
+		defaultLimiterCleanupInterval,
 	)
 	whitelist := newIPWhiteList(config.GetWhiteListOrDefault())
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			ipStr, _, err := net.SplitHostPort(r.RemoteAddr)
 			if err != nil {
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
 			}
+			ipAddr, err := netip.ParseAddr(ipStr)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+			ipAddr = ipAddr.Unmap()
 
-			if whitelist.isAllowed(ip) {
+			if whitelist.isAllowed(ipAddr) || limiters.Allow(ipAddr) {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			limiter := limiters.GetLimiter(ip)
-			if !limiter.Allow() {
-				http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
-				return
-			}
-
-			next.ServeHTTP(w, r)
+			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
 		})
 	}
 }
 
 type IPWhiteList struct {
-	addresses map[string]*netip.Addr
-	networks  []*netip.Prefix
+	addresses map[netip.Addr]struct{}
+	networks  []netip.Prefix
 	allowAny  bool
 }
 
 func newIPWhiteList(ipList []string) *IPWhiteList {
-	addresses := make(map[string]*netip.Addr)
-	networks := make([]*netip.Prefix, 0)
+	addresses := make(map[netip.Addr]struct{})
+	networks := make([]netip.Prefix, 0)
 	var allowAny bool
 
 	for _, ip := range ipList {
-		if strings.HasPrefix(ip, "0.0.0.0") {
-			allowAny = true
+		network, err := netip.ParsePrefix(ip)
+		if err == nil {
+			if network == allowAnyPrefix {
+				allowAny = true
+				continue
+			}
+			networks = append(networks, network)
 			continue
 		}
-		network, err := netip.ParsePrefix(ip)
+
+		ipAddr, err := netip.ParseAddr(ip)
 		if err != nil {
-			ipAddr, err := netip.ParseAddr(ip)
-			if err != nil {
-				panic("invalid ip configuration: " + ip)
-			}
-			addresses[ip] = &ipAddr
-		} else {
-			networks = append(networks, &network)
+			// Config validation should catch malformed entries.
+			// Keep runtime safe in case config arrives from another source.
+			slog.Warn("Ignoring invalid whitelist entry", slog.String("entry", ip))
+			continue
 		}
+		addresses[ipAddr.Unmap()] = struct{}{}
 	}
 
 	return &IPWhiteList{
@@ -78,22 +93,18 @@ func newIPWhiteList(ipList []string) *IPWhiteList {
 	}
 }
 
-func (wl *IPWhiteList) isAllowed(ip string) bool {
+func (wl *IPWhiteList) isAllowed(ip netip.Addr) bool {
 	if wl.allowAny {
 		return true
 	}
-	ipAddr, err := netip.ParseAddr(ip)
-	if err != nil {
-		slog.Warn("Invalid client IP")
-		return false
-	}
+
 	_, ok := wl.addresses[ip]
 	if ok {
 		return true
 	}
 
 	for _, network := range wl.networks {
-		if network.Contains(ipAddr) {
+		if network.Contains(ip) {
 			return true
 		}
 	}
@@ -101,53 +112,78 @@ func (wl *IPWhiteList) isAllowed(ip string) bool {
 	return false
 }
 
-// IPAddress represents an IP address string.
-type IPAddress string
+type ipLimiterEntry struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
 
 // IPRateLimiter represents a rate limiter based on an IP address.
 type IPRateLimiter struct {
 	sync.Mutex
-	limiters        map[IPAddress]*rate.Limiter
+	limiters        map[netip.Addr]*ipLimiterEntry
 	tokensPerSecond rate.Limit
 	tokenBucketSize int
+	idleTTL         time.Duration
+	cleanupTicker   *time.Ticker
 }
 
 // NewIPRateLimiter returns a new IPRateLimiter.
-func NewIPRateLimiter(tps rate.Limit, size int) *IPRateLimiter {
+func NewIPRateLimiter(ctx context.Context, tps rate.Limit, size int, idleTTL, cleanup time.Duration) *IPRateLimiter {
 	ipLimiter := &IPRateLimiter{
-		limiters:        make(map[IPAddress]*rate.Limiter),
+		limiters:        make(map[netip.Addr]*ipLimiterEntry),
 		tokensPerSecond: tps,
 		tokenBucketSize: size,
+		idleTTL:         idleTTL,
+	}
+
+	if cleanup > 0 {
+		ipLimiter.cleanupTicker = time.NewTicker(cleanup)
+		go ipLimiter.cleanupLoop(ctx)
 	}
 
 	return ipLimiter
 }
 
-// AddLimiter creates a new rate limiter and adds it to the limiters map,
-// using the IP address as the key.
-func (ipLimiter *IPRateLimiter) AddLimiter(ipAddr string) *rate.Limiter {
+// Allow reports whether a request from ipAddr may proceed at the current time.
+func (ipLimiter *IPRateLimiter) Allow(ipAddr netip.Addr) bool {
+	return ipLimiter.getOrCreateEntry(ipAddr).limiter.Allow()
+}
+
+func (ipLimiter *IPRateLimiter) getOrCreateEntry(ipAddr netip.Addr) *ipLimiterEntry {
 	ipLimiter.Lock()
 	defer ipLimiter.Unlock()
 
-	limiter := rate.NewLimiter(ipLimiter.tokensPerSecond, ipLimiter.tokenBucketSize)
+	entry, exists := ipLimiter.limiters[ipAddr]
+	if !exists {
+		entry = &ipLimiterEntry{
+			limiter: rate.NewLimiter(ipLimiter.tokensPerSecond, ipLimiter.tokenBucketSize),
+		}
+		ipLimiter.limiters[ipAddr] = entry
+	}
+	entry.lastSeen = time.Now()
 
-	ipLimiter.limiters[IPAddress(ipAddr)] = limiter
-
-	return limiter
+	return entry
 }
 
-// GetLimiter returns the rate limiter for the provided IP address if it exists.
-// Otherwise calls AddLimiter to add a new limiter to the map.
-func (ipLimiter *IPRateLimiter) GetLimiter(ipAddr string) *rate.Limiter {
-	ipLimiter.Lock()
-	limiter, exists := ipLimiter.limiters[IPAddress(ipAddr)]
-
-	if !exists {
-		ipLimiter.Unlock()
-		return ipLimiter.AddLimiter(ipAddr)
+func (ipLimiter *IPRateLimiter) cleanupLoop(ctx context.Context) {
+	for {
+		select {
+		case now := <-ipLimiter.cleanupTicker.C:
+			ipLimiter.evictIdle(now)
+		case <-ctx.Done():
+			ipLimiter.cleanupTicker.Stop()
+			return
+		}
 	}
+}
 
-	ipLimiter.Unlock()
+func (ipLimiter *IPRateLimiter) evictIdle(now time.Time) {
+	ipLimiter.Lock()
+	defer ipLimiter.Unlock()
 
-	return limiter
+	for ip, entry := range ipLimiter.limiters {
+		if now.Sub(entry.lastSeen) >= ipLimiter.idleTTL {
+			delete(ipLimiter.limiters, ip)
+		}
+	}
 }

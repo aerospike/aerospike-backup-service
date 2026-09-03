@@ -56,7 +56,7 @@ func TestAddAerospikeCluster(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -78,7 +78,7 @@ func TestAddAerospikeCluster(t *testing.T) {
 }
 
 func TestReadAerospikeClusters(t *testing.T) {
-	svc := setupTestService()
+	svc := setupTestService(t)
 	svc.config = model.NewConfig()
 
 	_ = svc.config.AddCluster("cluster1", &model.AerospikeCluster{})
@@ -130,7 +130,7 @@ func TestReadAerospikeCluster(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			if tt.cluster != nil {
 				_ = svc.config.AddCluster(tt.clusterName, tt.cluster)
 			}
@@ -184,9 +184,8 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
-			svc := setupTestService()
+			svc := setupTestService(t)
 			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 			svc.nsValidator = mockNsValidator
 
@@ -214,6 +213,57 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUpdateAerospikeCluster_PreservesSecretOnRoundTrip(t *testing.T) {
+	const realPassword = "real-secret-password"
+
+	svc := setupTestService(t)
+	ctrl := gomock.NewController(t)
+	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
+	svc.nsValidator = mockNsValidator
+	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Eq(svc.config)).AnyTimes()
+
+	clusterModel := &model.AerospikeCluster{
+		SeedNodes: []model.SeedNode{{HostName: "localhost", Port: 3000}},
+		Credentials: &model.Credentials{
+			User:     "testUser",
+			Password: realPassword,
+			AuthMode: model.AuthModeInternal,
+		},
+	}
+	require.NoError(t, svc.config.AddCluster("test-cluster", clusterModel))
+
+	getReq := httptest.NewRequestWithContext(
+		t.Context(), http.MethodGet, "/v1/config/clusters/test-cluster", nil,
+	)
+	getReq.SetPathValue("name", "test-cluster")
+	getW := httptest.NewRecorder()
+	svc.ReadAerospikeCluster(getW, getReq)
+	require.Equal(t, http.StatusOK, getW.Code)
+
+	var clusterDTO dto.AerospikeCluster
+	require.NoError(t, json.NewDecoder(getW.Body).Decode(&clusterDTO))
+	require.NotNil(t, clusterDTO.Credentials)
+	assert.Equal(t, "[secret]", string(clusterDTO.Credentials.Password))
+
+	clusterDTO.SeedNodes[0].HostName = "updated-host"
+	putBody, err := json.Marshal(clusterDTO)
+	require.NoError(t, err)
+
+	putReq := httptest.NewRequestWithContext(
+		t.Context(), http.MethodPut, "/v1/config/clusters/test-cluster", strings.NewReader(string(putBody)),
+	)
+	putReq.SetPathValue("name", "test-cluster")
+	putW := httptest.NewRecorder()
+	svc.UpdateAerospikeCluster(putW, putReq)
+	require.Equal(t, http.StatusOK, putW.Code)
+
+	updated, ok := svc.config.BackupConfigCopy().AerospikeClusters["test-cluster"]
+	require.True(t, ok)
+	require.NotNil(t, updated.Credentials)
+	assert.Equal(t, realPassword, updated.Credentials.Password)
+	assert.Equal(t, "updated-host", updated.SeedNodes[0].HostName)
 }
 
 //nolint:dupl
@@ -245,7 +295,7 @@ func TestDeleteAerospikeCluster(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			_ = svc.config.AddCluster("test-cluster", &model.AerospikeCluster{})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/clusters/"+tt.clusterName, nil)
@@ -263,7 +313,7 @@ func TestDeleteAerospikeCluster(t *testing.T) {
 }
 
 func TestDeleteAerospikeCluster_InUseErrorMessage(t *testing.T) {
-	svc := setupTestService()
+	svc := setupTestService(t)
 	entities := addValidBackupConfig(svc)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/clusters/"+entities.clusterName, nil)

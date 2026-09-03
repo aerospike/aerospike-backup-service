@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -51,11 +50,10 @@ type BackupPolicy struct {
 	// Do not apply base-64 encoding to BLOBs: Bytes, HLL, RawMap, RawList.
 	// Results in smaller backup files.
 	Compact *bool
-	// XDR configuration for MRT backups.
-	// Commented out in dto.BackupPolicy, will always be nil.
-	XDRConfig *XDRConfig
 	// Allows incremental backups to run concurrently.
 	ConcurrentIncremental *bool
+	// The mode for incremental backups.
+	IncrMode IncrMode
 	// Enables built-in compression during scan operation.
 	UseCompression *bool
 	// Maximum number of concurrent requests to server nodes.
@@ -80,6 +78,14 @@ func (p *BackupPolicy) AllowConcurrentIncremental() bool {
 	return *defaultConfig.backupPolicy.ConcurrentIncremental
 }
 
+func (p *BackupPolicy) GetIncrModeOrDefault() IncrMode {
+	if p != nil && p.IncrMode != "" {
+		return p.IncrMode
+	}
+
+	return defaultConfig.backupPolicy.IncrMode
+}
+
 func (p *BackupPolicy) UseCompressionOrDefault() bool {
 	if p != nil && p.UseCompression != nil {
 		return *p.UseCompression
@@ -94,27 +100,6 @@ func (p *BackupPolicy) CompactOrDefault() bool {
 	}
 
 	return *defaultConfig.backupPolicy.Compact
-}
-
-// CopyWithNoRecords creates a new instance of the BackupPolicy struct with identical field values.
-// New instance has NoRecords set to true.
-func (p *BackupPolicy) CopyWithNoRecords() *BackupPolicy {
-	return &BackupPolicy{
-		Parallel:         p.Parallel,
-		ParallelWrite:    p.ParallelWrite,
-		SocketTimeout:    p.SocketTimeout,
-		TotalTimeout:     p.TotalTimeout,
-		RetryPolicy:      p.RetryPolicy,
-		RetentionPolicy:  p.RetentionPolicy,
-		NoRecords:        ptr.Of(true),
-		NoIndexes:        p.NoIndexes,
-		NoUdfs:           p.NoUdfs,
-		Bandwidth:        p.Bandwidth,
-		RecordsPerSecond: p.RecordsPerSecond,
-		FileLimit:        p.FileLimit,
-		Sealed:           p.Sealed,
-		Compact:          p.Compact,
-	}
 }
 
 func (p *BackupPolicy) GetRetryPolicyOrDefault() *models.RetryPolicy {

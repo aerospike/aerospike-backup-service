@@ -2,8 +2,6 @@ package dto
 
 import (
 	"errors"
-	"maps"
-	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -16,7 +14,13 @@ type BackupCommonConfig struct {
 	// * ISO (e.g. 2006-01-02T15-04-05)
 	// * EU (e.g. 02-Jan-2006-15-04-05)
 	// * US (e.g. Jan-02-2006-15-04-05)
-	TimestampFormat *string `yaml:"timestamp-format,omitempty" json:"timestamp-format,omitempty" enums:"ISO,US,EU" extensions:"x-nullable"` //nolint:lll
+	TimestampFormat TimestampFormat `yaml:"timestamp-format,omitempty" json:"timestamp-format,omitempty" extensions:"x-nullable"` //nolint:lll
+	// Timezone for evaluating backup cron expressions (optional).
+	// Accepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.
+	// Keywords UTC and Local are case-insensitive; IANA names are case-sensitive.
+	// Abbreviations such as EST and POSIX TZ strings are not accepted.
+	// Changing this service-level default requires a restart.
+	ScheduleTimezone string `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"` //nolint:lll
 }
 
 // Validate validates the backup subsection configuration.
@@ -25,12 +29,12 @@ func (b *BackupCommonConfig) Validate() error {
 		return nil
 	}
 
-	if b.TimestampFormat != nil {
-		format := model.TimestampFormatFromString(*b.TimestampFormat)
-		if _, ok := model.TimestampFormatPresets[format]; !ok {
-			allowed := slices.Collect(maps.Keys(model.TimestampFormatPresets))
-			return errValidationInvalidValue("timestamp-format", *b.TimestampFormat, allowed)
-		}
+	if err := b.TimestampFormat.Validate(); err != nil {
+		return err
+	}
+
+	if err := validateScheduleTimezone(b.ScheduleTimezone); err != nil {
+		return err
 	}
 
 	return nil
@@ -41,20 +45,15 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 		return nil
 	}
 
-	var df *model.TimestampFormat
-	if b.TimestampFormat != nil {
-		v := model.TimestampFormatFromString(*b.TimestampFormat)
-		df = &v
+	return &model.BackupCommonConfig{
+		TimestampFormat: b.TimestampFormat.ToModel(),
+		Timezone:        model.NewServiceLocation(b.ScheduleTimezone),
 	}
-
-	return &model.BackupCommonConfig{TimestampFormat: df}
 }
 
 func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
-	if m.TimestampFormat != nil {
-		v := string(*m.TimestampFormat)
-		b.TimestampFormat = &v
-	}
+	b.TimestampFormat = NewTimestampFormatFromModel(m.TimestampFormat)
+	b.ScheduleTimezone = m.Timezone.Configured
 }
 
 // Compare compares two BackupCommonConfig instances and returns detailed errors.
@@ -68,5 +67,16 @@ func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
 	if other == nil {
 		return errors.New("backup removed")
 	}
-	return comparePointers("TimestampFormat", b.TimestampFormat, other.TimestampFormat)
+	return errors.Join(
+		compareValues("TimestampFormat", b.TimestampFormat, other.TimestampFormat),
+		compareValues("ScheduleTimezone", b.ScheduleTimezone, other.ScheduleTimezone),
+	)
+}
+
+func validateScheduleTimezone(value string) error {
+	if _, err := model.ParseTimezone(value); err != nil {
+		return errValidationInvalidValue("schedule-timezone", value, "UTC, Local, or a valid IANA timezone name")
+	}
+
+	return nil
 }

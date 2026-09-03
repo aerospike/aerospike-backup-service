@@ -1,10 +1,11 @@
 //go:build integration
 
+package integration
+
 // Metrics assertions for integration tests: Prometheus counters and gauges.
 //
 // Keep assertMetric* and waitForMetric* helpers here rather than in *_test.go files so
 // scenarios stay focused on setup and flow while metrics checks remain reusable.
-package integration
 
 import (
 	"time"
@@ -40,7 +41,7 @@ func (s *Suite) waitForMetricBackupSuccessEvent(e *env, backupType model.BackupT
 		time.Sleep(pollInterval)
 	}
 
-	s.Require().Failf("timed out waiting for %s backup success event", string(backupType))
+	s.Failf("timed out waiting for %s backup success event", string(backupType))
 }
 
 func (s *Suite) assertMetricBackupSuccessEventCount(e *env, backupType model.BackupType, want float64) {
@@ -49,6 +50,30 @@ func (s *Suite) assertMetricBackupSuccessEventCount(e *env, backupType model.Bac
 	count, ok, err := e.backupSuccessEventCount(s.T().Context(), backupType)
 	s.Require().NoError(err)
 	s.Require().True(ok, "backup success event counter not found for type %q", backupType)
+	s.Equal(want, count)
+}
+
+// metricRestoreSuccessEventCount returns restore_events_total{outcome="success"}.
+// Prometheus omits counters until the first event, so a missing series is treated as zero.
+func (s *Suite) metricRestoreSuccessEventCount(e *env) float64 {
+	s.T().Helper()
+
+	count, ok, err := e.restoreSuccessEventCount(s.T().Context())
+	s.Require().NoError(err)
+	if !ok {
+		return 0
+	}
+
+	return count
+}
+
+// assertMetricRestoreSuccessEventCount asserts restore_events_total{outcome="success"} equals want.
+func (s *Suite) assertMetricRestoreSuccessEventCount(e *env, want float64) {
+	s.T().Helper()
+
+	count, ok, err := e.restoreSuccessEventCount(s.T().Context())
+	s.Require().NoError(err)
+	s.Require().True(ok, "restore success event counter not found")
 	s.Equal(want, count)
 }
 
@@ -69,12 +94,12 @@ func (s *Suite) assertMetricLastSuccessfulBackup(e *env, backupType model.Backup
 
 		if time.Now().After(deadline) {
 			if !ok {
-				s.Require().Failf("timed out waiting for last successful backup metric",
+				s.Failf("timed out waiting for last successful backup metric",
 					"metric %q with routine=%q type=%q not found after %s",
 					lastSuccessfulBackupTimestampMetric, routineName, backupType, backupTimeout)
 			}
 
-			s.Require().Failf("timed out waiting for last successful backup metric",
+			s.Failf("timed out waiting for last successful backup metric",
 				"metric %q with routine=%q type=%q: got %d, want %d after %s",
 				lastSuccessfulBackupTimestampMetric, routineName, backupType, int64(value), wantUnix, backupTimeout)
 		}

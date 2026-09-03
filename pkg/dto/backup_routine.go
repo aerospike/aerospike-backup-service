@@ -9,9 +9,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	as "github.com/aerospike/aerospike-client-go/v8"
-	"github.com/aws/smithy-go/ptr"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -29,12 +27,17 @@ type BackupRoutine struct {
 	// The name of the corresponding storage provider configuration.
 	Storage string `yaml:"storage,omitempty" json:"storage,omitempty" validate:"required"`
 	// The name of a Secret Agent to read secrets from (optional).
-	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty" extensions:"x-nullable"`
+	SecretAgent string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty" extensions:"x-nullable"`
 	// The interval for full backup as a cron expression string.
 	// Cron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron" example:"0 0 * * * *" validate:"required"`
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string `yaml:"incr-interval-cron,omitempty" json:"incr-interval-cron,omitempty" example:"*/10 * * * * *" extensions:"x-nullable"`
+	// Timezone for evaluating this routine's cron expressions (optional).
+	// Accepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.
+	// When omitted, the routine inherits service.backup.schedule-timezone.
+	// Keywords UTC and Local are case-insensitive; IANA names are case-sensitive.
+	ScheduleTimezone string `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"`
 	// The list of namespaces to back up.
 	// If empty, the entire cluster is backed up.
 	// The order of namespaces does not determine the backup execution or completion order.
@@ -91,8 +94,6 @@ const (
 )
 
 // Validate validates the backup routine configuration.
-//
-//nolint:gocognit,funlen
 func (r *BackupRoutine) Validate() error {
 	if r.SourceCluster == "" {
 		return errValidationEmptyField("source-cluster")
@@ -108,17 +109,15 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
 	}
+	if err := validateScheduleTimezone(r.ScheduleTimezone); err != nil {
+		return err
+	}
 	for i, rack := range r.RackList {
 		if rack < 0 {
 			return errValidationNegative(fmt.Sprintf("rack-list[%d]", i), rack)
 		}
 		if rack > maxRack {
 			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)
-		}
-	}
-	if r.SecretAgent != nil {
-		if *r.SecretAgent == "" {
-			return errValidationEmptyField("secret-agent")
 		}
 	}
 	if err := validatePartitionList(r.PartitionList); err != nil {
@@ -130,36 +129,20 @@ func (r *BackupRoutine) Validate() error {
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
 	}
-	for i, ns := range *r.Namespaces {
-		if ns == "" {
-			return errValidationEmptyField(fmt.Sprintf("namespaces[%d]", i))
-		}
+	if err := validateUniqueNonEmpty("namespaces", *r.Namespaces); err != nil {
+		return err
 	}
-
-	if duplicates := collections.CheckDuplicates(*r.Namespaces); len(duplicates) > 0 {
-		return errValidationDuplicate("namespaces", duplicates)
+	if err := validateUniqueNonEmpty("set-list", r.SetList); err != nil {
+		return err
 	}
-	if duplicates := collections.CheckDuplicates(r.SetList); len(duplicates) > 0 {
-		return errValidationDuplicate("set-list", duplicates)
+	if err := validateUniqueNonEmpty("bin-list", r.BinList); err != nil {
+		return err
 	}
-	for i, set := range r.SetList {
-		if set == "" {
-			return errValidationEmptyField(fmt.Sprintf("set-list[%d]", i))
-		}
+	if err := validateUnique(rackListField, r.RackList); err != nil {
+		return err
 	}
-	if duplicates := collections.CheckDuplicates(r.BinList); len(duplicates) > 0 {
-		return errValidationDuplicate("bin-list", duplicates)
-	}
-	for i, bin := range r.BinList {
-		if bin == "" {
-			return errValidationEmptyField(fmt.Sprintf("bin-list[%d]", i))
-		}
-	}
-	if duplicates := collections.CheckDuplicates(r.RackList); len(duplicates) > 0 {
-		return errValidationDuplicate(rackListField, duplicates)
-	}
-	if duplicates := collections.CheckDuplicates(r.NodeList); len(duplicates) > 0 {
-		return errValidationDuplicate(nodeListField, duplicates)
+	if err := validateUniqueNonEmpty(nodeListField, r.NodeList); err != nil {
+		return err
 	}
 	if err := validateFilterExpression(r.FilterExpression, r.SetList); err != nil {
 		return err
@@ -251,7 +234,11 @@ func isValidPartitionID(entry string) bool {
 	return err == nil && id >= 0 && id <= 4095
 }
 
-func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model.BackupRoutine, error) {
+func (r *BackupRoutine) ToModel(
+	config *model.BackupConfig,
+	name string,
+	serviceTimezone model.Location,
+) (*model.BackupRoutine, error) {
 	policy, err := resolveBackupPolicy(r.BackupPolicy, config.BackupPolicies)
 	if err != nil {
 		return nil, err
@@ -263,16 +250,9 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 	}
 
 	// Enforce mutual exclusivity between routine-level selectors and cluster-level prefer-racks
-	if len(cluster.PreferRacks) > 0 {
-		if len(r.RackList) > 0 {
-			return nil, errValidationMutuallyExclusive(rackListField, preferRacksField)
-		}
-		if len(r.PartitionList) > 0 {
-			return nil, errValidationMutuallyExclusive(partitionListField, preferRacksField)
-		}
-		if len(r.NodeList) > 0 {
-			return nil, errValidationMutuallyExclusive(nodeListField, preferRacksField)
-		}
+
+	if err := r.validateRacks(cluster); err != nil {
+		return nil, err
 	}
 
 	if err := ValidateBackupPolicyParallelism(policy, cluster); err != nil {
@@ -288,12 +268,9 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		return nil, err
 	}
 
-	var secretAgent *model.SecretAgent
-	if r.SecretAgent != nil {
-		secretAgent, found = config.SecretAgents[*r.SecretAgent]
-		if !found {
-			return nil, errValidationNotFound("secret agent", *r.SecretAgent)
-		}
+	secretAgent, err := resolveRoutineSecretAgent(r.SecretAgent, config.SecretAgents)
+	if err != nil {
+		return nil, err
 	}
 
 	return &model.BackupRoutine{
@@ -304,6 +281,7 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		SecretAgent:      secretAgent,
 		IntervalCron:     r.IntervalCron,
 		IncrIntervalCron: r.IncrIntervalCron,
+		Timezone:         model.NewRoutineLocation(r.ScheduleTimezone, serviceTimezone),
 		Namespaces:       *r.Namespaces,
 		SetList:          r.SetList,
 		BinList:          r.BinList,
@@ -313,6 +291,24 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model
 		FilterExpression: r.FilterExpression,
 		Disabled:         r.Disabled,
 	}, nil
+}
+
+func (r *BackupRoutine) validateRacks(cluster *model.AerospikeCluster) error {
+	if len(cluster.PreferRacks) == 0 {
+		return nil
+	}
+
+	if len(r.RackList) > 0 {
+		return errValidationMutuallyExclusive(rackListField, preferRacksField)
+	}
+	if len(r.PartitionList) > 0 {
+		return errValidationMutuallyExclusive(partitionListField, preferRacksField)
+	}
+	if len(r.NodeList) > 0 {
+		return errValidationMutuallyExclusive(nodeListField, preferRacksField)
+	}
+
+	return nil
 }
 
 func validateFileLimit(policy *model.BackupPolicy, storage model.Storage) error {
@@ -342,6 +338,19 @@ func validateFileLimit(policy *model.BackupPolicy, storage model.Storage) error 
 	}
 
 	return nil
+}
+
+func resolveRoutineSecretAgent(name string, agents map[string]*model.SecretAgent) (*model.SecretAgent, error) {
+	if name == "" {
+		return nil, nil
+	}
+
+	agent, found := agents[name]
+	if !found {
+		return nil, errValidationNotFound("secret agent", name)
+	}
+
+	return agent, nil
 }
 
 func resolveBackupPolicy(name string, policies map[string]*model.BackupPolicy) (*model.BackupPolicy, error) {
@@ -378,6 +387,7 @@ func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRo
 
 	b := &BackupRoutine{}
 	b.fromModel(m, config.BackupConfigCopy())
+
 	return b
 }
 
@@ -386,10 +396,11 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	r.SourceCluster = findKeyByValue(config.AerospikeClusters, m.SourceCluster)
 	r.Storage = findStorageKey(config.Storage, m.Storage)
 	if m.SecretAgent != nil {
-		r.SecretAgent = ptr.String(findKeyByValue(config.SecretAgents, m.SecretAgent))
+		r.SecretAgent = findKeyByValue(config.SecretAgents, m.SecretAgent)
 	}
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
+	r.ScheduleTimezone = m.Timezone.Configured
 	r.Namespaces = &m.Namespaces
 	r.SetList = m.SetList
 	r.BinList = m.BinList

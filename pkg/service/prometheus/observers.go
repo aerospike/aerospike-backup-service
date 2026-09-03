@@ -35,7 +35,7 @@ func ObserveBackupEvent(
 	}
 	backupCounter.With(labels).Inc()
 
-	// last_successful_backup_timestamp is not set here. On success, recordSuccessfulBackup
+	// last_successful_backup_timestamp is not set here. On success, BackupSucceeded
 	// triggers an async storage scan that updates the gauge via SetLastBackupTimestamp.
 
 	if duration > 0 {

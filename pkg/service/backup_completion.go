@@ -10,10 +10,12 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// BackupCompletionHandler handles registry state and side-effects after backup completes.
+// BackupCompletionHandler updates the registry when a backup run ends. After a full backup it
+// also starts retention cleanup, and a cluster configuration backup if the routine asks for it.
 type BackupCompletionHandler interface {
-	// OnSuccess is called after a backup completes successfully.
-	// For full backups it also runs retention and backs up cluster configuration.
+	// OnSuccess is called after a backup completes successfully. It returns immediately:
+	// the registry update, and for full backups the retention cleanup and cluster
+	// configuration backup, continue in the background.
 	OnSuccess(
 		ctx context.Context,
 		routine *model.BackupRoutine,
@@ -26,16 +28,15 @@ type BackupCompletionHandler interface {
 }
 
 type backupCompletionHandler struct {
-	registry            RunningBackupsRegistry
-	retentionManager    RetentionManager
+	registry            BackupStateRegistry
+	retentionManager    BackupRetentionManager
 	clusterConfigWriter ClusterConfigWriter
 }
 
-// NewBackupCompletionHandler returns a BackupCompletionHandler that delegates to
-// registry, retentionManager, and clusterConfigWriter.
+// NewBackupCompletionHandler returns a BackupCompletionHandler.
 func NewBackupCompletionHandler(
-	registry RunningBackupsRegistry,
-	retentionManager RetentionManager,
+	registry BackupStateRegistry,
+	retentionManager BackupRetentionManager,
 	clusterConfigWriter ClusterConfigWriter,
 ) BackupCompletionHandler {
 	return &backupCompletionHandler{
@@ -54,14 +55,14 @@ func (h *backupCompletionHandler) OnSuccess(
 	timestamp time.Time,
 	logger *slog.Logger,
 ) {
-	go h.registry.recordSuccessfulBackup(routine, backupType)
+	go h.registry.BackupSucceeded(routine, backupType)
 
 	if backupType != model.BackupTypeFull {
 		return
 	}
 
 	go func() {
-		if err := h.retentionManager.deleteOldBackups(ctx, routine); err != nil {
+		if err := h.retentionManager.ApplyRetention(ctx, routine); err != nil {
 			if errors.Is(err, context.Canceled) {
 				logger.Info("Old backups cleanup context canceled")
 				return
@@ -88,5 +89,5 @@ func (h *backupCompletionHandler) OnFailure(
 	routine *model.BackupRoutine,
 	backupType model.BackupType,
 ) {
-	h.registry.clearFailedBackup(routine.Name, backupType)
+	h.registry.BackupFailed(routine.Name, backupType)
 }

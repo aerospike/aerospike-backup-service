@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -19,9 +20,10 @@ type Service struct {
 	restoreManager       service.RestoreManager
 	configRetriever      service.ConfigRetriever
 	backupReader         service.BackupReader
-	registry             RunningBackupsRegistry
+	registry             service.BackupStateRegistry
 	configurationManager configuration.Manager
 	nsValidator          aerospike.NamespaceValidator
+	tlsProber            servertls.Prober
 
 	changeConfigLock sync.Mutex
 }
@@ -34,9 +36,10 @@ func NewService(
 	restoreManager service.RestoreManager,
 	configRetriever service.ConfigRetriever,
 	backupReader service.BackupReader,
-	registry RunningBackupsRegistry,
+	registry service.BackupStateRegistry,
 	configurationManager configuration.Manager,
 	nsValidator aerospike.NamespaceValidator,
+	tlsProber servertls.Prober,
 ) *Service {
 	return &Service{
 		sysCtx:               ctx,
@@ -49,21 +52,6 @@ func NewService(
 		registry:             registry,
 		configurationManager: configurationManager,
 		nsValidator:          nsValidator,
+		tlsProber:            tlsProber,
 	}
-}
-
-// HTTPServerConfig returns the HTTP server config.
-func (s *Service) HTTPServerConfig() *model.HTTPServerConfig {
-	return s.config.ServiceConfig.GetHTTPServerOrDefault()
-}
-
-// RunningBackupsRegistry defines the interface for managing running backups and their statuses.
-// this is public version of service.RunningBackupsRegistry.
-type RunningBackupsRegistry interface {
-	// GetRoutineState returns the current backup statistics for a routine.
-	GetRoutineState(routine *model.BackupRoutine) model.RoutineState
-	// GetRunningState returns statistics for all current backups.
-	GetRunningState() map[string]model.RoutineState
-	// Cancel stops all ongoing backups for a specific routine.
-	Cancel(routineName string)
 }

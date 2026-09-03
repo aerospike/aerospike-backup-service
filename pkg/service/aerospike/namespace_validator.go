@@ -12,25 +12,26 @@ import (
 
 // NamespaceValidator checks whether routines reference namespaces
 // that exist in their respective Aerospike source clusters.
-// This implementation logs warnings but never returns errors.
+// Validation is advisory: missing namespaces are reported without rejecting configuration.
 type NamespaceValidator interface {
 	// Validate validates all routines in config against their respective clusters.
 	Validate(ctx context.Context, cfg *model.Config)
 }
 
-// NamespaceValidatorImpl implements NamespaceValidator.
-type NamespaceValidatorImpl struct {
+type namespaceValidator struct {
 	clientManager ClientManager
 }
 
+var _ NamespaceValidator = (*namespaceValidator)(nil)
+
 func NewNamespaceValidator(cm ClientManager) NamespaceValidator {
-	return &NamespaceValidatorImpl{clientManager: cm}
+	return &namespaceValidator{clientManager: cm}
 }
 
 // NamespacesByRoutine stores list of namespaces missing in each routine.
 type NamespacesByRoutine map[string][]string
 
-func (nv *NamespaceValidatorImpl) Validate(ctx context.Context, cfg *model.Config) {
+func (nv *namespaceValidator) Validate(ctx context.Context, cfg *model.Config) {
 	if cfg == nil {
 		return
 	}
@@ -45,7 +46,7 @@ func (nv *NamespaceValidatorImpl) Validate(ctx context.Context, cfg *model.Confi
 	}
 }
 
-func (nv *NamespaceValidatorImpl) findMissingNamespaces(
+func (nv *namespaceValidator) findMissingNamespaces(
 	ctx context.Context,
 	routines map[string]*model.BackupRoutine,
 ) NamespacesByRoutine {
@@ -55,7 +56,7 @@ func (nv *NamespaceValidatorImpl) findMissingNamespaces(
 }
 
 // collectClusters gathers unique clusters referenced by routines that actually need validation.
-func (nv *NamespaceValidatorImpl) collectClusters(
+func (nv *namespaceValidator) collectClusters(
 	routines map[string]*model.BackupRoutine,
 ) map[*model.AerospikeCluster]struct{} {
 	clusters := make(map[*model.AerospikeCluster]struct{})
@@ -69,7 +70,7 @@ func (nv *NamespaceValidatorImpl) collectClusters(
 }
 
 // fetchNamespacesByCluster fetches namespaces for each cluster.
-func (nv *NamespaceValidatorImpl) fetchNamespacesByCluster(
+func (nv *namespaceValidator) fetchNamespacesByCluster(
 	ctx context.Context,
 	clusters map[*model.AerospikeCluster]struct{},
 ) map[*model.AerospikeCluster][]string {
@@ -87,7 +88,7 @@ func (nv *NamespaceValidatorImpl) fetchNamespacesByCluster(
 }
 
 // fetchClusterNamespaces gets the namespace list from the given cluster.
-func (nv *NamespaceValidatorImpl) fetchClusterNamespaces(
+func (nv *namespaceValidator) fetchClusterNamespaces(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
 ) ([]string, error) {
@@ -106,7 +107,7 @@ func (nv *NamespaceValidatorImpl) fetchClusterNamespaces(
 }
 
 // diffRoutineNamespaces returns a map of routines to missing namespaces.
-func (nv *NamespaceValidatorImpl) diffRoutineNamespaces(
+func (nv *namespaceValidator) diffRoutineNamespaces(
 	routines map[string]*model.BackupRoutine,
 	namespacesByCluster map[*model.AerospikeCluster][]string,
 ) NamespacesByRoutine {

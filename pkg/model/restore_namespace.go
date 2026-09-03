@@ -5,7 +5,7 @@ package model
 // the namespace name to which the backup data is to be restored.
 type RestoreNamespace struct {
 	// Original namespace name.
-	Source *string
+	Source string
 	// Destination namespace name.
-	Destination *string
+	Destination string
 }

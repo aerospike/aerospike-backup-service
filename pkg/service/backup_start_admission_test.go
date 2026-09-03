@@ -13,11 +13,10 @@ import (
 
 func TestStartControllerAcquire_DeniesConcurrentAcquireForSameRoutineType(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
-	registry := NewMockRunningBackupsRegistry(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewNoBackupTime()},
 	).Times(3)
@@ -45,11 +44,10 @@ func TestStartControllerAcquire_DeniesConcurrentAcquireForSameRoutineType(t *tes
 
 func TestStartControllerAcquire_DeniesIncrementalWhenFullIsReserved(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
-	registry := NewMockRunningBackupsRegistry(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewFullBackupTime(now.Add(-24 * time.Hour))},
 	).Times(3)
@@ -77,11 +75,10 @@ func TestStartControllerAcquire_DeniesIncrementalWhenFullIsReserved(t *testing.T
 
 func TestStartControllerRelease_IsIdempotent(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
-	registry := NewMockRunningBackupsRegistry(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewNoBackupTime()},
 	).Times(2)
@@ -108,12 +105,11 @@ func TestStartControllerRelease_IsIdempotent(t *testing.T) {
 
 func TestStartControllerRelease_TracksReservationCountByToken(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
 	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
-	registry := NewMockRunningBackupsRegistry(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewFullBackupTime(now.Add(-24 * time.Hour))},
 	).AnyTimes()
@@ -128,7 +124,7 @@ func TestStartControllerRelease_TracksReservationCountByToken(t *testing.T) {
 	releaseTwo, err := controller.TryStart(routine, now, model.BackupTypeIncremental)
 	require.NoError(t, err)
 
-	impl := controller.(*startControllerImpl)
+	impl := controller.(*startController)
 	key := reservationKey{
 		routineName: routine.Name,
 		backupType:  model.BackupTypeIncremental,
@@ -152,11 +148,10 @@ func TestStartControllerRelease_TracksReservationCountByToken(t *testing.T) {
 
 func TestStartController_HasBackupRunning(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
-	registry := NewMockRunningBackupsRegistry(ctrl)
+	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewNoBackupTime()},
 	).AnyTimes()
@@ -171,4 +166,28 @@ func TestStartController_HasBackupRunning(t *testing.T) {
 
 	release()
 	require.False(t, controller.HasBackupRunning(routine))
+}
+
+func TestBuildStartFacts_UsesScheduleTimezone(t *testing.T) {
+	t.Parallel()
+
+	ny, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+
+	routine := &model.BackupRoutine{
+		Name:         "ny",
+		IntervalCron: "@daily",
+		Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+		BackupPolicy: &model.BackupPolicy{},
+	}
+
+	registry := newTestBackupStateRegistry(nil, nil)
+	registry.getTracker(routine.Name).markScanDone()
+	controller := NewStartController(registry, NewStartDecider()).(*startController)
+
+	localMidnight := time.Date(2025, 7, 20, 0, 0, 0, 0, ny)
+	utcMidnight := time.Date(2025, 7, 20, 0, 0, 0, 0, time.UTC)
+
+	assert.True(t, controller.buildStartFacts(routine, localMidnight).FullScheduledNow)
+	assert.False(t, controller.buildStartFacts(routine, utcMidnight).FullScheduledNow)
 }

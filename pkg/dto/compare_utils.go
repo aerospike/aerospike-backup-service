@@ -43,7 +43,3 @@ func compareSlices[T comparable](fieldName string, oldSlice []T, newSlice []T) e
 
 	return err
 }
-
-func hasText(s *string) bool {
-	return s != nil && *s != ""
-}

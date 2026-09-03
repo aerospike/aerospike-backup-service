@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // Storage represents the configuration for a backup storage details.
@@ -28,15 +29,15 @@ func validateObjectStoragePath(path string) error {
 		if !filepath.IsLocal(path) {
 			return fmt.Errorf("storage path must be local: %q", path)
 		}
-		if hasParentPathComponent(path) {
-			return fmt.Errorf("storage path must not contain traversal: %q", path)
+		if err := safepath.ValidateClean(path); err != nil {
+			return fmt.Errorf("storage path: %w", err)
 		}
 	}
 	return nil
 }
 
 // Validate checks if the Storage is valid.
-func (s *Storage) Validate(opts ...ValidationOption) error {
+func (s *Storage) Validate() error {
 	if s == nil {
 		return errors.New("storage is not specified")
 	}
@@ -67,7 +68,7 @@ func (s *Storage) Validate(opts ...ValidationOption) error {
 		return fmt.Errorf("multiple storage types specified (%d). Exactly one storage type should be specified", count)
 	}
 
-	return validStorage.Validate(opts...)
+	return validStorage.Validate()
 }
 
 // ToModel converts the Storage DTO to its corresponding model.

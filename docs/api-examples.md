@@ -215,6 +215,7 @@ up to the target timestamp.
 
 There is no need to specify individual backup paths or storage locations — the system handles this internally. The
 restore process requires a full backup as a foundation; incremental backups cannot be used on their own.
+If the backup policy is configured with `incr-mode: cumulative`, only the latest incremental backup before the timestamp is restored, skipping the intermediate ones.
 
 By default, backups are applied in chronological order. However, when restoring to an empty namespace, the system may
 reverse the order of application and use the `CREATE_ONLY` policy. This optimization ensures that each record is written
@@ -269,6 +270,7 @@ POST {{baseUrl}}/v1/restore/timestamp`](https://aerospike.github.io/aerospike-ba
 Request is almost identical to [restore by path](#direct-restore-using-a-specific-backup), but instead of
 `backup-data-path`
 should provide a pair `time` and `routine`.
+`time` is epoch milliseconds (an absolute instant); `schedule-timezone` does not change how it is interpreted.
 
 Optional overrides:
 - `destination` / `destination-name` overrides destination cluster from routine.

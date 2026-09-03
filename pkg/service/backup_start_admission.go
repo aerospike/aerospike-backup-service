@@ -10,12 +10,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// StartController coordinates admission for backup starts.
+// StartController decides whether a backup may start and holds the reservation until the run ends.
 type StartController interface {
-	// TryStart attempts to reserve a pending-start slot for the given routine and backup type.
+	// TryStart asks permission to start a backup of the given type for the routine.
 	//
-	// If admission is denied, Acquire returns an error wrapped with errBackupSkipped.
-	// If admission succeeds, it returns a release callback that MUST be called exactly
+	// If the start is denied, it returns an error wrapping errBackupSkipped.
+	// If it is allowed, it returns a release callback that MUST be called exactly
 	// once to clear the reservation.
 	TryStart(
 		routine *model.BackupRoutine,
@@ -30,8 +30,8 @@ type StartController interface {
 // TokenID identifies a single in-flight admission reservation.
 type TokenID = uuid.UUID
 
-type startControllerImpl struct {
-	registry     RunningBackupsRegistry
+type startController struct {
+	registry     BackupStateRegistry
 	startDecider StartDecider
 
 	mu sync.Mutex
@@ -41,19 +41,19 @@ type startControllerImpl struct {
 	activeReservations map[reservationKey]int
 }
 
-var _ StartController = (*startControllerImpl)(nil)
+var _ StartController = (*startController)(nil)
 
 type reservationKey struct {
 	routineName string
 	backupType  model.BackupType
 }
 
-// NewStartController builds a StartController backed by the provided registry and decision policy.
+// NewStartController returns a StartController.
 func NewStartController(
-	registry RunningBackupsRegistry,
+	registry BackupStateRegistry,
 	policy StartDecider,
 ) StartController {
-	return &startControllerImpl{
+	return &startController{
 		registry:           registry,
 		startDecider:       policy,
 		tokenToReservation: make(map[TokenID]reservationKey),
@@ -61,16 +61,16 @@ func NewStartController(
 	}
 }
 
-func (a *startControllerImpl) TryStart(
+func (s *startController) TryStart(
 	routine *model.BackupRoutine,
 	now time.Time,
 	backupType model.BackupType,
 ) (func(), error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	facts := a.buildStartFacts(routine, now)
-	if err := a.startDecider.CanStart(backupType, routine.BackupPolicy, facts); err != nil {
+	facts := s.buildStartFacts(routine, now)
+	if err := s.startDecider.CanStart(backupType, routine.BackupPolicy, facts); err != nil {
 		return nil, fmt.Errorf("%w: %w", errBackupSkipped, err)
 	}
 
@@ -79,69 +79,69 @@ func (a *startControllerImpl) TryStart(
 		routineName: routine.Name,
 		backupType:  backupType,
 	}
-	a.tokenToReservation[tokenID] = key
-	a.activeReservations[key]++
+	s.tokenToReservation[tokenID] = key
+	s.activeReservations[key]++
 
 	return func() {
-		a.release(tokenID)
+		s.release(tokenID)
 	}, nil
 }
 
 // HasBackupRunning reports whether a full or incremental backup is active for the routine.
-func (a *startControllerImpl) HasBackupRunning(routine *model.BackupRoutine) bool {
-	state := a.registry.GetRoutineState(routine)
+func (s *startController) HasBackupRunning(routine *model.BackupRoutine) bool {
+	state := s.registry.GetRoutineState(routine)
 	if state.Full != nil || state.Incremental != nil {
 		return true
 	}
 
-	return a.hasPendingStart(routine.Name, model.BackupTypeFull) ||
-		a.hasPendingStart(routine.Name, model.BackupTypeIncremental)
+	return s.hasPendingStart(routine.Name, model.BackupTypeFull) ||
+		s.hasPendingStart(routine.Name, model.BackupTypeIncremental)
 }
 
-func (a *startControllerImpl) hasPendingStart(routineName string, backupType model.BackupType) bool {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+func (s *startController) hasPendingStart(routineName string, backupType model.BackupType) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	return a.hasPendingStartLocked(reservationKey{
+	return s.hasPendingStartLocked(reservationKey{
 		routineName: routineName,
 		backupType:  backupType,
 	})
 }
 
-func (a *startControllerImpl) hasPendingStartLocked(key reservationKey) bool {
-	return a.activeReservations[key] > 0
+func (s *startController) hasPendingStartLocked(key reservationKey) bool {
+	return s.activeReservations[key] > 0
 }
 
 // release clears one reservation by token.
 //
 // This operation is idempotent: unknown or already-released tokens are ignored.
 // Multiple reservations for the same routine/type are tracked by a reference count.
-func (a *startControllerImpl) release(tokenID TokenID) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+func (s *startController) release(tokenID TokenID) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	key, ok := a.tokenToReservation[tokenID]
+	key, ok := s.tokenToReservation[tokenID]
 	if !ok {
 		return
 	}
-	delete(a.tokenToReservation, tokenID)
+	delete(s.tokenToReservation, tokenID)
 
-	count := a.activeReservations[key]
+	count := s.activeReservations[key]
 	if count <= 1 {
-		delete(a.activeReservations, key)
+		delete(s.activeReservations, key)
 		return
 	}
-	a.activeReservations[key] = count - 1
+	s.activeReservations[key] = count - 1
 }
 
 // buildStartFacts composes admission facts.
-func (a *startControllerImpl) buildStartFacts(routine *model.BackupRoutine, now time.Time) StartFacts {
-	state := a.registry.GetRoutineState(routine)
-	fullRunning := a.hasPendingStartLocked(reservationKey{
+func (s *startController) buildStartFacts(routine *model.BackupRoutine, now time.Time) StartFacts {
+	state := s.registry.GetRoutineState(routine)
+	fullRunning := s.hasPendingStartLocked(reservationKey{
 		routineName: routine.Name,
 		backupType:  model.BackupTypeFull,
 	})
-	incrRunning := a.hasPendingStartLocked(reservationKey{
+	incrRunning := s.hasPendingStartLocked(reservationKey{
 		routineName: routine.Name,
 		backupType:  model.BackupTypeIncremental,
 	})
@@ -152,6 +152,6 @@ func (a *startControllerImpl) buildStartFacts(routine *model.BackupRoutine, now 
 		IncrementalRunningNow: incrRunning,
 		// History still comes from registry.
 		HasCompletedFull: !state.LastRunTime.NoFullBackup(),
-		FullScheduledNow: timeutil.IsCronFireTime(routine.IntervalCron, now),
+		FullScheduledNow: timeutil.IsCronFireTime(routine.IntervalCron, now, routine.Timezone.ResolvedLocation()),
 	}
 }

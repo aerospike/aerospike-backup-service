@@ -45,7 +45,7 @@ func TestAddStorage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -67,7 +67,7 @@ func TestAddStorage(t *testing.T) {
 }
 
 func TestReadAllStorage(t *testing.T) {
-	svc := setupTestService()
+	svc := setupTestService(t)
 	svc.config = model.NewConfig()
 
 	_ = svc.config.AddStorage("storage1", &model.LocalStorage{})
@@ -118,7 +118,7 @@ func TestReadStorage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			if tt.storage != nil {
 				_ = svc.config.AddStorage(tt.storageName, tt.storage)
 			}
@@ -169,7 +169,7 @@ func TestUpdateStorage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			initialStorage := &model.LocalStorage{Path: "/"}
 			_ = svc.config.AddStorage("test-storage", initialStorage)
 
@@ -221,7 +221,7 @@ func TestDeleteStorage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			_ = svc.config.AddStorage("test-storage", &model.LocalStorage{})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/storage/"+tt.storageName, nil)
@@ -239,7 +239,7 @@ func TestDeleteStorage(t *testing.T) {
 }
 
 func TestDeleteStorage_InUseErrorMessage(t *testing.T) {
-	svc := setupTestService()
+	svc := setupTestService(t)
 	entities := addValidBackupConfig(svc)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/storage/"+entities.storageName, nil)

@@ -3,22 +3,24 @@
 package integration
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
-	"gopkg.in/yaml.v3"
 )
 
 // env is a running backup service instance under test.
 type env struct {
 	backupDir string
-	server    *httptest.Server
+	baseURL   string
+	client    *http.Client
 }
 
 // setupEnv starts a backup service against the suite's Aerospike container. Each customize
@@ -26,34 +28,43 @@ type env struct {
 // field without this harness needing to know about it.
 func (s *Suite) setupEnv(customize ...func(*dto.Config)) *env {
 	t := s.T()
-	ctx := t.Context()
 
 	backupDir := t.TempDir()
+	components := s.initComponents(s.baseConfig(backupDir), customize...)
 
-	config := s.baseConfig(backupDir)
+	srv := httptest.NewServer(components.Servers[0]) // only http server is configured.
+	t.Cleanup(srv.Close)
+
+	return &env{
+		backupDir: backupDir,
+		baseURL:   srv.URL,
+		client:    srv.Client(),
+	}
+}
+
+func (s *Suite) initComponents(config *dto.Config, customize ...func(*dto.Config)) *app.Components {
+	t := s.T()
+	ctx := t.Context()
+
 	for _, fn := range customize {
 		fn(config)
 	}
 
-	configYAML, err := yaml.Marshal(config)
+	configYAML, err := decoder.Marshal(config, decoder.YAML, false)
 	s.Require().NoError(err)
 
 	configPath := filepath.Join(t.TempDir(), "config.yml")
 	s.Require().NoError(os.WriteFile(configPath, configYAML, 0o600))
 
-	scheduler, svc, err := app.InitComponents(ctx, configPath, false)
+	components, err := app.InitComponents(ctx, configPath, false)
 	s.Require().NoError(err)
 
-	scheduler.Start(ctx)
-	t.Cleanup(func() { scheduler.Stop() })
+	components.Scheduler.Start(ctx)
+	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
+	components.TLSProvider.Start(ctx)
+	t.Cleanup(func() { components.Scheduler.Stop() })
 
-	srv := httptest.NewServer(server.NewServeMux("/v1", "/", svc))
-	t.Cleanup(srv.Close)
-
-	return &env{
-		backupDir: backupDir,
-		server:    srv,
-	}
+	return components
 }
 
 // baseConfig is a minimal working configuration: one cluster, one local storage, one policy and
@@ -61,7 +72,7 @@ func (s *Suite) setupEnv(customize ...func(*dto.Config)) *env {
 func (s *Suite) baseConfig(backupDir string) *dto.Config {
 	return &dto.Config{
 		ServiceConfig: dto.ServiceConfig{
-			Logger: &dto.LoggerConfig{Level: ptr.Of("ERROR")},
+			Logger: &dto.LoggerConfig{Level: "ERROR"},
 		},
 		AerospikeClusters: map[string]*dto.AerospikeCluster{
 			clusterName: {
@@ -96,6 +107,9 @@ func (s *Suite) baseConfig(backupDir string) *dto.Config {
 }
 
 // testRoutine returns the routine from baseConfig, for use inside setupEnv customize functions.
+func (s *Suite) testRoutine(config *dto.Config) *dto.BackupRoutine {
+	return config.BackupRoutines[routineName]
+}
 
 // seedRecords writes one record per age into the set that tests back up.
 func (s *Suite) seedRecords(ages []int) {

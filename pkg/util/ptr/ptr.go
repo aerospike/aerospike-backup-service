@@ -14,3 +14,11 @@ func ValueOrZero[T any](p *T) T {
 	var zero T
 	return zero
 }
+
+// StringOrNil returns nil when s is empty, otherwise a pointer to s.
+func StringOrNil(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return Of(s)
+}

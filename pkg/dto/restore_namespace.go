@@ -12,18 +12,18 @@ import (
 type RestoreNamespace struct {
 	// Original namespace name.
 	// This field is required as a safeguard to ensure intentional namespace remapping.
-	Source *string `json:"source,omitempty" example:"source-ns" validate:"required"`
+	Source string `json:"source,omitempty" example:"source-ns" validate:"required"`
 	// Name of the destination namespace to restore data into.
-	Destination *string `json:"destination,omitempty" example:"destination-ns" validate:"required"`
+	Destination string `json:"destination,omitempty" example:"destination-ns" validate:"required"`
 }
 
 // Validate validates the restore namespace.
 func (n *RestoreNamespace) Validate() error {
-	if n.Source == nil || *n.Source == "" {
+	if n.Source == "" {
 		return errValidationEmptyField("source")
 	}
 
-	if n.Destination == nil || *n.Destination == "" {
+	if n.Destination == "" {
 		return errValidationEmptyField("destination")
 	}
 

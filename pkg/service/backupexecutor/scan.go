@@ -14,7 +14,7 @@ import (
 // runScanBackup performs a regular scan-based backup.
 func runScanBackup(
 	ctx context.Context,
-	client aerospike.Backuper,
+	client aerospike.Client,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,
@@ -59,7 +59,7 @@ func makeBackupConfig(
 
 	backupPolicy := routine.BackupPolicy
 	config.NoRecords = ptr.ValueOrZero(backupPolicy.NoRecords)
-	if isFullBackup(timeBounds) {
+	if timeBounds.IsFullBackup() {
 		config.NoIndexes = ptr.ValueOrZero(backupPolicy.NoIndexes)
 		config.NoUDFs = ptr.ValueOrZero(backupPolicy.NoUdfs)
 	} else { // incremental backup don't include indexes or UDFs
@@ -136,7 +136,7 @@ func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy
 	}
 
 	return &backup.CompressionPolicy{
-		Mode:  policy.CompressionPolicy.Mode,
+		Mode:  policy.CompressionPolicy.Mode.String(),
 		Level: int(policy.CompressionPolicy.Level),
 	}
 }
@@ -147,9 +147,9 @@ func makeEncryptionPolicy(policy *model.BackupPolicy) *backup.EncryptionPolicy {
 	}
 
 	return &backup.EncryptionPolicy{
-		Mode:      policy.EncryptionPolicy.Mode,
-		KeyFile:   policy.EncryptionPolicy.KeyFile,
-		KeySecret: policy.EncryptionPolicy.KeySecret,
-		KeyEnv:    policy.EncryptionPolicy.KeyEnv,
+		Mode:      policy.EncryptionPolicy.Mode.String(),
+		KeyFile:   ptr.StringOrNil(policy.EncryptionPolicy.KeyFile),
+		KeySecret: ptr.StringOrNil(policy.EncryptionPolicy.KeySecret),
+		KeyEnv:    ptr.StringOrNil(policy.EncryptionPolicy.KeyEnv),
 	}
 }

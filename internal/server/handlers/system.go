@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,6 +8,7 @@ import (
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	_ "github.com/aerospike/aerospike-backup-service/v3/docs" // auto-generated Swagger spec
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
@@ -60,7 +60,9 @@ func VersionActionHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(response)
+
+	body, _ := decoder.Marshal(response, decoder.JSON, false)
+	_, _ = w.Write(body)
 }
 
 // MetricsActionHandler

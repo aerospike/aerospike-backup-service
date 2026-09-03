@@ -2,27 +2,13 @@ package service
 
 import (
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/reugn/go-quartz/quartz"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
-
-// MockScheduler implements JobScheduler for testing.
-type MockScheduler struct {
-	mock.Mock
-}
-
-func (m *MockScheduler) ScheduleJob(detail *quartz.JobDetail, trigger quartz.Trigger) error {
-	args := m.Called(detail, trigger)
-	return args.Error(0)
-}
-
-func (m *MockScheduler) DeleteJob(key *quartz.JobKey) error {
-	args := m.Called(key)
-	return args.Error(0)
-}
 
 func TestScheduleRoutines(t *testing.T) {
 	tests := []struct {
@@ -37,6 +23,7 @@ func TestScheduleRoutines(t *testing.T) {
 					Name:             "routine",
 					IntervalCron:     "0 0 * * * *",
 					IncrIntervalCron: "0 */6 * * * *",
+					Timezone:         model.NewServiceLocation(""),
 				},
 			},
 			expectedCalls: 2, // One for full backup, one for incremental
@@ -59,16 +46,32 @@ func TestScheduleRoutines(t *testing.T) {
 				"full-only": {
 					Name:         "full-only",
 					IntervalCron: "0 0 * * * *",
+					Timezone:     model.NewServiceLocation(""),
 				},
 			},
 			expectedCalls: 1, // One call for full backup only
+		},
+		{
+			name: "named timezone still schedules",
+			routines: map[string]*model.BackupRoutine{
+				"ny-routine": {
+					Name:         "ny-routine",
+					IntervalCron: "0 0 2 * * *",
+					Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+				},
+			},
+			expectedCalls: 1,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scheduler := new(MockScheduler)
-			scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
+			ctrl := gomock.NewController(t)
+			scheduler := NewMockJobScheduler(ctrl)
+			scheduler.EXPECT().
+				ScheduleJob(gomock.Any(), gomock.Any()).
+				Return(nil).
+				Times(tt.expectedCalls)
 
 			routines := make([]*model.BackupRoutine, 0, len(tt.routines))
 			for _, routine := range tt.routines {
@@ -84,7 +87,108 @@ func TestScheduleRoutines(t *testing.T) {
 			err := bs.ScheduleRoutines(routines)
 
 			require.NoError(t, err)
-			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)
 		})
+	}
+}
+
+func TestScheduleRoutines_UsesRoutineTimezone(t *testing.T) {
+	location, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+
+	ctrl := gomock.NewController(t)
+	scheduler := NewMockJobScheduler(ctrl)
+	scheduler.EXPECT().ScheduleJob(
+		gomock.Cond(func(detail *quartz.JobDetail) bool {
+			job, ok := detail.Job().(*backupJob)
+			return ok && job.routine.Timezone.ResolvedLocation().String() == location.String()
+		}),
+		gomock.Cond(func(trigger quartz.Trigger) bool {
+			after := time.Date(2025, 7, 20, 0, 0, 0, 0, time.UTC)
+			next, triggerErr := trigger.NextFireTime(after.UnixNano())
+			if triggerErr != nil {
+				return false
+			}
+
+			return time.Unix(0, next).Equal(time.Date(2025, 7, 20, 4, 0, 0, 0, time.UTC))
+		}),
+	).Return(nil)
+
+	backupScheduler := NewBackupScheduler(
+		scheduler,
+		NewBackupOrchestrator(nil, nil, nil, nil, nil),
+	)
+	require.NoError(t, backupScheduler.ScheduleRoutines([]*model.BackupRoutine{{
+		Name:         "ny-timezone",
+		IntervalCron: "@daily",
+		Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+	}}))
+}
+
+func TestBackupScheduler_DeleteJob(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	key := jobKey("routine-1", model.BackupTypeFull)
+	scheduler := NewMockJobScheduler(ctrl)
+	scheduler.EXPECT().DeleteJob(key).Return(nil)
+
+	bs := NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil))
+	require.NoError(t, bs.DeleteJob(key))
+}
+
+func TestBackupScheduler_TriggerAdHocFullBackup(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	routine := &model.BackupRoutine{Name: "routine-1"}
+	scheduler := NewMockJobScheduler(ctrl)
+	scheduler.EXPECT().ScheduleJob(
+		gomock.Cond(adHocJobMatcher("routine-1", model.BackupTypeFull)),
+		gomock.Any(),
+	).Return(nil)
+
+	bs := NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil))
+	require.NoError(t, bs.TriggerAdHocFullBackup(routine, time.Second))
+}
+
+func TestBackupScheduler_TriggerAdHocIncrementalBackup(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	routine := &model.BackupRoutine{Name: "routine-1"}
+	scheduler := NewMockJobScheduler(ctrl)
+	scheduler.EXPECT().ScheduleJob(
+		gomock.Cond(adHocJobMatcher("routine-1", model.BackupTypeIncremental)),
+		gomock.Any(),
+	).Return(nil)
+
+	bs := NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil))
+	require.NoError(t, bs.TriggerAdHocIncrementalBackup(routine, time.Second))
+}
+
+func TestBackupScheduler_TriggerAdHocBackup_EnforcesMinimumDelay(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	routine := &model.BackupRoutine{Name: "routine-1"}
+	scheduler := NewMockJobScheduler(ctrl)
+	scheduler.EXPECT().ScheduleJob(
+		gomock.Cond(adHocJobMatcher("routine-1", model.BackupTypeFull)),
+		gomock.Cond(func(trigger quartz.Trigger) bool {
+			now := time.Now().UnixNano()
+			next, err := trigger.NextFireTime(now)
+			if err != nil {
+				return false
+			}
+			delay := time.Duration(next - now)
+			return delay >= minAdHocBackupDelay
+		}),
+	).Return(nil)
+
+	bs := NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil))
+	require.NoError(t, bs.TriggerAdHocFullBackup(routine, 0))
+}
+
+func adHocJobMatcher(routineName string, backupType model.BackupType) func(*quartz.JobDetail) bool {
+	return func(detail *quartz.JobDetail) bool {
+		job, ok := detail.Job().(*backupJob)
+		if !ok {
+			return false
+		}
+		return detail.JobKey().Group() == string(quartzGroupAdHoc) &&
+			job.routine.Name == routineName &&
+			job.backupType == backupType
 	}
 }

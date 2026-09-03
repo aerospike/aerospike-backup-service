@@ -159,7 +159,7 @@ func TestBackupPolicy_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.policy.Validate()
+			err := tt.policy.Validate(ValidationDefault)
 			if tt.expectedErr == "" {
 				require.NoError(t, err)
 			} else {

@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   lychee:
+    # This name is referenced by branch protection rules; do not rename.
     name: markdown links
     runs-on: ubuntu-latest
     steps:
@@ -25,10 +26,62 @@ jobs:
 
       - name: Checkout sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history is required so we can diff against the PR base branch
+          # or the previous commit on a push.
+          fetch-depth: 0
+
+      - name: Detect markdown changes
+        id: changes
+        shell: bash
+        run: |
+          # "markdown links" is a required status check. The job must always run
+          # and report success or failure — workflow-level `paths` filters cannot
+          # be used here because they prevent the job from starting at all, which
+          # leaves PRs stuck at "Expected — Waiting for status to be reported".
+          #
+          # Instead, we always start this job and only invoke lychee when .md or
+          # .mdx files changed in the relevant diff:
+          #   pull_request  →  PR head vs. target branch tip (base.sha)
+          #   push          →  new commit vs. previous tip on the branch (before)
+          #
+          # On the first push to a new branch, github.event.before is all zeros
+          # and there is no prior commit to diff against, so we run lychee.
+
+          set -euo pipefail
+
+          run_lychee=false
+
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            if git diff --name-only "${base}" HEAD | grep -qE '\.(md|mdx)$'; then
+              run_lychee=true
+            fi
+          else
+            before="${{ github.event.before }}"
+            if [ "${before}" = "0000000000000000000000000000000000000000" ]; then
+              run_lychee=true
+            elif git diff --name-only "${before}" HEAD | grep -qE '\.(md|mdx)$'; then
+              run_lychee=true
+            fi
+          fi
+
+          echo "changed=${run_lychee}" >> "${GITHUB_OUTPUT}"
+
+          if [ "${run_lychee}" = true ]; then
+            echo "Markdown files changed; running lychee."
+          else
+            echo "No markdown changes; skipping lychee."
+          fi
 
       - name: Link Checker
+        if: steps.changes.outputs.changed == 'true'
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
           args: --config .lychee.toml .
           fail: true
           jobSummary: true
+
+      - name: Skip link check (no markdown changes)
+        if: steps.changes.outputs.changed != 'true'
+        run: echo "No .md or .mdx files changed; link check not needed."

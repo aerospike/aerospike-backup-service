@@ -10,7 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 )
 
-// RoutineBackupRunner coordinates backup runs for every namespace in a routine.
+// RoutineBackupRunner resolves the namespaces of a routine and starts a backup for each of them.
 type RoutineBackupRunner interface {
 	// Run resolves target namespaces and starts one cancelable backup per namespace.
 	Run(
@@ -21,20 +21,20 @@ type RoutineBackupRunner interface {
 	) (*BackupNamespacesOperation, error)
 }
 
-// RoutineBackupRunnerImpl implements [RoutineBackupRunner] by resolving
-// namespaces and delegating each namespace to a [NamespaceBackupRunner].
-type RoutineBackupRunnerImpl struct {
+// routineBackupRunner resolves the namespaces and delegates each one to a [NamespaceBackupRunner].
+type routineBackupRunner struct {
 	resolver aerospike.NamespaceResolver
 	nsRunner NamespaceBackupRunner
 }
 
-// NewRoutineBackupRunner returns an [RoutineBackupRunnerImpl] using the
-// given per-namespace nsRunner and namespace resolver.
+var _ RoutineBackupRunner = (*routineBackupRunner)(nil)
+
+// NewRoutineBackupRunner returns a RoutineBackupRunner.
 func NewRoutineBackupRunner(
 	nsRunner NamespaceBackupRunner,
 	namespaceResolver aerospike.NamespaceResolver,
-) *RoutineBackupRunnerImpl {
-	return &RoutineBackupRunnerImpl{
+) RoutineBackupRunner {
+	return &routineBackupRunner{
 		resolver: namespaceResolver,
 		nsRunner: nsRunner,
 	}
@@ -42,7 +42,7 @@ func NewRoutineBackupRunner(
 
 // Run resolves the namespace list, starts one backup per namespace, and returns the
 // aggregate [BackupNamespacesOperation].
-func (r *RoutineBackupRunnerImpl) Run(
+func (r *routineBackupRunner) Run(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	runSpec model.BackupRunSpec,

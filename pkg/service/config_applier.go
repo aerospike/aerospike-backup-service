@@ -10,28 +10,31 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
-// ConfigApplier is responsible for applying new configuration to the service.
+// ConfigApplier reschedules jobs and refreshes backup history for the routines that
+// a configuration change invalidated.
 type ConfigApplier interface {
 	// ApplyNewConfig applies new configuration to the service.
 	ApplyNewConfig(ctx context.Context) error
 }
 
-// DefaultConfigApplier applies configuration changes by unscheduling affected cron jobs, rescheduling
+// configApplier applies configuration changes by unscheduling affected cron jobs, rescheduling
 // from the new config snapshot, and triggering backup-history sync for those routines.
-type DefaultConfigApplier struct {
+type configApplier struct {
 	mu              sync.Mutex
 	backupScheduler *BackupScheduler
-	registry        RunningBackupsRegistry
+	registry        BackupStateRegistry
 	config          *model.Config
 }
 
-// NewDefaultConfigApplier wires config invalidation to the backup scheduler and running-backups registry.
-func NewDefaultConfigApplier(
+var _ ConfigApplier = (*configApplier)(nil)
+
+// NewConfigApplier returns a ConfigApplier.
+func NewConfigApplier(
 	backupScheduler *BackupScheduler,
-	registry RunningBackupsRegistry,
+	registry BackupStateRegistry,
 	config *model.Config,
 ) ConfigApplier {
-	return &DefaultConfigApplier{
+	return &configApplier{
 		backupScheduler: backupScheduler,
 		registry:        registry,
 		config:          config,
@@ -39,7 +42,7 @@ func NewDefaultConfigApplier(
 }
 
 // ApplyNewConfig reschedules periodic jobs and rescans backup history for routines marked invalid in config.
-func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
+func (a *configApplier) ApplyNewConfig(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -73,7 +76,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 
 // clearPeriodicSchedulerJobs deletes only scheduled jobs that correspond to invalidated routines.
 // This keeps unaffected routines untouched. and avoids full scheduler churn.
-func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routineNames []string) {
+func (a *configApplier) clearPeriodicSchedulerJobs(routineNames []string) {
 	keysToDelete := make([]*quartz.JobKey, 0, len(routineNames)*2)
 	for _, routineName := range routineNames {
 		keysToDelete = append(keysToDelete,
@@ -87,7 +90,7 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs(routineNames []string)
 	}
 }
 
-func (a *DefaultConfigApplier) existingRoutines(routineNames []string) []*model.BackupRoutine {
+func (a *configApplier) existingRoutines(routineNames []string) []*model.BackupRoutine {
 	existing := make([]*model.BackupRoutine, 0, len(routineNames))
 	for _, routineName := range routineNames {
 		if actualRoutine, ok := a.config.Routine(routineName); ok {

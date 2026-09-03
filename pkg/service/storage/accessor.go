@@ -8,7 +8,8 @@ import (
 	"github.com/aerospike/backup-go/io/storage/options"
 )
 
-// Accessor interface abstracts storage layer.
+// Accessor opens backup-go readers and writers for one kind of storage backend
+// (local, S3, GCP, Azure). [Operations] picks the accessor that supports a given storage.
 type Accessor interface {
 	supports(storage model.Storage) bool
 

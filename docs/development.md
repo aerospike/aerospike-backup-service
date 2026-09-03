@@ -7,7 +7,7 @@ released build rather than building from source, see the [Run](../README.md#run)
 
 - Go 1.25 (see `go` directive in [`go.mod`](../go.mod) for the exact minimum version)
 - Docker, for building images and running the [Docker Compose](../build/docker-compose/README.md) dev stack
-- Node.js (`npx`), used by `make openapi` to convert the generated Swagger spec to OpenAPI 3
+- Node.js (`npx`), used by `make docs` to convert the generated Swagger spec to OpenAPI 3
 - [`golangci-lint`](https://golangci-lint.run/) and [`gci`](https://github.com/daixiang0/gci), used by `make lint`
   and `make format`
 
@@ -41,19 +41,41 @@ CI additionally runs tests with the race detector and the `ci` build tag:
 go test -race -tags=ci ./... -coverprofile=coverage.out -covermode=atomic
 ```
 
+### Coverage
+
+Run the same filtered coverage total that CI and Codecov use:
+
+```bash
+make test-cover          # prints filtered total (last line)
+make test-cover-html     # also writes coverage.html from the filtered profile
+```
+
+[`.covignore`](../.covignore) removes lines from the uploaded profile before the total is computed. It excludes
+generated mocks, entrypoints, and packages that are thin wrappers or hard to unit-test in isolation:
+
+| Excluded path | Reason |
+|---------------|--------|
+| `/cmd/` | CLI entrypoint |
+| `/docs/`, `/modules/` | Non-Go assets |
+| `/pkg/model/` | Data structs with no logic |
+| `*mockgen.go` | Generated mocks |
+
+`internal/` (HTTP handlers, server wiring) **is** measured. CI fails if filtered coverage drops below the threshold
+configured in [`.github/workflows/build.yml`](../.github/workflows/build.yml) (currently 53%, matching the
+~53.5% filtered baseline after including `internal/`). That threshold ratchets up as test coverage improves across follow-up PRs.
+
 ## Generated artifacts
 
-Three sets of files are generated from source and checked into the repository. Each has a `make <x>` target to
+Two sets of files are generated from source and checked into the repository. Each has a `make <x>` target to
 regenerate it and a `make <x>-check` target (used in CI) that fails if the committed output is stale:
 
 | What                                             | Regenerate         | Verify              |
 |---------------------------------------------------|---------------------|----------------------|
 | Mocks for `pkg/service` interfaces (`mockgen.go`)  | `make mocks-generate` | `make mocks-check`  |
-| OpenAPI spec (`docs/docs.go`, `docs/openapi.json`, `docs/config.schema.json`) | `make openapi` | `make openapi-check` |
-| README and split docs (DTO examples, default config, metrics table) | `make readme` | `make readme-check`  |
+| OpenAPI spec, config schema, README, examples, and DTO markdown | `make docs` | `make docs-check` |
 
-`make generated-check` runs all three and is what CI's "Generated files up to date" workflow calls. If you change a
-`pkg/dto` struct, an HTTP handler's Swagger annotations, or a Prometheus metric, run the corresponding generator and
+`make generated-check` runs both and is what CI's "Generated files up to date" workflow calls. If you change a
+`pkg/dto` struct, an HTTP handler's Swagger annotations, or a Prometheus metric, run `make docs` and
 commit its output in the same PR — don't hand-edit the generated sections.
 
 ## Before opening a pull request
@@ -62,7 +84,7 @@ commit its output in the same PR — don't hand-edit the generated sections.
 make pr
 ```
 
-This runs `go mod tidy`, `mocks-check`, `format`, `lint-fix`, `test`, `openapi`, and `readme` in sequence — the same
+This runs `go mod tidy`, `mocks-check`, `format`, `lint-fix`, `test`, and `docs` in sequence — the same
 checks (plus the race-enabled test run) that CI enforces via the `Build`, `golangci-lint`, and `Generated files up to
 date` workflows. Running it locally before pushing avoids a slow feedback loop through CI.
 

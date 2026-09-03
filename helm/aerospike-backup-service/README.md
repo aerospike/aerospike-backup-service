@@ -32,11 +32,11 @@ helm repo add aerospike https://aerospike.github.io/helm-charts
 | `args`                    | Arguments to pass to ABS                                                                                                                                                             | `[]`                           |
 | `backupServiceConfig`     | ABS cluster configuration deployed to `/etc/aerospike-backup-service/aerospike-backup-service.yml`.                                                                                  | see [values.yaml](values.yaml) |
 | `initContainers`          | List of initContainers added to each abs pods for custom cluster behavior.                                                                                                           | `[]`                           |
-| `serviceAccount`          | Service Account details like name and annotations.                                                                                                                                   | see [values.yaml](values.yaml) |
+| `serviceAccount`          | Service Account details like name and annotations. `automount` defaults to `false`. The pod also sets `automountServiceAccountToken: false`.                                         | see [values.yaml](values.yaml) |
 | `podAnnotations`          | Additional pod [annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/). Should be specified as a map of annotation names to annotation values. | `{}`                           |
 | `podLabels`               | Additional pod [labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). Should be specified as a map of label names to label values.                     | `{}`                           |
 | `podSecurityContext`      | Pod [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)                                                                                   | `{}`                           |
-| `securityContext`         | Container [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container)                                    | `{}`                           |
+| `securityContext`         | Container [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container). Hardened by default (`runAsNonRoot`, `readOnlyRootFilesystem`, drop ALL capabilities, `seccompProfile: RuntimeDefault`). | see [values.yaml](values.yaml) |
 | `service`                 | Load-Balancer configuration for more details please refer to a Load-Balancer docs.                                                                                                   | `{}`                           |
 | `resources`               | Resource [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) for the abs pods.                                                     | `{}`                           |
 | `autoscaling`             | Enable the horizontal pod auto-scaler.                                                                                                                                               | see [values.yaml](values.yaml) |
@@ -58,6 +58,27 @@ See the [examples](examples) folder for examples.
 We recommend naming the file with the name of the ABS service. For example if you want to name your service as
 `abs`, create a file `abs-values.yaml`.
 Once you have created this custom values file, deploy the ABS, using the following commands.
+
+### Writable paths (`readOnlyRootFilesystem`)
+
+The default container `securityContext` sets `readOnlyRootFilesystem: true`. The chart mounts an `emptyDir` at `/tmp` so the process can start. File-based local storage or a log file on disk need an extra writable volume, for example:
+
+```yaml
+backupServiceConfig:
+  storage:
+    local:
+      local-storage:
+        path: /backup
+volumes:
+  - name: local-storage
+    emptyDir: {}
+extraVolumeMounts:
+  - name: local-storage
+    mountPath: /backup
+    readOnly: false
+```
+
+Override `securityContext.readOnlyRootFilesystem` only if you cannot mount a volume. Full operator guidance will live in `docs/security.md` (BKRS-295 / Phase 5 `p5-deploy-docs`).
 
 ### Create a new namespace
 We recommend using `aerospike` namespace for the ABS. If the namespace does not exist run the following command:

@@ -10,35 +10,31 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go/io/storage/common"
 )
 
-type storageFileReader interface {
-	// ReadFiles reads the content of files in the specified storage matching the filter.
-	ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error)
-}
-
-// ConfigRetriever is used to read saved Aerospike configuration from backup.
+// ConfigRetriever returns the cluster configuration files saved with the last full backup
+// at or before a given time, packed into a zip archive.
 type ConfigRetriever interface {
 	// RetrieveConfiguration returns backed up Aerospike configuration.
 	RetrieveConfiguration(context.Context, *model.BackupRoutine, time.Time) ([]byte, error)
 }
 
-// ConfigRetrieverImpl default implementation of ConfigRetriever.
-type ConfigRetrieverImpl struct {
+type configRetriever struct {
 	backupReader BackupReader
 	pathService  PathService
-	operations   storageFileReader
+	operations   storage.Operations
 }
 
-var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
+var _ ConfigRetriever = (*configRetriever)(nil)
 
 func NewConfigRetriever(
-	backupReader BackupReaderWriter,
+	backupReader BackupReader,
 	pathService PathService,
-	operations storageFileReader,
-) *ConfigRetrieverImpl {
-	return &ConfigRetrieverImpl{
+	operations storage.Operations,
+) ConfigRetriever {
+	return &configRetriever{
 		backupReader: backupReader,
 		pathService:  pathService,
 		operations:   operations,
@@ -46,7 +42,7 @@ func NewConfigRetriever(
 }
 
 // RetrieveConfiguration return backed up Aerospike configuration.
-func (cr *ConfigRetrieverImpl) RetrieveConfiguration(
+func (cr *configRetriever) RetrieveConfiguration(
 	ctx context.Context, routine *model.BackupRoutine, toTime time.Time,
 ) ([]byte, error) {
 	backups, err := cr.backupReader.GetBackups(ctx, NewFullBackupFilter(routine).WithToTime(toTime).Last())

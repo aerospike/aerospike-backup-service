@@ -8,7 +8,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -19,7 +18,6 @@ import (
 // Mocks return data only when called with the expected filters.
 func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	// All times in the past: full backup T1, request time T2, incremental created between T1 and T2.
 	now := time.Now()
@@ -86,7 +84,6 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 
 func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	now := time.Now()
 	fullAt11 := now.Add(-2 * time.Hour)
@@ -164,47 +161,47 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 	tests := []struct {
 		name              string
 		policy            model.RestorePolicy
-		backupEncryption  string
-		backupCompression string
+		backupEncryption  model.EncryptionMode
+		backupCompression model.CompressionMode
 		shouldSucceed     bool
 	}{
 		{
 			name:              "sets compression policy from backup",
 			policy:            model.RestorePolicy{},
-			backupCompression: "ZSTD",
+			backupCompression: model.CompressionModeZSTD,
 			shouldSucceed:     true,
 		},
 		{
 			name:             "fails when encrypted backup has no policy",
 			policy:           model.RestorePolicy{},
-			backupEncryption: "AES128",
+			backupEncryption: model.EncryptionModeAES128,
 			shouldSucceed:    false,
 		},
 		{
 			name: "fails when encryption mode mismatches",
 			policy: model.RestorePolicy{
-				EncryptionPolicy: &model.EncryptionPolicy{Mode: "AES256"},
+				EncryptionPolicy: &model.EncryptionPolicy{Mode: model.EncryptionModeAES256},
 			},
-			backupEncryption: "AES128",
+			backupEncryption: model.EncryptionModeAES128,
 			shouldSucceed:    false,
 		},
 		{
 			name: "fails when encryption key is missing",
 			policy: model.RestorePolicy{
-				EncryptionPolicy: &model.EncryptionPolicy{Mode: "AES128"},
+				EncryptionPolicy: &model.EncryptionPolicy{Mode: model.EncryptionModeAES128},
 			},
-			backupEncryption: "AES128",
+			backupEncryption: model.EncryptionModeAES128,
 			shouldSucceed:    false,
 		},
 		{
 			name: "succeeds with valid encryption policy",
 			policy: model.RestorePolicy{
 				EncryptionPolicy: &model.EncryptionPolicy{
-					Mode:   "AES128",
-					KeyEnv: ptr.Of("AES_KEY"),
+					Mode:   model.EncryptionModeAES128,
+					KeyEnv: "AES_KEY",
 				},
 			},
-			backupEncryption: "AES128",
+			backupEncryption: model.EncryptionModeAES128,
 			shouldSucceed:    true,
 		},
 	}
@@ -212,7 +209,6 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			env := setupTestRestoreEnv(t)
-			defer env.ctrl.Finish()
 
 			request := &model.RestoreTimestampRequest{
 				DestinationCluster: model.AerospikeCluster{},
@@ -272,6 +268,84 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 	}
 }
 
+func TestRestoreByTime_CumulativeIncrementals(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+
+	now := time.Now()
+	fullCreated := now.Add(-3 * time.Hour)
+	incr1Created := now.Add(-2 * time.Hour)
+	incr2Created := now.Add(-1 * time.Hour)
+	requestTime := now
+
+	request := &model.RestoreTimestampRequest{
+		DestinationCluster: model.AerospikeCluster{},
+		Policy:             model.RestorePolicy{},
+		RoutineName:        "test-routine",
+		Time:               requestTime,
+		DisableReordering:  true,
+	}
+
+	fullBackup := model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{
+			Created:   fullCreated,
+			Namespace: "ns1",
+			FileCount: 1,
+		},
+		Key:     "full",
+		Storage: &model.LocalStorage{},
+	}
+	incr1Backup := model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{
+			Created:   incr1Created,
+			From:      fullCreated,
+			Namespace: "ns1",
+			FileCount: 1,
+		},
+		Key:     "incr1",
+		Storage: &model.LocalStorage{},
+	}
+	incr2Backup := model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{
+			Created:   incr2Created,
+			From:      fullCreated,
+			Namespace: "ns1",
+			FileCount: 1,
+		},
+		Key:     "incr2",
+		Storage: &model.LocalStorage{},
+	}
+
+	env.restoreValidator.EXPECT().
+		ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+	gomock.InOrder(
+		env.mockBackupReader.EXPECT().
+			GetBackups(gomock.Any(), fullBackupFilterMatcher{toTime: requestTime}).
+			Return([]model.BackupDetails{fullBackup}, nil),
+		env.mockBackupReader.EXPECT().
+			GetBackups(gomock.Any(), incrementalFilterMatcher{fromTime: fullCreated, toTime: requestTime}).
+			Return([]model.BackupDetails{incr1Backup, incr2Backup}, nil),
+	)
+
+	client := env.expectSuccessfulClientInteraction(t)
+	// Restore runs executor once per backup in chain.
+	// Since incr2 covers the same period as incr1, incr1 should be skipped.
+	gomock.InOrder(
+		env.mockRestore.EXPECT().
+			Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: fullBackup.Key}).
+			Return(env.expectDefaultRestoreHandler(), nil),
+		env.mockRestore.EXPECT().
+			Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: incr2Backup.Key}).
+			Return(env.expectDefaultRestoreHandler(), nil),
+	)
+
+	jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
+	require.NoError(t, err)
+	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+	require.NoError(t, err)
+	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
+}
+
 func TestRestoreByTime_OrderScenarios(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -302,7 +376,6 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			env := setupTestRestoreEnv(t)
-			defer env.ctrl.Finish()
 
 			now := time.Now()
 			fullCreated := now.Add(-3 * time.Hour)
@@ -364,7 +437,7 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 
 			if tt.unique == nil || !*tt.unique {
 				env.infoGetter.EXPECT().
-					GetRecordCount(mock.Anything, "ns1", mock.Anything).
+					GetRecordCount(gomock.Any(), "ns1", gomock.Any()).
 					Return(uint64(tt.recordCount), nil)
 			}
 

@@ -28,6 +28,36 @@ Quartz uses either:
 * Shorthand expressions for common schedules:
   `@hourly`, `@daily`, `@weekly`, `@monthly`, `@yearly`
 
+Cron expressions are evaluated in **UTC** unless you set `schedule-timezone`.
+Accepted values:
+
+* omitted or `UTC` — Coordinated Universal Time (the default; existing configs are unchanged)
+* `Local` — the timezone of the host running the service (`TZ` or `/etc/localtime`)
+* an IANA name such as `America/New_York` — useful in containers, which typically run in UTC
+
+`UTC` and `Local` are case-insensitive; IANA names are case-sensitive. Abbreviations such as
+`EST` and POSIX `TZ` strings are rejected at startup.
+
+Set a service-wide default under `service.backup` (requires a restart) or override it on a
+routine (can be changed through the routine API):
+
+```yaml
+service:
+  backup:
+    schedule-timezone: America/New_York
+
+backup-routines:
+  nightly:
+    interval-cron: "0 0 2 * * ?"   # 02:00 in America/New_York
+    schedule-timezone: UTC         # optional per-routine override
+```
+
+Backup folder names and the optional `timestamp-format` suffix stay UTC regardless of
+`schedule-timezone`. Daylight saving applies to `Local` and IANA zones: a daily 02:30
+schedule does not fire on the spring-forward day when 02:30 does not exist locally, and
+daily schedules in the repeated fall-back hour fire once. Use UTC to avoid DST-driven
+variations in the elapsed time between runs.
+
 **📆 Quartz Cron Expression Examples for Backup Scheduling**
 
 | Schedule Description                | Cron Expression       | Use Case                                                             |
@@ -61,7 +91,7 @@ secret-agents:
   secret-agent: # <--- Custom secret agent name
     address: localhost
     port: 5000
-    connection-type: tcp
+    connection-type: TCP
 
 storage:
   s3: # <--- Custom storage name
@@ -109,6 +139,10 @@ We recommend experimenting with different values in your environment to find the
 The `service` section configures the operation settings of the Aerospike Backup Service,
 which include logging and HTTP endpoint. See the [`dto.ServiceConfig`](readme/dto/dto.serviceconfig.md)
 for details.
+HTTP rate limiter behavior:
+- Rate limiting applies to all clients by default.
+- Entries in `service.http.rate.white-list` are exempt from rate limiting.
+- If `white-list` contains `0.0.0.0/0`, all clients are exempt and rate limiting is effectively disabled.
 
 ## Configuration with API
 
@@ -133,7 +167,7 @@ See [`POST: /config/clusters`](https://aerospike.github.io/aerospike-backup-serv
 full specification.
 
 :warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/tools/backup#secret-agent-options) to avoid
-including secrets in your configuration.
+including secrets in your configuration. See [Security](security.md) for how secrets are resolved, cached, and rotated.
 
 #### Storage connection
 
@@ -249,6 +283,13 @@ For more complex logic (metadata filters, list/map operations, geo filters, etc.
 
 ## FAQ
 
+### What timezone do backup schedules use?
+
+Backup cron expressions are evaluated in UTC by default. Set `schedule-timezone` to `UTC`,
+`Local`, or an IANA name such as `America/New_York` on `service.backup` (service-wide default;
+requires a restart) or on a routine (overrides the default). Backup paths and the
+`timestamp-format` suffix remain UTC for every timezone setting.
+
 ### What happens when a backup doesn't finish before another starts (for the same routine)?
 
 - **Full Backups:**
@@ -282,8 +323,10 @@ with different behaviors for full and incremental backups:
       The service uses a scan operation with no lower time boundary (modAfter = 0).
 
 * **Incremental Backups:**:
-    * Only capture records that have been modified since the last successful backup (full or incremental). The service
-      tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp
+    * Only capture records that have been modified since the last successful backup. The behavior depends on the `incr-mode` setting in the backup policy:
+        - **Differential (default)**: Captures records modified since the last successful backup (full or incremental).
+        - **Cumulative**: Captures records modified since the last successful full backup.
+      The service tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp
       becomes the lower time boundary (modAfter parameter) for the next incremental backup.
       For the upper time boundary (modBefore), two approaches are available:
 
