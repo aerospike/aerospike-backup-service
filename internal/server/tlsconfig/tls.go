@@ -143,8 +143,10 @@ func loadKeyPair(certFile, keyFile, password string) (tls.Certificate, error) {
 	}
 
 	//nolint:staticcheck // Legacy PEM encryption is supported for compatibility with existing TLS configuration.
+	//noinspection GoDeprecation
 	if x509.IsEncryptedPEMBlock(keyBlock) {
 		//nolint:staticcheck // Legacy PEM encryption is supported for compatibility with existing TLS configuration.
+		//noinspection GoDeprecation
 		decrypted, decryptErr := x509.DecryptPEMBlock(keyBlock, []byte(password))
 		if decryptErr != nil {
 			return tls.Certificate{}, fmt.Errorf("failed to decrypt HTTPS private key: %w", decryptErr)

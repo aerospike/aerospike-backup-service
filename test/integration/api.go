@@ -72,7 +72,8 @@ func (s *Suite) waitForIncrementalBackup(e *env, want int) dto.BackupDetails {
 		// Fail fast if there are any failure events for this routine
 		failCount, _, err := e.backupFailureEventCount(s.T().Context(), model.BackupTypeIncremental)
 		if err == nil && failCount > 0 {
-			s.Failf("incremental backup failed", "aerospike_backup_service_backup_events_total outcome=failure is %f (> 0)", failCount)
+			s.Failf("incremental backup failed",
+				"aerospike_backup_service_backup_events_total outcome=failure is %f (> 0)", failCount)
 		}
 
 		backups := s.getIncrementalBackups(e)
@@ -259,25 +260,8 @@ func (s *Suite) waitForRestore(e *env, jobID int64) dto.RestoreJobStatus {
 	deadline := time.Now().Add(backupTimeout)
 
 	for {
-		req, err := http.NewRequestWithContext(s.T().Context(), http.MethodGet, e.restoreStatusURL(jobID), nil)
-		s.Require().NoError(err)
-
-		resp, err := e.client.Do(req)
-		s.Require().NoError(err)
-
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			s.Failf("failed to fetch restore status", "status %d: %s", resp.StatusCode, body)
-		}
-
-		var status dto.RestoreJobStatus
-		s.Require().NoError(decoder.Deserialize(&status, resp.Body, decoder.JSON))
-
-		if status.Status != dto.RestoreRunning {
-			s.Require().Equal(dto.RestoreSuccess, status.Status, "restore job failed with error: %s", status.Error)
-			return status
+		if jobStatus := s.checkStatusSuccess(e, jobID); jobStatus != nil {
+			return *jobStatus
 		}
 
 		if time.Now().After(deadline) {
@@ -286,4 +270,29 @@ func (s *Suite) waitForRestore(e *env, jobID int64) dto.RestoreJobStatus {
 
 		time.Sleep(pollInterval)
 	}
+}
+
+func (s *Suite) checkStatusSuccess(e *env, jobID int64) *dto.RestoreJobStatus {
+	req, err := http.NewRequestWithContext(s.T().Context(), http.MethodGet, e.restoreStatusURL(jobID), nil)
+	s.Require().NoError(err)
+
+	resp, err := e.client.Do(req)
+	s.Require().NoError(err)
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		s.Failf("failed to fetch restore status", "status %d: %s", resp.StatusCode, body)
+	}
+
+	var status dto.RestoreJobStatus
+	s.Require().NoError(decoder.Deserialize(&status, resp.Body, decoder.JSON))
+
+	if status.Status != dto.RestoreRunning {
+		s.Require().Equal(dto.RestoreSuccess, status.Status, "restore job failed with error: %s", status.Error)
+		return &status
+	}
+
+	return nil
 }

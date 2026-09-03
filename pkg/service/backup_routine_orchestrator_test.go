@@ -81,7 +81,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockCompletionHandler.EXPECT().
 		OnSuccess(gomock.Any(), routine, model.BackupTypeFull, newTimeMatcher(now), gomock.Any())
 	mockReporter.EXPECT().
-		Report(routine.Name, model.BackupTypeFull, newTimeMatcher(now), gomock.Any(), nil, gomock.Any())
+		Report(routine.Name, model.BackupTypeFull, gomock.Any(), nil, gomock.Any())
 
 	mockStartController := NewMockStartController(ctrl)
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
@@ -108,7 +108,7 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, skipReason)
 
 	mockReporter.EXPECT().
-		Report(routine.Name, model.BackupTypeFull, newTimeMatcher(now), gomock.Any(), skipReason, gomock.Any())
+		Report(routine.Name, model.BackupTypeFull, gomock.Any(), skipReason, gomock.Any())
 
 	mockRunner := NewMockRoutineBackupRunner(ctrl)
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
@@ -134,7 +134,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
 	mockReporter.EXPECT().
-		Report(routine.Name, model.BackupTypeFull, newTimeMatcher(now), gomock.Any(), connectionError, gomock.Any())
+		Report(routine.Name, model.BackupTypeFull, gomock.Any(), connectionError, gomock.Any())
 
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
 
@@ -158,7 +158,7 @@ func TestRunFullBackupInternal_ContextCanceled(t *testing.T) {
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
 	mockReporter.EXPECT().
-		Report(routine.Name, model.BackupTypeFull, newTimeMatcher(now), gomock.Any(), context.Canceled, gomock.Any())
+		Report(routine.Name, model.BackupTypeFull, gomock.Any(), context.Canceled, gomock.Any())
 
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
 
@@ -188,7 +188,7 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, skipReason)
 
 	mockReporter.EXPECT().
-		Report(routine.Name, model.BackupTypeIncremental, newTimeMatcher(now), gomock.Any(), skipReason, gomock.Any())
+		Report(routine.Name, model.BackupTypeIncremental, gomock.Any(), skipReason, gomock.Any())
 
 	mockRunner := NewMockRoutineBackupRunner(ctrl)
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
@@ -218,7 +218,7 @@ func TestRunIncrementalBackup_ContextCanceled(t *testing.T) {
 	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
 
 	mockReporter.EXPECT().Report(
-		routine.Name, model.BackupTypeIncremental, newTimeMatcher(now), gomock.Any(),
+		routine.Name, model.BackupTypeIncremental, gomock.Any(),
 		context.DeadlineExceeded, gomock.Any(),
 	)
 
@@ -295,7 +295,7 @@ func TestRunIncrementalBackup_CumulativeMode(t *testing.T) {
 		gomock.Any(),
 	)
 	mockReporter.EXPECT().
-		Report(routine.Name, model.BackupTypeIncremental, newTimeMatcher(now), gomock.Any(), nil, gomock.Any())
+		Report(routine.Name, model.BackupTypeIncremental, gomock.Any(), nil, gomock.Any())
 
 	startController := NewMockStartController(ctrl)
 	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
@@ -343,7 +343,7 @@ func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine
 		gomock.Any(),
 	)
 	mockReporter.EXPECT().
-		Report(routine.Name, model.BackupTypeIncremental, newTimeMatcher(now), gomock.Any(), nil, gomock.Any())
+		Report(routine.Name, model.BackupTypeIncremental, gomock.Any(), nil, gomock.Any())
 
 	startController := NewMockStartController(ctrl)
 	startController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)

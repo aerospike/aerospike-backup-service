@@ -125,7 +125,7 @@ func TestNewServerHTTP_ReadTimeoutClosesSilentClient(t *testing.T) {
 
 	conn, err := (&net.Dialer{}).DialContext(t.Context(), "tcp", ln.Addr().String())
 	require.NoError(t, err)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Silent client: open a connection but never send a request.
 	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))

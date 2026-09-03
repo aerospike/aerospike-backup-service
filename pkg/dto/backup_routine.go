@@ -9,7 +9,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -95,8 +94,6 @@ const (
 )
 
 // Validate validates the backup routine configuration.
-//
-//nolint:gocognit,funlen
 func (r *BackupRoutine) Validate() error {
 	if r.SourceCluster == "" {
 		return errValidationEmptyField("source-cluster")
@@ -132,36 +129,20 @@ func (r *BackupRoutine) Validate() error {
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
 	}
-	for i, ns := range *r.Namespaces {
-		if ns == "" {
-			return errValidationEmptyField(fmt.Sprintf("namespaces[%d]", i))
-		}
+	if err := validateUniqueNonEmpty("namespaces", *r.Namespaces); err != nil {
+		return err
 	}
-
-	if duplicates := collections.CheckDuplicates(*r.Namespaces); len(duplicates) > 0 {
-		return errValidationDuplicate("namespaces", duplicates)
+	if err := validateUniqueNonEmpty("set-list", r.SetList); err != nil {
+		return err
 	}
-	if duplicates := collections.CheckDuplicates(r.SetList); len(duplicates) > 0 {
-		return errValidationDuplicate("set-list", duplicates)
+	if err := validateUniqueNonEmpty("bin-list", r.BinList); err != nil {
+		return err
 	}
-	for i, set := range r.SetList {
-		if set == "" {
-			return errValidationEmptyField(fmt.Sprintf("set-list[%d]", i))
-		}
+	if err := validateUnique(rackListField, r.RackList); err != nil {
+		return err
 	}
-	if duplicates := collections.CheckDuplicates(r.BinList); len(duplicates) > 0 {
-		return errValidationDuplicate("bin-list", duplicates)
-	}
-	for i, bin := range r.BinList {
-		if bin == "" {
-			return errValidationEmptyField(fmt.Sprintf("bin-list[%d]", i))
-		}
-	}
-	if duplicates := collections.CheckDuplicates(r.RackList); len(duplicates) > 0 {
-		return errValidationDuplicate(rackListField, duplicates)
-	}
-	if duplicates := collections.CheckDuplicates(r.NodeList); len(duplicates) > 0 {
-		return errValidationDuplicate(nodeListField, duplicates)
+	if err := validateUniqueNonEmpty(nodeListField, r.NodeList); err != nil {
+		return err
 	}
 	if err := validateFilterExpression(r.FilterExpression, r.SetList); err != nil {
 		return err

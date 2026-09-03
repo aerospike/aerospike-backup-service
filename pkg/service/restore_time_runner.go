@@ -146,7 +146,7 @@ func filterIncrementals(
 		return b.Created.Compare(a.Created)
 	})
 
-	var filteredIncr []model.BackupDetails
+	filteredIncr := make([]model.BackupDetails, 0, len(incrementals))
 	var coveredUntil time.Time
 
 	for _, incr := range incrementals {

@@ -410,6 +410,7 @@ func writeEncryptedKey(t *testing.T, keyFile, password string) string {
 	keyBlock, _ := pem.Decode(keyPEM)
 	require.NotNil(t, keyBlock)
 	//nolint:staticcheck // Verify compatibility with legacy password-protected PEM keys.
+	//noinspection GoDeprecation
 	encryptedBlock, err := x509.EncryptPEMBlock(
 		rand.Reader, keyBlock.Type, keyBlock.Bytes, []byte(password), x509.PEMCipherAES256,
 	)
