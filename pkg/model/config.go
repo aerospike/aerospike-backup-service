@@ -41,12 +41,8 @@ func newBackupConfig() *BackupConfig {
 	}
 }
 
-func (bc *BackupConfig) copy() *BackupConfig {
-	if bc == nil {
-		return nil
-	}
-
-	newConfig := &BackupConfig{
+func (bc BackupConfig) copy() BackupConfig {
+	return BackupConfig{
 		AerospikeClusters:   maps.Clone(bc.AerospikeClusters),
 		Storage:             maps.Clone(bc.Storage),
 		BackupPolicies:      maps.Clone(bc.BackupPolicies),
@@ -54,8 +50,6 @@ func (bc *BackupConfig) copy() *BackupConfig {
 		SecretAgents:        maps.Clone(bc.SecretAgents),
 		invalidatedRoutines: make(map[string]struct{}),
 	}
-
-	return newConfig
 }
 
 var (
@@ -67,7 +61,8 @@ var (
 func (c *Config) BackupConfigCopy() *BackupConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.backupConfig.copy()
+	config := c.backupConfig.copy()
+	return &config
 }
 
 func (c *Config) AddStorage(name string, s Storage) error {
