@@ -148,8 +148,7 @@ jobs:
           PACKAGE_VERSION: ${{ steps.metadata.outputs.PACKAGE_VERSION }}
         run: |
           set -euo pipefail
-          release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${PACKAGE_VERSION}" 2>/dev/null || true)"
-          if [ -z "$release_json" ]; then
+          if ! release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${PACKAGE_VERSION}" 2>/dev/null)"; then
             echo "No GitHub Release for ${PACKAGE_VERSION}; safe to build."
             exit 0
           fi
