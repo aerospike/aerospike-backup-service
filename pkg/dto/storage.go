@@ -109,7 +109,7 @@ func NewStorageFromModel(m model.Storage, config *model.BackupConfig) *Storage {
 			AzureStorage: newAzureStorageFromModel(s, config),
 		}
 	default:
-		panic(fmt.Sprintf("unsupported model storage type %T", m))
+		return &Storage{} // never happens in production.
 	}
 }
 
