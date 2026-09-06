@@ -214,6 +214,7 @@ func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
 		return fmt.Errorf("add Aerospike cluster %q: %w", name, ErrAlreadyExists)
 	}
 	c.backupConfig.AerospikeClusters[name] = cluster
+
 	return nil
 }
 
