@@ -9,8 +9,8 @@ if [ -z "$NEXT_VERSION" ]; then
   exit 1
 fi
 
-if ! echo "$NEXT_VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-  echo "release: '$NEXT_VERSION' is not a vX.Y.Z version." >&2
+if ! echo "$NEXT_VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+  echo "release: '$NEXT_VERSION' is not a vX.Y.Z or vX.Y.Z-pre-release version." >&2
   exit 1
 fi
 
