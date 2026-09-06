@@ -15,6 +15,8 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+var testBackupStorage = &model.LocalStorage{Path: "test-path"}
+
 func TestService_GetAllFullBackups(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -31,10 +33,14 @@ func TestService_GetAllFullBackups(t *testing.T) {
 			},
 			setupMock: func(m *service.MockBackupReader) {
 				m.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
-					Return([]model.BackupDetails{{Key: "backup1", BackupMetadata: model.BackupMetadata{
-						Created:  time.UnixMilli(1000).In(time.UTC),
-						Finished: time.UnixMilli(5000).In(time.UTC),
-					}}}, nil)
+					Return([]model.BackupDetails{{
+						Key:     "backup1",
+						Storage: testBackupStorage,
+						BackupMetadata: model.BackupMetadata{
+							Created:  time.UnixMilli(1000).In(time.UTC),
+							Finished: time.UnixMilli(5000).In(time.UTC),
+						},
+					}}, nil)
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string][]dto.BackupDetails{
@@ -46,6 +52,9 @@ func TestService_GetAllFullBackups(t *testing.T) {
 						Finished:          time.UnixMilli(5000).In(time.UTC),
 						FinishedTimestamp: 5000,
 						Duration:          4,
+						Storage: &dto.Storage{
+							LocalStorage: &dto.LocalStorage{Path: "test-path"},
+						},
 					},
 				},
 			},
@@ -355,7 +364,7 @@ func TestService_GetFullBackupsForRoutine(t *testing.T) {
 			routineName: "routine1",
 			setupMock: func(m *service.MockBackupReader) {
 				m.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
-					Return([]model.BackupDetails{{Key: "backup1"}}, nil)
+					Return([]model.BackupDetails{{Key: "backup1", Storage: testBackupStorage}}, nil)
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -412,7 +421,7 @@ func TestService_GetAllIncrementalBackups(t *testing.T) {
 			name: "success",
 			setupMock: func(m *service.MockBackupReader) {
 				m.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
-					Return([]model.BackupDetails{{Key: "incr1"}}, nil)
+					Return([]model.BackupDetails{{Key: "incr1", Storage: testBackupStorage}}, nil)
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -473,7 +482,7 @@ func TestService_GetIncrementalBackupsForRoutine(t *testing.T) {
 			routineName: "routine1",
 			setupMock: func(m *service.MockBackupReader) {
 				m.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
-					Return([]model.BackupDetails{{Key: "incr1"}}, nil)
+					Return([]model.BackupDetails{{Key: "incr1", Storage: testBackupStorage}}, nil)
 			},
 			expectedStatus: http.StatusOK,
 		},
