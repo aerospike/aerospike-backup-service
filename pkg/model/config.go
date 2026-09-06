@@ -204,7 +204,7 @@ func (c *Config) AddRoutine(r *BackupRoutine) error {
 
 func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
 	if cluster == nil {
-		return errors.New("Aerospike cluster cannot be nil")
+		return errors.New("cluster cannot be nil")
 	}
 
 	c.mu.Lock()
