@@ -23,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Run Trivy vulnerability, misconfiguration, and secret scan
+      - name: Generate Trivy SARIF report
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: v0.74.0
@@ -35,7 +35,17 @@ jobs:
           skip-dirs: tmp,.git
           format: sarif
           output: trivy-results.sarif
-          exit-code: '1'
+          exit-code: '0'
+
+      - name: Enforce HIGH and CRITICAL findings policy
+        run: |
+          trivy fs \
+            --scanners vuln,misconfig,secret \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --skip-dirs tmp,.git \
+            --exit-code 1 \
+            .
 
       - name: Upload Trivy results to GitHub Code Scanning
         if: always()
