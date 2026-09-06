@@ -231,7 +231,11 @@ serviceAccount:
   name: ""
 podAnnotations: {}
 podLabels: {}
-podSecurityContext: {}
+podSecurityContext:
+  runAsNonRoot: true
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
 # fsGroup: 2000
 
 # Container securityContext is hardened by default (BKRS-302).

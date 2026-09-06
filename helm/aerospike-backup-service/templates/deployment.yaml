@@ -37,6 +37,16 @@ spec:
       {{- if not .Values.configmap.create }}
       initContainers:
         - name: config-injector
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
           image: busybox
           command:
             - /bin/sh
