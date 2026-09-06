@@ -95,6 +95,9 @@ func TestConfigAddRejectsNilValues(t *testing.T) {
 				if err := cfg.AddRoutine(&BackupRoutine{Name: "routine"}); err != nil {
 					return err
 				}
+				if err := cfg.AddPolicy("policy", &BackupPolicy{}); err != nil {
+					return err
+				}
 
 				return cfg.AddStorage("storage", &LocalStorage{})
 			},
@@ -107,6 +110,11 @@ func TestConfigAddRejectsNilValues(t *testing.T) {
 		{
 			name:    "routine",
 			add:     func(cfg *Config) error { return cfg.AddRoutine(nil) },
+			wantErr: true,
+		},
+		{
+			name:    "policy",
+			add:     func(cfg *Config) error { return cfg.AddPolicy("policy", nil) },
 			wantErr: true,
 		},
 		{

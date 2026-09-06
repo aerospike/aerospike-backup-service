@@ -66,6 +66,10 @@ func (c *Config) BackupConfigCopy() *BackupConfig {
 }
 
 func (c *Config) AddStorage(name string, s Storage) error {
+	if s == nil {
+		return errors.New("storage cannot be nil")
+	}
+
 	switch storage := s.(type) {
 	case *LocalStorage:
 		if storage == nil {
@@ -124,6 +128,10 @@ func (c *Config) routineUsesStorage(s Storage) string {
 }
 
 func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
+	if p == nil {
+		return errors.New("backup policy cannot be nil")
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
