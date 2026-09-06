@@ -22,6 +22,9 @@ type BackupRoutine struct {
 	IntervalCron string
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string
+	// Timezone is this routine's schedule timezone. Resolved is inherited from
+	// service.backup.schedule-timezone when Configured is empty.
+	Timezone Location
 	// The list of the namespaces to back up (optional, empty list implies backup up whole cluster).
 	Namespaces []string
 	// The list of backup set names (optional, an empty list implies backing up all sets).
@@ -54,6 +57,50 @@ func init() {
 	gob.Register(&AzureSharedKeyAuth{})
 }
 
+// backupRoutineGob is BackupRoutine without the resolved timezone. gob cannot
+// encode time.Location (no exported fields), so Copy() round-trips through this type.
+type backupRoutineGob struct {
+	Name               string
+	BackupPolicy       *BackupPolicy
+	SourceCluster      *AerospikeCluster
+	Storage            Storage
+	SecretAgent        *SecretAgent
+	IntervalCron       string
+	IncrIntervalCron   string
+	TimezoneConfigured string
+	TimezoneSource     LocationSource
+	Namespaces         []string
+	SetList            []string
+	BinList            []string
+	RackList           []int
+	PartitionList      string
+	NodeList           []string
+	FilterExpression   string
+	Disabled           bool
+}
+
+func toBackupRoutineGob(r *BackupRoutine) backupRoutineGob {
+	return backupRoutineGob{
+		Name:               r.Name,
+		BackupPolicy:       r.BackupPolicy,
+		SourceCluster:      r.SourceCluster,
+		Storage:            r.Storage,
+		SecretAgent:        r.SecretAgent,
+		IntervalCron:       r.IntervalCron,
+		IncrIntervalCron:   r.IncrIntervalCron,
+		TimezoneConfigured: r.Timezone.Configured,
+		TimezoneSource:     r.Timezone.Source,
+		Namespaces:         r.Namespaces,
+		SetList:            r.SetList,
+		BinList:            r.BinList,
+		RackList:           r.RackList,
+		PartitionList:      r.PartitionList,
+		NodeList:           r.NodeList,
+		FilterExpression:   r.FilterExpression,
+		Disabled:           r.Disabled,
+	}
+}
+
 // Copy returns a deep copy of the BackupRoutine.
 // Long-running backup/restore operations must work on an immutable routine snapshot.
 // A shallow copy would still share nested pointers/slices and could observe config changes mid-run.
@@ -63,14 +110,35 @@ func (r *BackupRoutine) Copy() *BackupRoutine {
 	}
 
 	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(r); err != nil {
+	if err := gob.NewEncoder(&buf).Encode(toBackupRoutineGob(r)); err != nil {
 		panic(err) // if happens, registered failed types in init()
 	}
 
-	var out BackupRoutine
-	if err := gob.NewDecoder(&buf).Decode(&out); err != nil {
+	var copied backupRoutineGob
+	if err := gob.NewDecoder(&buf).Decode(&copied); err != nil {
 		panic(err) // should never happen
 	}
 
-	return &out
+	return &BackupRoutine{
+		Name:             copied.Name,
+		BackupPolicy:     copied.BackupPolicy,
+		SourceCluster:    copied.SourceCluster,
+		Storage:          copied.Storage,
+		SecretAgent:      copied.SecretAgent,
+		IntervalCron:     copied.IntervalCron,
+		IncrIntervalCron: copied.IncrIntervalCron,
+		Timezone: Location{
+			resolved:   r.Timezone.resolved, // immutable; shared pointer is safe
+			Configured: copied.TimezoneConfigured,
+			Source:     copied.TimezoneSource,
+		},
+		Namespaces:       copied.Namespaces,
+		SetList:          copied.SetList,
+		BinList:          copied.BinList,
+		RackList:         copied.RackList,
+		PartitionList:    copied.PartitionList,
+		NodeList:         copied.NodeList,
+		FilterExpression: copied.FilterExpression,
+		Disabled:         copied.Disabled,
+	}
 }

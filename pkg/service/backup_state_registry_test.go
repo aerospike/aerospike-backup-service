@@ -32,7 +32,8 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 	registry.getTracker(routineName).markScanDone() // no need to scan history
 
 	stat := registry.GetRoutineState(&model.BackupRoutine{
-		Name: routineName,
+		Name:     routineName,
+		Timezone: model.NewServiceLocation(""),
 	})
 
 	assert.NotNil(t, stat.Full)
@@ -61,6 +62,7 @@ func TestHistoryScan(t *testing.T) {
 	stat := registry.GetRoutineState(&model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
+		Timezone:     model.NewServiceLocation(""),
 	})
 	assert.NotNil(t, stat.Full)
 	assert.Equal(t, uint64(100), stat.Full.TotalRecords)
@@ -84,6 +86,7 @@ func TestFinishFull(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
+		Timezone:     model.NewServiceLocation(""),
 	}
 
 	registry.BackupStarted(routineName, model.BackupTypeFull, handler)
@@ -113,6 +116,7 @@ func TestFinishIncremental(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
+		Timezone:     model.NewServiceLocation(""),
 	}
 
 	registry.BackupStarted(routineName, model.BackupTypeIncremental, handler)
@@ -137,6 +141,7 @@ func TestCanceledHistoryScanKeepsPreviousLastRun(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
+		Timezone:     model.NewServiceLocation(""),
 	}
 	registry.getTracker(routineName).setLastRun(previous)
 	registry.getTracker(routineName).markScanDone()
@@ -159,10 +164,12 @@ func TestGetAllCurrentStats(t *testing.T) {
 		routine1: {
 			Name:         routine1,
 			IntervalCron: "@daily",
+			Timezone:     model.NewServiceLocation(""),
 		},
 		routine2: {
 			Name:         routine2,
 			IntervalCron: "@daily",
+			Timezone:     model.NewServiceLocation(""),
 		},
 	}).AnyTimes()
 
@@ -191,6 +198,67 @@ func TestGetAllCurrentStats(t *testing.T) {
 	// Check stats for routine2
 	assert.Nil(t, stats[routine2].Full)
 	assert.NotNil(t, stats[routine2].Incremental)
+}
+
+func TestGetRoutineState_NextRunTimeUsesScheduleTimezone(t *testing.T) {
+	t.Parallel()
+
+	nyRoutine := &model.BackupRoutine{
+		Name:         "ny",
+		IntervalCron: "@daily",
+		Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+	}
+	utcRoutine := &model.BackupRoutine{
+		Name:         "utc",
+		IntervalCron: "@daily",
+		Timezone:     model.NewServiceLocation(""),
+	}
+
+	registry := newTestBackupStateRegistry(nil, nil)
+	registry.getTracker(nyRoutine.Name).markScanDone()
+	registry.getTracker(utcRoutine.Name).markScanDone()
+
+	nyNext := registry.GetRoutineState(nyRoutine).NextRunTime.FullBackupTime()
+	utcNext := registry.GetRoutineState(utcRoutine).NextRunTime.FullBackupTime()
+	require.NotNil(t, nyNext)
+	require.NotNil(t, utcNext)
+
+	nyLoc := nyRoutine.Timezone.ResolvedLocation()
+	assert.Equal(t, 0, nyNext.In(nyLoc).Hour())
+	assert.Equal(t, 0, nyNext.In(nyLoc).Minute())
+	assert.Equal(t, 0, utcNext.In(model.DefaultScheduleTimezone).Hour())
+	assert.NotEqual(t, nyNext.UTC(), utcNext.UTC())
+}
+
+func TestGetRoutineState_NextRunTimeUsesScheduleTimezoneForIncremental(t *testing.T) {
+	t.Parallel()
+
+	nyRoutine := &model.BackupRoutine{
+		Name:             "ny",
+		IntervalCron:     "@daily",
+		IncrIntervalCron: "0 0 2 * * *",
+		Timezone:         model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+	}
+	utcRoutine := &model.BackupRoutine{
+		Name:             "utc",
+		IntervalCron:     "@daily",
+		IncrIntervalCron: "0 0 2 * * *",
+		Timezone:         model.NewServiceLocation(""),
+	}
+
+	registry := newTestBackupStateRegistry(nil, nil)
+	registry.getTracker(nyRoutine.Name).markScanDone()
+	registry.getTracker(utcRoutine.Name).markScanDone()
+
+	nyNext := registry.GetRoutineState(nyRoutine).NextRunTime.IncrementalBackupTime()
+	utcNext := registry.GetRoutineState(utcRoutine).NextRunTime.IncrementalBackupTime()
+	require.NotNil(t, nyNext)
+	require.NotNil(t, utcNext)
+
+	nyLoc := nyRoutine.Timezone.ResolvedLocation()
+	assert.Equal(t, 2, nyNext.In(nyLoc).Hour())
+	assert.Equal(t, 2, utcNext.In(model.DefaultScheduleTimezone).Hour())
+	assert.NotEqual(t, nyNext.UTC(), utcNext.UTC())
 }
 
 func TestCancel(t *testing.T) {

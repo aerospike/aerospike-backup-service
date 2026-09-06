@@ -56,6 +56,23 @@ func TestBackupRoutine_Validate_Duplicates(t *testing.T) {
 			},
 			wantErr: "node-list contains duplicate value",
 		},
+		{
+			name: "empty namespace",
+			routine: &BackupRoutine{
+				SourceCluster: "c", Storage: "s", IntervalCron: "* * * * * *",
+				Namespaces: &[]string{"ns1", ""},
+			},
+			wantErr: `"namespaces[1]" required`,
+		},
+		{
+			name: "empty node-list value",
+			routine: &BackupRoutine{
+				SourceCluster: "c", Storage: "s", IntervalCron: "* * * * * *",
+				Namespaces: &[]string{"ns1"},
+				NodeList:   []string{"node1", ""},
+			},
+			wantErr: `"node-list[1]" required`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -120,7 +137,7 @@ func TestAerospikeCluster_Validate_Duplicates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.cluster.Validate(ValidationDefault)
+			err := tt.cluster.Validate()
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.wantErr)
 		})

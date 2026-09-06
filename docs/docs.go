@@ -1820,6 +1820,12 @@ const docTemplate = `{
             "description": "BackupCommonConfig represents service-level backup settings.",
             "type": "object",
             "properties": {
+                "schedule-timezone": {
+                    "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nAbbreviations such as EST and POSIX TZ strings are not accepted.\nChanging this service-level default requires a restart.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "America/New_York"
+                },
                 "timestamp-format": {
                     "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
                     "allOf": [
@@ -1964,6 +1970,16 @@ const docTemplate = `{
                     "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created.",
                     "type": "integer",
                     "default": 250
+                },
+                "incr-mode": {
+                    "description": "The mode for incremental backups (optional, default is differential).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.IncrMode"
+                        }
+                    ],
+                    "x-nullable": true,
+                    "example": "differential"
                 },
                 "max-concurrent-nodes": {
                     "description": "Maximum number of concurrent requests to server nodes.\nDefault is to issue requests to all server nodes in parallel.",
@@ -2125,6 +2141,12 @@ const docTemplate = `{
                         "type": "integer"
                     },
                     "x-nullable": true
+                },
+                "schedule-timezone": {
+                    "description": "Timezone for evaluating this routine's cron expressions (optional).\nAccepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.\nWhen omitted, the routine inherits service.backup.schedule-timezone.\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "America/New_York"
                 },
                 "secret-agent": {
                     "description": "The name of a Secret Agent to read secrets from (optional).",
@@ -2456,6 +2478,18 @@ const docTemplate = `{
                     "x-nullable": true
                 }
             }
+        },
+        "dto.IncrMode": {
+            "description": "IncrMode represents the mode for incremental backups.",
+            "type": "string",
+            "enum": [
+                "differential",
+                "cumulative"
+            ],
+            "x-enum-varnames": [
+                "IncrModeDifferential",
+                "IncrModeCumulative"
+            ]
         },
         "dto.JobStatus": {
             "description": "Possible states of restore jobs.",
@@ -3468,7 +3502,7 @@ const docTemplate = `{
                     ]
                 },
                 "client-ca-file": {
-                    "description": "Path to trusted client CA certificates in PEM format.",
+                    "description": "Path to trusted client CA certificates in PEM format.\nRewriting this file at the same path reloads the mTLS trust pool without a restart; changing the path requires a restart.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "/path/to/client-ca.pem"
@@ -3477,6 +3511,12 @@ const docTemplate = `{
                     "description": "ContextPath customizes path for the API endpoints.",
                     "type": "string",
                     "default": "/"
+                },
+                "crl-file": {
+                    "description": "Path to one DER-encoded CRL or one or more PEM-encoded CRLs for client certificates.\nRewriting this file at the same path reloads revocation state without a restart; changing the path requires a restart.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/client.crl"
                 },
                 "disabled": {
                     "description": "Disabled controls whether the listener is disabled.",

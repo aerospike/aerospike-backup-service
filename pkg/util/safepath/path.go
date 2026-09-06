@@ -41,7 +41,7 @@ func EnsureFileExists(path string) error {
 	if err != nil {
 		return err
 	}
-	defer root.Close()
+	defer func() { _ = root.Close() }()
 
 	info, err := root.Stat(name)
 	if err != nil {
@@ -60,7 +60,7 @@ func ReadFile(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer root.Close()
+	defer func() { _ = root.Close() }()
 
 	info, err := root.Stat(name)
 	if err != nil {
@@ -79,7 +79,7 @@ func ReadDir(path string) ([]fs.DirEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer root.Close()
+	defer func() { _ = root.Close() }()
 
 	return fs.ReadDir(root.FS(), ".")
 }

@@ -19,7 +19,7 @@ type LocalStorage struct {
 }
 
 // Validate checks if the LocalStorage is valid.
-func (l *LocalStorage) Validate(_ ValidationOptions) error {
+func (l *LocalStorage) Validate() error {
 	if l.Path == "" {
 		return errors.New("local storage path is not specified")
 	}

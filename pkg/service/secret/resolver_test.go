@@ -25,7 +25,7 @@ func TestResolverLiteral(t *testing.T) {
 func TestResolverNoCache(t *testing.T) {
 	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	addr := listener.Addr().(*net.TCPAddr)
 	connCount := atomic.Int32{}
@@ -79,7 +79,7 @@ func TestResolverFailClosed(t *testing.T) {
 			if reqCount.Add(1) == 1 {
 				go respondWithSecret(conn, 1)
 			} else {
-				conn.Close()
+				_ = conn.Close()
 			}
 		}
 	}()
@@ -96,7 +96,7 @@ func TestResolverFailClosed(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "value-1", result)
 
-	listener.Close()
+	_ = listener.Close()
 
 	// Second call should fail, not return cached "value-1"
 	_, err = resolver.Resolve(t.Context(), agent, "secrets:agent:key")
@@ -105,7 +105,7 @@ func TestResolverFailClosed(t *testing.T) {
 
 // respondWithSecret implements Secret Agent protocol for testing.
 func respondWithSecret(conn net.Conn, num int) {
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	header := make([]byte, 8)
 	if _, err := conn.Read(header); err != nil {
@@ -129,6 +129,6 @@ func respondWithSecret(conn net.Conn, num int) {
 	binary.BigEndian.PutUint32(respHeader[0:4], 0x51dec1cc)
 	binary.BigEndian.PutUint32(respHeader[4:8], uint32(len(response)))
 
-	conn.Write(respHeader)
-	conn.Write(response)
+	_, _ = conn.Write(respHeader)
+	_, _ = conn.Write(response)
 }

@@ -71,7 +71,7 @@ func TestReadFileRejectsRootEscape(t *testing.T) {
 
 	root, err := os.OpenRoot(innerDir)
 	require.NoError(t, err)
-	defer root.Close()
+	defer func() { _ = root.Close() }()
 
 	_, err = root.ReadFile("../secret.txt")
 	require.Error(t, err)

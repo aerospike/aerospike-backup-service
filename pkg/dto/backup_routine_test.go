@@ -65,6 +65,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 		NodeList:         []string{"node1"},
 		FilterExpression: "k1EDpHRlc3Q=",
 		Disabled:         true,
+		ScheduleTimezone: "America/New_York",
 	}
 
 	config := &model.BackupConfig{
@@ -82,7 +83,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 		},
 	}
 
-	m, err := routineDTO.ToModel(config, "r")
+	m, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.NoError(t, err)
 
 	assert.Equal(t, config.BackupPolicies["policy1"], m.BackupPolicy)
@@ -99,6 +100,53 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 	assert.Equal(t, []string{"node1"}, m.NodeList)
 	assert.Equal(t, "k1EDpHRlc3Q=", m.FilterExpression)
 	assert.True(t, m.Disabled)
+	assert.Equal(t, "America/New_York", m.Timezone.ResolvedLocation().String())
+}
+
+func TestBackupRoutine_ToModel_BlankTimezoneUsesDefault(t *testing.T) {
+	t.Parallel()
+
+	for _, timezone := range []string{"", " \t "} {
+		routineDTO := &BackupRoutine{
+			SourceCluster:    "cluster1",
+			Storage:          "storage1",
+			IntervalCron:     "cron",
+			Namespaces:       &[]string{"ns1"},
+			ScheduleTimezone: timezone,
+		}
+
+		m, err := routineDTO.ToModel(&model.BackupConfig{
+			AerospikeClusters: map[string]*model.AerospikeCluster{"cluster1": {}},
+			Storage:           map[string]model.Storage{"storage1": &model.LocalStorage{}},
+		}, "r", model.NewServiceLocation(""))
+
+		require.NoError(t, err)
+		assert.Equal(t, model.DefaultScheduleTimezone, m.Timezone.ResolvedLocation())
+		assert.Equal(t, model.LocationSourceDefault, m.Timezone.Source)
+		assert.Equal(t, timezone, m.Timezone.Configured)
+	}
+}
+
+func TestBackupRoutine_ToModel_PreservesConfiguredTimezone(t *testing.T) {
+	t.Parallel()
+
+	routineDTO := &BackupRoutine{
+		SourceCluster:    "cluster1",
+		Storage:          "storage1",
+		IntervalCron:     "cron",
+		Namespaces:       &[]string{"ns1"},
+		ScheduleTimezone: "utc",
+	}
+
+	m, err := routineDTO.ToModel(&model.BackupConfig{
+		AerospikeClusters: map[string]*model.AerospikeCluster{"cluster1": {}},
+		Storage:           map[string]model.Storage{"storage1": &model.LocalStorage{}},
+	}, "r", model.NewServiceLocation(""))
+
+	require.NoError(t, err)
+	assert.Equal(t, model.DefaultScheduleTimezone, m.Timezone.ResolvedLocation())
+	assert.Equal(t, model.LocationSourceRoutine, m.Timezone.Source)
+	assert.Equal(t, "utc", m.Timezone.Configured)
 }
 
 func TestBackupRoutine_ToModel_PolicyNotFound(t *testing.T) {
@@ -118,7 +166,7 @@ func TestBackupRoutine_ToModel_PolicyNotFound(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.Error(t, err)
 }
 
@@ -140,7 +188,7 @@ func TestBackupRoutine_ToModel_ClusterNotFound(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.Error(t, err)
 }
 
@@ -162,7 +210,7 @@ func TestBackupRoutine_ToModel_StorageNotFound(t *testing.T) {
 		Storage: map[string]model.Storage{},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.Error(t, err)
 }
 
@@ -188,7 +236,7 @@ func TestBackupRoutine_ToModel_SecretAgentNotFound(t *testing.T) {
 		SecretAgents: map[string]*model.SecretAgent{},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.Error(t, err)
 }
 
@@ -249,7 +297,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithPartitionList(t *testing
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.Error(t, err)
 }
 
@@ -274,7 +322,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithNodeList(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.Error(t, err)
 }
 
@@ -298,7 +346,7 @@ func TestBackupRoutine_ToModel_ParallelExceedsClusterMax(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.ErrorContains(t, err, "backup policy parallelism 8 exceeds cluster max parallelism 4")
 }
 
@@ -322,7 +370,7 @@ func TestBackupRoutine_ToModel_ParallelWithinClusterMax(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.NoError(t, err)
 }
 
@@ -346,7 +394,7 @@ func TestBackupRoutine_ToModel_ParallelEqualsClusterMax(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.NoError(t, err)
 }
 
@@ -370,7 +418,7 @@ func TestBackupRoutine_ToModel_ParallelUncheckedWhenClusterMaxUnset(t *testing.T
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.NoError(t, err)
 }
 
@@ -394,7 +442,7 @@ func TestBackupRoutine_ToModel_ParallelUncheckedWhenPolicyParallelUnset(t *testi
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.NoError(t, err)
 }
 
@@ -448,7 +496,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r")
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
 	require.Error(t, err)
 }
 
@@ -560,4 +608,26 @@ func TestValidateFileLimit(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBackupRoutine_Validate_ScheduleTimezone(t *testing.T) {
+	t.Parallel()
+
+	valid := &BackupRoutine{
+		SourceCluster:    "cluster1",
+		Storage:          "storage1",
+		IntervalCron:     "@daily",
+		Namespaces:       &[]string{"ns1"},
+		ScheduleTimezone: "America/New_York",
+	}
+	require.NoError(t, valid.Validate())
+
+	invalid := &BackupRoutine{
+		SourceCluster:    "cluster1",
+		Storage:          "storage1",
+		IntervalCron:     "@daily",
+		Namespaces:       &[]string{"ns1"},
+		ScheduleTimezone: "EST",
+	}
+	require.ErrorContains(t, invalid.Validate(), "EST")
 }

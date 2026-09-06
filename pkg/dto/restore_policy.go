@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 // BaseRestorePolicy represents the common policy for restore operations.
@@ -86,7 +85,7 @@ type TimestampRestorePolicy struct {
 
 // Validate validates the base restore policy.
 //
-//nolint:gocognit,funlen
+
 func (p *BaseRestorePolicy) Validate(opts ValidationOptions) error {
 	if p == nil {
 		return nil
@@ -123,21 +122,11 @@ func (p *BaseRestorePolicy) Validate(opts ValidationOptions) error {
 		}
 	}
 
-	if duplicates := collections.CheckDuplicates(p.SetList); len(duplicates) > 0 {
-		return errValidationDuplicate("set-list", duplicates)
+	if err := validateUniqueNonEmpty("set-list", p.SetList); err != nil {
+		return err
 	}
-	for i, set := range p.SetList {
-		if set == "" {
-			return errValidationEmptyField(fmt.Sprintf("set-list[%d]", i))
-		}
-	}
-	if duplicates := collections.CheckDuplicates(p.BinList); len(duplicates) > 0 {
-		return errValidationDuplicate("bin-list", duplicates)
-	}
-	for i, bin := range p.BinList {
-		if bin == "" {
-			return errValidationEmptyField(fmt.Sprintf("bin-list[%d]", i))
-		}
+	if err := validateUniqueNonEmpty("bin-list", p.BinList); err != nil {
+		return err
 	}
 
 	if err := p.EncryptionPolicy.Validate(opts); err != nil {

@@ -1,10 +1,11 @@
 //go:build integration
 
+package integration
+
 // Data assertions for integration tests: backup API responses.
 //
 // Keep assertData* helpers here rather than in *_test.go files so scenarios stay focused on
 // setup and flow while data checks remain reusable across future tests.
-package integration
 
 import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"

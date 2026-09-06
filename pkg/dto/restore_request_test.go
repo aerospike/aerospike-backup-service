@@ -293,7 +293,7 @@ func TestRestoreRequest_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.request.Validate(ValidationDefault)
+			err := tt.request.Validate()
 			if tt.err != nil {
 				require.ErrorIs(t, err, tt.err)
 			} else {
@@ -429,7 +429,7 @@ func TestRestoreTimestampRequest_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.request.Validate(ValidationDefault)
+			err := tt.request.Validate()
 			if tt.err != nil {
 				require.Error(t, err)
 				require.ErrorIs(t, err, tt.err)

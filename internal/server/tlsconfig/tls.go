@@ -2,6 +2,7 @@
 package tlsconfig
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -20,11 +21,12 @@ var secureCipherSuites = func() map[string]uint16 {
 	return suites
 }()
 
-// NewTLSConfig builds a server TLS configuration that asks getCertificate for the key pair on
-// every handshake, so a rotated pair is picked up without rebuilding the configuration.
+// NewTLSConfig builds a server TLS configuration. It reads no TLS material itself:
+// provider supplies the key pair and, for mTLS, the client CA pool and CRLs on every
+// handshake, so rotated files are picked up without rebuilding the configuration.
 func NewTLSConfig(
 	config *model.ServerConfigHTTPS,
-	getCertificate func(*tls.ClientHelloInfo) (*tls.Certificate, error),
+	provider TLSProvider,
 ) (*tls.Config, error) {
 	minVersion, err := parseMinVersion(config.GetMinVersionOrDefault())
 	if err != nil {
@@ -43,22 +45,78 @@ func NewTLSConfig(
 	if clientAuth != tls.NoClientCert && config.ClientCAFile == "" {
 		return nil, errors.New("TLS client authentication requires a client CA file")
 	}
+	if config.CRLFile != "" && clientAuth != tls.RequireAndVerifyClientCert {
+		return nil, errors.New("TLS certificate revocation requires require-and-verify client authentication")
+	}
 
 	result := &tls.Config{
 		MinVersion:     minVersion,
 		CipherSuites:   cipherSuites,
-		GetCertificate: getCertificate,
+		GetCertificate: provider.GetCertificate,
 	}
 
 	if config.ClientCAFile != "" {
-		result.ClientCAs, err = loadClientCAs(config.ClientCAFile)
-		if err != nil {
-			return nil, err
-		}
-		result.ClientAuth = clientAuth
+		attachClientAuth(result, config, provider, clientAuth)
 	}
 
 	return result, nil
+}
+
+// attachClientAuth configures client certificate authentication (mTLS) on the base
+// TLS configuration. To support hot-reloading of trust stores and CRL files without
+// connection disruption, it dynamically hooks into the GetConfigForClient callback.
+func attachClientAuth(
+	result *tls.Config,
+	config *model.ServerConfigHTTPS,
+	provider TLSProvider,
+	clientAuth tls.ClientAuthType,
+) {
+	result.ClientAuth = clientAuth
+	if config.CRLFile != "" {
+		// Session ticket resumption bypasses the full TLS handshake and certificate
+		// verification callbacks. We must disable it when CRL checks are active to
+		// guarantee that every new connection validates against the latest CRL state.
+		result.SessionTicketsDisabled = true
+	}
+	result.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
+		pool, verifier, poolErr := provider.ClientAuth()
+		if poolErr != nil {
+			return nil, poolErr
+		}
+
+		// Since Go's tls.Config is shared across all concurrent handshakes, we must
+		// clone the base configuration per connection before applying hot-reloaded
+		// ClientCAs and VerifyConnection callbacks to prevent concurrent map writes.
+		clone := result.Clone()
+		clone.ClientCAs = pool
+		clone.GetConfigForClient = nil
+		if err := attachCRLVerification(clone, config, verifier); err != nil {
+			return nil, err
+		}
+
+		return clone, nil
+	}
+}
+
+// attachCRLVerification mounts our custom CRL-based revocation checker onto the
+// connection-specific cloned TLS configuration.
+func attachCRLVerification(
+	clone *tls.Config,
+	config *model.ServerConfigHTTPS,
+	verifier ClientCertificateVerifier,
+) error {
+	if config.CRLFile == "" {
+		return nil
+	}
+	if verifier == nil {
+		return errors.New("HTTPS client CRL is not loaded")
+	}
+	// We bind to VerifyConnection rather than VerifyPeerCertificate because VerifyConnection
+	// is executed after Go's crypto/tls has successfully established a cryptographic chain
+	// of trust. This guarantees that our verifier receives pre-verified certificate chains.
+	clone.VerifyConnection = verifier.Verify
+
+	return nil
 }
 
 func loadKeyPair(certFile, keyFile, password string) (tls.Certificate, error) {
@@ -85,8 +143,10 @@ func loadKeyPair(certFile, keyFile, password string) (tls.Certificate, error) {
 	}
 
 	//nolint:staticcheck // Legacy PEM encryption is supported for compatibility with existing TLS configuration.
+	//noinspection GoDeprecation
 	if x509.IsEncryptedPEMBlock(keyBlock) {
 		//nolint:staticcheck // Legacy PEM encryption is supported for compatibility with existing TLS configuration.
+		//noinspection GoDeprecation
 		decrypted, decryptErr := x509.DecryptPEMBlock(keyBlock, []byte(password))
 		if decryptErr != nil {
 			return tls.Certificate{}, fmt.Errorf("failed to decrypt HTTPS private key: %w", decryptErr)
@@ -111,7 +171,34 @@ func loadClientCAs(path string) (*x509.CertPool, error) {
 	}
 
 	pool := x509.NewCertPool()
-	if !pool.AppendCertsFromPEM(caPEM) {
+	certificateCount := 0
+	remaining := caPEM
+	for {
+		remaining = bytes.TrimSpace(remaining)
+		if len(remaining) == 0 {
+			break
+		}
+		if !bytes.HasPrefix(remaining, []byte("-----BEGIN CERTIFICATE-----")) {
+			if certificateCount == 0 {
+				return nil, fmt.Errorf("client CA file %q contains no certificates", path)
+			}
+			return nil, fmt.Errorf("client CA file %q contains invalid data after a certificate", path)
+		}
+
+		block, rest := pem.Decode(remaining)
+		if block == nil {
+			return nil, fmt.Errorf("client CA file %q contains an invalid certificate PEM block", path)
+		}
+		certificate, parseErr := x509.ParseCertificate(block.Bytes)
+		if parseErr != nil {
+			return nil, fmt.Errorf("client CA file %q contains an invalid certificate: %w", path, parseErr)
+		}
+
+		pool.AddCert(certificate)
+		certificateCount++
+		remaining = rest
+	}
+	if certificateCount == 0 {
 		return nil, fmt.Errorf("client CA file %q contains no certificates", path)
 	}
 

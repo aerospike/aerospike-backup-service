@@ -61,7 +61,7 @@ func (s *Suite) initComponents(config *dto.Config, customize ...func(*dto.Config
 
 	components.Scheduler.Start(ctx)
 	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
-	components.CertReloader.Start(ctx)
+	components.TLSProvider.Start(ctx)
 	t.Cleanup(func() { components.Scheduler.Stop() })
 
 	return components
@@ -107,6 +107,9 @@ func (s *Suite) baseConfig(backupDir string) *dto.Config {
 }
 
 // testRoutine returns the routine from baseConfig, for use inside setupEnv customize functions.
+func (s *Suite) testRoutine(config *dto.Config) *dto.BackupRoutine {
+	return config.BackupRoutines[routineName]
+}
 
 // seedRecords writes one record per age into the set that tests back up.
 func (s *Suite) seedRecords(ages []int) {

@@ -61,6 +61,8 @@ type ServerConfigHTTPS struct {
 	CipherSuites []string
 	// ClientCAFile is the path to trusted client CA certificates.
 	ClientCAFile string
+	// CRLFile is the path to the client certificate revocation list.
+	CRLFile string
 	// ClientAuth controls client certificate authentication.
 	ClientAuth TLSClientAuth
 }

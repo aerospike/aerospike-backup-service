@@ -42,7 +42,7 @@ func TestCredentialsValidate_MalformedSecretRef(t *testing.T) {
 		},
 	}
 
-	err := cluster.Validate(ValidationDefault)
+	err := cluster.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "password")
@@ -58,7 +58,7 @@ func TestCredentialsToModel_SecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	err := cluster.Validate(ValidationDefault)
+	err := cluster.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "password")
@@ -75,7 +75,7 @@ func TestS3StorageToModel_SecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	err := storage.Validate(ValidationDefault)
+	err := storage.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "access-key-id")
@@ -90,7 +90,7 @@ func TestGcpStorageToModel_SecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	err := storage.Validate(ValidationDefault)
+	err := storage.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "key-json")
@@ -110,7 +110,7 @@ func TestConfigToModel_SecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	err := config.Validate(ValidationSkipTLSFiles)
+	err := config.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "secret agent")
@@ -135,7 +135,7 @@ func TestRestoreRequestToModel_SecretRefWithoutAgent(t *testing.T) {
 		BackupDataPath: "backup-path",
 	}
 
-	err := request.Validate(ValidationDefault)
+	err := request.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "secret agent")
@@ -164,7 +164,7 @@ func TestRestoreRequest_Validate_PolicySecretRefWithoutAgent(t *testing.T) {
 		},
 	}
 
-	err := request.Validate(ValidationDefault)
+	err := request.Validate()
 	require.Error(t, err)
 	require.ErrorIs(t, err, errValidation)
 	require.ErrorContains(t, err, "key-secret")
@@ -185,6 +185,6 @@ func TestRestoreTimestampRequest_Validate_PolicySecretRefWithoutInlineAgent(t *t
 		},
 	}
 
-	err := request.Validate(ValidationDefault)
+	err := request.Validate()
 	require.NoError(t, err)
 }

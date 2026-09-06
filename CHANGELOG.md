@@ -12,6 +12,11 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
 
 ## [Unreleased]
 
+### Added
+
+- `schedule-timezone` on `service.backup` and on backup routines so cron schedules can be
+  evaluated in UTC (default), the host timezone, or a named IANA zone. Backup paths remain UTC.
+
 ## [3.6.1] - 2026-07-23
 
 No functional changes; see 3.6.0 below.

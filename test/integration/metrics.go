@@ -105,7 +105,7 @@ func (e *env) lastSuccessfulBackupTimestamp(ctx context.Context, backupType mode
 	}
 
 	value, ok := gaugeValue(families, lastSuccessfulBackupTimestampMetric, prommodel.LabelSet{
-		"routine": prommodel.LabelValue(routineName),
+		"routine": routineName,
 		"type":    prommodel.LabelValue(backupType),
 	})
 
@@ -119,7 +119,7 @@ func (e *env) backupSuccessEventCount(ctx context.Context, backupType model.Back
 	}
 
 	value, ok := counterValue(families, backupEventsTotalMetric, prommodel.LabelSet{
-		"routine": prommodel.LabelValue(routineName),
+		"routine": routineName,
 		"type":    prommodel.LabelValue(backupType),
 		"outcome": "success",
 	})
@@ -134,7 +134,7 @@ func (e *env) backupFailureEventCount(ctx context.Context, backupType model.Back
 	}
 
 	value, ok := counterValue(families, backupEventsTotalMetric, prommodel.LabelSet{
-		"routine": prommodel.LabelValue(routineName),
+		"routine": routineName,
 		"type":    prommodel.LabelValue(backupType),
 		"outcome": "failure",
 	})

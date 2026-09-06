@@ -15,8 +15,8 @@ func TestMergeSecrets_ComplexFixture(t *testing.T) {
 	redacted.AerospikeClusters["cluster1"].Credentials.User = "updatedUser"
 	redacted.StorageProviders["s3-main"] = testStorage{
 		Name:            "updated-bucket",
-		AccessKeyID:     Secret(redactedSecret),
-		SecretAccessKey: Secret(redactedSecret),
+		AccessKeyID:     redactedSecret,
+		SecretAccessKey: redactedSecret,
 	}
 
 	MergeSecrets(&redacted, original)

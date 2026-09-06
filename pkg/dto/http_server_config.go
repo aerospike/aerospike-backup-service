@@ -6,7 +6,6 @@ import (
 	"net/netip"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 // ServerConfigHTTP represents the service's HTTP server configuration.
@@ -87,8 +86,8 @@ func (r *RateLimiterConfig) Validate() error {
 	if r == nil {
 		return nil
 	}
-	if duplicates := collections.CheckDuplicates(r.WhiteList); len(duplicates) > 0 {
-		return errValidationDuplicate("white-list", duplicates)
+	if err := validateUniqueNonEmpty("white-list", r.WhiteList); err != nil {
+		return err
 	}
 	for _, entry := range r.WhiteList {
 		if _, err := netip.ParsePrefix(entry); err == nil {

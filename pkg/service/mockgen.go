@@ -876,15 +876,15 @@ func (m *MockBackupReporter) EXPECT() *MockBackupReporterMockRecorder {
 }
 
 // Report mocks base method.
-func (m *MockBackupReporter) Report(routineName string, backupType model.BackupType, startTime time.Time, duration time.Duration, err error, logger *slog.Logger) {
+func (m *MockBackupReporter) Report(routineName string, backupType model.BackupType, duration time.Duration, err error, logger *slog.Logger) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Report", routineName, backupType, startTime, duration, err, logger)
+	m.ctrl.Call(m, "Report", routineName, backupType, duration, err, logger)
 }
 
 // Report indicates an expected call of Report.
-func (mr *MockBackupReporterMockRecorder) Report(routineName, backupType, startTime, duration, err, logger any) *gomock.Call {
+func (mr *MockBackupReporterMockRecorder) Report(routineName, backupType, duration, err, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Report", reflect.TypeOf((*MockBackupReporter)(nil).Report), routineName, backupType, startTime, duration, err, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Report", reflect.TypeOf((*MockBackupReporter)(nil).Report), routineName, backupType, duration, err, logger)
 }
 
 // MockBackupOrchestrator is a mock of BackupOrchestrator interface.

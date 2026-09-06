@@ -36,7 +36,7 @@ type GcpStorage struct {
 const gcsMinUploadChunkSize = 256 * 1024 // 256 KiB
 
 // Validate checks if the GcpStorage is valid.
-func (s *GcpStorage) Validate(opts ValidationOptions) error {
+func (s *GcpStorage) Validate() error {
 	if s.BucketName == "" {
 		return errors.New("GCP bucket name is not specified")
 	}
@@ -59,7 +59,7 @@ func (s *GcpStorage) Validate(opts ValidationOptions) error {
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-	return s.SecretAgentConfig.validate(opts)
+	return s.SecretAgentConfig.validate()
 }
 
 func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {

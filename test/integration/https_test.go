@@ -197,6 +197,7 @@ func (s *Suite) encryptPEMKeyFile(dir, keyFile, password string) string {
 	block, _ := pem.Decode(keyPEM)
 	s.Require().NotNil(block)
 
+	//noinspection GoDeprecation
 	encrypted, err := x509.EncryptPEMBlock( //nolint:staticcheck // DEK-Info PEM is what ABS decrypts
 		rand.Reader, block.Type, block.Bytes, []byte(password), x509.PEMCipherAES256)
 	s.Require().NoError(err)
@@ -212,7 +213,7 @@ func freeHostPort(s *Suite) int {
 
 	listener, err := (&net.ListenConfig{}).Listen(s.T().Context(), "tcp", "127.0.0.1:0")
 	s.Require().NoError(err)
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	return listener.Addr().(*net.TCPAddr).Port
 }

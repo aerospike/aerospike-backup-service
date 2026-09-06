@@ -24,7 +24,7 @@ func TestInitComponents_MinimalConfig(t *testing.T) {
 
 	require.NotNil(t, components.Scheduler)
 	require.NotNil(t, components.MetricsCollector)
-	require.NotNil(t, components.CertReloader)
+	require.NotNil(t, components.TLSProvider)
 	require.Len(t, components.Servers, 1)
 
 	components.Scheduler.Start(ctx)
@@ -50,4 +50,38 @@ func TestInitComponents_InvalidConfig(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed to load configuration")
 	require.Nil(t, components)
+}
+
+func TestInitComponents_MissingTLSFiles(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	config := `service:
+  https:
+    cert-file: /missing/server.pem
+    key-file: /missing/server-key.pem
+`
+	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
+
+	components, err := InitComponents(t.Context(), configPath, false)
+
+	require.ErrorContains(t, err, "failed to create HTTPS server")
+	require.Nil(t, components)
+}
+
+func TestInitComponents_DisabledHTTPSDoesNotRequireTLSFiles(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	config := `service:
+  https:
+    disabled: true
+    cert-file: /missing/server.pem
+    key-file: /missing/server-key.pem
+`
+	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	components, err := InitComponents(ctx, configPath, false)
+	require.NoError(t, err)
+	require.NotNil(t, components)
+	t.Cleanup(components.Scheduler.Stop)
 }

@@ -1,10 +1,11 @@
 //go:build integration
 
+package integration
+
 // Metrics assertions for integration tests: Prometheus counters and gauges.
 //
 // Keep assertMetric* and waitForMetric* helpers here rather than in *_test.go files so
 // scenarios stay focused on setup and flow while metrics checks remain reusable.
-package integration
 
 import (
 	"time"

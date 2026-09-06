@@ -111,7 +111,7 @@ func loadCertsFromPath(pool *x509.CertPool, caPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open CA path directory: %w", err)
 	}
-	defer root.Close()
+	defer func() { _ = root.Close() }()
 
 	files, err := safepath.ReadDir(caPath)
 	if err != nil {

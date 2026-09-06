@@ -36,11 +36,13 @@ func (c ServiceConfig) GetLoggerOrDefault() *LoggerConfig {
 	return &defaultConfig.logger
 }
 
-// GetBackupCommonOrDefault returns the backup subsection or an empty default.
+// GetBackupCommonOrDefault returns the backup subsection or a default with UTC schedule timezone.
 func (c ServiceConfig) GetBackupCommonOrDefault() *BackupCommonConfig {
 	if c.Backup != nil {
 		return c.Backup
 	}
 
-	return &BackupCommonConfig{}
+	return &BackupCommonConfig{
+		Timezone: NewServiceLocation(""),
+	}
 }

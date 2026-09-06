@@ -20,7 +20,6 @@ type BackupReporter interface {
 	Report(
 		routineName string,
 		backupType model.BackupType,
-		startTime time.Time,
 		duration time.Duration,
 		err error,
 		logger *slog.Logger,
@@ -39,7 +38,6 @@ var _ BackupReporter = (*backupReporter)(nil)
 func (r *backupReporter) Report(
 	routineName string,
 	backupType model.BackupType,
-	startTime time.Time,
 	duration time.Duration,
 	err error,
 	logger *slog.Logger,

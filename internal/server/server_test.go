@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
@@ -37,6 +39,7 @@ func newTestServerHTTP(t *testing.T, httpCfg *model.ServerConfigHTTP) *serverHTT
 		t.Context(),
 		model.NewConfig(),
 		nil, nil, nil, nil, nil, nil, nil, nil,
+		servertls.NewProber(secrets.NewResolver()),
 	)
 
 	return NewServerHTTP(t.Context(), httpCfg, svc).(*serverHTTP)
@@ -122,7 +125,7 @@ func TestNewServerHTTP_ReadTimeoutClosesSilentClient(t *testing.T) {
 
 	conn, err := (&net.Dialer{}).DialContext(t.Context(), "tcp", ln.Addr().String())
 	require.NoError(t, err)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Silent client: open a connection but never send a request.
 	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))

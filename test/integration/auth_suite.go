@@ -375,7 +375,7 @@ func availableHostPort(ctx context.Context, s *AuthSuite) int {
 	var listenConfig net.ListenConfig
 	listener, err := listenConfig.Listen(ctx, "tcp4", "127.0.0.1:0")
 	s.Require().NoError(err)
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	return listener.Addr().(*net.TCPAddr).Port
 }
@@ -505,6 +505,7 @@ func encryptPEMKey(s *AuthSuite, keyPEM []byte) []byte {
 	block, _ := pem.Decode(keyPEM)
 	s.Require().NotNil(block, "client key PEM")
 
+	//noinspection GoDeprecation
 	encrypted, err := x509.EncryptPEMBlock( //nolint:staticcheck // DEK-Info PEM is what ABS decrypts
 		rand.Reader, block.Type, block.Bytes, []byte(clientKeyPassword), x509.PEMCipherAES256)
 	s.Require().NoError(err)

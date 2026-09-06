@@ -226,4 +226,8 @@ generate_mocks \
     "internal/server/configuration" \
     "Manager"
 
+generate_mocks \
+    "internal/server/tlsconfig" \
+    "Prober"
+
 echo "All mocks generated successfully."

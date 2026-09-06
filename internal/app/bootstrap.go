@@ -32,7 +32,7 @@ type Components struct {
 	Scheduler        quartz.Scheduler
 	Servers          []server.HTTP
 	MetricsCollector *prometheus.MetricsCollector
-	CertReloader     servertls.Reloader
+	TLSProvider      servertls.TLSProvider
 }
 
 // InitComponents builds the full object graph.
@@ -52,10 +52,11 @@ func InitComponents(
 	remote bool,
 ) (*Components, error) {
 	resolver := secrets.NewResolver()
+	tlsProber := servertls.NewProber(resolver)
 	operations := newStorageOperations(resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 
-	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations)
+	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations, tlsProber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -129,6 +130,7 @@ func InitComponents(
 		registry,
 		configurationManager,
 		nsValidator,
+		tlsProber,
 	)
 
 	var servers []server.HTTP
@@ -137,14 +139,14 @@ func InitComponents(
 		servers = append(servers, server.NewServerHTTP(ctx, configHTTP, srv))
 	}
 
-	certReloader := servertls.NoReload()
+	tlsProvider := servertls.NoReload()
 	configHTTPS := config.ServiceConfig.GetServerHTTPSOrDefault()
 	if !configHTTPS.Disabled {
 		httpsServer, reloader, err := newServerHTTPS(ctx, configHTTPS, srv, resolver)
 		if err != nil {
 			return nil, err
 		}
-		certReloader = reloader
+		tlsProvider = reloader
 		servers = append(servers, httpsServer)
 	}
 
@@ -152,7 +154,7 @@ func InitComponents(
 		Scheduler:        scheduler,
 		Servers:          servers,
 		MetricsCollector: metricsCollector,
-		CertReloader:     certReloader,
+		TLSProvider:      tlsProvider,
 	}, nil
 }
 
@@ -161,20 +163,18 @@ func newServerHTTPS(
 	configHTTPS *model.ServerConfigHTTPS,
 	srv *handlers.Service,
 	resolver secrets.Resolver,
-) (server.HTTP, servertls.Reloader, error) {
-	reloader := servertls.NewCertificateReloader(
-		configHTTPS, resolver, servertls.DefaultWatchInterval,
-	)
-	if err := reloader.Load(ctx); err != nil { // initial TLS keys load.
+) (server.HTTP, servertls.TLSProvider, error) {
+	tlsProvider := servertls.NewCertificateProvider(configHTTPS, resolver)
+	if err := tlsProvider.Load(ctx); err != nil { // initial TLS material load.
 		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 	}
 
-	tlsConfig, err := servertls.NewTLSConfig(configHTTPS, reloader.GetCertificate)
+	tlsConfig, err := servertls.NewTLSConfig(configHTTPS, tlsProvider)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 	}
 
-	return server.NewServerHTTPS(ctx, configHTTPS, srv, tlsConfig), reloader, nil
+	return server.NewServerHTTPS(ctx, configHTTPS, srv, tlsConfig), tlsProvider, nil
 }
 
 func newStorageOperations(resolver secrets.Resolver) storage.Operations {

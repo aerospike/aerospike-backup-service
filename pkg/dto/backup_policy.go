@@ -64,6 +64,8 @@ type BackupPolicy struct {
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
 	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty" extensions:"x-nullable"`
+	// The mode for incremental backups (optional, default is differential).
+	IncrMode IncrMode `yaml:"incr-mode,omitempty" json:"incr-mode,omitempty" example:"differential" extensions:"x-nullable"`
 	// Enables built-in compression during scan operation.
 	// Valid for Aerospike Server Enterprise Edition only.
 	UseCompression *bool `yaml:"use-scan-compression,omitempty" json:"use-scan-compression,omitempty" extensions:"x-nullable"`
@@ -132,6 +134,9 @@ func (p *BackupPolicy) Validate(opts ValidationOptions) error {
 	if err := p.CompressionPolicy.Validate(); err != nil {
 		return err
 	}
+	if err := p.IncrMode.Validate(); err != nil {
+		return err
+	}
 
 	if p.MaxConcurrentNodes != nil && *p.MaxConcurrentNodes < 0 {
 		return errValidationNegative("max-concurrent-nodes", *p.MaxConcurrentNodes)
@@ -193,6 +198,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		Sealed:                p.Sealed,
 		Compact:               p.Compact,
 		ConcurrentIncremental: p.ConcurrentIncremental,
+		IncrMode:              p.IncrMode.ToModel(),
 		UseCompression:        p.UseCompression,
 		MaxConcurrentNodes:    p.MaxConcurrentNodes,
 	}
@@ -243,6 +249,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.Sealed = m.Sealed
 	p.Compact = m.Compact
 	p.ConcurrentIncremental = m.ConcurrentIncremental
+	p.IncrMode = NewIncrModeFromModel(m.IncrMode)
 	p.UseCompression = m.UseCompression
 	p.MaxConcurrentNodes = m.MaxConcurrentNodes
 }

@@ -59,7 +59,7 @@ func (p *backupOrchestrator) Backup(
 	logger := slog.With(attr.Routine(routine.Name))
 	release, err := p.startController.TryStart(routine, now, backupType)
 	if err != nil {
-		p.outcomeReporter.Report(routine.Name, backupType, now, 0, err, logger)
+		p.outcomeReporter.Report(routine.Name, backupType, 0, err, logger)
 		return
 	}
 	defer release()
@@ -68,7 +68,7 @@ func (p *backupOrchestrator) Backup(
 		return p.runBackupInternal(ctx, routine, now, backupType, logger)
 	})
 
-	p.outcomeReporter.Report(routine.Name, backupType, now, duration, err, logger)
+	p.outcomeReporter.Report(routine.Name, backupType, duration, err, logger)
 }
 
 // runBackupInternal starts namespace backups, registers the aggregate handler, and runs completion hooks.
@@ -79,12 +79,23 @@ func (p *backupOrchestrator) runBackupInternal(
 	backupType model.BackupType,
 	logger *slog.Logger,
 ) error {
-	logger.Info(string(backupType)+" backup started", slog.Time("now", now))
+	if backupType == model.BackupTypeIncremental {
+		logger.Info(
+			"incremental backup started",
+			slog.Time("now", now),
+			slog.String("incrMode", string(routine.BackupPolicy.GetIncrModeOrDefault())),
+		)
+	} else {
+		logger.Info("full backup started", slog.Time("now", now))
+	}
 
 	runSpec := model.BackupRunSpec{
-		Type:       backupType,
-		StartTime:  now,
-		TimeBounds: p.createTimeBounds(backupType, now, routine),
+		Type:      backupType,
+		StartTime: now,
+		TimeBounds: model.TimeBounds{
+			FromTime: p.backupFromTime(routine, backupType),
+			ToTime:   p.backupToTime(routine, now),
+		},
 	}
 	backupHandler, err := p.routineRunner.Run(ctx, routine, runSpec, logger)
 	if err != nil {
@@ -102,24 +113,23 @@ func (p *backupOrchestrator) runBackupInternal(
 	return nil
 }
 
-// createTimeBounds derives incremental from-time and optional sealed to-time for this run.
-func (p *backupOrchestrator) createTimeBounds(
-	backupType model.BackupType,
-	now time.Time,
-	routine *model.BackupRoutine,
-) model.TimeBounds {
-	var (
-		fromTime *time.Time
-		toTime   *time.Time
-	)
-
-	if backupType == model.BackupTypeIncremental {
-		fromTime = p.registry.GetRoutineState(routine).LastRunTime.LatestRun()
-	}
-
+func (p *backupOrchestrator) backupToTime(routine *model.BackupRoutine, now time.Time) *time.Time {
 	if routine.BackupPolicy.IsSealedOrDefault() {
-		toTime = &now
+		return &now
 	}
 
-	return model.TimeBounds{FromTime: fromTime, ToTime: toTime}
+	return nil
+}
+
+func (p *backupOrchestrator) backupFromTime(routine *model.BackupRoutine, backupType model.BackupType) *time.Time {
+	if backupType == model.BackupTypeFull {
+		return nil
+	}
+
+	lastRunTime := p.registry.GetRoutineState(routine).LastRunTime
+	if routine.BackupPolicy.GetIncrModeOrDefault() == model.IncrModeCumulative {
+		return lastRunTime.FullBackupTime()
+	}
+
+	return lastRunTime.LatestRun()
 }

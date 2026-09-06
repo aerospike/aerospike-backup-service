@@ -167,3 +167,27 @@ func TestStartController_HasBackupRunning(t *testing.T) {
 	release()
 	require.False(t, controller.HasBackupRunning(routine))
 }
+
+func TestBuildStartFacts_UsesScheduleTimezone(t *testing.T) {
+	t.Parallel()
+
+	ny, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+
+	routine := &model.BackupRoutine{
+		Name:         "ny",
+		IntervalCron: "@daily",
+		Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+		BackupPolicy: &model.BackupPolicy{},
+	}
+
+	registry := newTestBackupStateRegistry(nil, nil)
+	registry.getTracker(routine.Name).markScanDone()
+	controller := NewStartController(registry, NewStartDecider()).(*startController)
+
+	localMidnight := time.Date(2025, 7, 20, 0, 0, 0, 0, ny)
+	utcMidnight := time.Date(2025, 7, 20, 0, 0, 0, 0, time.UTC)
+
+	assert.True(t, controller.buildStartFacts(routine, localMidnight).FullScheduledNow)
+	assert.False(t, controller.buildStartFacts(routine, utcMidnight).FullScheduledNow)
+}

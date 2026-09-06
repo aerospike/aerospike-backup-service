@@ -110,7 +110,7 @@ func testComplexConfig() testConfig {
 			"s3-ref": {
 				Name:            "ref-bucket",
 				AccessKeyID:     validSecretRef,
-				SecretAccessKey: Secret(""),
+				SecretAccessKey: "",
 			},
 		},
 		Routines: []testBackupRoutine{
