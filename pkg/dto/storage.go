@@ -61,7 +61,7 @@ func (s *Storage) Validate() error {
 		validStorage = s.AzureStorage
 		count++
 	}
-	if count == 0 {
+	if validStorage == nil {
 		return errors.New("no storage type specified")
 	}
 	if count > 1 {
@@ -109,7 +109,7 @@ func NewStorageFromModel(m model.Storage, config *model.BackupConfig) *Storage {
 			AzureStorage: newAzureStorageFromModel(s, config),
 		}
 	default:
-		return nil
+		panic(fmt.Sprintf("unsupported model storage type %T", m))
 	}
 }
 
