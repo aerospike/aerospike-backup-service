@@ -186,14 +186,14 @@ format:
 lint:
 	golangci-lint run ./...
 
-# Production packages only: skip tests and generated mocks.
+# Production packages only: skip tests, generated mocks, and the docs generator.
 .PHONY: nilaway
 nilaway:
 	$(GO) run go.uber.org/nilaway/cmd/nilaway@$(NILAWAY_VERSION) \
 		-test=false \
 		-exclude-test-files \
 		-exclude-file-docstrings='Code generated' \
-		$$($(GO) list ./...)
+		$$($(GO) list ./... | grep -vE '/(build/docs|docs)$$')
 
 .PHONY: lint-fix
 lint-fix:
