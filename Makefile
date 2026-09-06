@@ -186,13 +186,15 @@ format:
 lint:
 	golangci-lint run ./...
 
-# Production packages only: skip tests, generated mocks, and the docs generator.
+# Production packages only: skip tests, generated mocks, the docs generator, and
+# out-of-module code (stdlib/deps). NilAway otherwise traces into net/http and similar.
 .PHONY: nilaway
 nilaway:
 	$(GO) run go.uber.org/nilaway/cmd/nilaway@$(NILAWAY_VERSION) \
 		-test=false \
 		-exclude-test-files \
 		-exclude-file-docstrings='Code generated' \
+		-include-pkgs=$$($(GO) list -m) \
 		$$($(GO) list ./... | grep -vE '/(build/docs|docs)$$')
 
 .PHONY: lint-fix
