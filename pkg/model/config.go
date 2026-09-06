@@ -66,6 +66,27 @@ func (c *Config) BackupConfigCopy() *BackupConfig {
 }
 
 func (c *Config) AddStorage(name string, s Storage) error {
+	switch storage := s.(type) {
+	case *LocalStorage:
+		if storage == nil {
+			return errors.New("storage cannot be nil")
+		}
+	case *S3Storage:
+		if storage == nil {
+			return errors.New("storage cannot be nil")
+		}
+	case *GcpStorage:
+		if storage == nil {
+			return errors.New("storage cannot be nil")
+		}
+	case *AzureStorage:
+		if storage == nil {
+			return errors.New("storage cannot be nil")
+		}
+	default:
+		return fmt.Errorf("unsupported storage type %T", s)
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -161,6 +182,10 @@ func (c *Config) Routine(name string) (*BackupRoutine, bool) {
 }
 
 func (c *Config) AddRoutine(r *BackupRoutine) error {
+	if r == nil {
+		return errors.New("backup routine cannot be nil")
+	}
+
 	if r.Name == "" {
 		return errors.New("backup routine name is empty")
 	}
@@ -178,6 +203,10 @@ func (c *Config) AddRoutine(r *BackupRoutine) error {
 }
 
 func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
+	if cluster == nil {
+		return errors.New("Aerospike cluster cannot be nil")
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

@@ -30,6 +30,8 @@ VERSION ?= $(shell cat VERSION)
 
 # Go parameters
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
+# go.uber.org/nilaway has no tagged releases; pin the module pseudo-version.
+NILAWAY_VERSION = v0.0.0-20260808063849-8649a03c818a
 NFPM ?= $(shell which nfpm)
 OS ?= $(shell $(GO) env GOOS)
 ARCH ?= $(shell $(GO) env GOARCH)
@@ -183,6 +185,15 @@ format:
 .PHONY: lint
 lint:
 	golangci-lint run ./...
+
+# Production packages only: skip tests and generated mocks.
+.PHONY: nilaway
+nilaway:
+	$(GO) run go.uber.org/nilaway/cmd/nilaway@$(NILAWAY_VERSION) \
+		-test=false \
+		-exclude-test-files \
+		-exclude-file-docstrings='Code generated' \
+		$$($(GO) list ./...)
 
 .PHONY: lint-fix
 lint-fix:

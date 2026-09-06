@@ -381,10 +381,6 @@ func NewRoutineFromReader(r io.Reader, format decoder.SerializationFormat) (*Bac
 }
 
 func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRoutine {
-	if m == nil || config == nil {
-		return nil
-	}
-
 	b := &BackupRoutine{}
 	b.fromModel(m, config.BackupConfigCopy())
 
