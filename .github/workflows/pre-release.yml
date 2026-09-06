@@ -263,6 +263,22 @@ jobs:
           current="${PACKAGE_VERSION#v}"
           major="${current%%.*}"
 
+          # One-off test/pre-release tags publish only their immutable tag; they must not
+          # participate in major/latest moving-tag decisions.
+          if ! echo "$current" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "VERSIONS_OVERRIDE=$current" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Docker moving tags"
+              echo "| Field | Value |"
+              echo "| --- | --- |"
+              echo "| Releasing | \`$current\` |"
+              echo "| Tags published (besides the immutable tag) | \`$current\` |"
+              echo ""
+              echo "Pre-release/test tag; \`latest\` and major moving tags are withheld."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
           # Final releases only. Pre-release tags (v3.7.0-rc1) and one-off test tags must not
           # get a say in which release owns `latest`. The tag being built is folded in because
           # it is not guaranteed to be among the fetched refs yet.
