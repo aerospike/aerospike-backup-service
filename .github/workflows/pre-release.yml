@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
           egress-policy: audit
 
@@ -66,7 +66,7 @@ jobs:
       package_version: ${{ steps.metadata.outputs.PACKAGE_VERSION }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
           egress-policy: audit
 
@@ -82,7 +82,7 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: setup GPG
-        uses: aerospike/shared-workflows/.github/actions/setup-gpg@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+        uses: aerospike/shared-workflows/.github/actions/setup-gpg@0d843cff870d70ac527048ab0d006c7c301fbb2f # v4.1.0
         with:
           gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
           gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
@@ -458,7 +458,7 @@ jobs:
       image_version: ${{ steps.metadata.outputs.IMAGE_VERSION }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
           egress-policy: audit
 
@@ -625,7 +625,7 @@ jobs:
       helm_version: ${{ steps.metadata.outputs.HELM_VERSION }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
           egress-policy: audit
 
@@ -671,7 +671,7 @@ jobs:
           echo "Helm chart metadata extraction completed."
 
       - name: setup GPG
-        uses: aerospike/shared-workflows/.github/actions/setup-gpg@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+        uses: aerospike/shared-workflows/.github/actions/setup-gpg@0d843cff870d70ac527048ab0d006c7c301fbb2f # v4.1.0
         with:
           gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
           gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
@@ -752,7 +752,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
           egress-policy: audit
 
