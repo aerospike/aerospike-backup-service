@@ -139,6 +139,7 @@ func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
 		return fmt.Errorf("add backup policy %q: %w", name, ErrAlreadyExists)
 	}
 	c.backupConfig.BackupPolicies[name] = p
+
 	return nil
 }
 
