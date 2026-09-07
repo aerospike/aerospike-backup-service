@@ -189,13 +189,15 @@ lint:
 # Production packages only: skip tests, generated mocks, the docs generator, and
 # out-of-module code (stdlib/deps). NilAway otherwise traces into net/http and similar.
 .PHONY: nilaway
-nilaway:
+nilaway: submodules
+	set -euo pipefail; \
+	packages="$$($(GO) list ./... | grep -vE '/(build/docs|docs)$$')"; \
 	$(GO) run go.uber.org/nilaway/cmd/nilaway@$(NILAWAY_VERSION) \
 		-test=false \
 		-exclude-test-files \
 		-exclude-file-docstrings='Code generated' \
 		-include-pkgs=$$($(GO) list -m) \
-		$$($(GO) list ./... | grep -vE '/(build/docs|docs)$$')
+		$$packages
 
 .PHONY: lint-fix
 lint-fix:
