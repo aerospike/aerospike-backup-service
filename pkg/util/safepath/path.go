@@ -18,13 +18,23 @@ func ValidateClean(path string) error {
 		return nil
 	}
 
-	cleaned := filepath.Clean(path)
-	if cleaned != path {
-		return fmt.Errorf("path %q is not clean (normalizes to %q)", path, cleaned)
+	// Check for path traversal first (most critical security issue)
+	if slices.Contains(strings.Split(path, string(filepath.Separator)), "..") {
+		return fmt.Errorf("path %q must not contain '..' (path traversal not allowed)", path)
 	}
 
-	if slices.Contains(strings.Split(path, string(filepath.Separator)), "..") {
-		return fmt.Errorf("path %q must not contain traversal", path)
+	// Check for non-canonical form (includes ./ prefix, trailing slashes, redundant separators, etc.)
+	cleaned := filepath.Clean(path)
+	if cleaned != path {
+		// Provide specific hints for common mistakes
+		switch {
+		case strings.HasPrefix(path, "./"):
+			return fmt.Errorf("path %q must not start with './' (use %q instead)", path, cleaned)
+		case strings.HasSuffix(path, "/"):
+			return fmt.Errorf("path %q must not end with '/' (use %q instead)", path, cleaned)
+		default:
+			return fmt.Errorf("path must be in canonical form (got %q, expected %q)", path, cleaned)
+		}
 	}
 
 	return nil
