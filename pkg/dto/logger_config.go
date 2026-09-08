@@ -90,7 +90,7 @@ func (l *LoggerConfig) Compare(other *LoggerConfig) error {
 // @Description FileLoggerConfig represents the configuration for the file logger writer.
 type FileLoggerConfig struct {
 	// Filename is the file to write logs to.
-	Filename string `yaml:"filename" json:"filename" example:"log.txt" validate:"required"`
+	Filename Path `yaml:"filename" json:"filename" example:"log.txt" validate:"required"`
 	// Maximum size in megabytes of the log file before it gets rotated.
 	MaxSize int `yaml:"maxsize" json:"maxsize" example:"100" extensions:"x-nullable" default:"100"`
 	// Maximum number of days to retain old log files based on the
@@ -110,7 +110,8 @@ func (f *FileLoggerConfig) Validate() error {
 	if f == nil {
 		return nil
 	}
-	if f.Filename == "" {
+	filenameStr := string(f.Filename)
+	if filenameStr == "" {
 		return errValidationEmptyField("logger file")
 	}
 	if f.MaxSize < 0 {
@@ -132,7 +133,7 @@ func (f *FileLoggerConfig) ToModel() *model.FileLoggerConfig {
 	}
 
 	return &model.FileLoggerConfig{
-		Filename:   f.Filename,
+		Filename:   string(f.Filename),
 		MaxSize:    f.MaxSize,
 		MaxAge:     f.MaxAge,
 		MaxBackups: f.MaxBackups,
@@ -141,7 +142,7 @@ func (f *FileLoggerConfig) ToModel() *model.FileLoggerConfig {
 }
 
 func (f *FileLoggerConfig) fromModel(m *model.FileLoggerConfig) {
-	f.Filename = m.Filename
+	f.Filename = Path(m.Filename)
 	f.MaxSize = m.MaxSize
 	f.MaxAge = m.MaxAge
 	f.MaxBackups = m.MaxBackups

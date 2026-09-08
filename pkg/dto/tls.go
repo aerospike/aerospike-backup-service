@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 const clusterTLSProtocol12 = "TLSv1.2"
@@ -25,7 +24,7 @@ var clusterCipherSuites = func() map[string]bool {
 type TLS struct {
 	ClientTLS `yaml:",inline"`
 	// Path to a directory of trusted CA certificates.
-	CAPath string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
+	CAPath Path `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
 	Protocols string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
 	// Colon-separated IANA TLS 1.2 cipher suite names (not OpenSSL nicknames).
@@ -69,7 +68,7 @@ func (t *TLS) Validate(opts ValidationOptions) error {
 }
 
 func (t *TLS) validatePaths() error {
-	if err := safepath.ValidateClean(t.CAPath); err != nil {
+	if err := t.CAPath.Validate(); err != nil {
 		return errValidationInvalidPath("ca-path", t.CAPath, err)
 	}
 
@@ -128,14 +127,14 @@ func (t *TLS) validateTLSFields() error {
 }
 
 func (t *TLS) fromModel(m *model.TLS) {
-	t.CAFile = m.CAFile
-	t.CAPath = m.CAPath
+	t.CAFile = Path(m.CAFile)
+	t.CAPath = Path(m.CAPath)
 	t.Name = m.Name
 	t.Protocols = m.Protocols
 	t.CipherSuite = m.CipherSuite
-	t.Keyfile = m.Keyfile
+	t.Keyfile = Path(m.Keyfile)
 	t.KeyfilePassword = secret(m.KeyfilePassword)
-	t.Certfile = m.Certfile
+	t.Certfile = Path(m.Certfile)
 }
 
 func (t *TLS) toModel() *model.TLS {
@@ -145,7 +144,7 @@ func (t *TLS) toModel() *model.TLS {
 
 	return &model.TLS{
 		ClientTLS:       t.ToModel(),
-		CAPath:          t.CAPath,
+		CAPath:          string(t.CAPath),
 		Protocols:       t.Protocols,
 		CipherSuite:     t.CipherSuite,
 		KeyfilePassword: string(t.KeyfilePassword),

@@ -7,7 +7,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -199,7 +198,7 @@ type Credentials struct {
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
 	Password secret `yaml:"password,omitempty" json:"password,omitempty" format:"password" extensions:"x-nullable"`
 	// The file path with the password string.
-	PasswordPath string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
+	PasswordPath Path `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
 	// The authentication mode (INTERNAL, EXTERNAL, PKI).
 	AuthMode AuthMode `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" default:"INTERNAL"`
 }
@@ -207,7 +206,7 @@ type Credentials struct {
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
 	c.User = m.User
 	c.Password = secret(m.Password)
-	c.PasswordPath = m.PasswordPath
+	c.PasswordPath = Path(m.PasswordPath)
 	c.AuthMode = NewAuthModeFromModel(m.AuthMode)
 
 	c.SecretAgentConfig = ResolveSecretAgentFromModel(m.SecretAgent, config)
@@ -229,8 +228,8 @@ func (c *Credentials) Validate() error {
 		return errValidationMutuallyExclusive("password", "password-path")
 	}
 
-	if err := safepath.ValidateClean(c.PasswordPath); err != nil {
-		return fmt.Errorf("%w: invalid password-path", errInvalidPath)
+	if err := c.PasswordPath.Validate(); err != nil {
+		return fmt.Errorf("%w: invalid password-path", err)
 	}
 
 	if err := c.AuthMode.Validate(); err != nil {
@@ -259,7 +258,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 	return &model.Credentials{
 		User:         c.User,
 		Password:     string(c.Password),
-		PasswordPath: c.PasswordPath,
+		PasswordPath: string(c.PasswordPath),
 		AuthMode:     c.AuthMode.ToModel(),
 		SecretAgent:  agent,
 	}, nil

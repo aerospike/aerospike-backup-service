@@ -8,48 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidateClean(t *testing.T) {
-	tests := []struct {
-		name       string
-		path       string
-		wantErr    bool
-		wantErrSub string
-	}{
-		{name: "empty path", path: ""},
-		{name: "clean relative path", path: "testdata/password.txt"},
-		{name: "clean absolute path", path: "/etc/ssl/certs/ca.pem"},
-		{name: "trailing slash", path: "backups/", wantErr: true, wantErrSub: "must not end with '/'"},
-		{name: "trailing slash absolute", path: "/etc/certs/", wantErr: true, wantErrSub: "must not end with '/'"},
-		{name: "parent traversal", path: "certs/../../outside.pem", wantErr: true, wantErrSub: "must not contain '..'"},
-		{name: "leading parent traversal segment", path: "../etc/passwd", wantErr: true, wantErrSub: "must not contain '..'"},
-		{name: "dot prefix", path: "./certs/ca.pem", wantErr: true, wantErrSub: "must not start with './'"},
-		{name: "redundant separators", path: "/etc//ssl/ca.pem", wantErr: true, wantErrSub: "canonical form"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateClean(tt.path)
-			if tt.wantErr {
-				require.Error(t, err)
-				if tt.wantErrSub != "" {
-					require.Contains(t, err.Error(), tt.wantErrSub)
-				}
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestEnsureFileExistsRejectsDirectory(t *testing.T) {
-	dir := t.TempDir()
-	require.NoError(t, os.Mkdir(filepath.Join(dir, "certs"), 0755))
-
-	err := EnsureFileExists(filepath.Join(dir, "certs"))
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "directory")
-}
-
 func TestReadFileRejectsDirectory(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.Mkdir(filepath.Join(dir, "certs"), 0755))
@@ -81,14 +39,6 @@ func TestReadFileRejectsRootEscape(t *testing.T) {
 
 	_, err = root.ReadFile("../secret.txt")
 	require.Error(t, err)
-}
-
-func TestEnsureFileExists(t *testing.T) {
-	tempDir := t.TempDir()
-	filePath := filepath.Join(tempDir, "cert.pem")
-	require.NoError(t, os.WriteFile(filePath, []byte("cert"), 0600))
-
-	require.NoError(t, EnsureFileExists(filePath))
 }
 
 func TestReadDir(t *testing.T) {

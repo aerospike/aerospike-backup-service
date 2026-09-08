@@ -5,64 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 )
-
-// ValidateClean reports whether path is safe for config use.
-// Empty paths are allowed and return nil.
-// Paths must be in canonical form (no ./ prefix, redundant separators, etc.)
-// and must not contain ".." elements.
-func ValidateClean(path string) error {
-	if path == "" {
-		return nil
-	}
-
-	// Check for path traversal first (most critical security issue)
-	if slices.Contains(strings.Split(path, string(filepath.Separator)), "..") {
-		return fmt.Errorf("path %q must not contain '..' (path traversal not allowed)", path)
-	}
-
-	// Check for non-canonical form (includes ./ prefix, trailing slashes, redundant separators, etc.)
-	cleaned := filepath.Clean(path)
-	if cleaned != path {
-		// Provide specific hints for common mistakes
-		switch {
-		case strings.HasPrefix(path, "./"):
-			return fmt.Errorf("path %q must not start with './' (use %q instead)", path, cleaned)
-		case strings.HasSuffix(path, "/"):
-			return fmt.Errorf("path %q must not end with '/' (use %q instead)", path, cleaned)
-		default:
-			return fmt.Errorf("path must be in canonical form (got %q, expected %q)", path, cleaned)
-		}
-	}
-
-	return nil
-}
-
-// EnsureFileExists checks that a validated file path exists using os.Root.
-// path must have passed ValidateClean.
-func EnsureFileExists(path string) error {
-	if path == "" {
-		return nil
-	}
-
-	root, name, err := openRootForFile(path)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = root.Close() }()
-
-	info, err := root.Stat(name)
-	if err != nil {
-		return err
-	}
-	if info.IsDir() {
-		return fmt.Errorf("path %q is a directory, not a file", path)
-	}
-
-	return nil
-}
 
 // ReadFile reads the full contents of a validated file path using os.Root.
 func ReadFile(path string) ([]byte, error) {

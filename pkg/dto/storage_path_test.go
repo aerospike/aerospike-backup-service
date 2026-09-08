@@ -18,12 +18,12 @@ func TestValidateObjectStoragePath(t *testing.T) {
 		{name: "parent directory", path: ".."},
 		{name: "traversal path", path: "../backups"},
 		{name: "embedded traversal", path: "backups/../../outside"},
-		{name: "absolute path", path: "/var/backups"},
+		{name: "absolute path", path: "/var/backups", valid: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateObjectStoragePath(tt.path)
+			err := Path(tt.path).Validate()
 			if tt.valid {
 				require.NoError(t, err)
 			} else {

@@ -8,7 +8,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // RestoreRequest represents a restore operation request from custom storage
@@ -24,7 +23,7 @@ type RestoreRequest struct {
 	// You can obtain this value by:
 	// - Browsing the storage UI, or
 	// - Reading the `key` field in the response from GET `v1/backups/full/{routine}`
-	BackupDataPath string `json:"backup-data-path" validate:"required"`
+	BackupDataPath Path `json:"backup-data-path" validate:"required"`
 }
 
 // NewRestoreRequestFromReader reads and deserializes the restore request from reader.
@@ -68,13 +67,14 @@ func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest
 
 // Validate validates the restore operation request.
 func (r *RestoreRequest) Validate() error {
-	if len(r.BackupDataPath) == 0 {
+	pathStr := string(r.BackupDataPath)
+	if len(pathStr) == 0 {
 		return errValidationEmptyField("backup-data-path")
 	}
-	if !filepath.IsLocal(r.BackupDataPath) {
+	if !filepath.IsLocal(pathStr) {
 		return fmt.Errorf("%w: backup-data-path must be local", errValidation)
 	}
-	if err := safepath.ValidateClean(r.BackupDataPath); err != nil {
+	if err := r.BackupDataPath.Validate(); err != nil {
 		return fmt.Errorf("%w: backup-data-path: %w", errValidation, err)
 	}
 	if err := r.DestinationClusterConfig.Validate(ValidationDefault); err != nil {
@@ -203,7 +203,7 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 		Policy:             *r.Policy.ToModel(),
 		SourceStorage:      storage,
 		SecretAgent:        secretAgent,
-		BackupDataPath:     r.BackupDataPath,
+		BackupDataPath:     string(r.BackupDataPath),
 	}, nil
 }
 

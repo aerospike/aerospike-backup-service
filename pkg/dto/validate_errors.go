@@ -66,6 +66,6 @@ func errValidationSecret(field string, err error) error {
 	return fmt.Errorf("%s: %w: %w", field, errValidation, err)
 }
 
-func errValidationInvalidPath(field, path string, err error) error {
+func errValidationInvalidPath(field string, path Path, err error) error {
 	return fmt.Errorf("%w: %q for %q: %w", errInvalidPath, path, field, err)
 }
