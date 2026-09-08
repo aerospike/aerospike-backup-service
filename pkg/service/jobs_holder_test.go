@@ -101,24 +101,20 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		recordsPerGoroutine := uint64(10)
 
 		var wg sync.WaitGroup
-		wg.Add(numGoroutines*2 + 1)
 
 		for range numGoroutines {
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				holder.addHandler(jobID, &mockRestoreHandler{})
-			}()
-			go func() {
-				defer wg.Done()
+			})
+			wg.Go(func() {
 				holder.addTotalRecords(jobID, recordsPerGoroutine)
-			}()
+			})
 		}
 
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			// finish job with cancellation
 			holder.finishJob(jobID, context.Canceled, slog.New(slog.DiscardHandler))
-		}()
+		})
 
 		wg.Wait()
 
@@ -143,24 +139,20 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		recordsPerGoroutine := uint64(10)
 
 		var wg sync.WaitGroup
-		wg.Add(numGoroutines*2 + 1)
 
 		for range numGoroutines {
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				holder.addHandler(jobID, &mockRestoreHandler{})
-			}()
-			go func() {
-				defer wg.Done()
+			})
+			wg.Go(func() {
 				holder.addTotalRecords(jobID, recordsPerGoroutine)
-			}()
+			})
 		}
 
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			// finish job with failure
 			holder.finishJob(jobID, failErr, slog.New(slog.DiscardHandler))
-		}()
+		})
 
 		wg.Wait()
 
