@@ -43,6 +43,9 @@ func (s *GcpStorage) Validate() error {
 	if err := s.Path.Validate(); err != nil {
 		return err
 	}
+	if err := s.KeyFile.Validate(); err != nil {
+		return errValidationInvalidPath("key-file-path", s.KeyFile, err)
+	}
 	if s.KeyFile != "" && s.Key != "" {
 		return errValidationMutuallyExclusive("key-file-path", "key-json")
 	}

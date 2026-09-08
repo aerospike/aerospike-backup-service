@@ -66,6 +66,10 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 		return errValidationSecret("key-secret", err)
 	}
 
+	if err := p.KeyFile.Validate(); err != nil {
+		return errValidationInvalidPath("key-file", p.KeyFile, err)
+	}
+
 	return nil
 }
 

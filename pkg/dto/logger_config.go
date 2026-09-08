@@ -110,9 +110,11 @@ func (f *FileLoggerConfig) Validate() error {
 	if f == nil {
 		return nil
 	}
-	filenameStr := string(f.Filename)
-	if filenameStr == "" {
+	if f.Filename == "" {
 		return errValidationEmptyField("logger file")
+	}
+	if err := f.Filename.Validate(); err != nil {
+		return errValidationInvalidPath("filename", f.Filename, err)
 	}
 	if f.MaxSize < 0 {
 		return errValidationNegative("maxsize", f.MaxSize)
