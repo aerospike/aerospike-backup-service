@@ -23,7 +23,7 @@ func TestScheduleRoutines(t *testing.T) {
 					Name:             "routine",
 					IntervalCron:     "0 0 * * * *",
 					IncrIntervalCron: "0 */6 * * * *",
-					Timezone:         model.NewServiceLocation(""),
+					Timezone:         model.NewServiceLocation("", nil),
 				},
 			},
 			expectedCalls: 2, // One for full backup, one for incremental
@@ -46,7 +46,7 @@ func TestScheduleRoutines(t *testing.T) {
 				"full-only": {
 					Name:         "full-only",
 					IntervalCron: "0 0 * * * *",
-					Timezone:     model.NewServiceLocation(""),
+					Timezone:     model.NewServiceLocation("", nil),
 				},
 			},
 			expectedCalls: 1, // One call for full backup only
@@ -57,7 +57,7 @@ func TestScheduleRoutines(t *testing.T) {
 				"ny-routine": {
 					Name:         "ny-routine",
 					IntervalCron: "0 0 2 * * *",
-					Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+					Timezone:     mustRoutineLocation("America/New_York", mustServiceLocation("")),
 				},
 			},
 			expectedCalls: 1,
@@ -120,7 +120,7 @@ func TestScheduleRoutines_UsesRoutineTimezone(t *testing.T) {
 	require.NoError(t, backupScheduler.ScheduleRoutines([]*model.BackupRoutine{{
 		Name:         "ny-timezone",
 		IntervalCron: "@daily",
-		Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+		Timezone:     mustRoutineLocation("America/New_York", mustServiceLocation("")),
 	}}))
 }
 

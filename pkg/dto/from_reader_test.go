@@ -101,11 +101,11 @@ func TestBackupCommonConfig_fromModel(t *testing.T) {
 	var dtoConfig BackupCommonConfig
 	dtoConfig.fromModel(&model.BackupCommonConfig{
 		TimestampFormat: &format,
-		Timezone:        model.NewServiceLocation("America/New_York"),
+		Timezone:        mustServiceLocation(t, "America/New_York"),
 	})
 
 	assert.Equal(t, TimestampFormatISO, dtoConfig.TimestampFormat)
-	assert.Equal(t, "America/New_York", dtoConfig.ScheduleTimezone)
+	assert.Equal(t, ScheduleTimezone("America/New_York"), dtoConfig.ScheduleTimezone)
 
 	roundTrip := dtoConfig.ToModel()
 	require.NotNil(t, roundTrip.TimestampFormat)
@@ -151,7 +151,7 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 
 	config := model.NewConfig()
 	config.ServiceConfig.Backup = &model.BackupCommonConfig{
-		Timezone: model.NewServiceLocation("America/New_York"),
+		Timezone: mustServiceLocation(t, "America/New_York"),
 	}
 	require.NoError(t, config.AddPolicy("policy1", policy))
 	require.NoError(t, config.AddCluster("cluster1", cluster))
@@ -164,7 +164,7 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 			Storage:       storage,
 			IntervalCron:  "@hourly",
 			Namespaces:    []string{"ns1"},
-			Timezone:      model.NewRoutineLocation(configured, config.ServiceConfig.Backup.Timezone),
+			Timezone:      mustRoutineLocation(t, configured, config.ServiceConfig.Backup.Timezone),
 		}
 	}
 
@@ -177,19 +177,19 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 	t.Run("explicit value differing from default is kept", func(t *testing.T) {
 		routine := NewRoutineFromModel(newRoutine("UTC"), config)
 		require.NotNil(t, routine)
-		assert.Equal(t, "UTC", routine.ScheduleTimezone)
+		assert.Equal(t, ScheduleTimezone("UTC"), routine.ScheduleTimezone)
 	})
 
 	t.Run("explicit value matching default is kept", func(t *testing.T) {
 		routine := NewRoutineFromModel(newRoutine("America/New_York"), config)
 		require.NotNil(t, routine)
-		assert.Equal(t, "America/New_York", routine.ScheduleTimezone)
+		assert.Equal(t, ScheduleTimezone("America/New_York"), routine.ScheduleTimezone)
 	})
 
 	t.Run("configured keyword is preserved", func(t *testing.T) {
 		routine := NewRoutineFromModel(newRoutine("utc"), config)
 		require.NotNil(t, routine)
-		assert.Equal(t, "utc", routine.ScheduleTimezone)
+		assert.Equal(t, ScheduleTimezone("utc"), routine.ScheduleTimezone)
 	})
 }
 
@@ -200,4 +200,20 @@ func TestNewClusterFromReader_InvalidYAML(t *testing.T) {
 
 func TestNewBackupDetailsFromModel_Nil(t *testing.T) {
 	assert.Nil(t, NewBackupDetailsFromModel(nil, &model.BackupConfig{}))
+}
+
+func mustServiceLocation(t *testing.T, configured string) model.Location {
+	t.Helper()
+	loc, err := model.ResolveTimezone(configured)
+	require.NoError(t, err)
+
+	return model.NewServiceLocation(configured, loc)
+}
+
+func mustRoutineLocation(t *testing.T, configured string, service model.Location) model.Location {
+	t.Helper()
+	loc, err := model.ResolveTimezone(configured)
+	require.NoError(t, err)
+
+	return model.NewRoutineLocation(configured, loc, service)
 }

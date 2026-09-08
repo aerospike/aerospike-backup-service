@@ -63,14 +63,15 @@ func TestBackupServiceConfig_Validate_ScheduleTimezone(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		value   string
+		value   ScheduleTimezone
 		wantErr string
 	}{
 		{name: "omitted", value: ""},
 		{name: "utc", value: "UTC"},
 		{name: "local", value: "local"},
 		{name: "iana", value: "America/New_York"},
-		{name: "EST rejected", value: "EST", wantErr: "EST"},
+		{name: "slashless iana", value: "Japan"},
+		{name: "iana EST accepted as fixed offset", value: "EST"},
 		{name: "unknown name", value: "Not/AZone", wantErr: "Not/AZone"},
 	}
 

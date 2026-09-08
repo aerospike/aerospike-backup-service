@@ -200,8 +200,8 @@ func TestConfig_ScheduleTimezoneRoundTrip(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		serviceTimezone  string
-		routineTimezone  string
+		serviceTimezone  ScheduleTimezone
+		routineTimezone  ScheduleTimezone
 		expectedResolved string
 	}{
 		{

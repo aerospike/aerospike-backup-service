@@ -177,7 +177,7 @@ func TestBuildStartFacts_UsesScheduleTimezone(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         "ny",
 		IntervalCron: "@daily",
-		Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+		Timezone:     mustRoutineLocation("America/New_York", mustServiceLocation("")),
 		BackupPolicy: &model.BackupPolicy{},
 	}
 
