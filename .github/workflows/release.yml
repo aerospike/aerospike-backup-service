@@ -4,20 +4,20 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Release version to publish (must match a release bundle already promoted to INTERNAL, e.g. v3.7.0)
+        description: Release version to publish (must match a release bundle already promoted to TEST, e.g. v3.7.0)
         required: true
         type: string
 
 permissions:
   contents: read
 
-# TEMPORARY (testing only): this workflow tracks the INTERNAL stage instead of PROD. Revert
+# TEMPORARY (testing only): this workflow tracks the TEST stage instead of PROD. Revert
 # `JF_TARGET_ENV` and the `JF_*_REPO` values below before merging to main.
 env:
-  JF_TARGET_ENV: INTERNAL
-  JF_DEB_REPO: database-deb-prod-internal-local
-  JF_RPM_REPO: database-rpm-prod-internal-local
-  JF_HELM_REPO: database-helm-prod-internal-local
+  JF_TARGET_ENV: TEST
+  JF_DEB_REPO: database-deb-test-local
+  JF_RPM_REPO: database-rpm-test-local
+  JF_HELM_REPO: database-helm-test-local
   DOCKERHUB_IMAGE: aerospike/aerospike-backup-service
 
 # This workflow is run manually, once the release bundle has already been promoted all the way to
