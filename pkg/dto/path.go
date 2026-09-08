@@ -39,3 +39,19 @@ func (p Path) Validate() error {
 
 	return nil
 }
+
+// ValidateRelative validates storage-relative paths such as object-storage
+// prefixes and backup-data-path. Empty paths are allowed.
+func (p Path) ValidateRelative() error {
+	if p == "" {
+		return nil
+	}
+	if err := p.Validate(); err != nil {
+		return err
+	}
+	if !filepath.IsLocal(string(p)) {
+		return fmt.Errorf("path %q must be relative", p)
+	}
+
+	return nil
+}

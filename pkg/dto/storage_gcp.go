@@ -40,8 +40,8 @@ func (s *GcpStorage) Validate() error {
 	if s.BucketName == "" {
 		return errors.New("GCP bucket name is not specified")
 	}
-	if err := s.Path.Validate(); err != nil {
-		return err
+	if err := s.Path.ValidateRelative(); err != nil {
+		return fmt.Errorf("storage path: %w", err)
 	}
 	if err := s.KeyFile.Validate(); err != nil {
 		return errValidationInvalidPath("key-file-path", s.KeyFile, err)

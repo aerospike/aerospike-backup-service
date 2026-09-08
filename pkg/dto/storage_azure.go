@@ -55,8 +55,8 @@ func (a *AzureStorage) Validate() error {
 	if a.ContainerName == "" {
 		return errors.New("azure storage container name is not specified")
 	}
-	if err := a.Path.Validate(); err != nil {
-		return err
+	if err := a.Path.ValidateRelative(); err != nil {
+		return fmt.Errorf("storage path: %w", err)
 	}
 
 	// Check for valid authentication method.

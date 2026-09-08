@@ -3,7 +3,6 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -23,9 +22,8 @@ func (l *LocalStorage) Validate() error {
 	if pathStr == "" {
 		return errors.New("local storage path is not specified")
 	}
-	if !filepath.IsAbs(pathStr) && !filepath.IsLocal(pathStr) {
-		return errors.New("local storage path must be absolute or local")
-	}
+	// Local filesystem storage roots may be absolute or relative, unlike
+	// object-storage prefixes and backup-data-path.
 	if err := l.Path.Validate(); err != nil {
 		return fmt.Errorf("local storage path: %w", err)
 	}

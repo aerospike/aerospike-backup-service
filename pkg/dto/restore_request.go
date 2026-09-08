@@ -3,7 +3,6 @@ package dto
 import (
 	"fmt"
 	"io"
-	"path/filepath"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
@@ -70,10 +69,7 @@ func (r *RestoreRequest) Validate() error {
 	if len(r.BackupDataPath) == 0 {
 		return errValidationEmptyField("backup-data-path")
 	}
-	if !filepath.IsLocal(string(r.BackupDataPath)) {
-		return fmt.Errorf("%w: backup-data-path must be local", errValidation)
-	}
-	if err := r.BackupDataPath.Validate(); err != nil {
+	if err := r.BackupDataPath.ValidateRelative(); err != nil {
 		return fmt.Errorf("%w: backup-data-path: %w", errValidation, err)
 	}
 	if err := r.DestinationClusterConfig.Validate(ValidationDefault); err != nil {
