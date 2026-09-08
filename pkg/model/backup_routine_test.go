@@ -52,7 +52,7 @@ func TestBackupRoutineCopy_GobRegistrations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &BackupRoutine{
 				Storage:  tt.storage,
-				Timezone: Location{resolved: time.FixedZone("test-zone", 3*60*60), Source: LocationSourceRoutine},
+				Timezone: Location{resolved: time.FixedZone("test-zone", 3*60*60), Configured: "test-zone"},
 			}
 			r.BackupPolicy = &BackupPolicy{}
 			r.BackupPolicy.RetentionPolicy = &RetentionPolicy{}

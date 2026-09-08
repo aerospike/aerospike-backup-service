@@ -47,17 +47,17 @@ func TestNewServiceLocation(t *testing.T) {
 		t.Parallel()
 
 		location := NewServiceLocation("", nil)
-		assert.Nil(t, location.resolved)
-		assert.Equal(t, LocationSourceDefault, location.Source)
+		assert.False(t, location.IsExplicit())
+		assert.Empty(t, location.Configured)
 		assert.Same(t, DefaultScheduleTimezone, location.ResolvedLocation())
 	})
 
-	t.Run("resolved iana uses service source", func(t *testing.T) {
+	t.Run("resolved iana is explicit", func(t *testing.T) {
 		t.Parallel()
 
 		location := mustServiceLocation("America/New_York")
+		assert.True(t, location.IsExplicit())
 		assert.Equal(t, "America/New_York", location.Configured)
-		assert.Equal(t, LocationSourceService, location.Source)
 		assert.Equal(t, "America/New_York", location.ResolvedLocation().String())
 	})
 
@@ -65,8 +65,8 @@ func TestNewServiceLocation(t *testing.T) {
 		t.Parallel()
 
 		location := mustServiceLocation("local")
+		assert.True(t, location.IsExplicit())
 		assert.Equal(t, "local", location.Configured)
-		assert.Equal(t, LocationSourceService, location.Source)
 		assert.Equal(t, "Local", location.ResolvedLocation().String())
 	})
 }
@@ -76,11 +76,12 @@ func TestNewRoutineLocation(t *testing.T) {
 
 	service := mustServiceLocation("America/New_York")
 
-	t.Run("nil resolved inherits service timezone and source", func(t *testing.T) {
+	t.Run("nil resolved inherits service resolved timezone", func(t *testing.T) {
 		t.Parallel()
 
 		location := NewRoutineLocation("", nil, service)
-		assert.Equal(t, LocationSourceService, location.Source)
+		assert.False(t, location.IsExplicit())
+		assert.Empty(t, location.Configured)
 		assert.Equal(t, "America/New_York", location.ResolvedLocation().String())
 	})
 
@@ -88,7 +89,7 @@ func TestNewRoutineLocation(t *testing.T) {
 		t.Parallel()
 
 		location := NewRoutineLocation("", nil, NewServiceLocation("", nil))
-		assert.Equal(t, LocationSourceDefault, location.Source)
+		assert.False(t, location.IsExplicit())
 		assert.Nil(t, location.resolved)
 		assert.Same(t, DefaultScheduleTimezone, location.ResolvedLocation())
 	})
@@ -97,8 +98,8 @@ func TestNewRoutineLocation(t *testing.T) {
 		t.Parallel()
 
 		location := mustRoutineLocation("UTC", service)
+		assert.True(t, location.IsExplicit())
 		assert.Equal(t, "UTC", location.Configured)
-		assert.Equal(t, LocationSourceRoutine, location.Source)
 		assert.Same(t, DefaultScheduleTimezone, location.ResolvedLocation())
 	})
 }

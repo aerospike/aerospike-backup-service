@@ -56,15 +56,15 @@ func TestScheduleTimezone_ToServiceLocation(t *testing.T) {
 		t.Parallel()
 
 		loc := ScheduleTimezone("").ToServiceLocation()
-		assert.Equal(t, model.LocationSourceDefault, loc.Source)
+		assert.False(t, loc.IsExplicit())
 		assert.Same(t, model.DefaultScheduleTimezone, loc.ResolvedLocation())
 	})
 
-	t.Run("configured value resolves and tags service source", func(t *testing.T) {
+	t.Run("configured value resolves as explicit", func(t *testing.T) {
 		t.Parallel()
 
 		loc := ScheduleTimezone("America/New_York").ToServiceLocation()
-		assert.Equal(t, model.LocationSourceService, loc.Source)
+		assert.True(t, loc.IsExplicit())
 		assert.Equal(t, "America/New_York", loc.ResolvedLocation().String())
 	})
 }
@@ -78,15 +78,15 @@ func TestScheduleTimezone_ToRoutineLocation(t *testing.T) {
 		t.Parallel()
 
 		loc := ScheduleTimezone("").ToRoutineLocation(service)
-		assert.Equal(t, model.LocationSourceService, loc.Source)
+		assert.False(t, loc.IsExplicit())
 		assert.Equal(t, "America/New_York", loc.ResolvedLocation().String())
 	})
 
-	t.Run("override tags routine source", func(t *testing.T) {
+	t.Run("override is explicit", func(t *testing.T) {
 		t.Parallel()
 
 		loc := ScheduleTimezone("UTC").ToRoutineLocation(service)
-		assert.Equal(t, model.LocationSourceRoutine, loc.Source)
+		assert.True(t, loc.IsExplicit())
 		assert.Same(t, model.DefaultScheduleTimezone, loc.ResolvedLocation())
 	})
 }

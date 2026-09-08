@@ -122,7 +122,7 @@ func TestBackupRoutine_ToModel_BlankTimezoneUsesDefault(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, model.DefaultScheduleTimezone, m.Timezone.ResolvedLocation())
-		assert.Equal(t, model.LocationSourceDefault, m.Timezone.Source)
+		assert.False(t, m.Timezone.IsExplicit())
 		assert.Equal(t, string(timezone), m.Timezone.Configured)
 	}
 }
@@ -145,7 +145,7 @@ func TestBackupRoutine_ToModel_PreservesConfiguredTimezone(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.DefaultScheduleTimezone, m.Timezone.ResolvedLocation())
-	assert.Equal(t, model.LocationSourceRoutine, m.Timezone.Source)
+	assert.True(t, m.Timezone.IsExplicit())
 	assert.Equal(t, "utc", m.Timezone.Configured)
 }
 
