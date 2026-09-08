@@ -3,13 +3,24 @@ package decoder
 import (
 	"log/slog"
 	"reflect"
+	"slices"
 	"time"
 )
 
 var (
-	secretType = reflect.TypeFor[Secret]()
-	timeType   = reflect.TypeFor[time.Time]()
-	errType    = reflect.TypeFor[error]()
+	secretType      = reflect.TypeFor[Secret]()
+	timeType        = reflect.TypeFor[time.Time]()
+	timePtrType     = reflect.PointerTo(timeType)
+	locationType    = reflect.TypeFor[time.Location]()
+	locationPtrType = reflect.PointerTo(locationType)
+	errType         = reflect.TypeFor[error]()
+
+	skipDeepCopyTypes = []reflect.Type{
+		timeType,
+		timePtrType,
+		locationType,
+		locationPtrType,
+	}
 )
 
 // RedactSecrets returns a deep copy of v with all Secret-typed values replaced by redactedSecret.
@@ -43,7 +54,7 @@ func redactValue(v reflect.Value) reflect.Value {
 		return reflect.ValueOf(Secret(s.DisplayString()))
 	}
 
-	if v.Type() == timeType {
+	if shouldSkipDeepCopy(v) {
 		return v
 	}
 
@@ -127,4 +138,8 @@ func setField(dst, src reflect.Value) {
 	if src.Type().ConvertibleTo(dst.Type()) {
 		dst.Set(src.Convert(dst.Type()))
 	}
+}
+
+func shouldSkipDeepCopy(t reflect.Value) bool {
+	return slices.Contains(skipDeepCopyTypes, t.Type())
 }
