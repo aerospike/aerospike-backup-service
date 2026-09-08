@@ -33,7 +33,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 
 	stat := registry.GetRoutineState(&model.BackupRoutine{
 		Name:     routineName,
-		Timezone: model.NewServiceLocation(""),
+		Timezone: model.NewServiceLocation("", nil),
 	})
 
 	assert.NotNil(t, stat.Full)
@@ -62,7 +62,7 @@ func TestHistoryScan(t *testing.T) {
 	stat := registry.GetRoutineState(&model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
-		Timezone:     model.NewServiceLocation(""),
+		Timezone:     model.NewServiceLocation("", nil),
 	})
 	assert.NotNil(t, stat.Full)
 	assert.Equal(t, uint64(100), stat.Full.TotalRecords)
@@ -86,7 +86,7 @@ func TestFinishFull(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
-		Timezone:     model.NewServiceLocation(""),
+		Timezone:     model.NewServiceLocation("", nil),
 	}
 
 	registry.BackupStarted(routineName, model.BackupTypeFull, handler)
@@ -116,7 +116,7 @@ func TestFinishIncremental(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
-		Timezone:     model.NewServiceLocation(""),
+		Timezone:     model.NewServiceLocation("", nil),
 	}
 
 	registry.BackupStarted(routineName, model.BackupTypeIncremental, handler)
@@ -141,7 +141,7 @@ func TestCanceledHistoryScanKeepsPreviousLastRun(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
-		Timezone:     model.NewServiceLocation(""),
+		Timezone:     model.NewServiceLocation("", nil),
 	}
 	registry.getTracker(routineName).setLastRun(previous)
 	registry.getTracker(routineName).markScanDone()
@@ -164,12 +164,12 @@ func TestGetAllCurrentStats(t *testing.T) {
 		routine1: {
 			Name:         routine1,
 			IntervalCron: "@daily",
-			Timezone:     model.NewServiceLocation(""),
+			Timezone:     model.NewServiceLocation("", nil),
 		},
 		routine2: {
 			Name:         routine2,
 			IntervalCron: "@daily",
-			Timezone:     model.NewServiceLocation(""),
+			Timezone:     model.NewServiceLocation("", nil),
 		},
 	}).AnyTimes()
 
@@ -206,12 +206,12 @@ func TestGetRoutineState_NextRunTimeUsesScheduleTimezone(t *testing.T) {
 	nyRoutine := &model.BackupRoutine{
 		Name:         "ny",
 		IntervalCron: "@daily",
-		Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+		Timezone:     testLocation,
 	}
 	utcRoutine := &model.BackupRoutine{
 		Name:         "utc",
 		IntervalCron: "@daily",
-		Timezone:     model.NewServiceLocation(""),
+		Timezone:     model.NewServiceLocation("", nil),
 	}
 
 	registry := newTestBackupStateRegistry(nil, nil)
@@ -237,13 +237,13 @@ func TestGetRoutineState_NextRunTimeUsesScheduleTimezoneForIncremental(t *testin
 		Name:             "ny",
 		IntervalCron:     "@daily",
 		IncrIntervalCron: "0 0 2 * * *",
-		Timezone:         model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+		Timezone:         testLocation,
 	}
 	utcRoutine := &model.BackupRoutine{
 		Name:             "utc",
 		IntervalCron:     "@daily",
 		IncrIntervalCron: "0 0 2 * * *",
-		Timezone:         model.NewServiceLocation(""),
+		Timezone:         model.NewServiceLocation("", nil),
 	}
 
 	registry := newTestBackupStateRegistry(nil, nil)

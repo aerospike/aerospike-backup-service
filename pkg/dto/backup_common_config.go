@@ -16,11 +16,13 @@ type BackupCommonConfig struct {
 	// * US (e.g. Jan-02-2006-15-04-05)
 	TimestampFormat TimestampFormat `yaml:"timestamp-format,omitempty" json:"timestamp-format,omitempty" extensions:"x-nullable"` //nolint:lll
 	// Timezone for evaluating backup cron expressions (optional).
-	// Accepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.
+	// Accepted values: UTC (default), Local, or any IANA timezone name resolvable
+	// by Go's time.LoadLocation (for example, America/New_York or Japan).
 	// Keywords UTC and Local are case-insensitive; IANA names are case-sensitive.
-	// Abbreviations such as EST and POSIX TZ strings are not accepted.
+	// Prefer canonical Area/Location names: legacy aliases such as EST resolve as
+	// fixed UTC-5 with no DST, which is rarely what "Eastern Time" is meant to be.
 	// Changing this service-level default requires a restart.
-	ScheduleTimezone string `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"` //nolint:lll
+	ScheduleTimezone ScheduleTimezone `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"` //nolint:lll
 }
 
 // Validate validates the backup subsection configuration.
@@ -33,7 +35,7 @@ func (b *BackupCommonConfig) Validate() error {
 		return err
 	}
 
-	if err := validateScheduleTimezone(b.ScheduleTimezone); err != nil {
+	if err := b.ScheduleTimezone.Validate(); err != nil {
 		return err
 	}
 
@@ -47,13 +49,13 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 
 	return &model.BackupCommonConfig{
 		TimestampFormat: b.TimestampFormat.ToModel(),
-		Timezone:        model.NewServiceLocation(b.ScheduleTimezone),
+		Timezone:        b.ScheduleTimezone.ToServiceLocation(),
 	}
 }
 
 func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
 	b.TimestampFormat = NewTimestampFormatFromModel(m.TimestampFormat)
-	b.ScheduleTimezone = m.Timezone.Configured
+	b.ScheduleTimezone = ScheduleTimezone(m.Timezone.Configured)
 }
 
 // Compare compares two BackupCommonConfig instances and returns detailed errors.
@@ -71,12 +73,4 @@ func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
 		compareValues("TimestampFormat", b.TimestampFormat, other.TimestampFormat),
 		compareValues("ScheduleTimezone", b.ScheduleTimezone, other.ScheduleTimezone),
 	)
-}
-
-func validateScheduleTimezone(value string) error {
-	if _, err := model.ParseTimezone(value); err != nil {
-		return errValidationInvalidValue("schedule-timezone", value, "UTC, Local, or a valid IANA timezone name")
-	}
-
-	return nil
 }

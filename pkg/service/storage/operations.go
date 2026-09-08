@@ -41,7 +41,7 @@ type Operations interface {
 		ctx context.Context, storage model.Storage, path string, opts ...options.Opt,
 	) (backup.Writer, error)
 	// ReadFile reads the content of a file in the specified storage.
-	ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error)
+	ReadFile(ctx context.Context, storage model.Storage, filePath string) ([]byte, error)
 	// ReadFiles reads the content of files in the specified storage matching the filter.
 	ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error)
 	// ReadFileNames lists the names of files in the specified storage matching the filter.
@@ -129,8 +129,8 @@ func (s *operations) CreateDirWriter(
 	return s.accessorCreateWriter(ctx, storage, opts...)
 }
 
-func (s *operations) ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
-	reader, err := s.createFileReader(ctx, storage, filepath)
+func (s *operations) ReadFile(ctx context.Context, storage model.Storage, filePath string) ([]byte, error) {
+	reader, err := s.createFileReader(ctx, storage, filePath)
 
 	if err != nil {
 		return nil, err

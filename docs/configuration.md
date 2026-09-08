@@ -35,8 +35,11 @@ Accepted values:
 * `Local` — the timezone of the host running the service (`TZ` or `/etc/localtime`)
 * an IANA name such as `America/New_York` — useful in containers, which typically run in UTC
 
-`UTC` and `Local` are case-insensitive; IANA names are case-sensitive. Abbreviations such as
-`EST` and POSIX `TZ` strings are rejected at startup.
+`UTC` and `Local` are case-insensitive; IANA names are case-sensitive. Any name Go's
+`time.LoadLocation` resolves is accepted, including legacy aliases such as `Japan` or
+`Turkey`. Prefer canonical `Area/Location` names: `EST` and similar abbreviations resolve
+as fixed offsets with no daylight saving, which is rarely what "Eastern Time" is meant
+to be. Use `America/New_York` if you want DST to apply.
 
 Set a service-wide default under `service.backup` (requires a restart) or override it on a
 routine (can be changed through the routine API):

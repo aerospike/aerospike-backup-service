@@ -68,7 +68,6 @@ type backupRoutineGob struct {
 	IntervalCron       string
 	IncrIntervalCron   string
 	TimezoneConfigured string
-	TimezoneSource     LocationSource
 	Namespaces         []string
 	SetList            []string
 	BinList            []string
@@ -89,7 +88,6 @@ func toBackupRoutineGob(r *BackupRoutine) backupRoutineGob {
 		IntervalCron:       r.IntervalCron,
 		IncrIntervalCron:   r.IncrIntervalCron,
 		TimezoneConfigured: r.Timezone.Configured,
-		TimezoneSource:     r.Timezone.Source,
 		Namespaces:         r.Namespaces,
 		SetList:            r.SetList,
 		BinList:            r.BinList,
@@ -126,7 +124,6 @@ func (r *BackupRoutine) Copy() *BackupRoutine {
 		Timezone: Location{
 			resolved:   r.Timezone.resolved, // immutable; shared pointer is safe
 			Configured: copied.TimezoneConfigured,
-			Source:     copied.TimezoneSource,
 		},
 		Namespaces:       copied.Namespaces,
 		SetList:          copied.SetList,
