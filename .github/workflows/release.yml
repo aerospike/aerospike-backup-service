@@ -4,17 +4,25 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Release version to publish (must match a release bundle already promoted to PROD, e.g. v3.7.0)
+        description: Release version to publish (must match a release bundle already promoted to INTERNAL, e.g. v3.7.0)
         required: true
         type: string
 
 permissions:
   contents: read
 
+# TEMPORARY (testing only): this workflow tracks the INTERNAL stage instead of PROD. Revert
+# `JF_TARGET_ENV` and the `JF_*_REPO` values below before merging to main.
+env:
+  JF_TARGET_ENV: INTERNAL
+  JF_DEB_REPO: database-deb-prod-internal-local
+  JF_RPM_REPO: database-rpm-prod-internal-local
+  JF_HELM_REPO: database-helm-prod-internal-local
+
 # This workflow is run manually, once the release bundle has already been promoted all the way to
 # JFrog PROD via the JFrog UI by a PM/EM (see docs/development.md "Cutting a release" -- gates past
 # TEST are product-owned and intentionally not automated in CI). It never promotes anything itself;
-# it only verifies the PROD promotion happened, then republishes the already-signed artifacts as an
+# it only verifies the target promotion happened, then republishes the already-signed artifacts as an
 # immutable GitHub Release. Nothing is rebuilt, re-signed, or re-checksummed here -- JFrog is the
 # source of truth. Docker Hub mirroring is handled entirely externally by artifact-publisher
 # (https://aerospike.atlassian.net/wiki/spaces/DevOps/pages/4648566799), triggered by JFrog's own
@@ -48,7 +56,7 @@ jobs:
           oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
           oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
-      - name: Check release bundle is promoted to PROD
+      - name: Check release bundle is promoted to ${{ env.JF_TARGET_ENV }}
         env:
           JF_PROJECT: ${{ vars.JF_PROJECT }}
         run: |
@@ -62,24 +70,25 @@ jobs:
           RESPONSE=$(jf rt curl -s "/lifecycle/api/v2/promotion/records/${BUNDLE_NAME}/${BUNDLE_VERSION}?project=${JF_PROJECT}")
           echo "$RESPONSE" | jq .
 
-          COMPLETED_PROD=$(echo "$RESPONSE" | jq '[.promotions[]? | select(.environment == "PROD" and .status == "COMPLETED")] | length')
-          if [ "$COMPLETED_PROD" -lt 1 ]; then
-            echo "::error::Release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} has no COMPLETED promotion to PROD. Have a PM/EM promote it via the JFrog UI, then re-run this workflow."
+          COMPLETED_TARGET=$(echo "$RESPONSE" | jq --arg env "${JF_TARGET_ENV}" '[.promotions[]? | select(.environment == $env and .status == "COMPLETED")] | length')
+          if [ "$COMPLETED_TARGET" -lt 1 ]; then
+            echo "::error::Release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} has no COMPLETED promotion to ${JF_TARGET_ENV}. Promote it via the JFrog UI, then re-run this workflow."
             exit 1
           fi
 
-          echo "Confirmed: ${BUNDLE_NAME}:${BUNDLE_VERSION} is promoted to PROD."
+          echo "Confirmed: ${BUNDLE_NAME}:${BUNDLE_VERSION} is promoted to ${JF_TARGET_ENV}."
 
       - name: Summarize verification
         if: always()
         run: |
           {
-            echo "### PROD promotion check"
+            echo "### ${{ env.JF_TARGET_ENV }} promotion check"
             echo "| Field | Value |"
             echo "| --- | --- |"
             echo "| Bundle name | \`${BUNDLE_NAME}\` |"
             echo "| Bundle version | \`${BUNDLE_VERSION}\` |"
             echo "| JFrog project | \`${{ vars.JF_PROJECT }}\` |"
+            echo "| Target environment | \`${{ env.JF_TARGET_ENV }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   publish-github-release:
@@ -135,18 +144,18 @@ jobs:
           oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
           oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
-      - name: Download signed artifacts from JFrog PROD
+      - name: Download signed artifacts from JFrog ${{ env.JF_TARGET_ENV }}
         env:
           HELM_VERSION: ${{ steps.helm-version.outputs.HELM_VERSION }}
-          DEB_REPO: ${{ vars.JF_ARTIFACTORY_DEB_PROD }}
-          RPM_REPO: ${{ vars.JF_ARTIFACTORY_RPM_PROD }}
-          HELM_REPO: ${{ vars.JF_ARTIFACTORY_HELM_PROD }}
+          DEB_REPO: ${{ env.JF_DEB_REPO }}
+          RPM_REPO: ${{ env.JF_RPM_REPO }}
+          HELM_REPO: ${{ env.JF_HELM_REPO }}
         run: |
           set -euxo pipefail
           # jf rt search's --bundle filter turned out not to reliably list release-bundle
           # members on our JFrog instance (verified empty against a real, promoted bundle;
           # same for --build, the bundle signature API, and release-bundle-export). Instead,
-          # filter each PROD-public repo directly by the "version" property that
+          # filter each target-stage repo directly by the "version" property that
           # reusable_deploy-artifacts.yaml stamps on every artifact it deploys -- verified
           # live to return exact, reliable matches with full metadata (including sha256).
           mkdir -p release-assets
