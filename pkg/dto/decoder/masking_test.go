@@ -191,6 +191,38 @@ func TestRedactSecrets_PreservesTime(t *testing.T) {
 	assert.Equal(t, int64(1000), redacted["routine1"][0].Timestamp)
 }
 
+func TestRedactSecrets_UnexportedTimePointerFields(t *testing.T) {
+	// Mirrors model.BackupTime: unexported *time.Time fields panic when redactValue
+	// tries to deep-copy through reflect without skipping *time.Time.
+	type backupTimeLike struct {
+		full *time.Time
+	}
+
+	now := time.Now()
+	backupTime := &backupTimeLike{full: &now}
+
+	assert.NotPanics(t, func() {
+		RedactSecrets(backupTime)
+	})
+}
+
+func TestRedactSecrets_UnexportedLocationPointerFields(t *testing.T) {
+	// Mirrors model.Location: unexported *time.Location field.
+	type locationLike struct {
+		resolved   *time.Location
+		Configured string
+	}
+
+	loc, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+
+	location := locationLike{resolved: loc, Configured: "America/New_York"}
+
+	assert.NotPanics(t, func() {
+		RedactSecrets(location)
+	})
+}
+
 // credentialError mirrors aerospike.AerospikeError: exported fields on a type
 // stored behind fmt.Errorf("%w"). slog.Any("error", err) walks that wrapError,
 // whose err field is unexported, then Set panics when copying ResultCode.

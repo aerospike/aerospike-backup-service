@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,4 +56,16 @@ func TestHandlerReplaceAttr_RendersTraceLevel(t *testing.T) {
 	log.Log(t.Context(), slog.Level(logger.LevelTrace), "trace message")
 
 	require.Contains(t, buf.String(), `"level":"TRACE"`)
+}
+
+func TestHandlerReplaceAttr_BackupTime(t *testing.T) {
+	var buf bytes.Buffer
+	log := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
+		ReplaceAttr: handlerReplaceAttr,
+	}))
+
+	backupTime := model.NewFullBackupTime(time.Now())
+	log.Info("Last existing backup", slog.Any("time", backupTime))
+
+	assert.Contains(t, buf.String(), `"msg":"Last existing backup"`)
 }
