@@ -82,7 +82,7 @@ func (s *Suite) baseConfig(backupDir string) *dto.Config {
 		},
 		Storage: map[string]*dto.Storage{
 			storageName: {
-				LocalStorage: &dto.LocalStorage{Path: backupDir},
+				LocalStorage: &dto.LocalStorage{Path: dto.Path(backupDir)},
 			},
 		},
 		BackupPolicies: map[string]*dto.BackupPolicy{

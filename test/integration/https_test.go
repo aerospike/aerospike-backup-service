@@ -66,8 +66,8 @@ func withHTTPSListener(certs httpsCertificates, agent *dto.SecretAgent, port int
 		c.ServiceConfig.ServerHTTPS = &dto.ServerConfigHTTPS{
 			ListenerConfig:  dto.ListenerConfig{Address: "127.0.0.1"},
 			Port:            ptr.Of(dto.Port(port)),
-			CertFile:        certs.certFile,
-			KeyFile:         certs.encryptedKeyFile,
+			CertFile:        dto.Path(certs.certFile),
+			KeyFile:         dto.Path(certs.encryptedKeyFile),
 			KeyFilePassword: decoder.Secret(secretRef()),
 			SecretAgentConfig: dto.SecretAgentConfig{
 				SecretAgent: agent,
