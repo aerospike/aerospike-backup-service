@@ -206,7 +206,7 @@ func TestGetRoutineState_NextRunTimeUsesScheduleTimezone(t *testing.T) {
 	nyRoutine := &model.BackupRoutine{
 		Name:         "ny",
 		IntervalCron: "@daily",
-		Timezone:     mustRoutineLocation("America/New_York", mustServiceLocation("")),
+		Timezone:     testLocation,
 	}
 	utcRoutine := &model.BackupRoutine{
 		Name:         "utc",
@@ -237,7 +237,7 @@ func TestGetRoutineState_NextRunTimeUsesScheduleTimezoneForIncremental(t *testin
 		Name:             "ny",
 		IntervalCron:     "@daily",
 		IncrIntervalCron: "0 0 2 * * *",
-		Timezone:         mustRoutineLocation("America/New_York", mustServiceLocation("")),
+		Timezone:         testLocation,
 	}
 	utcRoutine := &model.BackupRoutine{
 		Name:             "utc",

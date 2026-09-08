@@ -57,7 +57,7 @@ func TestScheduleRoutines(t *testing.T) {
 				"ny-routine": {
 					Name:         "ny-routine",
 					IntervalCron: "0 0 2 * * *",
-					Timezone:     mustRoutineLocation("America/New_York", mustServiceLocation("")),
+					Timezone:     testLocation,
 				},
 			},
 			expectedCalls: 1,
@@ -120,7 +120,7 @@ func TestScheduleRoutines_UsesRoutineTimezone(t *testing.T) {
 	require.NoError(t, backupScheduler.ScheduleRoutines([]*model.BackupRoutine{{
 		Name:         "ny-timezone",
 		IntervalCron: "@daily",
-		Timezone:     mustRoutineLocation("America/New_York", mustServiceLocation("")),
+		Timezone:     testLocation,
 	}}))
 }
 
