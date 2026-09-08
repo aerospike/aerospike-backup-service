@@ -59,5 +59,5 @@ jobs:
             echo "| Bundle version | \`${BUNDLE_VERSION}\` |"
             echo "| JFrog project | \`${{ vars.JF_PROJECT }}\` |"
             echo ""
-            echo "Next: run release.yml to publish the GitHub Release."
+            echo "Next: run release.yml to publish the GitHub pre-release."
           } >> "$GITHUB_STEP_SUMMARY"

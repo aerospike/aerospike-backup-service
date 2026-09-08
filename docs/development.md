@@ -110,7 +110,7 @@ through releases and hotfixes.
 Releases move through JFrog's promotion stages (`DEV -> TEST -> STAGE -> PREVIEW -> PROD`) before anything is made public. The
 GitHub Actions side is split into two workflows: [`pre-release.yml`](../.github/workflows/pre-release.yml) (developer
 owned, builds and promotes up to `TEST`) and [`release.yml`](../.github/workflows/release.yml) (run once the release
-is fully approved, publishes it).
+is fully approved; publishes a GitHub pre-release for final validation, then a PM/EM promotes it to GA manually).
 
 #### Chart versioning
 
@@ -189,8 +189,14 @@ The following steps apply to both regular releases and hotfixes:
    - A dev or PM/EM manually runs [`release.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/release.yml)
      (`workflow_dispatch`, with the release version as input). It verifies the bundle was actually promoted to
      `PROD`, then downloads the already-signed artifacts straight from JFrog's `PROD`-public repos and publishes
-     them as a new, immutable GitHub Release — nothing is rebuilt, re-signed, or re-checksummed at this point.
-10. Post-release actions:
+     them as a new, immutable GitHub **pre-release**. If this version is the highest final release overall,
+     the workflow also points Docker Hub `latest` at it (hotfixes on older lines leave `latest` unchanged) —
+     nothing is rebuilt, re-signed, or re-checksummed at this point.
+10. When ready to announce GA, a PM/EM edits that GitHub Release and clears **Set as a pre-release** only.
+    Docker `latest` is already managed by `release.yml`; the GitHub **Set as the latest release** checkbox is
+    unrelated and can be left unchecked. Until the pre-release flag is cleared, the release does not appear as
+    GA on GitHub.
+11. Post-release actions (after step 10):
    1. **Snyk**:
       - Add the new version to the `aerospike-applications` Snyk org (monitor the Docker image).
       - Remove the oldest maintenance version from the same org if no longer supported.
@@ -199,7 +205,7 @@ The following steps apply to both regular releases and hotfixes:
       - Use the link to the [prettified release notes](https://aerospike.com/docs/database/tools/backup-and-restore/backup-service/release/) if available; otherwise, use the GitHub Release link.
       - **Important**: Remove link previews before sending to keep the channel clean (hover over the preview and click the **'x'** in the top-right corner). See [this guide](https://aerospike.atlassian.net/wiki/spaces/RE/pages/2540339350/Message+Slack+releases+Internal+Channel) for more info.
    3. **Email**: Send the release announcement email to the appropriate internal distribution lists. See [this guide](https://aerospike.atlassian.net/wiki/spaces/RE/pages/2543124552/Send+email+of+the+Release+Notes+to+the+releases+aerospike.com+distribution+list) for more info.
-11. If the release added commits that exist only on `main` (for example a hotfix), back-merge `main` into `dev`.
+12. If the release added commits that exist only on `main` (for example a hotfix), back-merge `main` into `dev`.
 
 ## Reporting issues
 

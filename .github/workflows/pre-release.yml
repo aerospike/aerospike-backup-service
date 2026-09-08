@@ -250,10 +250,10 @@ jobs:
           echo "Chart $chart is consistent with app $app."
 
       # Left to its default, reusable_docker-build-deploy.yaml publishes `{version}`, `{major}`
-      # and `latest` next to the immutable tag. Both of those are moving tags, and a hotfix off
-      # an older line must not drag them backwards: shipping v2.9.5 after v3.0.0 is out would
-      # otherwise repoint `latest` at the 2.x image. Compute the moving tags this release has
-      # actually earned and pass them explicitly.
+      # and `latest` next to the immutable tag. Both major and latest are moving tags, and a hotfix
+      # off an older line must not drag them backwards. Compute the moving tags this release has
+      # actually earned at build time (major only — `latest` is deferred to release.yml after PROD)
+      # and pass them explicitly.
       - name: Resolve Docker moving tags
         id: docker-tags
         env:
@@ -296,25 +296,23 @@ jobs:
           if [ "$current" = "$highest_in_major" ]; then
             overrides="${overrides},${major}"
           fi
-          if [ "$current" = "$highest_overall" ]; then
-            overrides="${overrides},latest"
-          fi
 
           echo "VERSIONS_OVERRIDE=$overrides" >> "$GITHUB_OUTPUT"
 
           {
-            echo "### Docker moving tags"
+            echo "### Docker moving tags (at build time)"
             echo "| Field | Value |"
             echo "| --- | --- |"
             echo "| Releasing | \`$current\` |"
             echo "| Highest release overall | \`$highest_overall\` |"
             echo "| Highest release in \`$major.x\` | \`$highest_in_major\` |"
-            echo "| Tags published (besides the immutable tag) | \`$overrides\` |"
+            echo "| Tags published now (besides the immutable tag) | \`$overrides\` |"
             echo ""
-            if [ "$current" = "$highest_overall" ]; then
-              echo "This is the newest release, so \`latest\` moves to it."
+            echo "Docker \`latest\` is **not** set here — \`release.yml\` applies it after PROD promotion, once it can compare against every final release tag."
+            if [ "$current" = "$highest_in_major" ]; then
+              echo "This is the newest release in its major line, so major tag \`${major}\` moves to it."
             else
-              echo "Newer releases exist, so \`latest\` is withheld from this build."
+              echo "Newer releases exist in this major line, so major tag \`${major}\` is withheld from this build."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
