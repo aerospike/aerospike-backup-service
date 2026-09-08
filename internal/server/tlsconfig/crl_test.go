@@ -177,9 +177,9 @@ func (p testPKI) writeCRL(
 func TestParseCRLs(t *testing.T) {
 	pki := createTestPKI(t, 1)
 	now := time.Now()
-	path := filepath.Join(t.TempDir(), "crl")
 
 	t.Run("DER CRL", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "crl.der")
 		pki.writeCRL(t, path, nil, now.Add(-time.Minute), now.Add(time.Hour), 1, false)
 		index, err := loadCRLs(path)
 		require.NoError(t, err)
@@ -187,6 +187,7 @@ func TestParseCRLs(t *testing.T) {
 	})
 
 	t.Run("PEM CRL", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "crl.pem")
 		pki.writeCRL(
 			t, path, []*big.Int{pki.clients[0].cert.SerialNumber},
 			now.Add(-time.Minute), now.Add(time.Hour), 2, true,
@@ -199,8 +200,10 @@ func TestParseCRLs(t *testing.T) {
 	})
 
 	t.Run("PEM bundle", func(t *testing.T) {
-		first := filepath.Join(t.TempDir(), "one.pem")
-		second := filepath.Join(t.TempDir(), "two.pem")
+		dir := t.TempDir()
+		first := filepath.Join(dir, "one.pem")
+		second := filepath.Join(dir, "two.pem")
+		path := filepath.Join(dir, "bundle.pem")
 		pki.writeCRL(t, first, nil, now.Add(-time.Minute), now.Add(time.Hour), 1, true)
 		pki.writeCRL(
 			t, second, []*big.Int{pki.clients[0].cert.SerialNumber},
@@ -214,12 +217,14 @@ func TestParseCRLs(t *testing.T) {
 	})
 
 	t.Run("empty file", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "empty.crl")
 		require.NoError(t, os.WriteFile(path, []byte("   \n"), 0o600))
 		_, err := loadCRLs(path)
 		require.ErrorContains(t, err, "contains no CRLs")
 	})
 
 	t.Run("malformed trailing PEM", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "malformed.pem")
 		pki.writeCRL(t, path, nil, now.Add(-time.Minute), now.Add(time.Hour), 1, true)
 		partial := append(readFile(t, path), []byte("\n-----BEGIN X509 CRL-----\ntruncated\n")...)
 		require.NoError(t, os.WriteFile(path, partial, 0o600))
@@ -228,10 +233,34 @@ func TestParseCRLs(t *testing.T) {
 	})
 
 	t.Run("unsupported PEM block", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "unsupported.pem")
 		require.NoError(t, os.WriteFile(path, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: []byte("x")}), 0o600))
 		_, err := loadCRLs(path)
 		require.ErrorContains(t, err, "contains no CRLs")
 	})
+}
+
+func TestParseDERCRLPreservesTrailingWhitespaceByte(t *testing.T) {
+	pki := createTestPKI(t, 0)
+	now := time.Now()
+
+	for number := 1; number <= 1000; number++ {
+		path := filepath.Join(t.TempDir(), "crl.der")
+		pki.writeCRL(t, path, nil, now.Add(-time.Minute), now.Add(time.Hour), int64(number), false)
+		data, err := os.ReadFile(path)
+		require.NoError(t, err)
+
+		last := data[len(data)-1]
+		if last != 0x20 && last != 0x0a && last != 0x0d && last != 0x09 {
+			continue
+		}
+
+		_, err = parseCRLs(data, path)
+		require.NoError(t, err, "CRL ending with 0x%02x must parse", last)
+		return
+	}
+
+	t.Fatal("failed to generate CRL ending with whitespace byte")
 }
 
 func TestVerifyClientLeaf(t *testing.T) {
