@@ -73,7 +73,7 @@ func mergeValue(incoming, existing reflect.Value) {
 		return
 	}
 
-	if incoming.Type() == timeType {
+	if shouldSkipDeepCopy(incoming) {
 		return
 	}
 
