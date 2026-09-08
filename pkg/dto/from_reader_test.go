@@ -101,7 +101,7 @@ func TestBackupCommonConfig_fromModel(t *testing.T) {
 	var dtoConfig BackupCommonConfig
 	dtoConfig.fromModel(&model.BackupCommonConfig{
 		TimestampFormat: &format,
-		Timezone:        mustServiceLocation(t, "America/New_York"),
+		Timezone:        serviceLocation(t, "America/New_York"),
 	})
 
 	assert.Equal(t, TimestampFormatISO, dtoConfig.TimestampFormat)
@@ -151,7 +151,7 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 
 	config := model.NewConfig()
 	config.ServiceConfig.Backup = &model.BackupCommonConfig{
-		Timezone: mustServiceLocation(t, "America/New_York"),
+		Timezone: serviceLocation(t, "America/New_York"),
 	}
 	require.NoError(t, config.AddPolicy("policy1", policy))
 	require.NoError(t, config.AddCluster("cluster1", cluster))
@@ -164,7 +164,7 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 			Storage:       storage,
 			IntervalCron:  "@hourly",
 			Namespaces:    []string{"ns1"},
-			Timezone:      mustRoutineLocation(t, configured, config.ServiceConfig.Backup.Timezone),
+			Timezone:      routineLocation(t, configured, config.ServiceConfig.Backup.Timezone),
 		}
 	}
 
@@ -202,7 +202,7 @@ func TestNewBackupDetailsFromModel_Nil(t *testing.T) {
 	assert.Nil(t, NewBackupDetailsFromModel(nil, &model.BackupConfig{}))
 }
 
-func mustServiceLocation(t *testing.T, configured string) model.Location {
+func serviceLocation(t *testing.T, configured string) model.Location {
 	t.Helper()
 	loc, err := model.ResolveTimezone(configured)
 	require.NoError(t, err)
@@ -210,7 +210,7 @@ func mustServiceLocation(t *testing.T, configured string) model.Location {
 	return model.NewServiceLocation(configured, loc)
 }
 
-func mustRoutineLocation(t *testing.T, configured string, service model.Location) model.Location {
+func routineLocation(t *testing.T, configured string, service model.Location) model.Location {
 	t.Helper()
 	loc, err := model.ResolveTimezone(configured)
 	require.NoError(t, err)

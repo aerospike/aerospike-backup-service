@@ -8,26 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mustResolve panics on error. Test helper for known-good timezone names.
-func mustResolve(configured string) *time.Location {
-	loc, err := ResolveTimezone(configured)
-	if err != nil {
-		panic(err)
-	}
-
-	return loc
-}
-
-// mustServiceLocation builds a service-level Location from a known-good value.
-func mustServiceLocation(configured string) Location {
-	return NewServiceLocation(configured, mustResolve(configured))
-}
-
-// mustRoutineLocation builds a routine-level Location from a known-good value.
-func mustRoutineLocation(configured string, service Location) Location {
-	return NewRoutineLocation(configured, mustResolve(configured), service)
-}
-
 func TestLocation_ResolvedLocation(t *testing.T) {
 	t.Parallel()
 
@@ -55,7 +35,7 @@ func TestNewServiceLocation(t *testing.T) {
 	t.Run("resolved iana is explicit", func(t *testing.T) {
 		t.Parallel()
 
-		location := mustServiceLocation("America/New_York")
+		location := serviceLocation(t, "America/New_York")
 		assert.True(t, location.IsExplicit())
 		assert.Equal(t, "America/New_York", location.Configured)
 		assert.Equal(t, "America/New_York", location.ResolvedLocation().String())
@@ -64,7 +44,7 @@ func TestNewServiceLocation(t *testing.T) {
 	t.Run("resolved local keeps configured spelling", func(t *testing.T) {
 		t.Parallel()
 
-		location := mustServiceLocation("local")
+		location := serviceLocation(t, "local")
 		assert.True(t, location.IsExplicit())
 		assert.Equal(t, "local", location.Configured)
 		assert.Equal(t, "Local", location.ResolvedLocation().String())
@@ -74,7 +54,7 @@ func TestNewServiceLocation(t *testing.T) {
 func TestNewRoutineLocation(t *testing.T) {
 	t.Parallel()
 
-	service := mustServiceLocation("America/New_York")
+	service := serviceLocation(t, "America/New_York")
 
 	t.Run("nil resolved inherits service resolved timezone", func(t *testing.T) {
 		t.Parallel()
@@ -97,7 +77,7 @@ func TestNewRoutineLocation(t *testing.T) {
 	t.Run("explicit routine override", func(t *testing.T) {
 		t.Parallel()
 
-		location := mustRoutineLocation("UTC", service)
+		location := serviceLocation(t, "UTC")
 		assert.True(t, location.IsExplicit())
 		assert.Equal(t, "UTC", location.Configured)
 		assert.Same(t, DefaultScheduleTimezone, location.ResolvedLocation())
@@ -121,4 +101,12 @@ func TestResolveTimezone(t *testing.T) {
 
 	_, err = ResolveTimezone("Not/AZone")
 	require.Error(t, err)
+}
+
+func serviceLocation(t *testing.T, configured string) Location {
+	t.Helper()
+
+	loc, err := ResolveTimezone(configured)
+	require.NoError(t, err)
+	return NewServiceLocation(configured, loc)
 }
