@@ -67,11 +67,10 @@ func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest
 
 // Validate validates the restore operation request.
 func (r *RestoreRequest) Validate() error {
-	pathStr := string(r.BackupDataPath)
-	if len(pathStr) == 0 {
+	if len(r.BackupDataPath) == 0 {
 		return errValidationEmptyField("backup-data-path")
 	}
-	if !filepath.IsLocal(pathStr) {
+	if !filepath.IsLocal(string(r.BackupDataPath)) {
 		return fmt.Errorf("%w: backup-data-path must be local", errValidation)
 	}
 	if err := r.BackupDataPath.Validate(); err != nil {
