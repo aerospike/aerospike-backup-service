@@ -50,6 +50,14 @@ jobs:
         with:
           egress-policy: audit
 
+      - name: Checkout tag for artifact verification
+        if: env.JF_TARGET_ENV == 'TEST'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          fetch-tags: true
+          ref: ${{ env.BUNDLE_VERSION }}
+
       - name: Login to JFrog
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
@@ -62,11 +70,50 @@ jobs:
       - name: Check release bundle is promoted to ${{ env.JF_TARGET_ENV }}
         env:
           JF_PROJECT: ${{ vars.JF_PROJECT }}
+          DEB_REPO: ${{ env.JF_DEB_REPO }}
+          RPM_REPO: ${{ env.JF_RPM_REPO }}
+          HELM_REPO: ${{ env.JF_HELM_REPO }}
         run: |
           set -euxo pipefail
           if [ -z "${BUNDLE_VERSION}" ]; then
             echo "::error::version input is required (e.g. v3.7.0)."
             exit 1
+          fi
+
+          if [ "${JF_TARGET_ENV}" = "TEST" ]; then
+            # Promotion records are not reliably indexed for TEST bundles (especially
+            # pre-release/test version strings). Fall back to the same artifact search
+            # the publish job uses to confirm the bundle's artifacts are in TEST.
+            CHART_FILE="helm/aerospike-backup-service/Chart.yaml"
+            if [ ! -f "$CHART_FILE" ]; then
+              echo "::error::Chart file not found at ${CHART_FILE} (tag ${BUNDLE_VERSION})." >&2
+              exit 1
+            fi
+            HELM_VERSION=$(yq '.version' "$CHART_FILE" | tr -d '\n')
+            if [ -z "$HELM_VERSION" ]; then
+              echo "::error::Failed to extract Helm chart version from ${CHART_FILE}." >&2
+              exit 1
+            fi
+
+            echo "Verifying ${BUNDLE_NAME}:${BUNDLE_VERSION} artifacts in ${JF_TARGET_ENV} repos..."
+            echo "Searching ${DEB_REPO} for version=${BUNDLE_VERSION}..."
+            jf rt search "${DEB_REPO}/**" --props "version=${BUNDLE_VERSION}" > deb-artifacts.json
+            echo "Searching ${RPM_REPO} for version=${BUNDLE_VERSION}..."
+            jf rt search "${RPM_REPO}/**" --props "version=${BUNDLE_VERSION}" > rpm-artifacts.json
+            echo "Searching ${HELM_REPO} for version=${HELM_VERSION}..."
+            jf rt search "${HELM_REPO}/**" --props "version=${HELM_VERSION}" > helm-artifacts.json
+
+            jq -s 'add' deb-artifacts.json rpm-artifacts.json helm-artifacts.json > bundle-artifacts.json
+            cat bundle-artifacts.json
+
+            ARTIFACT_COUNT=$(jq 'length' bundle-artifacts.json)
+            if [ "$ARTIFACT_COUNT" -lt 1 ]; then
+              echo "::error::No package/Helm artifacts found for ${BUNDLE_NAME}:${BUNDLE_VERSION} (helm ${HELM_VERSION}) in ${DEB_REPO}, ${RPM_REPO}, or ${HELM_REPO}." >&2
+              exit 1
+            fi
+
+            echo "Confirmed: found ${ARTIFACT_COUNT} artifact(s) for ${BUNDLE_NAME}:${BUNDLE_VERSION} in ${JF_TARGET_ENV}."
+            exit 0
           fi
 
           echo "Checking promotion history for ${BUNDLE_NAME}:${BUNDLE_VERSION} (project: ${JF_PROJECT})..."
@@ -85,7 +132,12 @@ jobs:
         if: always()
         run: |
           {
-            echo "### ${{ env.JF_TARGET_ENV }} promotion check"
+            if [ "${{ env.JF_TARGET_ENV }}" = "TEST" ]; then
+              echo "### ${{ env.JF_TARGET_ENV }} artifact check"
+              echo "Verified artifacts exist in TEST repos (promotion records API is skipped for TEST)."
+            else
+              echo "### ${{ env.JF_TARGET_ENV }} promotion check"
+            fi
             echo "| Field | Value |"
             echo "| --- | --- |"
             echo "| Bundle name | \`${BUNDLE_NAME}\` |"
