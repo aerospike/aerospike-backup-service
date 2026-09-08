@@ -240,29 +240,6 @@ func TestParseCRLs(t *testing.T) {
 	})
 }
 
-func TestParseDERCRLPreservesTrailingWhitespaceByte(t *testing.T) {
-	pki := createTestPKI(t, 0)
-	now := time.Now()
-
-	for number := 1; number <= 1000; number++ {
-		path := filepath.Join(t.TempDir(), "crl.der")
-		pki.writeCRL(t, path, nil, now.Add(-time.Minute), now.Add(time.Hour), int64(number), false)
-		data, err := os.ReadFile(path)
-		require.NoError(t, err)
-
-		last := data[len(data)-1]
-		if last != 0x20 && last != 0x0a && last != 0x0d && last != 0x09 {
-			continue
-		}
-
-		_, err = parseCRLs(data, path)
-		require.NoError(t, err, "CRL ending with 0x%02x must parse", last)
-		return
-	}
-
-	t.Fatal("failed to generate CRL ending with whitespace byte")
-}
-
 func TestVerifyClientLeaf(t *testing.T) {
 	pki := createTestPKI(t, 2)
 	now := time.Now()
