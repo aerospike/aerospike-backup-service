@@ -7,7 +7,7 @@ image:
   repository: aerospike/aerospike-backup-service
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "3.6.1"
+  tag: "0.0.0-test-dgerchikov.7"
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
@@ -249,7 +249,6 @@ securityContext:
   runAsUser: 65532
   seccompProfile:
     type: RuntimeDefault
-
 service:
   type: ClusterIP
   port: &p 8080
