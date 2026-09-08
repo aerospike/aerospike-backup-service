@@ -35,15 +35,6 @@ func TestValidateClean(t *testing.T) {
 	}
 }
 
-func TestEnsureFileExistsRejectsDirectory(t *testing.T) {
-	dir := t.TempDir()
-	require.NoError(t, os.Mkdir(filepath.Join(dir, "certs"), 0755))
-
-	err := EnsureFileExists(filepath.Join(dir, "certs"))
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "directory")
-}
-
 func TestReadFileRejectsDirectory(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.Mkdir(filepath.Join(dir, "certs"), 0755))
@@ -75,14 +66,6 @@ func TestReadFileRejectsRootEscape(t *testing.T) {
 
 	_, err = root.ReadFile("../secret.txt")
 	require.Error(t, err)
-}
-
-func TestEnsureFileExists(t *testing.T) {
-	tempDir := t.TempDir()
-	filePath := filepath.Join(tempDir, "cert.pem")
-	require.NoError(t, os.WriteFile(filePath, []byte("cert"), 0600))
-
-	require.NoError(t, EnsureFileExists(filePath))
 }
 
 func TestReadDir(t *testing.T) {

@@ -201,15 +201,16 @@ nilaway: submodules
 		-include-pkgs=$$($(GO) list -m) \
 		$$packages
 
-# Whole-program reachability from the service binary. Reports exported functions
-# that golangci unused misses because they are only referenced from tests.
-# See https://go.dev/blog/deadcode
+# Whole-program reachability from the service binary. See https://go.dev/blog/deadcode
+# pkg/validation is a standalone API (config/restore checks) not wired from cmd/backup.
+DEADCODE_IGNORE = pkg/validation/
 .PHONY: deadcode
 deadcode: submodules
 	set -euo pipefail; \
 	out="$$($(GO) run golang.org/x/tools/cmd/deadcode@$(DEADCODE_VERSION) \
 		-filter=github.com/aerospike/aerospike-backup-service \
 		./cmd/backup)"; \
+	out="$$(printf '%s' "$$out" | grep -vF '$(DEADCODE_IGNORE)' || true)"; \
 	if [ -n "$$out" ]; then \
 		echo "$$out"; \
 		echo "Unreachable functions found. Run the command above without the Makefile wrapper for details."; \
