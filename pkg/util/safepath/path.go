@@ -5,30 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 )
-
-// ValidateClean reports whether path is safe for config use.
-// Empty paths are allowed and return nil.
-// Paths must be in canonical form (no ./ prefix, redundant separators, etc.)
-// and must not contain ".." elements.
-func ValidateClean(path string) error {
-	if path == "" {
-		return nil
-	}
-
-	cleaned := filepath.Clean(path)
-	if cleaned != path {
-		return fmt.Errorf("path %q is not clean (normalizes to %q)", path, cleaned)
-	}
-
-	if slices.Contains(strings.Split(path, string(filepath.Separator)), "..") {
-		return fmt.Errorf("path %q must not contain traversal", path)
-	}
-
-	return nil
-}
 
 // ReadFile reads the full contents of a validated file path using os.Root.
 func ReadFile(path string) ([]byte, error) {

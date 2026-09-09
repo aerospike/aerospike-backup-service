@@ -2,7 +2,6 @@ package dto
 
 import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // ClientTLS represents the TLS configuration options relevant for client-side connections.
@@ -11,13 +10,13 @@ import (
 //nolint:lll
 type ClientTLS struct {
 	// Path to a trusted CA certificate file in PEM format.
-	CAFile string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/ca.pem" extensions:"x-nullable"`
+	CAFile Path `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/ca.pem" extensions:"x-nullable"`
 	// TLS ServerName (SNI) for verifying the peer certificate.
 	Name string `yaml:"name,omitempty" json:"name,omitempty" example:"example.com" extensions:"x-nullable"`
 	// Path to a client certificate file for mutual TLS authentication.
-	Certfile string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/cert.pem" extensions:"x-nullable"`
+	Certfile Path `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/cert.pem" extensions:"x-nullable"`
 	// Path to a client private key file for mutual TLS authentication.
-	Keyfile string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/key.pem" extensions:"x-nullable"`
+	Keyfile Path `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/key.pem" extensions:"x-nullable"`
 }
 
 const (
@@ -78,20 +77,20 @@ func (c *ClientTLS) ToModel() model.ClientTLS {
 	}
 
 	return model.ClientTLS{
-		CAFile:   c.CAFile,
+		CAFile:   string(c.CAFile),
 		Name:     c.Name,
-		Certfile: c.Certfile,
-		Keyfile:  c.Keyfile,
+		Certfile: string(c.Certfile),
+		Keyfile:  string(c.Keyfile),
 	}
 }
 
 func (c *ClientTLS) validatePaths() error {
-	for field, path := range map[string]string{
+	for field, path := range map[string]Path{
 		caField:   c.CAFile,
 		certField: c.Certfile,
 		keyField:  c.Keyfile,
 	} {
-		if err := safepath.ValidateClean(path); err != nil {
+		if err := path.Validate(ValidationOptionalLocalFile); err != nil {
 			return errValidationInvalidPath(field, path, err)
 		}
 	}

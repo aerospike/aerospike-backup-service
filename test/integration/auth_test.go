@@ -36,7 +36,7 @@ func (s *AuthSuite) TestInternalPlain() {
 			UseServicesAlternate: ptr.Of(true),
 			Credentials: &dto.Credentials{
 				User:         intUser,
-				PasswordPath: passwordPath,
+				PasswordPath: dto.Path(passwordPath),
 				AuthMode:     dto.AuthModeInternal,
 			},
 		})
@@ -162,7 +162,7 @@ func (s *AuthSuite) serverOnlyTLS() *dto.TLS {
 		// ca-path is a directory of PEM CA files. Same purpose as ca-file: decide
 		// whether the server's certificate is trusted. Used when CAs are dropped
 		// in as separate files (for example a Kubernetes secret volume).
-		CAPath: s.certs.caDir,
+		CAPath: dto.Path(s.certs.caDir),
 		// protocols is Apache SSLProtocol syntax, space-separated. ABS currently
 		// accepts TLSv1.2 only. One token pins both the minimum and the maximum.
 		Protocols: tlsProtocols,
@@ -178,16 +178,16 @@ func (s *AuthSuite) mutualTLS(certFile, encryptedKeyFile string) *dto.TLS {
 	return &dto.TLS{
 		ClientTLS: dto.ClientTLS{
 			// ca-file: PEM bundle of CAs we trust to sign the server certificate.
-			CAFile: s.certs.caCert,
+			CAFile: dto.Path(s.certs.caCert),
 			// name: hostname we put in SNI and then check against the server cert.
 			// Must be set together with cert-file and key-file.
 			Name: tlsName,
 			// cert-file: our client certificate. The server uses this to decide
 			// who we are. For auth-mode PKI the Aerospike username is the cert CN.
-			Certfile: certFile,
+			Certfile: dto.Path(certFile),
 			// key-file: private key matching cert-file. Never sent on the wire;
 			// used to prove we own the certificate. Encrypted in these tests.
-			Keyfile: encryptedKeyFile,
+			Keyfile: dto.Path(encryptedKeyFile),
 		},
 		// ca-path left empty: mutually exclusive with ca-file.
 		CAPath: "",

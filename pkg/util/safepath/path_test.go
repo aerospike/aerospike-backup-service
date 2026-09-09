@@ -8,33 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidateClean(t *testing.T) {
-	tests := []struct {
-		name    string
-		path    string
-		wantErr bool
-	}{
-		{name: "empty path", path: ""},
-		{name: "clean relative path", path: "testdata/password.txt"},
-		{name: "clean absolute path", path: "/etc/ssl/certs/ca.pem"},
-		{name: "parent traversal", path: "certs/../../outside.pem", wantErr: true},
-		{name: "leading parent traversal segment", path: "../etc/passwd", wantErr: true},
-		{name: "dot prefix", path: "./certs/ca.pem", wantErr: true},
-		{name: "redundant separators", path: "/etc//ssl/ca.pem", wantErr: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateClean(tt.path)
-			if tt.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestReadFileRejectsDirectory(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.Mkdir(filepath.Join(dir, "certs"), 0755))

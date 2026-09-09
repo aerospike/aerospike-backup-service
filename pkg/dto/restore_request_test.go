@@ -551,7 +551,7 @@ func TestNewRestoreRequestFromReader(t *testing.T) {
 	jsonReq := `{"backup-data-path": "daily/backup/data"}`
 	req, err := NewRestoreRequestFromReader(strings.NewReader(jsonReq))
 	require.NoError(t, err)
-	assert.Equal(t, "daily/backup/data", req.BackupDataPath)
+	assert.Equal(t, "daily/backup/data", string(req.BackupDataPath))
 }
 
 func TestNewRestoreRequestFromReader_InvalidJSON(t *testing.T) {

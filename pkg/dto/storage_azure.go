@@ -18,7 +18,7 @@ type AzureStorage struct {
 	ContainerName string `yaml:"container-name" json:"container-name" validate:"required"`
 	// Path is the root path for the backup repository within the container.
 	// If not specified, backups will be saved in the container's root.
-	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
+	Path Path `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
 	// AccountName is the Azure storage account name for Shared Key authentication.
 	AccountName string `yaml:"account-name,omitempty" json:"account-name,omitempty" extensions:"x-nullable"`
 	// AccountKey is the Azure storage account key for Shared Key authentication.
@@ -55,8 +55,8 @@ func (a *AzureStorage) Validate() error {
 	if a.ContainerName == "" {
 		return errors.New("azure storage container name is not specified")
 	}
-	if err := validateObjectStoragePath(a.Path); err != nil {
-		return err
+	if err := a.Path.Validate(ValidationAllowEmpty); err != nil {
+		return errValidationInvalidPath("path", a.Path, err)
 	}
 
 	// Check for valid authentication method.
@@ -103,7 +103,7 @@ func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
 	return &model.AzureStorage{
 		Endpoint:      a.Endpoint,
 		ContainerName: a.ContainerName,
-		Path:          a.Path,
+		Path:          string(a.Path),
 		Auth:          getAzureAuth(a),
 		SecretAgent:   agent,
 		MinPartSize:   a.MinPartSize,
@@ -134,7 +134,7 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 	azureStorage := &AzureStorage{
 		Endpoint:          s.Endpoint,
 		ContainerName:     s.ContainerName,
-		Path:              s.Path,
+		Path:              Path(s.Path),
 		MinPartSize:       s.MinPartSize,
 		SecretAgentConfig: ResolveSecretAgentFromModel(s.SecretAgent, config),
 		StorageClass:      newAzureStorageClassFromModel(s.StorageClass),
