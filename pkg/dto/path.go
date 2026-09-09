@@ -21,8 +21,8 @@ type Path string
 //     paths such as certificates, key files and log files.
 //
 // Paths must never contain ".." elements and must be in canonical form
-// (no ./ prefix, redundant separators, or trailing slashes).
-//
+// (no ./ prefix, redundant separators, or trailing slashes). A path must not
+// contain a NUL byte, and must not start with '~'.
 // Call sites must wrap with errValidationInvalidPath, which adds both and classifies
 // the error (errEmpty for a missing path, errInvalidPath for an unusable one).
 func (p Path) Validate(opts ValidationOptions) error {
@@ -33,6 +33,14 @@ func (p Path) Validate(opts ValidationOptions) error {
 		}
 
 		return fmt.Errorf("%w: must not be empty", errEmpty)
+	}
+
+	if strings.ContainsRune(path, 0) {
+		return errors.New("must not contain a NUL byte")
+	}
+
+	if strings.HasPrefix(path, "~") {
+		return errors.New("must not start with '~': home-directory expansion is not supported")
 	}
 
 	// Check for path traversal first (most critical security issue)

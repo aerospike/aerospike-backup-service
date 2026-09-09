@@ -46,6 +46,15 @@ func TestPathValidate(t *testing.T) {
 			name: "redundant separators", path: "/etc//ssl/ca.pem",
 			opts: ValidationAllowAbsolutePath, wantErr: true, wantErrSub: "canonical form",
 		},
+
+		// NUL bytes and shell-style home-directory shorthand are always rejected.
+		{name: "embedded NUL byte", path: "backups/ca\x00.pem", wantErr: true, wantErrSub: "NUL byte"},
+		{name: "home directory shorthand", path: "~/backups", wantErr: true, wantErrSub: "home-directory expansion"},
+		{name: "bare tilde", path: "~", wantErr: true, wantErrSub: "home-directory expansion"},
+		{
+			name: "home directory shorthand absolute allowed", path: "~/backups",
+			opts: ValidationAllowAbsolutePath, wantErr: true, wantErrSub: "home-directory expansion",
+		},
 	}
 
 	for _, tt := range tests {
