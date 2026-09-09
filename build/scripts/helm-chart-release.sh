@@ -22,7 +22,20 @@ APP_VERSION="$(cat "$WORKSPACE"/VERSION | cut -c 2-)"
 # so that charts sort in the same order as the app versions they ship. pre-release.yml enforces
 # this for final releases; checking here too keeps the failure local to the machine cutting the
 # release. One-off test tags (vX.Y.Z-suffix) pick their own chart version and skip this rule.
-if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+#
+# The rule only applies from CUTOVER onward, matching pre-release.yml's own guard. Lines below it
+# predate the convention and already carry chart versions that cannot satisfy it: the 3.6 line
+# sits on chart 2.0.11, so demanding a chart ending in .3 for a v3.6.3 hotfix would force either
+# 2.0.3 (sorts below an already-published chart, which pre-release.yml then rejects) or a
+# needlessly high minor that would in turn block the next release's chart.
+CUTOVER="3.7.0"
+
+# True when $1 sorts strictly below $2 -- same comparison pre-release.yml uses.
+lower() {
+  [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$1" ]
+}
+
+if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' && ! lower "$APP_VERSION" "$CUTOVER"; then
   APP_PATCH="${APP_VERSION##*.}"
   CHART_PATCH="${NEXT_HELM_CHART_VERSION##*.}"
   if [ "$CHART_PATCH" != "$APP_PATCH" ]; then

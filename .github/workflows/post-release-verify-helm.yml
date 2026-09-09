@@ -60,6 +60,15 @@ jobs:
           python-version: '3.x'
           check-latest: true
 
+      # `docker pull` below reads Docker's own credential store, which setup-jfrog-cli does
+      # not populate (it configures the `jf` CLI only).
+      - name: Login to JFrog container registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}
+          username: ${{ secrets.ARTIFACTORY_USER }}
+          password: ${{ secrets.ARTIFACTORY_TOKEN }}
+
       - name: Set up Chart Testing
         uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
 
@@ -75,9 +84,27 @@ jobs:
           CHART_FILE="$(ls -1 chart-download/*.tgz | head -1)"
           echo "CHART_FILE=${CHART_FILE}" >> "$GITHUB_ENV"
 
-          IMAGE_REF="${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}/aerospike-backup-service:${{ inputs.version }}"
+          # chart-testing's --charts takes chart *directories* (it reads <path>/Chart.yaml), so
+          # unpack the released archive and hand ct the extracted chart root.
+          mkdir -p chart-extracted
+          tar -xzf "$CHART_FILE" -C chart-extracted
+          CHART_DIR="$(find chart-extracted -mindepth 1 -maxdepth 2 -name Chart.yaml -printf '%h\n' | head -1)"
+          if [ -z "$CHART_DIR" ]; then
+            echo "::error::No Chart.yaml found after extracting ${CHART_FILE}"
+            exit 1
+          fi
+          echo "CHART_DIR=${CHART_DIR}" >> "$GITHUB_ENV"
+
+          # Docker tags are published without the leading "v" (pre-release.yml's docker-tags
+          # step passes versions-override="${PACKAGE_VERSION#v}").
+          IMAGE_TAG="${{ inputs.version }}"
+          IMAGE_TAG="${IMAGE_TAG#v}"
+          IMAGE_REPO="${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}/aerospike-backup-service"
+          IMAGE_REF="${IMAGE_REPO}:${IMAGE_TAG}"
           docker pull "$IMAGE_REF"
           kind load docker-image "$IMAGE_REF" --name chart-testing
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
+          echo "IMAGE_REPO=${IMAGE_REPO}" >> "$GITHUB_ENV"
           echo "IMAGE_REF=${IMAGE_REF}" >> "$GITHUB_ENV"
 
       # Unchanged from helm-chart-tests.yml: OLM + AKO + AerospikeCluster CR setup is not
@@ -221,16 +248,18 @@ jobs:
               mountPath: /home/absuser/.aws/credentials
               readOnly: true
           image:
-            repository: ${{ env.IMAGE_REF }}
+            # repository must NOT include the tag -- templates/deployment.yaml renders
+            # "{{ .Values.image.repository }}:{{ .Values.image.tag }}" itself.
+            repository: ${{ env.IMAGE_REPO }}
             pullPolicy: IfNotPresent
-            tag: "${{ inputs.version }}"
+            tag: "${{ env.IMAGE_TAG }}"
           configmap:
             create: false
           EOF
 
           ct install \
             --namespace ${{ env.NAMESPACE }} \
-            --charts "${{ env.CHART_FILE }}" \
+            --charts "${{ env.CHART_DIR }}" \
             --target-branch "$GITHUB_DEFAULT_BRANCH" \
             --debug --helm-extra-args="--debug" \
             --helm-extra-set-args="--values=ct-values.yaml --values=abs-values.yaml"
@@ -300,21 +329,13 @@ jobs:
           kubectl exec -n ${{ env.NAMESPACE }} aerocluster-0-0 -- \
             asinfo -v "truncate-namespace:namespace=${{ env.ASDB_NAMESPACE }}"
 
-      - name: Confirm namespace is empty before restore
-        id: pre-restore-count
+      - name: Wait for the namespace to drain before restore
         uses: ./.github/actions/seed-and-verify-aerospike
         with:
-          mode: count
+          mode: wait-empty
           namespace: ${{ env.ASDB_NAMESPACE }}
           kubectl-namespace: ${{ env.NAMESPACE }}
           aerospike-k8s-host: aerocluster-0-0:3000
-
-      - name: Fail if truncate didn't work
-        run: |
-          if [ "${{ steps.pre-restore-count.outputs.record_count }}" != "0" ]; then
-            echo "::error::Namespace still has ${{ steps.pre-restore-count.outputs.record_count }} records after truncate"
-            exit 1
-          fi
 
       - name: Trigger restore
         id: restore
@@ -329,7 +350,13 @@ jobs:
               "policy": {}
             }')"
           echo "$RESPONSE"
-          JOB_ID="$(echo "$RESPONSE" | jq -r '.["job-id"] // .jobId // .id')"
+          # POST /v1/restore/full returns a bare int64 job id, not a JSON object (see
+          # handlers/errors.go's httpAcceptedWithJobID), so parse the raw body.
+          JOB_ID="$(printf '%s' "$RESPONSE" | tr -d '[:space:]')"
+          if ! printf '%s' "$JOB_ID" | grep -qE '^[0-9]+$'; then
+            echo "::error::Expected a numeric job id from /v1/restore/full, got: ${RESPONSE}"
+            exit 1
+          fi
           echo "job-id=${JOB_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Poll for restore completion

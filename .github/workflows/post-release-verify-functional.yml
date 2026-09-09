@@ -47,6 +47,23 @@ jobs:
           oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
           oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
+      # setup-jfrog-cli configures the `jf` CLI only; `docker pull` reads Docker's own
+      # credential store, so the registry needs a separate login.
+      - name: Login to JFrog container registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}
+          username: ${{ secrets.ARTIFACTORY_USER }}
+          password: ${{ secrets.ARTIFACTORY_TOKEN }}
+
+      - name: Resolve published image tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          # Docker tags are published without the leading "v" (see pre-release.yml's
+          # docker-tags step, which passes versions-override="${PACKAGE_VERSION#v}").
+          echo "IMAGE_TAG=${VERSION#v}" >> "$GITHUB_ENV"
+
       - name: Create shared Docker network
         run: docker network create abs-smoke-net
 
@@ -104,10 +121,15 @@ jobs:
       - name: Pull released image and run aerospike-backup-service
         run: |
           set -euo pipefail
-          IMAGE_REF="${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}/aerospike-backup-service:${{ inputs.version }}"
+          IMAGE_REF="${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_PROD }}/aerospike-backup-service:${{ env.IMAGE_TAG }}"
           docker pull "$IMAGE_REF"
+          # The config's minioStorage uses `s3-profile: minio`, so the matching AWS credentials
+          # file has to be mounted alongside it -- docker-compose.yaml mounts
+          # ./credentials to the same path for exactly this reason. Without it the S3 backup
+          # to MinIO has no [minio] profile to authenticate with.
           docker run -d --name abs --network abs-smoke-net \
             -p 8080:8080 \
+            -v "$(pwd)/build/docker-compose/credentials:/home/absuser/.aws/credentials:ro" \
             -v "$(pwd)/build/docker-compose/aerospike-backup-service.yml:/etc/aerospike-backup-service/aerospike-backup-service.yml:ro" \
             "$IMAGE_REF"
 
@@ -142,20 +164,12 @@ jobs:
           docker run --rm --network host aerospike/aerospike-tools:latest \
             asinfo -h 127.0.0.1:3000 -v "truncate-namespace:namespace=${{ env.NAMESPACE }}"
 
-      - name: Confirm namespace is empty before restore
-        id: pre-restore-count
+      - name: Wait for the namespace to drain before restore
         uses: ./.github/actions/seed-and-verify-aerospike
         with:
-          mode: count
+          mode: wait-empty
           namespace: ${{ env.NAMESPACE }}
           host: 127.0.0.1:3000
-
-      - name: Fail if truncate didn't work
-        run: |
-          if [ "${{ steps.pre-restore-count.outputs.record_count }}" != "0" ]; then
-            echo "::error::Namespace ${{ env.NAMESPACE }} still has ${{ steps.pre-restore-count.outputs.record_count }} records after truncate -- restore verification would be meaningless"
-            exit 1
-          fi
 
       - name: Trigger restore
         id: restore
@@ -170,7 +184,14 @@ jobs:
               "policy": {}
             }')"
           echo "$RESPONSE"
-          JOB_ID="$(echo "$RESPONSE" | jq -r '.["job-id"] // .jobId // .id')"
+          # POST /v1/restore/full returns a bare int64 job id, not a JSON object (see
+          # handlers/errors.go's httpAcceptedWithJobID and the handler's `@Success 202 {int64}`
+          # annotation), so parse the raw body rather than indexing it as an object.
+          JOB_ID="$(printf '%s' "$RESPONSE" | tr -d '[:space:]')"
+          if ! printf '%s' "$JOB_ID" | grep -qE '^[0-9]+$'; then
+            echo "::error::Expected a numeric job id from /v1/restore/full, got: ${RESPONSE}"
+            exit 1
+          fi
           echo "job-id=${JOB_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Poll for restore completion
