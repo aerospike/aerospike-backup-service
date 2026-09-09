@@ -32,6 +32,8 @@ VERSION ?= $(shell cat VERSION)
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
 # go.uber.org/nilaway has no tagged releases; pin the module pseudo-version.
 NILAWAY_VERSION = v0.0.0-20260808063849-8649a03c818a
+# Keep in sync with golang.org/x/tools in go.mod.
+DEADCODE_VERSION = v0.49.0
 NFPM ?= $(shell which nfpm)
 OS ?= $(shell $(GO) env GOOS)
 ARCH ?= $(shell $(GO) env GOARCH)
@@ -198,6 +200,22 @@ nilaway: submodules
 		-exclude-file-docstrings='Code generated' \
 		-include-pkgs=$$($(GO) list -m) \
 		$$packages
+
+# Whole-program reachability from the service binary. See https://go.dev/blog/deadcode
+# pkg/validation is a standalone API (config/restore checks) not wired from cmd/backup.
+DEADCODE_IGNORE = pkg/validation/
+.PHONY: deadcode
+deadcode: submodules
+	set -euo pipefail; \
+	out="$$($(GO) run golang.org/x/tools/cmd/deadcode@$(DEADCODE_VERSION) \
+		-filter=github.com/aerospike/aerospike-backup-service \
+		./cmd/backup)"; \
+	out="$$(printf '%s' "$$out" | grep -vF '$(DEADCODE_IGNORE)' || true)"; \
+	if [ -n "$$out" ]; then \
+		echo "$$out"; \
+		echo "Unreachable functions found. Run the command above without the Makefile wrapper for details."; \
+		exit 1; \
+	fi
 
 .PHONY: lint-fix
 lint-fix:

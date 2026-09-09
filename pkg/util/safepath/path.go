@@ -30,30 +30,6 @@ func ValidateClean(path string) error {
 	return nil
 }
 
-// EnsureFileExists checks that a validated file path exists using os.Root.
-// path must have passed ValidateClean.
-func EnsureFileExists(path string) error {
-	if path == "" {
-		return nil
-	}
-
-	root, name, err := openRootForFile(path)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = root.Close() }()
-
-	info, err := root.Stat(name)
-	if err != nil {
-		return err
-	}
-	if info.IsDir() {
-		return fmt.Errorf("path %q is a directory, not a file", path)
-	}
-
-	return nil
-}
-
 // ReadFile reads the full contents of a validated file path using os.Root.
 func ReadFile(path string) ([]byte, error) {
 	root, name, err := openRootForFile(path)

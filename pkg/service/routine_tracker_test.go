@@ -12,6 +12,13 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+// markScanDone completes a history scan with the production beginScan/endScan
+// handshake so getState does not block. Tests that do not exercise storage
+// scans call this instead of SynchroniseBackupHistory.
+func (t *routineTracker) markScanDone() {
+	t.endScan(t.beginScan())
+}
+
 func TestNewRoutineTracker(t *testing.T) {
 	tracker := newRoutineTracker()
 	assert.NotNil(t, tracker)
@@ -53,7 +60,7 @@ func TestGetState_BlockingAndTimeout(t *testing.T) {
 func TestRegisterAndGetState(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
-	tracker.markScanDone() // unblock getState
+	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
 
@@ -168,18 +175,15 @@ func TestScanCancellation(t *testing.T) {
 	assert.False(t, cancel2Called)
 }
 
-func TestMarkScanDone_Idempotency(t *testing.T) {
+func TestFinishScan_Idempotency(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
 
-	// calling markScanDone multiple times should not panic
 	tracker.markScanDone()
 	tracker.markScanDone()
 
-	// scanDone should be closed
 	select {
 	case <-tracker.scanDone:
-		// success
 	default:
 		t.Fatal("scanDone should be closed")
 	}
