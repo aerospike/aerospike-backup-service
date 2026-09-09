@@ -48,7 +48,10 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	// GET responses redact secrets as "[secret]". Before persisting a PUT, copy real secret
 	// values from the stored config into the incoming payload wherever the sentinel appears,
 	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
-	decoder.MergeSecrets(newConfig, oldConfig)
+	if err := decoder.MergeSecrets(newConfig, oldConfig); err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
 
 	if err := newConfig.Validate(); err != nil {
 		httpError(w, errBadRequest(err))

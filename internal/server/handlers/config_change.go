@@ -39,7 +39,9 @@ func (s *Service) changeBackupConfig(
 	// values from the stored config into the incoming payload wherever the sentinel appears,
 	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
 	existingConfig := dto.NewConfigFromModel(s.config)
-	decoder.MergeSecrets(dtoConfig, existingConfig)
+	if err := decoder.MergeSecrets(dtoConfig, existingConfig); err != nil {
+		return fmt.Errorf("failed to update configuration: %w", err)
+	}
 
 	if err := dtoConfig.Validate(); err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
