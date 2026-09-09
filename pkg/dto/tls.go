@@ -68,7 +68,7 @@ func (t *TLS) Validate(opts ValidationOptions) error {
 }
 
 func (t *TLS) validatePaths() error {
-	if err := t.CAPath.Validate(); err != nil {
+	if err := t.CAPath.Validate(ValidationOptionalLocalFile); err != nil {
 		return errValidationInvalidPath("ca-path", t.CAPath, err)
 	}
 

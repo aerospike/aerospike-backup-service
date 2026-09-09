@@ -66,11 +66,8 @@ func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest
 
 // Validate validates the restore operation request.
 func (r *RestoreRequest) Validate() error {
-	if len(r.BackupDataPath) == 0 {
-		return errValidationEmptyField("backup-data-path")
-	}
-	if err := r.BackupDataPath.ValidateRelative(); err != nil {
-		return fmt.Errorf("%w: backup-data-path: %w", errValidation, err)
+	if err := r.BackupDataPath.Validate(ValidationDefault); err != nil {
+		return errValidationInvalidPath("backup-data-path", r.BackupDataPath, err)
 	}
 	if err := r.DestinationClusterConfig.Validate(ValidationDefault); err != nil {
 		return err

@@ -2,7 +2,6 @@ package dto
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -18,14 +17,10 @@ type LocalStorage struct {
 
 // Validate checks if the LocalStorage is valid.
 func (l *LocalStorage) Validate() error {
-	pathStr := string(l.Path)
-	if pathStr == "" {
-		return errors.New("local storage path is not specified")
-	}
 	// Local filesystem storage roots may be absolute or relative, unlike
 	// object-storage prefixes and backup-data-path.
-	if err := l.Path.Validate(); err != nil {
-		return fmt.Errorf("local storage path: %w", err)
+	if err := l.Path.Validate(ValidationAllowAbsolutePath); err != nil {
+		return errValidationInvalidPath("path", l.Path, err)
 	}
 	if l.MinPartSize != nil && *l.MinPartSize <= 0 {
 		return errors.New("min-part-size for local storage must be a positive value")

@@ -54,8 +54,8 @@ func (s *S3Storage) Validate() error {
 	if s.S3Region == "" {
 		return errValidationEmptyField("s3-region")
 	}
-	if err := s.Path.ValidateRelative(); err != nil {
-		return fmt.Errorf("storage path: %w", err)
+	if err := s.Path.Validate(ValidationAllowEmpty); err != nil {
+		return errValidationInvalidPath("path", s.Path, err)
 	}
 
 	if s.AccessKeyID != "" && s.SecretAccessKey == "" {

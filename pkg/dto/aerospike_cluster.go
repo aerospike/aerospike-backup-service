@@ -228,8 +228,8 @@ func (c *Credentials) Validate() error {
 		return errValidationMutuallyExclusive("password", "password-path")
 	}
 
-	if err := c.PasswordPath.Validate(); err != nil {
-		return fmt.Errorf("%w: invalid password-path", err)
+	if err := c.PasswordPath.Validate(ValidationOptionalLocalFile); err != nil {
+		return errValidationInvalidPath("password-path", c.PasswordPath, err)
 	}
 
 	if err := c.AuthMode.Validate(); err != nil {

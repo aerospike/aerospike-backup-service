@@ -105,7 +105,7 @@ func (s *ServerConfigHTTPS) validateTLSFields() error {
 		clientCAField: s.ClientCAFile,
 		crlField:      s.CRLFile,
 	} {
-		if err := path.Validate(); err != nil {
+		if err := path.Validate(ValidationOptionalLocalFile); err != nil {
 			return errValidationInvalidPath(field, path, err)
 		}
 	}

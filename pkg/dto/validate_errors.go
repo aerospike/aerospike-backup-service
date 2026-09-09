@@ -66,6 +66,19 @@ func errValidationSecret(field string, err error) error {
 	return fmt.Errorf("%s: %w: %w", field, errValidation, err)
 }
 
+// errValidationInvalidPath is the single wrapper for every Path.Validate call site.
+// It supplies the field name and the offending value, which Path itself cannot know;
+// Path returns only the reason, so the value is reported exactly once:
+//
+//	invalid path validation error: ca-file "/etc//passwd": must be in canonical form (expected "/etc/passwd")
+//
+// A missing path is reported as an empty field rather than an invalid one. Path
+// signals that case with errEmpty, and echoing back an empty value for an empty
+// path tells the caller nothing they don't already know.
 func errValidationInvalidPath(field string, path Path, err error) error {
-	return fmt.Errorf("%w: %q for %q: %w", errInvalidPath, path, field, err)
+	if errors.Is(err, errEmpty) {
+		return errValidationEmptyField(field)
+	}
+
+	return fmt.Errorf("%w: %s %q: %w", errInvalidPath, field, path, err)
 }

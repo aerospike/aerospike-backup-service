@@ -90,7 +90,7 @@ func (c *ClientTLS) validatePaths() error {
 		certField: c.Certfile,
 		keyField:  c.Keyfile,
 	} {
-		if err := path.Validate(); err != nil {
+		if err := path.Validate(ValidationOptionalLocalFile); err != nil {
 			return errValidationInvalidPath(field, path, err)
 		}
 	}
