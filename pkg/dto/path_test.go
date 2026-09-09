@@ -15,7 +15,7 @@ func TestPathValidate(t *testing.T) {
 		wantErrSub string
 	}{
 		// Emptiness is governed by ValidationAllowEmpty.
-		{name: "empty path required", path: "", wantErr: true, wantErrSub: "must not be empty"},
+		{name: "empty path required", path: "", wantErr: true},
 		{name: "empty path allowed", path: "", opts: ValidationAllowEmpty},
 
 		// Absoluteness is governed by ValidationAllowAbsolutePath.

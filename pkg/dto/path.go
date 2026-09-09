@@ -32,7 +32,7 @@ func (p Path) Validate(opts ValidationOptions) error {
 			return nil
 		}
 
-		return fmt.Errorf("%w: must not be empty", errEmpty)
+		return errEmpty
 	}
 
 	if strings.ContainsRune(path, 0) {
