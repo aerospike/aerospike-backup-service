@@ -4,26 +4,20 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Release version to publish (must match a release bundle already promoted to TEST, e.g. v3.7.0)
+        description: Release version to publish (must match a release bundle already promoted to PROD, e.g. v3.7.0)
         required: true
         type: string
 
 permissions:
   contents: read
 
-# TEMPORARY (testing only): this workflow tracks the TEST stage instead of PROD. Revert
-# `JF_TARGET_ENV` and the `JF_*_REPO` values below before merging to main.
 env:
-  JF_TARGET_ENV: TEST
-  JF_DEB_REPO: database-deb-test-local
-  JF_RPM_REPO: database-rpm-test-local
-  JF_HELM_REPO: database-helm-test-local
   DOCKERHUB_IMAGE: aerospike/aerospike-backup-service
 
 # This workflow is run manually, once the release bundle has already been promoted all the way to
 # JFrog PROD via the JFrog UI by a PM/EM (see docs/development.md "Cutting a release" -- gates past
 # TEST are product-owned and intentionally not automated in CI). It never promotes anything itself;
-# it only verifies the target promotion happened, then republishes the already-signed artifacts as an
+# it only verifies the PROD promotion happened, then republishes the already-signed artifacts as an
 # immutable GitHub pre-release. A PM/EM promotes it to a full (non-prerelease) GitHub Release manually
 # when ready to announce GA. Nothing is rebuilt, re-signed, or re-checksummed here -- JFrog is the
 # source of truth. The immutable version tag on Docker Hub is mirrored externally by
@@ -50,14 +44,6 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Checkout tag for artifact verification
-        if: env.JF_TARGET_ENV == 'TEST'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 1
-          fetch-tags: true
-          ref: ${{ env.BUNDLE_VERSION }}
-
       - name: Login to JFrog
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
@@ -67,12 +53,9 @@ jobs:
           oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
           oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
-      - name: Check release bundle is promoted to ${{ env.JF_TARGET_ENV }}
+      - name: Check release bundle is promoted to PROD
         env:
           JF_PROJECT: ${{ vars.JF_PROJECT }}
-          DEB_REPO: ${{ env.JF_DEB_REPO }}
-          RPM_REPO: ${{ env.JF_RPM_REPO }}
-          HELM_REPO: ${{ env.JF_HELM_REPO }}
         run: |
           set -euxo pipefail
           if [ -z "${BUNDLE_VERSION}" ]; then
@@ -80,70 +63,28 @@ jobs:
             exit 1
           fi
 
-          if [ "${JF_TARGET_ENV}" = "TEST" ]; then
-            # Promotion records are not reliably indexed for TEST bundles (especially
-            # pre-release/test version strings). Fall back to the same artifact search
-            # the publish job uses to confirm the bundle's artifacts are in TEST.
-            CHART_FILE="helm/aerospike-backup-service/Chart.yaml"
-            if [ ! -f "$CHART_FILE" ]; then
-              echo "::error::Chart file not found at ${CHART_FILE} (tag ${BUNDLE_VERSION})." >&2
-              exit 1
-            fi
-            HELM_VERSION=$(yq '.version' "$CHART_FILE" | tr -d '\n')
-            if [ -z "$HELM_VERSION" ]; then
-              echo "::error::Failed to extract Helm chart version from ${CHART_FILE}." >&2
-              exit 1
-            fi
-
-            echo "Verifying ${BUNDLE_NAME}:${BUNDLE_VERSION} artifacts in ${JF_TARGET_ENV} repos..."
-            echo "Searching ${DEB_REPO} for version=${BUNDLE_VERSION}..."
-            jf rt search "${DEB_REPO}/**" --props "version=${BUNDLE_VERSION}" > deb-artifacts.json
-            echo "Searching ${RPM_REPO} for version=${BUNDLE_VERSION}..."
-            jf rt search "${RPM_REPO}/**" --props "version=${BUNDLE_VERSION}" > rpm-artifacts.json
-            echo "Searching ${HELM_REPO} for version=${HELM_VERSION}..."
-            jf rt search "${HELM_REPO}/**" --props "version=${HELM_VERSION}" > helm-artifacts.json
-
-            jq -s 'add' deb-artifacts.json rpm-artifacts.json helm-artifacts.json > bundle-artifacts.json
-            cat bundle-artifacts.json
-
-            ARTIFACT_COUNT=$(jq 'length' bundle-artifacts.json)
-            if [ "$ARTIFACT_COUNT" -lt 1 ]; then
-              echo "::error::No package/Helm artifacts found for ${BUNDLE_NAME}:${BUNDLE_VERSION} (helm ${HELM_VERSION}) in ${DEB_REPO}, ${RPM_REPO}, or ${HELM_REPO}." >&2
-              exit 1
-            fi
-
-            echo "Confirmed: found ${ARTIFACT_COUNT} artifact(s) for ${BUNDLE_NAME}:${BUNDLE_VERSION} in ${JF_TARGET_ENV}."
-            exit 0
-          fi
-
           echo "Checking promotion history for ${BUNDLE_NAME}:${BUNDLE_VERSION} (project: ${JF_PROJECT})..."
           RESPONSE=$(jf rt curl -s "/lifecycle/api/v2/promotion/records/${BUNDLE_NAME}/${BUNDLE_VERSION}?project=${JF_PROJECT}")
           echo "$RESPONSE" | jq .
 
-          COMPLETED_TARGET=$(echo "$RESPONSE" | jq --arg env "${JF_TARGET_ENV}" '[.promotions[]? | select(.environment == $env and .status == "COMPLETED")] | length')
-          if [ "$COMPLETED_TARGET" -lt 1 ]; then
-            echo "::error::Release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} has no COMPLETED promotion to ${JF_TARGET_ENV}. Promote it via the JFrog UI, then re-run this workflow."
+          COMPLETED_PROD=$(echo "$RESPONSE" | jq '[.promotions[]? | select(.environment == "PROD" and .status == "COMPLETED")] | length')
+          if [ "$COMPLETED_PROD" -lt 1 ]; then
+            echo "::error::Release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} has no COMPLETED promotion to PROD. Have a PM/EM promote it via the JFrog UI, then re-run this workflow."
             exit 1
           fi
 
-          echo "Confirmed: ${BUNDLE_NAME}:${BUNDLE_VERSION} is promoted to ${JF_TARGET_ENV}."
+          echo "Confirmed: ${BUNDLE_NAME}:${BUNDLE_VERSION} is promoted to PROD."
 
       - name: Summarize verification
         if: always()
         run: |
           {
-            if [ "${{ env.JF_TARGET_ENV }}" = "TEST" ]; then
-              echo "### ${{ env.JF_TARGET_ENV }} artifact check"
-              echo "Verified artifacts exist in TEST repos (promotion records API is skipped for TEST)."
-            else
-              echo "### ${{ env.JF_TARGET_ENV }} promotion check"
-            fi
+            echo "### PROD promotion check"
             echo "| Field | Value |"
             echo "| --- | --- |"
             echo "| Bundle name | \`${BUNDLE_NAME}\` |"
             echo "| Bundle version | \`${BUNDLE_VERSION}\` |"
             echo "| JFrog project | \`${{ vars.JF_PROJECT }}\` |"
-            echo "| Target environment | \`${{ env.JF_TARGET_ENV }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   publish-github-release:
@@ -243,18 +184,18 @@ jobs:
           oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
           oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
-      - name: Download signed artifacts from JFrog ${{ env.JF_TARGET_ENV }}
+      - name: Download signed artifacts from JFrog PROD
         env:
           HELM_VERSION: ${{ steps.helm-version.outputs.HELM_VERSION }}
-          DEB_REPO: ${{ env.JF_DEB_REPO }}
-          RPM_REPO: ${{ env.JF_RPM_REPO }}
-          HELM_REPO: ${{ env.JF_HELM_REPO }}
+          DEB_REPO: ${{ vars.JF_ARTIFACTORY_DEB_PROD }}
+          RPM_REPO: ${{ vars.JF_ARTIFACTORY_RPM_PROD }}
+          HELM_REPO: ${{ vars.JF_ARTIFACTORY_HELM_PROD }}
         run: |
           set -euxo pipefail
           # jf rt search's --bundle filter turned out not to reliably list release-bundle
           # members on our JFrog instance (verified empty against a real, promoted bundle;
           # same for --build, the bundle signature API, and release-bundle-export). Instead,
-          # filter each target-stage repo directly by the "version" property that
+          # filter each PROD-public repo directly by the "version" property that
           # reusable_deploy-artifacts.yaml stamps on every artifact it deploys -- verified
           # live to return exact, reliable matches with full metadata (including sha256).
           mkdir -p release-assets
@@ -323,18 +264,18 @@ jobs:
             release-assets/**/*.tgz.prov
 
       - name: Set up Docker Buildx
-        if: steps.docker-latest.outputs.APPLY_DOCKER_LATEST == 'true' && env.JF_TARGET_ENV == 'PROD'
+        if: steps.docker-latest.outputs.APPLY_DOCKER_LATEST == 'true'
         uses: step-security/setup-buildx-action@a4709e2865773e1792246433e8eb922f9743a875 # v4.2.0
 
       - name: Login to DockerHub
-        if: steps.docker-latest.outputs.APPLY_DOCKER_LATEST == 'true' && env.JF_TARGET_ENV == 'PROD'
+        if: steps.docker-latest.outputs.APPLY_DOCKER_LATEST == 'true'
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Wait for DockerHub version tag
-        if: steps.docker-latest.outputs.APPLY_DOCKER_LATEST == 'true' && env.JF_TARGET_ENV == 'PROD'
+        if: steps.docker-latest.outputs.APPLY_DOCKER_LATEST == 'true'
         id: dockerhub-version
         uses: ./.github/actions/wait-for-dockerhub-tag
         with:
@@ -342,7 +283,7 @@ jobs:
           tag: ${{ steps.docker-latest.outputs.IMAGE_TAG }}
 
       - name: Point DockerHub latest at this release
-        if: steps.docker-latest.outputs.APPLY_DOCKER_LATEST == 'true' && env.JF_TARGET_ENV == 'PROD' && steps.dockerhub-version.outputs.found == 'true'
+        if: steps.docker-latest.outputs.APPLY_DOCKER_LATEST == 'true' && steps.dockerhub-version.outputs.found == 'true'
         run: |
           set -euxo pipefail
           docker buildx imagetools create \
@@ -357,7 +298,7 @@ jobs:
             echo "Tag: \`${BUNDLE_VERSION}\`"
             echo ""
             echo "Clear **Set as a pre-release** in the GitHub Release UI when ready to announce GA."
-            if [ "${{ steps.docker-latest.outputs.APPLY_DOCKER_LATEST }}" = "true" ] && [ "${{ env.JF_TARGET_ENV }}" = "PROD" ]; then
+            if [ "${{ steps.docker-latest.outputs.APPLY_DOCKER_LATEST }}" = "true" ]; then
               if [ "${{ steps.dockerhub-version.outputs.found }}" = "true" ]; then
                 echo ""
                 echo "Docker Hub \`latest\` now points at \`${{ steps.docker-latest.outputs.IMAGE_TAG }}\`."
@@ -365,9 +306,6 @@ jobs:
                 echo ""
                 echo "::warning::Docker Hub \`latest\` was not updated — version tag \`${{ steps.docker-latest.outputs.IMAGE_TAG }}\` is not on Docker Hub yet (artifact-publisher mirroring may still be in progress). Re-run this workflow to retry."
               fi
-            elif [ "${{ steps.docker-latest.outputs.APPLY_DOCKER_LATEST }}" = "true" ] && [ "${{ env.JF_TARGET_ENV }}" != "PROD" ]; then
-              echo ""
-              echo "Docker Hub \`latest\` update skipped (promotion target is \`${{ env.JF_TARGET_ENV }}\`, not PROD)."
             fi
             echo ""
             echo '```'
