@@ -47,7 +47,7 @@ func TestConvertStorageMapToDTO(t *testing.T) {
 	require.Len(t, result, 1)
 	require.NotNil(t, result["local1"])
 	require.NotNil(t, result["local1"].LocalStorage)
-	assert.Equal(t, "/tmp/backups", result["local1"].LocalStorage.Path)
+	assert.Equal(t, "/tmp/backups", string(result["local1"].LocalStorage.Path))
 }
 
 func ptrInt(v int) *int { return &v }

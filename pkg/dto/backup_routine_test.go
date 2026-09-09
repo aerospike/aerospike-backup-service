@@ -83,7 +83,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 		},
 	}
 
-	m, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	m, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.NoError(t, err)
 
 	assert.Equal(t, config.BackupPolicies["policy1"], m.BackupPolicy)
@@ -106,7 +106,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 func TestBackupRoutine_ToModel_BlankTimezoneUsesDefault(t *testing.T) {
 	t.Parallel()
 
-	for _, timezone := range []string{"", " \t "} {
+	for _, timezone := range []ScheduleTimezone{"", " \t "} {
 		routineDTO := &BackupRoutine{
 			SourceCluster:    "cluster1",
 			Storage:          "storage1",
@@ -118,12 +118,12 @@ func TestBackupRoutine_ToModel_BlankTimezoneUsesDefault(t *testing.T) {
 		m, err := routineDTO.ToModel(&model.BackupConfig{
 			AerospikeClusters: map[string]*model.AerospikeCluster{"cluster1": {}},
 			Storage:           map[string]model.Storage{"storage1": &model.LocalStorage{}},
-		}, "r", model.NewServiceLocation(""))
+		}, "r", model.NewServiceLocation("", nil))
 
 		require.NoError(t, err)
 		assert.Equal(t, model.DefaultScheduleTimezone, m.Timezone.ResolvedLocation())
-		assert.Equal(t, model.LocationSourceDefault, m.Timezone.Source)
-		assert.Equal(t, timezone, m.Timezone.Configured)
+		assert.False(t, m.Timezone.IsExplicit())
+		assert.Equal(t, string(timezone), m.Timezone.Configured)
 	}
 }
 
@@ -141,11 +141,11 @@ func TestBackupRoutine_ToModel_PreservesConfiguredTimezone(t *testing.T) {
 	m, err := routineDTO.ToModel(&model.BackupConfig{
 		AerospikeClusters: map[string]*model.AerospikeCluster{"cluster1": {}},
 		Storage:           map[string]model.Storage{"storage1": &model.LocalStorage{}},
-	}, "r", model.NewServiceLocation(""))
+	}, "r", model.NewServiceLocation("", nil))
 
 	require.NoError(t, err)
 	assert.Equal(t, model.DefaultScheduleTimezone, m.Timezone.ResolvedLocation())
-	assert.Equal(t, model.LocationSourceRoutine, m.Timezone.Source)
+	assert.True(t, m.Timezone.IsExplicit())
 	assert.Equal(t, "utc", m.Timezone.Configured)
 }
 
@@ -166,7 +166,7 @@ func TestBackupRoutine_ToModel_PolicyNotFound(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.Error(t, err)
 }
 
@@ -188,7 +188,7 @@ func TestBackupRoutine_ToModel_ClusterNotFound(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.Error(t, err)
 }
 
@@ -210,7 +210,7 @@ func TestBackupRoutine_ToModel_StorageNotFound(t *testing.T) {
 		Storage: map[string]model.Storage{},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.Error(t, err)
 }
 
@@ -236,7 +236,7 @@ func TestBackupRoutine_ToModel_SecretAgentNotFound(t *testing.T) {
 		SecretAgents: map[string]*model.SecretAgent{},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.Error(t, err)
 }
 
@@ -297,7 +297,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithPartitionList(t *testing
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.Error(t, err)
 }
 
@@ -322,7 +322,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithNodeList(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.Error(t, err)
 }
 
@@ -346,7 +346,7 @@ func TestBackupRoutine_ToModel_ParallelExceedsClusterMax(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.ErrorContains(t, err, "backup policy parallelism 8 exceeds cluster max parallelism 4")
 }
 
@@ -370,7 +370,7 @@ func TestBackupRoutine_ToModel_ParallelWithinClusterMax(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.NoError(t, err)
 }
 
@@ -394,7 +394,7 @@ func TestBackupRoutine_ToModel_ParallelEqualsClusterMax(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.NoError(t, err)
 }
 
@@ -418,7 +418,7 @@ func TestBackupRoutine_ToModel_ParallelUncheckedWhenClusterMaxUnset(t *testing.T
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.NoError(t, err)
 }
 
@@ -442,7 +442,7 @@ func TestBackupRoutine_ToModel_ParallelUncheckedWhenPolicyParallelUnset(t *testi
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.NoError(t, err)
 }
 
@@ -496,7 +496,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation(""))
+	_, err := routineDTO.ToModel(config, "r", model.NewServiceLocation("", nil))
 	require.Error(t, err)
 }
 
@@ -627,7 +627,7 @@ func TestBackupRoutine_Validate_ScheduleTimezone(t *testing.T) {
 		Storage:          "storage1",
 		IntervalCron:     "@daily",
 		Namespaces:       &[]string{"ns1"},
-		ScheduleTimezone: "EST",
+		ScheduleTimezone: "Not/AZone",
 	}
-	require.ErrorContains(t, invalid.Validate(), "EST")
+	require.ErrorContains(t, invalid.Validate(), "Not/AZone")
 }

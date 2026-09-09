@@ -68,7 +68,6 @@ type backupRoutineGob struct {
 	IntervalCron       string
 	IncrIntervalCron   string
 	TimezoneConfigured string
-	TimezoneSource     LocationSource
 	Namespaces         []string
 	SetList            []string
 	BinList            []string
@@ -89,7 +88,6 @@ func toBackupRoutineGob(r *BackupRoutine) backupRoutineGob {
 		IntervalCron:       r.IntervalCron,
 		IncrIntervalCron:   r.IncrIntervalCron,
 		TimezoneConfigured: r.Timezone.Configured,
-		TimezoneSource:     r.Timezone.Source,
 		Namespaces:         r.Namespaces,
 		SetList:            r.SetList,
 		BinList:            r.BinList,
@@ -105,10 +103,6 @@ func toBackupRoutineGob(r *BackupRoutine) backupRoutineGob {
 // Long-running backup/restore operations must work on an immutable routine snapshot.
 // A shallow copy would still share nested pointers/slices and could observe config changes mid-run.
 func (r *BackupRoutine) Copy() *BackupRoutine {
-	if r == nil {
-		return nil
-	}
-
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(toBackupRoutineGob(r)); err != nil {
 		panic(err) // if happens, registered failed types in init()
@@ -130,7 +124,6 @@ func (r *BackupRoutine) Copy() *BackupRoutine {
 		Timezone: Location{
 			resolved:   r.Timezone.resolved, // immutable; shared pointer is safe
 			Configured: copied.TimezoneConfigured,
-			Source:     copied.TimezoneSource,
 		},
 		Namespaces:       copied.Namespaces,
 		SetList:          copied.SetList,

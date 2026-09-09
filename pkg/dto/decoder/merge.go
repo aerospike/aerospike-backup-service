@@ -1,6 +1,7 @@
 package decoder
 
 import (
+	"errors"
 	"reflect"
 )
 
@@ -9,6 +10,9 @@ import (
 //
 // It walks incoming recursively and, for every Secret field equal to redactedSecret,
 // copies the value from the matching field in existing.
+//
+// Returns an error if a redacted Secret is found in incoming but there is no
+// corresponding existing value to restore from.
 //
 // Example:
 //
@@ -44,121 +48,163 @@ import (
 //	    }
 //	  }
 //	}
-func MergeSecrets(incoming, existing any) {
+func MergeSecrets(incoming, existing any) error {
 	if incoming == nil || existing == nil {
-		return
+		return nil
 	}
 
-	mergeValue(reflect.ValueOf(incoming), reflect.ValueOf(existing))
+	return mergeValue(reflect.ValueOf(incoming), reflect.ValueOf(existing))
 }
 
 //nolint:gocognit,gocyclo,funlen // recursive reflect walk over nested DTO values
-func mergeValue(incoming, existing reflect.Value) {
-	if !incoming.IsValid() || !existing.IsValid() {
-		return
+func mergeValue(incoming, existing reflect.Value) error {
+	if !incoming.IsValid() {
+		return nil
 	}
 
 	if incoming.Type() == secretType {
-		inSecret, ok := incoming.Interface().(Secret)
-		if !ok || !inSecret.IsRedacted() {
-			return
-		}
-
-		if existing.Type() != secretType || !incoming.CanSet() {
-			return
-		}
-
-		incoming.Set(existing)
-
-		return
+		return setSecretValue(incoming, existing)
 	}
 
-	if incoming.Type() == timeType {
-		return
+	if shouldSkipDeepCopy(incoming) {
+		return nil
 	}
 
 	switch incoming.Kind() {
 	case reflect.Pointer:
 		if incoming.IsNil() {
-			return
+			return nil
 		}
 
 		incomingElem := incoming.Elem()
 		if existing.Kind() == reflect.Pointer {
-			if existing.IsNil() {
-				return
+			if !existing.IsValid() {
+				return mergeValue(incomingElem, reflect.Value{})
 			}
 
-			mergeValue(incomingElem, existing.Elem())
-			return
+			if existing.IsNil() {
+				return mergeValue(incomingElem, reflect.Value{})
+			}
+
+			return mergeValue(incomingElem, existing.Elem())
 		}
 
-		mergeValue(incomingElem, existing)
+		if !existing.IsValid() {
+			return mergeValue(incomingElem, reflect.Value{})
+		}
+
+		return mergeValue(incomingElem, existing)
 
 	case reflect.Interface:
 		if incoming.IsNil() {
-			return
+			return nil
+		}
+
+		if !existing.IsValid() {
+			return nil
 		}
 
 		if existing.IsNil() {
-			return
+			return nil
 		}
 
-		mergeValue(incoming.Elem(), existing.Elem())
+		return mergeValue(incoming.Elem(), existing.Elem())
 
 	case reflect.Struct:
-		if existing.Kind() != reflect.Struct || incoming.Type() != existing.Type() {
-			return
+		if existing.IsValid() && (existing.Kind() != reflect.Struct || incoming.Type() != existing.Type()) {
+			return nil
 		}
 
 		for i := 0; i < incoming.NumField(); i++ {
-			mergeValue(incoming.Field(i), existing.Field(i))
+			var existingField reflect.Value
+			if existing.IsValid() {
+				existingField = existing.Field(i)
+			}
+			if err := mergeValue(incoming.Field(i), existingField); err != nil {
+				return err
+			}
 		}
+
+		return nil
 
 	case reflect.Map:
 		if existing.Kind() != reflect.Map || incoming.Type() != existing.Type() {
-			return
+			return nil
 		}
 
 		for _, key := range incoming.MapKeys() {
-			existingVal := existing.MapIndex(key)
-			if !existingVal.IsValid() {
-				continue
-			}
-
 			incomingVal := incoming.MapIndex(key)
+			existingVal := existing.MapIndex(key)
+
 			if incomingVal.Kind() != reflect.Pointer && !incomingVal.CanSet() {
 				mutable := reflect.New(incomingVal.Type()).Elem()
 				mutable.Set(incomingVal)
-				mergeValue(mutable, existingVal)
+				if err := mergeValue(mutable, existingVal); err != nil {
+					return err
+				}
 				incoming.SetMapIndex(key, mutable)
 				continue
 			}
 
-			mergeValue(incomingVal, existingVal)
+			if err := mergeValue(incomingVal, existingVal); err != nil {
+				return err
+			}
 		}
+
+		return nil
 
 	case reflect.Slice:
 		if existing.Kind() != reflect.Slice {
-			return
+			return nil
 		}
 
 		n := min(existing.Len(), incoming.Len())
 
 		for i := range n {
-			mergeValue(incoming.Index(i), existing.Index(i))
+			if err := mergeValue(incoming.Index(i), existing.Index(i)); err != nil {
+				return err
+			}
 		}
+
+		return nil
 
 	case reflect.Array:
 		if existing.Kind() != reflect.Array || incoming.Type() != existing.Type() {
-			return
+			return nil
 		}
 
 		for i := 0; i < incoming.Len(); i++ {
-			mergeValue(incoming.Index(i), existing.Index(i))
+			if err := mergeValue(incoming.Index(i), existing.Index(i)); err != nil {
+				return err
+			}
 		}
+		return nil
 
 	default:
-		return
+		return nil
 	}
+}
+
+func setSecretValue(incoming reflect.Value, existing reflect.Value) error {
+	inSecret, ok := incoming.Interface().(Secret)
+	if !ok || !inSecret.IsRedacted() {
+		return nil
+	}
+
+	if !incoming.CanSet() {
+		return nil
+	}
+
+	if !existing.IsValid() || existing.Type() != secretType {
+		return errors.New("cannot use redacted secret \"[secret]\" for a new entity with no existing value")
+	}
+
+	existingSecret := existing.Interface().(Secret)
+	if existingSecret.IsRedacted() {
+		return errors.New("cannot use redacted secret \"[secret]\" for a new entity with no existing value")
+	}
+
+	incoming.Set(existing)
+
+	return nil
 }

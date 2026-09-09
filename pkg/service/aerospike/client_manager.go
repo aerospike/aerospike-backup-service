@@ -170,10 +170,9 @@ func (cm *clientManager) Close(client Client) {
 
 	// We need to find which info struct owns this client.
 	// Since Client interface wraps the underlying AerospikeClient, we compare pointers.
-	found := false
 	cm.clients.Iterate(func(key uint64, info *clientInfo) {
-		if found {
-			return // Optimization: stop if already found
+		if targetInfo != nil {
+			return
 		}
 
 		// We must lock to read info.aeroClient safely,
@@ -182,12 +181,11 @@ func (cm *clientManager) Close(client Client) {
 		if info.aeroClient == client.AerospikeClient() {
 			targetInfo = info
 			targetKey = key
-			found = true
 		}
 		info.mu.RUnlock()
 	})
 
-	if found {
+	if targetInfo != nil {
 		cm.decrementRef(targetInfo, targetKey)
 	} else {
 		// If it's not in our cache, we must close it immediately because we aren't managing its lifecycle.

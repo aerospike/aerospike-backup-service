@@ -104,6 +104,9 @@ linters:
           exclude:
             - test
         - name: unexported-return
+        - name: import-shadowing
+        - name: use-waitgroup-go
+        - name: time-equal
     usetesting:
       context-background: true
       context-todo: true

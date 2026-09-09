@@ -1821,7 +1821,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "schedule-timezone": {
-                    "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nAbbreviations such as EST and POSIX TZ strings are not accepted.\nChanging this service-level default requires a restart.",
+                    "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or any IANA timezone name resolvable\nby Go's time.LoadLocation (for example, America/New_York or Japan).\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nPrefer canonical Area/Location names: legacy aliases such as EST resolve as\nfixed UTC-5 with no DST, which is rarely what \"Eastern Time\" is meant to be.\nChanging this service-level default requires a restart.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "America/New_York"

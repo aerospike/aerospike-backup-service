@@ -37,7 +37,7 @@ type BackupRoutine struct {
 	// Accepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.
 	// When omitted, the routine inherits service.backup.schedule-timezone.
 	// Keywords UTC and Local are case-insensitive; IANA names are case-sensitive.
-	ScheduleTimezone string `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"`
+	ScheduleTimezone ScheduleTimezone `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"` //nolint:lll
 	// The list of namespaces to back up.
 	// If empty, the entire cluster is backed up.
 	// The order of namespaces does not determine the backup execution or completion order.
@@ -109,7 +109,7 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
 	}
-	if err := validateScheduleTimezone(r.ScheduleTimezone); err != nil {
+	if err := r.ScheduleTimezone.Validate(); err != nil {
 		return err
 	}
 	for i, rack := range r.RackList {
@@ -281,7 +281,7 @@ func (r *BackupRoutine) ToModel(
 		SecretAgent:      secretAgent,
 		IntervalCron:     r.IntervalCron,
 		IncrIntervalCron: r.IncrIntervalCron,
-		Timezone:         model.NewRoutineLocation(r.ScheduleTimezone, serviceTimezone),
+		Timezone:         r.ScheduleTimezone.ToRoutineLocation(serviceTimezone),
 		Namespaces:       *r.Namespaces,
 		SetList:          r.SetList,
 		BinList:          r.BinList,
@@ -381,10 +381,6 @@ func NewRoutineFromReader(r io.Reader, format decoder.SerializationFormat) (*Bac
 }
 
 func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRoutine {
-	if m == nil || config == nil {
-		return nil
-	}
-
 	b := &BackupRoutine{}
 	b.fromModel(m, config.BackupConfigCopy())
 
@@ -400,7 +396,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	}
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
-	r.ScheduleTimezone = m.Timezone.Configured
+	r.ScheduleTimezone = ScheduleTimezone(m.Timezone.Configured)
 	r.Namespaces = &m.Namespaces
 	r.SetList = m.SetList
 	r.BinList = m.BinList

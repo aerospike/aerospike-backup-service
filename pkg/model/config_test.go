@@ -77,3 +77,67 @@ func TestSetBackupConfig_DoesNotInvalidate(t *testing.T) {
 
 	assert.Empty(t, cfg.PopInvalidatedRoutineNames())
 }
+
+func TestConfigAddRejectsNilValues(t *testing.T) {
+	var typedNilStorage *LocalStorage
+
+	tests := []struct {
+		name    string
+		add     func(*Config) error
+		wantErr bool
+	}{
+		{
+			name: "valid values",
+			add: func(cfg *Config) error {
+				if err := cfg.AddCluster("cluster", &AerospikeCluster{}); err != nil {
+					return err
+				}
+				if err := cfg.AddRoutine(&BackupRoutine{Name: "routine"}); err != nil {
+					return err
+				}
+				if err := cfg.AddPolicy("policy", &BackupPolicy{}); err != nil {
+					return err
+				}
+
+				return cfg.AddStorage("storage", &LocalStorage{})
+			},
+		},
+		{
+			name:    "cluster",
+			add:     func(cfg *Config) error { return cfg.AddCluster("cluster", nil) },
+			wantErr: true,
+		},
+		{
+			name:    "routine",
+			add:     func(cfg *Config) error { return cfg.AddRoutine(nil) },
+			wantErr: true,
+		},
+		{
+			name:    "policy",
+			add:     func(cfg *Config) error { return cfg.AddPolicy("policy", nil) },
+			wantErr: true,
+		},
+		{
+			name:    "storage",
+			add:     func(cfg *Config) error { return cfg.AddStorage("storage", nil) },
+			wantErr: true,
+		},
+		{
+			name:    "typed nil storage",
+			add:     func(cfg *Config) error { return cfg.AddStorage("typed-nil-storage", typedNilStorage) },
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := NewConfig()
+			err := tt.add(cfg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

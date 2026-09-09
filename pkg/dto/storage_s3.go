@@ -18,7 +18,7 @@ type S3Storage struct {
 	Bucket string `yaml:"bucket" json:"bucket" validate:"required"`
 	// The root path for the backup repository within the bucket.
 	// If not specified, backups will be saved in the bucket's root.
-	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
+	Path Path `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
 	// The S3 region string.
 	S3Region string `yaml:"s3-region" json:"s3-region" example:"eu-central-1" validate:"required"`
 	// The S3 profile name (AWS S3 optional).
@@ -54,8 +54,8 @@ func (s *S3Storage) Validate() error {
 	if s.S3Region == "" {
 		return errValidationEmptyField("s3-region")
 	}
-	if err := validateObjectStoragePath(s.Path); err != nil {
-		return err
+	if err := s.Path.Validate(ValidationAllowEmpty); err != nil {
+		return errValidationInvalidPath("path", s.Path, err)
 	}
 
 	if s.AccessKeyID != "" && s.SecretAccessKey == "" {
@@ -106,7 +106,7 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 	}
 
 	return &model.S3Storage{
-		Path:               s.Path,
+		Path:               string(s.Path),
 		Bucket:             s.Bucket,
 		S3Region:           s.S3Region,
 		S3Profile:          s.S3Profile,
@@ -122,7 +122,7 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3Storage {
 	result := &S3Storage{
 		Bucket:             s.Bucket,
-		Path:               s.Path,
+		Path:               Path(s.Path),
 		S3Region:           s.S3Region,
 		S3Profile:          s.S3Profile,
 		S3EndpointOverride: s.S3EndpointOverride,

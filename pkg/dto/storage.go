@@ -4,11 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // Storage represents the configuration for a backup storage details.
@@ -22,18 +20,6 @@ type Storage struct {
 	GcpStorage *GcpStorage `yaml:"gcp-storage,omitempty" json:"gcp-storage,omitempty"`
 	// AzureStorage configuration, set if using Azure storage.
 	AzureStorage *AzureStorage `yaml:"azure-storage,omitempty" json:"azure-storage,omitempty"`
-}
-
-func validateObjectStoragePath(path string) error {
-	if path != "" {
-		if !filepath.IsLocal(path) {
-			return fmt.Errorf("storage path must be local: %q", path)
-		}
-		if err := safepath.ValidateClean(path); err != nil {
-			return fmt.Errorf("storage path: %w", err)
-		}
-	}
-	return nil
 }
 
 // Validate checks if the Storage is valid.
@@ -61,7 +47,7 @@ func (s *Storage) Validate() error {
 		validStorage = s.AzureStorage
 		count++
 	}
-	if count == 0 {
+	if validStorage == nil {
 		return errors.New("no storage type specified")
 	}
 	if count > 1 {
@@ -109,7 +95,7 @@ func NewStorageFromModel(m model.Storage, config *model.BackupConfig) *Storage {
 			AzureStorage: newAzureStorageFromModel(s, config),
 		}
 	default:
-		return nil
+		panic(fmt.Sprintf("unsupported model storage type %T", m)) // Unreachable
 	}
 }
 
