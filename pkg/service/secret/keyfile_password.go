@@ -10,8 +10,10 @@ import (
 // KeyfilePasswordResolver resolves a TLS config's KeyfilePassword when it holds a
 // Secret Agent reference rather than a literal value (see dto.TLS.KeyfilePassword).
 type KeyfilePasswordResolver interface {
-	// Resolve returns a copy of tlsConfig with KeyfilePassword resolved through
-	// agent. An empty password is returned unchanged without contacting the agent.
+	// Resolve returns tlsConfig with KeyfilePassword resolved through agent. An
+	// empty password is passed through unchanged without contacting agent. On
+	// error, the returned model.TLS is the zero value and must not be used;
+	// tlsConfig itself is never modified.
 	//
 	// Callers must run this before tlsconfig.NewTLSConfig, which uses
 	// KeyfilePassword verbatim as the decryption password: skipping this step
@@ -30,7 +32,7 @@ func NewKeyfilePasswordResolver(resolver Resolver) KeyfilePasswordResolver {
 	return &keyfilePasswordResolver{resolver: resolver}
 }
 
-// Resolve returns a copy of tlsConfig with KeyfilePassword resolved through agent.
+// Resolve returns tlsConfig with KeyfilePassword resolved through agent.
 func (r *keyfilePasswordResolver) Resolve(
 	ctx context.Context, tlsConfig model.TLS, agent *model.SecretAgent,
 ) (model.TLS, error) {
@@ -42,7 +44,9 @@ func (r *keyfilePasswordResolver) Resolve(
 	if err != nil {
 		return model.TLS{}, fmt.Errorf("failed to resolve TLS key-file-password: %w", err)
 	}
-	tlsConfig.KeyfilePassword = password
 
-	return tlsConfig, nil
+	resolved := tlsConfig
+	resolved.KeyfilePassword = password
+
+	return resolved, nil
 }

@@ -770,8 +770,7 @@ func newListenerHandler(t *testing.T) *handlers.Service {
 	return handlers.NewService(
 		t.Context(),
 		model.NewConfig(),
-		nil, nil, nil, nil, nil, nil, nil, nil,
-		servertls.NewProber(secrets.NewKeyfilePasswordResolver(secrets.NewResolver())),
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 }
 

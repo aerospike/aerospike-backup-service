@@ -71,6 +71,7 @@ func writeClusterTLSFiles(t *testing.T) clusterTLSFiles {
 	const keyPassword = "correct-horse-battery-staple"
 	pemBlock := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(clientKey)}
 	//nolint:staticcheck // DEK-Info PEM encryption is what ABS decrypts for password-protected keys
+	//noinspection GoDeprecation
 	encryptedBlock, err := x509.EncryptPEMBlock(
 		rand.Reader, pemBlock.Type, pemBlock.Bytes, []byte(keyPassword), x509.PEMCipherAES256)
 	require.NoError(t, err)
