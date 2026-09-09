@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/stretchr/testify/require"
 )
 
 func TestProbeCluster(t *testing.T) {
 	files := createTestCertificateFiles(t)
-	prober := &prober{resolver: newTestResolver(t)}
+	prober := &prober{resolver: secrets.NewKeyfilePasswordResolver(newTestResolver(t))}
 
 	t.Run("valid", func(t *testing.T) {
 		err := prober.probeCluster(t.Context(), &model.AerospikeCluster{
@@ -52,13 +53,13 @@ func TestProbeReportsClusterName(t *testing.T) {
 		}},
 	}))
 
-	err := NewProber(newTestResolver(t)).Probe(t.Context(), config)
+	err := NewProber(secrets.NewKeyfilePasswordResolver(newTestResolver(t))).Probe(t.Context(), config)
 	require.ErrorContains(t, err, `cluster "broken" TLS validation failed`)
 }
 
 func TestProbeSecretAgent(t *testing.T) {
 	files := createTestCertificateFiles(t)
-	prober := NewProber(newTestResolver(t))
+	prober := NewProber(secrets.NewKeyfilePasswordResolver(newTestResolver(t)))
 
 	t.Run("valid", func(t *testing.T) {
 		config := model.NewConfig()

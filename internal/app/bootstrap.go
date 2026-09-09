@@ -52,7 +52,7 @@ func InitComponents(
 	remote bool,
 ) (*Components, error) {
 	resolver := secrets.NewResolver()
-	tlsProber := servertls.NewProber(resolver)
+	tlsProber := servertls.NewProber(secrets.NewKeyfilePasswordResolver(resolver))
 	operations := newStorageOperations(resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 
@@ -189,7 +189,7 @@ func newStorageOperations(resolver secrets.Resolver) storage.Operations {
 func newAerospikeLayer(resolver secrets.Resolver) (aerospike.ClientManager, aerospike.NamespaceValidator) {
 	passwordResolver := secrets.NewPasswordResolver(resolver)
 	clientManager := aerospike.NewClientManager(
-		aerospike.NewClientFactory(passwordResolver, resolver),
+		aerospike.NewClientFactory(passwordResolver, secrets.NewKeyfilePasswordResolver(resolver)),
 		aerospike.DefaultCloseDelay,
 	)
 	return clientManager, aerospike.NewNamespaceValidator(clientManager)

@@ -19,7 +19,7 @@ func newTestServeMux(t *testing.T) *http.ServeMux {
 		t.Context(),
 		model.NewConfig(),
 		nil, nil, nil, nil, nil, nil, nil, nil,
-		servertls.NewProber(secrets.NewResolver()),
+		servertls.NewProber(secrets.NewKeyfilePasswordResolver(secrets.NewResolver())),
 	)
 
 	return NewServeMux("/v1", "/", svc)

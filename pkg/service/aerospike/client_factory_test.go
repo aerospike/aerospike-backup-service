@@ -121,10 +121,12 @@ func TestClientPolicyResolvesTLSKeyfilePasswordThroughSecretAgent(t *testing.T) 
 	agent := &model.SecretAgent{Address: "127.0.0.1"}
 	cluster := clusterRequiringTLS(files, agent, "secrets:agent1:tls-key")
 
-	resolver := secrets.NewMockResolver(ctrl)
+	resolvedTLS := *cluster.TLS
+	resolvedTLS.KeyfilePassword = files.keyPassword
+	resolver := secrets.NewMockKeyfilePasswordResolver(ctrl)
 	resolver.EXPECT().
-		Resolve(gomock.Any(), agent, "secrets:agent1:tls-key").
-		Return(files.keyPassword, nil)
+		Resolve(gomock.Any(), *cluster.TLS, agent).
+		Return(resolvedTLS, nil)
 
 	factory := &clientFactory{resolver: resolver}
 	policy, err := factory.clientPolicy(t.Context(), cluster)
@@ -141,10 +143,10 @@ func TestClientPolicyTLSKeyfilePasswordResolutionErrorPropagates(t *testing.T) {
 	agent := &model.SecretAgent{Address: "127.0.0.1"}
 	cluster := clusterRequiringTLS(files, agent, "secrets:agent1:tls-key")
 
-	resolver := secrets.NewMockResolver(ctrl)
+	resolver := secrets.NewMockKeyfilePasswordResolver(ctrl)
 	resolver.EXPECT().
-		Resolve(gomock.Any(), agent, "secrets:agent1:tls-key").
-		Return("", errors.New("secret agent unreachable"))
+		Resolve(gomock.Any(), *cluster.TLS, agent).
+		Return(model.TLS{}, errors.New("secret agent unreachable"))
 
 	factory := &clientFactory{resolver: resolver}
 	policy, err := factory.clientPolicy(t.Context(), cluster)
@@ -165,7 +167,9 @@ func TestClientPolicyTLSConfigErrorPropagates(t *testing.T) {
 		},
 	}
 
-	factory := &clientFactory{}
+	// KeyfilePassword is empty, so KeyfilePasswordResolver.Resolve short-circuits
+	// without touching its underlying Resolver: nil is a valid resolver here.
+	factory := &clientFactory{resolver: secrets.NewKeyfilePasswordResolver(nil)}
 	policy, err := factory.clientPolicy(t.Context(), cluster)
 	require.Error(t, err)
 	assert.Nil(t, policy)

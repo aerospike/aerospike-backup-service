@@ -39,7 +39,7 @@ func newTestServerHTTP(t *testing.T, httpCfg *model.ServerConfigHTTP) *serverHTT
 		t.Context(),
 		model.NewConfig(),
 		nil, nil, nil, nil, nil, nil, nil, nil,
-		servertls.NewProber(secrets.NewResolver()),
+		servertls.NewProber(secrets.NewKeyfilePasswordResolver(secrets.NewResolver())),
 	)
 
 	return NewServerHTTP(t.Context(), httpCfg, svc).(*serverHTTP)

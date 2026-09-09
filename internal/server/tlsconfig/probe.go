@@ -18,13 +18,13 @@ type Prober interface {
 }
 
 type prober struct {
-	resolver secrets.Resolver
+	resolver secrets.KeyfilePasswordResolver
 }
 
 var _ Prober = (*prober)(nil)
 
 // NewProber returns a TLS material prober.
-func NewProber(resolver secrets.Resolver) Prober {
+func NewProber(resolver secrets.KeyfilePasswordResolver) Prober {
 	return &prober{resolver: resolver}
 }
 
@@ -88,18 +88,12 @@ func (p *prober) probeCluster(
 		return nil
 	}
 
-	tlsConfig := *cluster.TLS
-	if tlsConfig.KeyfilePassword != "" {
-		password, err := p.resolver.Resolve(ctx, agent, tlsConfig.KeyfilePassword)
-		if err != nil {
-			return fmt.Errorf("failed to resolve key-file-password: %w", err)
-		}
-		tlsConfig.KeyfilePassword = password
-	}
-
-	if _, err := clienttls.NewTLSConfig(&tlsConfig); err != nil {
+	tlsConfig, err := p.resolver.Resolve(ctx, *cluster.TLS, agent)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	_, err = clienttls.NewTLSConfig(&tlsConfig)
+
+	return err
 }

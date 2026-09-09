@@ -26,11 +26,13 @@ var _ ClientFactory = (*clientFactory)(nil)
 
 type clientFactory struct {
 	passwordResolver secrets.PasswordResolver
-	resolver         secrets.Resolver
+	resolver         secrets.KeyfilePasswordResolver
 }
 
 // NewClientFactory returns a ClientFactory.
-func NewClientFactory(passwordResolver secrets.PasswordResolver, resolver secrets.Resolver) ClientFactory {
+func NewClientFactory(
+	passwordResolver secrets.PasswordResolver, resolver secrets.KeyfilePasswordResolver,
+) ClientFactory {
 	return &clientFactory{
 		passwordResolver: passwordResolver,
 		resolver:         resolver,
@@ -122,10 +124,9 @@ func isPKIAuthMode(creds *model.Credentials) bool {
 
 // setTLSConfig builds the TLS config for a cluster whose seed nodes require TLS.
 // KeyfilePassword may still be an unresolved Secret Agent reference at this point
-// (see model.TLS.KeyfilePassword and dto.TLS.KeyfilePassword) - it must be resolved
-// here, the same way probe.probeCluster does for config validation, because
-// tlsconfig.NewTLSConfig uses it verbatim as the decryption password. A resolution
-// or TLS-config failure is returned rather than logged: silently leaving
+// (see model.TLS.KeyfilePassword and dto.TLS.KeyfilePassword); f.resolver resolves
+// it the same way probe.probeCluster does for config validation. A resolution or
+// TLS-config failure is returned rather than logged: silently leaving
 // policy.TlsConfig nil would make the client fall back to a plaintext connection
 // to seed nodes that are configured to require TLS.
 func (f *clientFactory) setTLSConfig(ctx context.Context, c *model.AerospikeCluster, policy *as.ClientPolicy) error {
@@ -145,17 +146,14 @@ func (f *clientFactory) setTLSConfig(ctx context.Context, c *model.AerospikeClus
 		tlsToApply = *c.TLS
 	}
 
-	if tlsToApply.KeyfilePassword != "" {
-		var agent *model.SecretAgent
-		if c.Credentials != nil {
-			agent = c.Credentials.SecretAgent
-		}
+	var agent *model.SecretAgent
+	if c.Credentials != nil {
+		agent = c.Credentials.SecretAgent
+	}
 
-		password, err := f.resolver.Resolve(ctx, agent, tlsToApply.KeyfilePassword)
-		if err != nil {
-			return fmt.Errorf("failed to resolve TLS key-file-password for cluster %q: %w", c.ClusterLabel, err)
-		}
-		tlsToApply.KeyfilePassword = password
+	tlsToApply, err := f.resolver.Resolve(ctx, tlsToApply, agent)
+	if err != nil {
+		return fmt.Errorf("failed to resolve TLS key-file-password for cluster %q: %w", c.ClusterLabel, err)
 	}
 
 	tlsConfig, err := tlsconfig.NewTLSConfig(&tlsToApply)
