@@ -283,18 +283,20 @@ func TestUnconfiguredService_SentinelSecretValidation(t *testing.T) {
 		wantBodyReg string
 	}{
 		{
-			name:        "new cluster with redacted password sentinel",
-			method:      http.MethodPost,
-			path:        "/v1/config/clusters/newcluster",
-			body:        "{\"seed-nodes\":[{\"host-name\":\"localhost\",\"port\":3000}],\"credentials\":{\"user\":\"admin\",\"password\":\"[secret]\"}}",
+			name:   "new cluster with redacted password sentinel",
+			method: http.MethodPost,
+			path:   "/v1/config/clusters/newcluster",
+			body: "{\"seed-nodes\":[{\"host-name\":\"localhost\",\"port\":3000}]," +
+				"\"credentials\":{\"user\":\"admin\",\"password\":\"[secret]\"}}",
 			wantStatus:  http.StatusBadRequest,
 			wantBodyReg: "cannot use redacted secret.*for a new entity",
 		},
 		{
-			name:        "new storage with redacted secret access key sentinel",
-			method:      http.MethodPost,
-			path:        "/v1/config/storage/newstorage",
-			body:        "{\"s3-storage\":{\"bucket\":\"test\",\"s3-region\":\"us-east-1\",\"access-key-id\":\"key\",\"secret-access-key\":\"[secret]\"}}",
+			name:   "new storage with redacted secret access key sentinel",
+			method: http.MethodPost,
+			path:   "/v1/config/storage/newstorage",
+			body: "{\"s3-storage\":{\"bucket\":\"test\",\"s3-region\":\"us-east-1\"," +
+				"\"access-key-id\":\"key\",\"secret-access-key\":\"[secret]\"}}",
 			wantStatus:  http.StatusBadRequest,
 			wantBodyReg: "cannot use redacted secret.*for a new entity",
 		},
