@@ -112,6 +112,19 @@ func clusterRequiringTLS(
 	}
 }
 
+// newTestClientFactory builds a factory whose collaborators are strict mocks, so an
+// unexpected call fails the test with a gomock message instead of panicking on a nil
+// interface. The fixtures below authenticate with PKI, so passwordResolver is never
+// expected to be called.
+func newTestClientFactory(t *testing.T, tlsResolver secrets.ClusterTLSResolver) *clientFactory {
+	t.Helper()
+
+	return &clientFactory{
+		passwordResolver: secrets.NewMockPasswordResolver(gomock.NewController(t)),
+		tlsResolver:      tlsResolver,
+	}
+}
+
 // TestClientPolicyResolvesTLSKeyfilePasswordThroughSecretAgent guards the fix: a
 // cluster's TLS.KeyfilePassword can be a Secret Agent reference (see
 // dto.TLS.KeyfilePassword), and setTLSConfig must resolve it - the same way
@@ -129,7 +142,7 @@ func TestClientPolicyResolvesTLSKeyfilePasswordThroughSecretAgent(t *testing.T) 
 		Resolve(gomock.Any(), cluster).
 		Return(resolvedTLS, nil)
 
-	factory := &clientFactory{tlsResolver: resolver}
+	factory := newTestClientFactory(t, resolver)
 	policy, err := factory.clientPolicy(t.Context(), cluster)
 	require.NoError(t, err)
 	require.NotNil(t, policy.TlsConfig, "seed node requires TLS; policy.TlsConfig must not be nil")
@@ -149,7 +162,7 @@ func TestClientPolicyTLSKeyfilePasswordResolutionErrorPropagates(t *testing.T) {
 		Resolve(gomock.Any(), cluster).
 		Return(model.TLS{}, errors.New("secret agent unreachable"))
 
-	factory := &clientFactory{tlsResolver: resolver}
+	factory := newTestClientFactory(t, resolver)
 	policy, err := factory.clientPolicy(t.Context(), cluster)
 	require.Error(t, err, "a resolution failure must fail client creation, not silently disable TLS")
 	assert.Nil(t, policy)
@@ -173,7 +186,7 @@ func TestClientPolicyTLSConfigErrorPropagates(t *testing.T) {
 	resolver := secrets.NewMockClusterTLSResolver(ctrl)
 	resolver.EXPECT().Resolve(gomock.Any(), cluster).Return(*cluster.TLS, nil)
 
-	factory := &clientFactory{tlsResolver: resolver}
+	factory := newTestClientFactory(t, resolver)
 	policy, err := factory.clientPolicy(t.Context(), cluster)
 	require.Error(t, err)
 	assert.Nil(t, policy)
@@ -190,7 +203,8 @@ func TestClientPolicyNoTLSWhenNoSeedNodeRequiresIt(t *testing.T) {
 		},
 	}
 
-	factory := &clientFactory{}
+	// Strict mock with no EXPECT(): resolving anything here fails the test.
+	factory := newTestClientFactory(t, secrets.NewMockClusterTLSResolver(gomock.NewController(t)))
 	policy, err := factory.clientPolicy(t.Context(), cluster)
 	require.NoError(t, err)
 	assert.Nil(t, policy.TlsConfig)

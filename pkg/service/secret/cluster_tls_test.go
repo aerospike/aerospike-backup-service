@@ -43,22 +43,31 @@ func TestClusterTLSResolverResolvesThroughTheClusterAgent(t *testing.T) {
 	require.Equal(t, "secrets:agent:key", cluster.TLS.KeyfilePassword)
 }
 
+// TestClusterTLSResolverSkipsResolverWhenNothingToResolve also pins the contract
+// client_factory relies on: a cluster whose seed nodes require TLS but that has no
+// TLS block resolves to the zero value, which tlsconfig.NewTLSConfig turns into a
+// default configuration.
 func TestClusterTLSResolverSkipsResolverWhenNothingToResolve(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resolver := NewMockResolver(ctrl) // no EXPECT(): Resolve must not be called
 
-	tests := map[string]*model.AerospikeCluster{
-		"nil cluster":    nil,
-		"no TLS block":   {ClusterLabel: "test-cluster"},
-		"empty password": clusterWithTLS(&model.TLS{ClientTLS: model.ClientTLS{CAFile: "ca.pem"}}, nil),
-		"no credentials": {TLS: &model.TLS{ClientTLS: model.ClientTLS{CAFile: "ca.pem"}}},
+	withCAFile := model.TLS{ClientTLS: model.ClientTLS{CAFile: "ca.pem"}}
+
+	tests := map[string]struct {
+		cluster *model.AerospikeCluster
+		want    model.TLS
+	}{
+		"nil cluster":    {cluster: nil, want: model.TLS{}},
+		"no TLS block":   {cluster: &model.AerospikeCluster{ClusterLabel: "test-cluster"}, want: model.TLS{}},
+		"empty password": {cluster: clusterWithTLS(&withCAFile, nil), want: withCAFile},
+		"no credentials": {cluster: &model.AerospikeCluster{TLS: &withCAFile}, want: withCAFile},
 	}
 
-	for name, cluster := range tests {
+	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			result, err := NewClusterTLSResolver(resolver).Resolve(t.Context(), cluster)
+			result, err := NewClusterTLSResolver(resolver).Resolve(t.Context(), test.cluster)
 			require.NoError(t, err)
-			require.Empty(t, result.KeyfilePassword)
+			require.Equal(t, test.want, result)
 		})
 	}
 }
@@ -74,15 +83,4 @@ func TestClusterTLSResolverPropagatesResolverError(t *testing.T) {
 
 	_, err := NewClusterTLSResolver(resolver).Resolve(t.Context(), cluster)
 	require.ErrorContains(t, err, "failed to resolve TLS key-file-password")
-}
-
-// TestClusterTLSResolverNoTLSYieldsDefaults documents the contract client_factory
-// relies on: a cluster whose seed nodes require TLS but that has no TLS block gets
-// the zero value, which tlsconfig.NewTLSConfig turns into a default configuration.
-func TestClusterTLSResolverNoTLSYieldsDefaults(t *testing.T) {
-	result, err := NewClusterTLSResolver(nil).Resolve(
-		t.Context(), &model.AerospikeCluster{ClusterLabel: "test-cluster"},
-	)
-	require.NoError(t, err)
-	require.Equal(t, model.TLS{}, result)
 }

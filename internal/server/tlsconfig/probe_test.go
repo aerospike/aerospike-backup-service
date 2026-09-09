@@ -1,17 +1,40 @@
 package tlsconfig
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
+
+// newPassthroughTLSResolver hands a cluster's TLS config back unchanged. Resolution
+// itself is covered by secrets.ClusterTLSResolver's own tests; these tests are about
+// what prober does with the result.
+func newPassthroughTLSResolver(t *testing.T) secrets.ClusterTLSResolver {
+	t.Helper()
+
+	resolver := secrets.NewMockClusterTLSResolver(gomock.NewController(t))
+	resolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, cluster *model.AerospikeCluster) (model.TLS, error) {
+			if cluster == nil || cluster.TLS == nil {
+				return model.TLS{}, nil
+			}
+
+			return *cluster.TLS, nil
+		}).
+		AnyTimes()
+
+	return resolver
+}
 
 func TestProbeCluster(t *testing.T) {
 	files := createTestCertificateFiles(t)
-	prober := &prober{resolver: secrets.NewClusterTLSResolver(newTestResolver(t))}
+	prober := &prober{resolver: newPassthroughTLSResolver(t)}
 
 	t.Run("valid", func(t *testing.T) {
 		err := prober.probeCluster(t.Context(), &model.AerospikeCluster{
@@ -53,13 +76,13 @@ func TestProbeReportsClusterName(t *testing.T) {
 		}},
 	}))
 
-	err := NewProber(secrets.NewClusterTLSResolver(newTestResolver(t))).Probe(t.Context(), config)
+	err := NewProber(newPassthroughTLSResolver(t)).Probe(t.Context(), config)
 	require.ErrorContains(t, err, `cluster "broken" TLS validation failed`)
 }
 
 func TestProbeSecretAgent(t *testing.T) {
 	files := createTestCertificateFiles(t)
-	prober := NewProber(secrets.NewClusterTLSResolver(newTestResolver(t)))
+	prober := NewProber(newPassthroughTLSResolver(t))
 
 	t.Run("valid", func(t *testing.T) {
 		config := model.NewConfig()
