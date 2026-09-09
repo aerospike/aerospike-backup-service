@@ -41,6 +41,8 @@ CI additionally runs tests with the race detector and the `ci` build tag:
 go test -race -tags=ci ./... -coverprofile=coverage.out -covermode=atomic
 ```
 
+`make deadcode` reports functions unreachable from `cmd/backup`. `pkg/validation` is ignored: it is a standalone check API, not called from the service binary.
+
 ### Coverage
 
 Run the same filtered coverage total that CI and Codecov use:

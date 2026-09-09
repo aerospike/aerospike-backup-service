@@ -162,15 +162,6 @@ func (t *routineTracker) endScan(ch chan struct{}) {
 	closeChan(ch)
 }
 
-// markScanDone closes the current scanDone channel without starting a new scan.
-// Used in tests to skip the scan wait.
-func (t *routineTracker) markScanDone() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	closeChan(t.scanDone)
-}
-
 func closeChan(ch chan struct{}) {
 	select {
 	case <-ch:
