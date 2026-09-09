@@ -10,9 +10,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
-	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
@@ -38,8 +36,7 @@ func newTestServerHTTP(t *testing.T, httpCfg *model.ServerConfigHTTP) *serverHTT
 	svc := handlers.NewService(
 		t.Context(),
 		model.NewConfig(),
-		nil, nil, nil, nil, nil, nil, nil, nil,
-		servertls.NewProber(secrets.NewKeyfilePasswordResolver(secrets.NewResolver())),
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
 	return NewServerHTTP(t.Context(), httpCfg, svc).(*serverHTTP)

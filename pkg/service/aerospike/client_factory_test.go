@@ -124,12 +124,12 @@ func TestClientPolicyResolvesTLSKeyfilePasswordThroughSecretAgent(t *testing.T) 
 
 	resolvedTLS := *cluster.TLS
 	resolvedTLS.KeyfilePassword = files.keyPassword
-	resolver := secrets.NewMockKeyfilePasswordResolver(ctrl)
+	resolver := secrets.NewMockClusterTLSResolver(ctrl)
 	resolver.EXPECT().
-		Resolve(gomock.Any(), *cluster.TLS, agent).
+		Resolve(gomock.Any(), cluster).
 		Return(resolvedTLS, nil)
 
-	factory := &clientFactory{resolver: resolver}
+	factory := &clientFactory{tlsResolver: resolver}
 	policy, err := factory.clientPolicy(t.Context(), cluster)
 	require.NoError(t, err)
 	require.NotNil(t, policy.TlsConfig, "seed node requires TLS; policy.TlsConfig must not be nil")
@@ -144,12 +144,12 @@ func TestClientPolicyTLSKeyfilePasswordResolutionErrorPropagates(t *testing.T) {
 	agent := &model.SecretAgent{Address: "127.0.0.1"}
 	cluster := clusterRequiringTLS(files, agent, "secrets:agent1:tls-key")
 
-	resolver := secrets.NewMockKeyfilePasswordResolver(ctrl)
+	resolver := secrets.NewMockClusterTLSResolver(ctrl)
 	resolver.EXPECT().
-		Resolve(gomock.Any(), *cluster.TLS, agent).
+		Resolve(gomock.Any(), cluster).
 		Return(model.TLS{}, errors.New("secret agent unreachable"))
 
-	factory := &clientFactory{resolver: resolver}
+	factory := &clientFactory{tlsResolver: resolver}
 	policy, err := factory.clientPolicy(t.Context(), cluster)
 	require.Error(t, err, "a resolution failure must fail client creation, not silently disable TLS")
 	assert.Nil(t, policy)
@@ -158,6 +158,7 @@ func TestClientPolicyTLSKeyfilePasswordResolutionErrorPropagates(t *testing.T) {
 // TestClientPolicyTLSConfigErrorPropagates covers the general "don't swallow
 // NewTLSConfig errors" half of the fix, independent of the password path.
 func TestClientPolicyTLSConfigErrorPropagates(t *testing.T) {
+	ctrl := gomock.NewController(t)
 	cluster := &model.AerospikeCluster{
 		ClusterLabel: "test-cluster",
 		SeedNodes: []model.SeedNode{
@@ -168,9 +169,11 @@ func TestClientPolicyTLSConfigErrorPropagates(t *testing.T) {
 		},
 	}
 
-	// KeyfilePassword is empty, so KeyfilePasswordResolver.Resolve short-circuits
-	// without touching its underlying Resolver: nil is a valid resolver here.
-	factory := &clientFactory{resolver: secrets.NewKeyfilePasswordResolver(nil)}
+	// Resolution succeeds; the CA file is what NewTLSConfig chokes on.
+	resolver := secrets.NewMockClusterTLSResolver(ctrl)
+	resolver.EXPECT().Resolve(gomock.Any(), cluster).Return(*cluster.TLS, nil)
+
+	factory := &clientFactory{tlsResolver: resolver}
 	policy, err := factory.clientPolicy(t.Context(), cluster)
 	require.Error(t, err)
 	assert.Nil(t, policy)

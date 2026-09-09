@@ -11,7 +11,7 @@ import (
 
 func TestProbeCluster(t *testing.T) {
 	files := createTestCertificateFiles(t)
-	prober := &prober{resolver: secrets.NewKeyfilePasswordResolver(newTestResolver(t))}
+	prober := &prober{resolver: secrets.NewClusterTLSResolver(newTestResolver(t))}
 
 	t.Run("valid", func(t *testing.T) {
 		err := prober.probeCluster(t.Context(), &model.AerospikeCluster{
@@ -20,7 +20,7 @@ func TestProbeCluster(t *testing.T) {
 				Certfile: files.certFile,
 				Keyfile:  files.keyFile,
 			}},
-		}, nil)
+		})
 		require.NoError(t, err)
 	})
 
@@ -29,7 +29,7 @@ func TestProbeCluster(t *testing.T) {
 			TLS: &model.TLS{ClientTLS: model.ClientTLS{
 				CAFile: filepath.Join(t.TempDir(), "missing.pem"),
 			}},
-		}, nil)
+		})
 		require.Error(t, err)
 	})
 
@@ -40,7 +40,7 @@ func TestProbeCluster(t *testing.T) {
 				Certfile: files.certFile,
 				Keyfile:  other.keyFile,
 			}},
-		}, nil)
+		})
 		require.ErrorContains(t, err, "private key does not match public key")
 	})
 }
@@ -53,13 +53,13 @@ func TestProbeReportsClusterName(t *testing.T) {
 		}},
 	}))
 
-	err := NewProber(secrets.NewKeyfilePasswordResolver(newTestResolver(t))).Probe(t.Context(), config)
+	err := NewProber(secrets.NewClusterTLSResolver(newTestResolver(t))).Probe(t.Context(), config)
 	require.ErrorContains(t, err, `cluster "broken" TLS validation failed`)
 }
 
 func TestProbeSecretAgent(t *testing.T) {
 	files := createTestCertificateFiles(t)
-	prober := NewProber(secrets.NewKeyfilePasswordResolver(newTestResolver(t)))
+	prober := NewProber(secrets.NewClusterTLSResolver(newTestResolver(t)))
 
 	t.Run("valid", func(t *testing.T) {
 		config := model.NewConfig()

@@ -26,16 +26,16 @@ var _ ClientFactory = (*clientFactory)(nil)
 
 type clientFactory struct {
 	passwordResolver secrets.PasswordResolver
-	resolver         secrets.KeyfilePasswordResolver
+	tlsResolver      secrets.ClusterTLSResolver
 }
 
 // NewClientFactory returns a ClientFactory.
 func NewClientFactory(
-	passwordResolver secrets.PasswordResolver, resolver secrets.KeyfilePasswordResolver,
+	passwordResolver secrets.PasswordResolver, tlsResolver secrets.ClusterTLSResolver,
 ) ClientFactory {
 	return &clientFactory{
 		passwordResolver: passwordResolver,
-		resolver:         resolver,
+		tlsResolver:      tlsResolver,
 	}
 }
 
@@ -123,12 +123,9 @@ func isPKIAuthMode(creds *model.Credentials) bool {
 }
 
 // setTLSConfig builds the TLS config for a cluster whose seed nodes require TLS.
-// KeyfilePassword may still be an unresolved Secret Agent reference at this point
-// (see model.TLS.KeyfilePassword and dto.TLS.KeyfilePassword); f.resolver resolves
-// it the same way probe.probeCluster does for config validation. A resolution or
-// TLS-config failure is returned rather than logged: silently leaving
-// policy.TlsConfig nil would make the client fall back to a plaintext connection
-// to seed nodes that are configured to require TLS.
+// Failures are returned rather than logged: silently leaving policy.TlsConfig nil
+// would make the client fall back to a plaintext connection to seed nodes that are
+// configured to require TLS.
 func (f *clientFactory) setTLSConfig(ctx context.Context, c *model.AerospikeCluster, policy *as.ClientPolicy) error {
 	if !anySeedNodeHasTLSName(c) {
 		if c.TLS != nil {
@@ -139,21 +136,11 @@ func (f *clientFactory) setTLSConfig(ctx context.Context, c *model.AerospikeClus
 		return nil // no TLS configuration needed for this cluster
 	}
 
-	// Seed nodes require TLS, so a TLS configuration is necessary.
-	// If no specific TLS configuration is provided, a default one is used.
-	tlsToApply := model.TLS{}
-	if c.TLS != nil {
-		tlsToApply = *c.TLS
-	}
-
-	var agent *model.SecretAgent
-	if c.Credentials != nil {
-		agent = c.Credentials.SecretAgent
-	}
-
-	tlsToApply, err := f.resolver.Resolve(ctx, tlsToApply, agent)
+	// Seed nodes require TLS, so a TLS configuration is necessary. A cluster with no
+	// TLS block resolves to the zero value, which builds a default configuration.
+	tlsToApply, err := f.tlsResolver.Resolve(ctx, c)
 	if err != nil {
-		return fmt.Errorf("failed to resolve TLS key-file-password for cluster %q: %w", c.ClusterLabel, err)
+		return fmt.Errorf("cluster %q: %w", c.ClusterLabel, err)
 	}
 
 	tlsConfig, err := tlsconfig.NewTLSConfig(&tlsToApply)
