@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/tlsconfig"
@@ -27,12 +26,14 @@ var _ ClientFactory = (*clientFactory)(nil)
 
 type clientFactory struct {
 	passwordResolver secrets.PasswordResolver
+	resolver         secrets.Resolver
 }
 
 // NewClientFactory returns a ClientFactory.
-func NewClientFactory(passwordResolver secrets.PasswordResolver) ClientFactory {
+func NewClientFactory(passwordResolver secrets.PasswordResolver, resolver secrets.Resolver) ClientFactory {
 	return &clientFactory{
 		passwordResolver: passwordResolver,
+		resolver:         resolver,
 	}
 }
 
@@ -84,7 +85,9 @@ func (f *clientFactory) clientPolicy(ctx context.Context, c *model.AerospikeClus
 		policy.UseServicesAlternate = *c.UseServicesAlternate
 	}
 
-	setTLSConfig(c, policy)
+	if err := f.setTLSConfig(ctx, c, policy); err != nil {
+		return nil, err
+	}
 
 	policy.ConnectionQueueSize = 256
 	policy.LimitConnectionsToQueueSize = false
@@ -117,30 +120,51 @@ func isPKIAuthMode(creds *model.Credentials) bool {
 	return creds.AuthModeOrDefault() == model.AuthModePKI
 }
 
-func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
+// setTLSConfig builds the TLS config for a cluster whose seed nodes require TLS.
+// KeyfilePassword may still be an unresolved Secret Agent reference at this point
+// (see model.TLS.KeyfilePassword and dto.TLS.KeyfilePassword) - it must be resolved
+// here, the same way probe.probeCluster does for config validation, because
+// tlsconfig.NewTLSConfig uses it verbatim as the decryption password. A resolution
+// or TLS-config failure is returned rather than logged: silently leaving
+// policy.TlsConfig nil would make the client fall back to a plaintext connection
+// to seed nodes that are configured to require TLS.
+func (f *clientFactory) setTLSConfig(ctx context.Context, c *model.AerospikeCluster, policy *as.ClientPolicy) error {
 	if !anySeedNodeHasTLSName(c) {
 		if c.TLS != nil {
 			slog.Warn("A TLS configuration is provided, but no seed nodes have TLS names. Ignoring TLS settings.",
 				slog.String("cluster", c.ClusterLabel))
 		}
 
-		return // no TLS configuration needed for this cluster
+		return nil // no TLS configuration needed for this cluster
 	}
 
 	// Seed nodes require TLS, so a TLS configuration is necessary.
 	// If no specific TLS configuration is provided, a default one is used.
-	tlsToApply := c.TLS
-	if tlsToApply == nil {
-		tlsToApply = &model.TLS{}
+	tlsToApply := model.TLS{}
+	if c.TLS != nil {
+		tlsToApply = *c.TLS
 	}
 
-	var err error
-	policy.TlsConfig, err = tlsconfig.NewTLSConfig(tlsToApply)
-	if err != nil {
-		slog.Error("Failed to initialize TLS config",
-			slog.String("cluster", c.ClusterLabel),
-			attr.Error(err))
+	if tlsToApply.KeyfilePassword != "" {
+		var agent *model.SecretAgent
+		if c.Credentials != nil {
+			agent = c.Credentials.SecretAgent
+		}
+
+		password, err := f.resolver.Resolve(ctx, agent, tlsToApply.KeyfilePassword)
+		if err != nil {
+			return fmt.Errorf("failed to resolve TLS key-file-password for cluster %q: %w", c.ClusterLabel, err)
+		}
+		tlsToApply.KeyfilePassword = password
 	}
+
+	tlsConfig, err := tlsconfig.NewTLSConfig(&tlsToApply)
+	if err != nil {
+		return fmt.Errorf("failed to initialize TLS config for cluster %q: %w", c.ClusterLabel, err)
+	}
+	policy.TlsConfig = tlsConfig
+
+	return nil
 }
 
 // anySeedNodeHasTLSName checks if any of the seed nodes are configured with a TLS name.

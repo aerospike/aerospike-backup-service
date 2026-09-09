@@ -189,7 +189,7 @@ func newStorageOperations(resolver secrets.Resolver) storage.Operations {
 func newAerospikeLayer(resolver secrets.Resolver) (aerospike.ClientManager, aerospike.NamespaceValidator) {
 	passwordResolver := secrets.NewPasswordResolver(resolver)
 	clientManager := aerospike.NewClientManager(
-		aerospike.NewClientFactory(passwordResolver),
+		aerospike.NewClientFactory(passwordResolver, resolver),
 		aerospike.DefaultCloseDelay,
 	)
 	return clientManager, aerospike.NewNamespaceValidator(clientManager)
