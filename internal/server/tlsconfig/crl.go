@@ -68,7 +68,8 @@ func parseCRLs(data []byte, path string) ([]*x509.RevocationList, error) {
 		return parsePEMCRLs(remaining, path)
 	}
 
-	list, err := x509.ParseRevocationList(remaining)
+	// DER CRLs are binary; do not trim whitespace bytes that may be part of the encoding.
+	list, err := x509.ParseRevocationList(data)
 	if err != nil {
 		return nil, fmt.Errorf("client CRL file %q contains an invalid CRL: %w", path, err)
 	}

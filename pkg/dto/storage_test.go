@@ -16,7 +16,7 @@ func TestNewStorageFromReader(t *testing.T) {
 	s, err := NewStorageFromReader(strings.NewReader(jsonStorage), decoder.JSON)
 	require.NoError(t, err)
 	require.NotNil(t, s.LocalStorage)
-	assert.Equal(t, "backups", s.LocalStorage.Path)
+	assert.Equal(t, "backups", string(s.LocalStorage.Path))
 }
 
 func TestNewStorageFromReader_ValidationError(t *testing.T) {

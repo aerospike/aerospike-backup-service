@@ -131,8 +131,8 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 			config: &ServiceConfig{
 				ServerHTTP: &ServerConfigHTTP{ListenerConfig: ListenerConfig{Disabled: true}},
 				ServerHTTPS: &ServerConfigHTTPS{
-					CertFile: certs.certFile,
-					KeyFile:  certs.keyFile,
+					CertFile: Path(certs.certFile),
+					KeyFile:  Path(certs.keyFile),
 				},
 			},
 		},
@@ -142,8 +142,8 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 				ServerHTTP: &ServerConfigHTTP{Port: ptr.Of(Port(8080))},
 				ServerHTTPS: &ServerConfigHTTPS{
 					Port:     ptr.Of(Port(8443)),
-					CertFile: certs.certFile,
-					KeyFile:  certs.keyFile,
+					CertFile: Path(certs.certFile),
+					KeyFile:  Path(certs.keyFile),
 				},
 			},
 		},
@@ -168,8 +168,8 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 				ServerHTTP: &ServerConfigHTTP{Port: ptr.Of(Port(8443))},
 				ServerHTTPS: &ServerConfigHTTPS{
 					Port:     ptr.Of(Port(8443)),
-					CertFile: certs.certFile,
-					KeyFile:  certs.keyFile,
+					CertFile: Path(certs.certFile),
+					KeyFile:  Path(certs.keyFile),
 				},
 			},
 			wantErr: "cannot use the same port 8443",

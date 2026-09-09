@@ -270,3 +270,44 @@ func keysOf(m map[string]any) []string {
 
 	return keys
 }
+
+// TestUnconfiguredService_SentinelSecretValidation tests that creating new entities with
+// redacted secret sentinels is rejected with a 400 error.
+func TestUnconfiguredService_SentinelSecretValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		method      string
+		path        string
+		body        string
+		wantStatus  int
+		wantBodyReg string
+	}{
+		{
+			name:   "new cluster with redacted password sentinel",
+			method: http.MethodPost,
+			path:   "/v1/config/clusters/newcluster",
+			body: "{\"seed-nodes\":[{\"host-name\":\"localhost\",\"port\":3000}]," +
+				"\"credentials\":{\"user\":\"admin\",\"password\":\"[secret]\"}}",
+			wantStatus:  http.StatusBadRequest,
+			wantBodyReg: "cannot use redacted secret.*for a new entity",
+		},
+		{
+			name:   "new storage with redacted secret access key sentinel",
+			method: http.MethodPost,
+			path:   "/v1/config/storage/newstorage",
+			body: "{\"s3-storage\":{\"bucket\":\"test\",\"s3-region\":\"us-east-1\"," +
+				"\"access-key-id\":\"key\",\"secret-access-key\":\"[secret]\"}}",
+			wantStatus:  http.StatusBadRequest,
+			wantBodyReg: "cannot use redacted secret.*for a new entity",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := serve(t, newUnconfiguredService(t), tt.method, tt.path, tt.body)
+
+			assert.Equal(t, tt.wantStatus, w.Code)
+			assert.Regexp(t, tt.wantBodyReg, w.Body.String())
+		})
+	}
+}

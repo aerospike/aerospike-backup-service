@@ -84,6 +84,13 @@ func TestEncryptionPolicy_Validate_Invalid(t *testing.T) {
 			},
 			wantIsErr: errMutuallyExclusive,
 		},
+		"traversal key file": {
+			policy: EncryptionPolicy{
+				Mode:    EncryptionModeAES128,
+				KeyFile: "../keys/encryption.key",
+			},
+			wantIsErr: errInvalidPath,
+		},
 	}
 
 	for name, tc := range tests {

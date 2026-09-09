@@ -19,7 +19,8 @@ func TestMergeSecrets_ComplexFixture(t *testing.T) {
 		SecretAccessKey: redactedSecret,
 	}
 
-	MergeSecrets(&redacted, original)
+	err := MergeSecrets(&redacted, original)
+	require.NoError(t, err)
 
 	t.Run("restores literal secrets", func(t *testing.T) {
 		assert.Equal(t, Secret(literalPassword), redacted.AerospikeClusters["cluster1"].Credentials.Password)
@@ -53,7 +54,7 @@ func TestMergeSecrets_ComplexFixture(t *testing.T) {
 	})
 }
 
-func TestMergeSecrets_NewMapEntryWithSentinel(t *testing.T) {
+func TestMergeSecrets_NewMapEntryWithSentinel_ReturnsError(t *testing.T) {
 	existing := testConfig{
 		AerospikeClusters: map[string]*testCluster{},
 	}
@@ -69,9 +70,9 @@ func TestMergeSecrets_NewMapEntryWithSentinel(t *testing.T) {
 		},
 	}
 
-	MergeSecrets(&incoming, existing)
-
-	assert.Equal(t, Secret(redactedSecret), incoming.AerospikeClusters["new-cluster"].Credentials.Password)
+	err := MergeSecrets(&incoming, existing)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot use redacted secret")
 }
 
 func TestMergeSecrets_ExplicitSecretUpdate(t *testing.T) {
@@ -97,7 +98,8 @@ func TestMergeSecrets_ExplicitSecretUpdate(t *testing.T) {
 		},
 	}
 
-	MergeSecrets(&incoming, existing)
+	err := MergeSecrets(&incoming, existing)
+	require.NoError(t, err)
 
 	assert.Equal(t, Secret("new-password"), incoming.AerospikeClusters["cluster1"].Credentials.Password)
 }
@@ -125,7 +127,8 @@ func TestMergeSecrets_ClearSecretWithEmptyString(t *testing.T) {
 		},
 	}
 
-	MergeSecrets(&incoming, existing)
+	err := MergeSecrets(&incoming, existing)
+	require.NoError(t, err)
 
 	assert.Empty(t, incoming.AerospikeClusters["cluster1"].Credentials.Password)
 }
@@ -134,10 +137,61 @@ func TestMergeSecrets_NilInput(t *testing.T) {
 	original := testComplexConfig()
 
 	require.NotPanics(t, func() {
-		MergeSecrets(nil, original)
-		MergeSecrets(&original, nil)
-		MergeSecrets(nil, nil)
+		err1 := MergeSecrets(nil, original)
+		assert.NoError(t, err1)
+		err2 := MergeSecrets(&original, nil)
+		assert.NoError(t, err2)
+		err3 := MergeSecrets(nil, nil)
+		assert.NoError(t, err3)
 	})
+}
+
+func TestMergeSecrets_NewEntityWithSentinel_StorageSecret(t *testing.T) {
+	existing := testConfig{
+		StorageProviders: map[string]testStorage{},
+	}
+
+	incoming := testConfig{
+		StorageProviders: map[string]testStorage{
+			"new-storage": {
+				Name:            "new-bucket",
+				AccessKeyID:     redactedSecret,
+				SecretAccessKey: redactedSecret,
+			},
+		},
+	}
+
+	err := MergeSecrets(&incoming, existing)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot use redacted secret")
+}
+
+func TestMergeSecrets_ExistingEntityWithSentinel_RestoredCorrectly(t *testing.T) {
+	existing := testConfig{
+		AerospikeClusters: map[string]*testCluster{
+			"cluster1": {
+				Credentials: &testCredentials{
+					User:     "testUser",
+					Password: literalPassword,
+				},
+			},
+		},
+	}
+
+	incoming := testConfig{
+		AerospikeClusters: map[string]*testCluster{
+			"cluster1": {
+				Credentials: &testCredentials{
+					User:     "testUser",
+					Password: redactedSecret,
+				},
+			},
+		},
+	}
+
+	err := MergeSecrets(&incoming, existing)
+	require.NoError(t, err)
+	assert.Equal(t, Secret(literalPassword), incoming.AerospikeClusters["cluster1"].Credentials.Password)
 }
 
 func TestSecret_IsRedacted(t *testing.T) {
