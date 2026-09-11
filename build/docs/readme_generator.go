@@ -10,26 +10,20 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"time"
 
 	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	metrics "github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	examplesDir   = "docs/examples"
-	readmeRelPath = "README.md"
+	examplesDir = "docs/examples"
 
-	valLocal          = "local"
-	valBackups        = "backups"
-	valAsBackupBucket = "as-backup-bucket"
-	valEuCentral1     = "eu-central-1"
-	valRoutine1       = "routine1"
+	// openAPIRelPath is written earlier in the same run by generateOpenAPI.
+	openAPIRelPath = "docs/openapi.json"
 )
 
 // targetFiles lists every Markdown file that may contain generated sections
@@ -38,218 +32,14 @@ const (
 // that aren't present in a given file are simply left alone, so a new doc
 // (e.g. docs/security.md) only needs to be added here to opt in.
 var targetFiles = []string{
-	readmeRelPath,
+	"README.md",
 	"docs/installation.md",
 	"docs/configuration.md",
 	"docs/api-examples.md",
+	"docs/architecture.md",
 	"docs/monitoring.md",
 	"docs/migration.md",
 	"docs/security.md",
-}
-
-var allStorageTypes = map[string]dto.Storage{
-	valLocal: {
-		LocalStorage: &dto.LocalStorage{
-			Path: valBackups,
-		},
-	},
-	"aws-s3": {
-		S3Storage: &dto.S3Storage{
-			Bucket:   valAsBackupBucket,
-			Path:     valBackups,
-			S3Region: valEuCentral1,
-		},
-	},
-	"gcp-gcs": {
-		GcpStorage: &dto.GcpStorage{
-			Path:       valBackups,
-			KeyFile:    "key-file.json",
-			BucketName: "gcp-backup-bucket",
-			Endpoint:   "http://127.0.0.1:9020",
-		},
-	},
-	"azure-blob-storage": {
-		AzureStorage: &dto.AzureStorage{
-			Path:          valBackups,
-			Endpoint:      "http://127.0.0.1:6000/devstoreaccount1",
-			AccountName:   "devstoreaccount1",
-			ContainerName: "testcontainer",
-			AccountKey:    "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
-		},
-	},
-}
-
-var cluster = dto.AerospikeCluster{
-	SeedNodes: []dto.SeedNode{{
-		HostName: "host.docker.internal", Port: 3000},
-	},
-	Credentials: &dto.Credentials{
-		User:     "user",
-		Password: "password",
-	},
-}
-
-var jsonExamples = map[string]any{
-	"ClustersResponse": []dto.AerospikeCluster{cluster},
-	"RoutinesResponse": map[string]dto.BackupRoutine{
-		valRoutine1: {
-			BackupPolicy:  "keepFilesPolicy",
-			SourceCluster: "absDefaultCluster",
-			Storage:       valLocal,
-			IntervalCron:  "@yearly",
-			Namespaces:    ptr.Of([]string{"test-namespace"}),
-		},
-		"routine2": {
-			BackupPolicy:     "removeFilesPolicy",
-			SourceCluster:    "absDefaultCluster",
-			Storage:          valLocal,
-			IntervalCron:     "@monthly",
-			IncrIntervalCron: "@daily",
-			Namespaces:       ptr.Of([]string{"test-namespace"}),
-			SetList:          []string{"backupSet"},
-			BinList:          []string{"backupBin"},
-		},
-	},
-	"StorageResponse": allStorageTypes,
-	"FullBackupsResponse": map[string][]dto.BackupDetails{
-		valRoutine1: {{
-			Created:             time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
-			Timestamp:           time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC).UnixMilli(),
-			Finished:            time.Date(2024, 01, 01, 12, 5, 0, 0, time.UTC),
-			Duration:            300,
-			From:                time.Time{},
-			Namespace:           "source-ns1",
-			RecordCount:         42,
-			ByteCount:           480_000,
-			FileCount:           1,
-			SecondaryIndexCount: 5,
-			UDFCount:            1,
-			Key:                 "routine1/backup/1704110400000/source-ns1",
-			Storage: &dto.Storage{
-				S3Storage: &dto.S3Storage{
-					Bucket:   valAsBackupBucket,
-					Path:     valBackups,
-					S3Region: valEuCentral1,
-				},
-			},
-			Compression: string(dto.CompressionModeZSTD),
-			Encryption:  string(dto.EncryptionModeNone),
-		},
-		},
-	},
-	"RestoreFullRequest": dto.RestoreRequest{
-		DestinationClusterConfig: dto.DestinationClusterConfig{
-			Cluster: &cluster,
-		},
-		Policy: &dto.RestorePolicy{
-			BaseRestorePolicy: dto.BaseRestorePolicy{
-				NoGeneration: ptr.Of(true),
-			},
-		},
-		StorageConfig: dto.StorageConfig{
-			Storage: &dto.Storage{
-				S3Storage: &dto.S3Storage{
-					Bucket:   valAsBackupBucket,
-					Path:     valBackups,
-					S3Region: valEuCentral1,
-				},
-			},
-		},
-		BackupDataPath: "routine1/backup/1704110400000/source-ns1",
-	},
-	"RestoreTimestampRequest": dto.RestoreTimestampRequest{
-		DestinationClusterConfig: dto.DestinationClusterConfig{
-			Name: "abs-cluster",
-		},
-		Time:    1704110400000,
-		Routine: valRoutine1,
-	},
-	"CurrentBackupResponse": dto.RoutineState{
-		Full: &dto.RunningJob{
-			TotalRecords:     100_000,
-			DoneRecords:      50_000,
-			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
-			FinishTime:       nil,
-			PercentageDone:   50,
-			EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
-			Duration:         1800,
-			Metrics: &dto.Metrics{
-				RecordsPerSecond:   1000,
-				KilobytesPerSecond: 30000,
-				Pipeline:           167,
-			},
-		},
-	},
-	"CurrentRestoreResponse": dto.RestoreJobStatus{
-		ReadRecords:     100_000,
-		TotalBytes:      30000000,
-		ExpiredRecords:  0,
-		SkippedRecords:  0,
-		IgnoredRecords:  0,
-		InsertedRecords: 50_000,
-		ExistedRecords:  0,
-		FresherRecords:  0,
-		IndexCount:      4,
-		UDFCount:        1,
-		ErrorsInDoubt:   0,
-		CurrentRestore: &dto.RunningJob{
-			TotalRecords:     100_000,
-			DoneRecords:      50_000,
-			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
-			FinishTime:       nil,
-			PercentageDone:   50,
-			EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
-			Duration:         1800,
-			Metrics: &dto.Metrics{
-				RecordsPerSecond:   1000,
-				KilobytesPerSecond: 30000,
-				Pipeline:           8192,
-			},
-		},
-		Status: dto.RestoreRunning,
-		Error:  "",
-	},
-	"CurrentRestoresResponse": map[int]dto.RestoreJobStatus{
-		12345678: {
-			ReadRecords:     100_000,
-			TotalBytes:      30000000,
-			ExpiredRecords:  0,
-			SkippedRecords:  0,
-			IgnoredRecords:  0,
-			InsertedRecords: 50_000,
-			ExistedRecords:  0,
-			FresherRecords:  0,
-			IndexCount:      4,
-			UDFCount:        1,
-			ErrorsInDoubt:   0,
-			CurrentRestore: &dto.RunningJob{
-				TotalRecords:     100_000,
-				DoneRecords:      50_000,
-				StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
-				FinishTime:       nil,
-				PercentageDone:   50,
-				Duration:         1800,
-				EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
-				Metrics: &dto.Metrics{
-					RecordsPerSecond:   1000,
-					KilobytesPerSecond: 30000,
-					Pipeline:           0,
-				},
-			},
-			Status: dto.RestoreRunning,
-			Error:  "",
-		}},
-}
-
-var yamlExamples = map[string]any{
-	"Storage": allStorageTypes,
-	"RemoteConfig": dto.Storage{
-		S3Storage: &dto.S3Storage{
-			Path:     "config.yml",
-			Bucket:   valAsBackupBucket,
-			S3Region: valEuCentral1,
-		},
-	},
 }
 
 func generateReadme() {
@@ -259,11 +49,12 @@ func generateReadme() {
 	generateExampleFiles()
 
 	// Compute the Prometheus metrics table once; it's applied to every target
-	// file below, and only files that actually contain the <!-- Metrics -->
-	// marker are changed.
+	// file below, and only files that actually carry the marker are changed.
 	metricRows := extractRows()
 	writeMetricsToFile(metricRows)
-	metricsTable := renderMetricsTable(metricRows)
+
+	// Endpoints come from the OpenAPI document generated earlier in this run.
+	renderers := newRenderers(loadEndpoints(), renderMetricsTable(metricRows))
 
 	for _, path := range targetFiles {
 		content, err := os.ReadFile(path)
@@ -271,16 +62,7 @@ func generateReadme() {
 			panic(fmt.Errorf("failed to read target file %q: %w", path, err))
 		}
 
-		// replace every <!-- DTONAME --> comment with a real example from jsonExamples and yamlExamples
-		content = updateDtoExamples(content)
-		// copy example configuration (with explanatory comments) to a <!-- DefaultConfig --> section
-		content = updateDefaultConfigSection(content)
-		// add the Prometheus metrics explanation table after <!-- Metrics -->
-		content = applyMetricsTable(content, metricsTable)
-		// reserved for the security plan: injects an RBAC permissions matrix after <!-- RBACMatrix -->
-		content = updateRBACMatrix(content)
-		// keep the documented TLS reload interval synchronized with the runtime constant
-		content = updateTLSReloadInterval(content)
+		content = applyTags(content, renderers)
 
 		//nolint:gosec // G306 target markdown files are meant to be readable by anyone building docs.
 		err = os.WriteFile(path, content, 0600)
@@ -288,6 +70,48 @@ func generateReadme() {
 			panic(fmt.Errorf("failed to write target file %q: %w", path, err))
 		}
 	}
+}
+
+// newRenderers collects every tag the documents may use into one namespace.
+//
+// Three sources contribute: every operation in the OpenAPI document, every worked
+// example built from the DTO structs, and a handful of one-off sections. Two
+// sources claiming the same id would make a document's meaning depend on map
+// iteration order, so that is a build failure rather than a surprise.
+func newRenderers(endpoints map[string]endpoint, metricsTable string) map[string]renderer {
+	renderers := make(map[string]renderer)
+
+	add := func(source, id string, render renderer) {
+		if _, taken := renderers[id]; taken {
+			panic(fmt.Errorf("duplicate tag %q: %s claims an id another source already provides",
+				id, source))
+		}
+
+		renderers[id] = render
+	}
+
+	for id := range endpoints {
+		add(openAPIRelPath, id, func(args string) string { return renderEndpoint(id, args, endpoints) })
+	}
+
+	for id := range jsonExamples {
+		add("jsonExamples", id, func(string) string { return renderExample(id) })
+	}
+
+	for id := range yamlExamples {
+		add("yamlExamples", id, func(string) string { return renderExample(id) })
+	}
+
+	defaultConfig := readDefaultConfig()
+
+	add("generator", "DefaultConfig", func(string) string { return fence("yaml", defaultConfig) })
+	add("generator", "Metrics", func(string) string { return "\n\n" + metricsTable })
+	add("generator", "TLSReloadInterval", func(string) string { return servertls.WatchInterval.String() })
+	// Reserved for the security plan: a document may carry the tag before there
+	// is anything to put in it.
+	add("generator", "RBACMatrix", func(string) string { return "" })
+
+	return renderers
 }
 
 func generateExampleFiles() {
@@ -320,74 +144,102 @@ func generateExampleFiles() {
 	}
 }
 
-func updateDtoExamples(readme []byte) []byte {
-	// comment containing an example name (e.g.,key from jsonExamples)
-	// followed by ```json/```yaml and the example code block.
-	re := regexp.MustCompile("<!--\\s*(\\w+)\\s*-->\\s*```(json|yaml)[\\s\\S]*?```")
+// apiDocsBaseURL is where the published API browser serves an operation.
+const apiDocsBaseURL = "https://aerospike.github.io/aerospike-backup-service/#/"
 
-	updatedReadme := re.ReplaceAllFunc(readme, func(match []byte) []byte {
-		submatches := re.FindSubmatch(match)
-		if len(submatches) < 3 {
-			panic(fmt.Errorf("failed to find submatch: %s", submatches))
-		}
+// linkFlag asks for the linked call-out form rather than a bare code span.
+const linkFlag = "link"
 
-		name := string(submatches[1])
-		format := string(submatches[2])
+// endpointMarker matches a marked region and everything a previous run put in it:
+//
+//	<!-- Endpoint <operationId> [link] [?query] --> … <!-- /Endpoint -->
+//
+// Paired markers rather than an open marker plus a guessed payload: the closing
+// marker says exactly how far the generated text reaches, so the same rule works
+// for a link on its own line and for a code span in the middle of a sentence,
+// and a region can never swallow the prose after it.
+var endpointMarker = regexp.MustCompile(
+	`(?s)<!--\s*Endpoint\s+(.*?)\s*-->.*?<!--\s*/Endpoint\s*-->`)
 
-		var formattedExample []byte
-
-		var err error
-		switch format {
-		case "json":
-			example, exists := jsonExamples[name]
-			if exists {
-				formattedExample, err = json.MarshalIndent(example, "", "  ")
-			}
-		case "yaml":
-			example, exists := yamlExamples[name]
-			if exists {
-				formattedExample, err = marshalYAML(example)
-			}
-		}
-
-		if err != nil {
-			panic(fmt.Errorf("failed to parse: %w", err))
-		}
-
-		var buffer bytes.Buffer
-		_, _ = fmt.Fprintf(&buffer, "<!-- %s -->\n\n```%s\n", name, format)
-		buffer.Write(formattedExample)
-		buffer.WriteString("\n```")
-
-		return buffer.Bytes()
-	})
-
-	return updatedReadme
+// endpoint is one operation as the published API browser presents it.
+type endpoint struct {
+	method string
+	path   string
+	tag    string
 }
 
-func updateDefaultConfigSection(readme []byte) []byte {
-	configRe := regexp.MustCompile("<!--\\s*DefaultConfig\\s*-->\\s*```yaml[\\s\\S]*?```")
+// renderEndpoint expands one region, keeping its markers so the next run finds it.
+func renderEndpoint(operationID, args string, endpoints map[string]endpoint) string {
+	asLink, query := parseEndpointArgs(operationID, args)
 
-	configContent, err := os.ReadFile("build/package/config/aerospike-backup-service.yml")
+	operation, found := endpoints[operationID]
+	if !found {
+		panic(fmt.Errorf("unknown operation %q: no such operationId in %s", operationID, openAPIRelPath))
+	}
+
+	// A call-out on its own line addresses the service through the {{baseUrl}}
+	// placeholder the API examples use, and links to the published browser.
+	if asLink {
+		return fmt.Sprintf("\n[`%s {{baseUrl}}%s%s`](%s%s/%s)\n",
+			operation.method, operation.path, query,
+			apiDocsBaseURL, operation.tag, operationID)
+	}
+
+	// A mention inside a sentence is just the method and path.
+	return fmt.Sprintf("`%s %s%s`", operation.method, operation.path, query)
+}
+
+// parseEndpointArgs reads the "[link] [?query]" that may follow an operation id.
+func parseEndpointArgs(operationID, args string) (asLink bool, query string) {
+	for _, field := range strings.Fields(args) {
+		switch {
+		case field == linkFlag:
+			asLink = true
+		case strings.HasPrefix(field, "?"):
+			query = field
+		default:
+			panic(fmt.Errorf("tag %q: unknown argument %q", operationID, field))
+		}
+	}
+
+	return asLink, query
+}
+
+// loadEndpoints indexes the generated OpenAPI document by operation id.
+func loadEndpoints() map[string]endpoint {
+	content, err := os.ReadFile(openAPIRelPath)
 	if err != nil {
-		panic(fmt.Errorf("failed to read config YAML: %w", err))
+		panic(fmt.Errorf("failed to read %s: %w", openAPIRelPath, err))
 	}
 
-	config, err := dto.NewConfigFromReader(bytes.NewReader(configContent), decoder.YAML)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse default config YAML: %w", err))
-	}
-	if err = config.Validate(); err != nil {
-		panic(fmt.Errorf("failed to validate default config YAML: %w", err))
+	var document struct {
+		Paths map[string]map[string]struct {
+			OperationID string   `json:"operationId"`
+			Tags        []string `json:"tags"`
+		} `json:"paths"`
 	}
 
-	return configRe.ReplaceAllFunc(readme, func(_ []byte) []byte {
-		var buffer bytes.Buffer
-		buffer.WriteString("<!-- DefaultConfig -->\n\n```yaml\n")
-		buffer.Write(configContent)
-		buffer.WriteString("\n```")
-		return buffer.Bytes()
-	})
+	if err := json.Unmarshal(content, &document); err != nil {
+		panic(fmt.Errorf("failed to parse %s: %w", openAPIRelPath, err))
+	}
+
+	endpoints := make(map[string]endpoint)
+
+	for path, operations := range document.Paths {
+		for method, operation := range operations {
+			if operation.OperationID == "" || len(operation.Tags) == 0 {
+				continue
+			}
+
+			endpoints[operation.OperationID] = endpoint{
+				method: strings.ToUpper(method),
+				path:   path,
+				tag:    operation.Tags[0],
+			}
+		}
+	}
+
+	return endpoints
 }
 
 // MarshalYAML marshals the input into YAML and replaces 4-space indents with 2-space indents.
@@ -455,34 +307,6 @@ func renderMetricsTable(rows []MetricRow) string {
 	}
 
 	return sb.String()
-}
-
-// applyMetricsTable replaces the placeholder section after <!-- Metrics -->
-// with the rendered table. Files without the marker are returned unchanged.
-func applyMetricsTable(content []byte, table string) []byte {
-	metricsRe := regexp.MustCompile(`(?s)(<!-- Metrics -->\n\n)(\|.*?\|\n)(\n)`)
-
-	return metricsRe.ReplaceAll(content, []byte("${1}"+table+"${3}"))
-}
-
-// updateRBACMatrix is a reserved extension point for the security plan's RBAC
-// work: once role/permission definitions exist, this function should replace
-// a <!-- RBACMatrix --> marker the same way applyMetricsTable does for
-// <!-- Metrics -->. It is a no-op today because no target file defines that
-// marker yet; generateReadme already invokes it, so the security plan only needs
-// to fill in the body, not add multi-file plumbing.
-func updateRBACMatrix(content []byte) []byte {
-	return content
-}
-
-func updateTLSReloadInterval(content []byte) []byte {
-	intervalRe := regexp.MustCompile(`<!-- TLSReloadInterval -->.*?<!-- /TLSReloadInterval -->`)
-	replacement := fmt.Sprintf(
-		"<!-- TLSReloadInterval -->%s<!-- /TLSReloadInterval -->",
-		servertls.WatchInterval.String(),
-	)
-
-	return intervalRe.ReplaceAll(content, []byte(replacement))
 }
 
 func extractRows() []MetricRow {
@@ -557,4 +381,24 @@ func metricsType(metric prometheus.Collector) string {
 		// Readme generator only; panic is acceptable if an unknown metric type is registered.
 		panic(fmt.Sprintf("Unknown metric type %v", metric))
 	}
+}
+
+// readDefaultConfig loads the packaged configuration that the documentation shows
+// as its worked example, and refuses to publish one the service would not accept.
+func readDefaultConfig() []byte {
+	content, err := os.ReadFile("build/package/config/aerospike-backup-service.yml")
+	if err != nil {
+		panic(fmt.Errorf("failed to read config YAML: %w", err))
+	}
+
+	config, err := dto.NewConfigFromReader(bytes.NewReader(content), decoder.YAML)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse default config YAML: %w", err))
+	}
+
+	if err = config.Validate(); err != nil {
+		panic(fmt.Errorf("failed to validate default config YAML: %w", err))
+	}
+
+	return content
 }

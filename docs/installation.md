@@ -37,7 +37,7 @@ With the `-r` flag, the file specified after `-c` contains the path or URL to th
 
 For example, you may store your configurations remotely, such as on AWS S3 storage.
 In this case, you could have a `remote_config.yaml` file containing S3 details:
-<!-- RemoteConfig -->
+<!-- tag RemoteConfig -->
 
 ```yaml
 s3-storage:
@@ -46,6 +46,7 @@ s3-storage:
   s3-region: eu-central-1
 
 ```
+<!-- /tag -->
 
 Run the server
 

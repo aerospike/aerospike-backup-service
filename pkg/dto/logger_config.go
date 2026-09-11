@@ -96,10 +96,10 @@ type FileLoggerConfig struct {
 	// Maximum number of days to retain old log files based on the
 	// timestamp encoded in their filename. The default is not to remove old log files
 	// based on age.
-	MaxAge int `yaml:"maxage" json:"maxage" extensions:"x-nullable" default:"7"`
+	MaxAge int `yaml:"maxage" json:"maxage" extensions:"x-nullable" default:"0"`
 	// Maximum number of old log files to retain. The default
 	// is to retain all old log files.
-	MaxBackups int `yaml:"maxbackups" json:"maxbackups" extensions:"x-nullable" default:"3"`
+	MaxBackups int `yaml:"maxbackups" json:"maxbackups" extensions:"x-nullable" default:"0"`
 	// Determines if the rotated log files should be compressed
 	// using gzip. The default is not to perform compression.
 	Compress bool `yaml:"compress" json:"compress" default:"false"`

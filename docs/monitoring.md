@@ -3,7 +3,7 @@
 The service exposes a wide variety of system metrics that [Prometheus](https://prometheus.io/) can scrape, including the
 following application metrics:
 
-<!-- Metrics -->
+<!-- tag Metrics -->
 
 | Name                                                        | Type      | Description                                                                                                             | Labels                 |
 |-------------------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------|------------------------|
@@ -22,6 +22,7 @@ following application metrics:
 | `aerospike_backup_service_incremental_skip_total`           | Counter   | Incremental backup skip counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                 |                        |
 | `aerospike_backup_service_runs_total`                       | Counter   | Successful backup runs counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                  |                        |
 | `aerospike_backup_service_skip_total`                       | Counter   | Full backup skip counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                        |                        |
+<!-- /tag -->
 
 **Example PromQL Queries**
 

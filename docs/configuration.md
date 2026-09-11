@@ -75,7 +75,7 @@ variations in the elapsed time between runs.
 
 ## Configuration file example
 
-<!-- DefaultConfig -->
+<!-- tag DefaultConfig -->
 
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.6.1/docs/config.schema.json
@@ -132,6 +132,7 @@ service:
     file-writer:
       filename: /var/log/aerospike-backup-service.log
 ```
+<!-- /tag -->
 
 See the [`dto.Config`](readme/dto/dto.config.md) for details.
 Several configuration fields in the YAML file are marked with `May affect performance`.

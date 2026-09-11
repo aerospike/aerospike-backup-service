@@ -67,20 +67,20 @@ to see the full object graph and every dependency between components.
 Backup and restore triggers are asynchronous by design: an Aerospike cluster backup or restore can run for hours, far
 longer than an HTTP client should be expected to hold a connection open.
 
-1. A client calls e.g. `POST /v1/backups/full/{name}` or `POST /v1/restore/full`.
+1. A client calls e.g. <!-- tag triggerFullBackup -->`POST /v1/backups/full/{name}`<!-- /tag --> or <!-- tag restoreFull -->`POST /v1/restore/full`<!-- /tag -->.
 2. The handler validates the request, looks up the routine/policy from the in-memory config, and hands off to the
    service layer (`BackupScheduler.TriggerAdHocFullBackup`, `RestoreManager.Restore`, ...), which starts the job on a
    goroutine and registers it in the running-backups registry or the restore jobs holder.
 3. The handler immediately returns **`202 Accepted`** (see
    [`TriggerFullBackup`](../internal/server/handlers/backup.go#L195) and the restore handlers) — it does not wait for
    the job to finish.
-4. The client polls status separately: `GET /v1/backups/currentBackup/{name}` for backups, or
-   `GET /v1/restore/status/{jobId}` for restores (see [API examples](api-examples.md)). Progress is also exported as
+4. The client polls status separately: <!-- tag getCurrentBackup -->`GET /v1/backups/currentBackup/{name}`<!-- /tag --> for backups, or
+   <!-- tag restoreStatus -->`GET /v1/restore/status/{jobId}`<!-- /tag --> for restores (see [API examples](api-examples.md)). Progress is also exported as
    Prometheus metrics.
 5. Triggered jobs run with a context tied to the process lifetime (derived from the top-level context created in
    [`cmd/backup/main.go`](../cmd/backup/main.go)), not the originating HTTP request's context. A job that has started
    must not be canceled just because the client that triggered it disconnected; it can only be stopped explicitly via
-   `POST /v1/backups/cancel/{name}`.
+   <!-- tag cancelCurrentBackup -->`POST /v1/backups/cancel/{name}`<!-- /tag -->.
 
 Scheduled (cron-triggered) backups follow the same execution path, minus the initial HTTP request — Quartz invokes
 the same orchestration code that ad-hoc triggers use.
