@@ -100,6 +100,7 @@ These are ordinary tests and also run under `make test`; the target is for itera
 |---|---|---|
 | Published defaults are the applied ones | `default:` struct tags in `pkg/dto`, against the `pkg/model` code that fills the value in | Go needs both the tag and the business logic. A mismatch is a question for a person — `maxage` publishes 7 days while nothing applies it, and only a human knows whether the tag or the code was the mistake. A generator would answer "the code" and the intent would vanish. |
 | The OpenAPI contract matches the router | `docs/openapi.json`, against `internal/server.Routes` | Two genuinely independent sources: swag annotations on handlers, and the patterns the mux registers. Everything downstream of the OpenAPI document is generated, so this is the only hop left to check. |
+| Field names in prose are real | backticked kebab-case words in those documents, against the property names in `docs/config.schema.json` and `docs/openapi.json` | A sentence can name a field that does not exist — `storage-name` for `source-name`, `parallel-read` for `parallel`. Nothing generates prose, so this can only be checked. |
 | Configuration examples decode | Hand-written YAML blocks in the documents listed in `docFiles` | You want to author an example in YAML, not in Go. The check only confirms it still parses. Shipped configuration files are covered elsewhere: `make docs` decodes and validates the packaged one, and the `validate-config-files` workflow checks every `aerospike-backup-service.yml` against the JSON schema. |
 
 Routes are declared once, in `internal/server.Routes`, and registered from that list — which is what lets the route
@@ -125,12 +126,13 @@ generated mocks, entrypoints, and packages that are thin wrappers or hard to uni
 |---------------|--------|
 | `/cmd/` | CLI entrypoint |
 | `/docs/`, `/modules/` | Non-Go assets |
+| `/build/` | Build tooling and packaging, not the service |
 | `/pkg/model/` | Data structs with no logic |
 | `*mockgen.go` | Generated mocks |
 
 `internal/` (HTTP handlers, server wiring) **is** measured. CI fails if filtered coverage drops below the threshold
-configured in [`.github/workflows/build.yml`](../.github/workflows/build.yml) (currently 53%, matching the
-~53.5% filtered baseline after including `internal/`). That threshold ratchets up as test coverage improves across follow-up PRs.
+configured in [`.github/workflows/build.yml`](../.github/workflows/build.yml) — currently **80%**. That threshold
+ratchets up as test coverage improves across follow-up PRs.
 
 ## Generated artifacts
 

@@ -235,7 +235,8 @@ docs:
 
 DOCS_GENERATED := docs/docs.go docs/openapi.json docs/config.schema.json \
 	README.md docs/installation.md docs/configuration.md docs/api-examples.md \
-	docs/monitoring.md docs/migration.md docs/security.md docs/examples/ docs/readme/dto/ docs/metrics.json
+	docs/architecture.md docs/monitoring.md docs/migration.md docs/security.md \
+	docs/examples/ docs/readme/dto/ docs/metrics.json
 
 # Ensure committed generated docs match the output of docs (no hand-edits, no stale docs).
 .PHONY: docs-check
