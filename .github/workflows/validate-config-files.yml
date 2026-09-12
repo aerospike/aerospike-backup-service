@@ -63,8 +63,7 @@ jobs:
           
           for file in \
             .github/config/test-chart-abs-conf.yaml \
-            ./config/config.yml \
-            ./config/minio_config.yml
+            ./config/config.yml
           do
             echo ""
             echo "Validating file: $file"
