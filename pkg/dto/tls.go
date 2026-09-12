@@ -26,7 +26,9 @@ type TLS struct {
 	// Path to a directory of trusted CA certificates.
 	CAPath Path `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
-	Protocols string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
+	// Empty by default, which leaves the choice to Go and negotiates TLS 1.2 or 1.3.
+	// Setting a single version pins both the minimum and the maximum to it.
+	Protocols string `yaml:"protocols,omitempty" json:"protocols,omitempty" extensions:"x-nullable"`
 	// Colon-separated IANA TLS 1.2 cipher suite names (not OpenSSL nicknames).
 	// The suite must match the certificate key type (RSA vs ECDSA).
 	// If omitted, the client offers Go crypto/tls TLS 1.2 defaults:

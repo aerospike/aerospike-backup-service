@@ -12,17 +12,28 @@ recommended for a more convenient and user-friendly experience.
 
 #### Trigger On-Demand Backup
 
-ℹ️ *Available since v1.0*
+ℹ️ *Available since v3.5.0*
 
-This request starts the backup operation for the specified routine, regardless of its configured schedule.
+These requests start a backup for the specified routine, regardless of its configured schedule.
 
-[
-`POST {{baseUrl}}/v1/backups/schedule/<routineName>?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/scheduleFullBackup)
+<!-- tag triggerFullBackup link ?delay=<timeout> -->
+[`POST {{baseUrl}}/v1/backups/full/{name}?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/triggerFullBackup)
+<!-- /tag -->
 
-* routineName: The name of the backup routine to trigger.
+<!-- tag triggerIncrementalBackup link ?delay=<timeout> -->
+[`POST {{baseUrl}}/v1/backups/incremental/{name}?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/triggerIncrementalBackup)
+<!-- /tag -->
+
+* `name`: The name of the backup routine to trigger.
 * delay (optional): Time in milliseconds to delay the start of the backup.
 
-If the request is accepted, the server responds with Http 202 Accepted.
+If the request is accepted, the server responds with Http 202 Accepted — the backup itself runs afterwards. A
+triggered incremental backup is skipped at run time if the routine has not yet completed a full backup, or if a full
+backup is running or falls on the same instant; see
+[What happens when a backup doesn't finish before another starts](configuration.md#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine).
+
+⚠️ *Deprecated:* <!-- tag scheduleFullBackup ?delay=<timeout> -->`POST /v1/backups/schedule/{name}?delay=<timeout>`<!-- /tag --> is an alias of the full-backup
+trigger above, kept for compatibility with v1.0 clients. Use `/v1/backups/full/{name}` instead.
 
 #### Get Current Backup
 
@@ -30,15 +41,16 @@ If the request is accepted, the server responds with Http 202 Accepted.
 
 This endpoint retrieves the current statistics for a backup in progress, identified by its routine name.
 
-[
-`GET {{baseUrl}}/v1/backups/currentBackup/<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getCurrentBackup)
+<!-- tag getCurrentBackup link -->
+[`GET {{baseUrl}}/v1/backups/currentBackup/{name}`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getCurrentBackup)
+<!-- /tag -->
 
-* routineName: The name of the routine for which to retrieve current backup information.
+* `name`: The name of the routine for which to retrieve current backup information.
 
 <details>
     <summary>Response</summary>
 
-<!-- CurrentBackupResponse -->
+<!-- tag CurrentBackupResponse -->
 
 ```json
 {
@@ -57,6 +69,7 @@ This endpoint retrieves the current statistics for a backup in progress, identif
   }
 }
 ```
+<!-- /tag -->
 
 See [fields description](readme/dto/dto.runningjob.md) for details.
 
@@ -66,8 +79,9 @@ See [fields description](readme/dto/dto.runningjob.md) for details.
 
 ℹ️ *Available since v3.0*
 
-[
-`POST {{baseUrl}}/v1/backups/cancel/<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancelCurrentBackup)
+<!-- tag cancelCurrentBackup link -->
+[`POST {{baseUrl}}/v1/backups/cancel/{name}`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancelCurrentBackup)
+<!-- /tag -->
 
 Cancel all currently running backups (both full and incremental) for the specified routine. Partially created backups
 will be deleted.
@@ -79,13 +93,15 @@ will be deleted.
 Provides a list of backups for each configured routine, including details such as creation time, duration, namespace,
 and storage location.
 
+<!-- tag getFullBackups link -->
 [`GET {{baseUrl}}/v1/backups/full`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getFullBackups)
+<!-- /tag -->
 
 <details>
     <summary>Response</summary>
 
 The response is a map of routine names to lists of backups.
-<!-- FullBackupsResponse -->
+<!-- tag FullBackupsResponse -->
 
 ```json
 {
@@ -116,6 +132,7 @@ The response is a map of routine names to lists of backups.
   ]
 }
 ```
+<!-- /tag -->
 
 For fields description see [fields description](readme/dto/dto.backupdetails.md)
 
@@ -123,8 +140,9 @@ For fields description see [fields description](readme/dto/dto.backupdetails.md)
 
 You can filter the results by adding query parameters:
 
-[
-`GET {{baseUrl}}/v1/backups/full/<name>?from=<from>&to=<to>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getFullBackups)
+<!-- tag getFullBackupsForRoutine link ?from=<from>&to=<to> -->
+[`GET {{baseUrl}}/v1/backups/full/{name}?from=<from>&to=<to>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getFullBackupsForRoutine)
+<!-- /tag -->
 
 Here, `name` is the routine name, `from` and `to` are timestamps in milliseconds since epoch.
 
@@ -132,11 +150,13 @@ Here, `name` is the routine name, `from` and `to` are timestamps in milliseconds
 
 ℹ️ *Available since v3.0*
 
-[
-`POST {{baseUrl}}/v1/routines/<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/disableRoutine)
+<!-- tag disableRoutine link -->
+[`PUT {{baseUrl}}/v1/config/routines/{name}/disable`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/disableRoutine)
+<!-- /tag -->
 
-[
-`POST {{baseUrl}}/v1/routines/<routineName>/enable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/enableRoutine)
+<!-- tag enableRoutine link -->
+[`PUT {{baseUrl}}/v1/config/routines/{name}/enable`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/enableRoutine)
+<!-- /tag -->
 
 Set the disabled flag for the given routine to `true` or `false` (default is `false`).
 
@@ -151,13 +171,14 @@ Set the disabled flag for the given routine to `true` or `false` (default is `fa
 
 This request restores a backup from a specified path to a designated destination.
 
-[
-`POST {{baseUrl}}/v1/restore/full`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreFull)
+<!-- tag restoreFull link -->
+[`POST {{baseUrl}}/v1/restore/full`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreFull)
+<!-- /tag -->
 
 <details>
     <summary>Request body</summary>
 
-<!-- RestoreFullRequest -->
+<!-- tag RestoreFullRequest -->
 
 ```json
 {
@@ -186,6 +207,7 @@ This request restores a backup from a specified path to a designated destination
   "backup-data-path": "routine1/backup/1704110400000/source-ns1"
 }
 ```
+<!-- /tag -->
 
 The `no-generation` parameter allows overwriting of existing keys if set to `true`.
 
@@ -194,7 +216,7 @@ example.
 
 The `destination` field says where to restore to. It can be any Aerospike cluster.
 
-You can also use `destination-name` and `storage-name` instead of `destination` and `storage` respectively.
+You can also use `destination-name` and `source-name` instead of `destination` and `source` respectively.
 They refer to the names of the corresponding entities in the configuration file.
 
 For more details see [fields description](readme/dto/dto.restorerequest.md)
@@ -253,8 +275,9 @@ Restore order (to non-empty namespace or with `disable-reordering`): `Full B`, `
   All versions of each record are restored step by step.
   If a record was modified multiple times, each update is applied, with the final version appearing last.
 
-[`
-POST {{baseUrl}}/v1/restore/timestamp`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreTimestamp)
+<!-- tag restoreTimestamp link -->
+[`POST {{baseUrl}}/v1/restore/timestamp`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreTimestamp)
+<!-- /tag -->
 
 <details>
     <summary>Request body</summary>
@@ -288,14 +311,15 @@ The response is a job ID.
 
 You can get job status with the endpoint
 
-[
-`GET {{baseUrl}}/v1/restore/status/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
+<!-- tag restoreStatus link -->
+[`GET {{baseUrl}}/v1/restore/status/{jobId}`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus)
+<!-- /tag -->.
 
 It works identical for both restore types.
 
 <details>
     <summary>Response example</summary>
-<!-- CurrentRestoreResponse -->
+<!-- tag CurrentRestoreResponse -->
 
 ```json
 {
@@ -326,6 +350,7 @@ It works identical for both restore types.
   "status": "running"
 }
 ```
+<!-- /tag -->
 
 For fields description see [fields description](readme/dto/dto.restorejobstatus.md)
 </details>
@@ -336,18 +361,21 @@ For fields description see [fields description](readme/dto/dto.restorejobstatus.
 
 Provides a list of all restore jobs, with optional filtering by time range and status.
 
-[
-`GET {{baseUrl}}/v1/restore/jobs?from=<from>&to=<to>&status=<status>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/retrieveRestoreJobs)
+<!-- tag retrieveRestoreJobs link ?from=<from>&to=<to>&status=<status> -->
+[`GET {{baseUrl}}/v1/restore/jobs?from=<from>&to=<to>&status=<status>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/retrieveRestoreJobs)
+<!-- /tag -->
 
 - `from` (optional): Lower bound timestamp filter in milliseconds since epoch.
 - `to` (optional): Upper bound timestamp filter in milliseconds since epoch.
-- `status` (optional): Comma-separated status filter (e.g., `Running,Done,Failed,Canceled`). Use `!` prefix to exclude
-  statuses (e.g., `!Failed,Canceled`).
+- `status` (optional): Comma-separated status filter over the job statuses `running`, `success`, `failure` and
+  `canceled` — the same values the `status` field of a job carries. Matching is case-insensitive, so
+  `Running,Success` and `running,success` are equivalent. Use a `!` prefix to exclude statuses instead
+  (e.g. `!failure,canceled`). `done` and `failed` are accepted as deprecated aliases of `success` and `failure`.
 
 <details>
     <summary>Response example</summary>
 
-<!-- CurrentRestoresResponse -->
+<!-- tag CurrentRestoresResponse -->
 
 ```json
 {
@@ -380,6 +408,7 @@ Provides a list of all restore jobs, with optional filtering by time range and s
   }
 }
 ```
+<!-- /tag -->
 
 </details>
 
@@ -389,5 +418,6 @@ Provides a list of all restore jobs, with optional filtering by time range and s
 
 Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
 
-[
-`POST {{baseUrl}}/v1/restore/cancel/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
+<!-- tag cancelRestore link -->
+[`POST {{baseUrl}}/v1/restore/cancel/{jobId}`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
+<!-- /tag -->

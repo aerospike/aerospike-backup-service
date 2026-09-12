@@ -2045,7 +2045,7 @@ const docTemplate = `{
                 "socket-timeout": {
                     "description": "Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000
+                    "default": 600000
                 },
                 "total-timeout": {
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
@@ -2381,13 +2381,13 @@ const docTemplate = `{
                 "maxage": {
                     "description": "Maximum number of days to retain old log files based on the\ntimestamp encoded in their filename. The default is not to remove old log files\nbased on age.",
                     "type": "integer",
-                    "default": 7,
+                    "default": 0,
                     "x-nullable": true
                 },
                 "maxbackups": {
                     "description": "Maximum number of old log files to retain. The default\nis to retain all old log files.",
                     "type": "integer",
-                    "default": 3,
+                    "default": 0,
                     "x-nullable": true
                 },
                 "maxsize": {
@@ -2890,7 +2890,7 @@ const docTemplate = `{
                 "socket-timeout": {
                     "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000,
+                    "default": 600000,
                     "example": 1000
                 },
                 "total-timeout": {
@@ -3720,9 +3720,9 @@ const docTemplate = `{
                     "example": "example.com"
                 },
                 "protocols": {
-                    "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
+                    "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.\nEmpty by default, which leaves the choice to Go and negotiates TLS 1.2 or 1.3.\nSetting a single version pins both the minimum and the maximum to it.",
                     "type": "string",
-                    "default": "TLSv1.2"
+                    "x-nullable": true
                 }
             }
         },
@@ -3881,7 +3881,7 @@ const docTemplate = `{
                 "socket-timeout": {
                     "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000,
+                    "default": 600000,
                     "example": 1000
                 },
                 "total-timeout": {

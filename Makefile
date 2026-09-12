@@ -188,6 +188,12 @@ format:
 lint:
 	golangci-lint run ./...
 
+# doc-check: runs the documentation checks on their own. They are ordinary tests
+#   and also run under "make test"; this target is for iterating on the docs.
+.PHONY: doc-check
+doc-check:
+	$(GOTEST) -count=1 ./internal/doccheck/...
+
 # Production packages only: skip tests, generated mocks, the docs generator, and
 # out-of-module code (stdlib/deps). NilAway otherwise traces into net/http and similar.
 .PHONY: nilaway
@@ -229,7 +235,8 @@ docs:
 
 DOCS_GENERATED := docs/docs.go docs/openapi.json docs/config.schema.json \
 	README.md docs/installation.md docs/configuration.md docs/api-examples.md \
-	docs/monitoring.md docs/migration.md docs/security.md docs/examples/ docs/readme/dto/ docs/metrics.json
+	docs/architecture.md docs/monitoring.md docs/migration.md docs/security.md \
+	docs/development.md docs/examples/ docs/readme/dto/ docs/metrics.json
 
 # Ensure committed generated docs match the output of docs (no hand-edits, no stale docs).
 .PHONY: docs-check

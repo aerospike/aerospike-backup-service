@@ -22,7 +22,7 @@ type BackupPolicy struct {
 	ParallelWrite *int `yaml:"parallel-write,omitempty" json:"parallel-write,omitempty" example:"1" default:"8" minimum:"1"`
 	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" default:"60000"`
+	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" default:"600000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
 	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" default:"0"`
 	// RetryPolicy defines the configuration for database scan retry attempts in case of failures.
