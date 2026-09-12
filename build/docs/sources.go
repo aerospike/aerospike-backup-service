@@ -40,6 +40,36 @@ func renderDuration(d time.Duration) string {
 	return d.String()
 }
 
+// modulePath is the module this generator belongs to, and the marker it uses to
+// recognise the directory it must be run from.
+const modulePath = "github.com/aerospike/aerospike-backup-service/v3"
+
+// moduleDirective matches the `module` line of a module file.
+var moduleDirective = regexp.MustCompile(`(?m)^module\s+(\S+)\s*$`)
+
+// requireRepoRoot stops the run when the working directory is not the repository
+// root.
+//
+// Every path the generator touches is relative to the root — go.mod,
+// docs/openapi.json, build/package/config/aerospike-backup-service.yml, each of
+// the target documents. Run from anywhere else, the first of those to be missing
+// fails somewhere in the middle of a run that has already rewritten other files,
+// and the error names a path rather than the mistake. `make docs` always gets
+// this right; a hand-typed `go run ./build/docs` from a subdirectory does not.
+func requireRepoRoot() {
+	content, err := os.ReadFile("go.mod")
+	if err != nil {
+		panic(fmt.Errorf("build/docs must run from the repository root, "+
+			"where every path it reads is rooted: %w", err))
+	}
+
+	match := moduleDirective.FindSubmatch(content)
+	if match == nil || string(match[1]) != modulePath {
+		panic(fmt.Errorf("build/docs must run from the root of %s, but the go.mod here "+
+			"declares a different module", modulePath))
+	}
+}
+
 // goDirective matches the `go` line of a module file, which is the one place the
 // project states the toolchain version it is built with.
 var goDirective = regexp.MustCompile(`(?m)^go\s+(\S+)\s*$`)

@@ -241,17 +241,28 @@ func loadEndpoints() map[string]endpoint {
 	return endpoints
 }
 
-// MarshalYAML marshals the input into YAML and replaces 4-space indents with 2-space indents.
-// we need this to be in sync with Goland's markdown formatter.
+// marshalYAML renders a value at the two-space indent GoLand's Markdown
+// formatter uses, so a regenerated block does not fight the editor.
+//
+// The encoder is asked for that indent rather than the output being rewritten
+// afterwards: the previous version replaced every run of four spaces with two,
+// which is indistinguishable from four spaces inside a scalar and would have
+// silently rewritten one.
 func marshalYAML(v any) ([]byte, error) {
-	rawYAML, err := yaml.Marshal(v)
-	if err != nil {
+	var out bytes.Buffer
+
+	encoder := yaml.NewEncoder(&out)
+	encoder.SetIndent(2)
+
+	if err := encoder.Encode(v); err != nil {
 		return nil, err
 	}
 
-	formattedYAML := strings.ReplaceAll(string(rawYAML), "    ", "  ")
+	if err := encoder.Close(); err != nil {
+		return nil, err
+	}
 
-	return []byte(formattedYAML), nil
+	return out.Bytes(), nil
 }
 
 type MetricRow struct {
@@ -268,20 +279,12 @@ func renderMetricsTable(rows []MetricRow) string {
 	maxType := len("Type")
 	maxHelp := len("Description")
 	maxLabels := len("Labels")
+
 	for _, r := range rows {
-		if len(r.Name) > maxName {
-			maxName = len(r.Name)
-		}
-		if len(r.Type) > maxType {
-			maxType = len(r.Type)
-		}
-		if len(r.Description) > maxHelp {
-			maxHelp = len(r.Description)
-		}
-		labelsStr := strings.Join(r.Labels, ", ")
-		if len(labelsStr) > maxLabels {
-			maxLabels = len(labelsStr)
-		}
+		maxName = max(maxName, len(r.Name))
+		maxType = max(maxType, len(r.Type))
+		maxHelp = max(maxHelp, len(r.Description))
+		maxLabels = max(maxLabels, len(strings.Join(r.Labels, ", ")))
 	}
 
 	// Adding 2 for the backticks `` around the name
