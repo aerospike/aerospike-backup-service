@@ -12,18 +12,28 @@ recommended for a more convenient and user-friendly experience.
 
 #### Trigger On-Demand Backup
 
-ℹ️ *Available since v1.0*
+ℹ️ *Available since v3.5.0*
 
-This request starts the backup operation for the specified routine, regardless of its configured schedule.
+These requests start a backup for the specified routine, regardless of its configured schedule.
 
-<!-- tag scheduleFullBackup link ?delay=<timeout> -->
-[`POST {{baseUrl}}/v1/backups/schedule/{name}?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/scheduleFullBackup)
+<!-- tag triggerFullBackup link ?delay=<timeout> -->
+[`POST {{baseUrl}}/v1/backups/full/{name}?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/triggerFullBackup)
+<!-- /tag -->
+
+<!-- tag triggerIncrementalBackup link ?delay=<timeout> -->
+[`POST {{baseUrl}}/v1/backups/incremental/{name}?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/triggerIncrementalBackup)
 <!-- /tag -->
 
 * `name`: The name of the backup routine to trigger.
 * delay (optional): Time in milliseconds to delay the start of the backup.
 
-If the request is accepted, the server responds with Http 202 Accepted.
+If the request is accepted, the server responds with Http 202 Accepted — the backup itself runs afterwards. A
+triggered incremental backup is skipped at run time if the routine has not yet completed a full backup, or if a full
+backup is running or falls on the same instant; see
+[What happens when a backup doesn't finish before another starts](configuration.md#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine).
+
+⚠️ *Deprecated:* <!-- tag scheduleFullBackup ?delay=<timeout> -->`POST /v1/backups/schedule/{name}?delay=<timeout>`<!-- /tag --> is an alias of the full-backup
+trigger above, kept for compatibility with v1.0 clients. Use `/v1/backups/full/{name}` instead.
 
 #### Get Current Backup
 
@@ -357,8 +367,10 @@ Provides a list of all restore jobs, with optional filtering by time range and s
 
 - `from` (optional): Lower bound timestamp filter in milliseconds since epoch.
 - `to` (optional): Upper bound timestamp filter in milliseconds since epoch.
-- `status` (optional): Comma-separated status filter (e.g., `Running,Done,Failed,Canceled`). Use `!` prefix to exclude
-  statuses (e.g., `!Failed,Canceled`).
+- `status` (optional): Comma-separated status filter over the job statuses `running`, `success`, `failure` and
+  `canceled` — the same values the `status` field of a job carries. Matching is case-insensitive, so
+  `Running,Success` and `running,success` are equivalent. Use a `!` prefix to exclude statuses instead
+  (e.g. `!failure,canceled`). `done` and `failed` are accepted as deprecated aliases of `success` and `failure`.
 
 <details>
     <summary>Response example</summary>

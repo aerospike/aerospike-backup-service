@@ -86,3 +86,34 @@ func isConfigSnippet(t *testing.T, body string) bool {
 
 	return true
 }
+
+// TestGeneratedBlocksAreRecognized is a guard on the check above rather than on
+// the documentation.
+//
+// The generated-block exemption is silent by construction: when it stops working,
+// every check simply does more than it should, and nothing fails. It did stop
+// working — build/docs collapsed its markers to the single <!-- tag id --> form
+// and the pattern here still matched the old one, so for a while no block was
+// recognized as generated and the packaged configuration was being re-decoded as
+// if a person had typed it. This asserts both directions, so the next change to
+// the marker syntax breaks a test instead of quietly widening the check.
+func TestGeneratedBlocksAreRecognized(t *testing.T) {
+	snippets := doccheck.Snippets(t, doccheck.Root(t), docFiles, "yaml")
+
+	var generated, handWritten int
+
+	for _, snippet := range snippets {
+		if snippet.Generated {
+			generated++
+		} else {
+			handWritten++
+		}
+	}
+
+	require.Positive(t, generated,
+		"no YAML block was recognized as generated; build/docs writes <!-- tag id --> "+
+			"above every block it renders, so the marker pattern in doccheck.go is stale")
+	require.Positive(t, handWritten,
+		"every YAML block was treated as generated; the marker pattern matches too much "+
+			"and the hand-written examples are no longer checked")
+}

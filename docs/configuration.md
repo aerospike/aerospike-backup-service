@@ -56,10 +56,11 @@ backup-routines:
 ```
 
 Backup folder names and the optional `timestamp-format` suffix stay UTC regardless of
-`schedule-timezone`. Daylight saving applies to `Local` and IANA zones: a daily 02:30
-schedule does not fire on the spring-forward day when 02:30 does not exist locally, and
-daily schedules in the repeated fall-back hour fire once. Use UTC to avoid DST-driven
-variations in the elapsed time between runs.
+`schedule-timezone`. Daylight saving applies to `Local` and IANA zones: on the spring-forward
+day a schedule whose local time does not exist (for example 02:30) still fires — the
+nonexistent wall-clock time is normalized, so the run lands an hour earlier in local terms and
+23 hours after the previous one. Daily schedules in the repeated fall-back hour fire once.
+Use UTC to avoid DST-driven variations in the elapsed time between runs.
 
 **📆 Quartz Cron Expression Examples for Backup Scheduling**
 
@@ -167,8 +168,11 @@ However, backup processes already in progress will continue using the configurat
 Cluster configuration entities denote the configuration properties needed to establish connections to Aerospike
 clusters.
 These connections include the cluster IP address, port number, authentication information, and more.
-See [`POST: /config/clusters`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addCluster) for the
-full specification.
+See the full specification:
+
+<!-- tag addCluster link -->
+[`POST {{baseUrl}}/v1/config/clusters/{name}`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addCluster)
+<!-- /tag -->
 
 :warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/tools/backup#secret-agent-options) to avoid
 including secrets in your configuration. See [Security](security.md) for how secrets are resolved, cached, and rotated.
@@ -179,8 +183,11 @@ This entity includes properties of connections to local or cloud storage, where 
 You can get information about a specific configured storage option, such as checking the cloud storage location for
 a backup.
 You can also add, update, or remove a storage configuration.
-See the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities
-under `/config/storage` for detailed information.
+See the Storage entities for detailed information:
+
+<!-- tag readAllStorage link -->
+[`GET {{baseUrl}}/v1/config/storage`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage)
+<!-- /tag -->
 
 :warning: ABS currently supports AWS S3, GCP, and Microsoft Azure cloud storage.
 
@@ -188,13 +195,18 @@ under `/config/storage` for detailed information.
 
 A backup policy is a set of rules that defines how backups should be performed.
 It includes settings for performance tuning, data selection, encryption, compression, and other operational details.
-See [`GET: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readPolicies) for
-full details about what parameters are available to customize a backup policy.
+See the following for full details about what parameters are available to customize a backup policy:
+
+<!-- tag readPolicies link -->
+[`GET {{baseUrl}}/v1/config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readPolicies)
+<!-- /tag -->
 
 You can save multiple policies with different configurations.
-When you run
-the [`POST: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addPolicy) command
-to create a policy, ensure that you give your policy a name that will let you quickly identify its characteristics.
+When you create a policy, ensure that you give it a name that will let you quickly identify its characteristics:
+
+<!-- tag addPolicy link -->
+[`POST {{baseUrl}}/v1/config/policies/{name}`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addPolicy)
+<!-- /tag -->
 
 #### Backup routine
 
@@ -202,9 +214,12 @@ A backup routine is a set of procedures that actually perform backups based on t
 It includes configurations for the source cluster, storage destination, scheduling (separately for full and incremental
 backups), and the scope of data to back up (such as namespaces, sets, or bins).
 
-See the [Routines](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readRoutines) section for
-command examples showing how to find all routines, get information about a specific named routine, and add, remove, or
-update an existing routine.
+See the Routines section for command examples showing how to find all routines, get information about a specific
+named routine, and add, remove, or update an existing routine:
+
+<!-- tag readRoutines link -->
+[`GET {{baseUrl}}/v1/config/routines`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readRoutines)
+<!-- /tag -->
 
 :warning: Incremental backups are deleted if they are empty and after each full backup. System metadata is backed up
 only on full backups.
@@ -276,11 +291,14 @@ backup-routines:
 
 ### Common examples
 
+<!-- tag FilterExpressions -->
+
 | Filter | Base64 value |
 |--------|--------------|
 | `age > 25` | `kwOTUQKjYWdlGQ==` |
 | `country = "US"` | `kwGTUQOnY291bnRyeaMDVVM=` |
 | `age >= 18 AND (country = "US" OR country = "CA")` | `kxCTBJNRAqNhZ2USkxGTAZNRA6djb3VudHJ5owNVU5MBk1EDp2NvdW50cnmjA0NB` |
+<!-- /tag -->
 
 For more complex logic (metadata filters, list/map operations, geo filters, etc.), see the
 [Aerospike Expressions documentation](https://aerospike.com/docs/develop/expressions/).
@@ -305,7 +323,11 @@ requires a restart) or on a routine (overrides the default). Backup paths and th
 
 - **Incremental Backups:**
     - By default, incremental backups are skipped if any other backup (full or incremental) is still running.
-      This behavior can be overridden using the `concurrent-incremental` field in the
+    - An incremental backup is also skipped when a full backup is scheduled for the same instant: the full backup
+      takes the tick, whether or not anything is currently running. The pairing in the
+      [configuration file example](#configuration-file-example) — `interval-cron: "@daily"` with
+      `incr-interval-cron: "0 0 0/2 * * ? *"` — hits this every midnight.
+    - Both conditions can be lifted using the `concurrent-incremental` field in the
       [backup policy](readme/dto/dto.backuppolicy.md), which allows incremental backups to run concurrently.
     - Incremental backups will not run until at least one full backup has been successfully completed.
 

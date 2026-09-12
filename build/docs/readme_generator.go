@@ -15,6 +15,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	metrics "github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
 )
@@ -40,6 +41,7 @@ var targetFiles = []string{
 	"docs/monitoring.md",
 	"docs/migration.md",
 	"docs/security.md",
+	"docs/development.md",
 }
 
 func generateReadme() {
@@ -64,7 +66,6 @@ func generateReadme() {
 
 		content = applyTags(content, renderers)
 
-		//nolint:gosec // G306 target markdown files are meant to be readable by anyone building docs.
 		err = os.WriteFile(path, content, 0600)
 		if err != nil {
 			panic(fmt.Errorf("failed to write target file %q: %w", path, err))
@@ -109,8 +110,13 @@ func newRenderers(endpoints map[string]endpoint, metricsTable string) map[string
 	}))
 	add("generator", "Metrics", noArgs("Metrics", func() string { return "\n\n" + metricsTable }))
 	add("generator", "TLSReloadInterval", noArgs("TLSReloadInterval", func() string {
-		return servertls.WatchInterval.String()
+		return renderDuration(servertls.WatchInterval)
 	}))
+	add("generator", "StorageClientCacheTTL", noArgs("StorageClientCacheTTL", func() string {
+		return renderDuration(storage.ClientCacheTTL)
+	}))
+	add("generator", "GoVersion", noArgs("GoVersion", renderGoVersion))
+	add("generator", "FilterExpressions", noArgs("FilterExpressions", renderFilterExpressions))
 	// Reserved for the security plan: a document may carry the tag before there
 	// is anything to put in it.
 	add("generator", "RBACMatrix", noArgs("RBACMatrix", func() string { return "" }))

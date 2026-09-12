@@ -105,3 +105,47 @@ func TestNoArgs_PanicsOnUnexpectedArgument(t *testing.T) {
 func TestRenderExample_PanicsOnUnknownExample(t *testing.T) {
 	assert.Panics(t, func() { renderExample("NoSuchExample") })
 }
+
+// TestApplyTags_LeavesTagsInsideFencesAlone is what lets docs/development.md
+// document the tag syntax: inside a fenced block a tag is being shown, not used,
+// so expanding it would rewrite the explanation into an example of itself.
+func TestApplyTags_LeavesTagsInsideFencesAlone(t *testing.T) {
+	input := []byte("```markdown\n<!-- tag greeting world --><!-- /tag -->\n```\n")
+
+	got := string(applyTags(input, engineRenderers()))
+
+	assert.Equal(t, string(input), got)
+}
+
+// TestApplyTags_RendersAroundAFencedExample covers the two together: a fenced
+// illustration must not stop the real tags on either side of it from rendering.
+func TestApplyTags_RendersAroundAFencedExample(t *testing.T) {
+	input := []byte("<!-- tag greeting one --><!-- /tag -->\n" +
+		"```markdown\n<!-- tag nonsense --><!-- /tag -->\n```\n" +
+		"<!-- tag greeting two --><!-- /tag -->\n")
+
+	got := string(applyTags(input, engineRenderers()))
+
+	assert.Equal(t, "<!-- tag greeting one -->hello one<!-- /tag -->\n"+
+		"```markdown\n<!-- tag nonsense --><!-- /tag -->\n```\n"+
+		"<!-- tag greeting two -->hello two<!-- /tag -->\n", got)
+}
+
+// TestApplyTags_IgnoresAnUnclosedTagInsideAFence keeps the fence rule and the
+// missing-close rule from contradicting each other.
+func TestApplyTags_IgnoresAnUnclosedTagInsideAFence(t *testing.T) {
+	input := []byte("```markdown\n<!-- tag greeting world -->\n```\n")
+
+	assert.NotPanics(t, func() { applyTags(input, engineRenderers()) })
+}
+
+// TestApplyTags_SeesTagsAfterAFencedBlock guards the fence counter itself: a
+// generated region carries its own fences, and if they were counted as unpaired
+// every tag below the first rendered example would be treated as illustration.
+func TestApplyTags_SeesTagsAfterAFencedBlock(t *testing.T) {
+	input := []byte("```yaml\nservice: {}\n```\n<!-- tag greeting world --><!-- /tag -->\n")
+
+	got := string(applyTags(input, engineRenderers()))
+
+	assert.Contains(t, got, "<!-- tag greeting world -->hello world<!-- /tag -->")
+}

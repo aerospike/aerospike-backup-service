@@ -56,9 +56,14 @@ type Snippet struct {
 // fence matches a fenced block and captures its language and body.
 var fence = regexp.MustCompile("(?ms)^```([a-zA-Z0-9_-]*)[ \t]*\r?\n(.*?)^```[ \t]*$")
 
-// marker matches the HTML comment that build/docs writes immediately above a
-// block it renders, such as <!-- DefaultConfig --> or <!-- dto.Config -->.
-var marker = regexp.MustCompile(`^<!--\s*[\w.]+\s*-->$`)
+// marker matches the opening tag that build/docs writes above a block it
+// renders, such as <!-- tag DefaultConfig --> or <!-- tag RestoreFullRequest -->.
+//
+// The literal "tag" keyword is required, and is the whole point: a generic
+// <!-- word --> would also match the <!-- toc --> a table-of-contents tool
+// leaves above a fence, and would then exempt a hand-written block from every
+// check below. This pattern is build/docs/markers.go's openTag, anchored.
+var marker = regexp.MustCompile(`^<!--\s*tag\s+\S+[ \t]*.*?-->$`)
 
 // isGenerated reports whether the fence starting at offset is preceded by a
 // generator marker. A generated block is reproduced byte-for-byte from source

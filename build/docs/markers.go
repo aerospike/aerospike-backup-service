@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -25,46 +26,115 @@ import (
 // so a region always survives to be regenerated next time.
 type renderer func(args string) string
 
+// openTagPattern matches an opening marker, capturing the id and the arguments
+// after it. Both regexes below are built from it so the two cannot drift: the
+// region matcher and the unclosed-region check must agree on what an opening
+// marker looks like, or a forgotten <!-- /tag --> stops being an error.
+const openTagPattern = `<!--\s*tag\s+(\S+)[ \t]*(.*?)-->`
+
 // tagRegion matches one complete region. The content is non-greedy, so each
 // opening marker pairs with the nearest closing one and two tags on the same line
 // stay separate.
-var tagRegion = regexp.MustCompile(`(?s)<!--\s*tag\s+(\S+)[ \t]*(.*?)-->(.*?)<!--\s*/tag\s*-->`)
+var tagRegion = regexp.MustCompile(`(?s)` + openTagPattern + `(?:.*?)<!--\s*/tag\s*-->`)
 
 // openTag matches any opening tag, to find regions that lost their close.
-var openTag = regexp.MustCompile(`<!--\s*tag\s+(\S+)[ \t]*(.*?)-->`)
+var openTag = regexp.MustCompile(openTagPattern)
 
 // applyTags renders every tagged region in the document. An unknown id is a typo
 // and stops the build rather than silently generating nothing.
+//
+// A tag written inside a fenced code block is left exactly as it is: there it is
+// being shown, not used, which is how docs/development.md can document the syntax
+// without the generator expanding the example out from under it.
 func applyTags(content []byte, renderers map[string]renderer) []byte {
-	rendered := tagRegion.ReplaceAllFunc(content, func(match []byte) []byte {
-		fields := tagRegion.FindSubmatch(match)
-		id, args := string(fields[1]), strings.TrimSpace(string(fields[2]))
+	fenced := fencedOffsets(content)
+
+	var (
+		rendered []byte
+		last     int
+	)
+
+	for _, region := range tagRegion.FindAllSubmatchIndex(content, -1) {
+		start, end := region[0], region[1]
+		if fenced[start] {
+			continue
+		}
+
+		id := string(content[region[2]:region[3]])
+		args := strings.TrimSpace(string(content[region[4]:region[5]]))
 
 		render, known := renderers[id]
 		if !known {
 			panic(fmt.Errorf("unknown tag %q: no renderer is registered for it", id))
 		}
 
-		return fmt.Appendf(nil, "<!-- tag %s -->%s<!-- /tag -->",
+		rendered = append(rendered, content[last:start]...)
+		rendered = fmt.Appendf(rendered, "<!-- tag %s -->%s<!-- /tag -->",
 			strings.TrimSpace(id+" "+args), render(args))
-	})
+		last = end
+	}
+
+	rendered = append(rendered, content[last:]...)
 
 	requireClosed(rendered)
 
 	return rendered
 }
 
+// fenceLine matches the start of a Markdown code fence.
+var fenceLine = regexp.MustCompile("(?m)^[ \t]*(```|~~~)")
+
+// fencedOffsets reports, for every byte offset, whether it sits inside a fenced
+// code block.
+//
+// Generated content always carries balanced fences — a rendered example opens and
+// closes its own — so counting fences across the whole document, generated regions
+// included, stays in step. Only a document that shows an unpaired fence would
+// confuse this, and such a document does not render correctly in the first place.
+func fencedOffsets(content []byte) []bool {
+	inside := make([]bool, len(content)+1)
+
+	var (
+		offset int
+		open   bool
+	)
+
+	for _, line := range bytes.SplitAfter(content, []byte("\n")) {
+		isFence := fenceLine.Match(line)
+		if isFence {
+			open = !open
+		}
+
+		// A fence line belongs to the block it delimits, not to the side it
+		// switches to: after the toggle, the opening line reads as outside and
+		// the closing line as inside. Neither can carry a tag, so this only has
+		// to be consistent.
+		within := open != isFence
+		for i := range line {
+			inside[offset+i] = within
+		}
+
+		offset += len(line)
+	}
+
+	inside[len(content)] = open
+
+	return inside
+}
+
 // requireClosed reports an opening tag that no closing marker follows. Without it
 // a forgotten <!-- /tag --> would simply generate nothing, which is the failure
 // the old per-marker regexes made easy to miss.
 func requireClosed(content []byte) {
+	fenced := fencedOffsets(content)
+
 	closed := make(map[int]bool)
 	for _, region := range tagRegion.FindAllIndex(content, -1) {
 		closed[region[0]] = true
 	}
 
 	for _, opening := range openTag.FindAllSubmatchIndex(content, -1) {
-		if closed[opening[0]] {
+		if closed[opening[0]] || fenced[opening[0]] {
 			continue
 		}
 

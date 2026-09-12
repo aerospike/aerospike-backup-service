@@ -84,7 +84,7 @@ sudo journalctl -u aerospike-backup-service -n 100 --no-page -f
 
 ### Prerequisites
 
-- Go 1.25
+- Go <!-- tag GoVersion -->1.25.13<!-- /tag -->
 
 ### Build the service
 

@@ -99,7 +99,7 @@ The `aerospike_backup_service_backup_progress_pct` metric provides percentage co
 **Labels**
 
 * `routine`: Name of the backup routine
-* `type`: Backup type (Full or Incremental)
+* `type`: Backup type (`full` or `incremental`)
 
 #### How It's Calculated
 
@@ -107,8 +107,16 @@ The progress percentage is calculated as `Progress = (Records Processed / Total 
 
 **Total Records Estimation**
 
-When a backup starts, ABS samples one partition (metadata scan only) and multiplies the sample count by total partition
-count (typically 4096).
+How the total is estimated depends on whether the scan carries a filter:
+
+* **Unfiltered scan** — the default for a full backup. The namespace record count is read from the cluster's info
+  client and scaled by the share of partitions being backed up. Nothing is scanned or sampled.
+* **Filtered scan** — an incremental backup (which bounds the scan by modification time), or a routine that sets
+  `filter-exp`, `partition-list` or `node-list`. One partition is scanned for metadata only and the sample count is
+  multiplied by the number of partitions being backed up (4096 for a routine that backs up the whole namespace).
+
+The total is not a one-time estimate: it is recalculated every 10 minutes for as long as the backup runs. A recount
+that raises the denominator makes `aerospike_backup_service_backup_progress_pct` move backwards.
 
 **Duration Estimation**
 

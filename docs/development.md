@@ -5,7 +5,7 @@ released build rather than building from source, see the [Run](../README.md#run)
 
 ## Prerequisites
 
-- Go 1.25 (see `go` directive in [`go.mod`](../go.mod) for the exact minimum version)
+- Go <!-- tag GoVersion -->1.25.13<!-- /tag --> (the `go` directive in [`go.mod`](../go.mod), which is where this number is rendered from)
 - Docker, for building images and running the [Docker Compose](../build/docker-compose/README.md) dev stack
 - Node.js (`npx`), used by `make docs` to convert the generated Swagger spec to OpenAPI 3
 - [`golangci-lint`](https://golangci-lint.run/) and [`gci`](https://github.com/daixiang0/gci), used by `make lint`
@@ -66,7 +66,7 @@ sources claiming the same id is a build failure:
 |---|---|---|
 | `docs/openapi.json` | every operation id, e.g. `restoreFull` | `` `POST /v1/restore/full` ``, or a linked call-out with `link` |
 | `jsonExamples`, `yamlExamples` | e.g. `RestoreFullRequest` | a fenced block built from the DTO structs |
-| the generator | `DefaultConfig`, `Metrics`, `TLSReloadInterval`, `RBACMatrix` | the packaged config, the metrics table, the reload interval |
+| the generator | `DefaultConfig`, `Metrics`, `FilterExpressions`, `TLSReloadInterval`, `StorageClientCacheTTL`, `GoVersion`, `RBACMatrix` | the packaged config, the metrics table, the worked filter expressions, the two rotation intervals, the `go` directive from `go.mod` |
 
 So an endpoint reads as either of:
 
@@ -84,6 +84,9 @@ mid-sentence — it says exactly how far the generated text reaches, so a region
 two tags in one sentence stay separate. The literal `tag` keyword is what distinguishes these from markers left by
 other tools, such as the `<!-- toc -->` the table-of-contents generator writes. HTML comments are invisible in
 rendered Markdown.
+
+A tag inside a fenced code block is left alone: there it is being shown, not used, which is what lets this page
+document the syntax without the generator expanding the examples above.
 
 ### Validated: everything else
 
