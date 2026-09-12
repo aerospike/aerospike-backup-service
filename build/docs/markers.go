@@ -104,3 +104,19 @@ func renderExample(name string) string {
 func fence(language string, content []byte) string {
 	return "\n\n```" + language + "\n" + string(content) + "\n```\n"
 }
+
+// noArgs adapts a renderer that takes no arguments.
+//
+// Only endpoint tags read their arguments, so without this an id that ignores
+// them would silently accept anything: <!-- tag Storage nonsense --> would
+// render the storage example and quietly drop the word. A typo should stop the
+// build for the same reason an unknown id does.
+func noArgs(id string, render func() string) renderer {
+	return func(args string) string {
+		if args != "" {
+			panic(fmt.Errorf("tag %q takes no arguments, got %q", id, args))
+		}
+
+		return render()
+	}
+}

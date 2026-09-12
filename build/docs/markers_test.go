@@ -90,6 +90,18 @@ func TestNewRenderers_PanicsOnDuplicateID(t *testing.T) {
 	assert.Panics(t, func() { newRenderers(clash, "") })
 }
 
+// TestNoArgs_PanicsOnUnexpectedArgument closes the gap that only endpoint tags
+// read their arguments: without this, <!-- tag Storage nonsense --> would render
+// the example and quietly drop the word.
+func TestNoArgs_PanicsOnUnexpectedArgument(t *testing.T) {
+	render := noArgs("Storage", func() string { return "content" })
+
+	assert.Equal(t, "content", render(""))
+	assert.PanicsWithError(t,
+		`tag "Storage" takes no arguments, got "nonsense"`,
+		func() { render("nonsense") })
+}
+
 func TestRenderExample_PanicsOnUnknownExample(t *testing.T) {
 	assert.Panics(t, func() { renderExample("NoSuchExample") })
 }

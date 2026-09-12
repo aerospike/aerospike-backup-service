@@ -95,21 +95,25 @@ func newRenderers(endpoints map[string]endpoint, metricsTable string) map[string
 	}
 
 	for id := range jsonExamples {
-		add("jsonExamples", id, func(string) string { return renderExample(id) })
+		add("jsonExamples", id, noArgs(id, func() string { return renderExample(id) }))
 	}
 
 	for id := range yamlExamples {
-		add("yamlExamples", id, func(string) string { return renderExample(id) })
+		add("yamlExamples", id, noArgs(id, func() string { return renderExample(id) }))
 	}
 
 	defaultConfig := readDefaultConfig()
 
-	add("generator", "DefaultConfig", func(string) string { return fence("yaml", defaultConfig) })
-	add("generator", "Metrics", func(string) string { return "\n\n" + metricsTable })
-	add("generator", "TLSReloadInterval", func(string) string { return servertls.WatchInterval.String() })
+	add("generator", "DefaultConfig", noArgs("DefaultConfig", func() string {
+		return fence("yaml", defaultConfig)
+	}))
+	add("generator", "Metrics", noArgs("Metrics", func() string { return "\n\n" + metricsTable }))
+	add("generator", "TLSReloadInterval", noArgs("TLSReloadInterval", func() string {
+		return servertls.WatchInterval.String()
+	}))
 	// Reserved for the security plan: a document may carry the tag before there
 	// is anything to put in it.
-	add("generator", "RBACMatrix", func(string) string { return "" })
+	add("generator", "RBACMatrix", noArgs("RBACMatrix", func() string { return "" }))
 
 	return renderers
 }
@@ -149,17 +153,6 @@ const apiDocsBaseURL = "https://aerospike.github.io/aerospike-backup-service/#/"
 
 // linkFlag asks for the linked call-out form rather than a bare code span.
 const linkFlag = "link"
-
-// endpointMarker matches a marked region and everything a previous run put in it:
-//
-//	<!-- Endpoint <operationId> [link] [?query] --> … <!-- /Endpoint -->
-//
-// Paired markers rather than an open marker plus a guessed payload: the closing
-// marker says exactly how far the generated text reaches, so the same rule works
-// for a link on its own line and for a code span in the middle of a sentence,
-// and a region can never swallow the prose after it.
-var endpointMarker = regexp.MustCompile(
-	`(?s)<!--\s*Endpoint\s+(.*?)\s*-->.*?<!--\s*/Endpoint\s*-->`)
 
 // endpoint is one operation as the published API browser presents it.
 type endpoint struct {
