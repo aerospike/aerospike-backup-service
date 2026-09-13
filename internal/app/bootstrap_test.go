@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
@@ -69,6 +71,53 @@ func TestInitComponents_StartsNothing(t *testing.T) {
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
 	require.NoError(t, err, "the HTTP listener was bound before Start")
 	require.NoError(t, listener.Close())
+}
+
+// TestComponents_RunServesUntilCanceled drives the whole lifecycle through the one entry
+// point main uses: Run brings the listener up, and canceling the context brings everything
+// down cleanly.
+func TestComponents_RunServesUntilCanceled(t *testing.T) {
+	port := freePort(t)
+	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	config := fmt.Sprintf("service:\n  http:\n    address: 127.0.0.1\n    port: %d\n", port)
+	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	components, err := InitComponents(ctx, configPath, false)
+	require.NoError(t, err)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- components.Run(ctx)
+	}()
+
+	client := &http.Client{Timeout: 100 * time.Millisecond}
+	require.Eventually(t, func() bool {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+addr+"/health", nil)
+		require.NoError(t, err)
+		resp, err := client.Do(req)
+		if err != nil {
+			return false
+		}
+		_ = resp.Body.Close()
+
+		return resp.StatusCode == http.StatusOK
+	}, 5*time.Second, 10*time.Millisecond, "Run did not bring the HTTP listener up")
+	require.True(t, components.Scheduler.IsStarted())
+
+	cancel()
+
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run did not return after its context was canceled")
+	}
+	require.False(t, components.Scheduler.IsStarted(), "scheduler still running after Run returned")
 }
 
 // freePort returns a port that is free at the moment of the call.

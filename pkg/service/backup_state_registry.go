@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,9 +26,12 @@ type BackupStateRegistry interface {
 	GetRunningState() map[string]model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.
 	Cancel(routineName string)
-	// SynchroniseBackupHistory updates last backup times from storage for the given routines.
-	// It scans the routines in parallel.
-	SynchroniseBackupHistory(ctx context.Context, routines []*model.BackupRoutine)
+	// RequestHistorySync asks for the last backup times of the given routines to be re-read
+	// from storage. Requests are coalesced per routine and served by Start; before Start they
+	// only accumulate, so no storage is read until the service is running.
+	RequestHistorySync(routines []*model.BackupRoutine)
+	// Start serves history sync requests until ctx is canceled.
+	Start(ctx context.Context)
 
 	// BackupStarted stores the handler of a started backup, so it can be tracked and canceled.
 	BackupStarted(routineName string, backupType model.BackupType, handler CancelableBackupHandler)
@@ -52,6 +58,14 @@ type backupStateRegistry struct {
 
 	// config is needed to calculate next run times
 	config routineProvider
+
+	// pending holds the routines waiting for a history sync, latest definition per name.
+	// signal has a buffer of one, so a request never blocks and back-to-back requests
+	// collapse into a single scan.
+	pendingMu sync.Mutex
+	pending   map[string]*model.BackupRoutine
+	signal    chan struct{}
+	startOnce sync.Once
 }
 
 var _ BackupStateRegistry = (*backupStateRegistry)(nil)
@@ -67,7 +81,58 @@ func NewBackupStateRegistry(
 		trackers: collections.NewSafeMap[string, *routineTracker](),
 		history:  history,
 		config:   config,
+		pending:  make(map[string]*model.BackupRoutine),
+		signal:   make(chan struct{}, 1),
 	}
+}
+
+// RequestHistorySync queues the routines for a storage scan. It returns at once.
+func (r *backupStateRegistry) RequestHistorySync(routines []*model.BackupRoutine) {
+	if len(routines) == 0 {
+		return
+	}
+
+	r.pendingMu.Lock()
+	for _, routine := range routines {
+		r.pending[routine.Name] = routine
+	}
+	r.pendingMu.Unlock()
+
+	select {
+	case r.signal <- struct{}{}:
+	default: // a scan is already due; it will pick these up.
+	}
+}
+
+// Start serves queued history sync requests until ctx is canceled. Calling it again is a no-op.
+func (r *backupStateRegistry) Start(ctx context.Context) {
+	r.startOnce.Do(func() {
+		go r.serveSyncRequests(ctx)
+	})
+}
+
+func (r *backupStateRegistry) serveSyncRequests(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-r.signal:
+			r.synchroniseBackupHistory(ctx, r.takePending())
+		}
+	}
+}
+
+// takePending drains the queue, sorted by routine name so logs and scans are deterministic.
+func (r *backupStateRegistry) takePending() []*model.BackupRoutine {
+	r.pendingMu.Lock()
+	defer r.pendingMu.Unlock()
+
+	routines := slices.SortedFunc(maps.Values(r.pending), func(a, b *model.BackupRoutine) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+	clear(r.pending)
+
+	return routines
 }
 
 // getTracker atomically retrieves or creates a new tracker for a routine.
@@ -75,9 +140,9 @@ func (r *backupStateRegistry) getTracker(routineName string) *routineTracker {
 	return r.trackers.LoadOrStore(routineName, newRoutineTracker())
 }
 
-// SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
+// synchroniseBackupHistory updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans provided routines in parallel.
-func (r *backupStateRegistry) SynchroniseBackupHistory(ctx context.Context, routines []*model.BackupRoutine) {
+func (r *backupStateRegistry) synchroniseBackupHistory(ctx context.Context, routines []*model.BackupRoutine) {
 	if len(routines) == 0 {
 		return
 	}

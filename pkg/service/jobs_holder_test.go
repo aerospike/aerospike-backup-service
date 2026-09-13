@@ -41,8 +41,8 @@ var _ restoreexecutor.RestoreHandler = (*mockRestoreHandler)(nil)
 
 func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	t.Run("concurrently modify job and succeed", func(t *testing.T) {
-		holder := NewRestoreJobsHolder()
-		jobID := holder.newJob("test-label", func() {})
+		holder := newStartedJobsHolder(t)
+		jobID := mustNewJob(t, holder, "test-label")
 
 		recordsPerGoroutine := uint64(10)
 		var wg sync.WaitGroup
@@ -96,8 +96,8 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	})
 
 	t.Run("job is canceled", func(t *testing.T) {
-		holder := NewRestoreJobsHolder()
-		jobID := holder.newJob("test-label", func() {})
+		holder := newStartedJobsHolder(t)
+		jobID := mustNewJob(t, holder, "test-label")
 		recordsPerGoroutine := uint64(10)
 
 		var wg sync.WaitGroup
@@ -133,8 +133,8 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	})
 
 	t.Run("job is failed", func(t *testing.T) {
-		holder := NewRestoreJobsHolder()
-		jobID := holder.newJob("test-label", func() {})
+		holder := newStartedJobsHolder(t)
+		jobID := mustNewJob(t, holder, "test-label")
 		failErr := errors.New("something went wrong")
 		recordsPerGoroutine := uint64(10)
 
@@ -171,8 +171,8 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	})
 
 	t.Run("job failed due to restore pre-requisites", func(t *testing.T) {
-		holder := NewRestoreJobsHolder()
-		jobID := holder.newJob("test-label", func() {})
+		holder := newStartedJobsHolder(t)
+		jobID := mustNewJob(t, holder, "test-label")
 		failErr := errors.Join(
 			ErrRestorePrerequisitesFailed,
 			errors.New("destination cluster does not have required namespace: ns1"),
@@ -190,12 +190,48 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	})
 }
 
-func TestRestoreJobsHolder_StatusCounts(t *testing.T) {
+func TestRestoreJobsHolder_RejectsJobsBeforeStart(t *testing.T) {
 	holder := NewRestoreJobsHolder()
-	jobRunning := holder.newJob("running", func() {})
-	jobDone := holder.newJob("done", func() {})
-	jobCanceled := holder.newJob("canceled", func() {})
-	jobFailed := holder.newJob("failed", func() {})
+
+	_, _, err := holder.newJob("too-early")
+
+	require.ErrorIs(t, err, ErrRestoreNotStarted)
+	assert.Empty(t, holder.StatusCounts())
+}
+
+func TestRestoreJobsHolder_JobsEndWithTheServiceContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	holder := NewRestoreJobsHolder()
+	holder.Start(ctx)
+
+	_, jobCtx, err := holder.newJob("running")
+	require.NoError(t, err)
+	require.NoError(t, jobCtx.Err())
+
+	cancel()
+
+	require.ErrorIs(t, jobCtx.Err(), context.Canceled, "a job must not outlive the service")
+}
+
+func TestRestoreJobsHolder_FinishReleasesJobContext(t *testing.T) {
+	holder := newStartedJobsHolder(t)
+	jobID, ctx, err := holder.newJob("done")
+	require.NoError(t, err)
+
+	holder.finishJob(jobID, nil, slog.New(slog.DiscardHandler))
+
+	require.ErrorIs(t, ctx.Err(), context.Canceled, "a finished job must not keep its context alive")
+	job, err := holder.getJob(jobID)
+	require.NoError(t, err)
+	assert.Equal(t, model.RestoreSuccess, job.getStatus(), "releasing the context does not change the outcome")
+}
+
+func TestRestoreJobsHolder_StatusCounts(t *testing.T) {
+	holder := newStartedJobsHolder(t)
+	jobRunning := mustNewJob(t, holder, "running")
+	jobDone := mustNewJob(t, holder, "done")
+	jobCanceled := mustNewJob(t, holder, "canceled")
+	jobFailed := mustNewJob(t, holder, "failed")
 
 	holder.finishJob(jobDone, nil, slog.New(slog.DiscardHandler))
 	holder.finishJob(jobCanceled, context.Canceled, slog.New(slog.DiscardHandler))
@@ -213,4 +249,23 @@ func TestRestoreJobsHolder_StatusCounts(t *testing.T) {
 	assert.Equal(t, 2, counts[model.RestoreSuccess])
 	assert.Equal(t, 1, counts[model.RestoreCanceled])
 	assert.Equal(t, 1, counts[model.RestoreFailure])
+}
+
+// newStartedJobsHolder returns a holder that accepts jobs for the duration of the test.
+func newStartedJobsHolder(t *testing.T) *RestoreJobsHolder {
+	t.Helper()
+
+	holder := NewRestoreJobsHolder()
+	holder.Start(t.Context())
+
+	return holder
+}
+
+func mustNewJob(t *testing.T, holder *RestoreJobsHolder, label string) model.RestoreJobID {
+	t.Helper()
+
+	id, _, err := holder.newJob(label)
+	require.NoError(t, err)
+
+	return id
 }

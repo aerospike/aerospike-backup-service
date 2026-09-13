@@ -47,10 +47,9 @@ func TestService_RestoreHandlers(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
 			mockManager := service.NewMockRestoreManager(ctrl)
-			mockManager.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(tt.jobID, nil)
+			mockManager.EXPECT().Restore(gomock.Any()).Return(tt.jobID, nil)
 
 			svc := &Service{
-				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
 			}
@@ -114,7 +113,7 @@ func TestService_restoreByPath(t *testing.T) {
 				BackupDataPath:           "test/path",
 			}),
 			setupMock: func(m *service.MockRestoreManager) {
-				m.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(model.RestoreJobID(0), errors.New("boom"))
+				m.EXPECT().Restore(gomock.Any()).Return(model.RestoreJobID(0), errors.New("boom"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedError:  "boom",
@@ -128,7 +127,7 @@ func TestService_restoreByPath(t *testing.T) {
 				BackupDataPath:           "test/path",
 			}),
 			setupMock: func(m *service.MockRestoreManager) {
-				m.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(model.RestoreJobID(42), nil)
+				m.EXPECT().Restore(gomock.Any()).Return(model.RestoreJobID(42), nil)
 			},
 			expectedStatus: http.StatusAccepted,
 		},
@@ -142,7 +141,6 @@ func TestService_restoreByPath(t *testing.T) {
 			tt.setupMock(mockManager)
 
 			svc := &Service{
-				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
 			}
@@ -207,7 +205,7 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 				Routine:                  "daily",
 			}),
 			setupMock: func(m *service.MockRestoreManager) {
-				m.EXPECT().RestoreByTime(gomock.Any(), gomock.Any()).Return(model.RestoreJobID(0), errors.New("boom"))
+				m.EXPECT().RestoreByTime(gomock.Any()).Return(model.RestoreJobID(0), errors.New("boom"))
 			},
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  "boom",
@@ -222,7 +220,7 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 				Routine:                  "daily",
 			}),
 			setupMock: func(m *service.MockRestoreManager) {
-				m.EXPECT().RestoreByTime(gomock.Any(), gomock.Any()).Return(model.RestoreJobID(7), nil)
+				m.EXPECT().RestoreByTime(gomock.Any()).Return(model.RestoreJobID(7), nil)
 			},
 			expectedStatus: http.StatusAccepted,
 		},
@@ -236,7 +234,6 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 			tt.setupMock(mockManager)
 
 			svc := &Service{
-				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
 			}

@@ -33,11 +33,34 @@ type Components struct {
 	Servers          []server.HTTP
 	MetricsCollector *prometheus.MetricsCollector
 	TLSProvider      servertls.TLSProvider
+
+	registry    service.BackupStateRegistry
+	restoreJobs *service.RestoreJobsHolder
+}
+
+// Run starts every component and serves until ctx is canceled or a listener stops. It is
+// the one place the run context is handed out: anything that needs to outlive a request —
+// a restore job, a history scan — descends from it here, and ends with it.
+func (c *Components) Run(ctx context.Context) error {
+	c.registry.Start(ctx)
+	c.restoreJobs.Start(ctx)
+	c.Scheduler.Start(ctx)
+	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
+	c.TLSProvider.Start(ctx)
+
+	err := server.Run(ctx, c.Servers)
+	c.Scheduler.Stop()
+
+	return err
 }
 
 // InitComponents builds the full object graph.
 // Components are created and wired but not started: no goroutines, listeners, or
-// watchers run here. The caller decides when to Start/Stop them.
+// watchers run here. The caller decides when to Start/Stop them, normally through Run.
+//
+// ctx bounds the reads that building needs — the configuration, TLS material, secrets.
+// Nothing keeps it: components that later run background work receive the run context
+// from Run, so a build context that is canceled or expired cannot leak into a running service.
 //
 // Collaborators (other components) are non-nil interfaces. If a collaborator is unused
 // or a feature is disabled, pass a no-op implementation, never nil, and do not add
@@ -99,7 +122,7 @@ func InitComponents(
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
 	configApplier := service.NewConfigApplier(backupScheduler, registry, config)
 
-	err = configApplier.ApplyNewConfig(ctx)
+	err = configApplier.ApplyNewConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
@@ -120,7 +143,6 @@ func InitComponents(
 
 	configRetriever := service.NewConfigRetriever(catalog, pathService, operations)
 	srv := handlers.NewService(
-		ctx,
 		config,
 		configApplier,
 		backupScheduler,
@@ -155,6 +177,8 @@ func InitComponents(
 		Servers:          servers,
 		MetricsCollector: metricsCollector,
 		TLSProvider:      tlsProvider,
+		registry:         registry,
+		restoreJobs:      restoreJobs,
 	}, nil
 }
 

@@ -14,7 +14,6 @@ func newTestServeMux(t *testing.T) *http.ServeMux {
 	t.Helper()
 
 	svc := handlers.NewService(
-		t.Context(),
 		model.NewConfig(),
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)

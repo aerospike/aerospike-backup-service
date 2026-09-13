@@ -75,7 +75,7 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 			Return(env.expectDefaultRestoreHandler(), nil),
 	)
 
-	jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
+	jobID, err := env.restoreManager.RestoreByTime(request)
 	require.NoError(t, err)
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 	require.NoError(t, err)
@@ -150,7 +150,7 @@ func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
 		Return(env.expectDefaultRestoreHandler(), nil).
 		Times(1)
 
-	jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
+	jobID, err := env.restoreManager.RestoreByTime(request)
 	require.NoError(t, err)
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 	require.NoError(t, err)
@@ -252,7 +252,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 					AnyTimes()
 			}
 
-			jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
+			jobID, err := env.restoreManager.RestoreByTime(request)
 			require.NoError(t, err)
 
 			jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -339,7 +339,7 @@ func TestRestoreByTime_CumulativeIncrementals(t *testing.T) {
 			Return(env.expectDefaultRestoreHandler(), nil),
 	)
 
-	jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
+	jobID, err := env.restoreManager.RestoreByTime(request)
 	require.NoError(t, err)
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 	require.NoError(t, err)
@@ -453,7 +453,7 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 
 			gomock.InOrder(call1, call2, call3)
 
-			jobID, err := env.restoreManager.RestoreByTime(t.Context(), request)
+			jobID, err := env.restoreManager.RestoreByTime(request)
 			require.NoError(t, err)
 			jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 			require.NoError(t, err)

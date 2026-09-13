@@ -91,33 +91,33 @@ func (mr *MockRestoreManagerMockRecorder) JobStatus(jobID any) *gomock.Call {
 }
 
 // Restore mocks base method.
-func (m *MockRestoreManager) Restore(ctx context.Context, request *model.RestoreRequest) (model.RestoreJobID, error) {
+func (m *MockRestoreManager) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Restore", ctx, request)
+	ret := m.ctrl.Call(m, "Restore", request)
 	ret0, _ := ret[0].(model.RestoreJobID)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Restore indicates an expected call of Restore.
-func (mr *MockRestoreManagerMockRecorder) Restore(ctx, request any) *gomock.Call {
+func (mr *MockRestoreManagerMockRecorder) Restore(request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockRestoreManager)(nil).Restore), ctx, request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockRestoreManager)(nil).Restore), request)
 }
 
 // RestoreByTime mocks base method.
-func (m *MockRestoreManager) RestoreByTime(ctx context.Context, request *model.RestoreTimestampRequest) (model.RestoreJobID, error) {
+func (m *MockRestoreManager) RestoreByTime(request *model.RestoreTimestampRequest) (model.RestoreJobID, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestoreByTime", ctx, request)
+	ret := m.ctrl.Call(m, "RestoreByTime", request)
 	ret0, _ := ret[0].(model.RestoreJobID)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RestoreByTime indicates an expected call of RestoreByTime.
-func (mr *MockRestoreManagerMockRecorder) RestoreByTime(ctx, request any) *gomock.Call {
+func (mr *MockRestoreManagerMockRecorder) RestoreByTime(request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreByTime", reflect.TypeOf((*MockRestoreManager)(nil).RestoreByTime), ctx, request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreByTime", reflect.TypeOf((*MockRestoreManager)(nil).RestoreByTime), request)
 }
 
 // MockBackupCatalog is a mock of BackupCatalog interface.
@@ -378,16 +378,28 @@ func (mr *MockBackupStateRegistryMockRecorder) GetRunningState() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRunningState", reflect.TypeOf((*MockBackupStateRegistry)(nil).GetRunningState))
 }
 
-// SynchroniseBackupHistory mocks base method.
-func (m *MockBackupStateRegistry) SynchroniseBackupHistory(ctx context.Context, routines []*model.BackupRoutine) {
+// RequestHistorySync mocks base method.
+func (m *MockBackupStateRegistry) RequestHistorySync(routines []*model.BackupRoutine) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SynchroniseBackupHistory", ctx, routines)
+	m.ctrl.Call(m, "RequestHistorySync", routines)
 }
 
-// SynchroniseBackupHistory indicates an expected call of SynchroniseBackupHistory.
-func (mr *MockBackupStateRegistryMockRecorder) SynchroniseBackupHistory(ctx, routines any) *gomock.Call {
+// RequestHistorySync indicates an expected call of RequestHistorySync.
+func (mr *MockBackupStateRegistryMockRecorder) RequestHistorySync(routines any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SynchroniseBackupHistory", reflect.TypeOf((*MockBackupStateRegistry)(nil).SynchroniseBackupHistory), ctx, routines)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestHistorySync", reflect.TypeOf((*MockBackupStateRegistry)(nil).RequestHistorySync), routines)
+}
+
+// Start mocks base method.
+func (m *MockBackupStateRegistry) Start(ctx context.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start", ctx)
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockBackupStateRegistryMockRecorder) Start(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockBackupStateRegistry)(nil).Start), ctx)
 }
 
 // MockBackupRetentionManager is a mock of BackupRetentionManager interface.
@@ -1000,17 +1012,17 @@ func (m *MockConfigApplier) EXPECT() *MockConfigApplierMockRecorder {
 }
 
 // ApplyNewConfig mocks base method.
-func (m *MockConfigApplier) ApplyNewConfig(ctx context.Context) error {
+func (m *MockConfigApplier) ApplyNewConfig() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyNewConfig", ctx)
+	ret := m.ctrl.Call(m, "ApplyNewConfig")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ApplyNewConfig indicates an expected call of ApplyNewConfig.
-func (mr *MockConfigApplierMockRecorder) ApplyNewConfig(ctx any) *gomock.Call {
+func (mr *MockConfigApplierMockRecorder) ApplyNewConfig() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyNewConfig", reflect.TypeOf((*MockConfigApplier)(nil).ApplyNewConfig), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyNewConfig", reflect.TypeOf((*MockConfigApplier)(nil).ApplyNewConfig))
 }
 
 // MockConfigRetriever is a mock of ConfigRetriever interface.

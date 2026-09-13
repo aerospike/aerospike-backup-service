@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -21,7 +20,7 @@ func TestConfigApplier_ApplyNewConfig_NoInvalidations(t *testing.T) {
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig(t.Context()))
+	require.NoError(t, applier.ApplyNewConfig())
 }
 
 func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T) {
@@ -41,10 +40,8 @@ func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T
 	scheduler.EXPECT().DeleteJob(jobKey("routine-1", model.BackupTypeIncremental)).Return(nil)
 	scheduler.EXPECT().ScheduleJob(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
-	syncDone := make(chan struct{})
 	registry := NewMockBackupStateRegistry(ctrl)
-	registry.EXPECT().SynchroniseBackupHistory(gomock.Any(), gomock.Any()).
-		Do(func(context.Context, []*model.BackupRoutine) { close(syncDone) })
+	registry.EXPECT().RequestHistorySync(gomock.Len(1))
 
 	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
@@ -52,8 +49,7 @@ func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig(t.Context()))
-	waitAsyncDone(t, syncDone, "backup history sync")
+	require.NoError(t, applier.ApplyNewConfig())
 }
 
 func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
@@ -66,10 +62,8 @@ func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 	scheduler.EXPECT().DeleteJob(jobKey("removed-routine", model.BackupTypeFull)).Return(nil)
 	scheduler.EXPECT().DeleteJob(jobKey("removed-routine", model.BackupTypeIncremental)).Return(nil)
 
-	syncDone := make(chan struct{})
 	registry := NewMockBackupStateRegistry(ctrl)
-	registry.EXPECT().SynchroniseBackupHistory(gomock.Any(), gomock.Len(0)).
-		Do(func(context.Context, []*model.BackupRoutine) { close(syncDone) })
+	registry.EXPECT().RequestHistorySync(gomock.Len(0))
 
 	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
@@ -77,8 +71,7 @@ func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig(t.Context()))
-	waitAsyncDone(t, syncDone, "backup history sync")
+	require.NoError(t, applier.ApplyNewConfig())
 }
 
 func TestConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
@@ -101,7 +94,7 @@ func TestConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
 		cfg,
 	)
 
-	err := applier.ApplyNewConfig(t.Context())
+	err := applier.ApplyNewConfig()
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed to schedule periodic backups")
 }
@@ -128,7 +121,7 @@ func TestConfigApplier_ApplyNewConfig_ScheduleJobError(t *testing.T) {
 		cfg,
 	)
 
-	err := applier.ApplyNewConfig(t.Context())
+	err := applier.ApplyNewConfig()
 	require.Error(t, err)
 	require.ErrorIs(t, err, scheduleErr)
 }

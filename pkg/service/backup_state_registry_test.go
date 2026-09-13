@@ -48,7 +48,7 @@ func TestHistoryScan(t *testing.T) {
 	backupTime := model.NewBackupTime(time.Now(), time.Now().Add(-1*time.Hour))
 	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(backupTime, nil).Times(1)
 	registry := newTestBackupStateRegistry(historyMgr, nil)
-	registry.SynchroniseBackupHistory(t.Context(), []*model.BackupRoutine{{Name: routineName}})
+	registry.synchroniseBackupHistory(t.Context(), []*model.BackupRoutine{{Name: routineName}})
 
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
@@ -68,6 +68,58 @@ func TestHistoryScan(t *testing.T) {
 	assert.Equal(t, uint64(100), stat.Full.TotalRecords)
 	assert.Nil(t, stat.Incremental)
 	assert.Equal(t, stat.LastRunTime, backupTime)
+}
+
+func TestRequestHistorySync_WaitsForStart(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	historyMgr := NewMockHistoryManager(ctrl)
+	scanned := make(chan struct{}, 1)
+	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(context.Context, *model.BackupRoutine) (*model.BackupTime, error) {
+			scanned <- struct{}{}
+			return model.NewNoBackupTime(), nil
+		}).Times(1)
+	registry := newTestBackupStateRegistry(historyMgr, nil)
+
+	// Before Start there is no context to scan on, so a request only queues.
+	registry.RequestHistorySync([]*model.BackupRoutine{{Name: routineName}})
+	select {
+	case <-scanned:
+		t.Fatal("history was scanned before Start")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	registry.Start(t.Context())
+	waitAsyncDone(t, scanned, "history scan after Start")
+}
+
+func TestRequestHistorySync_CoalescesRequestsPerRoutine(t *testing.T) {
+	registry := newTestBackupStateRegistry(nil, nil)
+
+	stale := &model.BackupRoutine{Name: routineName, IntervalCron: "@daily"}
+	fresh := &model.BackupRoutine{Name: routineName, IntervalCron: "@hourly"}
+	registry.RequestHistorySync([]*model.BackupRoutine{stale, {Name: "other"}})
+	registry.RequestHistorySync([]*model.BackupRoutine{fresh})
+
+	pending := registry.takePending()
+	require.Len(t, pending, 2)
+	assert.Equal(t, "other", pending[0].Name)
+	assert.Same(t, fresh, pending[1], "the latest routine definition wins")
+	assert.Empty(t, registry.takePending(), "taking drains the queue")
+}
+
+func TestRequestHistorySync_EmptyRequestQueuesNothing(t *testing.T) {
+	registry := newTestBackupStateRegistry(nil, nil)
+
+	registry.RequestHistorySync(nil)
+
+	assert.Empty(t, registry.takePending())
+	select {
+	case <-registry.signal:
+		t.Fatal("an empty request must not signal a scan")
+	default:
+	}
 }
 
 func TestFinishFull(t *testing.T) {
