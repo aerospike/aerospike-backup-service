@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 const clusterTLSProtocol12 = "TLSv1.2"
@@ -40,7 +41,7 @@ type TLS struct {
 	// Passphrase for an encrypted TLS key file.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	KeyfilePassword secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
+	KeyfilePassword redact.Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
 }
 
 func (t *TLS) Validate(opts ValidationOptions) error {

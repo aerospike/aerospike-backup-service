@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -195,7 +196,7 @@ func TestNewTLSConfig(t *testing.T) {
 					Certfile: serverCertFile,
 					Keyfile:  encKeyFile,
 				},
-				KeyfilePassword: model.Secret(encKeyPassword),
+				KeyfilePassword: redact.Secret(encKeyPassword),
 			})
 			require.NoError(t, err)
 			assert.Len(t, cfg.Certificates, 1, "Certificate should be loaded with correct password")
@@ -208,7 +209,7 @@ func TestNewTLSConfig(t *testing.T) {
 					Certfile: serverCertFile,
 					Keyfile:  encKeyFile,
 				},
-				KeyfilePassword: model.Secret(wrongPass),
+				KeyfilePassword: redact.Secret(wrongPass),
 			})
 			require.Error(t, err, "Should fail with wrong password")
 		})

@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 // AzureStorage represents the configuration for Azure Blob storage.
@@ -24,19 +25,19 @@ type AzureStorage struct {
 	// AccountKey is the Azure storage account key for Shared Key authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	AccountKey secret `yaml:"account-key,omitempty" json:"account-key,omitempty" format:"password" extensions:"x-nullable"`
+	AccountKey redact.Secret `yaml:"account-key,omitempty" json:"account-key,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// TenantID is the Azure Active Directory tenant ID for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	TenantID secret `yaml:"tenant-id,omitempty" json:"tenant-id,omitempty" format:"password" extensions:"x-nullable"`
+	TenantID redact.Secret `yaml:"tenant-id,omitempty" json:"tenant-id,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// ClientID is the Azure Active Directory client ID for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	ClientID secret `yaml:"client-id,omitempty" json:"client-id,omitempty" format:"password" extensions:"x-nullable"`
+	ClientID redact.Secret `yaml:"client-id,omitempty" json:"client-id,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// ClientSecret is the Azure Active Directory client secret for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	ClientSecret secret `yaml:"client-secret,omitempty" json:"client-secret,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
+	ClientSecret redact.Secret `yaml:"client-secret,omitempty" json:"client-secret,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// The minimum size in bytes of individual Azure Blob chunks.
 	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" minimum:"1048576"`
 	// StorageClass defines the storage tier for data and metadata objects.

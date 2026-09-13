@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,7 +30,7 @@ func TestAzureStorage_ConnectivitySuccess(t *testing.T) {
 		ContainerName: "test-container",
 		Auth: &model.AzureSharedKeyAuth{
 			AccountName: "testaccount",
-			AccountKey:  model.Secret(key),
+			AccountKey:  redact.Secret(key),
 		},
 	})
 	require.NoError(t, err)
@@ -51,7 +52,7 @@ func TestAzureStorage_ConnectivityReadOnly(t *testing.T) {
 		ContainerName: "test-container",
 		Auth: &model.AzureSharedKeyAuth{
 			AccountName: "testaccount",
-			AccountKey:  model.Secret(key),
+			AccountKey:  redact.Secret(key),
 		},
 	})
 	require.NoError(t, err)
@@ -75,7 +76,7 @@ func TestAzureStorage_ConnectivityFailure(t *testing.T) {
 		ContainerName: "test-container",
 		Auth: &model.AzureSharedKeyAuth{
 			AccountName: "testaccount",
-			AccountKey:  model.Secret(key),
+			AccountKey:  redact.Secret(key),
 		},
 	})
 	require.Error(t, err)

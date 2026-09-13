@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	redact "github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -81,7 +82,7 @@ func (m *MockResolver) EXPECT() *MockResolverMockRecorder {
 }
 
 // Resolve mocks base method.
-func (m *MockResolver) Resolve(ctx context.Context, agent *model.SecretAgent, value model.Secret) (string, error) {
+func (m *MockResolver) Resolve(ctx context.Context, agent *model.SecretAgent, value redact.Secret) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Resolve", ctx, agent, value)
 	ret0, _ := ret[0].(string)
