@@ -1,6 +1,10 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
+)
 
 // AzureStorage represents the configuration for Azure Blob storage.
 type AzureStorage struct {
@@ -40,7 +44,7 @@ type AzureSharedKeyAuth struct {
 	// AccountName is the name of the Azure Storage account.
 	AccountName string
 	// AccountKey is the access key for the Azure Storage account.
-	AccountKey Secret
+	AccountKey redact.Secret
 }
 
 func (*AzureSharedKeyAuth) azureAuth() {}
@@ -48,11 +52,11 @@ func (*AzureSharedKeyAuth) azureAuth() {}
 // AzureADAuth represents Azure Active Directory authentication for Azure Blob storage.
 type AzureADAuth struct {
 	// TenantID is the Azure AD tenant (directory) ID.
-	TenantID Secret
+	TenantID redact.Secret
 	// ClientID is the application (client) ID registered in Azure AD.
-	ClientID Secret
+	ClientID redact.Secret
 	// ClientSecret is the secret key for the application registered in Azure AD.
-	ClientSecret Secret
+	ClientSecret redact.Secret
 }
 
 func (*AzureADAuth) azureAuth() {}

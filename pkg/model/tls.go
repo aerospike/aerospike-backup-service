@@ -1,5 +1,7 @@
 package model
 
+import "github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
+
 // TLS represents the Aerospike cluster TLS configuration options.
 type TLS struct {
 	ClientTLS
@@ -15,7 +17,7 @@ type TLS struct {
 	// reference (see dto.TLS.KeyfilePassword) - callers must resolve it via secrets.Resolver
 	// before use. tlsconfig.NewTLSConfig applies no further processing: it uses this value
 	// verbatim as the decryption password.
-	KeyfilePassword Secret
+	KeyfilePassword redact.Secret
 }
 
 // Hash returns a unique identifier for the TLS configuration.

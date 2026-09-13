@@ -1,13 +1,17 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
+)
 
 type GcpStorage struct {
 	// KeyFile is the path to the JSON file containing the Google Cloud service account key.
 	// This file is used for authentication with GCP services.
 	KeyFile string
 	// KeyJSON is the contents of the Google Cloud service account key.
-	KeyJSON Secret
+	KeyJSON redact.Secret
 	// BucketName is the name of the GCP bucket where backups will be stored.
 	BucketName string
 	// Path is the root directory within the GCS bucket where backups will be stored.

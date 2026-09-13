@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -22,7 +23,7 @@ func TestClusterTLSResolverResolvesThroughTheClusterAgent(t *testing.T) {
 	agent := &model.SecretAgent{Address: "127.0.0.1"}
 	resolver := NewMockResolver(ctrl)
 	resolver.EXPECT().
-		Resolve(gomock.Any(), agent, model.Secret("secrets:agent:key")).
+		Resolve(gomock.Any(), agent, redact.Secret("secrets:agent:key")).
 		Return("real-password", nil)
 
 	cluster := clusterWithTLS(&model.TLS{
@@ -33,14 +34,14 @@ func TestClusterTLSResolverResolvesThroughTheClusterAgent(t *testing.T) {
 
 	result, err := NewClusterTLSResolver(resolver).Resolve(t.Context(), cluster)
 	require.NoError(t, err)
-	require.Equal(t, model.Secret("real-password"), result.KeyfilePassword)
+	require.Equal(t, redact.Secret("real-password"), result.KeyfilePassword)
 
 	// Every other field survives resolution, and the cluster itself is untouched.
 	require.Equal(t, "ca.pem", result.CAFile)
 	require.Equal(t, "cert.pem", result.Certfile)
 	require.Equal(t, "key.pem", result.Keyfile)
 	require.Equal(t, "TLSv1.2", result.Protocols)
-	require.Equal(t, model.Secret("secrets:agent:key"), cluster.TLS.KeyfilePassword)
+	require.Equal(t, redact.Secret("secrets:agent:key"), cluster.TLS.KeyfilePassword)
 }
 
 // TestClusterTLSResolverSkipsResolverWhenNothingToResolve also pins the contract

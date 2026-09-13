@@ -1,6 +1,10 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
+)
 
 type S3Storage struct {
 	// Path is the root directory within the S3 bucket where backups will be stored.
@@ -28,8 +32,8 @@ type S3Storage struct {
 }
 
 type S3Authentication struct {
-	KeyIDSecret     Secret
-	AccessKeySecret Secret
+	KeyIDSecret     redact.Secret
+	AccessKeySecret redact.Secret
 	SecretAgent     *SecretAgent
 }
 

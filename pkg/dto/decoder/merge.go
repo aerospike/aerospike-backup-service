@@ -3,12 +3,14 @@ package decoder
 import (
 	"errors"
 	"reflect"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
-// MergeSecrets mutates incoming in place, replacing redactedSecret sentinel values
+// MergeSecrets mutates incoming in place, replacing redact.Placeholder sentinel values
 // with the corresponding Secret values from existing.
 //
-// It walks incoming recursively and, for every Secret field equal to redactedSecret,
+// It walks incoming recursively and, for every Secret field equal to redact.Placeholder,
 // copies the value from the matching field in existing.
 //
 // Returns an error if a redacted Secret is found in incoming but there is no
@@ -186,7 +188,7 @@ func mergeValue(incoming, existing reflect.Value) error {
 }
 
 func setSecretValue(incoming reflect.Value, existing reflect.Value) error {
-	inSecret, ok := incoming.Interface().(Secret)
+	inSecret, ok := incoming.Interface().(redact.Secret)
 	if !ok || !inSecret.IsRedacted() {
 		return nil
 	}
@@ -199,7 +201,7 @@ func setSecretValue(incoming reflect.Value, existing reflect.Value) error {
 		return errors.New("cannot use redacted secret \"[secret]\" for a new entity with no existing value")
 	}
 
-	existingSecret := existing.Interface().(Secret)
+	existingSecret := existing.Interface().(redact.Secret)
 	if existingSecret.IsRedacted() {
 		return errors.New("cannot use redacted secret \"[secret]\" for a new entity with no existing value")
 	}

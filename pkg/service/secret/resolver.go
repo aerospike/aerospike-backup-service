@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/aerospike/backup-go"
 )
 
@@ -14,7 +15,7 @@ type Resolver interface {
 	// Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
 	// If the secret agent is nil, the literal value is returned. The result is a revealed
 	// credential: hand it straight to the SDK and never store it back on a model struct.
-	Resolve(ctx context.Context, agent *model.SecretAgent, value model.Secret) (string, error)
+	Resolve(ctx context.Context, agent *model.SecretAgent, value redact.Secret) (string, error)
 }
 
 type resolver struct{}
@@ -24,7 +25,7 @@ func NewResolver() Resolver {
 }
 
 // Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
-func (m *resolver) Resolve(ctx context.Context, agent *model.SecretAgent, value model.Secret) (string, error) {
+func (m *resolver) Resolve(ctx context.Context, agent *model.SecretAgent, value redact.Secret) (string, error) {
 	if agent == nil {
 		return value.Reveal(), nil
 	}

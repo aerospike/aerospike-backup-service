@@ -3,32 +3,32 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSecret_Validate_NilAgentWithPrefix(t *testing.T) {
-	err := secret("secrets:asbackup:psw").Validate(false)
+	err := redact.Secret("secrets:asbackup:psw").Validate(false)
 	require.Error(t, err)
-	require.ErrorIs(t, err, decoder.ErrSecretValidation)
+	require.ErrorIs(t, err, redact.ErrSecretValidation)
 	require.ErrorContains(t, err, "secrets:asbackup:psw")
 	require.ErrorContains(t, err, "secret agent")
 }
 
 func TestSecret_Validate_ValidReference(t *testing.T) {
-	err := secret("secrets:resource:key").Validate(true)
+	err := redact.Secret("secrets:resource:key").Validate(true)
 	require.NoError(t, err)
 }
 
 func TestSecret_Validate_PlainValue(t *testing.T) {
-	err := secret("plain-password").Validate(false)
+	err := redact.Secret("plain-password").Validate(false)
 	require.NoError(t, err)
 }
 
 func TestSecret_Validate_MalformedReference(t *testing.T) {
-	err := secret("secrets:foo").Validate(true)
+	err := redact.Secret("secrets:foo").Validate(true)
 	require.Error(t, err)
-	require.ErrorIs(t, err, decoder.ErrSecretValidation)
+	require.ErrorIs(t, err, redact.ErrSecretValidation)
 	require.ErrorContains(t, err, "secrets:foo")
 	require.ErrorContains(t, err, "secrets:<resource>:<key>")
 }

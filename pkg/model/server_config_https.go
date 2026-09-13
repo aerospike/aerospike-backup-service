@@ -3,6 +3,8 @@ package model
 import (
 	"crypto/tls"
 	"fmt"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 // TLSClientAuth identifies how the HTTPS listener authenticates client certificates.
@@ -52,7 +54,7 @@ type ServerConfigHTTPS struct {
 	KeyFile string
 	// KeyFilePassword is the passphrase for an encrypted server private key.
 	// This may be a literal value or a Secret Agent reference.
-	KeyFilePassword Secret
+	KeyFilePassword redact.Secret
 	// SecretAgent is used to resolve KeyFilePassword when it is a Secret Agent reference.
 	SecretAgent *SecretAgent
 	// MinVersion is the minimum accepted TLS protocol version.

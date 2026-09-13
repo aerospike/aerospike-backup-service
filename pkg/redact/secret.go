@@ -1,4 +1,6 @@
-package decoder
+// Package redact holds the Secret type: a string that redacts itself in logs, fmt output
+// and API responses, and is read only through Reveal().
+package redact
 
 import (
 	"errors"
@@ -9,8 +11,8 @@ import (
 )
 
 const (
-	// redactedSecret is the placeholder emitted for literal secret values in API responses and logs.
-	redactedSecret  = "[secret]"
+	// Placeholder is emitted for literal secret values in API responses and logs.
+	Placeholder     = "[secret]"
 	secretRefPrefix = "secrets:"
 )
 
@@ -68,7 +70,7 @@ func (s Secret) DisplayString() string {
 		return string(s)
 	}
 
-	return redactedSecret
+	return Placeholder
 }
 
 // String implements fmt.Stringer for "%s" and "%v".
@@ -79,14 +81,14 @@ func (s Secret) String() string {
 // GoString redacts fmt "%#v" output used in debug prints and some test failure messages.
 func (s Secret) GoString() string {
 	if s == "" {
-		return "decoder.Secret(\"\")"
+		return "redact.Secret(\"\")"
 	}
 
 	if s.isRef() {
-		return fmt.Sprintf("decoder.Secret(%q)", string(s))
+		return fmt.Sprintf("redact.Secret(%q)", string(s))
 	}
 
-	return `decoder.Secret("[secret]")`
+	return `redact.Secret("[secret]")`
 }
 
 // LogValue implements slog.LogValuer for direct slog.Any("password", secret) calls.
@@ -95,7 +97,7 @@ func (s Secret) LogValue() slog.Value {
 }
 
 func (s Secret) IsRedacted() bool {
-	return s == redactedSecret
+	return s == Placeholder
 }
 
 // Reveal returns the literal value. It is the only sanctioned way to read a secret; grep

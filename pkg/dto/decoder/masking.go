@@ -5,10 +5,12 @@ import (
 	"reflect"
 	"slices"
 	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 var (
-	secretType      = reflect.TypeFor[Secret]()
+	secretType      = reflect.TypeFor[redact.Secret]()
 	timeType        = reflect.TypeFor[time.Time]()
 	timePtrType     = reflect.PointerTo(timeType)
 	locationType    = reflect.TypeFor[time.Location]()
@@ -23,7 +25,7 @@ var (
 	}
 )
 
-// RedactSecrets returns a deep copy of v with all Secret-typed values replaced by redactedSecret.
+// RedactSecrets returns a deep copy of v with all Secret-typed values replaced by redact.Placeholder.
 func RedactSecrets(v any) any {
 	if v == nil {
 		return nil
@@ -46,12 +48,12 @@ func redactValue(v reflect.Value) reflect.Value {
 	}
 
 	if v.Type() == secretType {
-		s, ok := v.Interface().(Secret)
+		s, ok := v.Interface().(redact.Secret)
 		if !ok {
 			return v
 		}
 
-		return reflect.ValueOf(Secret(s.DisplayString()))
+		return reflect.ValueOf(redact.Secret(s.DisplayString()))
 	}
 
 	if shouldSkipDeepCopy(v) {
