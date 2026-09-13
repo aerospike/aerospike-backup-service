@@ -81,6 +81,12 @@ linters:
           msg: use decoder.Marshal instead
         - pattern: '^yaml\.NewDecoder$'
           msg: use decoder.Deserialize instead
+        - pattern: '^time\.Sleep$'
+          msg: 'not cancellable; use select { case <-time.After(d): case <-ctx.Done(): }'
+        - pattern: '^context\.Background$'
+          msg: pass the caller's context, or context.WithoutCancel(ctx) for cleanup after cancellation
+        - pattern: '^context\.TODO$'
+          msg: pass the caller's context, or context.WithoutCancel(ctx) for cleanup after cancellation
     nlreturn:
       block-size: 10
     misspell:
@@ -122,6 +128,11 @@ linters:
       - linters:
           - forbidigo
         path: pkg/dto/decoder/
+      # main owns the root context: signal.NotifyContext(context.Background(), …)
+      # is where cancellation starts, so it is the one place that may create one.
+      - linters:
+          - forbidigo
+        path: cmd/backup/main\.go
       - linters:
           - forbidigo
         path: build/
@@ -140,6 +151,8 @@ linters:
           - unparam
         path: _test\.go
     paths:
+      # zz_*_test.go are throwaway audit scratch files, not part of the suite.
+      - zz_.*_test\.go$
       - examples
       - modules
       - docs
@@ -155,6 +168,7 @@ formatters:
   exclusions:
     generated: lax
     paths:
+      - zz_.*_test\.go$
       - examples
       - modules
       - docs

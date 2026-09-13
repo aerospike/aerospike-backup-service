@@ -327,15 +327,15 @@ func (mr *MockBackupStateRegistryMockRecorder) BackupStarted(routineName, backup
 }
 
 // BackupSucceeded mocks base method.
-func (m *MockBackupStateRegistry) BackupSucceeded(routine *model.BackupRoutine, backupType model.BackupType) {
+func (m *MockBackupStateRegistry) BackupSucceeded(ctx context.Context, routine *model.BackupRoutine, backupType model.BackupType) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "BackupSucceeded", routine, backupType)
+	m.ctrl.Call(m, "BackupSucceeded", ctx, routine, backupType)
 }
 
 // BackupSucceeded indicates an expected call of BackupSucceeded.
-func (mr *MockBackupStateRegistryMockRecorder) BackupSucceeded(routine, backupType any) *gomock.Call {
+func (mr *MockBackupStateRegistryMockRecorder) BackupSucceeded(ctx, routine, backupType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackupSucceeded", reflect.TypeOf((*MockBackupStateRegistry)(nil).BackupSucceeded), routine, backupType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackupSucceeded", reflect.TypeOf((*MockBackupStateRegistry)(nil).BackupSucceeded), ctx, routine, backupType)
 }
 
 // Cancel mocks base method.

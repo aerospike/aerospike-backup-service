@@ -55,7 +55,7 @@ func (h *backupCompletionHandler) OnSuccess(
 	timestamp time.Time,
 	logger *slog.Logger,
 ) {
-	go h.registry.BackupSucceeded(routine, backupType)
+	go h.registry.BackupSucceeded(ctx, routine, backupType)
 
 	if backupType != model.BackupTypeFull {
 		return

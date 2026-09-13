@@ -1,6 +1,7 @@
 package try
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -22,7 +23,7 @@ var testRetryPolicy = models.RetryPolicy{
 func Test_timer(t *testing.T) {
 	counterLock := sync.Mutex{}
 	retryCounter := 2
-	err := Retry(testRetryPolicy, slog.Default(), func() error {
+	err := Retry(t.Context(), testRetryPolicy, slog.Default(), func() error {
 		counterLock.Lock()
 		defer counterLock.Unlock()
 		if retryCounter > 0 {
@@ -42,7 +43,7 @@ func Test_timer_expires(t *testing.T) {
 	counterLock := sync.Mutex{}
 	retryCounter := 0
 	const attempts = 3
-	_ = Retry(testRetryPolicy, slog.Default(), func() error {
+	_ = Retry(t.Context(), testRetryPolicy, slog.Default(), func() error {
 		counterLock.Lock()
 		defer counterLock.Unlock()
 		retryCounter++
@@ -66,8 +67,8 @@ func Test_timerRunTwice(t *testing.T) {
 		}
 		return nil
 	}
-	_ = Retry(testRetryPolicy, slog.Default(), f, func() {})
-	_ = Retry(testRetryPolicy, slog.Default(), f, func() {})
+	_ = Retry(t.Context(), testRetryPolicy, slog.Default(), f, func() {})
+	_ = Retry(t.Context(), testRetryPolicy, slog.Default(), f, func() {})
 
 	counterLock.Lock()
 	defer counterLock.Unlock()
@@ -78,7 +79,7 @@ func Test_retry_attempts_expected_count(t *testing.T) {
 	attempts := 0
 	expectedAttempts := 3 // MaxRetries=2 + 1 initial attempt
 
-	err := Retry(testRetryPolicy, slog.Default(), func() error {
+	err := Retry(t.Context(), testRetryPolicy, slog.Default(), func() error {
 		attempts++
 		return errors.New("still failing")
 	}, func() {})
@@ -97,7 +98,7 @@ func Test_non_retryable_error_stops_retries(t *testing.T) {
 		Multiplier:  1,
 	}
 
-	err := Retry(policy, slog.Default(), func() error {
+	err := Retry(t.Context(), policy, slog.Default(), func() error {
 		attempts++
 		return fmt.Errorf("wrapped: %w", asinfo.ErrNoNode)
 	}, func() { onRetryCalls++ })
@@ -106,4 +107,26 @@ func Test_non_retryable_error_stops_retries(t *testing.T) {
 	require.ErrorIs(t, err, asinfo.ErrNoNode)
 	require.Equal(t, 1, attempts, "should attempt only once for non-retryable error")
 	require.Equal(t, 0, onRetryCalls, "onRetry should not be called for non-retryable error")
+}
+
+func Test_canceled_context_interrupts_backoff(t *testing.T) {
+	policy := models.RetryPolicy{
+		MaxRetries:  5,
+		BaseTimeout: time.Minute,
+		Multiplier:  1,
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	attempts := 0
+	start := time.Now()
+
+	err := Retry(ctx, policy, slog.Default(), func() error {
+		attempts++
+		cancel()
+		return errors.New("mock error")
+	}, func() {})
+
+	require.ErrorIs(t, err, context.Canceled)
+	require.ErrorContains(t, err, "mock error")
+	require.Equal(t, 1, attempts, "no attempt should follow a canceled context")
+	require.Less(t, time.Since(start), policy.BaseTimeout, "back-off outlived the context")
 }

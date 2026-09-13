@@ -44,7 +44,7 @@ func newRetryableBackupHandler(
 
 	// Helper to retry onSuccess only
 	retryOnSuccess := func(handler backupexecutor.BackupHandler) error {
-		err := try.Retry(policy, logger.With(slog.String("label", "write metadata")), func() error {
+		err := try.Retry(ctx, policy, logger.With(slog.String("label", "write metadata")), func() error {
 			return callbacks.OnSuccess(ctx, handler.GetStats())
 		}, func() {})
 		if err != nil {
@@ -75,7 +75,8 @@ func newRetryableBackupHandler(
 
 	// Start the backup process with retries
 	go func() {
-		h.errCh <- try.Retry(policy, logger.With(slog.String("label", "backup")), processBackup, callbacks.OnRetry)
+		h.errCh <- try.Retry(ctxWithCancel, policy,
+			logger.With(slog.String("label", "backup")), processBackup, callbacks.OnRetry)
 	}()
 
 	return h
