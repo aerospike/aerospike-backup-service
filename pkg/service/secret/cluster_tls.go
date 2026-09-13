@@ -54,7 +54,7 @@ func (r *clusterTLSResolver) Resolve(
 	if err != nil {
 		return model.TLS{}, fmt.Errorf("failed to resolve TLS key-file-password: %w", err)
 	}
-	tlsConfig.KeyfilePassword = password
+	tlsConfig.KeyfilePassword = model.Secret(password)
 
 	return tlsConfig, nil
 }

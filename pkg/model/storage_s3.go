@@ -28,8 +28,8 @@ type S3Storage struct {
 }
 
 type S3Authentication struct {
-	KeyIDSecret     string
-	AccessKeySecret string
+	KeyIDSecret     Secret
+	AccessKeySecret Secret
 	SecretAgent     *SecretAgent
 }
 

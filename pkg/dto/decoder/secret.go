@@ -3,6 +3,7 @@ package decoder
 import (
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"log/slog"
 	"strings"
 )
@@ -95,4 +96,21 @@ func (s Secret) LogValue() slog.Value {
 
 func (s Secret) IsRedacted() bool {
 	return s == redactedSecret
+}
+
+// Reveal returns the literal value. It is the only sanctioned way to read a secret; grep
+// for it to find every place a credential leaves the type. Do not use a plain string
+// conversion, which is invisible to such a search.
+func (s Secret) Reveal() string {
+	return string(s)
+}
+
+// Hash returns a hash of the literal value. Use it wherever a configuration hash must
+// change when the secret changes: String() and %v render the redaction placeholder, so
+// hashing the formatted value would make all literal secrets collide.
+func (s Secret) Hash() uint64 {
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(s))
+
+	return h.Sum64()
 }

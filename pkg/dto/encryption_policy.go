@@ -82,7 +82,7 @@ func (p *EncryptionPolicy) ToModel() *model.EncryptionPolicy {
 		Mode:      p.Mode.ToModel(),
 		KeyFile:   string(p.KeyFile),
 		KeyEnv:    p.KeyEnv,
-		KeySecret: string(p.KeySecret),
+		KeySecret: p.KeySecret,
 	}
 }
 
@@ -99,5 +99,5 @@ func (p *EncryptionPolicy) fromModel(m *model.EncryptionPolicy) {
 	p.Mode = NewEncryptionModeFromModel(m.Mode)
 	p.KeyFile = Path(m.KeyFile)
 	p.KeyEnv = m.KeyEnv
-	p.KeySecret = secret(m.KeySecret)
+	p.KeySecret = m.KeySecret
 }

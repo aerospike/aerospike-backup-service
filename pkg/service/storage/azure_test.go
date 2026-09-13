@@ -29,7 +29,7 @@ func TestAzureStorage_ConnectivitySuccess(t *testing.T) {
 		ContainerName: "test-container",
 		Auth: &model.AzureSharedKeyAuth{
 			AccountName: "testaccount",
-			AccountKey:  key,
+			AccountKey:  model.Secret(key),
 		},
 	})
 	require.NoError(t, err)
@@ -51,7 +51,7 @@ func TestAzureStorage_ConnectivityReadOnly(t *testing.T) {
 		ContainerName: "test-container",
 		Auth: &model.AzureSharedKeyAuth{
 			AccountName: "testaccount",
-			AccountKey:  key,
+			AccountKey:  model.Secret(key),
 		},
 	})
 	require.NoError(t, err)
@@ -75,7 +75,7 @@ func TestAzureStorage_ConnectivityFailure(t *testing.T) {
 		ContainerName: "test-container",
 		Auth: &model.AzureSharedKeyAuth{
 			AccountName: "testaccount",
-			AccountKey:  key,
+			AccountKey:  model.Secret(key),
 		},
 	})
 	require.Error(t, err)

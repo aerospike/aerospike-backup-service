@@ -205,7 +205,7 @@ type Credentials struct {
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
 	c.User = m.User
-	c.Password = secret(m.Password)
+	c.Password = m.Password
 	c.PasswordPath = Path(m.PasswordPath)
 	c.AuthMode = NewAuthModeFromModel(m.AuthMode)
 
@@ -257,7 +257,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 
 	return &model.Credentials{
 		User:         c.User,
-		Password:     string(c.Password),
+		Password:     c.Password,
 		PasswordPath: string(c.PasswordPath),
 		AuthMode:     c.AuthMode.ToModel(),
 		SecretAgent:  agent,

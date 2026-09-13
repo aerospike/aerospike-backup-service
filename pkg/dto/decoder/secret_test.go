@@ -51,10 +51,18 @@ func TestSecret_StringInCredentials(t *testing.T) {
 
 func TestSecret_UnderlyingValueUnchanged(t *testing.T) {
 	secret := Secret("superSecretPassword")
-	require.Equal(t, "superSecretPassword", string(secret))
+	require.Equal(t, "superSecretPassword", secret.Reveal())
 
 	ref := Secret("secrets:resource:key")
 	require.Equal(t, "secrets:resource:key", string(ref))
+}
+
+func TestSecret_Hash(t *testing.T) {
+	first := Secret("password").Hash()
+	assert.Equal(t, first, Secret("password").Hash())
+	assert.NotEqual(t, first, Secret("other-password").Hash(),
+		"literal secrets must hash by value, not by the redaction placeholder")
+	assert.NotEqual(t, Secret("").Hash(), Secret("password").Hash())
 }
 
 func TestSecret_IsRef(t *testing.T) {

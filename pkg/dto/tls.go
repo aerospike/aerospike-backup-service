@@ -133,7 +133,7 @@ func (t *TLS) fromModel(m *model.TLS) {
 	t.Protocols = m.Protocols
 	t.CipherSuite = m.CipherSuite
 	t.Keyfile = Path(m.Keyfile)
-	t.KeyfilePassword = secret(m.KeyfilePassword)
+	t.KeyfilePassword = m.KeyfilePassword
 	t.Certfile = Path(m.Certfile)
 }
 
@@ -147,6 +147,6 @@ func (t *TLS) toModel() *model.TLS {
 		CAPath:          string(t.CAPath),
 		Protocols:       t.Protocols,
 		CipherSuite:     t.CipherSuite,
-		KeyfilePassword: string(t.KeyfilePassword),
+		KeyfilePassword: t.KeyfilePassword,
 	}
 }

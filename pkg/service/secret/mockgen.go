@@ -81,7 +81,7 @@ func (m *MockResolver) EXPECT() *MockResolverMockRecorder {
 }
 
 // Resolve mocks base method.
-func (m *MockResolver) Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error) {
+func (m *MockResolver) Resolve(ctx context.Context, agent *model.SecretAgent, value model.Secret) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Resolve", ctx, agent, value)
 	ret0, _ := ret[0].(string)
