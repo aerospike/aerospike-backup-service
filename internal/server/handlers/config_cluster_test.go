@@ -262,7 +262,7 @@ func TestUpdateAerospikeCluster_PreservesSecretOnRoundTrip(t *testing.T) {
 	updated, ok := svc.config.BackupConfigCopy().AerospikeClusters["test-cluster"]
 	require.True(t, ok)
 	require.NotNil(t, updated.Credentials)
-	assert.Equal(t, realPassword, updated.Credentials.Password)
+	assert.Equal(t, model.Secret(realPassword), updated.Credentials.Password)
 	assert.Equal(t, "updated-host", updated.SeedNodes[0].HostName)
 }
 

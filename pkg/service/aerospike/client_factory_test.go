@@ -107,7 +107,7 @@ func clusterRequiringTLS(
 				Certfile: files.certFile,
 				Keyfile:  files.encryptedKeyFile,
 			},
-			KeyfilePassword: keyfilePasswordRef,
+			KeyfilePassword: model.Secret(keyfilePasswordRef),
 		},
 	}
 }
@@ -136,7 +136,7 @@ func TestClientPolicyResolvesTLSKeyfilePasswordThroughSecretAgent(t *testing.T) 
 	cluster := clusterRequiringTLS(files, agent, "secrets:agent1:tls-key")
 
 	resolvedTLS := *cluster.TLS
-	resolvedTLS.KeyfilePassword = files.keyPassword
+	resolvedTLS.KeyfilePassword = model.Secret(files.keyPassword)
 	resolver := secrets.NewMockClusterTLSResolver(ctrl)
 	resolver.EXPECT().
 		Resolve(gomock.Any(), cluster).

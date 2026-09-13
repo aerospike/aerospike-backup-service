@@ -7,7 +7,7 @@ type GcpStorage struct {
 	// This file is used for authentication with GCP services.
 	KeyFile string
 	// KeyJSON is the contents of the Google Cloud service account key.
-	KeyJSON string
+	KeyJSON Secret
 	// BucketName is the name of the GCP bucket where backups will be stored.
 	BucketName string
 	// Path is the root directory within the GCS bucket where backups will be stored.

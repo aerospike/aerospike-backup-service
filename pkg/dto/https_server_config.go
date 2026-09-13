@@ -160,7 +160,7 @@ func (s *ServerConfigHTTPS) ToModel() *model.ServerConfigHTTPS {
 		Port:            s.Port.ToModel(),
 		CertFile:        string(s.CertFile),
 		KeyFile:         string(s.KeyFile),
-		KeyFilePassword: string(s.KeyFilePassword),
+		KeyFilePassword: s.KeyFilePassword,
 		SecretAgent:     s.SecretAgent.ToModel(),
 		MinVersion:      minVersion,
 		CipherSuites:    s.CipherSuites,
@@ -179,7 +179,7 @@ func (s *ServerConfigHTTPS) fromModel(m *model.ServerConfigHTTPS) {
 	s.Port = NewPortFromModel(m.Port)
 	s.CertFile = Path(m.CertFile)
 	s.KeyFile = Path(m.KeyFile)
-	s.KeyFilePassword = secret(m.KeyFilePassword)
+	s.KeyFilePassword = m.KeyFilePassword
 	s.MinVersion = NewTLSMinVersionFromModel(m.MinVersion)
 	s.CipherSuites = m.CipherSuites
 	s.ClientCAFile = Path(m.ClientCAFile)

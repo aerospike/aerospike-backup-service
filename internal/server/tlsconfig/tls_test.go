@@ -124,8 +124,8 @@ func newTestResolver(t *testing.T) secrets.Resolver {
 	resolver := secrets.NewMockResolver(gomock.NewController(t))
 	resolver.EXPECT().
 		Resolve(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ *model.SecretAgent, value string) (string, error) {
-			return value, nil
+		DoAndReturn(func(_ context.Context, _ *model.SecretAgent, value model.Secret) (string, error) {
+			return string(value), nil
 		}).
 		AnyTimes()
 
@@ -372,7 +372,7 @@ func TestNewResolvesKeyFilePasswordThroughSecretAgent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resolver := secrets.NewMockResolver(ctrl)
 	resolver.EXPECT().
-		Resolve(gomock.Any(), agent, "secrets:agent1:tls-key").
+		Resolve(gomock.Any(), agent, model.Secret("secrets:agent1:tls-key")).
 		Return("resolved-password", nil)
 
 	config := requireTLSConfig(t, &model.ServerConfigHTTPS{
@@ -390,7 +390,7 @@ func TestNewReturnsSecretAgentResolutionError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resolver := secrets.NewMockResolver(ctrl)
 	resolver.EXPECT().
-		Resolve(gomock.Any(), gomock.Any(), "secrets:agent1:tls-key").
+		Resolve(gomock.Any(), gomock.Any(), model.Secret("secrets:agent1:tls-key")).
 		Return("", assert.AnError)
 
 	_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{

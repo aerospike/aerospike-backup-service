@@ -99,8 +99,8 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 		}
 
 		auth = &model.S3Authentication{
-			KeyIDSecret:     string(s.AccessKeyID),
-			AccessKeySecret: string(s.SecretAccessKey),
+			KeyIDSecret:     s.AccessKeyID,
+			AccessKeySecret: s.SecretAccessKey,
 			SecretAgent:     agent,
 		}
 	}
@@ -133,8 +133,8 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 	}
 	if s.Auth != nil {
 		result.SecretAgentConfig = ResolveSecretAgentFromModel(s.Auth.SecretAgent, config)
-		result.AccessKeyID = secret(s.Auth.KeyIDSecret)
-		result.SecretAccessKey = secret(s.Auth.AccessKeySecret)
+		result.AccessKeyID = s.Auth.KeyIDSecret
+		result.SecretAccessKey = s.Auth.AccessKeySecret
 	}
 
 	return result

@@ -12,8 +12,9 @@ import (
 // instead of reusing a previously resolved value.
 type Resolver interface {
 	// Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
-	// If the secret agent is nil, the value is returned as is.
-	Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error)
+	// If the secret agent is nil, the literal value is returned. The result is a revealed
+	// credential: hand it straight to the SDK and never store it back on a model struct.
+	Resolve(ctx context.Context, agent *model.SecretAgent, value model.Secret) (string, error)
 }
 
 type resolver struct{}
@@ -23,11 +24,11 @@ func NewResolver() Resolver {
 }
 
 // Resolve resolves the value using the secret agent if configured, otherwise returns the value as is.
-func (m *resolver) Resolve(ctx context.Context, agent *model.SecretAgent, value string) (string, error) {
+func (m *resolver) Resolve(ctx context.Context, agent *model.SecretAgent, value model.Secret) (string, error) {
 	if agent == nil {
-		return value, nil
+		return value.Reveal(), nil
 	}
 
 	agentConfig := agent.ToSecretAgentConfig()
-	return backup.ParseSecret(ctx, agentConfig, value)
+	return backup.ParseSecret(ctx, agentConfig, value.Reveal())
 }

@@ -34,16 +34,6 @@ func (c *AerospikeCluster) GetUser() string {
 	return ""
 }
 
-// GetPassword returns the configured password.
-// Note: This returns the raw password configuration. If using Secret Agent or file path,
-// this needs to be resolved by the service layer.
-func (c *AerospikeCluster) GetPassword() string {
-	if c.Credentials == nil {
-		return ""
-	}
-	return c.Credentials.Password
-}
-
 // Hash returns a unique identifier for the AerospikeCluster.
 func (c *AerospikeCluster) Hash() uint64 {
 	if c == nil {
@@ -74,7 +64,7 @@ type Credentials struct {
 	User string
 	// The password for the cluster authentication.
 	// It can be either plain text or path into the secret agent.
-	Password string
+	Password Secret
 	// The file path with the password string, will take precedence over the password field.
 	PasswordPath string
 	// The authentication mode (INTERNAL, EXTERNAL, PKI).
@@ -100,7 +90,7 @@ func (c *Credentials) Hash() uint64 {
 
 	return hashValues(
 		c.User,
-		c.Password,
+		c.Password.Hash(),
 		c.PasswordPath,
 		c.AuthMode,
 		c.SecretAgent.Hash(),
