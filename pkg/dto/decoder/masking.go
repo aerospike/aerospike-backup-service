@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	secretType      = reflect.TypeFor[redact.Secret]()
+	redactableType  = reflect.TypeFor[redact.Redactable]()
 	timeType        = reflect.TypeFor[time.Time]()
 	timePtrType     = reflect.PointerTo(timeType)
 	locationType    = reflect.TypeFor[time.Location]()
@@ -41,19 +41,39 @@ func RedactSecretsReplaceAttr() func(groups []string, a slog.Attr) slog.Attr {
 	}
 }
 
+// isRedactable reports whether v is a credential-bearing string value that redacts itself.
+// A Redactable that is not a string cannot hold its own DisplayString, so it is left to the
+// ordinary walk, which still redacts every Secret nested inside it.
+func isRedactable(v reflect.Value) bool {
+	return v.Kind() == reflect.String && v.Type().Implements(redactableType)
+}
+
+// redactedValue replaces a credential with its safe display form, keeping the value's own
+// type so it can be stored back into the field, map entry or slice element it came from.
+func redactedValue(v reflect.Value) (reflect.Value, bool) {
+	if !isRedactable(v) {
+		return v, false
+	}
+
+	r, ok := v.Interface().(redact.Redactable)
+	if !ok {
+		return v, false
+	}
+
+	dst := reflect.New(v.Type()).Elem()
+	dst.SetString(r.DisplayString())
+
+	return dst, true
+}
+
 //nolint:gocognit,funlen // recursive reflect walk over nested DTO values
 func redactValue(v reflect.Value) reflect.Value {
 	if !v.IsValid() {
 		return v
 	}
 
-	if v.Type() == secretType {
-		s, ok := v.Interface().(redact.Secret)
-		if !ok {
-			return v
-		}
-
-		return reflect.ValueOf(redact.Secret(s.DisplayString()))
+	if redacted, ok := redactedValue(v); ok {
+		return redacted
 	}
 
 	if shouldSkipDeepCopy(v) {

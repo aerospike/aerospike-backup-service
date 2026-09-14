@@ -64,7 +64,7 @@ func mergeValue(incoming, existing reflect.Value) error {
 		return nil
 	}
 
-	if incoming.Type() == secretType {
+	if isRedactable(incoming) {
 		return setSecretValue(incoming, existing)
 	}
 
@@ -188,7 +188,7 @@ func mergeValue(incoming, existing reflect.Value) error {
 }
 
 func setSecretValue(incoming reflect.Value, existing reflect.Value) error {
-	inSecret, ok := incoming.Interface().(redact.Secret)
+	inSecret, ok := incoming.Interface().(redact.Redactable)
 	if !ok || !inSecret.IsRedacted() {
 		return nil
 	}
@@ -197,12 +197,12 @@ func setSecretValue(incoming reflect.Value, existing reflect.Value) error {
 		return nil
 	}
 
-	if !existing.IsValid() || existing.Type() != secretType {
+	if !existing.IsValid() || existing.Type() != incoming.Type() {
 		return errors.New("cannot use redacted secret \"[secret]\" for a new entity with no existing value")
 	}
 
-	existingSecret := existing.Interface().(redact.Secret)
-	if existingSecret.IsRedacted() {
+	existingSecret, ok := existing.Interface().(redact.Redactable)
+	if !ok || existingSecret.IsRedacted() {
 		return errors.New("cannot use redacted secret \"[secret]\" for a new entity with no existing value")
 	}
 

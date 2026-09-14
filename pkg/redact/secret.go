@@ -18,6 +18,20 @@ const (
 // Secret marks a string field as sensitive for redaction during API responses and logging.
 type Secret string
 
+// Redactable is implemented by credential-bearing values that know how to render themselves
+// safely. The reflective walks in pkg/dto/decoder key on this interface rather than on Secret
+// itself, so a second secret-bearing type is redacted, and merge-preserved, without touching
+// them. An implementation must have string as its underlying type, because redaction replaces
+// the value with DisplayString.
+type Redactable interface {
+	// DisplayString returns the value as it may safely appear in logs, errors and API responses.
+	DisplayString() string
+	// IsRedacted reports whether the value is the redaction placeholder itself.
+	IsRedacted() bool
+}
+
+var _ Redactable = Secret("")
+
 // IsMalformedRef reports whether the value looks like a Secret Agent reference but is not
 // well-formed. DTO-layer validation (pkg/dto) uses this to reject it; Secret itself only
 // needs it to decide how to redact and display the value.
@@ -85,15 +99,6 @@ func (s Secret) IsRedacted() bool {
 // conversion, which is invisible to such a search.
 func (s Secret) Reveal() string {
 	return string(s)
-}
-
-func (s Secret) RevealPtr() *string {
-	if s == "" {
-		return nil
-	}
-
-	str := string(s)
-	return &str
 }
 
 // Hash returns a hash of the literal value. Use it wherever a configuration hash must

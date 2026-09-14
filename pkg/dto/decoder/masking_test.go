@@ -318,3 +318,52 @@ func TestSecret_MaskedInErrorMessages(t *testing.T) {
 		assert.Equal(t, err.Error(), RedactSecrets(err).(error).Error())
 	})
 }
+
+// altSecret is a second credential-bearing type. It exists to prove that both reflective
+// walks key on the redact.Redactable interface rather than on redact.Secret alone, and that
+// they hand back a value of the field's own type.
+type altSecret string
+
+func (s altSecret) DisplayString() string {
+	if s == "" {
+		return ""
+	}
+
+	return redact.Placeholder
+}
+
+func (s altSecret) IsRedacted() bool {
+	return s == redact.Placeholder
+}
+
+type altCredentials struct {
+	User  string
+	Token altSecret
+}
+
+func TestRedactSecrets_AnyRedactableType(t *testing.T) {
+	redacted, ok := RedactSecrets(altCredentials{User: "testUser", Token: "literal-token"}).(altCredentials)
+
+	require.True(t, ok, "redaction must return a value of the original type")
+	assert.Equal(t, "testUser", redacted.User)
+	assert.Equal(t, altSecret(redact.Placeholder), redacted.Token)
+}
+
+func TestRedactSecrets_AnyRedactableTypeInMapAndSlice(t *testing.T) {
+	in := struct {
+		ByName map[string]altSecret
+		All    []altSecret
+	}{
+		ByName: map[string]altSecret{"first": "literal-token"},
+		All:    []altSecret{"another-token"},
+	}
+
+	redacted, ok := RedactSecrets(in).(struct {
+		ByName map[string]altSecret
+		All    []altSecret
+	})
+
+	require.True(t, ok)
+	assert.Equal(t, altSecret(redact.Placeholder), redacted.ByName["first"])
+	assert.Equal(t, altSecret(redact.Placeholder), redacted.All[0])
+}

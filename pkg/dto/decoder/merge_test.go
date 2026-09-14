@@ -201,3 +201,23 @@ func TestSecret_IsRedacted(t *testing.T) {
 	assert.False(t, redact.Secret("").IsRedacted())
 	assert.False(t, redact.Secret(validSecretRef).IsRedacted())
 }
+
+func TestMergeSecrets_AnyRedactableType(t *testing.T) {
+	incoming := &altCredentials{User: "newUser", Token: redact.Placeholder}
+	existing := &altCredentials{User: "testUser", Token: "real-token"}
+
+	require.NoError(t, MergeSecrets(incoming, existing))
+	assert.Equal(t, altSecret("real-token"), incoming.Token)
+	assert.Equal(t, "newUser", incoming.User)
+}
+
+func TestMergeSecrets_AnyRedactableTypeOnNewEntity(t *testing.T) {
+	existing := map[string]*altCredentials{}
+	incoming := map[string]*altCredentials{
+		"new-entity": {User: "newUser", Token: redact.Placeholder},
+	}
+
+	err := MergeSecrets(incoming, existing)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot use redacted secret")
+}
