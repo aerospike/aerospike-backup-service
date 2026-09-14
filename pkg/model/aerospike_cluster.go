@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"slices"
 	"time"
-
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -66,7 +64,7 @@ type Credentials struct {
 	User string
 	// The password for the cluster authentication.
 	// It can be either plain text or path into the secret agent.
-	Password redact.Secret
+	Password Secret
 	// The file path with the password string, will take precedence over the password field.
 	PasswordPath string
 	// The authentication mode (INTERNAL, EXTERNAL, PKI).

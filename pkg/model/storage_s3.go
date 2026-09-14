@@ -2,8 +2,6 @@ package model
 
 import (
 	"fmt"
-
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 type S3Storage struct {
@@ -32,8 +30,8 @@ type S3Storage struct {
 }
 
 type S3Authentication struct {
-	KeyIDSecret     redact.Secret
-	AccessKeySecret redact.Secret
+	KeyIDSecret     Secret
+	AccessKeySecret Secret
 	SecretAgent     *SecretAgent
 }
 

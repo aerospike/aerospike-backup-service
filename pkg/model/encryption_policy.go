@@ -1,7 +1,5 @@
 package model
 
-import "github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
-
 // EncryptionPolicy contains backup encryption information.
 type EncryptionPolicy struct {
 	// The encryption mode to be used (NONE, AES128, AES256)
@@ -11,5 +9,5 @@ type EncryptionPolicy struct {
 	// The name of the environment variable containing the encryption key.
 	KeyEnv string
 	// The secret keyword in Aerospike Secret Agent containing the encryption key.
-	KeySecret redact.Secret
+	KeySecret Secret
 }
