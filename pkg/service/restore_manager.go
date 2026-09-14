@@ -15,12 +15,12 @@ import (
 // queried or canceled by its id. Statuses live as long as the process.
 type RestoreManager interface {
 	// Restore starts a restore process using the given request and returns the job id.
-	// The job runs in the background for the lifetime of the service, not of the caller.
-	Restore(request *model.RestoreRequest) (model.RestoreJobID, error)
+	// The job runs in the background for the lifetime of the service.
+	Restore(request *model.RestoreRequest) model.RestoreJobID
 
 	// RestoreByTime starts a restore by time process using the given request and returns
 	// the job id. The job runs in the background for the lifetime of the service.
-	RestoreByTime(request *model.RestoreTimestampRequest) (model.RestoreJobID, error)
+	RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID
 
 	// JobStatus returns status for the given job id.
 	JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error)
@@ -86,11 +86,11 @@ func NewRestoreManager(
 	}
 }
 
-func (r *restoreManager) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
+func (r *restoreManager) Restore(request *model.RestoreRequest) model.RestoreJobID {
 	return r.pathRunner.Restore(request)
 }
 
-func (r *restoreManager) RestoreByTime(request *model.RestoreTimestampRequest) (model.RestoreJobID, error) {
+func (r *restoreManager) RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID {
 	return r.timeRunner.RestoreByTime(request)
 }
 

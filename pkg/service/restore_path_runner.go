@@ -39,11 +39,8 @@ func newPathRestoreRunner(
 	}
 }
 
-func (r *pathRestoreRunner) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
-	jobID, ctx, err := r.restoreJobs.newJob(request.BackupDataPath)
-	if err != nil {
-		return 0, err
-	}
+func (r *pathRestoreRunner) Restore(request *model.RestoreRequest) model.RestoreJobID {
+	jobID, ctx := r.restoreJobs.newJob(request.BackupDataPath)
 
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore job", slog.Any("path", request.BackupDataPath))
@@ -52,7 +49,7 @@ func (r *pathRestoreRunner) Restore(request *model.RestoreRequest) (model.Restor
 		r.restoreJobs.finishJob(jobID, r.executeRestore(ctx, request, jobID, logger), logger)
 	}()
 
-	return jobID, nil
+	return jobID
 }
 
 func (r *pathRestoreRunner) executeRestore(

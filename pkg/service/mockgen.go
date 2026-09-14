@@ -91,12 +91,11 @@ func (mr *MockRestoreManagerMockRecorder) JobStatus(jobID any) *gomock.Call {
 }
 
 // Restore mocks base method.
-func (m *MockRestoreManager) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
+func (m *MockRestoreManager) Restore(request *model.RestoreRequest) model.RestoreJobID {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Restore", request)
 	ret0, _ := ret[0].(model.RestoreJobID)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // Restore indicates an expected call of Restore.
@@ -106,12 +105,11 @@ func (mr *MockRestoreManagerMockRecorder) Restore(request any) *gomock.Call {
 }
 
 // RestoreByTime mocks base method.
-func (m *MockRestoreManager) RestoreByTime(request *model.RestoreTimestampRequest) (model.RestoreJobID, error) {
+func (m *MockRestoreManager) RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RestoreByTime", request)
 	ret0, _ := ret[0].(model.RestoreJobID)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // RestoreByTime indicates an expected call of RestoreByTime.

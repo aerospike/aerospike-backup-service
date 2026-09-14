@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,7 +9,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -150,14 +148,24 @@ func (s *BackupScheduler) triggerAdHocBackup(
 }
 
 // NewScheduler creates a new quartz.Scheduler.
-func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler, error) {
+func NewScheduler(appLogger *slog.Logger) (quartz.Scheduler, error) {
 	warnOnlyLogger := log.NewMinLevelLogger(appLogger, slog.LevelWarn)
 	scheduler, err := quartz.NewStdScheduler(
 		quartz.WithOutdatedThreshold(time.Second),
-		quartz.WithLogger(logger.NewSlogLogger(ctx, warnOnlyLogger)),
+		quartz.WithLogger(schedulerLogger{warnOnlyLogger}),
 		quartz.WithJobMetadata(),
 	)
+
 	return scheduler, err
+}
+
+// schedulerLogger adapts a slog.Logger to the logger quartz wants.
+type schedulerLogger struct {
+	*slog.Logger
+}
+
+func (l schedulerLogger) Trace(msg string, args ...any) {
+	l.Debug(msg, args...)
 }
 
 // jobKey returns the stable Quartz key for a periodic full or incremental job in the scheduled group.

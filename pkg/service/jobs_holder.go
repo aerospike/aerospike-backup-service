@@ -140,9 +140,6 @@ func (j *restoreJob) getStatus() model.RestoreState {
 	return j.status
 }
 
-// ErrRestoreNotStarted is returned when a restore is requested before the service is running.
-var ErrRestoreNotStarted = errors.New("restore jobs are not accepted before the service is started")
-
 // RestoreJobsHolder is a thread-safe map of restore jobs and the owner of their lifetime:
 // Start hands it the service context and every job runs in a child of that context, so
 // canceling the service cancels the jobs with it.
@@ -151,20 +148,23 @@ type RestoreJobsHolder struct {
 
 	mu sync.Mutex
 	// lifetime is the parent of every job context. A restore outlives the HTTP request that
-	// starts it, so its parent must be the service lifetime rather than the request's; this
-	// holder is the one owner of that lifetime, and receives it in Start rather than at
-	// construction so that nothing can run before the service does.
+	// starts it, so its parent must be the service lifetime rather than the request's, and
+	// this holder is the one owner of that lifetime. The mutex is here because Start writes
+	// it while requests read it, not because a request could arrive first.
 	lifetime context.Context //nolint:containedctx // the holder's purpose is job lifetimes; see above.
 }
 
-// NewRestoreJobsHolder returns a new RestoreJobsHolder. It accepts jobs only after Start.
+// NewRestoreJobsHolder returns a new RestoreJobsHolder. It is usable once Start has given
+// it a lifetime, which Components.Start does before anything can reach it.
 func NewRestoreJobsHolder() *RestoreJobsHolder {
 	return &RestoreJobsHolder{
 		SafeMap: collections.NewSafeMap[model.RestoreJobID, *restoreJob](),
 	}
 }
 
-// Start makes ctx the parent of every restore job started from now on.
+// Start makes ctx the parent of every restore job started from now on. Nothing is
+// launched here: Start is the call every component gets the moment the service begins
+// running, and this one needs that moment only to learn the run context.
 func (h *RestoreJobsHolder) Start(ctx context.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -174,20 +174,16 @@ func (h *RestoreJobsHolder) Start(ctx context.Context) {
 
 // newJob registers a new restore job and returns its id together with the context the job
 // must run in. The job is finished, and its context released, by finishJob.
-func (h *RestoreJobsHolder) newJob(label string) (model.RestoreJobID, context.Context, error) {
+func (h *RestoreJobsHolder) newJob(label string) (model.RestoreJobID, context.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-
-	if h.lifetime == nil {
-		return 0, nil, ErrRestoreNotStarted
-	}
 
 	ctx, cancel := context.WithCancel(h.lifetime)
 	// #nosec G404
 	id := model.RestoreJobID(rand.Int64())
 	h.Store(id, newRestoreJob(label, cancel))
 
-	return id, ctx, nil
+	return id, ctx
 }
 
 // addHandler should be called for each backup (full or incremental) handler.
