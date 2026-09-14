@@ -24,6 +24,11 @@ exclude = [
   "^https://docs\\.aerospike\\.com/cloud/kubernetes/operator",
 ]
 
+# Resolve the #fragment of a local link against the target file's headings, not
+# just the file. Without this, ../README.md#run passes as long as README.md exists;
+# three such anchors sat in docs/ undetected while this check was green.
+include_fragments = "anchor-only"
+
 max_concurrency = 8
 timeout = 45
 retry_wait_time = 5
