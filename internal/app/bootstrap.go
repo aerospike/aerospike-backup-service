@@ -37,20 +37,6 @@ type Components struct {
 	registry service.BackupStateRegistry
 }
 
-// Start brings up every background component and returns. It is the one place the run
-// context is handed out: a component that outlives a single request takes its lifetime
-// from here, never from the context that built the graph.
-//
-// This is the whole list of what "running" means, so adding a component is one edit here
-// rather than one per caller. Run serves the HTTP listeners on top of it; a caller that
-// serves the handler itself (the integration fixture) calls Start directly.
-func (c *Components) Start(ctx context.Context) {
-	c.registry.Start(ctx)
-	c.Scheduler.Start(ctx)
-	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
-	c.TLSProvider.Start(ctx)
-}
-
 // Run starts every component and serves until ctx is canceled or a listener stops. It
 // blocks for as long as the service runs: a caller that wants the service up without
 // giving up its goroutine - a test serving the handler itself - uses Start instead.
@@ -58,6 +44,16 @@ func (c *Components) Run(ctx context.Context) error {
 	c.Start(ctx)
 
 	return server.Run(ctx, c.Servers)
+}
+
+// Start brings up every background component and returns. It is the one place the run
+// context is handed out: a component that outlives a single request takes its lifetime
+// from here, never from the context that built the graph.
+func (c *Components) Start(ctx context.Context) {
+	c.registry.Start(ctx)
+	c.Scheduler.Start(ctx)
+	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
+	c.TLSProvider.Start(ctx)
 }
 
 // InitComponents builds the full object graph.
