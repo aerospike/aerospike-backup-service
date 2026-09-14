@@ -59,7 +59,7 @@ flowchart TB
   registry and restore jobs on a fixed interval and exposes the metrics documented in [Monitoring](monitoring.md).
 
 All of these are wired together once, at startup, in
-[`internal/app/bootstrap.go`](../internal/app/bootstrap.go#L30) (`InitComponents`) — that function is the fastest way
+[`internal/app/bootstrap.go`](../internal/app/bootstrap.go) (`InitComponents`) — that function is the fastest way
 to see the full object graph and every dependency between components.
 
 ## Request lifecycle
@@ -92,7 +92,7 @@ ABS keeps two parallel representations of every configuration entity (routine, p
 - **`pkg/dto`** is the wire format. Its structs carry `json`/`yaml` struct tags, `validate` rules, and
   `swag`/OpenAPI annotations, and they mirror exactly what the YAML configuration file and the REST API accept and
   return. It changes whenever the public API or config file format changes, and it is what gets versioned across
-  the [migration guide](../README.md#migration-guide).
+  the [migration guide](migration.md).
 - **`pkg/model`** is the internal domain representation used by the service layer and the scheduler. It has no
   serialization concerns and is free to include derived/runtime state (for example, invalidated-routine bookkeeping
   in [`pkg/model/config.go`](../pkg/model/config.go)) that should never be part of the public API surface.
@@ -105,7 +105,7 @@ purposes. This means:
   refactors to `pkg/service`.
 - Internal fields never leak into API responses or the config file by accident.
 - Breaking API changes are visible as changes to `pkg/dto`, which is exactly the set of files the
-  [migration guide](../README.md#migration-guide) needs to track.
+  [migration guide](migration.md) needs to track.
 
 ## Configuration management
 

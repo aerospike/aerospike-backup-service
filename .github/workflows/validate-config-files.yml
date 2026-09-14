@@ -47,7 +47,9 @@ jobs:
           EXIT_CODE=0
           
           echo "Searching for all aerospike-backup-service.yml files..."
-          find . -type f -name 'aerospike-backup-service.yml' | while read -r file; do
+          # Read from process substitution rather than a pipe: a piped `while` runs in a
+          # subshell, and EXIT_CODE=1 set there never reaches the `exit` below.
+          while read -r file; do
             echo ""
             echo "Validating dynamically discovered file: $file"
             if check-jsonschema --verbose --schemafile "$SCHEMA" "$file"; then
@@ -56,7 +58,7 @@ jobs:
               echo "FAILED: $file"
               EXIT_CODE=1
             fi
-          done
+          done < <(find . -type f -name 'aerospike-backup-service.yml')
           
           echo ""
           echo "Validating additional explicitly listed files..."

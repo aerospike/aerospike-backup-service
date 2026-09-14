@@ -275,7 +275,6 @@ gcp-gcs:
 local:
   local-storage:
     path: backups
-
 ```
 <!-- /tag -->
 

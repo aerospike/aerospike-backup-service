@@ -26,42 +26,56 @@ import (
 // so a region always survives to be regenerated next time.
 type renderer func(args string) string
 
-// openTagPattern matches an opening marker, capturing the id and the arguments
-// after it. Both regexes below are built from it so the two cannot drift: the
-// region matcher and the unclosed-region check must agree on what an opening
-// marker looks like, or a forgotten <!-- /tag --> stops being an error.
-const openTagPattern = `<!--\s*tag\s+(\S+)[ \t]*(.*?)-->`
+// openTag matches an opening marker, capturing the id and the arguments after
+// it. closeTag matches the marker that ends a region.
+var (
+	openTag  = regexp.MustCompile(`<!--\s*tag\s+(\S+)[ \t]*(.*?)-->`)
+	closeTag = regexp.MustCompile(`<!--\s*/tag\s*-->`)
+)
 
-// tagRegion matches one complete region. The content is non-greedy, so each
-// opening marker pairs with the nearest closing one and two tags on the same line
-// stay separate.
-var tagRegion = regexp.MustCompile(`(?s)` + openTagPattern + `(?:.*?)<!--\s*/tag\s*-->`)
-
-// openTag matches any opening tag, to find regions that lost their close.
-var openTag = regexp.MustCompile(openTagPattern)
-
-// applyTags renders every tagged region in the document. An unknown id is a typo
-// and stops the build rather than silently generating nothing.
+// applyTags renders every tagged region in the document.
+//
+// Regions are found by walking the opening markers in order and pairing each
+// with the nearest closing marker after it. That pairing is only accepted when
+// no other opening marker lies in between: a tag whose own close is missing or
+// mistyped would otherwise borrow the next tag's, and rendering would replace
+// every line of prose between the two — silently, since the borrowed region
+// looks perfectly well-formed. Either mistake stops the build instead, which is
+// what docs/development.md promises. An unknown id is a typo and stops it too.
 //
 // A tag written inside a fenced code block is left exactly as it is: there it is
 // being shown, not used, which is how docs/development.md can document the syntax
 // without the generator expanding the example out from under it.
 func applyTags(content []byte, renderers map[string]renderer) []byte {
 	fenced := fencedOffsets(content)
+	openers := openTag.FindAllSubmatchIndex(content, -1)
 
 	var (
 		rendered []byte
 		last     int
 	)
 
-	for _, region := range tagRegion.FindAllSubmatchIndex(content, -1) {
-		start, end := region[0], region[1]
+	for i, opening := range openers {
+		start := opening[0]
 		if fenced[start] {
 			continue
 		}
 
-		id := string(content[region[2]:region[3]])
-		args := strings.TrimSpace(string(content[region[4]:region[5]]))
+		id := string(content[opening[2]:opening[3]])
+		args := strings.TrimSpace(string(content[opening[4]:opening[5]]))
+
+		closing := closeTag.FindIndex(content[opening[1]:])
+		if closing == nil {
+			panic(fmt.Errorf("tag %q has no closing <!-- /tag -->", id))
+		}
+
+		closeStart, closeEnd := opening[1]+closing[0], opening[1]+closing[1]
+
+		if i+1 < len(openers) && openers[i+1][0] < closeStart {
+			next := string(content[openers[i+1][2]:openers[i+1][3]])
+			panic(fmt.Errorf("tag %q is not closed before tag %q opens; "+
+				"a <!-- /tag --> is missing or mistyped", id, next))
+		}
 
 		render, known := renderers[id]
 		if !known {
@@ -71,14 +85,10 @@ func applyTags(content []byte, renderers map[string]renderer) []byte {
 		rendered = append(rendered, content[last:start]...)
 		rendered = fmt.Appendf(rendered, "<!-- tag %s -->%s<!-- /tag -->",
 			strings.TrimSpace(id+" "+args), render(args))
-		last = end
+		last = closeEnd
 	}
 
-	rendered = append(rendered, content[last:]...)
-
-	requireClosed(rendered)
-
-	return rendered
+	return append(rendered, content[last:]...)
 }
 
 // fenceLine matches the start of a Markdown code fence.
@@ -89,20 +99,29 @@ var fenceLine = regexp.MustCompile("(?m)^[ \t]*(```|~~~)")
 //
 // Generated content always carries balanced fences — a rendered example opens and
 // closes its own — so counting fences across the whole document, generated regions
-// included, stays in step. Only a document that shows an unpaired fence would
-// confuse this, and such a document does not render correctly in the first place.
+// included, stays in step. A fence that is still open at the end of the document
+// is a build failure: every tag after it would otherwise be treated as
+// illustration and quietly left stale, and such a document does not render
+// correctly in the first place.
 func fencedOffsets(content []byte) []bool {
 	inside := make([]bool, len(content)+1)
 
 	var (
-		offset int
-		open   bool
+		offset   int
+		open     bool
+		openedAt int // 1-based line of the fence that is currently open
+		line     int
 	)
 
-	for _, line := range bytes.SplitAfter(content, []byte("\n")) {
-		isFence := fenceLine.Match(line)
+	for _, text := range bytes.SplitAfter(content, []byte("\n")) {
+		line++
+
+		isFence := fenceLine.Match(text)
 		if isFence {
 			open = !open
+			if open {
+				openedAt = line
+			}
 		}
 
 		// A fence line belongs to the block it delimits, not to the side it
@@ -110,37 +129,21 @@ func fencedOffsets(content []byte) []bool {
 		// the closing line as inside. Neither can carry a tag, so this only has
 		// to be consistent.
 		within := open != isFence
-		for i := range line {
+		for i := range text {
 			inside[offset+i] = within
 		}
 
-		offset += len(line)
+		offset += len(text)
 	}
 
-	inside[len(content)] = open
+	if open {
+		panic(fmt.Errorf("the code fence opened on line %d is never closed; "+
+			"every tag after it would be ignored", openedAt))
+	}
+
+	inside[len(content)] = false
 
 	return inside
-}
-
-// requireClosed reports an opening tag that no closing marker follows. Without it
-// a forgotten <!-- /tag --> would simply generate nothing, which is the failure
-// the old per-marker regexes made easy to miss.
-func requireClosed(content []byte) {
-	fenced := fencedOffsets(content)
-
-	closed := make(map[int]bool)
-	for _, region := range tagRegion.FindAllIndex(content, -1) {
-		closed[region[0]] = true
-	}
-
-	for _, opening := range openTag.FindAllSubmatchIndex(content, -1) {
-		if closed[opening[0]] || fenced[opening[0]] {
-			continue
-		}
-
-		id := string(content[opening[2]:opening[3]])
-		panic(fmt.Errorf("tag %q has no closing <!-- /tag -->", id))
-	}
 }
 
 // renderExample renders one of the worked examples built from the DTO structs.
@@ -172,7 +175,7 @@ func renderExample(name string) string {
 // fence wraps generated content in a Markdown code fence, spaced so the rendered
 // document reads the same as when the blocks were written by hand.
 func fence(language string, content []byte) string {
-	return "\n\n```" + language + "\n" + string(content) + "\n```\n"
+	return "\n\n```" + language + "\n" + string(bytes.TrimRight(content, "\n")) + "\n```\n"
 }
 
 // noArgs adapts a renderer that takes no arguments.

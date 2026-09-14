@@ -44,7 +44,6 @@ s3-storage:
   bucket: as-backup-bucket
   path: config.yml
   s3-region: eu-central-1
-
 ```
 <!-- /tag -->
 

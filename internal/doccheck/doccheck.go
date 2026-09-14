@@ -73,8 +73,12 @@ func isGenerated(text string, offset int) bool {
 	preceding := strings.TrimRight(text[:offset], " \t\r\n")
 
 	lastBreak := strings.LastIndex(preceding, "\n")
+	line := strings.TrimSpace(preceding[lastBreak+1:])
 
-	return marker.MatchString(strings.TrimSpace(preceding[lastBreak+1:]))
+	// A one-line region such as <!-- tag restoreFull -->`POST …`<!-- /tag --> also
+	// starts with an opening marker, but it is complete on its own line and the
+	// fence below it is hand-written. The opening marker alone carries one "-->".
+	return marker.MatchString(line) && strings.Count(line, "-->") == 1
 }
 
 // Snippets returns every fenced block in the given Markdown files whose language

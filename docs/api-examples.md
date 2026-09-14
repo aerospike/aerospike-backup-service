@@ -71,7 +71,7 @@ This endpoint retrieves the current statistics for a backup in progress, identif
 ```
 <!-- /tag -->
 
-See [fields description](readme/dto/dto.runningjob.md) for details.
+See [fields description](readme/dto/dto.routinestate.md) for details.
 
 </details>
 
@@ -93,9 +93,11 @@ will be deleted.
 Provides a list of backups for each configured routine, including details such as creation time, duration, namespace,
 and storage location.
 
-<!-- tag getFullBackups link -->
-[`GET {{baseUrl}}/v1/backups/full`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getFullBackups)
+<!-- tag getFullBackups link ?from=<from>&to=<to> -->
+[`GET {{baseUrl}}/v1/backups/full?from=<from>&to=<to>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getFullBackups)
 <!-- /tag -->
+
+`from` and `to` are optional and bound the list to a time window; both are timestamps in milliseconds since epoch.
 
 <details>
     <summary>Response</summary>
@@ -138,13 +140,13 @@ For fields description see [fields description](readme/dto/dto.backupdetails.md)
 
 </details>
 
-You can filter the results by adding query parameters:
+The same `from`/`to` window applies to a single routine:
 
 <!-- tag getFullBackupsForRoutine link ?from=<from>&to=<to> -->
 [`GET {{baseUrl}}/v1/backups/full/{name}?from=<from>&to=<to>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getFullBackupsForRoutine)
 <!-- /tag -->
 
-Here, `name` is the routine name, `from` and `to` are timestamps in milliseconds since epoch.
+Here, `name` is the routine name.
 
 #### Disable Routine
 
@@ -313,7 +315,7 @@ You can get job status with the endpoint
 
 <!-- tag restoreStatus link -->
 [`GET {{baseUrl}}/v1/restore/status/{jobId}`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus)
-<!-- /tag -->.
+<!-- /tag -->
 
 It works identical for both restore types.
 

@@ -1,7 +1,7 @@
 # Development guide
 
 This guide covers what you need to build, test, and submit changes to Aerospike Backup Service (ABS). For running a
-released build rather than building from source, see the [Run](../README.md#run) section of the README.
+released build rather than building from source, see the [Run](installation.md#run) section of the installation guide.
 
 ## Prerequisites
 
