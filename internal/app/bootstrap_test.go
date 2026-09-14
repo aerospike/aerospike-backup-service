@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 )
@@ -118,6 +119,65 @@ func TestComponents_RunServesUntilCanceled(t *testing.T) {
 		t.Fatal("Run did not return after its context was canceled")
 	}
 	require.False(t, components.Scheduler.IsStarted(), "scheduler still running after Run returned")
+}
+
+// routineConfig wires one routine against local storage in dir. A routine is what makes a
+// history sync meaningful: with none configured, applying the configuration has nothing to
+// synchronize and would queue nothing even if it wanted to.
+const routineConfig = `service:
+aerospike-clusters:
+  testCluster:
+    seed-nodes:
+      - host-name: 127.0.0.1
+        port: 3000
+storage:
+  testStorage:
+    local-storage:
+      path: %s
+backup-routines:
+  testRoutine:
+    source-cluster: testCluster
+    storage: testStorage
+    interval-cron: "@daily"
+    namespaces:
+      - testNamespace
+`
+
+// TestComponents_StartServesTheHistorySyncQueuedWhileBuilding pins the contract between
+// InitComponents and Start: applying the configuration during the build queues a history
+// sync, and only Start serves it.
+//
+// GetRoutineState blocks until a routine's first scan has completed, so if Start forgets a
+// component the symptom is not a failure but a stall - every state read waits out
+// getStateTimeout and then reports an empty state. Asserting that the read returns promptly
+// is what catches a component that was wired and queued but never started.
+func TestComponents_StartServesTheHistorySyncQueuedWhileBuilding(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	config := fmt.Sprintf(routineConfig, t.TempDir())
+	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	components, err := InitComponents(ctx, configPath, false)
+	require.NoError(t, err)
+
+	components.Start(ctx)
+	t.Cleanup(components.Stop)
+
+	state := make(chan model.RoutineState, 1)
+	go func() {
+		state <- components.registry.GetRoutineState(&model.BackupRoutine{
+			Name:     "testRoutine",
+			Timezone: model.NewServiceLocation("", nil),
+		})
+	}()
+
+	select {
+	case <-state:
+	case <-time.After(5 * time.Second):
+		t.Fatal("routine state is still waiting for a history scan: Start did not serve the queued sync")
+	}
 }
 
 // freePort returns a port that is free at the moment of the call.

@@ -37,31 +37,33 @@ type Components struct {
 	registry service.BackupStateRegistry
 }
 
-// Run starts every component, serves until ctx is canceled or a listener stops, and then
-// stops what needs stopping. It is the one place the run context is handed out, so a
-// component that must outlive a single request takes its lifetime from here.
-func (c *Components) Run(ctx context.Context) error {
+// Start brings up every background component and returns. It is the one place the run
+// context is handed out: a component that outlives a single request takes its lifetime
+// from here, never from the context that built the graph.
+//
+// This is the whole list of what "running" means, so adding a component is one edit here
+// rather than one per caller. Run serves the HTTP listeners on top of it; a caller that
+// serves the handler itself (the integration fixture) calls Start directly.
+func (c *Components) Start(ctx context.Context) {
 	c.registry.Start(ctx)
 	c.Scheduler.Start(ctx)
 	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	c.TLSProvider.Start(ctx)
+}
 
-	err := server.Run(ctx, c.Servers)
+// Stop shuts down the components that need an explicit stop. The rest end with the
+// context that was given to Start.
+func (c *Components) Stop() {
 	c.Scheduler.Stop()
-
-	return err
 }
 
 // Run starts every component, serves until ctx is canceled or a listener stops, and then
-// stops what needs stopping. It is the one place the run context is handed out, so a
-// component that must outlive a single request takes its lifetime from here.
+// stops them again.
 func (c *Components) Run(ctx context.Context) error {
-	c.Scheduler.Start(ctx)
-	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
-	c.TLSProvider.Start(ctx)
+	c.Start(ctx)
 
 	err := server.Run(ctx, c.Servers)
-	c.Scheduler.Stop()
+	c.Stop()
 
 	return err
 }
