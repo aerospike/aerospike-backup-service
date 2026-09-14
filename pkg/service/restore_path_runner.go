@@ -46,7 +46,8 @@ func (r *pathRestoreRunner) Restore(request *model.RestoreRequest) model.Restore
 	logger.Info("New restore job", slog.Any("path", request.BackupDataPath))
 	go func() {
 		// finishJob releases the job context, which stops any sub-operation still running.
-		r.restoreJobs.finishJob(jobID, r.executeRestore(ctx, request, jobID, logger), logger)
+		err := r.executeRestore(ctx, request, jobID, logger)
+		r.restoreJobs.finishJob(jobID, err, logger)
 	}()
 
 	return jobID
