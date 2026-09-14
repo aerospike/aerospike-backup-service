@@ -136,7 +136,7 @@ func InitComponents(
 	var servers []server.HTTP
 	configHTTP := config.ServiceConfig.GetServerHTTPOrDefault()
 	if !configHTTP.Disabled {
-		servers = append(servers, server.NewServerHTTP(ctx, configHTTP, srv))
+		servers = append(servers, server.NewServerHTTP(configHTTP, srv))
 	}
 
 	tlsProvider := servertls.NoReload()
@@ -174,7 +174,7 @@ func newServerHTTPS(
 		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 	}
 
-	return server.NewServerHTTPS(ctx, configHTTPS, srv, tlsConfig), tlsProvider, nil
+	return server.NewServerHTTPS(configHTTPS, srv, tlsConfig), tlsProvider, nil
 }
 
 func newStorageOperations(resolver secrets.Resolver) storage.Operations {

@@ -2,11 +2,15 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 )
 
 // TestInitComponents_MinimalConfig is a smoke test: a config with no clusters, storage, or
@@ -29,6 +33,54 @@ func TestInitComponents_MinimalConfig(t *testing.T) {
 
 	components.Scheduler.Start(ctx)
 	t.Cleanup(components.Scheduler.Stop)
+}
+
+// TestInitComponents_StartsNothing is the executable form of the contract in the
+// InitComponents doc comment and in CLAUDE.md: components are wired but not started.
+//
+// Two checks, because each sees what the other cannot. goleak finds goroutines that
+// outlive the call; the third-party ones the object graph inevitably brings along are
+// named and ignored one at a time, so a new name in that list is a review question,
+// not a test fix. The port and scheduler checks find what a goroutine count misses:
+// a listener bound without a serving goroutine, a scheduler started but idle.
+func TestInitComponents_StartsNothing(t *testing.T) {
+	before := goleak.IgnoreCurrent()
+
+	port := freePort(t)
+	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	config := fmt.Sprintf("service:\n  http:\n    address: 127.0.0.1\n    port: %d\n", port)
+	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	components, err := InitComponents(ctx, configPath, false)
+	require.NoError(t, err)
+	require.Len(t, components.Servers, 1)
+
+	goleak.VerifyNone(t, before,
+		// lumberjack starts its rotation goroutine on the first log write and never stops it.
+		goleak.IgnoreAnyFunction("gopkg.in/natefinch/lumberjack%2ev2.(*Logger).millRun"),
+	)
+	require.False(t, components.Scheduler.IsStarted(), "scheduler is running before Start")
+
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
+	require.NoError(t, err, "the HTTP listener was bound before Start")
+	require.NoError(t, listener.Close())
+}
+
+// freePort returns a port that is free at the moment of the call.
+func freePort(t *testing.T) int {
+	t.Helper()
+
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	port := listener.Addr().(*net.TCPAddr).Port
+	require.NoError(t, listener.Close())
+
+	return port
 }
 
 func TestInitComponents_ConfigLoadError(t *testing.T) {
