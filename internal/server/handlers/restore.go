@@ -58,13 +58,7 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, err := s.restoreManager.Restore(s.sysCtx, restoreRequest)
-	if err != nil {
-		httpError(w, err)
-		return
-	}
-
-	httpAcceptedWithJobID(w, jobID)
+	httpAcceptedWithJobID(w, s.restoreManager.Restore(restoreRequest))
 }
 
 // RestoreByTimeHandler
@@ -96,13 +90,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, err := s.restoreManager.RestoreByTime(s.sysCtx, restoreRequest)
-	if err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-
-	httpAcceptedWithJobID(w, jobID)
+	httpAcceptedWithJobID(w, s.restoreManager.RestoreByTime(restoreRequest))
 }
 
 // RestoreStatusHandler

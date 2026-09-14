@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 
@@ -15,13 +14,13 @@ import (
 // RestoreManager starts restore jobs and keeps their status in memory, so a job can be
 // queried or canceled by its id. Statuses live as long as the process.
 type RestoreManager interface {
-	// Restore starts a restore process using the given request.
-	// Returns the job id as a unique identifier.
-	Restore(ctx context.Context, request *model.RestoreRequest) (model.RestoreJobID, error)
+	// Restore starts a restore process using the given request and returns the job id.
+	// The job runs in the background for the lifetime of the service.
+	Restore(request *model.RestoreRequest) model.RestoreJobID
 
-	// RestoreByTime starts a restore by time process using the given request.
-	// Returns the job id as a unique identifier.
-	RestoreByTime(ctx context.Context, request *model.RestoreTimestampRequest) (model.RestoreJobID, error)
+	// RestoreByTime starts a restore by time process using the given request and returns
+	// the job id. The job runs in the background for the lifetime of the service.
+	RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID
 
 	// JobStatus returns status for the given job id.
 	JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error)
@@ -87,14 +86,12 @@ func NewRestoreManager(
 	}
 }
 
-func (r *restoreManager) Restore(ctx context.Context, request *model.RestoreRequest) (model.RestoreJobID, error) {
-	return r.pathRunner.Restore(ctx, request)
+func (r *restoreManager) Restore(request *model.RestoreRequest) model.RestoreJobID {
+	return r.pathRunner.Restore(request)
 }
 
-func (r *restoreManager) RestoreByTime(
-	ctx context.Context, request *model.RestoreTimestampRequest,
-) (model.RestoreJobID, error) {
-	return r.timeRunner.RestoreByTime(ctx, request)
+func (r *restoreManager) RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID {
+	return r.timeRunner.RestoreByTime(request)
 }
 
 // JobStatus returns the status of the job with the given id.

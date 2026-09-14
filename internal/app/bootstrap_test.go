@@ -187,3 +187,52 @@ func TestInitComponents_DisabledHTTPSDoesNotRequireTLSFiles(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, components)
 }
+
+// TestInitComponents_BuildContextIsNotALifetime is the executable form of the second half
+// of the InitComponents contract: the build context is for loading only. Canceling it the
+// moment the graph is built must change nothing, because the run context Start hands out
+// is the only lifetime any component may have taken.
+//
+// Any component that captured the build context instead - a watcher, a scheduler, a job
+// holder - stops here and takes the service down with it.
+func TestInitComponents_BuildContextIsNotALifetime(t *testing.T) {
+	port := freePort(t)
+	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	config := fmt.Sprintf("service:\n  http:\n    address: 127.0.0.1\n    port: %d\n", port)
+	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
+
+	buildCtx, cancelBuild := context.WithCancel(t.Context())
+	components, err := InitComponents(buildCtx, configPath, false)
+	require.NoError(t, err)
+
+	cancelBuild() // loading is over; from here the build context means nothing.
+
+	runCtx, cancelRun := context.WithCancel(t.Context())
+	t.Cleanup(cancelRun)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- components.Run(runCtx)
+	}()
+
+	client := &http.Client{Timeout: 100 * time.Millisecond}
+	require.Eventually(t, func() bool {
+		req, err := http.NewRequestWithContext(runCtx, http.MethodGet, "http://"+addr+"/health", nil)
+		require.NoError(t, err)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+
+		return resp.StatusCode == http.StatusOK
+	}, 2*time.Second, 10*time.Millisecond, "the service did not come up on a canceled build context")
+
+	require.True(t, components.Scheduler.IsStarted(), "the scheduler took its lifetime from the build context")
+
+	cancelRun()
+	require.NoError(t, <-done)
+}

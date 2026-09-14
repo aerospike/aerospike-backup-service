@@ -34,7 +34,15 @@ type Components struct {
 	MetricsCollector *prometheus.MetricsCollector
 	TLSProvider      servertls.TLSProvider
 
-	registry service.BackupStateRegistry
+	registry    service.BackupStateRegistry
+	restoreJobs component
+}
+
+// component is anything whose work outlives a single request: it takes the run context
+// from Components.Start and ends when that context is canceled.
+// Start should be called exactly once, by Components.Start.
+type component interface {
+	Start(ctx context.Context)
 }
 
 // Run starts every component and serves until ctx is canceled or a listener stops. It
@@ -48,9 +56,10 @@ func (c *Components) Run(ctx context.Context) error {
 
 // Start brings up every background component and returns. It is the one place the run
 // context is handed out: a component that outlives a single request takes its lifetime
-// from here, never from the context that built the graph.
+// from here, never from the context that built the graph. It is called exactly once.
 func (c *Components) Start(ctx context.Context) {
 	c.registry.Start(ctx)
+	c.restoreJobs.Start(ctx)
 	c.Scheduler.Start(ctx)
 	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	c.TLSProvider.Start(ctx)
@@ -58,7 +67,10 @@ func (c *Components) Start(ctx context.Context) {
 
 // InitComponents builds the full object graph.
 // Components are created and wired but not started: no goroutines, listeners, or
-// watchers run here. The caller decides when to Start/Stop them, normally through Run.
+// watchers run here. The caller decides when to Start them, normally through Run.
+//
+// ctx is the build context: it is for loading only. Nothing may capture it or launch
+// work on it - a component that outlives a single request takes its lifetime from Start.
 //
 // Collaborators (other components) are non-nil interfaces. If a collaborator is unused
 // or a feature is disabled, pass a no-op implementation, never nil, and do not add
@@ -84,7 +96,7 @@ func InitComponents(
 
 	appLogger := initLogger(config)
 
-	scheduler, err := service.NewScheduler(ctx, appLogger)
+	scheduler, err := service.NewScheduler(appLogger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
@@ -141,7 +153,6 @@ func InitComponents(
 
 	configRetriever := service.NewConfigRetriever(catalog, pathService, operations)
 	srv := handlers.NewService(
-		ctx,
 		config,
 		configApplier,
 		backupScheduler,
@@ -177,6 +188,7 @@ func InitComponents(
 		MetricsCollector: metricsCollector,
 		TLSProvider:      tlsProvider,
 		registry:         registry,
+		restoreJobs:      restoreJobs,
 	}, nil
 }
 

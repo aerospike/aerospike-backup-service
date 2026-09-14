@@ -45,11 +45,9 @@ func newTimeRestoreRunner(
 	}
 }
 
-func (r *timeRestoreRunner) RestoreByTime(
-	ctx context.Context, request *model.RestoreTimestampRequest,
-) (model.RestoreJobID, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
+func (r *timeRestoreRunner) RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID {
+	jobID, ctx := r.restoreJobs.newJob(request.RoutineName)
+
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore by time job",
 		slog.String("routine", request.RoutineName),
@@ -60,7 +58,7 @@ func (r *timeRestoreRunner) RestoreByTime(
 		r.restoreJobs.finishJob(jobID, err, logger)
 	}()
 
-	return jobID, nil
+	return jobID
 }
 
 // findBackupsToRestore returns list of backups for each namespace, sorted by creation date. First is full backup.
