@@ -40,7 +40,7 @@ type TLS struct {
 	// Passphrase for an encrypted TLS key file.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	KeyfilePassword secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
+	KeyfilePassword Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
 }
 
 func (t *TLS) Validate(opts ValidationOptions) error {
@@ -91,8 +91,8 @@ func (t *TLS) validateKeyfilePassword(opts ValidationOptions) error {
 		return errValidationRequires("key-file-password", "key-file")
 	}
 
-	if err := t.KeyfilePassword.Validate(opts.Has(ValidationWithSecretAgent)); err != nil {
-		return errValidationSecret("key-file-password", err)
+	if err := validateSecret("key-file-password", t.KeyfilePassword, opts.Has(ValidationWithSecretAgent)); err != nil {
+		return err
 	}
 
 	return nil
@@ -133,7 +133,7 @@ func (t *TLS) fromModel(m *model.TLS) {
 	t.Protocols = m.Protocols
 	t.CipherSuite = m.CipherSuite
 	t.Keyfile = Path(m.Keyfile)
-	t.KeyfilePassword = secret(m.KeyfilePassword)
+	t.KeyfilePassword = m.KeyfilePassword
 	t.Certfile = Path(m.Certfile)
 }
 
@@ -147,6 +147,6 @@ func (t *TLS) toModel() *model.TLS {
 		CAPath:          string(t.CAPath),
 		Protocols:       t.Protocols,
 		CipherSuite:     t.CipherSuite,
-		KeyfilePassword: string(t.KeyfilePassword),
+		KeyfilePassword: t.KeyfilePassword,
 	}
 }

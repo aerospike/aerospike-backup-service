@@ -4,7 +4,7 @@ package integration
 
 import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 // TestBackupRestoreWithSecretAgentEncryption starts Aerospike Secret Agent with the
@@ -22,7 +22,7 @@ func (s *BackupSuite) TestBackupRestoreWithSecretAgentEncryption() {
 		}
 		c.BackupPolicies[policyName].EncryptionPolicy = &dto.EncryptionPolicy{
 			Mode:      dto.EncryptionModeAES128,
-			KeySecret: decoder.Secret(secretRef()),
+			KeySecret: redact.Secret(secretRef()),
 		}
 		c.BackupRoutines[routineName].SecretAgent = secretAgentName
 	})
@@ -43,7 +43,7 @@ func (s *BackupSuite) TestBackupRestoreWithSecretAgentEncryption() {
 		BaseRestorePolicy: dto.BaseRestorePolicy{
 			EncryptionPolicy: &dto.EncryptionPolicy{
 				Mode:      dto.EncryptionModeAES128,
-				KeySecret: decoder.Secret(secretRef()),
+				KeySecret: redact.Secret(secretRef()),
 			},
 		},
 	}

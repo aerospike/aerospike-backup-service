@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -124,8 +125,8 @@ func newTestResolver(t *testing.T) secrets.Resolver {
 	resolver := secrets.NewMockResolver(gomock.NewController(t))
 	resolver.EXPECT().
 		Resolve(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ *model.SecretAgent, value string) (string, error) {
-			return value, nil
+		DoAndReturn(func(_ context.Context, _ *model.SecretAgent, value redact.Secret) (string, error) {
+			return string(value), nil
 		}).
 		AnyTimes()
 
@@ -372,7 +373,7 @@ func TestNewResolvesKeyFilePasswordThroughSecretAgent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resolver := secrets.NewMockResolver(ctrl)
 	resolver.EXPECT().
-		Resolve(gomock.Any(), agent, "secrets:agent1:tls-key").
+		Resolve(gomock.Any(), agent, redact.Secret("secrets:agent1:tls-key")).
 		Return("resolved-password", nil)
 
 	config := requireTLSConfig(t, &model.ServerConfigHTTPS{
@@ -390,7 +391,7 @@ func TestNewReturnsSecretAgentResolutionError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resolver := secrets.NewMockResolver(ctrl)
 	resolver.EXPECT().
-		Resolve(gomock.Any(), gomock.Any(), "secrets:agent1:tls-key").
+		Resolve(gomock.Any(), gomock.Any(), redact.Secret("secrets:agent1:tls-key")).
 		Return("", assert.AnError)
 
 	_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
