@@ -16,6 +16,12 @@ exclude = [
   # Pre-existing broken link in the Helm chart README, owned by the
   # security plan's docs-supporting item.
   "helm/aerospike-backup-service/examples$",
+  # The published API browser is a single-page app: "#/Backup/getCurrentBackup"
+  # is a client-side route, not an element id, so no checker can resolve it.
+  # These links are rendered by build/docs from docs/openapi.json, which is what
+  # keeps the operation ids honest; the bare site URL is linked elsewhere and is
+  # still checked.
+  "^https://aerospike\\.github\\.io/aerospike-backup-service/#/",
   # kubernetes.io is often unreachable from GitHub Actions runners
   # (connection failed / WAF), so CI cannot reliably verify these links.
   "^https://kubernetes\\.io/",

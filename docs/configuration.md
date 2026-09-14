@@ -174,7 +174,7 @@ See the full specification:
 [`POST {{baseUrl}}/v1/config/clusters/{name}`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addCluster)
 <!-- /tag -->
 
-:warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/tools/backup#secret-agent-options) to avoid
+:warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/database/tools/secret-agent/) to avoid
 including secrets in your configuration. See [Security](security.md) for how secrets are resolved, cached, and rotated.
 
 #### Storage connection
