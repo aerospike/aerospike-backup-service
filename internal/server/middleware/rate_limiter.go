@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"log/slog"
 	"net"
 	"net/http"
@@ -20,9 +19,8 @@ const (
 
 var allowAnyPrefix = netip.MustParsePrefix("0.0.0.0/0")
 
-func RateLimiter(ctx context.Context, config *model.RateLimiterConfig) Middleware {
+func RateLimiter(config *model.RateLimiterConfig) Middleware {
 	limiters := NewIPRateLimiter(
-		ctx,
 		rate.Limit(config.GetTpsOrDefault()),
 		config.GetSizeOrDefault(),
 		defaultLimiterIdleTTL,
@@ -124,24 +122,22 @@ type IPRateLimiter struct {
 	tokensPerSecond rate.Limit
 	tokenBucketSize int
 	idleTTL         time.Duration
-	cleanupTicker   *time.Ticker
+	cleanupInterval time.Duration
+	lastCleanup     time.Time
 }
 
 // NewIPRateLimiter returns a new IPRateLimiter.
-func NewIPRateLimiter(ctx context.Context, tps rate.Limit, size int, idleTTL, cleanup time.Duration) *IPRateLimiter {
-	ipLimiter := &IPRateLimiter{
+// Entries idle for longer than idleTTL are evicted on the request path, at most once per cleanupInterval.
+// A cleanupInterval of zero or less disables eviction.
+func NewIPRateLimiter(tps rate.Limit, size int, idleTTL, cleanupInterval time.Duration) *IPRateLimiter {
+	return &IPRateLimiter{
 		limiters:        make(map[netip.Addr]*ipLimiterEntry),
 		tokensPerSecond: tps,
 		tokenBucketSize: size,
 		idleTTL:         idleTTL,
+		cleanupInterval: cleanupInterval,
+		lastCleanup:     time.Now(),
 	}
-
-	if cleanup > 0 {
-		ipLimiter.cleanupTicker = time.NewTicker(cleanup)
-		go ipLimiter.cleanupLoop(ctx)
-	}
-
-	return ipLimiter
 }
 
 // Allow reports whether a request from ipAddr may proceed at the current time.
@@ -153,6 +149,9 @@ func (ipLimiter *IPRateLimiter) getOrCreateEntry(ipAddr netip.Addr) *ipLimiterEn
 	ipLimiter.Lock()
 	defer ipLimiter.Unlock()
 
+	now := time.Now()
+	ipLimiter.evictIdle(now)
+
 	entry, exists := ipLimiter.limiters[ipAddr]
 	if !exists {
 		entry = &ipLimiterEntry{
@@ -160,26 +159,18 @@ func (ipLimiter *IPRateLimiter) getOrCreateEntry(ipAddr netip.Addr) *ipLimiterEn
 		}
 		ipLimiter.limiters[ipAddr] = entry
 	}
-	entry.lastSeen = time.Now()
+	entry.lastSeen = now
 
 	return entry
 }
 
-func (ipLimiter *IPRateLimiter) cleanupLoop(ctx context.Context) {
-	for {
-		select {
-		case now := <-ipLimiter.cleanupTicker.C:
-			ipLimiter.evictIdle(now)
-		case <-ctx.Done():
-			ipLimiter.cleanupTicker.Stop()
-			return
-		}
-	}
-}
-
+// evictIdle drops entries unused for idleTTL. It sweeps at most once per cleanupInterval.
+// The caller must hold the lock.
 func (ipLimiter *IPRateLimiter) evictIdle(now time.Time) {
-	ipLimiter.Lock()
-	defer ipLimiter.Unlock()
+	if ipLimiter.cleanupInterval <= 0 || now.Sub(ipLimiter.lastCleanup) < ipLimiter.cleanupInterval {
+		return
+	}
+	ipLimiter.lastCleanup = now
 
 	for ip, entry := range ipLimiter.limiters {
 		if now.Sub(entry.lastSeen) >= ipLimiter.idleTTL {

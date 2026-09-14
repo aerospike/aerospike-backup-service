@@ -40,8 +40,8 @@ type serverHTTP struct {
 var _ HTTP = (*serverHTTP)(nil)
 
 // NewServerHTTP returns a new instance of HTTP.
-func NewServerHTTP(ctx context.Context, serverConfig *model.ServerConfigHTTP, service *handlers.Service) HTTP {
-	return newServerHTTP(ctx,
+func NewServerHTTP(serverConfig *model.ServerConfigHTTP, service *handlers.Service) HTTP {
+	return newServerHTTP(
 		&serverConfig.ListenerConfig,
 		fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault()),
 		service,
@@ -52,12 +52,11 @@ func NewServerHTTP(ctx context.Context, serverConfig *model.ServerConfigHTTP, se
 // NewServerHTTPS returns a new instance of an HTTPS server.
 // The TLS configuration is built by the caller.
 func NewServerHTTPS(
-	ctx context.Context,
 	serverConfig *model.ServerConfigHTTPS,
 	service *handlers.Service,
 	tlsConfig *tls.Config,
 ) HTTP {
-	return newServerHTTP(ctx,
+	return newServerHTTP(
 		&serverConfig.ListenerConfig,
 		fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault()),
 		service,
@@ -66,7 +65,6 @@ func NewServerHTTPS(
 }
 
 func newServerHTTP(
-	ctx context.Context,
 	listener *model.ListenerConfig,
 	addr string,
 	service *handlers.Service,
@@ -81,7 +79,7 @@ func newServerHTTP(
 
 	handler := middleware.Wrap(mux,
 		middleware.RequestLogger(slog.Default(), []string{"health", "ready", "metrics"}),
-		middleware.RateLimiter(ctx, listener.GetRateOrDefault()),
+		middleware.RateLimiter(listener.GetRateOrDefault()),
 	)
 
 	return &serverHTTP{

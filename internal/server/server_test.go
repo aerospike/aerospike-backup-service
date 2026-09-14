@@ -40,7 +40,7 @@ func newTestServerHTTP(t *testing.T, httpCfg *model.ServerConfigHTTP) *serverHTT
 		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
-	return NewServerHTTP(t.Context(), httpCfg, svc).(*serverHTTP)
+	return NewServerHTTP(httpCfg, svc).(*serverHTTP)
 }
 
 func waitForServerHTTPReady(t *testing.T, healthURL string) {
