@@ -148,9 +148,22 @@ jobs:
           PACKAGE_VERSION: ${{ steps.metadata.outputs.PACKAGE_VERSION }}
         run: |
           set -euo pipefail
-          if ! release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${PACKAGE_VERSION}" 2>/dev/null)"; then
-            echo "No GitHub Release for ${PACKAGE_VERSION}; safe to build."
-            exit 0
+          # Only an explicit HTTP 404 means "no release exists". Any other gh failure (rate
+          # limit, outage, bad token) must fail the build, not fall through to "safe": this
+          # step is the sole guard keyed on the published GitHub Release, and treating an
+          # outage as a green light would let a re-run rebuild over shipped artifacts.
+          set +e
+          release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${PACKAGE_VERSION}" 2>gh-error.log)"
+          gh_status=$?
+          set -e
+          if [ "$gh_status" -ne 0 ]; then
+            if grep -q "HTTP 404" gh-error.log; then
+              echo "No GitHub Release for ${PACKAGE_VERSION}; safe to build."
+              exit 0
+            fi
+            echo "::error::Could not determine whether ${PACKAGE_VERSION} already shipped (gh api failed with something other than 404):"
+            cat gh-error.log
+            exit 1
           fi
 
           is_draft="$(printf '%s' "$release_json" | jq -r '.draft // false')"
@@ -258,6 +271,7 @@ jobs:
         id: docker-tags
         env:
           PACKAGE_VERSION: ${{ steps.metadata.outputs.PACKAGE_VERSION }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           current="${PACKAGE_VERSION#v}"
@@ -280,10 +294,14 @@ jobs:
           fi
 
           # Final releases only. Pre-release tags (v3.7.0-rc1) and one-off test tags must not
-          # get a say in which release owns `latest`. The tag being built is folded in because
-          # it is not guaranteed to be among the fetched refs yet.
+          # get a say in which release owns the moving tags. Compare against versions that
+          # actually shipped (a non-draft GitHub Release exists -- release.yml publishes one
+          # only after a verified PROD promotion), not against all git tags: a tag whose
+          # pipeline was abandoned before release would otherwise withhold the major tag
+          # forever. The version being built is folded in since it has no Release yet.
           versions="$(
-            { git tag --list 'v*'; echo "v${current}"; } \
+            { gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" \
+                --jq '.[] | select(.draft == false) | .tag_name'; echo "v${current}"; } \
               | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
               | sed 's/^v//' \
               | sort -uV
@@ -468,7 +486,7 @@ jobs:
       gpg-key-pass: ${{ secrets.GPG_PASS }}
 
   deploy-packages:
-    needs: [prepare, sign-packages, delete-existing-bundle]
+    needs: [prepare, sign-packages, verify-signatures, delete-existing-bundle]
     # reusable_deploy-artifacts.yaml's nested `deploy` job declares actions: write at job
     # scope (for the optional Maven bundle-metadata upload, unused here). GitHub's static
     # validation requires it to be granted by the caller even though it's never exercised.
@@ -537,8 +555,121 @@ jobs:
       gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
       gpg-key-pass: ${{ secrets.GPG_PASS }}
 
+  # ---------------------------------------------------------------------------
+  # Enforce the sign-or-fail invariant before anything is deployed
+  # ---------------------------------------------------------------------------
+  #
+  # reusable_sign-artifacts.yaml deliberately fails OPEN: when the gpg-private-key secret
+  # resolves empty (renamed, environment-scoped, Dependabot -- GitHub passes an empty string
+  # for a missing secret) it stages the UNSIGNED artifacts under the signed artifact name and
+  # exits 0 ("Determine GPG signing eligibility" -> reason=missing-secrets), so nothing
+  # downstream would notice. It also never verifies its own output (rpm --addsign runs with
+  # stderr discarded and no --checksig afterwards). The legacy pipeline hard-failed on an
+  # empty key and verified every signature right after signing; this job restores both
+  # guarantees on the consumer side, and deploy-packages/deploy-helm depend on it so unsigned
+  # or mis-signed artifacts can never reach JFrog.
+
+  verify-signatures:
+    needs: [sign-packages, sign-helm]
+    permissions:
+      contents: read
+    # ubuntu-22.04: dpkg-sig is not packaged for 24.04 (the same constraint the legacy
+    # signing job ran under, and the reason post-release-verify-artifacts.yml's GPG job
+    # also stays on 22.04).
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Download signed packages
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: packages-signed
+          path: signed/packages
+
+      - name: Download signed Helm chart
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: helm-signed
+          path: signed/helm
+
+      - name: Install verification tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y dpkg-sig rpm
+
+      - name: Import GPG public key
+        env:
+          GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GPG_PUBLIC_KEY" ]; then
+            echo "::error::GPG_PUBLIC_KEY secret is empty; cannot verify signatures."
+            exit 1
+          fi
+          echo "$GPG_PUBLIC_KEY" | gpg --import
+          # rpm --checksig reads its own keyring, not GnuPG's.
+          echo "$GPG_PUBLIC_KEY" | sudo rpm --import /dev/stdin
+
+      - name: Verify every artifact carries a valid signature
+        run: |
+          set -euo pipefail
+          shopt -s nullglob globstar
+          fail=0
+
+          debs=(signed/packages/**/*.deb)
+          rpms=(signed/packages/**/*.rpm)
+          charts=(signed/helm/**/*.tgz)
+          if [ "${#debs[@]}" -eq 0 ] || [ "${#rpms[@]}" -eq 0 ] || [ "${#charts[@]}" -eq 0 ]; then
+            echo "::error::Expected signed .deb, .rpm and Helm .tgz artifacts, got deb=${#debs[@]} rpm=${#rpms[@]} chart=${#charts[@]}. Was a build or sign leg skipped?"
+            exit 1
+          fi
+
+          check_detached() {
+            if [ -f "$1.asc" ] && gpg --verify "$1.asc" "$1" 2>&1; then
+              echo "Detached signature OK: $1"
+            else
+              echo "::error::Missing or invalid detached signature for $1 -- was GPG signing skipped (empty gpg-private-key)?"
+              fail=1
+            fi
+          }
+
+          for pkg in "${debs[@]}"; do
+            check_detached "$pkg"
+            out="$(dpkg-sig --verify "$pkg" || true)"
+            echo "$out"
+            if ! grep -q 'GOODSIG' <<< "$out"; then
+              echo "::error::dpkg-sig reports no GOODSIG for ${pkg}."
+              fail=1
+            fi
+          done
+
+          for pkg in "${rpms[@]}"; do
+            check_detached "$pkg"
+            out="$(rpm --checksig "$pkg" || true)"
+            echo "$out"
+            if ! grep -q 'digests signatures OK' <<< "$out"; then
+              echo "::error::rpm --checksig does not report 'digests signatures OK' for ${pkg}."
+              fail=1
+            fi
+          done
+
+          for chart in "${charts[@]}"; do
+            if [ -f "${chart}.prov" ] && gpg --verify "${chart}.prov" 2>&1; then
+              echo "Helm provenance OK: ${chart}"
+            else
+              echo "::error::Missing or invalid Helm provenance for ${chart} -- was GPG signing skipped (empty gpg-private-key)?"
+              fail=1
+            fi
+          done
+
+          exit $fail
+
   deploy-helm:
-    needs: [prepare, sign-helm, delete-existing-bundle]
+    needs: [prepare, sign-helm, verify-signatures, delete-existing-bundle]
     # See note on deploy-packages: reusable_deploy-artifacts.yaml's nested `deploy` job
     # requires actions: write to be granted by the caller, even though it's unused here.
     permissions:

@@ -45,6 +45,7 @@ jobs:
           egress-policy: audit
 
       - name: Login to JFrog
+        id: jfrog-login
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
           JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
@@ -53,21 +54,46 @@ jobs:
           oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
           oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
+      # The Lifecycle API lives at the JFrog *platform* root, not under the Artifactory
+      # service path: `jf rt curl` prefixes every request with /artifactory and 404s on
+      # /lifecycle/... (verified live against aerospike.jfrog.io -- the platform-root URL
+      # returns the promotion records, the /artifactory-prefixed one is Not Found). Call it
+      # with plain curl and the OIDC token from setup-jfrog-cli instead. No `set -x`: the
+      # bearer token must not land in the trace log.
       - name: Check release bundle is promoted to PROD
         env:
           JF_PROJECT: ${{ vars.JF_PROJECT }}
+          JF_PLATFORM_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          JF_TOKEN: ${{ steps.jfrog-login.outputs.oidc-token }}
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           if [ -z "${BUNDLE_VERSION}" ]; then
             echo "::error::version input is required (e.g. v3.7.0)."
             exit 1
           fi
 
-          echo "Checking promotion history for ${BUNDLE_NAME}:${BUNDLE_VERSION} (project: ${JF_PROJECT})..."
-          RESPONSE=$(jf rt curl -s "/lifecycle/api/v2/promotion/records/${BUNDLE_NAME}/${BUNDLE_VERSION}?project=${JF_PROJECT}")
-          echo "$RESPONSE" | jq .
+          # Normalize in case the var carries the Artifactory service URL rather than the
+          # platform root (setup-jfrog-cli accepts either).
+          PLATFORM_URL="${JF_PLATFORM_URL%/}"
+          PLATFORM_URL="${PLATFORM_URL%/artifactory}"
 
-          COMPLETED_PROD=$(echo "$RESPONSE" | jq '[.promotions[]? | select(.environment == "PROD" and .status == "COMPLETED")] | length')
+          echo "Checking promotion history for ${BUNDLE_NAME}:${BUNDLE_VERSION} (project: ${JF_PROJECT})..."
+          HTTP_CODE=$(curl -sS -o response.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${JF_TOKEN}" -H "Accept: application/json" \
+            "${PLATFORM_URL}/lifecycle/api/v2/promotion/records/${BUNDLE_NAME}/${BUNDLE_VERSION}?project=${JF_PROJECT}")
+
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo "::error::No release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} found in project ${JF_PROJECT}. Check the version input against the bundles in the JFrog UI."
+            exit 1
+          fi
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Promotion-records lookup failed with HTTP ${HTTP_CODE}; refusing to publish without proof of PROD promotion."
+            cat response.json || true
+            exit 1
+          fi
+          jq . response.json
+
+          COMPLETED_PROD=$(jq '[.promotions[]? | select(.environment == "PROD" and .status == "COMPLETED")] | length' response.json)
           if [ "$COMPLETED_PROD" -lt 1 ]; then
             echo "::error::Release bundle ${BUNDLE_NAME}:${BUNDLE_VERSION} has no COMPLETED promotion to PROD. Have a PM/EM promote it via the JFrog UI, then re-run this workflow."
             exit 1
@@ -113,6 +139,16 @@ jobs:
           fetch-tags: true
           ref: ${{ env.BUNDLE_VERSION }}
 
+      # Local composite actions must resolve from the workflow's own commit, not the released
+      # tag's tree: any tag cut before an action existed would fail `uses: ./...` resolution
+      # (the hazard post-release-verify-artifacts.yml's verify-dockerhub documents). Checked
+      # out under a separate path so the tag checkout above keeps serving Chart.yaml.
+      - name: Checkout workflow-side actions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          path: workflow-actions
+
       - name: Resolve Helm chart version
         id: helm-version
         run: |
@@ -131,6 +167,8 @@ jobs:
 
       - name: Resolve Docker latest tag
         id: docker-latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           current="${BUNDLE_VERSION#v}"
@@ -144,8 +182,14 @@ jobs:
             exit 0
           fi
 
+          # Compare against versions that actually shipped (a non-draft GitHub Release exists,
+          # which this workflow only publishes after a verified PROD promotion), not against
+          # all git tags: a tag whose pipeline was abandoned before release would otherwise
+          # block `latest` forever with no error surfaced anywhere. The version being published
+          # is folded in because its own Release is only created later in this job.
           versions="$(
-            { git tag --list 'v*'; echo "v${current}"; } \
+            { gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" \
+                --jq '.[] | select(.draft == false) | .tag_name'; echo "v${current}"; } \
               | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
               | sed 's/^v//' \
               | sort -uV
@@ -277,7 +321,7 @@ jobs:
       - name: Wait for DockerHub version tag
         if: steps.docker-latest.outputs.APPLY_DOCKER_LATEST == 'true'
         id: dockerhub-version
-        uses: ./.github/actions/wait-for-dockerhub-tag
+        uses: ./workflow-actions/.github/actions/wait-for-dockerhub-tag
         with:
           image: ${{ env.DOCKERHUB_IMAGE }}
           tag: ${{ steps.docker-latest.outputs.IMAGE_TAG }}

@@ -110,6 +110,50 @@ jobs:
           done
           exit $fail
 
+      # The detached .asc above proves the bytes were signed, but `dnf`/`apt` verify the
+      # EMBEDDED rpm/deb signature -- and the shared-workflows signer never checks its own
+      # output (rpm --addsign runs with stderr discarded, no --checksig anywhere). A package
+      # signed with a wrong/expired key would carry a valid .asc yet be rejected by
+      # gpgcheck=1 in the field, so verify what the package manager actually verifies.
+      - name: Verify embedded DEB/RPM signatures
+        env:
+          GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y dpkg-sig rpm
+          # rpm --checksig reads its own keyring, not GnuPG's (which the key was imported
+          # into two steps up).
+          echo "$GPG_PUBLIC_KEY" | sudo rpm --import /dev/stdin
+
+          cd release-assets
+          fail=0
+          shopt -s nullglob
+
+          for pkg in *.deb; do
+            out="$(dpkg-sig --verify "$pkg" || true)"
+            echo "$out"
+            if grep -q 'GOODSIG' <<< "$out"; then
+              echo "Embedded signature OK: ${pkg}"
+            else
+              echo "::error::dpkg-sig reports no GOODSIG for ${pkg}"
+              fail=1
+            fi
+          done
+
+          for pkg in *.rpm; do
+            out="$(rpm --checksig "$pkg" || true)"
+            echo "$out"
+            if grep -q 'digests signatures OK' <<< "$out"; then
+              echo "Embedded signature OK: ${pkg}"
+            else
+              echo "::error::rpm --checksig does not report 'digests signatures OK' for ${pkg}"
+              fail=1
+            fi
+          done
+
+          exit $fail
+
       - name: Verify Helm chart signature and checksum
         if: steps.list.outputs.helm-chart-file != ''
         run: |

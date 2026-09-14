@@ -38,6 +38,17 @@ jobs:
           fetch-depth: 1
           ref: ${{ inputs.version }}
 
+      # Local composite actions must resolve from the workflow's own commit, not the released
+      # tag's tree: this workflow's whole point is verifying already-released versions, and any
+      # tag cut before an action existed would fail `uses: ./...` resolution (the hazard
+      # post-release-verify-artifacts.yml's verify-dockerhub documents). Checked out under a
+      # separate path so the tag checkout above keeps serving build/docker-compose configs.
+      - name: Checkout workflow-side actions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          path: workflow-actions
+
       - name: Login to JFrog
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
@@ -96,7 +107,7 @@ jobs:
 
       - name: Seed records and verify seed count
         id: seed
-        uses: ./.github/actions/seed-and-verify-aerospike
+        uses: ./workflow-actions/.github/actions/seed-and-verify-aerospike
         with:
           mode: seed
           namespace: ${{ env.NAMESPACE }}
@@ -104,7 +115,7 @@ jobs:
           host: 127.0.0.1:3000
 
       - name: Confirm seeded count before proceeding
-        uses: ./.github/actions/seed-and-verify-aerospike
+        uses: ./workflow-actions/.github/actions/seed-and-verify-aerospike
         id: seed-count
         with:
           mode: count
@@ -147,7 +158,7 @@ jobs:
 
       - name: Poll for backup completion
         id: backup
-        uses: ./.github/actions/poll-abs-job
+        uses: ./workflow-actions/.github/actions/poll-abs-job
         with:
           base-url: http://127.0.0.1:8080
           kind: backup
@@ -155,8 +166,14 @@ jobs:
 
       - name: Verify backup files landed in MinIO (independent of the ABS API's own say-so)
         run: |
-          docker run --rm --network abs-smoke-net minio/mc \
-            sh -c "mc alias set myminio http://minio:9000 minioadmin minioadmin && mc ls --recursive myminio/${{ env.BUCKET }}/minioStorage" | tee minio-ls.txt
+          set -euo pipefail
+          # Configure the alias via MC_HOST_* instead of `mc alias set` inside the same piped
+          # command: alias set's own "Added `myminio` successfully." line would land in
+          # minio-ls.txt and satisfy the -s test even when the backup wrote zero objects.
+          # pipefail so a failing `mc ls` isn't swallowed by tee either.
+          docker run --rm --network abs-smoke-net \
+            -e MC_HOST_myminio="http://minioadmin:minioadmin@minio:9000" \
+            minio/mc ls --recursive "myminio/${{ env.BUCKET }}/minioStorage" | tee minio-ls.txt
           [ -s minio-ls.txt ] || { echo "::error::No objects found under minioStorage in MinIO after backup"; exit 1; }
 
       - name: Truncate namespace before restore
@@ -165,7 +182,7 @@ jobs:
             asinfo -h 127.0.0.1:3000 -v "truncate-namespace:namespace=${{ env.NAMESPACE }}"
 
       - name: Wait for the namespace to drain before restore
-        uses: ./.github/actions/seed-and-verify-aerospike
+        uses: ./workflow-actions/.github/actions/seed-and-verify-aerospike
         with:
           mode: wait-empty
           namespace: ${{ env.NAMESPACE }}
@@ -195,7 +212,7 @@ jobs:
           echo "job-id=${JOB_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Poll for restore completion
-        uses: ./.github/actions/poll-abs-job
+        uses: ./workflow-actions/.github/actions/poll-abs-job
         with:
           base-url: http://127.0.0.1:8080
           kind: restore
@@ -203,7 +220,7 @@ jobs:
 
       - name: Verify record count matches the original seed
         id: final-count
-        uses: ./.github/actions/seed-and-verify-aerospike
+        uses: ./workflow-actions/.github/actions/seed-and-verify-aerospike
         with:
           mode: count
           namespace: ${{ env.NAMESPACE }}
