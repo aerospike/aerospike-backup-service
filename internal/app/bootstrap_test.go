@@ -34,7 +34,6 @@ func TestInitComponents_MinimalConfig(t *testing.T) {
 	require.Len(t, components.Servers, 1)
 
 	components.Scheduler.Start(ctx)
-	t.Cleanup(components.Scheduler.Stop)
 }
 
 // TestInitComponents_StartsNothing is the executable form of the contract in the
@@ -117,7 +116,10 @@ func TestComponents_RunServesUntilCanceled(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Run did not return after its context was canceled")
 	}
-	require.False(t, components.Scheduler.IsStarted(), "scheduler still running after Run returned")
+	// The scheduler stops itself when the context it was started with is canceled.
+	require.Eventually(t, func() bool {
+		return !components.Scheduler.IsStarted()
+	}, time.Second, 10*time.Millisecond, "canceling the run context did not stop the scheduler")
 }
 
 // freePort returns a port that is free at the moment of the call.
@@ -184,5 +186,4 @@ func TestInitComponents_DisabledHTTPSDoesNotRequireTLSFiles(t *testing.T) {
 	components, err := InitComponents(ctx, configPath, false)
 	require.NoError(t, err)
 	require.NotNil(t, components)
-	t.Cleanup(components.Scheduler.Stop)
 }

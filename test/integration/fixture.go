@@ -11,7 +11,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
@@ -59,10 +58,7 @@ func (s *Suite) initComponents(config *dto.Config, customize ...func(*dto.Config
 	components, err := app.InitComponents(ctx, configPath, false)
 	s.Require().NoError(err)
 
-	components.Scheduler.Start(ctx)
-	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
-	components.TLSProvider.Start(ctx)
-	t.Cleanup(func() { components.Scheduler.Stop() })
+	components.Start(ctx)
 
 	return components
 }

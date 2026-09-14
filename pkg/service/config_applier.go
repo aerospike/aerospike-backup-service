@@ -69,7 +69,7 @@ func (a *configApplier) ApplyNewConfig() error {
 	}
 
 	// Scan existing backups only for routines that were invalidated and still exist.
-	a.registry.RequestHistorySync(routinesToApply)
+	a.registry.RequestHistorySync(routineNames(routinesToApply))
 
 	return nil
 }

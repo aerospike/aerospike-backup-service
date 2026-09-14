@@ -117,16 +117,3 @@ Run `make packages`.
 This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`linux/arm64`) with respective `sha256`
 checksum file in the `build/target` directory.
 See the quick [guide](../build/package/README.md) on how to get started with the Linux packages.
-
-### Release
-
-Use the following commands before a release to update the version.
-
-```bash
-NEXT_VERSION="<version>"  make release
-NEXT_HELM_CHART_VERSION="<helm-chart-version>" make helm-chart-release
-git add --all
-git commit -m "Release: "$(cat VERSION)""
-git tag "$(cat VERSION)"
-git push 
-```

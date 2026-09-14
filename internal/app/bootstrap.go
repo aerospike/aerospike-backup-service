@@ -38,34 +38,24 @@ type Components struct {
 	restoreJobs *service.RestoreJobsHolder
 }
 
-// Run starts every component and serves until ctx is canceled or a listener stops. It is
-// the one place the run context is handed out: anything that needs to outlive a request —
-// a restore job, a history scan — descends from it here, and ends with it.
+// Run starts every component, serves until ctx is canceled or a listener stops, and then
+// stops what needs stopping. It is the one place the run context is handed out, so a
+// component that must outlive a single request takes its lifetime from here.
 func (c *Components) Run(ctx context.Context) error {
+	c.Start(ctx)
+
+	return server.Run(ctx, c.Servers)
+}
+
+// Start brings up every background component and returns. It is the one place the run
+// context is handed out: a component that outlives a single request takes its lifetime
+// from here, never from the context that built the graph.
+func (c *Components) Start(ctx context.Context) {
 	c.registry.Start(ctx)
 	c.restoreJobs.Start(ctx)
 	c.Scheduler.Start(ctx)
 	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	c.TLSProvider.Start(ctx)
-
-	err := server.Run(ctx, c.Servers)
-	c.Scheduler.Stop()
-
-	return err
-}
-
-// Run starts every component, serves until ctx is canceled or a listener stops, and then
-// stops what needs stopping. It is the one place the run context is handed out, so a
-// component that must outlive a single request takes its lifetime from here.
-func (c *Components) Run(ctx context.Context) error {
-	c.Scheduler.Start(ctx)
-	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
-	c.TLSProvider.Start(ctx)
-
-	err := server.Run(ctx, c.Servers)
-	c.Scheduler.Stop()
-
-	return err
 }
 
 // InitComponents builds the full object graph.

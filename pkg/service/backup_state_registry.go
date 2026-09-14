@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -26,10 +25,10 @@ type BackupStateRegistry interface {
 	GetRunningState() map[string]model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.
 	Cancel(routineName string)
-	// RequestHistorySync asks for the last backup times of the given routines to be re-read
-	// from storage. Requests are coalesced per routine and served by Start; before Start they
+	// RequestHistorySync asks for the last backup times of the named routines to be re-read
+	// from storage. Requests are coalesced per name and served by Start; before Start they
 	// only accumulate, so no storage is read until the service is running.
-	RequestHistorySync(routines []*model.BackupRoutine)
+	RequestHistorySync(routineNames []string)
 	// Start serves history sync requests until ctx is canceled.
 	Start(ctx context.Context)
 
@@ -59,13 +58,13 @@ type backupStateRegistry struct {
 	// config is needed to calculate next run times
 	config routineProvider
 
-	// pending holds the routines waiting for a history sync, latest definition per name.
-	// signal has a buffer of one, so a request never blocks and back-to-back requests
-	// collapse into a single scan.
+	// pending holds the names of routines waiting for a history sync; the definition to
+	// scan is resolved from config when the queue is drained, so a scan always runs
+	// against the current configuration. signal has a buffer of one, so a request never
+	// blocks and back-to-back requests collapse into a single scan.
 	pendingMu sync.Mutex
-	pending   map[string]*model.BackupRoutine
+	pending   map[string]struct{}
 	signal    chan struct{}
-	startOnce sync.Once
 }
 
 var _ BackupStateRegistry = (*backupStateRegistry)(nil)
@@ -81,20 +80,20 @@ func NewBackupStateRegistry(
 		trackers: collections.NewSafeMap[string, *routineTracker](),
 		history:  history,
 		config:   config,
-		pending:  make(map[string]*model.BackupRoutine),
+		pending:  make(map[string]struct{}),
 		signal:   make(chan struct{}, 1),
 	}
 }
 
-// RequestHistorySync queues the routines for a storage scan. It returns at once.
-func (r *backupStateRegistry) RequestHistorySync(routines []*model.BackupRoutine) {
-	if len(routines) == 0 {
+// RequestHistorySync queues the named routines for a storage scan. It returns at once.
+func (r *backupStateRegistry) RequestHistorySync(routineNames []string) {
+	if len(routineNames) == 0 {
 		return
 	}
 
 	r.pendingMu.Lock()
-	for _, routine := range routines {
-		r.pending[routine.Name] = routine
+	for _, name := range routineNames {
+		r.pending[name] = struct{}{}
 	}
 	r.pendingMu.Unlock()
 
@@ -104,35 +103,49 @@ func (r *backupStateRegistry) RequestHistorySync(routines []*model.BackupRoutine
 	}
 }
 
-// Start serves queued history sync requests until ctx is canceled. Calling it again is a no-op.
+// Start serves queued history sync requests until ctx is canceled.
 func (r *backupStateRegistry) Start(ctx context.Context) {
-	r.startOnce.Do(func() {
-		go r.serveSyncRequests(ctx)
-	})
-}
-
-func (r *backupStateRegistry) serveSyncRequests(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-r.signal:
-			r.synchroniseBackupHistory(ctx, r.takePending())
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-r.signal:
+				r.synchroniseBackupHistory(ctx, r.takePending())
+			}
 		}
-	}
+	}()
 }
 
-// takePending drains the queue, sorted by routine name so logs and scans are deterministic.
+// takePending drains the queue and resolves each name against the current configuration.
+// A routine deleted since its request was made is skipped: there is no longer anything to
+// scan for it. Names are sorted so a scan and its log line are deterministic.
 func (r *backupStateRegistry) takePending() []*model.BackupRoutine {
 	r.pendingMu.Lock()
-	defer r.pendingMu.Unlock()
-
-	routines := slices.SortedFunc(maps.Values(r.pending), func(a, b *model.BackupRoutine) int {
-		return strings.Compare(a.Name, b.Name)
-	})
+	names := slices.Sorted(maps.Keys(r.pending))
 	clear(r.pending)
+	r.pendingMu.Unlock()
+
+	configured := r.config.Routines()
+
+	routines := make([]*model.BackupRoutine, 0, len(names))
+	for _, name := range names {
+		if routine, ok := configured[name]; ok {
+			routines = append(routines, routine)
+		}
+	}
 
 	return routines
+}
+
+// routineNames returns the names of the given routines, in order.
+func routineNames(routines []*model.BackupRoutine) []string {
+	names := make([]string, len(routines))
+	for i, routine := range routines {
+		names[i] = routine.Name
+	}
+
+	return names
 }
 
 // getTracker atomically retrieves or creates a new tracker for a routine.
@@ -147,10 +160,7 @@ func (r *backupStateRegistry) synchroniseBackupHistory(ctx context.Context, rout
 		return
 	}
 
-	names := make([]string, len(routines))
-	for i, t := range routines {
-		names[i] = t.Name
-	}
+	names := routineNames(routines)
 
 	slog.Info("Start backup history synchronization",
 		slog.Any("routines", names),

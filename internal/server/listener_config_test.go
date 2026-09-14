@@ -234,7 +234,6 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 			cfg := test.config(httpPort, httpsPort, certs)
 
 			components := initListenerComponents(t, cfg)
-			t.Cleanup(components.Scheduler.Stop)
 
 			httpURL := fmt.Sprintf("http://127.0.0.1:%d", httpPort)
 			httpsURL := fmt.Sprintf("https://127.0.0.1:%d", httpsPort)
@@ -303,7 +302,6 @@ func TestConfiguredContextPathPrefixesRoutes(t *testing.T) {
 	}
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -347,7 +345,6 @@ func TestHTTPSListenerNegotiatesHTTP2(t *testing.T) {
 	}
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -385,7 +382,6 @@ func TestConfiguredHTTPSContextPathPrefixesRoutes(t *testing.T) {
 	cfg.ServiceConfig.ServerHTTPS.ContextPath = "/abs"
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -409,7 +405,6 @@ func TestHTTPSRequestClientCertificateAllowsAnonymousClient(t *testing.T) {
 	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequest
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -432,7 +427,6 @@ func TestHTTPSRequireAndVerifyRejectsMissingClientCertificate(t *testing.T) {
 	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequireAndVerify
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -467,7 +461,6 @@ func TestHTTPSRequireAndVerifyRejectsUntrustedClientCertificate(t *testing.T) {
 	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequireAndVerify
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -512,7 +505,6 @@ func TestHTTPSRequireAndVerifyRejectsExpiredClientCertificate(t *testing.T) {
 	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequireAndVerify
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -577,7 +569,6 @@ func TestHTTPSRejectsExpiredServerCertificate(t *testing.T) {
 	))
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -633,7 +624,6 @@ func TestRunFailsFastWhenListenerCannotBind(t *testing.T) {
 	}
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	err := server.Run(t.Context(), components.Servers)
 	require.ErrorContains(t, err, fmt.Sprintf("HTTP listener 127.0.0.1:%d", httpPort))
