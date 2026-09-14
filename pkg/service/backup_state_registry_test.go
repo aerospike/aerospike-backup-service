@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -70,6 +71,24 @@ func TestHistoryScan(t *testing.T) {
 	assert.Equal(t, stat.LastRunTime, backupTime)
 }
 
+// configWithRoutines returns a configuration holding one routine per given name. The
+// registry resolves a queued name against this when it drains, so a request for a routine
+// that is not here is a request for a routine that no longer exists.
+func configWithRoutines(t *testing.T, names ...string) *model.Config {
+	t.Helper()
+
+	cfg := model.NewConfig()
+	for _, name := range names {
+		require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
+			Name:         name,
+			IntervalCron: "@daily",
+			Timezone:     model.NewServiceLocation("", nil),
+		}))
+	}
+
+	return cfg
+}
+
 func TestRequestHistorySync_WaitsForStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -80,10 +99,10 @@ func TestRequestHistorySync_WaitsForStart(t *testing.T) {
 			scanned <- struct{}{}
 			return model.NewNoBackupTime(), nil
 		}).Times(1)
-	registry := newTestBackupStateRegistry(historyMgr, nil)
+	registry := newTestBackupStateRegistry(historyMgr, configWithRoutines(t, routineName))
 
 	// Before Start there is no context to scan on, so a request only queues.
-	registry.RequestHistorySync([]*model.BackupRoutine{{Name: routineName}})
+	registry.RequestHistorySync([]string{routineName})
 	select {
 	case <-scanned:
 		t.Fatal("history was scanned before Start")
@@ -95,22 +114,31 @@ func TestRequestHistorySync_WaitsForStart(t *testing.T) {
 }
 
 func TestRequestHistorySync_CoalescesRequestsPerRoutine(t *testing.T) {
-	registry := newTestBackupStateRegistry(nil, nil)
+	cfg := configWithRoutines(t, routineName, "other")
+	registry := newTestBackupStateRegistry(nil, cfg)
 
-	stale := &model.BackupRoutine{Name: routineName, IntervalCron: "@daily"}
-	fresh := &model.BackupRoutine{Name: routineName, IntervalCron: "@hourly"}
-	registry.RequestHistorySync([]*model.BackupRoutine{stale, {Name: "other"}})
-	registry.RequestHistorySync([]*model.BackupRoutine{fresh})
+	registry.RequestHistorySync([]string{routineName, "other"})
+	registry.RequestHistorySync([]string{routineName})
 
 	pending := registry.takePending()
-	require.Len(t, pending, 2)
+	require.Len(t, pending, 2, "a routine named twice is scanned once")
 	assert.Equal(t, "other", pending[0].Name)
-	assert.Same(t, fresh, pending[1], "the latest routine definition wins")
+	assert.Same(t, cfg.Routines()[routineName], pending[1], "the scan uses the configured routine")
 	assert.Empty(t, registry.takePending(), "taking drains the queue")
 }
 
+func TestRequestHistorySync_SkipsRoutineDeletedSinceTheRequest(t *testing.T) {
+	registry := newTestBackupStateRegistry(nil, configWithRoutines(t, "survivor"))
+
+	registry.RequestHistorySync([]string{"survivor", "deleted-since"})
+
+	pending := registry.takePending()
+	require.Len(t, pending, 1)
+	assert.Equal(t, "survivor", pending[0].Name)
+}
+
 func TestRequestHistorySync_EmptyRequestQueuesNothing(t *testing.T) {
-	registry := newTestBackupStateRegistry(nil, nil)
+	registry := newTestBackupStateRegistry(nil, configWithRoutines(t))
 
 	registry.RequestHistorySync(nil)
 
@@ -120,6 +148,36 @@ func TestRequestHistorySync_EmptyRequestQueuesNothing(t *testing.T) {
 		t.Fatal("an empty request must not signal a scan")
 	default:
 	}
+}
+
+func TestStart_IsIgnoredAndReportedWhenAlreadyRunning(t *testing.T) {
+	originalLogger := slog.Default()
+	logs := &logBuffer{}
+	slog.SetDefault(slog.New(slog.NewTextHandler(logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(originalLogger) })
+
+	ctrl := gomock.NewController(t)
+	historyMgr := NewMockHistoryManager(ctrl)
+	scanned := make(chan struct{}, 1)
+	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(context.Context, *model.BackupRoutine) (*model.BackupTime, error) {
+			scanned <- struct{}{}
+			return model.NewNoBackupTime(), nil
+		}).Times(1)
+
+	registry := newTestBackupStateRegistry(historyMgr, configWithRoutines(t, routineName))
+	registry.Start(t.Context())
+
+	rejected, cancelRejected := context.WithCancel(t.Context())
+	registry.Start(rejected)
+	cancelRejected()
+
+	assert.Contains(t, logs.String(), "already running")
+
+	// The lifetime the first Start gave still governs, so canceling the context that Start
+	// refused stops nothing: a request made afterwards is still served.
+	registry.RequestHistorySync([]string{routineName})
+	waitAsyncDone(t, scanned, "history scan after a rejected Start")
 }
 
 func TestFinishFull(t *testing.T) {

@@ -379,15 +379,15 @@ func (mr *MockBackupStateRegistryMockRecorder) GetRunningState() *gomock.Call {
 }
 
 // RequestHistorySync mocks base method.
-func (m *MockBackupStateRegistry) RequestHistorySync(routines []*model.BackupRoutine) {
+func (m *MockBackupStateRegistry) RequestHistorySync(routineNames []string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RequestHistorySync", routines)
+	m.ctrl.Call(m, "RequestHistorySync", routineNames)
 }
 
 // RequestHistorySync indicates an expected call of RequestHistorySync.
-func (mr *MockBackupStateRegistryMockRecorder) RequestHistorySync(routines any) *gomock.Call {
+func (mr *MockBackupStateRegistryMockRecorder) RequestHistorySync(routineNames any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestHistorySync", reflect.TypeOf((*MockBackupStateRegistry)(nil).RequestHistorySync), routines)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestHistorySync", reflect.TypeOf((*MockBackupStateRegistry)(nil).RequestHistorySync), routineNames)
 }
 
 // Start mocks base method.

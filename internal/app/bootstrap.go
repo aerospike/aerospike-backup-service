@@ -58,7 +58,9 @@ func (c *Components) Stop() {
 }
 
 // Run starts every component, serves until ctx is canceled or a listener stops, and then
-// stops them again.
+// stops them again. It blocks for as long as the service runs: a caller that wants the
+// service up without giving up its goroutine - a test serving the handler itself - uses
+// Start and Stop instead.
 func (c *Components) Run(ctx context.Context) error {
 	c.Start(ctx)
 
