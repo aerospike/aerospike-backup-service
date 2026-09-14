@@ -95,6 +95,9 @@ const (
 
 // Validate validates the backup routine configuration.
 func (r *BackupRoutine) Validate() error {
+	if r == nil {
+		return errors.New("backup routine is not specified")
+	}
 	if r.SourceCluster == "" {
 		return errValidationEmptyField("source-cluster")
 	}
@@ -106,7 +109,7 @@ func (r *BackupRoutine) Validate() error {
 	}
 	if r.IncrIntervalCron != "" { // incremental interval is optional
 		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
-			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
+			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IncrIntervalCron, err)
 		}
 	}
 	if err := r.ScheduleTimezone.Validate(); err != nil {

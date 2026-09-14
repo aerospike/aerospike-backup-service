@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -26,13 +25,12 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newCluster, err := dto.NewClusterFromReader(r.Body, decoder.JSON)
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
+	newCluster, ok := decodeBody(w, r, jsonReader(dto.NewClusterFromReader))
+	if !ok {
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.AerospikeClusters[name]; exists {
 			return nil, fmt.Errorf("add Aerospike cluster %q: %w", name, model.ErrAlreadyExists)
 		}
@@ -107,18 +105,17 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	updatedCluster, err := dto.NewClusterFromReader(r.Body, decoder.JSON)
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
+	updatedCluster, ok := decodeBody(w, r, jsonReader(dto.NewClusterFromReader))
+	if !ok {
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.AerospikeClusters[name]; !exists {
 			return nil, fmt.Errorf("update Aerospike cluster %q: %w", name, model.ErrNotFound)
 		}
 		config.AerospikeClusters[name] = updatedCluster
-		return nil, nil
+		return routinesUsingCluster(config, name), nil
 	}, withNamespaceValidation); err != nil {
 		httpError(w, errBadRequest(err))
 		return

@@ -131,6 +131,9 @@ func (c *Config) Validate() error {
 		if name == "" {
 			return errValidationEmptyField("secret agent name")
 		}
+		if agent == nil {
+			return fmt.Errorf("secret agent '%s' validation error: secret agent is not specified", name)
+		}
 		if err := agent.validate(); err != nil {
 			return fmt.Errorf("secret agent '%s' validation error: %w", name, err)
 		}

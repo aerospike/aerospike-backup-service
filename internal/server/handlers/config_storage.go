@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -26,13 +25,12 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newStorage, err := dto.NewStorageFromReader(r.Body, decoder.JSON)
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
+	newStorage, ok := decodeBody(w, r, jsonReader(dto.NewStorageFromReader))
+	if !ok {
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.Storage[name]; exists {
 			return nil, fmt.Errorf("add storage %q: %w", name, model.ErrAlreadyExists)
 		}
@@ -101,13 +99,12 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedStorage, err := dto.NewStorageFromReader(r.Body, decoder.JSON)
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
+	updatedStorage, ok := decodeBody(w, r, jsonReader(dto.NewStorageFromReader))
+	if !ok {
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.Storage[name]; !exists {
 			return nil, fmt.Errorf("update storage %q: %w", name, model.ErrNotFound)
 		}

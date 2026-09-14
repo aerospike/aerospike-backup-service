@@ -203,12 +203,12 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		},
 		{
 			http.MethodGet, "/v1/restore/status/1", "", http.StatusNotFound,
-			"job '\\x01' not found\n",
+			"job 1 not found\n",
 		},
 		{http.MethodGet, "/v1/restore/jobs", "", http.StatusOK, "{}"},
 		{
 			http.MethodPost, "/v1/restore/cancel/1", "", http.StatusNotFound,
-			"job '\\x01' not found\n",
+			"job 1 not found\n",
 		},
 		{
 			http.MethodGet, "/v1/retrieve/configuration/routine1/1000", "", http.StatusNotFound,
