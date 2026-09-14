@@ -30,7 +30,7 @@ type BackupStateRegistry interface {
 	// BackupStarted stores the handler of a started backup, so it can be tracked and canceled.
 	BackupStarted(routineName string, backupType model.BackupType, handler CancelableBackupHandler)
 	// BackupSucceeded drops the handler and rescans storage to refresh the last backup time.
-	BackupSucceeded(routine *model.BackupRoutine, backupType model.BackupType)
+	BackupSucceeded(ctx context.Context, routine *model.BackupRoutine, backupType model.BackupType)
 	// BackupFailed drops the handler of a failed backup.
 	BackupFailed(routineName string, backupType model.BackupType)
 }
@@ -190,11 +190,12 @@ func (r *backupStateRegistry) BackupStarted(
 // BackupSucceeded removes a backup from the registry and triggers a storage scan
 // to update the last backup timestamp. Storage is the single source of truth for history.
 func (r *backupStateRegistry) BackupSucceeded(
+	ctx context.Context,
 	routine *model.BackupRoutine,
 	backupType model.BackupType,
 ) {
 	r.getTracker(routine.Name).clearBackup(backupType)
-	_ = r.scanSingleRoutineHistory(context.Background(), routine)
+	_ = r.scanSingleRoutineHistory(ctx, routine)
 }
 
 // BackupFailed deletes a backup from the registry.

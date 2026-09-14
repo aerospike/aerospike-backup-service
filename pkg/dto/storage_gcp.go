@@ -17,7 +17,7 @@ type GcpStorage struct {
 	// Key is the service account key in JSON format.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	Key secret `yaml:"key,omitempty" json:"key,omitempty" format:"password" extensions:"x-nullable"`
+	Key Secret `yaml:"key,omitempty" json:"key,omitempty" format:"password" extensions:"x-nullable"`
 	// GCP storage bucket name.
 	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
 	// The root path for the backup repository. If not specified, backups will be saved in the bucket's root.
@@ -57,8 +57,8 @@ func (s *GcpStorage) Validate() error {
 	}
 
 	withAgent := s.hasSecretAgent()
-	if err := s.Key.Validate(withAgent); err != nil {
-		return errValidationSecret("key-json", err)
+	if err := validateSecret("key-json", s.Key, withAgent); err != nil {
+		return err
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
@@ -77,7 +77,7 @@ func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
 		BucketName:   s.BucketName,
 		Path:         string(s.Path),
 		Endpoint:     s.Endpoint,
-		KeyJSON:      string(s.Key),
+		KeyJSON:      s.Key,
 		SecretAgent:  agent,
 		MinPartSize:  s.MinPartSize,
 		StorageClass: s.StorageClass.ToModel(),
@@ -90,7 +90,7 @@ func newGcpStorageFromModel(s *model.GcpStorage, config *model.BackupConfig) *Gc
 		BucketName:        s.BucketName,
 		Path:              Path(s.Path),
 		Endpoint:          s.Endpoint,
-		Key:               secret(s.KeyJSON),
+		Key:               s.KeyJSON,
 		MinPartSize:       s.MinPartSize,
 		SecretAgentConfig: ResolveSecretAgentFromModel(s.SecretAgent, config),
 		StorageClass:      newGcpStorageClassFromModel(s.StorageClass),

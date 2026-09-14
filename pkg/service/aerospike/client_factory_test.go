@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -107,7 +108,7 @@ func clusterRequiringTLS(
 				Certfile: files.certFile,
 				Keyfile:  files.encryptedKeyFile,
 			},
-			KeyfilePassword: keyfilePasswordRef,
+			KeyfilePassword: redact.Secret(keyfilePasswordRef),
 		},
 	}
 }
@@ -136,7 +137,7 @@ func TestClientPolicyResolvesTLSKeyfilePasswordThroughSecretAgent(t *testing.T) 
 	cluster := clusterRequiringTLS(files, agent, "secrets:agent1:tls-key")
 
 	resolvedTLS := *cluster.TLS
-	resolvedTLS.KeyfilePassword = files.keyPassword
+	resolvedTLS.KeyfilePassword = redact.Secret(files.keyPassword)
 	resolver := secrets.NewMockClusterTLSResolver(ctrl)
 	resolver.EXPECT().
 		Resolve(gomock.Any(), cluster).

@@ -92,7 +92,7 @@ func TestFinishFull(t *testing.T) {
 	registry.BackupStarted(routineName, model.BackupTypeFull, handler)
 	registry.getTracker(routineName).markScanDone()
 
-	registry.BackupSucceeded(routine, model.BackupTypeFull)
+	registry.BackupSucceeded(t.Context(), routine, model.BackupTypeFull)
 
 	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)
@@ -122,7 +122,7 @@ func TestFinishIncremental(t *testing.T) {
 	registry.BackupStarted(routineName, model.BackupTypeIncremental, handler)
 	registry.getTracker(routineName).markScanDone()
 
-	registry.BackupSucceeded(routine, model.BackupTypeIncremental)
+	registry.BackupSucceeded(t.Context(), routine, model.BackupTypeIncremental)
 
 	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)

@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
@@ -255,7 +256,7 @@ func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
 	updated, ok := svc.config.BackupConfigCopy().AerospikeClusters["test-cluster"]
 	require.True(t, ok)
 	require.NotNil(t, updated.Credentials)
-	assert.Equal(t, realPassword, updated.Credentials.Password)
+	assert.Equal(t, redact.Secret(realPassword), updated.Credentials.Password)
 	assert.Equal(t, "updated-label", updated.ClusterLabel)
 }
 

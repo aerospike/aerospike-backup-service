@@ -30,6 +30,73 @@ func TestHandlerReplaceAttr_RedactsSecrets(t *testing.T) {
 	assert.NotContains(t, output, "superSecretPassword")
 }
 
+func TestHandlerReplaceAttr_RedactsModelStorageCredentials(t *testing.T) {
+	const (
+		s3Literal    = "AWS-SECRET-ACCESS-KEY-VALUE"
+		azureLiteral = "AZURE-ACCOUNT-KEY-VALUE"
+		adLiteral    = "AZURE-CLIENT-SECRET-VALUE"
+		gcpKeyJSON   = `{"type":"service_account","private_key":"-----BEGIN PRIVATE KEY-----"}`
+	)
+
+	storages := map[string]struct {
+		storage model.Storage
+		secret  string
+	}{
+		"s3": {
+			storage: &model.S3Storage{Bucket: "b", Auth: &model.S3Authentication{
+				KeyIDSecret: "AKIA", AccessKeySecret: s3Literal,
+			}},
+			secret: s3Literal,
+		},
+		"azure shared key": {
+			storage: &model.AzureStorage{ContainerName: "c", Auth: &model.AzureSharedKeyAuth{
+				AccountName: "acc", AccountKey: azureLiteral,
+			}},
+			secret: azureLiteral,
+		},
+		"azure ad": {
+			storage: &model.AzureStorage{ContainerName: "c", Auth: &model.AzureADAuth{
+				TenantID: "tenant", ClientID: "client", ClientSecret: adLiteral,
+			}},
+			secret: adLiteral,
+		},
+		"gcp": {
+			storage: &model.GcpStorage{BucketName: "b", KeyJSON: gcpKeyJSON},
+			secret:  "BEGIN PRIVATE KEY",
+		},
+	}
+
+	handlers := map[string]func(w *bytes.Buffer) slog.Handler{
+		"json": func(w *bytes.Buffer) slog.Handler {
+			return slog.NewJSONHandler(w, &slog.HandlerOptions{ReplaceAttr: handlerReplaceAttr})
+		},
+		"plain": func(w *bytes.Buffer) slog.Handler {
+			return slog.NewTextHandler(w, &slog.HandlerOptions{ReplaceAttr: handlerReplaceAttr})
+		},
+	}
+
+	for format, newHandler := range handlers {
+		for name, test := range storages {
+			t.Run(format+"/"+name, func(t *testing.T) {
+				var buf bytes.Buffer
+				log := slog.New(newHandler(&buf))
+
+				details := model.NewBackupDetails(
+					model.BackupMetadata{Created: time.Now(), Namespace: "ns"},
+					"routine/backup/123/data/ns",
+					test.storage,
+				)
+
+				log.Info("Start restoring", slog.Any("backup", details))
+				log.Info("Start restoring", slog.Any("backups", []model.BackupDetails{details}))
+
+				assert.Contains(t, buf.String(), `routine/backup/123/data/ns`)
+				assert.NotContains(t, buf.String(), test.secret)
+			})
+		}
+	}
+}
+
 func TestHandlerReplaceAttr_PreservesSecretRef(t *testing.T) {
 	var buf bytes.Buffer
 	log := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{

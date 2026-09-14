@@ -656,7 +656,7 @@ func TestHTTPSStartFailsWhenPortIsOccupied(t *testing.T) {
 	tlsConfig, err := servertls.NewTLSConfig(serverConfig, tlsProvider)
 	require.NoError(t, err)
 
-	srv := server.NewServerHTTPS(t.Context(), serverConfig, newListenerHandler(t), tlsConfig)
+	srv := server.NewServerHTTPS(serverConfig, newListenerHandler(t), tlsConfig)
 
 	err = srv.Start()
 	require.Error(t, err)
