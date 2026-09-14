@@ -104,7 +104,7 @@ func TestService_UpdateConfig(t *testing.T) {
 
 			mockConfigApplier := service.NewMockConfigApplier(ctrl)
 			if tt.expectedStatus == http.StatusOK || tt.configApplierErr != nil {
-				mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(tt.configApplierErr)
+				mockConfigApplier.EXPECT().ApplyNewConfig().Return(tt.configApplierErr)
 			}
 			svc.configApplier = mockConfigApplier
 
@@ -172,7 +172,7 @@ func TestService_ApplyConfig(t *testing.T) {
 
 			mockConfigApplier := service.NewMockConfigApplier(ctrl)
 			if tt.expectedStatus == http.StatusOK || tt.configApplierErr != nil {
-				mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(tt.configApplierErr)
+				mockConfigApplier.EXPECT().ApplyNewConfig().Return(tt.configApplierErr)
 			}
 			svc.configApplier = mockConfigApplier
 
@@ -197,7 +197,7 @@ func TestService_changeConfig(t *testing.T) {
 	svc.configurationManager = mockConfigurationManager
 
 	mockConfigApplier := service.NewMockConfigApplier(ctrl)
-	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil)
+	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil)
 	svc.configApplier = mockConfigApplier
 
 	called := false
@@ -229,7 +229,7 @@ func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
 	svc.configurationManager = mockConfigurationManager
 
 	mockConfigApplier := service.NewMockConfigApplier(ctrl)
-	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil)
+	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil)
 	svc.configApplier = mockConfigApplier
 
 	getReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config", nil)
