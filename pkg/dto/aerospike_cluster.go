@@ -238,7 +238,7 @@ func (c *Credentials) Validate() error {
 	}
 
 	withAgent := c.hasSecretAgent()
-	if err := c.Password.Validate(withAgent); err != nil {
+	if err := (secretRef{c.Password}).Validate(withAgent); err != nil {
 		return errValidationSecret("password", err)
 	}
 

@@ -58,7 +58,7 @@ func (s *GcpStorage) Validate() error {
 	}
 
 	withAgent := s.hasSecretAgent()
-	if err := s.Key.Validate(withAgent); err != nil {
+	if err := (secretRef{s.Key}).Validate(withAgent); err != nil {
 		return errValidationSecret("key-json", err)
 	}
 

@@ -92,7 +92,7 @@ func (t *TLS) validateKeyfilePassword(opts ValidationOptions) error {
 		return errValidationRequires("key-file-password", "key-file")
 	}
 
-	if err := t.KeyfilePassword.Validate(opts.Has(ValidationWithSecretAgent)); err != nil {
+	if err := (secretRef{t.KeyfilePassword}).Validate(opts.Has(ValidationWithSecretAgent)); err != nil {
 		return errValidationSecret("key-file-password", err)
 	}
 

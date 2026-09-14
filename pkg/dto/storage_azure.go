@@ -77,16 +77,16 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 	}
 
 	withAgent := a.hasSecretAgent()
-	if err := a.AccountKey.Validate(withAgent); err != nil {
+	if err := (secretRef{a.AccountKey}).Validate(withAgent); err != nil {
 		return errValidationSecret("account-key", err)
 	}
-	if err := a.TenantID.Validate(withAgent); err != nil {
+	if err := (secretRef{a.TenantID}).Validate(withAgent); err != nil {
 		return errValidationSecret("tenant-id", err)
 	}
-	if err := a.ClientID.Validate(withAgent); err != nil {
+	if err := (secretRef{a.ClientID}).Validate(withAgent); err != nil {
 		return errValidationSecret("client-id", err)
 	}
-	if err := a.ClientSecret.Validate(withAgent); err != nil {
+	if err := (secretRef{a.ClientSecret}).Validate(withAgent); err != nil {
 		return errValidationSecret("client-secret", err)
 	}
 

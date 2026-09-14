@@ -3,7 +3,6 @@
 package redact
 
 import (
-	"errors"
 	"fmt"
 	"hash/fnv"
 	"log/slog"
@@ -19,34 +18,15 @@ const (
 // Secret marks a string field as sensitive for redaction during API responses and logging.
 type Secret string
 
-// ErrSecretValidation is returned when a secret value fails validation.
-var ErrSecretValidation = errors.New("secret validation failed")
-
-// Validate checks secret agent references.
-func (s Secret) Validate(withAgent bool) error {
-	if s == "" {
-		return nil
-	}
-
-	if s.isMalformedRef() {
-		return fmt.Errorf("%w: %q must be in the form secrets:<resource>:<key>", ErrSecretValidation, string(s))
-	}
-
-	if s.isRef() && !withAgent {
-		return fmt.Errorf("%w: %q requires secret agent configuration (secret-agent or secret-agent-name)",
-			ErrSecretValidation, string(s))
-	}
-
-	return nil
+// IsMalformedRef reports whether the value looks like a Secret Agent reference but is not
+// well-formed. DTO-layer validation (pkg/dto) uses this to reject it; Secret itself only
+// needs it to decide how to redact and display the value.
+func (s Secret) IsMalformedRef() bool {
+	return strings.HasPrefix(string(s), secretRefPrefix) && !s.IsRef()
 }
 
-// isMalformedRef reports whether the value looks like a secret agent reference but is not well-formed.
-func (s Secret) isMalformedRef() bool {
-	return strings.HasPrefix(string(s), secretRefPrefix) && !s.isRef()
-}
-
-// isRef reports whether the value is a well-formed Secret Agent reference.
-func (s Secret) isRef() bool {
+// IsRef reports whether the value is a well-formed Secret Agent reference.
+func (s Secret) IsRef() bool {
 	asString := string(s)
 	if asString == "" {
 		return false
@@ -66,7 +46,7 @@ func (s Secret) DisplayString() string {
 		return ""
 	}
 
-	if s.isRef() {
+	if s.IsRef() {
 		return string(s)
 	}
 
@@ -84,7 +64,7 @@ func (s Secret) GoString() string {
 		return "redact.Secret(\"\")"
 	}
 
-	if s.isRef() {
+	if s.IsRef() {
 		return fmt.Sprintf("redact.Secret(%q)", string(s))
 	}
 
@@ -105,6 +85,15 @@ func (s Secret) IsRedacted() bool {
 // conversion, which is invisible to such a search.
 func (s Secret) Reveal() string {
 	return string(s)
+}
+
+func (s Secret) RevealPtr() *string {
+	if s == "" {
+		return nil
+	}
+
+	str := string(s)
+	return &str
 }
 
 // Hash returns a hash of the literal value. Use it wherever a configuration hash must

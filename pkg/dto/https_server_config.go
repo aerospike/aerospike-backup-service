@@ -96,7 +96,7 @@ func (s *ServerConfigHTTPS) validateTLSFields() error {
 	if s.KeyFilePassword != "" && s.KeyFile == "" {
 		return errValidationRequires("key-file-password", keyField)
 	}
-	if err := s.KeyFilePassword.Validate(s.hasSecretAgent()); err != nil {
+	if err := (secretRef{s.KeyFilePassword}).Validate(s.hasSecretAgent()); err != nil {
 		return errValidationSecret("key-file-password", err)
 	}
 

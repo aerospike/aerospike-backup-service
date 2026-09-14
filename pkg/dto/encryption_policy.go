@@ -63,7 +63,7 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 		return errValidationMutuallyExclusive("key-env", "key-secret")
 	}
 
-	if err := p.KeySecret.Validate(opts.Has(ValidationWithSecretAgent)); err != nil {
+	if err := (secretRef{p.KeySecret}).Validate(opts.Has(ValidationWithSecretAgent)); err != nil {
 		return errValidationSecret("key-secret", err)
 	}
 

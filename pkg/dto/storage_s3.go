@@ -79,10 +79,10 @@ func (s *S3Storage) Validate() error {
 	}
 
 	withAgent := s.hasSecretAgent()
-	if err := s.AccessKeyID.Validate(withAgent); err != nil {
+	if err := (secretRef{s.AccessKeyID}).Validate(withAgent); err != nil {
 		return errValidationSecret("access-key-id", err)
 	}
-	if err := s.SecretAccessKey.Validate(withAgent); err != nil {
+	if err := (secretRef{s.SecretAccessKey}).Validate(withAgent); err != nil {
 		return errValidationSecret("secret-access-key", err)
 	}
 
