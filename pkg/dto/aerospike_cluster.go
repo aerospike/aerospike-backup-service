@@ -7,7 +7,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -197,7 +196,7 @@ type Credentials struct {
 	// The password for the cluster authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	Password redact.Secret `yaml:"password,omitempty" json:"password,omitempty" format:"password" extensions:"x-nullable"`
+	Password Secret `yaml:"password,omitempty" json:"password,omitempty" format:"password" extensions:"x-nullable"`
 	// The file path with the password string.
 	PasswordPath Path `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
 	// The authentication mode (INTERNAL, EXTERNAL, PKI).
@@ -238,8 +237,8 @@ func (c *Credentials) Validate() error {
 	}
 
 	withAgent := c.hasSecretAgent()
-	if err := (secretRef{c.Password}).Validate(withAgent); err != nil {
-		return errValidationSecret("password", err)
+	if err := validateSecret("password", c.Password, withAgent); err != nil {
+		return err
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.

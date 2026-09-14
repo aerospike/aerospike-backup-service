@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 var secureServerCipherSuites = func() map[string]bool {
@@ -39,7 +38,7 @@ type ServerConfigHTTPS struct {
 	// Passphrase for an encrypted HTTPS server private key.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	KeyFilePassword redact.Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
+	KeyFilePassword Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
 	// Minimum accepted TLS protocol version.
 	MinVersion TLSMinVersion `yaml:"min-version,omitempty" json:"min-version,omitempty" default:"1.2" enums:"1.2,1.3"`
 	// Allowed TLS cipher suite names. An empty list uses Go's secure defaults.
@@ -96,8 +95,8 @@ func (s *ServerConfigHTTPS) validateTLSFields() error {
 	if s.KeyFilePassword != "" && s.KeyFile == "" {
 		return errValidationRequires("key-file-password", keyField)
 	}
-	if err := (secretRef{s.KeyFilePassword}).Validate(s.hasSecretAgent()); err != nil {
-		return errValidationSecret("key-file-password", err)
+	if err := validateSecret("key-file-password", s.KeyFilePassword, s.hasSecretAgent()); err != nil {
+		return err
 	}
 
 	for field, path := range map[string]Path{

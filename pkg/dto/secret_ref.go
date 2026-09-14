@@ -1,34 +1,32 @@
 package dto
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
-// secretRef validates a redact.Secret as a Secret Agent reference. redact.Secret itself is
-// shared with pkg/model and stays focused purely on redaction (String, GoString, LogValue,
-// Reveal, Hash); this wrapper keeps validation — an input-format concern — in the DTO layer,
-// alongside every other field validator in this package.
-type secretRef struct {
-	redact.Secret
-}
+// validateSecret checks a value that may be a Secret Agent reference and reports the result
+// against the field it came from. redact.Secret is shared with pkg/model, so this cannot be
+// a method on it; it belongs here with the rest of this package's field validators.
+//
+// Neither message carries a literal credential. A well-formed reference is not sensitive,
+// which is exactly what DisplayString returns unchanged. A malformed one is reported without
+// its value, because a literal password that happens to start with "secrets:" lands there.
+func validateSecret(field string, secret redact.Secret, withAgent bool) error {
+	switch {
+	case secret == "":
+		return nil
 
-// Validate checks that the value, if it looks like a Secret Agent reference, is well-formed,
-// and that a Secret Agent is configured to resolve it. It returns only the reason: callers
-// wrap the result with errValidationSecret, which supplies the field name.
-func (s secretRef) Validate(withAgent bool) error {
-	if s.Secret == "" {
+	case secret.IsMalformedRef():
+		return errValidationSecret(field, errors.New("must be in the form secrets:<resource>:<key>"))
+
+	case secret.IsRef() && !withAgent:
+		return errValidationSecret(field, fmt.Errorf(
+			"%q requires secret agent configuration (secret-agent or secret-agent-name)", secret.DisplayString()))
+
+	default:
 		return nil
 	}
-
-	if s.IsMalformedRef() {
-		return fmt.Errorf("%q must be in the form secrets:<resource>:<key>", string(s.Secret))
-	}
-
-	if s.IsRef() && !withAgent {
-		return fmt.Errorf("%q requires secret agent configuration (secret-agent or secret-agent-name)", string(s.Secret))
-	}
-
-	return nil
 }

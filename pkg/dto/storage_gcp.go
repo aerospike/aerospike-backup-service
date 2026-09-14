@@ -6,7 +6,6 @@ import (
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 // GcpStorage represents the configuration for GCP storage.
@@ -18,7 +17,7 @@ type GcpStorage struct {
 	// Key is the service account key in JSON format.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	Key redact.Secret `yaml:"key,omitempty" json:"key,omitempty" format:"password" extensions:"x-nullable"`
+	Key Secret `yaml:"key,omitempty" json:"key,omitempty" format:"password" extensions:"x-nullable"`
 	// GCP storage bucket name.
 	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
 	// The root path for the backup repository. If not specified, backups will be saved in the bucket's root.
@@ -58,8 +57,8 @@ func (s *GcpStorage) Validate() error {
 	}
 
 	withAgent := s.hasSecretAgent()
-	if err := (secretRef{s.Key}).Validate(withAgent); err != nil {
-		return errValidationSecret("key-json", err)
+	if err := validateSecret("key-json", s.Key, withAgent); err != nil {
+		return err
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.

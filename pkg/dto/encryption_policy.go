@@ -2,7 +2,6 @@ package dto
 
 import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 // EncryptionPolicy contains backup encryption information.
@@ -17,7 +16,7 @@ type EncryptionPolicy struct {
 	// The secret keyword in Aerospike Secret Agent containing the encryption key.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	KeySecret redact.Secret `yaml:"key-secret,omitempty" json:"key-secret,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
+	KeySecret Secret `yaml:"key-secret,omitempty" json:"key-secret,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 }
 
 // Validate validates the encryption policy.
@@ -63,8 +62,8 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 		return errValidationMutuallyExclusive("key-env", "key-secret")
 	}
 
-	if err := (secretRef{p.KeySecret}).Validate(opts.Has(ValidationWithSecretAgent)); err != nil {
-		return errValidationSecret("key-secret", err)
+	if err := validateSecret("key-secret", p.KeySecret, opts.Has(ValidationWithSecretAgent)); err != nil {
+		return err
 	}
 
 	if err := p.KeyFile.Validate(ValidationOptionalLocalFile); err != nil {

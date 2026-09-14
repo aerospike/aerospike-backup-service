@@ -6,28 +6,43 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSecretRef_Validate_NilAgentWithPrefix(t *testing.T) {
-	err := secretRef{"secrets:asbackup:psw"}.Validate(false)
+func TestValidateSecret_ReferenceWithoutAgent(t *testing.T) {
+	err := validateSecret("password", "secrets:asbackup:psw", false)
 	require.Error(t, err)
+	require.ErrorIs(t, err, errValidation)
+	require.ErrorContains(t, err, "password")
 	require.ErrorContains(t, err, "secrets:asbackup:psw")
 	require.ErrorContains(t, err, "secret agent")
 }
 
-func TestSecretRef_Validate_ValidReference(t *testing.T) {
-	err := secretRef{"secrets:resource:key"}.Validate(true)
-	require.NoError(t, err)
+func TestValidateSecret_ValidReference(t *testing.T) {
+	require.NoError(t, validateSecret("password", "secrets:resource:key", true))
 }
 
-func TestSecretRef_Validate_PlainValue(t *testing.T) {
-	err := secretRef{"plain-password"}.Validate(false)
-	require.NoError(t, err)
+func TestValidateSecret_PlainValue(t *testing.T) {
+	require.NoError(t, validateSecret("password", "plain-password", false))
 }
 
-func TestSecretRef_Validate_MalformedReference(t *testing.T) {
-	err := secretRef{"secrets:foo"}.Validate(true)
+func TestValidateSecret_Empty(t *testing.T) {
+	require.NoError(t, validateSecret("password", "", false))
+}
+
+func TestValidateSecret_MalformedReference(t *testing.T) {
+	err := validateSecret("key-secret", "secrets:foo", true)
 	require.Error(t, err)
-	require.ErrorContains(t, err, "secrets:foo")
+	require.ErrorIs(t, err, errValidation)
+	require.ErrorContains(t, err, "key-secret")
 	require.ErrorContains(t, err, "secrets:<resource>:<key>")
+}
+
+// A literal password that happens to start with "secrets:" is malformed rather than a
+// reference, so it reaches the same branch. The message must not carry it into the API
+// error body or the log.
+func TestValidateSecret_MalformedReferenceKeepsTheValueOut(t *testing.T) {
+	err := validateSecret("password", "secrets:hunter2", false)
+	require.Error(t, err)
+	require.NotContains(t, err.Error(), "hunter2")
+	require.NotContains(t, err.Error(), "secrets:hunter2")
 }
 
 func TestCredentialsValidate_MalformedSecretRef(t *testing.T) {
