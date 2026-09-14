@@ -151,8 +151,6 @@ linters:
           - unparam
         path: _test\.go
     paths:
-      # zz_*_test.go are throwaway audit scratch files, not part of the suite.
-      - zz_.*_test\.go$
       - examples
       - modules
       - docs
@@ -168,7 +166,6 @@ formatters:
   exclusions:
     generated: lax
     paths:
-      - zz_.*_test\.go$
       - examples
       - modules
       - docs
