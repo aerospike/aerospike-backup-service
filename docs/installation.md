@@ -37,15 +37,15 @@ With the `-r` flag, the file specified after `-c` contains the path or URL to th
 
 For example, you may store your configurations remotely, such as on AWS S3 storage.
 In this case, you could have a `remote_config.yaml` file containing S3 details:
-<!-- RemoteConfig -->
+<!-- tag RemoteConfig -->
 
 ```yaml
 s3-storage:
   bucket: as-backup-bucket
   path: config.yml
   s3-region: eu-central-1
-
 ```
+<!-- /tag -->
 
 Run the server
 
@@ -83,7 +83,7 @@ sudo journalctl -u aerospike-backup-service -n 100 --no-page -f
 
 ### Prerequisites
 
-- Go 1.25
+- Go <!-- tag GoVersion -->1.25.13<!-- /tag -->
 
 ### Build the service
 
