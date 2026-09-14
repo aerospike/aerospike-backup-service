@@ -35,7 +35,6 @@ func TestInitComponents_MinimalConfig(t *testing.T) {
 	require.Len(t, components.Servers, 1)
 
 	components.Scheduler.Start(ctx)
-	t.Cleanup(components.Scheduler.Stop)
 }
 
 // TestInitComponents_StartsNothing is the executable form of the contract in the
@@ -247,5 +246,4 @@ func TestInitComponents_DisabledHTTPSDoesNotRequireTLSFiles(t *testing.T) {
 	components, err := InitComponents(ctx, configPath, false)
 	require.NoError(t, err)
 	require.NotNil(t, components)
-	t.Cleanup(components.Scheduler.Stop)
 }
