@@ -66,7 +66,7 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to write configuration: %w", err)
 	}
 
-	if err = s.configApplier.ApplyNewConfig(s.sysCtx); err != nil {
+	if err = s.configApplier.ApplyNewConfig(); err != nil {
 		return fmt.Errorf("failed to apply new configuration: %w", err)
 	}
 

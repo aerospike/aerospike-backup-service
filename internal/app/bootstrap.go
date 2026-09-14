@@ -33,20 +33,27 @@ type Components struct {
 	Servers          []server.HTTP
 	MetricsCollector *prometheus.MetricsCollector
 	TLSProvider      servertls.TLSProvider
+
+	registry service.BackupStateRegistry
 }
 
-// Run starts every component, serves until ctx is canceled or a listener stops, and then
-// stops what needs stopping. It is the one place the run context is handed out, so a
-// component that must outlive a single request takes its lifetime from here.
+// Run starts every component and serves until ctx is canceled or a listener stops. It
+// blocks for as long as the service runs: a caller that wants the service up without
+// giving up its goroutine - a test serving the handler itself - uses Start instead.
 func (c *Components) Run(ctx context.Context) error {
+	c.Start(ctx)
+
+	return server.Run(ctx, c.Servers)
+}
+
+// Start brings up every background component and returns. It is the one place the run
+// context is handed out: a component that outlives a single request takes its lifetime
+// from here, never from the context that built the graph.
+func (c *Components) Start(ctx context.Context) {
+	c.registry.Start(ctx)
 	c.Scheduler.Start(ctx)
 	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	c.TLSProvider.Start(ctx)
-
-	err := server.Run(ctx, c.Servers)
-	c.Scheduler.Stop()
-
-	return err
 }
 
 // InitComponents builds the full object graph.
@@ -113,7 +120,7 @@ func InitComponents(
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
 	configApplier := service.NewConfigApplier(backupScheduler, registry, config)
 
-	err = configApplier.ApplyNewConfig(ctx)
+	err = configApplier.ApplyNewConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
@@ -169,6 +176,7 @@ func InitComponents(
 		Servers:          servers,
 		MetricsCollector: metricsCollector,
 		TLSProvider:      tlsProvider,
+		registry:         registry,
 	}, nil
 }
 
