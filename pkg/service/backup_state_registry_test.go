@@ -149,15 +149,6 @@ func TestRequestHistorySync_EmptyRequestQueuesNothing(t *testing.T) {
 	}
 }
 
-func TestStart_PanicsWhenCalledTwice(t *testing.T) {
-	registry := newTestBackupStateRegistry(nil, configWithRoutines(t))
-	registry.Start(t.Context())
-
-	assert.PanicsWithValue(t, "service: backup state registry already started", func() {
-		registry.Start(t.Context())
-	})
-}
-
 func TestFinishFull(t *testing.T) {
 	ctrl := gomock.NewController(t)
 

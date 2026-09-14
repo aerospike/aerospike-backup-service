@@ -8,7 +8,6 @@ import (
 	"maps"
 	"slices"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -66,7 +65,6 @@ type backupStateRegistry struct {
 	pendingMu sync.Mutex
 	pending   map[string]struct{}
 	signal    chan struct{}
-	started   atomic.Bool
 }
 
 var _ BackupStateRegistry = (*backupStateRegistry)(nil)
@@ -105,29 +103,18 @@ func (r *backupStateRegistry) RequestHistorySync(routineNames []string) {
 	}
 }
 
-// Start serves queued history sync requests until ctx is canceled. It may be called once.
-//
-// A second call has no meaning to give: two loops would serve one queue, and the lifetime
-// the caller passed would be neither honored nor refused. That is a mistake in how the
-// service is wired, not a condition to reconcile at runtime, so it fails here - at
-// startup, where whoever wired it is watching.
+// Start serves queued history sync requests until ctx is canceled.
 func (r *backupStateRegistry) Start(ctx context.Context) {
-	if !r.started.CompareAndSwap(false, true) {
-		panic("service: backup state registry already started")
-	}
-
-	go r.serveSyncRequests(ctx)
-}
-
-func (r *backupStateRegistry) serveSyncRequests(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-r.signal:
-			r.synchroniseBackupHistory(ctx, r.takePending())
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-r.signal:
+				r.synchroniseBackupHistory(ctx, r.takePending())
+			}
 		}
-	}
+	}()
 }
 
 // takePending drains the queue and resolves each name against the current configuration.

@@ -41,10 +41,6 @@ type Components struct {
 // context is handed out: a component that outlives a single request takes its lifetime
 // from here, never from the context that built the graph.
 //
-// There is no matching Stop, because ctx is how everything here ends - the scheduler
-// included, which stops itself when the context it was started with is canceled. Cancel
-// what you passed in.
-//
 // This is the whole list of what "running" means, so adding a component is one edit here
 // rather than one per caller. Run serves the HTTP listeners on top of it; a caller that
 // serves the handler itself (the integration fixture) calls Start directly.
