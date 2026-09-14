@@ -43,7 +43,6 @@ func newConfigTestService(t *testing.T) (*Service, *gomock.Controller) {
 	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
 
 	return &Service{
-		sysCtx:      t.Context(),
 		config:      model.NewConfig(),
 		nsValidator: mockNsValidator,
 		tlsProber:   newMockTLSProber(ctrl),
