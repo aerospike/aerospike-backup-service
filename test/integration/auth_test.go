@@ -106,6 +106,32 @@ func (s *AuthSuite) TestMutualTLS() {
 			TLS: s.mutualTLS(s.certs.pkiCert, s.certs.pkiKeyEncrypted),
 		})
 	})
+
+	s.Run("internal with key-file-password from secret agent", func() {
+		// key-file-password is a secret-agent reference here, not the literal
+		// passphrase that unlocks internalKeyEncrypted. ABS must resolve it through
+		// Credentials.SecretAgent before decrypting the client key - the same way it
+		// already resolves Credentials.Password in TestInternalPlain, but for the
+		// TLS key file instead of the account password.
+		agent := s.startSecretAgent(clientKeyPassword)
+
+		tlsConfig := s.mutualTLS(s.certs.internalCert, s.certs.internalKeyEncrypted)
+		tlsConfig.KeyfilePassword = decoder.Secret(secretRef())
+
+		s.testAuthenticatedBackup(cluster, &dto.AerospikeCluster{
+			SeedNodes:            []dto.SeedNode{cluster.seed},
+			UseServicesAlternate: ptr.Of(true),
+			Credentials: &dto.Credentials{
+				User:     intUser,
+				Password: intPassword,
+				AuthMode: dto.AuthModeInternal,
+				SecretAgentConfig: dto.SecretAgentConfig{
+					SecretAgent: agent,
+				},
+			},
+			TLS: tlsConfig,
+		})
+	})
 }
 
 func (s *AuthSuite) testAuthenticatedBackup(cluster authCluster, config *dto.AerospikeCluster) {

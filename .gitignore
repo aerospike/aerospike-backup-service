@@ -29,6 +29,7 @@ go.work.sum
 .vscode
 .DS_Store
 .cursor
+CLAUDE.md
 
 # Targets and temps
 lib/

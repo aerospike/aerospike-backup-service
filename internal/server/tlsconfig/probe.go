@@ -18,13 +18,13 @@ type Prober interface {
 }
 
 type prober struct {
-	resolver secrets.Resolver
+	resolver secrets.ClusterTLSResolver
 }
 
 var _ Prober = (*prober)(nil)
 
 // NewProber returns a TLS material prober.
-func NewProber(resolver secrets.Resolver) Prober {
+func NewProber(resolver secrets.ClusterTLSResolver) Prober {
 	return &prober{resolver: resolver}
 }
 
@@ -53,7 +53,7 @@ func (p *prober) Probe(ctx context.Context, config *model.Config) error {
 		if err := probeSecretAgent(agent); err != nil {
 			return fmt.Errorf("secret agent of cluster %q TLS validation failed: %w", name, err)
 		}
-		if err := p.probeCluster(ctx, cluster, agent); err != nil {
+		if err := p.probeCluster(ctx, cluster); err != nil {
 			return fmt.Errorf("cluster %q TLS validation failed: %w", name, err)
 		}
 	}
@@ -79,27 +79,17 @@ func hasClientTLSFiles(tls model.ClientTLS) bool {
 
 // probeCluster verifies that a cluster's CA and client key pair can be loaded.
 // Secret values are resolved into a copy so the model never retains plaintext.
-func (p *prober) probeCluster(
-	ctx context.Context,
-	cluster *model.AerospikeCluster,
-	agent *model.SecretAgent,
-) error {
+func (p *prober) probeCluster(ctx context.Context, cluster *model.AerospikeCluster) error {
 	if cluster == nil || cluster.TLS == nil {
 		return nil
 	}
 
-	tlsConfig := *cluster.TLS
-	if tlsConfig.KeyfilePassword != "" {
-		password, err := p.resolver.Resolve(ctx, agent, tlsConfig.KeyfilePassword)
-		if err != nil {
-			return fmt.Errorf("failed to resolve key-file-password: %w", err)
-		}
-		tlsConfig.KeyfilePassword = password
-	}
-
-	if _, err := clienttls.NewTLSConfig(&tlsConfig); err != nil {
+	tlsConfig, err := p.resolver.Resolve(ctx, cluster)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	_, err = clienttls.NewTLSConfig(&tlsConfig)
+
+	return err
 }

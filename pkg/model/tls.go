@@ -11,7 +11,10 @@ type TLS struct {
 	// The suite must match the certificate key type. If omitted, Go crypto/tls
 	// TLS 1.2 defaults apply (ECDHE AES-GCM, ChaCha20-Poly1305, and ECDHE AES-CBC SHA).
 	CipherSuite string
-	// Passphrase for an encrypted TLS key file. The value is used verbatim as the decryption password.
+	// Passphrase for an encrypted TLS key file. May still be an unresolved Secret Agent
+	// reference (see dto.TLS.KeyfilePassword) - callers must resolve it via secrets.Resolver
+	// before use. tlsconfig.NewTLSConfig applies no further processing: it uses this value
+	// verbatim as the decryption password.
 	KeyfilePassword string
 }
 
