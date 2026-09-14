@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -13,8 +12,9 @@ import (
 // ConfigApplier reschedules jobs and refreshes backup history for the routines that
 // a configuration change invalidated.
 type ConfigApplier interface {
-	// ApplyNewConfig applies new configuration to the service.
-	ApplyNewConfig(ctx context.Context) error
+	// ApplyNewConfig reschedules the jobs of every invalidated routine and queues a
+	// history sync for those that still exist. The sync runs once the registry is started.
+	ApplyNewConfig() error
 }
 
 // configApplier applies configuration changes by unscheduling affected cron jobs, rescheduling
@@ -42,7 +42,7 @@ func NewConfigApplier(
 }
 
 // ApplyNewConfig reschedules periodic jobs and rescans backup history for routines marked invalid in config.
-func (a *configApplier) ApplyNewConfig(ctx context.Context) error {
+func (a *configApplier) ApplyNewConfig() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -69,7 +69,7 @@ func (a *configApplier) ApplyNewConfig(ctx context.Context) error {
 	}
 
 	// Scan existing backups only for routines that were invalidated and still exist.
-	go a.registry.SynchroniseBackupHistory(ctx, routinesToApply)
+	a.registry.RequestHistorySync(routinesToApply)
 
 	return nil
 }
