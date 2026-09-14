@@ -52,6 +52,20 @@ func (c *Components) Run(ctx context.Context) error {
 	return err
 }
 
+// Run starts every component, serves until ctx is canceled or a listener stops, and then
+// stops what needs stopping. It is the one place the run context is handed out, so a
+// component that must outlive a single request takes its lifetime from here.
+func (c *Components) Run(ctx context.Context) error {
+	c.Scheduler.Start(ctx)
+	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
+	c.TLSProvider.Start(ctx)
+
+	err := server.Run(ctx, c.Servers)
+	c.Scheduler.Stop()
+
+	return err
+}
+
 // InitComponents builds the full object graph.
 // Components are created and wired but not started: no goroutines, listeners, or
 // watchers run here. The caller decides when to Start/Stop them, normally through Run.
