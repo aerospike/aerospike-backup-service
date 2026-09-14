@@ -91,33 +91,33 @@ func (mr *MockRestoreManagerMockRecorder) JobStatus(jobID any) *gomock.Call {
 }
 
 // Restore mocks base method.
-func (m *MockRestoreManager) Restore(ctx context.Context, request *model.RestoreRequest) (model.RestoreJobID, error) {
+func (m *MockRestoreManager) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Restore", ctx, request)
+	ret := m.ctrl.Call(m, "Restore", request)
 	ret0, _ := ret[0].(model.RestoreJobID)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Restore indicates an expected call of Restore.
-func (mr *MockRestoreManagerMockRecorder) Restore(ctx, request any) *gomock.Call {
+func (mr *MockRestoreManagerMockRecorder) Restore(request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockRestoreManager)(nil).Restore), ctx, request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockRestoreManager)(nil).Restore), request)
 }
 
 // RestoreByTime mocks base method.
-func (m *MockRestoreManager) RestoreByTime(ctx context.Context, request *model.RestoreTimestampRequest) (model.RestoreJobID, error) {
+func (m *MockRestoreManager) RestoreByTime(request *model.RestoreTimestampRequest) (model.RestoreJobID, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestoreByTime", ctx, request)
+	ret := m.ctrl.Call(m, "RestoreByTime", request)
 	ret0, _ := ret[0].(model.RestoreJobID)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RestoreByTime indicates an expected call of RestoreByTime.
-func (mr *MockRestoreManagerMockRecorder) RestoreByTime(ctx, request any) *gomock.Call {
+func (mr *MockRestoreManagerMockRecorder) RestoreByTime(request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreByTime", reflect.TypeOf((*MockRestoreManager)(nil).RestoreByTime), ctx, request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreByTime", reflect.TypeOf((*MockRestoreManager)(nil).RestoreByTime), request)
 }
 
 // MockBackupCatalog is a mock of BackupCatalog interface.

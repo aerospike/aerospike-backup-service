@@ -39,19 +39,17 @@ func newPathRestoreRunner(
 	}
 }
 
-func (r *pathRestoreRunner) Restore(ctx context.Context, request *model.RestoreRequest) (model.RestoreJobID, error) {
-	// Create a cancellable context for this specific job.
-	ctx, cancel := context.WithCancel(ctx)
+func (r *pathRestoreRunner) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
+	jobID, ctx, err := r.restoreJobs.newJob(request.BackupDataPath)
+	if err != nil {
+		return 0, err
+	}
 
-	jobID := r.restoreJobs.newJob(request.BackupDataPath, cancel)
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore job", slog.Any("path", request.BackupDataPath))
 	go func() {
-		err := r.executeRestore(ctx, request, jobID, logger)
-		if err != nil { // if some of the restore sub-operations failed, we need to cancel the rest.
-			cancel()
-		}
-		r.restoreJobs.finishJob(jobID, err, logger)
+		// finishJob releases the job context, which stops any sub-operation still running.
+		r.restoreJobs.finishJob(jobID, r.executeRestore(ctx, request, jobID, logger), logger)
 	}()
 
 	return jobID, nil

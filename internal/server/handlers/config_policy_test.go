@@ -330,7 +330,6 @@ func setupTestService(t *testing.T) *Service {
 	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil).AnyTimes()
 
 	return NewService(
-		t.Context(),
 		model.NewConfig(),
 		mockConfigApplier,
 		nil,

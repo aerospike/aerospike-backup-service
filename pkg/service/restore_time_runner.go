@@ -45,11 +45,12 @@ func newTimeRestoreRunner(
 	}
 }
 
-func (r *timeRestoreRunner) RestoreByTime(
-	ctx context.Context, request *model.RestoreTimestampRequest,
-) (model.RestoreJobID, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
+func (r *timeRestoreRunner) RestoreByTime(request *model.RestoreTimestampRequest) (model.RestoreJobID, error) {
+	jobID, ctx, err := r.restoreJobs.newJob(request.RoutineName)
+	if err != nil {
+		return 0, err
+	}
+
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore by time job",
 		slog.String("routine", request.RoutineName),
