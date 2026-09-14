@@ -62,8 +62,6 @@ var defaultConfig = struct {
 		Level:        LogLevelInfo,
 		Format:       LogFormatPlain,
 		StdoutWriter: ptr.Of(true),
-		// MaxAge and MaxBackups have no default: the documented behavior is to keep
-		// every rotated file, and internal/log passes the fields through unchanged.
 		FileWriter: &FileLoggerConfig{
 			MaxSize: 100,
 		},
