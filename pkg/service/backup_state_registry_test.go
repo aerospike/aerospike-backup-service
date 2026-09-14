@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"log/slog"
 	"testing"
 	"time"
 
@@ -150,34 +149,13 @@ func TestRequestHistorySync_EmptyRequestQueuesNothing(t *testing.T) {
 	}
 }
 
-func TestStart_IsIgnoredAndReportedWhenAlreadyRunning(t *testing.T) {
-	originalLogger := slog.Default()
-	logs := &logBuffer{}
-	slog.SetDefault(slog.New(slog.NewTextHandler(logs, nil)))
-	t.Cleanup(func() { slog.SetDefault(originalLogger) })
-
-	ctrl := gomock.NewController(t)
-	historyMgr := NewMockHistoryManager(ctrl)
-	scanned := make(chan struct{}, 1)
-	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(context.Context, *model.BackupRoutine) (*model.BackupTime, error) {
-			scanned <- struct{}{}
-			return model.NewNoBackupTime(), nil
-		}).Times(1)
-
-	registry := newTestBackupStateRegistry(historyMgr, configWithRoutines(t, routineName))
+func TestStart_PanicsWhenCalledTwice(t *testing.T) {
+	registry := newTestBackupStateRegistry(nil, configWithRoutines(t))
 	registry.Start(t.Context())
 
-	rejected, cancelRejected := context.WithCancel(t.Context())
-	registry.Start(rejected)
-	cancelRejected()
-
-	assert.Contains(t, logs.String(), "already running")
-
-	// The lifetime the first Start gave still governs, so canceling the context that Start
-	// refused stops nothing: a request made afterwards is still served.
-	registry.RequestHistorySync([]string{routineName})
-	waitAsyncDone(t, scanned, "history scan after a rejected Start")
+	assert.PanicsWithValue(t, "service: backup state registry already started", func() {
+		registry.Start(t.Context())
+	})
 }
 
 func TestFinishFull(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"maps"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -65,7 +66,7 @@ type backupStateRegistry struct {
 	pendingMu sync.Mutex
 	pending   map[string]struct{}
 	signal    chan struct{}
-	startOnce sync.Once
+	started   atomic.Bool
 }
 
 var _ BackupStateRegistry = (*backupStateRegistry)(nil)
@@ -104,22 +105,18 @@ func (r *backupStateRegistry) RequestHistorySync(routineNames []string) {
 	}
 }
 
-// Start serves queued history sync requests until ctx is canceled.
+// Start serves queued history sync requests until ctx is canceled. It may be called once.
 //
-// Only the first call takes effect. A later one keeps the lifetime the first one gave,
-// which is not what a caller passing a different context is asking for, so it is reported
-// rather than dropped in silence.
+// A second call has no meaning to give: two loops would serve one queue, and the lifetime
+// the caller passed would be neither honored nor refused. That is a mistake in how the
+// service is wired, not a condition to reconcile at runtime, so it fails here - at
+// startup, where whoever wired it is watching.
 func (r *backupStateRegistry) Start(ctx context.Context) {
-	started := false
-	r.startOnce.Do(func() {
-		started = true
-
-		go r.serveSyncRequests(ctx)
-	})
-
-	if !started {
-		slog.Warn("Backup history synchronization is already running; the new context is ignored")
+	if !r.started.CompareAndSwap(false, true) {
+		panic("service: backup state registry already started")
 	}
+
+	go r.serveSyncRequests(ctx)
 }
 
 func (r *backupStateRegistry) serveSyncRequests(ctx context.Context) {
