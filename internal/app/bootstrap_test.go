@@ -118,7 +118,11 @@ func TestComponents_RunServesUntilCanceled(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Run did not return after its context was canceled")
 	}
-	require.False(t, components.Scheduler.IsStarted(), "scheduler still running after Run returned")
+	// The scheduler stops itself when the context it was started with is canceled, which
+	// is what makes Components.Stop unnecessary - but it does so on its own goroutine.
+	require.Eventually(t, func() bool {
+		return !components.Scheduler.IsStarted()
+	}, 5*time.Second, 10*time.Millisecond, "canceling the run context did not stop the scheduler")
 }
 
 // routineConfig wires one routine against local storage in dir. A routine is what makes a
@@ -163,7 +167,6 @@ func TestComponents_StartServesTheHistorySyncQueuedWhileBuilding(t *testing.T) {
 	require.NoError(t, err)
 
 	components.Start(ctx)
-	t.Cleanup(components.Stop)
 
 	state := make(chan model.RoutineState, 1)
 	go func() {

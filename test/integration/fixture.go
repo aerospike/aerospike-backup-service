@@ -59,7 +59,6 @@ func (s *Suite) initComponents(config *dto.Config, customize ...func(*dto.Config
 	s.Require().NoError(err)
 
 	components.Start(ctx)
-	t.Cleanup(components.Stop)
 
 	return components
 }

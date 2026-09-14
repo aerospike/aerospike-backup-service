@@ -41,6 +41,10 @@ type Components struct {
 // context is handed out: a component that outlives a single request takes its lifetime
 // from here, never from the context that built the graph.
 //
+// There is no matching Stop, because ctx is how everything here ends - the scheduler
+// included, which stops itself when the context it was started with is canceled. Cancel
+// what you passed in.
+//
 // This is the whole list of what "running" means, so adding a component is one edit here
 // rather than one per caller. Run serves the HTTP listeners on top of it; a caller that
 // serves the handler itself (the integration fixture) calls Start directly.
@@ -51,23 +55,13 @@ func (c *Components) Start(ctx context.Context) {
 	c.TLSProvider.Start(ctx)
 }
 
-// Stop shuts down the components that need an explicit stop. The rest end with the
-// context that was given to Start.
-func (c *Components) Stop() {
-	c.Scheduler.Stop()
-}
-
-// Run starts every component, serves until ctx is canceled or a listener stops, and then
-// stops them again. It blocks for as long as the service runs: a caller that wants the
-// service up without giving up its goroutine - a test serving the handler itself - uses
-// Start and Stop instead.
+// Run starts every component and serves until ctx is canceled or a listener stops. It
+// blocks for as long as the service runs: a caller that wants the service up without
+// giving up its goroutine - a test serving the handler itself - uses Start instead.
 func (c *Components) Run(ctx context.Context) error {
 	c.Start(ctx)
 
-	err := server.Run(ctx, c.Servers)
-	c.Stop()
-
-	return err
+	return server.Run(ctx, c.Servers)
 }
 
 // InitComponents builds the full object graph.
