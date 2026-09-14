@@ -38,7 +38,7 @@ type ServerConfigHTTPS struct {
 	// Passphrase for an encrypted HTTPS server private key.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	KeyFilePassword secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
+	KeyFilePassword Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
 	// Minimum accepted TLS protocol version.
 	MinVersion TLSMinVersion `yaml:"min-version,omitempty" json:"min-version,omitempty" default:"1.2" enums:"1.2,1.3"`
 	// Allowed TLS cipher suite names. An empty list uses Go's secure defaults.
@@ -95,8 +95,8 @@ func (s *ServerConfigHTTPS) validateTLSFields() error {
 	if s.KeyFilePassword != "" && s.KeyFile == "" {
 		return errValidationRequires("key-file-password", keyField)
 	}
-	if err := s.KeyFilePassword.Validate(s.hasSecretAgent()); err != nil {
-		return errValidationSecret("key-file-password", err)
+	if err := validateSecret("key-file-password", s.KeyFilePassword, s.hasSecretAgent()); err != nil {
+		return err
 	}
 
 	for field, path := range map[string]Path{
@@ -160,7 +160,7 @@ func (s *ServerConfigHTTPS) ToModel() *model.ServerConfigHTTPS {
 		Port:            s.Port.ToModel(),
 		CertFile:        string(s.CertFile),
 		KeyFile:         string(s.KeyFile),
-		KeyFilePassword: string(s.KeyFilePassword),
+		KeyFilePassword: s.KeyFilePassword,
 		SecretAgent:     s.SecretAgent.ToModel(),
 		MinVersion:      minVersion,
 		CipherSuites:    s.CipherSuites,
@@ -179,7 +179,7 @@ func (s *ServerConfigHTTPS) fromModel(m *model.ServerConfigHTTPS) {
 	s.Port = NewPortFromModel(m.Port)
 	s.CertFile = Path(m.CertFile)
 	s.KeyFile = Path(m.KeyFile)
-	s.KeyFilePassword = secret(m.KeyFilePassword)
+	s.KeyFilePassword = m.KeyFilePassword
 	s.MinVersion = NewTLSMinVersionFromModel(m.MinVersion)
 	s.CipherSuites = m.CipherSuites
 	s.ClientCAFile = Path(m.ClientCAFile)

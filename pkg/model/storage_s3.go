@@ -1,6 +1,8 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type S3Storage struct {
 	// Path is the root directory within the S3 bucket where backups will be stored.
@@ -28,8 +30,8 @@ type S3Storage struct {
 }
 
 type S3Authentication struct {
-	KeyIDSecret     string
-	AccessKeySecret string
+	KeyIDSecret     Secret
+	AccessKeySecret Secret
 	SecretAgent     *SecretAgent
 }
 

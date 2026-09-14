@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 // ClusterTLSResolver produces a cluster's TLS configuration with its secret values
@@ -54,7 +55,7 @@ func (r *clusterTLSResolver) Resolve(
 	if err != nil {
 		return model.TLS{}, fmt.Errorf("failed to resolve TLS key-file-password: %w", err)
 	}
-	tlsConfig.KeyfilePassword = password
+	tlsConfig.KeyfilePassword = redact.Secret(password)
 
 	return tlsConfig, nil
 }

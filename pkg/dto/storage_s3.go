@@ -34,11 +34,11 @@ type S3Storage struct {
 	// Access Key ID for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	AccessKeyID secret `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty" format:"password" extensions:"x-nullable"`
+	AccessKeyID Secret `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty" format:"password" extensions:"x-nullable"`
 	// Secret Access Key for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	SecretAccessKey secret `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty" format:"password" extensions:"x-nullable"`
+	SecretAccessKey Secret `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty" format:"password" extensions:"x-nullable"`
 	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *S3StorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
@@ -78,11 +78,11 @@ func (s *S3Storage) Validate() error {
 	}
 
 	withAgent := s.hasSecretAgent()
-	if err := s.AccessKeyID.Validate(withAgent); err != nil {
-		return errValidationSecret("access-key-id", err)
+	if err := validateSecret("access-key-id", s.AccessKeyID, withAgent); err != nil {
+		return err
 	}
-	if err := s.SecretAccessKey.Validate(withAgent); err != nil {
-		return errValidationSecret("secret-access-key", err)
+	if err := validateSecret("secret-access-key", s.SecretAccessKey, withAgent); err != nil {
+		return err
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
@@ -99,8 +99,8 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 		}
 
 		auth = &model.S3Authentication{
-			KeyIDSecret:     string(s.AccessKeyID),
-			AccessKeySecret: string(s.SecretAccessKey),
+			KeyIDSecret:     s.AccessKeyID,
+			AccessKeySecret: s.SecretAccessKey,
 			SecretAgent:     agent,
 		}
 	}
@@ -133,8 +133,8 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 	}
 	if s.Auth != nil {
 		result.SecretAgentConfig = ResolveSecretAgentFromModel(s.Auth.SecretAgent, config)
-		result.AccessKeyID = secret(s.Auth.KeyIDSecret)
-		result.SecretAccessKey = secret(s.Auth.AccessKeySecret)
+		result.AccessKeyID = s.Auth.KeyIDSecret
+		result.SecretAccessKey = s.Auth.AccessKeySecret
 	}
 
 	return result

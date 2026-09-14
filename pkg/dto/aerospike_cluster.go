@@ -196,7 +196,7 @@ type Credentials struct {
 	// The password for the cluster authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	Password secret `yaml:"password,omitempty" json:"password,omitempty" format:"password" extensions:"x-nullable"`
+	Password Secret `yaml:"password,omitempty" json:"password,omitempty" format:"password" extensions:"x-nullable"`
 	// The file path with the password string.
 	PasswordPath Path `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
 	// The authentication mode (INTERNAL, EXTERNAL, PKI).
@@ -205,7 +205,7 @@ type Credentials struct {
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
 	c.User = m.User
-	c.Password = secret(m.Password)
+	c.Password = m.Password
 	c.PasswordPath = Path(m.PasswordPath)
 	c.AuthMode = NewAuthModeFromModel(m.AuthMode)
 
@@ -237,8 +237,8 @@ func (c *Credentials) Validate() error {
 	}
 
 	withAgent := c.hasSecretAgent()
-	if err := c.Password.Validate(withAgent); err != nil {
-		return errValidationSecret("password", err)
+	if err := validateSecret("password", c.Password, withAgent); err != nil {
+		return err
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
@@ -257,7 +257,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 
 	return &model.Credentials{
 		User:         c.User,
-		Password:     string(c.Password),
+		Password:     c.Password,
 		PasswordPath: string(c.PasswordPath),
 		AuthMode:     c.AuthMode.ToModel(),
 		SecretAgent:  agent,
