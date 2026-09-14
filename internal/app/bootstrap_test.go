@@ -116,11 +116,10 @@ func TestComponents_RunServesUntilCanceled(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Run did not return after its context was canceled")
 	}
-	// The scheduler stops itself when the context it was started with is canceled, which
-	// is what makes Components.Stop unnecessary - but it does so on its own goroutine.
+	// The scheduler stops itself when the context it was started with is canceled.
 	require.Eventually(t, func() bool {
 		return !components.Scheduler.IsStarted()
-	}, 5*time.Second, 10*time.Millisecond, "canceling the run context did not stop the scheduler")
+	}, time.Second, 10*time.Millisecond, "canceling the run context did not stop the scheduler")
 }
 
 // freePort returns a port that is free at the moment of the call.
