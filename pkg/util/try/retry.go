@@ -17,7 +17,14 @@ var nonRetryableErrors = []error{asinfo.ErrNoNode}
 // Retry runs f with retries according to policy.
 // Pass a logger scoped with context (e.g. logger.With(slog.String("label", "backup"))).
 // onRetry is invoked before each Retry (not on the final failed attempt).
-func Retry(policy models.RetryPolicy, logger *slog.Logger, f func() error, onRetry func()) error {
+// Canceling ctx cuts the back-off short and returns the last failure joined with ctx.Err().
+func Retry(
+	ctx context.Context,
+	policy models.RetryPolicy,
+	logger *slog.Logger,
+	f func() error,
+	onRetry func(),
+) error {
 	var (
 		lastErr       error
 		retryInterval = policy.BaseTimeout
@@ -44,7 +51,13 @@ func Retry(policy models.RetryPolicy, logger *slog.Logger, f func() error, onRet
 				slog.Any("maxAttempts", policy.MaxRetries),
 				slog.Any("retryInterval", retryInterval),
 				attr.Error(lastErr))
-			time.Sleep(retryInterval)
+			select {
+			case <-time.After(retryInterval):
+			case <-ctx.Done():
+				logger.Info("Retry aborted, context done", attr.Error(lastErr))
+				return errors.Join(lastErr, ctx.Err())
+			}
+
 			retryInterval = time.Duration(float64(retryInterval) * policy.Multiplier)
 		}
 	}

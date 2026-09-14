@@ -35,9 +35,23 @@ type Components struct {
 	TLSProvider      servertls.TLSProvider
 }
 
+// Run starts every component, serves until ctx is canceled or a listener stops, and then
+// stops what needs stopping. It is the one place the run context is handed out, so a
+// component that must outlive a single request takes its lifetime from here.
+func (c *Components) Run(ctx context.Context) error {
+	c.Scheduler.Start(ctx)
+	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
+	c.TLSProvider.Start(ctx)
+
+	err := server.Run(ctx, c.Servers)
+	c.Scheduler.Stop()
+
+	return err
+}
+
 // InitComponents builds the full object graph.
 // Components are created and wired but not started: no goroutines, listeners, or
-// watchers run here. The caller decides when to Start/Stop them.
+// watchers run here. The caller decides when to Start/Stop them, normally through Run.
 //
 // Collaborators (other components) are non-nil interfaces. If a collaborator is unused
 // or a feature is disabled, pass a no-op implementation, never nil, and do not add
@@ -136,7 +150,7 @@ func InitComponents(
 	var servers []server.HTTP
 	configHTTP := config.ServiceConfig.GetServerHTTPOrDefault()
 	if !configHTTP.Disabled {
-		servers = append(servers, server.NewServerHTTP(ctx, configHTTP, srv))
+		servers = append(servers, server.NewServerHTTP(configHTTP, srv))
 	}
 
 	tlsProvider := servertls.NoReload()
@@ -174,7 +188,7 @@ func newServerHTTPS(
 		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 	}
 
-	return server.NewServerHTTPS(ctx, configHTTPS, srv, tlsConfig), tlsProvider, nil
+	return server.NewServerHTTPS(configHTTPS, srv, tlsConfig), tlsProvider, nil
 }
 
 func newStorageOperations(resolver secrets.Resolver) storage.Operations {

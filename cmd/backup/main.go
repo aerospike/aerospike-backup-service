@@ -12,8 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/spf13/cobra"
 )
 
@@ -69,16 +67,7 @@ func startService(configFile string, remote bool) error {
 		return err
 	}
 
-	components.Scheduler.Start(ctx)
-	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
-	components.TLSProvider.Start(ctx)
-
-	err = server.Run(ctx, components.Servers)
-
-	// stop the scheduler
-	components.Scheduler.Stop()
-
-	return err
+	return components.Run(ctx)
 }
 
 func systemCtx() (context.Context, context.CancelFunc) {

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -29,31 +28,56 @@ func TestIPWhiteList_AllowAnyRequiresExplicitCIDR(t *testing.T) {
 	})
 }
 
-func TestIPRateLimiter_EvictsIdleEntriesOnTick(t *testing.T) {
+func TestIPRateLimiter_EvictsIdleEntriesOnRequest(t *testing.T) {
 	const (
-		idleTTL         = 150 * time.Millisecond
-		cleanupInterval = 50 * time.Millisecond
+		idleTTL         = time.Minute
+		cleanupInterval = time.Minute
 	)
 
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
+	limiter := NewIPRateLimiter(rate.Limit(1), 1, idleTTL, cleanupInterval)
+	active := netip.MustParseAddr("10.0.0.1")
+	idle := netip.MustParseAddr("10.0.0.2")
 
-	limiter := NewIPRateLimiter(ctx, rate.Limit(1), 1, idleTTL, cleanupInterval)
+	limiter.getOrCreateEntry(active)
+	limiter.getOrCreateEntry(idle)
 
-	limiter.getOrCreateEntry(netip.MustParseAddr("10.0.0.1"))
-	limiter.getOrCreateEntry(netip.MustParseAddr("10.0.0.2"))
+	// Age the second entry past its TTL and make a sweep due on the next request.
+	limiter.Lock()
+	limiter.limiters[idle].lastSeen = time.Now().Add(-2 * idleTTL)
+	limiter.lastCleanup = time.Now().Add(-2 * cleanupInterval)
+	limiter.Unlock()
 
-	time.Sleep(80 * time.Millisecond)
-	limiter.getOrCreateEntry(netip.MustParseAddr("10.0.0.1"))
+	limiter.getOrCreateEntry(active)
 
-	require.Eventually(t, func() bool {
-		limiter.Lock()
-		defer limiter.Unlock()
+	limiter.Lock()
+	defer limiter.Unlock()
+	require.NotContains(t, limiter.limiters, idle, "idle entry survived the sweep")
+	require.Contains(t, limiter.limiters, active, "active entry was evicted")
+}
 
-		_, firstExists := limiter.limiters[netip.MustParseAddr("10.0.0.1")]
-		_, secondExists := limiter.limiters[netip.MustParseAddr("10.0.0.2")]
-		return firstExists && !secondExists
-	}, 2*time.Second, 10*time.Millisecond)
+func TestIPRateLimiter_SweepsAtMostOncePerInterval(t *testing.T) {
+	const (
+		idleTTL         = time.Minute
+		cleanupInterval = time.Minute
+	)
+
+	limiter := NewIPRateLimiter(rate.Limit(1), 1, idleTTL, cleanupInterval)
+	active := netip.MustParseAddr("10.0.0.1")
+	idle := netip.MustParseAddr("10.0.0.2")
+
+	limiter.getOrCreateEntry(active)
+	limiter.getOrCreateEntry(idle)
+
+	// Idle past its TTL, but the interval since the last sweep has not elapsed.
+	limiter.Lock()
+	limiter.limiters[idle].lastSeen = time.Now().Add(-2 * idleTTL)
+	limiter.Unlock()
+
+	limiter.getOrCreateEntry(active)
+
+	limiter.Lock()
+	defer limiter.Unlock()
+	require.Contains(t, limiter.limiters, idle, "swept before the interval elapsed")
 }
 
 func TestRateLimiter_RunsBeforeBodyReaderMiddleware(t *testing.T) {
@@ -73,7 +97,7 @@ func TestRateLimiter_RunsBeforeBodyReaderMiddleware(t *testing.T) {
 	size := 1
 	handler := Wrap(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}), bodyReader, RateLimiter(t.Context(), &model.RateLimiterConfig{
+	}), bodyReader, RateLimiter(&model.RateLimiterConfig{
 		Tps:       &tps,
 		Size:      &size,
 		WhiteList: []string{},

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
@@ -52,7 +52,7 @@ func (s *AuthSuite) TestInternalPlain() {
 			UseServicesAlternate: ptr.Of(true),
 			Credentials: &dto.Credentials{
 				User:     intUser,
-				Password: decoder.Secret(secretRef()),
+				Password: redact.Secret(secretRef()),
 				AuthMode: dto.AuthModeInternal,
 				SecretAgentConfig: dto.SecretAgentConfig{
 					SecretAgent: agent,
@@ -116,7 +116,7 @@ func (s *AuthSuite) TestMutualTLS() {
 		agent := s.startSecretAgent(clientKeyPassword)
 
 		tlsConfig := s.mutualTLS(s.certs.internalCert, s.certs.internalKeyEncrypted)
-		tlsConfig.KeyfilePassword = decoder.Secret(secretRef())
+		tlsConfig.KeyfilePassword = redact.Secret(secretRef())
 
 		s.testAuthenticatedBackup(cluster, &dto.AerospikeCluster{
 			SeedNodes:            []dto.SeedNode{cluster.seed},

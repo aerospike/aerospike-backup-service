@@ -24,19 +24,19 @@ type AzureStorage struct {
 	// AccountKey is the Azure storage account key for Shared Key authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	AccountKey secret `yaml:"account-key,omitempty" json:"account-key,omitempty" format:"password" extensions:"x-nullable"`
+	AccountKey Secret `yaml:"account-key,omitempty" json:"account-key,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// TenantID is the Azure Active Directory tenant ID for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	TenantID secret `yaml:"tenant-id,omitempty" json:"tenant-id,omitempty" format:"password" extensions:"x-nullable"`
+	TenantID Secret `yaml:"tenant-id,omitempty" json:"tenant-id,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// ClientID is the Azure Active Directory client ID for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	ClientID secret `yaml:"client-id,omitempty" json:"client-id,omitempty" format:"password" extensions:"x-nullable"`
+	ClientID Secret `yaml:"client-id,omitempty" json:"client-id,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// ClientSecret is the Azure Active Directory client secret for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	ClientSecret secret `yaml:"client-secret,omitempty" json:"client-secret,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
+	ClientSecret Secret `yaml:"client-secret,omitempty" json:"client-secret,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// The minimum size in bytes of individual Azure Blob chunks.
 	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" minimum:"1048576"`
 	// StorageClass defines the storage tier for data and metadata objects.
@@ -76,17 +76,17 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 	}
 
 	withAgent := a.hasSecretAgent()
-	if err := a.AccountKey.Validate(withAgent); err != nil {
-		return errValidationSecret("account-key", err)
+	if err := validateSecret("account-key", a.AccountKey, withAgent); err != nil {
+		return err
 	}
-	if err := a.TenantID.Validate(withAgent); err != nil {
-		return errValidationSecret("tenant-id", err)
+	if err := validateSecret("tenant-id", a.TenantID, withAgent); err != nil {
+		return err
 	}
-	if err := a.ClientID.Validate(withAgent); err != nil {
-		return errValidationSecret("client-id", err)
+	if err := validateSecret("client-id", a.ClientID, withAgent); err != nil {
+		return err
 	}
-	if err := a.ClientSecret.Validate(withAgent); err != nil {
-		return errValidationSecret("client-secret", err)
+	if err := validateSecret("client-secret", a.ClientSecret, withAgent); err != nil {
+		return err
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
@@ -115,15 +115,15 @@ func getAzureAuth(a *AzureStorage) model.AzureAuth {
 	if a.AccountName != "" && a.AccountKey != "" {
 		return &model.AzureSharedKeyAuth{
 			AccountName: a.AccountName,
-			AccountKey:  string(a.AccountKey),
+			AccountKey:  a.AccountKey,
 		}
 	}
 
 	if a.TenantID != "" && a.ClientID != "" && a.ClientSecret != "" {
 		return &model.AzureADAuth{
-			TenantID:     string(a.TenantID),
-			ClientID:     string(a.ClientID),
-			ClientSecret: string(a.ClientSecret),
+			TenantID:     a.TenantID,
+			ClientID:     a.ClientID,
+			ClientSecret: a.ClientSecret,
 		}
 	}
 
@@ -143,11 +143,11 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 	switch auth := s.Auth.(type) {
 	case *model.AzureSharedKeyAuth:
 		azureStorage.AccountName = auth.AccountName
-		azureStorage.AccountKey = secret(auth.AccountKey)
+		azureStorage.AccountKey = auth.AccountKey
 	case *model.AzureADAuth:
-		azureStorage.TenantID = secret(auth.TenantID)
-		azureStorage.ClientID = secret(auth.ClientID)
-		azureStorage.ClientSecret = secret(auth.ClientSecret)
+		azureStorage.TenantID = auth.TenantID
+		azureStorage.ClientID = auth.ClientID
+		azureStorage.ClientSecret = auth.ClientSecret
 	}
 
 	return azureStorage

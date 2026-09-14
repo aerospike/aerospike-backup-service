@@ -3,6 +3,7 @@ package decoder
 import (
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,21 +16,21 @@ func TestMergeSecrets_ComplexFixture(t *testing.T) {
 	redacted.AerospikeClusters["cluster1"].Credentials.User = "updatedUser"
 	redacted.StorageProviders["s3-main"] = testStorage{
 		Name:            "updated-bucket",
-		AccessKeyID:     redactedSecret,
-		SecretAccessKey: redactedSecret,
+		AccessKeyID:     redact.Placeholder,
+		SecretAccessKey: redact.Placeholder,
 	}
 
 	err := MergeSecrets(&redacted, original)
 	require.NoError(t, err)
 
 	t.Run("restores literal secrets", func(t *testing.T) {
-		assert.Equal(t, Secret(literalPassword), redacted.AerospikeClusters["cluster1"].Credentials.Password)
-		assert.Equal(t, Secret(literalTLSPassword), redacted.AerospikeClusters["cluster1"].TLS.KeyfilePassword)
-		assert.Equal(t, Secret(literalSecretKey), redacted.AerospikeClusters["cluster1"].Encryption.KeySecret)
-		assert.Equal(t, Secret(literalAccessKey), redacted.StorageProviders["s3-main"].AccessKeyID)
-		assert.Equal(t, Secret(literalSecretKey), redacted.StorageProviders["s3-main"].SecretAccessKey)
-		assert.Equal(t, Secret(literalAccessKey), redacted.Routines[0].Storages[0].AccessKeyID)
-		assert.Equal(t, Secret(literalPassword), redacted.Routines[0].Keys[0])
+		assert.Equal(t, redact.Secret(literalPassword), redacted.AerospikeClusters["cluster1"].Credentials.Password)
+		assert.Equal(t, redact.Secret(literalTLSPassword), redacted.AerospikeClusters["cluster1"].TLS.KeyfilePassword)
+		assert.Equal(t, redact.Secret(literalSecretKey), redacted.AerospikeClusters["cluster1"].Encryption.KeySecret)
+		assert.Equal(t, redact.Secret(literalAccessKey), redacted.StorageProviders["s3-main"].AccessKeyID)
+		assert.Equal(t, redact.Secret(literalSecretKey), redacted.StorageProviders["s3-main"].SecretAccessKey)
+		assert.Equal(t, redact.Secret(literalAccessKey), redacted.Routines[0].Storages[0].AccessKeyID)
+		assert.Equal(t, redact.Secret(literalPassword), redacted.Routines[0].Keys[0])
 	})
 
 	t.Run("preserves non-secret edits", func(t *testing.T) {
@@ -38,9 +39,9 @@ func TestMergeSecrets_ComplexFixture(t *testing.T) {
 	})
 
 	t.Run("preserves valid secret refs", func(t *testing.T) {
-		assert.Equal(t, Secret(validSecretRef), redacted.AerospikeClusters["cluster2"].Credentials.Password)
-		assert.Equal(t, Secret(validSecretRef), redacted.StorageProviders["s3-ref"].AccessKeyID)
-		assert.Equal(t, Secret(validSecretRef), redacted.Routines[0].Keys[1])
+		assert.Equal(t, redact.Secret(validSecretRef), redacted.AerospikeClusters["cluster2"].Credentials.Password)
+		assert.Equal(t, redact.Secret(validSecretRef), redacted.StorageProviders["s3-ref"].AccessKeyID)
+		assert.Equal(t, redact.Secret(validSecretRef), redacted.Routines[0].Keys[1])
 	})
 
 	t.Run("preserves empty secrets", func(t *testing.T) {
@@ -64,7 +65,7 @@ func TestMergeSecrets_NewMapEntryWithSentinel_ReturnsError(t *testing.T) {
 			"new-cluster": {
 				Credentials: &testCredentials{
 					User:     "newUser",
-					Password: redactedSecret,
+					Password: redact.Placeholder,
 				},
 			},
 		},
@@ -101,7 +102,7 @@ func TestMergeSecrets_ExplicitSecretUpdate(t *testing.T) {
 	err := MergeSecrets(&incoming, existing)
 	require.NoError(t, err)
 
-	assert.Equal(t, Secret("new-password"), incoming.AerospikeClusters["cluster1"].Credentials.Password)
+	assert.Equal(t, redact.Secret("new-password"), incoming.AerospikeClusters["cluster1"].Credentials.Password)
 }
 
 func TestMergeSecrets_ClearSecretWithEmptyString(t *testing.T) {
@@ -155,8 +156,8 @@ func TestMergeSecrets_NewEntityWithSentinel_StorageSecret(t *testing.T) {
 		StorageProviders: map[string]testStorage{
 			"new-storage": {
 				Name:            "new-bucket",
-				AccessKeyID:     redactedSecret,
-				SecretAccessKey: redactedSecret,
+				AccessKeyID:     redact.Placeholder,
+				SecretAccessKey: redact.Placeholder,
 			},
 		},
 	}
@@ -183,7 +184,7 @@ func TestMergeSecrets_ExistingEntityWithSentinel_RestoredCorrectly(t *testing.T)
 			"cluster1": {
 				Credentials: &testCredentials{
 					User:     "testUser",
-					Password: redactedSecret,
+					Password: redact.Placeholder,
 				},
 			},
 		},
@@ -191,12 +192,12 @@ func TestMergeSecrets_ExistingEntityWithSentinel_RestoredCorrectly(t *testing.T)
 
 	err := MergeSecrets(&incoming, existing)
 	require.NoError(t, err)
-	assert.Equal(t, Secret(literalPassword), incoming.AerospikeClusters["cluster1"].Credentials.Password)
+	assert.Equal(t, redact.Secret(literalPassword), incoming.AerospikeClusters["cluster1"].Credentials.Password)
 }
 
 func TestSecret_IsRedacted(t *testing.T) {
-	assert.True(t, Secret(redactedSecret).IsRedacted())
-	assert.False(t, Secret("real-password").IsRedacted())
-	assert.False(t, Secret("").IsRedacted())
-	assert.False(t, Secret(validSecretRef).IsRedacted())
+	assert.True(t, redact.Secret(redact.Placeholder).IsRedacted())
+	assert.False(t, redact.Secret("real-password").IsRedacted())
+	assert.False(t, redact.Secret("").IsRedacted())
+	assert.False(t, redact.Secret(validSecretRef).IsRedacted())
 }

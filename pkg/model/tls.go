@@ -15,7 +15,7 @@ type TLS struct {
 	// reference (see dto.TLS.KeyfilePassword) - callers must resolve it via secrets.Resolver
 	// before use. tlsconfig.NewTLSConfig applies no further processing: it uses this value
 	// verbatim as the decryption password.
-	KeyfilePassword string
+	KeyfilePassword Secret
 }
 
 // Hash returns a unique identifier for the TLS configuration.
@@ -29,6 +29,6 @@ func (tls *TLS) Hash() uint64 {
 		tls.CAPath,
 		tls.Protocols,
 		tls.CipherSuite,
-		tls.KeyfilePassword,
+		tls.KeyfilePassword.Hash(),
 	)
 }

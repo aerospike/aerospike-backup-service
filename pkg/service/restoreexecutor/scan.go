@@ -79,7 +79,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 		config.EncryptionPolicy = &backup.EncryptionPolicy{
 			Mode:      restoreRequest.Policy.EncryptionPolicy.Mode.String(),
 			KeyFile:   ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyFile),
-			KeySecret: ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeySecret),
+			KeySecret: ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeySecret.Reveal()),
 			KeyEnv:    ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyEnv),
 		}
 	}

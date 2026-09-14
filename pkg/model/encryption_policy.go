@@ -9,5 +9,5 @@ type EncryptionPolicy struct {
 	// The name of the environment variable containing the encryption key.
 	KeyEnv string
 	// The secret keyword in Aerospike Secret Agent containing the encryption key.
-	KeySecret string
+	KeySecret Secret
 }
