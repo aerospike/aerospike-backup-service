@@ -68,10 +68,10 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+	err = s.changeConfig(r.Context(), func(ctx context.Context, config *model.Config) error {
 		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
 		config.InvalidateAllRoutines()
-		s.nsValidator.Validate(r.Context(), config) // validate under the lock
+		s.nsValidator.Validate(ctx, config) // validate under the lock
 		return nil
 	})
 
@@ -127,13 +127,21 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
+// changeConfig applies updateFunc to the live configuration, persists the result and reschedules
+// the routines. The caller has already validated the change; everything here is the commit phase
+// and runs on the context commitContext returns, updateFunc included.
+func (s *Service) changeConfig(
+	ctx context.Context,
+	updateFunc func(ctx context.Context, config *model.Config) error,
+) error {
 	// ApplyConfig and changeConfig must be synchronized to prevent race conditions
 	// where one operation reads/writes config while another is in the middle of updating it
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
 
-	err := updateFunc(s.config)
+	ctx = commitContext(ctx)
+
+	err := updateFunc(ctx, s.config)
 	if err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}

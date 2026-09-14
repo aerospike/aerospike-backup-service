@@ -13,6 +13,17 @@ import (
 
 // retryableBackupHandler is a wrapper around BackupHandler that adds
 // retry logic and cancellation support.
+//
+// Two contexts take part in a run. The run context is the one the caller passes in: it comes
+// from the scheduler, lives as long as the service does, and is what the backup pipeline is
+// started with and what the failure and success callbacks run on. The wait context is derived
+// from it and is this run's cancel handle: the retry loop and every Wait on the inner handler
+// observe it, so Cancel ends both without touching the run context. Ending the wait context
+// alone is enough to stop the pipeline, because the inner handler cancels its own work when the
+// context it is waiting under ends, and it leaves the run context alive for the cleanup callback
+// to delete the partial backup. The goroutine releases the wait context when the retry loop
+// returns, whatever the outcome: a child context stays registered in its parent until it is
+// canceled, and the parent here outlives every run.
 type retryableBackupHandler struct {
 	sync.RWMutex
 	handler backupexecutor.BackupHandler
@@ -57,6 +68,7 @@ func newRetryableBackupHandler(
 
 	// Process backup function.
 	processBackup := func() error {
+		// The pipeline is started on the run context; only the wait is tied to this run's handle.
 		handler, err := callbacks.Start(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to start backup: %w", err)
@@ -65,6 +77,7 @@ func newRetryableBackupHandler(
 		h.setHandler(handler)
 
 		if err = handler.Wait(ctxWithCancel); err != nil {
+			// The run context is still alive after Cancel, so the cleanup can reach storage.
 			callbacks.OnFail(ctx)
 			h.setHandler(nil)
 			return fmt.Errorf("backup failed: %w", err)
@@ -73,8 +86,10 @@ func newRetryableBackupHandler(
 		return retryOnSuccess(handler)
 	}
 
-	// Start the backup process with retries
+	// Start the backup process with retries. The wait context is released as soon as the loop
+	// returns, so a finished run leaves nothing behind in the scheduler context.
 	go func() {
+		defer cancel()
 		h.errCh <- try.Retry(ctxWithCancel, policy,
 			logger.With(slog.String("label", "backup")), processBackup, callbacks.OnRetry)
 	}()
@@ -118,10 +133,9 @@ func (h *retryableBackupHandler) GetMetrics() *models.Metrics {
 	return nil
 }
 
+// Cancel ends this run's wait context, which stops the inner handler and the retry loop. The
+// same function runs when the loop returns on its own, and a CancelFunc is idempotent, so Cancel
+// is safe at any time and any number of times.
 func (h *retryableBackupHandler) Cancel() {
-	h.Lock()
-	defer h.Unlock()
-	if h.cancel != nil {
-		h.cancel()
-	}
+	h.cancel()
 }

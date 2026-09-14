@@ -55,6 +55,9 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
+	// Everything above only read; from here on the change is committed, see commitContext.
+	ctx = commitContext(ctx)
+
 	s.config.SetBackupConfig(modelConfig.BackupConfigCopy())
 	s.config.InvalidateRoutines(routinesToInvalidate)
 
@@ -71,6 +74,20 @@ func (s *Service) changeBackupConfig(
 	}
 
 	return nil
+}
+
+// commitContext returns the context the commit phase of a configuration change runs on.
+//
+// A change has two phases. Validation runs on the request context: it only reads, so a client
+// that disconnects merely stops getting an answer. The commit swaps the in-memory configuration,
+// persists it and reschedules the routines, and those steps have to happen together: if the
+// request context ended between them, memory would describe one configuration while the file and
+// the scheduler still describe another. The commit therefore runs on a context that keeps the
+// request's values but not its cancellation. It carries no deadline of its own: how long a
+// persist may take is decided by the persistence layer, through its file or storage client
+// timeouts, not by the client that asked for the change.
+func commitContext(ctx context.Context) context.Context {
+	return context.WithoutCancel(ctx)
 }
 
 func withNamespaceValidation(opts *backupConfigChangeOptions) {

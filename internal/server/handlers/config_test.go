@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -200,7 +201,7 @@ func TestService_changeConfig(t *testing.T) {
 	svc.configApplier = mockConfigApplier
 
 	called := false
-	err := svc.changeConfig(t.Context(), func(config *model.Config) error {
+	err := svc.changeConfig(t.Context(), func(_ context.Context, config *model.Config) error {
 		called = true
 		return nil
 	})
@@ -262,10 +263,55 @@ func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
 func TestService_changeConfig_UpdateFuncError(t *testing.T) {
 	svc, _ := newConfigTestService(t)
 
-	err := svc.changeConfig(t.Context(), func(config *model.Config) error {
+	err := svc.changeConfig(t.Context(), func(_ context.Context, config *model.Config) error {
 		return errors.New("update boom")
 	})
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "update boom")
+}
+
+// liveContext matches a context that has not been canceled.
+func liveContext() gomock.Matcher {
+	return gomock.Cond(func(ctx context.Context) bool { return ctx.Err() == nil })
+}
+
+func TestService_UpdateConfig_CommitOutlivesRequest(t *testing.T) {
+	svc, ctrl := newConfigTestService(t)
+
+	mockConfigurationManager := configuration.NewMockManager(ctrl)
+	mockConfigurationManager.EXPECT().Write(liveContext(), gomock.Any()).Return(nil)
+	svc.configurationManager = mockConfigurationManager
+
+	mockConfigApplier := service.NewMockConfigApplier(ctrl)
+	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil)
+	svc.configApplier = mockConfigApplier
+
+	// The client disconnected before the handler reached the commit.
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	req := httptest.NewRequestWithContext(ctx, http.MethodPut, "/v1/config", strings.NewReader(`{}`))
+	w := httptest.NewRecorder()
+
+	svc.UpdateConfig(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestService_changeBackupConfig_CommitOutlivesRequest(t *testing.T) {
+	svc, ctrl := newConfigTestService(t)
+
+	mockConfigurationManager := configuration.NewMockManager(ctrl)
+	mockConfigurationManager.EXPECT().Write(liveContext(), gomock.Any()).Return(nil)
+	svc.configurationManager = mockConfigurationManager
+
+	mockConfigApplier := service.NewMockConfigApplier(ctrl)
+	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil)
+	svc.configApplier = mockConfigApplier
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := svc.changeBackupConfig(ctx, func(*dto.Config) ([]string, error) { return nil, nil })
+	require.NoError(t, err)
 }
