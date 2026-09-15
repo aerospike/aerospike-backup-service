@@ -48,7 +48,7 @@ func decodeBody[T any](w http.ResponseWriter, r *http.Request, read dtoFromReade
 
 	value, err := read(body, decoder.JSON)
 	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
+		httpError(w, errBadRequest(err))
 		return zero, false
 	}
 

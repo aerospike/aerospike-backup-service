@@ -36,10 +36,6 @@ func errInvalidQueryParam(err error, param string) error {
 	return newStatusCodeError(fmt.Errorf("invalid query param %s: %w", param, err), http.StatusBadRequest)
 }
 
-func errInvalidJSONPayload(err error) error {
-	return newStatusCodeError(fmt.Errorf("invalid JSON payload: %w", err), http.StatusBadRequest)
-}
-
 func errBadRequest(err error) error {
 	return newStatusCodeError(fmt.Errorf("invalid request: %w", err), http.StatusBadRequest)
 }
