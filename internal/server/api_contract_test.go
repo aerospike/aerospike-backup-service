@@ -84,7 +84,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		{http.MethodGet, "/v1/config/clusters", "", http.StatusOK, "{}"},
 		{
 			http.MethodPost, "/v1/config/clusters/cluster1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: seed nodes are not specified\n",
+			"invalid request: seed nodes are not specified\n",
 		},
 		{
 			http.MethodGet, "/v1/config/clusters/cluster1", "", http.StatusNotFound,
@@ -92,7 +92,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		},
 		{
 			http.MethodPut, "/v1/config/clusters/cluster1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: seed nodes are not specified\n",
+			"invalid request: seed nodes are not specified\n",
 		},
 		{
 			http.MethodDelete, "/v1/config/clusters/cluster1", "", http.StatusBadRequest,
@@ -102,7 +102,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		{http.MethodGet, "/v1/config/storage", "", http.StatusOK, "{}"},
 		{
 			http.MethodPost, "/v1/config/storage/storage1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: no storage type specified\n",
+			"invalid request: no storage type specified\n",
 		},
 		{
 			http.MethodGet, "/v1/config/storage/storage1", "", http.StatusNotFound,
@@ -110,7 +110,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		},
 		{
 			http.MethodPut, "/v1/config/storage/storage1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: no storage type specified\n",
+			"invalid request: no storage type specified\n",
 		},
 		{
 			http.MethodDelete, "/v1/config/storage/storage1", "", http.StatusBadRequest,
@@ -135,7 +135,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		{http.MethodGet, "/v1/config/routines", "", http.StatusOK, "{}"},
 		{
 			http.MethodPost, "/v1/config/routines/routine1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: empty field validation error: \"source-cluster\" required\n",
+			"invalid request: empty field validation error: \"source-cluster\" required\n",
 		},
 		{
 			http.MethodGet, "/v1/config/routines/routine1", "", http.StatusNotFound,
@@ -143,7 +143,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		},
 		{
 			http.MethodPut, "/v1/config/routines/routine1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: empty field validation error: \"source-cluster\" required\n",
+			"invalid request: empty field validation error: \"source-cluster\" required\n",
 		},
 		{
 			http.MethodDelete, "/v1/config/routines/routine1", "", http.StatusBadRequest,
