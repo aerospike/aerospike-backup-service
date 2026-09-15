@@ -3,29 +3,23 @@ package decoder
 import (
 	"log/slog"
 	"reflect"
-	"slices"
-	"time"
+	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 var (
-	redactableType  = reflect.TypeFor[redact.Redactable]()
-	timeType        = reflect.TypeFor[time.Time]()
-	timePtrType     = reflect.PointerTo(timeType)
-	locationType    = reflect.TypeFor[time.Location]()
-	locationPtrType = reflect.PointerTo(locationType)
-	errType         = reflect.TypeFor[error]()
+	redactableType = reflect.TypeFor[redact.Redactable]()
+	errType        = reflect.TypeFor[error]()
 
-	skipDeepCopyTypes = []reflect.Type{
-		timeType,
-		timePtrType,
-		locationType,
-		locationPtrType,
-	}
+	// containsRedactableCache memoizes containsRedactable. A type's answer never changes,
+	// and the walk asks the same question for the same types on every log line.
+	containsRedactableCache sync.Map // reflect.Type -> bool
 )
 
 // RedactSecrets returns a deep copy of v with all Secret-typed values replaced by redact.Placeholder.
+// Values that hold no such secret are returned as they are: rebuilding them through reflection
+// would drop the state their unexported fields hold. The walk assumes an acyclic value graph.
 func RedactSecrets(v any) any {
 	if v == nil {
 		return nil
@@ -51,7 +45,9 @@ func isRedactable(v reflect.Value) bool {
 // redactedValue replaces a credential with its safe display form, keeping the value's own
 // type so it can be stored back into the field, map entry or slice element it came from.
 func redactedValue(v reflect.Value) (reflect.Value, bool) {
-	if !isRedactable(v) {
+	// A value read out of an unexported field cannot be handed to an interface, and cannot be
+	// stored back into the copy either: the walk leaves it alone and the copy drops it.
+	if !isRedactable(v) || !v.CanInterface() {
 		return v, false
 	}
 
@@ -76,11 +72,11 @@ func redactValue(v reflect.Value) reflect.Value {
 		return redacted
 	}
 
-	if shouldSkipDeepCopy(v) {
+	if v.Type().Implements(errType) {
 		return v
 	}
 
-	if v.Type().Implements(errType) {
+	if !needsRedaction(v) {
 		return v
 	}
 
@@ -151,6 +147,131 @@ func redactValue(v reflect.Value) reflect.Value {
 	}
 }
 
+// needsRedaction reports whether v holds a credential that redacts itself, anywhere inside.
+// Only such a value is worth the deep copy: every other value is returned as it stands, so
+// a logged struct keeps the state its unexported fields hold.
+//
+// The type of v answers the question on its own unless an interface stands in the way, in
+// which case the dynamic value behind it decides.
+func needsRedaction(v reflect.Value) bool {
+	if !v.IsValid() {
+		return false
+	}
+
+	if isRedactable(v) {
+		return true
+	}
+
+	if !containsRedactable(v.Type()) {
+		return false
+	}
+
+	switch v.Kind() {
+	case reflect.Pointer, reflect.Interface:
+		return !v.IsNil() && needsRedaction(v.Elem())
+
+	case reflect.Struct:
+		return anyFieldNeedsRedaction(v)
+
+	case reflect.Map:
+		return anyEntryNeedsRedaction(v)
+
+	case reflect.Slice, reflect.Array:
+		return anyElementNeedsRedaction(v)
+
+	default:
+		return false
+	}
+}
+
+func anyFieldNeedsRedaction(v reflect.Value) bool {
+	for i := range v.NumField() {
+		if needsRedaction(v.Field(i)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func anyEntryNeedsRedaction(v reflect.Value) bool {
+	if v.IsNil() {
+		return false
+	}
+
+	for _, key := range v.MapKeys() {
+		if needsRedaction(key) || needsRedaction(v.MapIndex(key)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func anyElementNeedsRedaction(v reflect.Value) bool {
+	for i := range v.Len() {
+		if needsRedaction(v.Index(i)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// containsRedactable reports whether a value of type t can reach a credential that redacts
+// itself, through any field, element, key or pointer. An interface member is unknown here, so
+// it counts as reachable and leaves the decision to needsRedaction's walk over the value.
+func containsRedactable(t reflect.Type) bool {
+	if cached, ok := containsRedactableCache.Load(t); ok {
+		reachable, _ := cached.(bool)
+
+		return reachable
+	}
+
+	reachable := reachesRedactable(t, map[reflect.Type]struct{}{})
+	containsRedactableCache.Store(t, reachable)
+
+	return reachable
+}
+
+// reachesRedactable answers containsRedactable for t. A type already on the path reaches
+// nothing its first visit has not reached already, which is what keeps a recursive type from
+// recursing here.
+func reachesRedactable(t reflect.Type, onPath map[reflect.Type]struct{}) bool {
+	if t.Kind() == reflect.String && t.Implements(redactableType) {
+		return true
+	}
+
+	if _, visiting := onPath[t]; visiting {
+		return false
+	}
+	onPath[t] = struct{}{}
+	defer delete(onPath, t)
+
+	switch t.Kind() {
+	case reflect.Interface:
+		return true
+
+	case reflect.Pointer, reflect.Slice, reflect.Array:
+		return reachesRedactable(t.Elem(), onPath)
+
+	case reflect.Map:
+		return reachesRedactable(t.Key(), onPath) || reachesRedactable(t.Elem(), onPath)
+
+	case reflect.Struct:
+		for i := range t.NumField() {
+			if reachesRedactable(t.Field(i).Type, onPath) {
+				return true
+			}
+		}
+
+		return false
+
+	default:
+		return false
+	}
+}
+
 func setField(dst, src reflect.Value) {
 	if src.Type().AssignableTo(dst.Type()) {
 		dst.Set(src)
@@ -160,8 +281,4 @@ func setField(dst, src reflect.Value) {
 	if src.Type().ConvertibleTo(dst.Type()) {
 		dst.Set(src.Convert(dst.Type()))
 	}
-}
-
-func shouldSkipDeepCopy(t reflect.Value) bool {
-	return slices.Contains(skipDeepCopyTypes, t.Type())
 }
