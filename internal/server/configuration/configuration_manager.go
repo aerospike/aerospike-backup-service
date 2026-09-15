@@ -80,8 +80,8 @@ func readConfig(
 		return nil, fmt.Errorf("failed to read configuration content: %w", err)
 	}
 
-	config := &dto.Config{}
-	if err := decoder.Deserialize(config, bytes.NewReader(configBytes), decoder.YAML); err != nil {
+	config, err := dto.NewFromReader[dto.Config](bytes.NewReader(configBytes), decoder.YAML)
+	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 

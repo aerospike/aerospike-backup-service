@@ -32,24 +32,24 @@ func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
-	newConfig, err := dto.NewConfigFromReader(r.Body, decoder.JSON)
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
+	newConfig, ok := decodeBody[dto.Config](w, r)
+	if !ok {
 		return
 	}
 
-	// validate static fields.
 	oldConfig := dto.NewConfigFromModel(s.config)
-	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
-		httpError(w, errBadRequest(fmt.Errorf("static configuration has changed: %w", err)))
-		return
-	}
 
-	// GET responses redact secrets as "[secret]". Before persisting a PUT, copy real secret
+	// GET responses redact secrets as "[secret]". Before comparing or persisting a PUT, copy real secret
 	// values from the stored config into the incoming payload wherever the sentinel appears,
 	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
 	if err := decoder.MergeSecrets(newConfig, oldConfig); err != nil {
 		httpError(w, errBadRequest(err))
+		return
+	}
+
+	// validate static fields (after the merge, so a redacted secret does not count as a change).
+	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
+		httpError(w, errBadRequest(fmt.Errorf("static configuration has changed: %w", err)))
 		return
 	}
 

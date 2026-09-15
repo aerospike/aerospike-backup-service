@@ -104,6 +104,26 @@ func routinesUsingStorage(config *dto.Config, storageName string) []string {
 	return names
 }
 
+func routinesUsingCluster(config *dto.Config, clusterName string) []string {
+	var names []string
+	for name, routine := range config.BackupRoutines {
+		if routine != nil && routine.SourceCluster == clusterName {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
+func routinesUsingPolicy(config *dto.Config, policyName string) []string {
+	var names []string
+	for name, routine := range config.BackupRoutines {
+		if routine != nil && routine.BackupPolicy == policyName {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
 func ensurePolicyNotInUse(config *dto.Config, policyName string) error {
 	for routineName, routine := range config.BackupRoutines {
 		if routine != nil && routine.BackupPolicy == policyName {

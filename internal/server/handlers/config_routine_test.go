@@ -35,7 +35,7 @@ func TestAddRoutine(t *testing.T) {
 			routineName:    "test-routine",
 			requestBody:    "{noField : 1}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 
@@ -152,7 +152,7 @@ func TestUpdateRoutine(t *testing.T) {
 			routineName:    "test-routine",
 			requestBody:    "{nil}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 

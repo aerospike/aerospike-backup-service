@@ -143,8 +143,20 @@ func (s *operations) ReadFile(ctx context.Context, storage model.Storage, filePa
 	select {
 	case err := <-errorsCh:
 		return nil, err
-	case r := <-readersCh:
+	case r, ok := <-readersCh:
+		if !ok {
+			// The reader closes readersCh on every exit path, including failures, so a closed
+			// channel here means either the error already sits in errorsCh or there is no file.
+			select {
+			case err := <-errorsCh:
+				return nil, err
+			default:
+				return nil, fmt.Errorf("file %s not found in storage", filePath)
+			}
+		}
+
 		defer r.Reader.Close()
+
 		return io.ReadAll(r.Reader)
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -191,8 +203,20 @@ func (s *operations) ReadFiles(
 			return nil, err
 		case r, ok := <-readersCh:
 			if !ok {
-				return files, nil
+				// The reader closes readersCh on every exit path, including failures,
+				// so a failure reported just before the close is still waiting in errorsCh.
+				select {
+				case err := <-errorsCh:
+					if errors.Is(err, io.EOF) {
+						return files, nil
+					}
+
+					return nil, err
+				default:
+					return files, nil
+				}
 			}
+
 			buf := new(bytes.Buffer)
 			_, err := func() (int64, error) {
 				defer r.Reader.Close()

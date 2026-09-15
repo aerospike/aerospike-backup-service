@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -68,11 +69,23 @@ func Retry(
 				return joinContextErr(lastErr, ctx.Err())
 			}
 
-			retryInterval = time.Duration(float64(retryInterval) * policy.Multiplier)
+			retryInterval = nextRetryInterval(retryInterval, policy.Multiplier)
 		}
 	}
 
 	return fmt.Errorf("failed after %d attempts: %w", totalAttempts, lastErr)
+}
+
+// nextRetryInterval grows the back-off by multiplier and saturates at the largest Duration. An
+// overflowing float-to-int conversion is implementation-defined and wraps negative on amd64, which
+// would turn the back-off into a hot loop.
+func nextRetryInterval(current time.Duration, multiplier float64) time.Duration {
+	next := float64(current) * multiplier
+	if next >= float64(math.MaxInt64) {
+		return time.Duration(math.MaxInt64)
+	}
+
+	return time.Duration(next)
 }
 
 // joinContextErr attaches the reason the context ended to the failure it interrupted, unless

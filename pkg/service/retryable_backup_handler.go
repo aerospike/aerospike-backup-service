@@ -48,6 +48,9 @@ func newRetryableBackupHandler(
 	logger *slog.Logger,
 ) *retryableBackupHandler {
 	ctxWithCancel, cancel := context.WithCancel(ctx)
+	// Cleanup must still run when the run itself was canceled (shutdown, user cancel), otherwise
+	// the partial backup folder stays in storage.
+	cleanupCtx := context.WithoutCancel(ctx)
 	h := &retryableBackupHandler{
 		errCh:  make(chan error, 1),
 		cancel: cancel,
@@ -60,7 +63,7 @@ func newRetryableBackupHandler(
 		}, func() {})
 		if err != nil {
 			// Trigger onFail if onSuccess ultimately fails
-			callbacks.OnFail(ctx)
+			callbacks.OnFail(cleanupCtx)
 		}
 
 		return err
@@ -78,7 +81,7 @@ func newRetryableBackupHandler(
 
 		if err = handler.Wait(ctxWithCancel); err != nil {
 			// The run context is still alive after Cancel, so the cleanup can reach storage.
-			callbacks.OnFail(ctx)
+			callbacks.OnFail(cleanupCtx)
 			h.setHandler(nil)
 			return fmt.Errorf("backup failed: %w", err)
 		}

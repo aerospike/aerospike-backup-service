@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -26,13 +25,12 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	newRoutine, err := dto.NewRoutineFromReader(r.Body, decoder.JSON)
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
+	newRoutine, ok := decodeBodyValidated[dto.BackupRoutine](w, r)
+	if !ok {
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.BackupRoutines[name]; exists {
 			return nil, fmt.Errorf("add backup routine %q: %w", name, model.ErrAlreadyExists)
 		}
@@ -104,13 +102,12 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedRoutine, err := dto.NewRoutineFromReader(r.Body, decoder.JSON)
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
+	updatedRoutine, ok := decodeBodyValidated[dto.BackupRoutine](w, r)
+	if !ok {
 		return
 	}
 
-	if err = s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		if _, exists := config.BackupRoutines[name]; !exists {
 			return nil, fmt.Errorf("update backup routine %q: %w", name, model.ErrNotFound)
 		}

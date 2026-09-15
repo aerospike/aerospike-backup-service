@@ -2,10 +2,8 @@ package dto
 
 import (
 	"fmt"
-	"io"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 )
@@ -74,22 +72,13 @@ type BackupPolicy struct {
 	MaxConcurrentNodes *int `yaml:"max-concurrent-nodes,omitempty" json:"max-concurrent-nodes,omitempty" extensions:"x-nullable"`
 }
 
-// NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.
-func NewBackupPolicyFromReader(r io.Reader, format decoder.SerializationFormat) (*BackupPolicy, error) {
-	b := &BackupPolicy{}
-	if err := decoder.Deserialize(b, r, format); err != nil {
-		return nil, err
-	}
-
-	if err := b.Validate(ValidationDefault); err != nil {
-		return nil, err
-	}
-
-	return b, nil
+// Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
+func (p *BackupPolicy) Validate() error {
+	return p.ValidateWithOpts(ValidationWithSecretAgent) // if we don't know the secret agent, we assume it's available.
 }
 
-// Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
-func (p *BackupPolicy) Validate(opts ValidationOptions) error {
+// ValidateWithOpts checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
+func (p *BackupPolicy) ValidateWithOpts(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
