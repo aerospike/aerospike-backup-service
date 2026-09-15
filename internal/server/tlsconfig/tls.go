@@ -164,6 +164,12 @@ func loadKeyPair(certFile, keyFile, password string) (tls.Certificate, error) {
 	return certificate, nil
 }
 
+// beginCertificateMarker is the PEM header that starts a certificate block. Tools
+// like "openssl x509 -text" prepend a human-readable dump of the certificate before
+// this marker, so we scan for it instead of requiring it at the very start of the
+// file, matching the tolerant behavior of tls.X509KeyPair and x509.CertPool.AppendCertsFromPEM.
+const beginCertificateMarker = "-----BEGIN CERTIFICATE-----"
+
 func loadClientCAs(path string) (*x509.CertPool, error) {
 	caPEM, err := safepath.ReadFile(path)
 	if err != nil {
@@ -174,16 +180,15 @@ func loadClientCAs(path string) (*x509.CertPool, error) {
 	certificateCount := 0
 	remaining := caPEM
 	for {
-		remaining = bytes.TrimSpace(remaining)
-		if len(remaining) == 0 {
+		// Skip any leading non-PEM text (e.g. an "openssl x509 -text" human-readable
+		// dump that commonly precedes the PEM block in CA bundles produced by openssl).
+		// Only text between certificates, or before the first one, is skipped this way;
+		// once a "-----BEGIN CERTIFICATE-----" marker is found, it must decode cleanly.
+		idx := bytes.Index(remaining, []byte(beginCertificateMarker))
+		if idx < 0 {
 			break
 		}
-		if !bytes.HasPrefix(remaining, []byte("-----BEGIN CERTIFICATE-----")) {
-			if certificateCount == 0 {
-				return nil, fmt.Errorf("client CA file %q contains no certificates", path)
-			}
-			return nil, fmt.Errorf("client CA file %q contains invalid data after a certificate", path)
-		}
+		remaining = remaining[idx:]
 
 		block, rest := pem.Decode(remaining)
 		if block == nil {

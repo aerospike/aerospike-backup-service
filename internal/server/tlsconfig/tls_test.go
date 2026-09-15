@@ -348,6 +348,22 @@ func TestNew(t *testing.T) {
 		require.ErrorContains(t, err, "contains no certificates")
 	})
 
+	t.Run("client CA file with a leading openssl -text style dump", func(t *testing.T) {
+		caFile := filepath.Join(t.TempDir(), "text-dump-ca.pem")
+		caPEM, err := os.ReadFile(files.caFile)
+		require.NoError(t, err)
+		textDump := append([]byte("Certificate:\n    Data:\n        Version: 3 (0x2)\n"), caPEM...)
+		require.NoError(t, os.WriteFile(caFile, textDump, 0o600)) //nolint:gosec // test tempdir
+
+		_, err = loadTLSConfig(t, &model.ServerConfigHTTPS{
+			CertFile:     files.certFile,
+			KeyFile:      files.keyFile,
+			ClientCAFile: caFile,
+			ClientAuth:   model.TLSClientAuthRequest,
+		}, newTestResolver(t))
+		require.NoError(t, err)
+	})
+
 	t.Run("client CA file with a valid certificate and malformed trailing certificate", func(t *testing.T) {
 		caFile := filepath.Join(t.TempDir(), "partially-invalid-ca.pem")
 		caPEM, err := os.ReadFile(files.caFile)
