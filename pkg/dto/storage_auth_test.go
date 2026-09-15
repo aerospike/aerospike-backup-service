@@ -3,8 +3,6 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
