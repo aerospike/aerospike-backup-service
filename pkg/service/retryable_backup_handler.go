@@ -16,7 +16,10 @@ type retryableBackupHandler struct {
 	sync.RWMutex
 	handler backupexecutor.BackupHandler
 	cancel  context.CancelFunc
-	errCh   chan error
+	// done is closed once the retry loop has returned; err holds its outcome and is only
+	// read after that.
+	done chan struct{}
+	err  error
 }
 
 var _ backupexecutor.BackupHandler = (*retryableBackupHandler)(nil)
@@ -44,7 +47,7 @@ func newRetryableBackupHandler(
 	// the partial backup folder stays in storage.
 	cleanupCtx := context.WithoutCancel(ctx)
 	h := &retryableBackupHandler{
-		errCh:  make(chan error, 1),
+		done:   make(chan struct{}),
 		cancel: cancel,
 	}
 
@@ -85,8 +88,9 @@ func newRetryableBackupHandler(
 	// returns, so a finished run leaves nothing behind in the scheduler context.
 	go func() {
 		defer cancel()
-		h.errCh <- try.Retry(ctxWithCancel, policy,
-			logger.With(slog.String("label", "backup")), processBackup, callbacks.OnRetry)
+
+		h.finish(try.Retry(ctxWithCancel, policy,
+			logger.With(slog.String("label", "backup")), processBackup, callbacks.OnRetry))
 	}()
 
 	return h
@@ -98,10 +102,33 @@ func (h *retryableBackupHandler) setHandler(handler backupexecutor.BackupHandler
 	h.handler = handler
 }
 
+// finish records the run's outcome and releases everyone waiting on it.
+func (h *retryableBackupHandler) finish(err error) {
+	h.Lock()
+	h.err = err
+	h.Unlock()
+
+	close(h.done)
+}
+
+// Done is closed once the run has finished, successfully or not. A run whose pipeline never
+// started ends here with GetStats still nil, so a caller waiting for the start has to watch it.
+func (h *retryableBackupHandler) Done() <-chan struct{} {
+	return h.done
+}
+
+// Err returns the run's outcome. It is meaningful only once Done is closed.
+func (h *retryableBackupHandler) Err() error {
+	h.RLock()
+	defer h.RUnlock()
+
+	return h.err
+}
+
 func (h *retryableBackupHandler) Wait(ctx context.Context) error {
 	select {
-	case err := <-h.errCh:
-		return err
+	case <-h.done:
+		return h.Err()
 	case <-ctx.Done():
 		return ctx.Err()
 	}

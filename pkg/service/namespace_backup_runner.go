@@ -29,7 +29,7 @@ type NamespaceBackupRunner interface {
 		runSpec model.BackupRunSpec,
 		scanLimiter syncutil.Limiter,
 		logger *slog.Logger,
-	) CancelableBackupHandler
+	) NamespaceBackupHandler
 }
 
 // NewNamespaceBackupRunner returns a NamespaceBackupRunner.
@@ -61,6 +61,18 @@ type CancelableBackupHandler interface {
 	Cancel()
 }
 
+// NamespaceBackupHandler is one namespace's backup run: a CancelableBackupHandler that also
+// reports when the run itself is over. A run whose pipeline never started - an unreachable
+// cluster, a storage writer that cannot be created - never publishes statistics, so a caller
+// waiting for it to start needs the run's own outcome to know that it never will.
+type NamespaceBackupHandler interface {
+	CancelableBackupHandler
+	// Done is closed once the run has finished, successfully or not.
+	Done() <-chan struct{}
+	// Err returns the run's outcome. It is meaningful only once Done is closed.
+	Err() error
+}
+
 // Run starts a retryable backup for one namespace via [backupexecutor.Backup.Run],
 // with cleanup and metadata callbacks wired for the routine's storage layout.
 // scanLimiter is a per-routine limiter shared across all namespace backups within
@@ -72,7 +84,7 @@ func (e *namespaceBackupRunner) Run(
 	runSpec model.BackupRunSpec,
 	scanLimiter syncutil.Limiter,
 	logger *slog.Logger,
-) CancelableBackupHandler {
+) NamespaceBackupHandler {
 	return newRetryableBackupHandler(
 		ctx,
 		*routine.BackupPolicy.GetRetryPolicyOrDefault(),
