@@ -18,6 +18,7 @@ import (
 // @Param       storage body dto.Storage true "Backup storage details"
 // @Success     201
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -37,7 +38,7 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 		config.Storage[name] = newStorage
 		return nil, nil
 	}); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -92,6 +93,7 @@ func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 // @Param       storage body dto.Storage true "Backup storage details"
 // @Success     200
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -111,7 +113,7 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 		config.Storage[name] = updatedStorage
 		return routinesUsingStorage(config, name), nil
 	}); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -126,6 +128,7 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup storage name"
 // @Success     204
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -144,7 +147,7 @@ func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 		return nil, nil
 	})
 	if err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 

@@ -535,6 +535,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -661,6 +667,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -700,6 +712,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -724,6 +742,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -830,6 +854,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -869,6 +899,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -893,6 +929,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -1005,6 +1047,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1044,6 +1092,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1068,6 +1122,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -1100,6 +1160,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1126,6 +1192,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "The specified routine was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -1232,6 +1304,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1271,6 +1349,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1295,6 +1379,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }

@@ -623,6 +623,16 @@
                                 }
                             }
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -759,6 +769,16 @@
                                 }
                             }
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -795,6 +815,16 @@
                                 }
                             }
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -821,6 +851,16 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -940,6 +980,16 @@
                                 }
                             }
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -976,6 +1026,16 @@
                                 }
                             }
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1002,6 +1062,16 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1131,6 +1201,16 @@
                                 }
                             }
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1167,6 +1247,16 @@
                                 }
                             }
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1193,6 +1283,16 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1235,6 +1335,16 @@
                                 }
                             }
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1263,6 +1373,16 @@
                     },
                     "404": {
                         "description": "The specified routine was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1382,6 +1502,16 @@
                                 }
                             }
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1418,6 +1548,16 @@
                                 }
                             }
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1444,6 +1584,16 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "content": {
                             "*/*": {
                                 "schema": {

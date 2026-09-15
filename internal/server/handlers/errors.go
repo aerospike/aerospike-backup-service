@@ -40,6 +40,13 @@ func errBadRequest(err error) error {
 	return newStatusCodeError(fmt.Errorf("invalid request: %w", err), http.StatusBadRequest)
 }
 
+// errStorageUnavailable reports a configuration change that could not be persisted. The request
+// was well formed; the storage holding the configuration file was not available, so the client
+// may retry.
+func errStorageUnavailable(err error) error {
+	return newStatusCodeError(err, http.StatusServiceUnavailable)
+}
+
 var errMissingRoutineName = newStatusCodeError(errors.New("routine name required"), http.StatusBadRequest)
 var errMissingClusterName = newStatusCodeError(errors.New("cluster name required"), http.StatusBadRequest)
 var errMissingPolicyName = newStatusCodeError(errors.New("policy name required"), http.StatusBadRequest)

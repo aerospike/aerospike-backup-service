@@ -3,7 +3,9 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
@@ -31,6 +33,7 @@ func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 // @Param       config body dto.Config true "Configuration details"
 // @Success     200
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	newConfig, ok := decodeBody[dto.Config](w, r)
 	if !ok {
@@ -68,14 +71,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
-		config.InvalidateAllRoutines()
-		s.nsValidator.Validate(r.Context(), config) // validate under the lock
-		return nil
-	})
-
-	if err != nil {
+	if err := s.replaceConfig(r.Context(), newConfigModel); err != nil {
 		httpError(w, err)
 		return
 	}
@@ -127,33 +123,21 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// changeConfig applies updateFunc to the live configuration, persists the result and reschedules
-// the routines. The caller has already validated the change, so everything here is the commit.
-func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
-	// ApplyConfig and changeConfig must be synchronized to prevent race conditions
+// replaceConfig persists newConfig and makes it the live configuration, rescheduling every
+// routine it describes. The caller has already validated the change, so everything here is
+// the commit.
+func (s *Service) replaceConfig(ctx context.Context, newConfig *model.Config) error {
+	// ApplyConfig and replaceConfig must be synchronized to prevent race conditions
 	// where one operation reads/writes config while another is in the middle of updating it
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
 
-	err := updateFunc(s.config)
-	if err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
-	}
+	s.nsValidator.Validate(ctx, newConfig) // validate under the lock
 
-	// A write the client can cancel would leave memory, file and scheduler describing different
-	// configurations, so the persist outlives the request and its own timeout bounds it instead.
-	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), configWriteTimeout)
-	defer cancel()
+	return s.commitConfig(ctx, newConfig, routineNames(newConfig))
+}
 
-	err = s.configurationManager.Write(writeCtx, s.config)
-	if err != nil {
-		return fmt.Errorf("failed to write configuration: %w", err)
-	}
-
-	err = s.configApplier.ApplyNewConfig()
-	if err != nil {
-		return fmt.Errorf("failed to apply new configuration: %w", err)
-	}
-
-	return nil
+// routineNames lists every routine the configuration describes.
+func routineNames(config *model.Config) []string {
+	return slices.Collect(maps.Keys(config.BackupConfigCopy().BackupRoutines))
 }
