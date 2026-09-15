@@ -32,19 +32,21 @@ func requestBody(w http.ResponseWriter, r *http.Request) (io.Reader, error) {
 	return bytes.NewReader(data), nil
 }
 
-// decodeBody reads a bounded, non-empty request body into a T without validating it; request
-// bodies are always JSON. On failure it writes the error response and returns false, so the
-// handler just returns. Only dto.Config is read this way: its Validate must run after the handler
-// merges stored secrets back into the incoming document. Every other payload validates itself, so
-// use decodeBodyValidated.
-func decodeBody[T any](w http.ResponseWriter, r *http.Request) (*T, bool) {
+// dtoFromReader is the shape shared by dto.NewFromReader and dto.NewValidatedFromReader. It is
+// internal plumbing for the two helpers below, so no handler ever passes a constructor in.
+type dtoFromReader[T any] func(io.Reader, decoder.SerializationFormat) (*T, error)
+
+// decodeBodyWith reads a bounded, non-empty request body and builds a T from it with read;
+// request bodies are always JSON. On failure it writes the error response and returns false, so
+// the handler just returns.
+func decodeBodyWith[T any](w http.ResponseWriter, r *http.Request, read dtoFromReader[T]) (*T, bool) {
 	body, err := requestBody(w, r)
 	if err != nil {
 		httpError(w, err)
 		return nil, false
 	}
 
-	value, err := dto.NewFromReader[T](body, decoder.JSON)
+	value, err := read(body, decoder.JSON)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return nil, false
@@ -53,20 +55,19 @@ func decodeBody[T any](w http.ResponseWriter, r *http.Request) (*T, bool) {
 	return value, true
 }
 
+// decodeBody decodes the request body into a T without validating it. Use decodeBodyValidated
+// unless T cannot be validated as it arrives: dto.Config is the only such payload, because its
+// Validate must run after the handler merges stored secrets into the incoming document. A
+// single-entity payload also needs that merge, but gets it in changeBackupConfig once the entity
+// sits in the surrounding config.
+func decodeBody[T any](w http.ResponseWriter, r *http.Request) (*T, bool) {
+	return decodeBodyWith(w, r, dto.NewFromReader[T])
+}
+
 // decodeBodyValidated decodes the request body into a T and validates it with T's own Validate.
 func decodeBodyValidated[T any, PT interface {
 	*T
 	dto.Validator
 }](w http.ResponseWriter, r *http.Request) (*T, bool) {
-	value, ok := decodeBody[T](w, r)
-	if !ok {
-		return nil, false
-	}
-
-	if err := PT(value).Validate(); err != nil {
-		httpError(w, errBadRequest(err))
-		return nil, false
-	}
-
-	return value, true
+	return decodeBodyWith(w, r, dto.NewValidatedFromReader[T, PT])
 }

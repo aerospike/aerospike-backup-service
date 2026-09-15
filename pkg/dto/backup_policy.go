@@ -74,7 +74,7 @@ type BackupPolicy struct {
 
 // Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
 func (p *BackupPolicy) Validate() error {
-	return p.ValidateWithOpts(ValidationDefault)
+	return p.ValidateWithOpts(ValidationWithSecretAgent) // if we don't know the secret agent, we assume it's available.
 }
 
 // ValidateWithOpts checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
