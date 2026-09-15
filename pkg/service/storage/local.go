@@ -45,10 +45,10 @@ func (a *LocalStorageAccessor) createWriter(
 // probe checks that the configured path is usable as a backup destination. The local
 // writer creates missing directories itself, so what has to hold is that the nearest
 // existing ancestor of the path is a directory this process can write to.
-func (a *LocalStorageAccessor) probe(_ context.Context, storage model.Storage) error {
+func (a *LocalStorageAccessor) probe(ctx context.Context, storage model.Storage) error {
 	path := storage.(*model.LocalStorage).Path
 
-	dir, err := nearestExistingDir(path)
+	dir, err := nearestExistingDir(ctx, path)
 	if err != nil {
 		return err
 	}
@@ -68,13 +68,21 @@ func (a *LocalStorageAccessor) probe(_ context.Context, storage model.Storage) e
 
 // nearestExistingDir walks up from path to the first component that exists and reports
 // an error unless that component is a directory.
-func nearestExistingDir(path string) (string, error) {
+//
+// It checks ctx between components rather than around each one: a stat that blocks in the
+// kernel - a hung network mount - cannot be interrupted by a context at all, so the most
+// this can do is stop walking once the deadline has passed.
+func nearestExistingDir(ctx context.Context, path string) (string, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return "", fmt.Errorf("local storage path %q cannot be resolved: %w", path, err)
 	}
 
 	for dir := abs; ; dir = filepath.Dir(dir) {
+		if err := ctx.Err(); err != nil {
+			return "", fmt.Errorf("local storage path %q could not be checked: %w", path, err)
+		}
+
 		info, err := os.Stat(dir)
 		switch {
 		case os.IsNotExist(err):

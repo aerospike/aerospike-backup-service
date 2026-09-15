@@ -29,6 +29,12 @@ type Checker interface {
 	Check(ctx context.Context, backupConfig *model.BackupConfig)
 }
 
+// checkTimeout is a backstop on one whole pass, not a budget for any single probe: every
+// probe already carries its own tighter deadline, and they all run concurrently. It exists
+// so that a backend which accepts a connection and then never answers cannot pin the
+// goroutine - and, on a config change, the context it runs under cannot be canceled at all.
+const checkTimeout = 2 * time.Minute
+
 type checker struct {
 	clusters aerospike.NamespaceValidator
 	storage  storage.Operations
@@ -59,6 +65,9 @@ func (c *checker) Check(ctx context.Context, backupConfig *model.BackupConfig) {
 	if nothingToReach(backupConfig) {
 		return
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, checkTimeout)
+	defer cancel()
 
 	start := time.Now()
 	slog.Info("Validating configured clusters and storage")

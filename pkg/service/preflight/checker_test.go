@@ -194,3 +194,39 @@ func (r *recorder) attrValues(key string) []string {
 
 	return values
 }
+
+// Probes must run under a deadline of the checker's own. A config change hands Check a
+// context whose cancellation has been stripped, so without this a backend that accepts a
+// connection and never answers would pin the goroutine for the life of the process.
+func TestChecker_BoundsProbesWithADeadline(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	clusters := aerospike.NewMockNamespaceValidator(ctrl)
+	var clusterDeadline bool
+	clusters.EXPECT().
+		Validate(gomock.Any(), gomock.Any()).
+		Do(func(ctx context.Context, _ *model.BackupConfig) {
+			_, clusterDeadline = ctx.Deadline()
+		})
+
+	ops := storage.NewMockOperations(ctrl)
+	var storageDeadline bool
+	ops.EXPECT().
+		Probe(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, _ model.Storage) error {
+			_, storageDeadline = ctx.Deadline()
+
+			return nil
+		})
+
+	// An uncancellable context, as a config change supplies.
+	newTestChecker(clusters, ops).Check(context.WithoutCancel(t.Context()), configWithStorage(t, "s1"))
+
+	assert.True(t, storageDeadline, "the storage probe ran without a deadline")
+	assert.True(t, clusterDeadline, "the cluster check ran without a deadline")
+}
+
+// newTestChecker returns the concrete checker so a test can drive one pass directly.
+func newTestChecker(clusters aerospike.NamespaceValidator, operations storage.Operations) *checker {
+	return NewChecker(clusters, operations).(*checker)
+}

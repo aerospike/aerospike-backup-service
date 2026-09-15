@@ -120,8 +120,8 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The check is queued only once the reload is accepted: a rejected configuration must
-	// not dial its clusters or write probe objects into its buckets.
+	// The check runs only once the reload is accepted: a rejected configuration must not
+	// dial its clusters or write probe objects into its buckets.
 	previous := s.config.BackupConfigCopy()
 	current := config.BackupConfigCopy()
 	s.checkChanges(r.Context(), previous, current) // diff the copies before current goes live.

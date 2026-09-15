@@ -89,7 +89,8 @@ func (s *Service) changeBackupConfig(
 // nothing reads their result, so making a config request wait for them - with the
 // configuration lock held, no less - would buy the operator nothing. The request's values
 // come along for logging; only its cancellation is dropped, because the probes outlive
-// the response.
+// the response. Check applies its own deadline, so dropping that cancellation does not
+// leave the probes unbounded.
 func (s *Service) checkChanges(ctx context.Context, previous, current *model.BackupConfig) {
 	delta := preflight.Changes(previous, current)
 

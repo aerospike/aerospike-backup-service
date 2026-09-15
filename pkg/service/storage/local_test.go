@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -133,4 +134,17 @@ func TestLocalStorageAccessor_Probe_LeavesNoFiles(t *testing.T) {
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
 	assert.Empty(t, entries)
+}
+
+// The probe runs with a deadline of the checker's, and on a config change under a context
+// whose cancellation was stripped, so it has to stop walking once that deadline passes.
+func TestLocalStorageAccessor_Probe_RespectsCanceledContext(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := NewLocalStorageAccessor().probe(ctx, &model.LocalStorage{Path: t.TempDir()})
+
+	require.ErrorIs(t, err, context.Canceled)
 }
