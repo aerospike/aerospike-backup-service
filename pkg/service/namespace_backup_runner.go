@@ -82,8 +82,11 @@ func (e *namespaceBackupRunner) Run(
 				return e.backupExecutor.Run(ctx, routine, runSpec.TimeBounds, namespace, backupFolder, scanLimiter, logger)
 			},
 			OnFail: func(ctx context.Context) {
-				path := e.pathService.GetTimestampPath(routine.Name, runSpec.StartTime, runSpec.Type)
-				e.deleteFolder(ctx, routine, path, logger)
+				// Only this namespace's own folder. The timestamp folder above it is shared with
+				// the other namespaces of the same run, which may still be writing into it;
+				// whatever is left there is removed at run level once they have all finished.
+				backupFolder := e.pathService.GetBackupPath(routine.Name, runSpec.Type, namespace, runSpec.StartTime)
+				e.deleteFolder(ctx, routine, backupFolder, logger)
 			},
 			OnSuccess: func(ctx context.Context, stats *models.BackupStats) error {
 				if runSpec.Type == model.BackupTypeIncremental && stats.IsEmpty() {
