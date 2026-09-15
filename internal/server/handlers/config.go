@@ -127,6 +127,8 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// changeConfig applies updateFunc to the live configuration, persists the result and reschedules
+// the routines. The caller has already validated the change, so everything here is the commit.
 func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
 	// ApplyConfig and changeConfig must be synchronized to prevent race conditions
 	// where one operation reads/writes config while another is in the middle of updating it
@@ -138,7 +140,12 @@ func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Confi
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	err = s.configurationManager.Write(ctx, s.config)
+	// A write the client can cancel would leave memory, file and scheduler describing different
+	// configurations, so the persist outlives the request and its own timeout bounds it instead.
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), configWriteTimeout)
+	defer cancel()
+
+	err = s.configurationManager.Write(writeCtx, s.config)
 	if err != nil {
 		return fmt.Errorf("failed to write configuration: %w", err)
 	}

@@ -11,8 +11,7 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// retryableBackupHandler is a wrapper around BackupHandler that adds
-// retry logic and cancellation support.
+// retryableBackupHandler wraps a BackupHandler with retries and cancellation.
 type retryableBackupHandler struct {
 	sync.RWMutex
 	handler backupexecutor.BackupHandler
@@ -36,6 +35,10 @@ func newRetryableBackupHandler(
 	callbacks retryableBackupCallbacks,
 	logger *slog.Logger,
 ) *retryableBackupHandler {
+	// A run uses three contexts: the caller's, which starts the pipeline and outlives every run; a
+	// cancelable child of it, which is this run's handle and what Cancel ends; and a cleanup context
+	// that survives cancellation. Ending the child stops the pipeline, because the inner handler
+	// cancels its own work when the context it waits under ends.
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	// Cleanup must still run when the run itself was canceled (shutdown, user cancel), otherwise
 	// the partial backup folder stays in storage.
@@ -45,9 +48,10 @@ func newRetryableBackupHandler(
 		cancel: cancel,
 	}
 
-	// Helper to retry onSuccess only
+	// Helper to retry onSuccess only. The loop observes the wait context, so Cancel stops further
+	// attempts; the write itself runs on the run context and is left to finish once started.
 	retryOnSuccess := func(handler backupexecutor.BackupHandler) error {
-		err := try.Retry(ctx, policy, logger.With(slog.String("label", "write metadata")), func() error {
+		err := try.Retry(ctxWithCancel, policy, logger.With(slog.String("label", "write metadata")), func() error {
 			return callbacks.OnSuccess(ctx, handler.GetStats())
 		}, func() {})
 		if err != nil {
@@ -60,6 +64,7 @@ func newRetryableBackupHandler(
 
 	// Process backup function.
 	processBackup := func() error {
+		// The pipeline is started on the run context; only the wait is tied to this run's handle.
 		handler, err := callbacks.Start(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to start backup: %w", err)
@@ -76,8 +81,10 @@ func newRetryableBackupHandler(
 		return retryOnSuccess(handler)
 	}
 
-	// Start the backup process with retries
+	// Start the backup process with retries. The wait context is released as soon as the loop
+	// returns, so a finished run leaves nothing behind in the scheduler context.
 	go func() {
+		defer cancel()
 		h.errCh <- try.Retry(ctxWithCancel, policy,
 			logger.With(slog.String("label", "backup")), processBackup, callbacks.OnRetry)
 	}()
@@ -121,10 +128,9 @@ func (h *retryableBackupHandler) GetMetrics() *models.Metrics {
 	return nil
 }
 
+// Cancel ends this run's wait context, which stops the inner handler and the retry loop. The
+// same function runs when the loop returns on its own, and a CancelFunc is idempotent, so Cancel
+// is safe at any time and any number of times.
 func (h *retryableBackupHandler) Cancel() {
-	h.Lock()
-	defer h.Unlock()
-	if h.cancel != nil {
-		h.cancel()
-	}
+	h.cancel()
 }

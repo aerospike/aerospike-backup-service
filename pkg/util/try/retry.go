@@ -18,7 +18,12 @@ var nonRetryableErrors = []error{asinfo.ErrNoNode}
 // Retry runs f with retries according to policy.
 // Pass a logger scoped with context (e.g. logger.With(slog.String("label", "backup"))).
 // onRetry is invoked before each Retry (not on the final failed attempt).
-// Canceling ctx cuts the back-off short and returns the last failure joined with ctx.Err().
+//
+// Whether to try again is decided by ctx, never by the shape of the error: an operation may
+// return context.Canceled for reasons of its own, such as a pipeline stopping its workers after
+// one of them failed, and that is a failure to retry like any other. Only when ctx itself is done
+// has the caller withdrawn; then the loop stops at once, before any further attempt or back-off,
+// and returns the last failure joined with ctx.Err() unless the failure already carries it.
 func Retry(
 	ctx context.Context,
 	policy models.RetryPolicy,
@@ -34,8 +39,13 @@ func Retry(
 
 	for attempt := uint(1); attempt <= totalAttempts; attempt++ {
 		lastErr = f()
-		if lastErr == nil || errors.Is(lastErr, context.Canceled) {
-			return lastErr
+		if lastErr == nil {
+			return nil
+		}
+
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			logger.Info("Retry aborted, context done", attr.Error(lastErr))
+			return joinContextErr(lastErr, ctxErr)
 		}
 
 		for _, nre := range nonRetryableErrors {
@@ -56,7 +66,7 @@ func Retry(
 			case <-time.After(retryInterval):
 			case <-ctx.Done():
 				logger.Info("Retry aborted, context done", attr.Error(lastErr))
-				return errors.Join(lastErr, ctx.Err())
+				return joinContextErr(lastErr, ctx.Err())
 			}
 
 			retryInterval = nextRetryInterval(retryInterval, policy.Multiplier)
@@ -76,4 +86,14 @@ func nextRetryInterval(current time.Duration, multiplier float64) time.Duration 
 	}
 
 	return time.Duration(next)
+}
+
+// joinContextErr attaches the reason the context ended to the failure it interrupted, unless
+// the failure already reports that reason, so callers see "context canceled" once, not twice.
+func joinContextErr(err, ctxErr error) error {
+	if errors.Is(err, ctxErr) {
+		return err
+	}
+
+	return errors.Join(err, ctxErr)
 }
