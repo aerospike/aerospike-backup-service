@@ -78,10 +78,6 @@ cannot see:
   hands the run context to every component's `Start(ctx)`; a component stops when that context ends. A context lives
   in a struct only where owning lifetimes is the struct's purpose (`RestoreJobsHolder`), with the reasoning written
   next to the `containedctx` suppression.
-- **Requests.** Handlers pass `r.Context()` to reads. A configuration change has two phases: validation runs on the
-  request context, while the commit, which swaps the in-memory configuration, persists it and reschedules routines,
-  runs on `context.WithoutCancel` so a client disconnect cannot leave memory and disk describing different
-  configurations. Jobs a request starts (backups, restores) are parented to the service lifetime, never to the request.
 - **Stopping vs. classifying.** Whether to stop is read from the context (`ctx.Err() != nil`), never inferred from an
   error: an operation may return `context.Canceled` for reasons of its own, and that is a failure like any other.
   `errors.Is(err, context.Canceled)` classifies an outcome after the fact, for logs and metrics.

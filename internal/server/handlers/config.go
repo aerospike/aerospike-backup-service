@@ -68,10 +68,11 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.changeConfig(r.Context(), func(ctx context.Context, config *model.Config) error {
+	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
 		config.InvalidateAllRoutines()
-		s.nsValidator.Validate(ctx, config) // validate under the lock
+		// Advisory and network-bound: it only logs, so it stays cancelable with the request.
+		s.nsValidator.Validate(r.Context(), config) // validate under the lock
 		return nil
 	})
 
@@ -128,25 +129,24 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 // changeConfig applies updateFunc to the live configuration, persists the result and reschedules
-// the routines. The caller has already validated the change; everything here is the commit phase
-// and runs on the context commitContext returns, updateFunc included.
-func (s *Service) changeConfig(
-	ctx context.Context,
-	updateFunc func(ctx context.Context, config *model.Config) error,
-) error {
+// the routines. The caller has already validated the change, so everything here is the commit.
+func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
 	// ApplyConfig and changeConfig must be synchronized to prevent race conditions
 	// where one operation reads/writes config while another is in the middle of updating it
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
 
-	ctx = commitContext(ctx)
-
-	err := updateFunc(ctx, s.config)
+	err := updateFunc(s.config)
 	if err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	err = s.configurationManager.Write(ctx, s.config)
+	// A write the client can cancel would leave memory, file and scheduler describing different
+	// configurations, so the persist outlives the request and its own timeout bounds it instead.
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), configWriteTimeout)
+	defer cancel()
+
+	err = s.configurationManager.Write(writeCtx, s.config)
 	if err != nil {
 		return fmt.Errorf("failed to write configuration: %w", err)
 	}

@@ -264,6 +264,38 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 	require.Equal(t, 0, successCount)
 }
 
+func TestStartRetryableBackup_ReleasesWaitContextOnCompletion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
+
+	// The context the inner handler waits under is this run's cancel handle.
+	waitCtxCh := make(chan context.Context, 1)
+	mockHandler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+		waitCtxCh <- ctx
+		return nil
+	})
+	mockHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+
+	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+		Start:     func(context.Context) (backupexecutor.BackupHandler, error) { return mockHandler, nil },
+		OnFail:    func(context.Context) {},
+		OnSuccess: func(context.Context, *models.BackupStats) error { return nil },
+		OnRetry:   func() {},
+	}, slog.Default())
+
+	require.NoError(t, handler.Wait(t.Context()))
+
+	waitCtx := <-waitCtxCh
+
+	// A finished run releases its wait context, so it stops being registered in the long-lived
+	// parent it was derived from.
+	select {
+	case <-waitCtx.Done():
+	case <-time.After(time.Second):
+		t.Fatal("the wait context was still live after the backup finished")
+	}
+}
+
 func TestRetryableBackupHandler_GetStats_GetMetrics(t *testing.T) {
 	t.Parallel()
 

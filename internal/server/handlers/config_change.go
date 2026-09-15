@@ -3,11 +3,16 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
+
+// configWriteTimeout bounds the persist step of a configuration change: long enough for a cold
+// cloud client, short enough that a stalled backend cannot hold the config lock indefinitely.
+const configWriteTimeout = 60 * time.Second
 
 type backupConfigChangeOptions struct {
 	validateNamespaces bool
@@ -55,17 +60,20 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	// Everything above only read; from here on the change is committed, see commitContext.
-	ctx = commitContext(ctx)
-
 	s.config.SetBackupConfig(modelConfig.BackupConfigCopy())
 	s.config.InvalidateRoutines(routinesToInvalidate)
 
 	if options.validateNamespaces {
+		// Advisory and network-bound: it only logs, so it stays cancelable with the request.
 		s.nsValidator.Validate(ctx, s.config)
 	}
 
-	if err = s.configurationManager.Write(ctx, s.config); err != nil {
+	// A write the client can cancel would leave memory, file and scheduler describing different
+	// configurations, so the persist outlives the request and its own timeout bounds it instead.
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), configWriteTimeout)
+	defer cancel()
+
+	if err = s.configurationManager.Write(writeCtx, s.config); err != nil {
 		return fmt.Errorf("failed to write configuration: %w", err)
 	}
 
@@ -74,20 +82,6 @@ func (s *Service) changeBackupConfig(
 	}
 
 	return nil
-}
-
-// commitContext returns the context the commit phase of a configuration change runs on.
-//
-// A change has two phases. Validation runs on the request context: it only reads, so a client
-// that disconnects merely stops getting an answer. The commit swaps the in-memory configuration,
-// persists it and reschedules the routines, and those steps have to happen together: if the
-// request context ended between them, memory would describe one configuration while the file and
-// the scheduler still describe another. The commit therefore runs on a context that keeps the
-// request's values but not its cancellation. It carries no deadline of its own: how long a
-// persist may take is decided by the persistence layer, through its file or storage client
-// timeouts, not by the client that asked for the change.
-func commitContext(ctx context.Context) context.Context {
-	return context.WithoutCancel(ctx)
 }
 
 func withNamespaceValidation(opts *backupConfigChangeOptions) {
