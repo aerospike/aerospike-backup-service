@@ -19,6 +19,8 @@ const (
 	configurationBackupDirectory = "configuration"
 	dataDirectory                = "data"
 	configPrefix                 = "aerospike"
+	// timestampDigits is the width of the Unix-milliseconds prefix of a timestamp folder name.
+	timestampDigits = 13
 )
 
 // PathService defines the canonical storage layout for backup data, metadata, and cluster configuration.
@@ -55,9 +57,10 @@ func NewPathService(format *model.TimestampFormat) PathService {
 	return &pathService{
 		format: format,
 		timestampPattern: regexp.MustCompile(
-			fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})(?:_[^/]*)?/`,
+			fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{%d})(?:_[^/]*)?/`,
 				fullBackupDirectory,
-				incrementalBackupDirectory)),
+				incrementalBackupDirectory,
+				timestampDigits)),
 	}
 }
 
