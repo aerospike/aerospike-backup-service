@@ -34,7 +34,7 @@ func TestIPRateLimiter_EvictsIdleEntriesOnRequest(t *testing.T) {
 		cleanupInterval = time.Minute
 	)
 
-	limiter := NewIPRateLimiter(rate.Limit(1), 1, idleTTL, cleanupInterval)
+	limiter := NewIPRateLimiter(rate.Limit(1), 1, idleTTL, cleanupInterval, defaultLimiterMaxEntries)
 	active := netip.MustParseAddr("10.0.0.1")
 	idle := netip.MustParseAddr("10.0.0.2")
 
@@ -43,7 +43,7 @@ func TestIPRateLimiter_EvictsIdleEntriesOnRequest(t *testing.T) {
 
 	// Age the second entry past its TTL and make a sweep due on the next request.
 	limiter.Lock()
-	limiter.limiters[idle].lastSeen = time.Now().Add(-2 * idleTTL)
+	entryOf(limiter.limiters[peerKey(idle)]).lastSeen = time.Now().Add(-2 * idleTTL)
 	limiter.lastCleanup = time.Now().Add(-2 * cleanupInterval)
 	limiter.Unlock()
 
@@ -51,8 +51,9 @@ func TestIPRateLimiter_EvictsIdleEntriesOnRequest(t *testing.T) {
 
 	limiter.Lock()
 	defer limiter.Unlock()
-	require.NotContains(t, limiter.limiters, idle, "idle entry survived the sweep")
-	require.Contains(t, limiter.limiters, active, "active entry was evicted")
+	require.NotContains(t, limiter.limiters, peerKey(idle), "idle entry survived the sweep")
+	require.Contains(t, limiter.limiters, peerKey(active), "active entry was evicted")
+	require.Equal(t, len(limiter.limiters), limiter.recent.Len(), "recency list out of sync with the map")
 }
 
 func TestIPRateLimiter_SweepsAtMostOncePerInterval(t *testing.T) {
@@ -61,7 +62,7 @@ func TestIPRateLimiter_SweepsAtMostOncePerInterval(t *testing.T) {
 		cleanupInterval = time.Minute
 	)
 
-	limiter := NewIPRateLimiter(rate.Limit(1), 1, idleTTL, cleanupInterval)
+	limiter := NewIPRateLimiter(rate.Limit(1), 1, idleTTL, cleanupInterval, defaultLimiterMaxEntries)
 	active := netip.MustParseAddr("10.0.0.1")
 	idle := netip.MustParseAddr("10.0.0.2")
 
@@ -70,14 +71,14 @@ func TestIPRateLimiter_SweepsAtMostOncePerInterval(t *testing.T) {
 
 	// Idle past its TTL, but the interval since the last sweep has not elapsed.
 	limiter.Lock()
-	limiter.limiters[idle].lastSeen = time.Now().Add(-2 * idleTTL)
+	entryOf(limiter.limiters[peerKey(idle)]).lastSeen = time.Now().Add(-2 * idleTTL)
 	limiter.Unlock()
 
 	limiter.getOrCreateEntry(active)
 
 	limiter.Lock()
 	defer limiter.Unlock()
-	require.Contains(t, limiter.limiters, idle, "swept before the interval elapsed")
+	require.Contains(t, limiter.limiters, peerKey(idle), "swept before the interval elapsed")
 }
 
 func TestRateLimiter_RunsBeforeBodyReaderMiddleware(t *testing.T) {
