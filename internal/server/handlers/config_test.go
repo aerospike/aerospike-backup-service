@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -40,7 +42,7 @@ func newConfigTestService(t *testing.T) (*Service, *gomock.Controller) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	checker := preflight.NewMockChecker(ctrl)
-	checker.EXPECT().RequestCheck(gomock.Any(), gomock.Any()).AnyTimes()
+	checker.EXPECT().Check(gomock.Any(), gomock.Any()).AnyTimes()
 
 	return &Service{
 		config:    model.NewConfig(),
@@ -194,9 +196,15 @@ func TestService_ApplyConfig(t *testing.T) {
 			}
 			svc.configApplier = mockConfigApplier
 
+			// The check runs on its own goroutine, so a call is awaited rather than
+			// asserted straight after the handler returns.
+			checked := make(chan struct{}, 1)
 			checker := preflight.NewMockChecker(ctrl)
 			if tt.expectCheck {
-				checker.EXPECT().RequestCheck(gomock.Any(), gomock.Any()).Times(1)
+				checker.EXPECT().
+					Check(gomock.Any(), gomock.Any()).
+					Do(func(context.Context, *model.BackupConfig) { close(checked) }).
+					Times(1)
 			}
 			svc.checker = checker
 
@@ -208,6 +216,14 @@ func TestService_ApplyConfig(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+
+			if tt.expectCheck {
+				select {
+				case <-checked:
+				case <-time.After(5 * time.Second):
+					t.Fatal("the accepted reload was never handed to the checker")
+				}
 			}
 		})
 	}

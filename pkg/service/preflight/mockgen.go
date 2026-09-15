@@ -41,26 +41,14 @@ func (m *MockChecker) EXPECT() *MockCheckerMockRecorder {
 	return m.recorder
 }
 
-// RequestCheck mocks base method.
-func (m *MockChecker) RequestCheck(previous, current *model.BackupConfig) {
+// Check mocks base method.
+func (m *MockChecker) Check(ctx context.Context, backupConfig *model.BackupConfig) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RequestCheck", previous, current)
+	m.ctrl.Call(m, "Check", ctx, backupConfig)
 }
 
-// RequestCheck indicates an expected call of RequestCheck.
-func (mr *MockCheckerMockRecorder) RequestCheck(previous, current any) *gomock.Call {
+// Check indicates an expected call of Check.
+func (mr *MockCheckerMockRecorder) Check(ctx, backupConfig any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestCheck", reflect.TypeOf((*MockChecker)(nil).RequestCheck), previous, current)
-}
-
-// Start mocks base method.
-func (m *MockChecker) Start(ctx context.Context) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Start", ctx)
-}
-
-// Start indicates an expected call of Start.
-func (mr *MockCheckerMockRecorder) Start(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockChecker)(nil).Start), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Check", reflect.TypeOf((*MockChecker)(nil).Check), ctx, backupConfig)
 }

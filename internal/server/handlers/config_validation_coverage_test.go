@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -181,12 +183,14 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 			registry.EXPECT().Cancel(gomock.Any()).AnyTimes()
 			svc.registry = registry
 
-			queued := &queuedChecks{}
+			// The handler probes on its own goroutine, so the delta arrives over a
+			// channel rather than being read straight after the call.
+			checked := make(chan *model.BackupConfig, 1)
 			checker := preflight.NewMockChecker(ctrl)
 			checker.EXPECT().
-				RequestCheck(gomock.Any(), gomock.Any()).
-				Do(queued.record).
-				AnyTimes()
+				Check(gomock.Any(), gomock.Any()).
+				Do(func(_ context.Context, delta *model.BackupConfig) { checked <- delta }).
+				Times(1)
 			svc.checker = checker
 
 			req := httptest.NewRequestWithContext(
@@ -201,8 +205,15 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 			// expectation would otherwise pass for the wrong reason.
 			assert.Equal(t, tt.expectStatus, w.Code, w.Body.String())
 
-			assert.ElementsMatch(t, tt.expectStorage, queued.storagePaths(), "storage to probe")
-			assert.ElementsMatch(t, tt.expectClusters, queued.clusterNames(), "clusters to reach")
+			var delta *model.BackupConfig
+			select {
+			case delta = <-checked:
+			case <-time.After(5 * time.Second):
+				t.Fatal("the handler never handed a configuration to the checker")
+			}
+
+			assert.ElementsMatch(t, tt.expectStorage, storagePaths(delta), "storage to probe")
+			assert.ElementsMatch(t, tt.expectClusters, clusterNames(delta), "clusters to reach")
 		})
 	}
 }
@@ -242,34 +253,19 @@ func addUnusedEntities(t *testing.T, svc *Service) {
 	svc.config.SetBackupConfig(withUnused.BackupConfigCopy())
 }
 
-// queuedChecks captures what each handler asked the checker to look at. It runs the real
-// preflight.Changes over the pair, so the assertions are on the delta the checker's worker
-// would actually probe - without needing that worker to run.
-type queuedChecks struct {
-	deltas []*model.BackupConfig
-}
-
-func (q *queuedChecks) record(previous, current *model.BackupConfig) {
-	q.deltas = append(q.deltas, preflight.Changes(previous, current))
-}
-
-func (q *queuedChecks) storagePaths() []string {
+func storagePaths(delta *model.BackupConfig) []string {
 	var paths []string
-	for _, delta := range q.deltas {
-		for _, s := range delta.Storage {
-			paths = append(paths, s.GetPath())
-		}
+	for _, s := range delta.Storage {
+		paths = append(paths, s.GetPath())
 	}
 
 	return paths
 }
 
-func (q *queuedChecks) clusterNames() []string {
+func clusterNames(delta *model.BackupConfig) []string {
 	var names []string
-	for _, delta := range q.deltas {
-		for name := range delta.AerospikeClusters {
-			names = append(names, name)
-		}
+	for name := range delta.AerospikeClusters {
+		names = append(names, name)
 	}
 
 	return names

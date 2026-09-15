@@ -7,6 +7,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/preflight"
 )
 
 // changeBackupConfig applies a mutation to the backup configuration DTO, validates and
@@ -49,13 +50,9 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	// Both snapshots are taken, and the delta computed, before the change lands: until
-	// SetBackupConfig runs, current is a private copy that nothing else can be reading or
-	// writing. RequestCheck only computes that delta and queues it, so the configuration
-	// lock covers the diff and never the probes.
 	previous := s.config.BackupConfigCopy()
 	current := modelConfig.BackupConfigCopy()
-	s.checker.RequestCheck(previous, current)
+	s.checkChanges(ctx, previous, current)
 
 	s.config.SetBackupConfig(current)
 	s.config.InvalidateRoutines(routinesToInvalidate)
@@ -69,6 +66,24 @@ func (s *Service) changeBackupConfig(
 	}
 
 	return nil
+}
+
+// checkChanges probes whatever current adds or alters relative to previous, and returns
+// at once. Two things are deliberate about it.
+//
+// The delta is computed here, on the caller's goroutine, while it still holds the
+// configuration lock and current is a private copy that SetBackupConfig has not published
+// yet - so the diff never reads maps that are simultaneously the live configuration's.
+//
+// The probes then run without the caller. They can each take a connect timeout, and
+// nothing reads their result, so making a config request wait for them - with the
+// configuration lock held, no less - would buy the operator nothing. The request's values
+// come along for logging; only its cancellation is dropped, because the probes outlive
+// the response.
+func (s *Service) checkChanges(ctx context.Context, previous, current *model.BackupConfig) {
+	delta := preflight.Changes(previous, current)
+
+	go s.checker.Check(context.WithoutCancel(ctx), delta)
 }
 
 func routinesUsingStorage(config *dto.Config, storageName string) []string {

@@ -27,7 +27,7 @@ func TestChecker_AllReachable_NoWarnings(t *testing.T) {
 	ops := storage.NewMockOperations(ctrl)
 	ops.EXPECT().Probe(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 
-	newTestChecker(clusters, ops).check(t.Context(), config)
+	NewChecker(clusters, ops).Check(t.Context(), config)
 
 	assert.Empty(t, warnings.messages())
 }
@@ -50,7 +50,7 @@ func TestChecker_UnreachableStorage_WarnsPerStorage(t *testing.T) {
 		Return(errors.New("bucket does not exist")).
 		Times(2)
 
-	newTestChecker(clusters, ops).check(t.Context(), config)
+	NewChecker(clusters, ops).Check(t.Context(), config)
 
 	names := warnings.attrValues("storage")
 	assert.ElementsMatch(t, []string{"broken-1", "broken-2"}, names)
@@ -71,7 +71,7 @@ func TestChecker_ChecksClustersWithoutStorage(t *testing.T) {
 	clusters := aerospike.NewMockNamespaceValidator(ctrl)
 	clusters.EXPECT().Validate(gomock.Any(), backupConfig)
 
-	newTestChecker(clusters, storage.NewMockOperations(ctrl)).check(t.Context(), backupConfig)
+	NewChecker(clusters, storage.NewMockOperations(ctrl)).Check(t.Context(), backupConfig)
 }
 
 // There is nothing to say about a configuration that points at nothing, and a delta is
@@ -80,16 +80,16 @@ func TestChecker_NothingToReach_DoesNothing(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	// No EXPECT calls: neither collaborator may be touched.
-	newTestChecker(aerospike.NewMockNamespaceValidator(ctrl), storage.NewMockOperations(ctrl)).
-		check(t.Context(), model.NewBackupConfig())
+	NewChecker(aerospike.NewMockNamespaceValidator(ctrl), storage.NewMockOperations(ctrl)).
+		Check(t.Context(), model.NewBackupConfig())
 }
 
 func TestChecker_NilConfig_DoesNothing(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	// No EXPECT calls: a nil config must not reach either collaborator.
-	newTestChecker(aerospike.NewMockNamespaceValidator(ctrl), storage.NewMockOperations(ctrl)).
-		check(t.Context(), nil)
+	NewChecker(aerospike.NewMockNamespaceValidator(ctrl), storage.NewMockOperations(ctrl)).
+		Check(t.Context(), nil)
 }
 
 // Storage probes have to overlap: one unreachable backend blocks for its whole connect
@@ -117,7 +117,7 @@ func TestChecker_ProbesRunConcurrently(t *testing.T) {
 		}).
 		Times(3)
 
-	newTestChecker(clusters, ops).check(t.Context(), config)
+	NewChecker(clusters, ops).Check(t.Context(), config)
 }
 
 func configWithStorage(t *testing.T, names ...string) *model.BackupConfig {
@@ -193,10 +193,4 @@ func (r *recorder) attrValues(key string) []string {
 	}
 
 	return values
-}
-
-// newTestChecker returns the concrete checker, so a test can drive one probing pass
-// directly instead of going through the queue and its worker.
-func newTestChecker(clusters aerospike.NamespaceValidator, operations storage.Operations) *checker {
-	return NewChecker(clusters, operations).(*checker)
 }

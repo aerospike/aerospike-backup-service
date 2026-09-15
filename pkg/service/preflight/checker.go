@@ -6,7 +6,6 @@ package preflight
 import (
 	"context"
 	"log/slog"
-	"maps"
 	"reflect"
 	"slices"
 	"sync"
@@ -22,33 +21,17 @@ import (
 // cannot be reached.
 //
 // It is advisory and never fails: a cluster that is down delays the backups that use it,
-// not the service. Nothing reads its result - every finding is a log line - so probing is
-// never done on a caller's goroutine. Requests are queued and served by Start.
+// not the service. Nothing reads its result - every finding is a log line - so a caller
+// that does not want to wait for the probes runs Check on a goroutine.
 type Checker interface {
-	// RequestCheck queues a check of whatever current adds or alters relative to
-	// previous, and returns at once. A change that removes something, or that alters
-	// only what the service does not have to reach, queues nothing.
-	//
-	// The delta is computed here, in the caller's goroutine, so that a caller holding
-	// the configuration lock hands over a snapshot nothing can still be changing.
-	// Requests made before Start accumulate, so nothing is probed until the service runs.
-	RequestCheck(previous, current *model.BackupConfig)
-
-	// Start serves queued checks until ctx is canceled.
-	Start(ctx context.Context)
+	// Check probes every cluster and storage backend in backupConfig, logging one
+	// warning per problem found. It returns when every probe has finished.
+	Check(ctx context.Context, backupConfig *model.BackupConfig)
 }
 
 type checker struct {
 	clusters aerospike.NamespaceValidator
 	storage  storage.Operations
-
-	// pending holds the entities queued checks still have to reach. Deltas merge by
-	// name, so back-to-back changes to one storage probe it once, with the newest
-	// definition. signal has a buffer of one, so a request never blocks and repeated
-	// requests collapse into a single pass.
-	pendingMu sync.Mutex
-	pending   *model.BackupConfig
-	signal    chan struct{}
 }
 
 var _ Checker = (*checker)(nil)
@@ -59,53 +42,7 @@ func NewChecker(clusters aerospike.NamespaceValidator, operations storage.Operat
 	return &checker{
 		clusters: clusters,
 		storage:  operations,
-		pending:  model.NewBackupConfig(),
-		signal:   make(chan struct{}, 1),
 	}
-}
-
-// RequestCheck queues a check of what current adds or alters relative to previous.
-func (c *checker) RequestCheck(previous, current *model.BackupConfig) {
-	delta := Changes(previous, current)
-	if nothingToReach(delta) {
-		return
-	}
-
-	c.pendingMu.Lock()
-	maps.Copy(c.pending.AerospikeClusters, delta.AerospikeClusters)
-	maps.Copy(c.pending.Storage, delta.Storage)
-	maps.Copy(c.pending.BackupRoutines, delta.BackupRoutines)
-	c.pendingMu.Unlock()
-
-	select {
-	case c.signal <- struct{}{}:
-	default: // a check is already due; it will pick this up.
-	}
-}
-
-// Start serves queued checks until ctx is canceled.
-func (c *checker) Start(ctx context.Context) {
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-c.signal:
-				c.check(ctx, c.takePending())
-			}
-		}
-	}()
-}
-
-// takePending drains the queue, leaving an empty one behind.
-func (c *checker) takePending() *model.BackupConfig {
-	c.pendingMu.Lock()
-	defer c.pendingMu.Unlock()
-
-	pending := c.pending
-	c.pending = model.NewBackupConfig()
-
-	return pending
 }
 
 // nothingToReach reports whether a backup configuration names any external system.
@@ -114,11 +51,11 @@ func nothingToReach(backupConfig *model.BackupConfig) bool {
 		(len(backupConfig.AerospikeClusters) == 0 && len(backupConfig.Storage) == 0)
 }
 
-// check probes every cluster and storage backend in backupConfig, logging one warning per
+// Check probes every cluster and storage backend in backupConfig, logging one warning per
 // problem found, and returns when every probe has finished. Probes run concurrently: they
 // are independent, and a single unreachable backend would otherwise hold up the whole
 // check for its connect timeout.
-func (c *checker) check(ctx context.Context, backupConfig *model.BackupConfig) {
+func (c *checker) Check(ctx context.Context, backupConfig *model.BackupConfig) {
 	if nothingToReach(backupConfig) {
 		return
 	}
