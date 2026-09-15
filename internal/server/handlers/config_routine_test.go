@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -341,6 +342,49 @@ func TestDisableRoutine(t *testing.T) {
 				require.True(t, ok)
 				assert.True(t, updated.Disabled)
 			}
+		})
+	}
+}
+
+// A routine name arrives from the request path, where the mux decodes "..%2F..%2Fescape" into
+// "../../escape". Such a name, and a namespace carrying the same, would place the routine's
+// backups outside the storage root, so the request is rejected and nothing is persisted.
+func TestAddRoutine_RejectsPathTraversal(t *testing.T) {
+	tests := []struct {
+		name        string
+		routineName string
+		namespace   string
+	}{
+		{name: "in the routine name", routineName: "../../escaped-routine", namespace: "source-ns1"},
+		{name: "in a namespace", routineName: "new-routine", namespace: "../../escaped-ns"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			manager := configuration.NewMockManager(ctrl)
+			manager.EXPECT().Write(gomock.Any(), gomock.Any()).Times(0)
+
+			svc := setupTestService(t)
+			svc.configurationManager = manager
+			entities := addValidBackupConfig(svc)
+
+			body := marshalToString(dto.BackupRoutine{
+				SourceCluster: entities.clusterName,
+				Storage:       entities.storageName,
+				BackupPolicy:  entities.policyName,
+				IntervalCron:  "@daily",
+				Namespaces:    &[]string{tt.namespace},
+			})
+			req := httptest.NewRequestWithContext(
+				t.Context(), http.MethodPost, "/v1/config/routines/x", strings.NewReader(body))
+			req.SetPathValue("name", tt.routineName)
+			w := httptest.NewRecorder()
+
+			svc.AddRoutine(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+			assert.NotContains(t, svc.config.BackupConfigCopy().BackupRoutines, tt.routineName)
 		})
 	}
 }

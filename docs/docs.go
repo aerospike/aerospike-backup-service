@@ -2112,7 +2112,7 @@ const docTemplate = `{
                     "example": "0 0 * * * *"
                 },
                 "namespaces": {
-                    "description": "The list of namespaces to back up.\nIf empty, the entire cluster is backed up.\nThe order of namespaces does not determine the backup execution or completion order.",
+                    "description": "The list of namespaces to back up.\nIf empty, the entire cluster is backed up.\nThe order of namespaces does not determine the backup execution or completion order.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -2214,28 +2214,28 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "aerospike-clusters": {
-                    "description": "AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.",
+                    "description": "AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.\nNames must be a single path segment.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.AerospikeCluster"
                     }
                 },
                 "backup-policies": {
-                    "description": "BackupPolicies is a map of backup policies that can be used by backup routines.",
+                    "description": "BackupPolicies is a map of backup policies that can be used by backup routines.\nNames must be a single path segment.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.BackupPolicy"
                     }
                 },
                 "backup-routines": {
-                    "description": "BackupRoutines is a map of backup routines.",
+                    "description": "BackupRoutines is a map of backup routines.\nNames must be a single path segment: the name is the folder the routine's backups live in.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.BackupRoutine"
                     }
                 },
                 "secret-agents": {
-                    "description": "SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication).",
+                    "description": "SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication).\nNames must be a single path segment.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.SecretAgent"
@@ -2250,7 +2250,7 @@ const docTemplate = `{
                     ]
                 },
                 "storage": {
-                    "description": "Storage is a map of storages that can be used by backup routines.",
+                    "description": "Storage is a map of storages that can be used by backup routines.\nNames must be a single path segment.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.Storage"
