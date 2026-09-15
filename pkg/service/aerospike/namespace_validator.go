@@ -134,7 +134,10 @@ func (nv *namespaceValidator) diffRoutineNamespaces(
 		}
 		clusterNamespaces, ok := namespacesByCluster[r.SourceCluster]
 		if !ok {
-			continue // no data for this cluster; warning already logged
+			// Either the cluster could not be reached, which fetchNamespacesByCluster has
+			// already reported by name, or it was never in the map to begin with, which
+			// Changes reports when it builds the delta. Either way it has been said once.
+			continue
 		}
 
 		missing := collections.MissingElements(r.Namespaces, clusterNamespaces)

@@ -130,3 +130,29 @@ func s3ConnectivityHandler(denyList, denyWrite bool) http.HandlerFunc {
 		}
 	}
 }
+
+// The probe object belongs under the storage's configured path. A credential scoped to
+// that prefix - the usual grant - can write there and nowhere else, so probing the bucket
+// root would report a perfectly good storage as broken.
+func TestProbeKey_IsScopedToTheStoragePath(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		storagePath string
+		expected    string
+	}{
+		{name: "path set", storagePath: "abs", expected: "abs/.abs-connectivity-check"},
+		{name: "nested path", storagePath: "team/abs", expected: "team/abs/.abs-connectivity-check"},
+		{name: "no path", storagePath: "", expected: ".abs-connectivity-check"},
+		{name: "trailing slash", storagePath: "abs/", expected: "abs/.abs-connectivity-check"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.expected, probeKey(tt.storagePath))
+		})
+	}
+}

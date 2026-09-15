@@ -26,8 +26,16 @@ var (
 	clientCacheTTL = ptr.Of(10 * time.Minute)
 )
 
-// connectivityProbeKey is used for optional write probes at client init.
+// connectivityProbeKey is used for optional write probes at client init. It is written
+// under the storage's configured path, not at the root of the bucket or container: a
+// credential scoped to that prefix - the usual way these are granted - can write there and
+// nowhere else, and probing the root would report such a storage as broken.
 const connectivityProbeKey = ".abs-connectivity-check"
+
+// probeKey returns the probe object's full key for a storage rooted at the given path.
+func probeKey(storagePath string) string {
+	return filepath.Join(storagePath, connectivityProbeKey)
+}
 
 // Operations reads and writes files in any supported storage backend, hiding the differences
 // between local disk, S3, GCP, and Azure behind a single set of calls.

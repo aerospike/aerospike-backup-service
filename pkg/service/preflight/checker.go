@@ -130,7 +130,7 @@ func Changes(previous, current *model.BackupConfig) *model.BackupConfig {
 	}
 
 	for name, cluster := range current.AerospikeClusters {
-		if !reflect.DeepEqual(previous.AerospikeClusters[name], cluster) {
+		if clusterChanged(previous.AerospikeClusters[name], cluster) {
 			delta.AerospikeClusters[name] = cluster
 		}
 	}
@@ -141,6 +141,11 @@ func Changes(previous, current *model.BackupConfig) *model.BackupConfig {
 		}
 	}
 
+	// A routine names nothing: it points straight at its cluster and its storage, so the
+	// name each carries in the configuration has to be recovered by identity.
+	clusterNames := namesByEntry(current.AerospikeClusters)
+	storageNames := namesByEntry(current.Storage)
+
 	// A routine is carried into the delta for the cluster it reads and the storage it
 	// writes, separately: repointing a routine at another existing cluster changes nothing
 	// about its storage, and editing a cluster changes nothing about the storage of every
@@ -150,17 +155,41 @@ func Changes(previous, current *model.BackupConfig) *model.BackupConfig {
 
 		if routineSourceChanged(previousRoutine, routine) {
 			delta.BackupRoutines[name] = routine
-			// The namespace diff needs the cluster the routine reads, whether or not
-			// that cluster changed on its own.
-			copyNamed(current.AerospikeClusters, delta.AerospikeClusters, routine.SourceCluster)
+
+			// The namespace diff needs the cluster the routine reads, whether or not that
+			// cluster changed on its own.
+			cluster, ok := clusterNames[routine.SourceCluster]
+			if !ok {
+				// Nothing to diff the routine against. Saying so is the point: the
+				// alternative is a delta that looks healthy and checks nothing.
+				slog.Warn("Routine reads a cluster that is not in the configuration;"+
+					" its namespaces cannot be checked", attr.Routine(name))
+			} else {
+				delta.AerospikeClusters[cluster] = routine.SourceCluster
+			}
 		}
 
 		if routineStorageChanged(previousRoutine, routine) {
-			copyNamed(current.Storage, delta.Storage, routine.Storage)
+			storageName, ok := storageNames[routine.Storage]
+			if !ok {
+				slog.Warn("Routine writes to storage that is not in the configuration;"+
+					" it cannot be checked", attr.Routine(name))
+			} else {
+				delta.Storage[storageName] = routine.Storage
+			}
 		}
 	}
 
 	return delta
+}
+
+// clusterChanged compares clusters the way the rest of the service identifies them.
+// AerospikeCluster.Hash is what clientManager keys its connections on, so preflight and the
+// connection cache agree on what "the same cluster" means; it deliberately sorts seed nodes,
+// so reordering them in the configuration is not a change; and it reaches through
+// Secret.Hash, so a rotated password is one. A nil cluster hashes to zero.
+func clusterChanged(previous, current *model.AerospikeCluster) bool {
+	return previous.Hash() != current.Hash()
 }
 
 // routineSourceChanged reports whether a routine now reads a different cluster or names
@@ -172,12 +201,28 @@ func routineSourceChanged(previous, current *model.BackupRoutine) bool {
 		return true
 	}
 
-	return !slices.Equal(previous.Namespaces, current.Namespaces) ||
-		!reflect.DeepEqual(previous.SourceCluster, current.SourceCluster)
+	return namespacesChanged(previous.Namespaces, current.Namespaces) ||
+		clusterChanged(previous.SourceCluster, current.SourceCluster)
+}
+
+// namespacesChanged compares the lists as sets: a routine that names the same namespaces
+// in a different order backs up exactly the same data.
+func namespacesChanged(previous, current []string) bool {
+	if len(previous) != len(current) {
+		return true
+	}
+
+	return !slices.Equal(
+		slices.Sorted(slices.Values(previous)),
+		slices.Sorted(slices.Values(current)),
+	)
 }
 
 // routineStorageChanged reports whether a routine now writes somewhere else, which is a
 // change worth probing even when that storage is an existing entry nobody edited.
+//
+// Storage has no Hash of its own, so this stays a deep comparison: it cannot silently miss
+// a field the way an explicit field list can when a new one is added.
 func routineStorageChanged(previous, current *model.BackupRoutine) bool {
 	if previous == nil {
 		return true
@@ -186,13 +231,13 @@ func routineStorageChanged(previous, current *model.BackupRoutine) bool {
 	return !reflect.DeepEqual(previous.Storage, current.Storage)
 }
 
-// copyNamed copies the entry a routine points at into the delta under the name it carries
-// in the full configuration.
-func copyNamed[T comparable](from, to map[string]T, target T) {
-	for name, entry := range from {
-		if entry == target {
-			to[name] = entry
-			return
-		}
+// namesByEntry indexes a configuration map by the entity it holds, so that a routine can be
+// resolved back to the name its cluster or storage carries in the configuration.
+func namesByEntry[T comparable](entries map[string]T) map[T]string {
+	names := make(map[T]string, len(entries))
+	for name, entry := range entries {
+		names[entry] = name
 	}
+
+	return names
 }

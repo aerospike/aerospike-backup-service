@@ -232,3 +232,88 @@ func names[T any](entries map[string]T) []string {
 
 	return result
 }
+
+// Reordering seed nodes or namespaces is not a change. AerospikeCluster.Hash sorts seed
+// node hashes precisely so that order does not matter, and a routine that names the same
+// namespaces in a different order backs up the same data. A formatter that reorders YAML
+// sequences must not make the service re-dial every cluster and re-probe every bucket.
+func TestChangedOnly_ReorderingIsNotAChange(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*testConfig)
+	}{
+		{
+			name: "seed nodes reordered",
+			mutate: func(c *testConfig) {
+				c.clusters["cluster1"] = &model.AerospikeCluster{SeedNodes: []model.SeedNode{
+					{HostName: "b", Port: 3001}, {HostName: "a", Port: 3000},
+				}}
+			},
+		},
+		{
+			name:   "namespaces reordered",
+			mutate: func(c *testConfig) { c.routines["routine1"].namespaces = []string{"ns2", "ns1"} },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			before := baseConfig()
+			before.clusters["cluster1"] = &model.AerospikeCluster{SeedNodes: []model.SeedNode{
+				{HostName: "a", Port: 3000}, {HostName: "b", Port: 3001},
+			}}
+			before.routines["routine1"].namespaces = []string{"ns1", "ns2"}
+
+			after := baseConfig()
+			after.clusters["cluster1"] = before.clusters["cluster1"]
+			after.routines["routine1"].namespaces = []string{"ns1", "ns2"}
+			tt.mutate(after)
+
+			delta := Changes(before.build(t), after.build(t))
+
+			assert.Empty(t, names(delta.AerospikeClusters), "clusters")
+			assert.Empty(t, names(delta.BackupRoutines), "routines")
+		})
+	}
+}
+
+// A rotated password still has to be seen: Hash reaches through Secret.Hash, so comparing
+// clusters by hash must not become blind to credentials the way DTO comparison is.
+func TestChangedOnly_RotatedClusterPasswordIsAChange(t *testing.T) {
+	before := baseConfig()
+	before.clusters["cluster1"] = clusterWithPassword("old-password")
+
+	after := baseConfig()
+	after.clusters["cluster1"] = clusterWithPassword("new-password")
+
+	delta := Changes(before.build(t), after.build(t))
+
+	assert.Equal(t, []string{"cluster1"}, names(delta.AerospikeClusters))
+}
+
+// A routine pointing at a cluster the configuration does not hold cannot be checked
+// against anything. That has to be reported: the alternative is a delta that looks healthy
+// and validates nothing.
+func TestChangedOnly_RoutineWithUnknownClusterIsReported(t *testing.T) {
+	warnings := captureWarnings(t)
+
+	previous := baseConfig().build(t)
+
+	current := baseConfig().build(t)
+	// A different cluster, and one the configuration map does not hold.
+	current.BackupRoutines["routine1"].SourceCluster = newCluster(9999)
+
+	delta := Changes(previous, current)
+
+	assert.Empty(t, names(delta.AerospikeClusters), "an unresolvable cluster must not be probed")
+	assert.Equal(t,
+		[]string{"Routine reads a cluster that is not in the configuration; its namespaces cannot be checked"},
+		warnings.messages())
+}
+
+func clusterWithPassword(password model.Secret) *model.AerospikeCluster {
+	return &model.AerospikeCluster{
+		SeedNodes:   []model.SeedNode{{HostName: "localhost", Port: 3000}},
+		Credentials: &model.Credentials{User: "u", Password: password},
+	}
+}

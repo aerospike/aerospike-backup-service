@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -28,6 +29,7 @@ import (
 type S3StorageAccessor struct {
 	clientMap collections.Cache[*model.S3Storage, *awsS3.Client]
 	resolver  secrets.Resolver
+	probeMu   sync.Mutex
 }
 
 func NewS3StorageAccessor(resolver secrets.Resolver) *S3StorageAccessor {
@@ -77,10 +79,19 @@ func (a *S3StorageAccessor) createWriter(
 	return s3.NewWriter(ctx, client, s3s.Bucket, opts...)
 }
 
-// probe creates (and caches) the S3 client, which runs the bucket connectivity,
-// read and upload permission checks.
+// probe serializes with every other probe on this accessor. The probe object's key is
+// derived from the storage's path, so two storages that share a bucket and a path would
+// otherwise interleave - one deleting the object the other had just written - and report
+// a healthy backend as broken.
+//
+// Creating the client is what runs the connectivity, read and upload permission checks,
+// so a cached client is one that already passed them.
 func (a *S3StorageAccessor) probe(ctx context.Context, storage model.Storage) error {
+	a.probeMu.Lock()
+	defer a.probeMu.Unlock()
+
 	_, err := a.clientMap.Get(ctx, storage.(*model.S3Storage))
+
 	return err
 }
 
@@ -144,7 +155,7 @@ func (a *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage)
 		}
 	})
 
-	if err := checkS3Connectivity(ctx, client, s.Bucket); err != nil {
+	if err := checkS3Connectivity(ctx, client, s.Bucket, s.Path); err != nil {
 		return nil, err
 	}
 
@@ -178,7 +189,7 @@ func (a *S3StorageAccessor) withCredentialsProvider(
 	}), nil
 }
 
-func checkS3Connectivity(ctx context.Context, client *awsS3.Client, bucket string) error {
+func checkS3Connectivity(ctx context.Context, client *awsS3.Client, bucket, storagePath string) error {
 	ctx, cancel := context.WithTimeout(ctx, connectivityTimeout)
 	defer cancel()
 
@@ -191,23 +202,26 @@ func checkS3Connectivity(ctx context.Context, client *awsS3.Client, bucket strin
 
 	_, err = client.ListObjectsV2(ctx, &awsS3.ListObjectsV2Input{
 		Bucket:  aws.String(bucket),
+		Prefix:  aws.String(storagePath),
 		MaxKeys: aws.Int32(1),
 	})
 	if err != nil {
 		return fmt.Errorf("s3 storage read permission check failed: %w", err)
 	}
 
-	checkS3MultipartUpload(ctx, client, bucket)
+	checkS3MultipartUpload(ctx, client, bucket, storagePath)
 
 	return nil
 }
 
 const s3uploadPermissionWarnMsg = "s3 storage upload permission check failed; backup writes may fail at runtime"
 
-func checkS3MultipartUpload(ctx context.Context, client *awsS3.Client, bucket string) {
+func checkS3MultipartUpload(ctx context.Context, client *awsS3.Client, bucket, storagePath string) {
+	key := probeKey(storagePath)
+
 	createOutput, err := client.CreateMultipartUpload(ctx, &awsS3.CreateMultipartUploadInput{
 		Bucket: aws.String(bucket),
-		Key:    aws.String(connectivityProbeKey),
+		Key:    aws.String(key),
 	})
 	if err != nil {
 		slog.Warn(s3uploadPermissionWarnMsg, slog.String("bucket", bucket), attr.Error(err))
@@ -215,24 +229,29 @@ func checkS3MultipartUpload(ctx context.Context, client *awsS3.Client, bucket st
 	}
 
 	uploadID := createOutput.UploadId
-	etag, err := uploadS3ProbePart(ctx, client, bucket, uploadID)
+	etag, err := uploadS3ProbePart(ctx, client, bucket, key, uploadID)
 	if err != nil {
-		abortS3MultipartUpload(ctx, client, bucket, uploadID)
+		abortS3MultipartUpload(ctx, client, bucket, key, uploadID)
 		return
 	}
 
-	if err = completeS3MultipartUpload(ctx, client, bucket, uploadID, etag); err != nil {
-		abortS3MultipartUpload(ctx, client, bucket, uploadID)
+	if err = completeS3MultipartUpload(ctx, client, bucket, key, uploadID, etag); err != nil {
+		abortS3MultipartUpload(ctx, client, bucket, key, uploadID)
 		return
 	}
 
-	deleteS3ProbeObject(ctx, client, bucket)
+	deleteS3ProbeObject(ctx, client, bucket, key)
 }
 
-func uploadS3ProbePart(ctx context.Context, client *awsS3.Client, bucket string, uploadID *string) (string, error) {
+func uploadS3ProbePart(
+	ctx context.Context,
+	client *awsS3.Client,
+	bucket, key string,
+	uploadID *string,
+) (string, error) {
 	uploadOutput, err := client.UploadPart(ctx, &awsS3.UploadPartInput{
 		Bucket:     aws.String(bucket),
-		Key:        aws.String(connectivityProbeKey),
+		Key:        aws.String(key),
 		UploadId:   uploadID,
 		PartNumber: aws.Int32(1),
 		Body:       bytes.NewReader([]byte{}),
@@ -248,13 +267,13 @@ func uploadS3ProbePart(ctx context.Context, client *awsS3.Client, bucket string,
 func completeS3MultipartUpload(
 	ctx context.Context,
 	client *awsS3.Client,
-	bucket string,
+	bucket, key string,
 	uploadID *string,
 	etag string,
 ) error {
 	_, err := client.CompleteMultipartUpload(ctx, &awsS3.CompleteMultipartUploadInput{
 		Bucket:   aws.String(bucket),
-		Key:      aws.String(connectivityProbeKey),
+		Key:      aws.String(key),
 		UploadId: uploadID,
 		MultipartUpload: &types.CompletedMultipartUpload{
 			Parts: []types.CompletedPart{
@@ -272,21 +291,22 @@ func completeS3MultipartUpload(
 	return err
 }
 
-func abortS3MultipartUpload(ctx context.Context, client *awsS3.Client, bucket string, uploadID *string) {
+func abortS3MultipartUpload(ctx context.Context, client *awsS3.Client, bucket, key string, uploadID *string) {
 	_, _ = client.AbortMultipartUpload(ctx, &awsS3.AbortMultipartUploadInput{
 		Bucket:   aws.String(bucket),
-		Key:      aws.String(connectivityProbeKey),
+		Key:      aws.String(key),
 		UploadId: uploadID,
 	})
 }
 
-func deleteS3ProbeObject(ctx context.Context, client *awsS3.Client, bucket string) {
+func deleteS3ProbeObject(ctx context.Context, client *awsS3.Client, bucket, key string) {
 	_, err := client.DeleteObject(ctx, &awsS3.DeleteObjectInput{
 		Bucket: aws.String(bucket),
-		Key:    aws.String(connectivityProbeKey),
+		Key:    aws.String(key),
 	})
 	if err != nil {
-		slog.Warn("s3 storage delete permission check failed; backup writes or cleanup may fail at runtime",
+		slog.Warn(
+			"s3 storage delete permission check failed; backup writes or cleanup may fail at runtime",
 			slog.String("bucket", bucket),
 			attr.Error(err),
 		)
