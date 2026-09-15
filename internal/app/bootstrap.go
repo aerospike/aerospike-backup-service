@@ -34,8 +34,9 @@ type Components struct {
 	MetricsCollector *prometheus.MetricsCollector
 	TLSProvider      servertls.TLSProvider
 
-	registry    service.BackupStateRegistry
-	restoreJobs component
+	registry       service.BackupStateRegistry
+	restoreJobs    component
+	partialBackups component
 }
 
 // component is anything whose work outlives a single request: it takes the run context
@@ -60,6 +61,7 @@ func (c *Components) Run(ctx context.Context) error {
 func (c *Components) Start(ctx context.Context) {
 	c.registry.Start(ctx)
 	c.restoreJobs.Start(ctx)
+	c.partialBackups.Start(ctx)
 	c.Scheduler.Start(ctx)
 	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	c.TLSProvider.Start(ctx)
@@ -192,6 +194,7 @@ func InitComponents(
 		TLSProvider:      tlsProvider,
 		registry:         registry,
 		restoreJobs:      restoreJobs,
+		partialBackups:   service.NewPartialBackupCollector(config, catalog, operations),
 	}, nil
 }
 
