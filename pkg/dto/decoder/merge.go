@@ -3,6 +3,8 @@ package decoder
 import (
 	"errors"
 	"reflect"
+	"slices"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
@@ -56,6 +58,19 @@ func MergeSecrets(incoming, existing any) error {
 	}
 
 	return mergeValue(reflect.ValueOf(incoming), reflect.ValueOf(existing))
+}
+
+// mergeValue stops at these types rather than descending into their unexported state, which
+// carries no secret to merge.
+var skipDeepCopyTypes = []reflect.Type{
+	reflect.TypeFor[time.Time](),
+	reflect.TypeFor[*time.Time](),
+	reflect.TypeFor[time.Location](),
+	reflect.TypeFor[*time.Location](),
+}
+
+func shouldSkipDeepCopy(v reflect.Value) bool {
+	return slices.Contains(skipDeepCopyTypes, v.Type())
 }
 
 //nolint:gocognit,gocyclo,funlen // recursive reflect walk over nested DTO values
