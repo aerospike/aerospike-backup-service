@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
@@ -26,6 +27,16 @@ type Manager interface {
 	// Write writes the configuration to the source.
 	Write(ctx context.Context, config *model.Config) error
 }
+
+// remoteConfigTimeout bounds one fetch of a configuration served over HTTP(S).
+const remoteConfigTimeout = 30 * time.Second
+
+// remoteConfigHTTPClient fetches configuration served over HTTP(S). The contexts that reach
+// these requests carry cancellation but no deadline: at startup it is the signal context from
+// main, at runtime the context of the request that asked for a reload. The client's own timeout
+// is therefore what bounds a server that accepts the connection and then stalls; without it the
+// service would sit in Load until it is killed.
+var remoteConfigHTTPClient = &http.Client{Timeout: remoteConfigTimeout}
 
 //nolint:lll
 const schemaHeader = "# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/%s/docs/config.schema.json\n"
@@ -150,7 +161,7 @@ func readFromHTTP(ctx context.Context, url string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request for %s: %w", url, err)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := remoteConfigHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed HTTP GET request to %s: %w", url, err)
 	}

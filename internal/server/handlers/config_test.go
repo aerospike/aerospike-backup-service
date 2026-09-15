@@ -310,3 +310,52 @@ func TestService_changeConfig_UpdateFuncError(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "update boom")
 }
+
+// commitWriteContext matches the context the persist step runs on: alive although the request
+// that started the change was canceled, and carrying a bound of its own.
+func commitWriteContext() gomock.Matcher {
+	return gomock.Cond(func(ctx context.Context) bool {
+		_, hasDeadline := ctx.Deadline()
+		return ctx.Err() == nil && hasDeadline
+	})
+}
+
+func TestService_UpdateConfig_CommitOutlivesRequest(t *testing.T) {
+	svc, ctrl := newConfigTestService(t)
+
+	mockConfigurationManager := configuration.NewMockManager(ctrl)
+	mockConfigurationManager.EXPECT().Write(commitWriteContext(), gomock.Any()).Return(nil)
+	svc.configurationManager = mockConfigurationManager
+
+	mockConfigApplier := service.NewMockConfigApplier(ctrl)
+	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil)
+	svc.configApplier = mockConfigApplier
+
+	// The client disconnected before the handler reached the commit.
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	req := httptest.NewRequestWithContext(ctx, http.MethodPut, "/v1/config", strings.NewReader(`{}`))
+	w := httptest.NewRecorder()
+
+	svc.UpdateConfig(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestService_changeBackupConfig_CommitOutlivesRequest(t *testing.T) {
+	svc, ctrl := newConfigTestService(t)
+
+	mockConfigurationManager := configuration.NewMockManager(ctrl)
+	mockConfigurationManager.EXPECT().Write(commitWriteContext(), gomock.Any()).Return(nil)
+	svc.configurationManager = mockConfigurationManager
+
+	mockConfigApplier := service.NewMockConfigApplier(ctrl)
+	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil)
+	svc.configApplier = mockConfigApplier
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := svc.changeBackupConfig(ctx, func(*dto.Config) ([]string, error) { return nil, nil })
+	require.NoError(t, err)
+}

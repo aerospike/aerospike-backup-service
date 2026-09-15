@@ -12,6 +12,9 @@ import (
 // httpConfigurationManager reads the service configuration over HTTP(S). Writing is not supported.
 type httpConfigurationManager struct {
 	configURL string
+	// client is remoteConfigHTTPClient, whose timeout bounds a fetch the caller's context does
+	// not. A test installs one with a shorter timeout.
+	client *http.Client
 }
 
 var _ Manager = (*httpConfigurationManager)(nil)
@@ -20,6 +23,7 @@ var _ Manager = (*httpConfigurationManager)(nil)
 func newHTTPConfigurationManager(uri string) Manager {
 	return &httpConfigurationManager{
 		configURL: uri,
+		client:    remoteConfigHTTPClient,
 	}
 }
 
@@ -34,7 +38,7 @@ func (h *httpConfigurationManager) Read(ctx context.Context) (*model.Config, err
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := h.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute HTTP request: %w", err)
 	}
