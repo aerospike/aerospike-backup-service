@@ -25,7 +25,7 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newCluster, ok := decodeBody(w, r, jsonReader(dto.NewClusterFromReader))
+	newCluster, ok := decodeBody(w, r, dto.NewValidatedFromReader[dto.AerospikeCluster])
 	if !ok {
 		return
 	}
@@ -105,7 +105,7 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	updatedCluster, ok := decodeBody(w, r, jsonReader(dto.NewClusterFromReader))
+	updatedCluster, ok := decodeBody(w, r, dto.NewValidatedFromReader[dto.AerospikeCluster])
 	if !ok {
 		return
 	}

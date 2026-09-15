@@ -19,7 +19,7 @@ import (
 // @Success     201
 // @Failure     400 {string} string
 func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
-	newPolicy, ok := decodeBody(w, r, jsonReader(dto.NewBackupPolicyFromReader))
+	newPolicy, ok := decodeBody(w, r, dto.NewBackupPolicyFromReader)
 	if !ok {
 		return
 	}
@@ -92,7 +92,7 @@ func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
-	updatedPolicy, ok := decodeBody(w, r, jsonReader(dto.NewBackupPolicyFromReader))
+	updatedPolicy, ok := decodeBody(w, r, dto.NewBackupPolicyFromReader)
 	if !ok {
 		return
 	}

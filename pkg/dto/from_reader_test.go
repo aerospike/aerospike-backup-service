@@ -17,7 +17,7 @@ seed-nodes:
   - host-name: localhost
     port: 3000
 `
-	cluster, err := NewClusterFromReader(strings.NewReader(yamlCluster), decoder.YAML)
+	cluster, err := NewValidatedFromReader[AerospikeCluster](strings.NewReader(yamlCluster), decoder.YAML)
 	require.NoError(t, err)
 	require.Len(t, cluster.SeedNodes, 1)
 	assert.Equal(t, "localhost", cluster.SeedNodes[0].HostName)
@@ -41,7 +41,7 @@ storage: storage1
 interval-cron: "@daily"
 namespaces: []
 `
-	routine, err := NewRoutineFromReader(strings.NewReader(yamlRoutine), decoder.YAML)
+	routine, err := NewValidatedFromReader[BackupRoutine](strings.NewReader(yamlRoutine), decoder.YAML)
 	require.NoError(t, err)
 	assert.Equal(t, "cluster1", routine.SourceCluster)
 	assert.Equal(t, "storage1", routine.Storage)
@@ -194,7 +194,7 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 }
 
 func TestNewClusterFromReader_InvalidYAML(t *testing.T) {
-	_, err := NewClusterFromReader(strings.NewReader("seed-nodes: []"), decoder.YAML)
+	_, err := NewValidatedFromReader[AerospikeCluster](strings.NewReader("seed-nodes: []"), decoder.YAML)
 	require.Error(t, err)
 }
 

@@ -2,9 +2,7 @@ package dto
 
 import (
 	"fmt"
-	"io"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -70,16 +68,6 @@ func (c *Config) fromModel(m *model.Config) {
 	for name, s := range backupConfig.SecretAgents {
 		c.SecretAgents[name] = newSecretAgentFromModel(s)
 	}
-}
-
-// NewConfigFromReader creates a new Config object from a given reader.
-func NewConfigFromReader(r io.Reader, format decoder.SerializationFormat) (*Config, error) {
-	c := &Config{}
-	if err := decoder.Deserialize(c, r, format); err != nil {
-		return nil, err
-	}
-
-	return c, nil
 }
 
 // Validate validates the configuration.

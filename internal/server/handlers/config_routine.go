@@ -25,7 +25,7 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	newRoutine, ok := decodeBody(w, r, jsonReader(dto.NewRoutineFromReader))
+	newRoutine, ok := decodeBody(w, r, dto.NewValidatedFromReader[dto.BackupRoutine])
 	if !ok {
 		return
 	}
@@ -102,7 +102,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedRoutine, ok := decodeBody(w, r, jsonReader(dto.NewRoutineFromReader))
+	updatedRoutine, ok := decodeBody(w, r, dto.NewValidatedFromReader[dto.BackupRoutine])
 	if !ok {
 		return
 	}
