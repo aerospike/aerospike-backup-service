@@ -6,15 +6,13 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
 // storageManager keeps the service configuration in a storage backend (local, S3, GCP, Azure).
 type storageManager struct {
-	storage     model.Storage
-	nsValidator aerospike.NamespaceValidator
-	operations  storage.Operations
+	storage    model.Storage
+	operations storage.Operations
 }
 
 var _ Manager = (*storageManager)(nil)
@@ -22,13 +20,11 @@ var _ Manager = (*storageManager)(nil)
 // newStorageManager returns new instance of storageManager.
 func newStorageManager(
 	configStorage model.Storage,
-	nsValidator aerospike.NamespaceValidator,
 	operations storage.Operations,
 ) Manager {
 	return &storageManager{
-		storage:     configStorage,
-		nsValidator: nsValidator,
-		operations:  operations,
+		storage:    configStorage,
+		operations: operations,
 	}
 }
 
@@ -38,7 +34,7 @@ func (m *storageManager) Read(ctx context.Context) (*model.Config, error) {
 		return nil, fmt.Errorf("failed to read configuration from storage: %w", err)
 	}
 
-	return readConfig(ctx, bytes.NewReader(content), m.nsValidator)
+	return readConfig(bytes.NewReader(content))
 }
 
 func (m *storageManager) Write(ctx context.Context, config *model.Config) error {

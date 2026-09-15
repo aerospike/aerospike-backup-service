@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -37,8 +36,7 @@ func TestStorageManager_Read(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			manager, ops, configStorage := newTestStorageManager(t, ctrl)
+			manager, ops, configStorage := newTestStorageManager(t)
 
 			if !tt.missingFile {
 				require.NoError(t, ops.WriteDataFile(t.Context(), configStorage, "", tt.content))
@@ -59,8 +57,7 @@ func TestStorageManager_Read(t *testing.T) {
 
 func TestStorageManager_Write(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		manager, ops, configStorage := newTestStorageManager(t, ctrl)
+		manager, ops, configStorage := newTestStorageManager(t)
 
 		require.NoError(t, manager.Write(t.Context(), model.NewConfig()))
 
@@ -79,7 +76,6 @@ func TestStorageManager_Write(t *testing.T) {
 
 		manager := newStorageManager(
 			&model.LocalStorage{Path: filepath.Join(t.TempDir(), "config.yml")},
-			newTestNamespaceValidator(ctrl),
 			ops,
 		)
 
@@ -90,8 +86,7 @@ func TestStorageManager_Write(t *testing.T) {
 }
 
 func TestStorageManager_WriteThenRead_RoundTrip(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	manager, _, _ := newTestStorageManager(t, ctrl)
+	manager, _, _ := newTestStorageManager(t)
 
 	require.NoError(t, manager.Write(t.Context(), model.NewConfig()))
 
@@ -100,16 +95,10 @@ func TestStorageManager_WriteThenRead_RoundTrip(t *testing.T) {
 	require.NotNil(t, cfg)
 }
 
-func newTestStorageManager(t *testing.T, ctrl *gomock.Controller) (Manager, storage.Operations, *model.LocalStorage) {
+func newTestStorageManager(t *testing.T) (Manager, storage.Operations, *model.LocalStorage) {
 	t.Helper()
 
 	configStorage := &model.LocalStorage{Path: filepath.Join(t.TempDir(), "config.yml")}
 	ops := storage.NewOperations(storage.NewLocalStorageAccessor())
-	return newStorageManager(configStorage, newTestNamespaceValidator(ctrl), ops), ops, configStorage
-}
-
-func newTestNamespaceValidator(ctrl *gomock.Controller) aerospike.NamespaceValidator {
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
-	return mockNsValidator
+	return newStorageManager(configStorage, ops), ops, configStorage
 }

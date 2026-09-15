@@ -7,22 +7,19 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
 // httpConfigurationManager reads the service configuration over HTTP(S). Writing is not supported.
 type httpConfigurationManager struct {
-	configURL   string
-	nsValidator aerospike.NamespaceValidator
+	configURL string
 }
 
 var _ Manager = (*httpConfigurationManager)(nil)
 
 // newHTTPConfigurationManager returns a new httpConfigurationManager.
-func newHTTPConfigurationManager(uri string, nsValidator aerospike.NamespaceValidator) Manager {
+func newHTTPConfigurationManager(uri string) Manager {
 	return &httpConfigurationManager{
-		configURL:   uri,
-		nsValidator: nsValidator,
+		configURL: uri,
 	}
 }
 
@@ -47,7 +44,7 @@ func (h *httpConfigurationManager) Read(ctx context.Context) (*model.Config, err
 		return nil, fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
 
-	return readConfig(ctx, resp.Body, h.nsValidator)
+	return readConfig(resp.Body)
 }
 
 // WriteConfiguration is unsupported for httpConfigurationManager.

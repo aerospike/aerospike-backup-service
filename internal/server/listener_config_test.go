@@ -675,7 +675,7 @@ func initListenerComponents(t *testing.T, cfg dto.Config) *app.Components {
 func startListeners(t *testing.T, ctx context.Context, components *app.Components) <-chan error {
 	t.Helper()
 
-	components.TLSProvider.Start(ctx)
+	components.Start(ctx)
 
 	listeners := components.Servers
 	errCh := make(chan error, 1)

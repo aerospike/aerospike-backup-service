@@ -55,6 +55,9 @@ type Operations interface {
 	WriteDataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
 	// DeleteFolder deletes a folder and its contents in the specified storage.
 	DeleteFolder(ctx context.Context, storage model.Storage, path string) error
+	// Probe reports whether the storage is reachable and usable with the configured
+	// credentials, without reading or writing any backup data.
+	Probe(ctx context.Context, storage model.Storage) error
 }
 
 // operations serves each call through the first registered [Accessor] that supports the storage.
@@ -306,6 +309,17 @@ func (s *operations) DeleteFolder(ctx context.Context, storage model.Storage, pa
 		return err
 	}
 	return writer.RemoveFiles(ctx)
+}
+
+// Probe reports whether the storage is reachable and usable with the configured
+// credentials, without reading or writing any backup data.
+func (s *operations) Probe(ctx context.Context, storage model.Storage) error {
+	accessor, err := s.getAccessor(storage)
+	if err != nil {
+		return err
+	}
+
+	return accessor.probe(ctx, storage)
 }
 
 // getAccessor returns the appropriate accessor for the given storage.

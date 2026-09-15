@@ -16,4 +16,9 @@ type Accessor interface {
 	createReader(ctx context.Context, storage model.Storage, opts ...options.Opt) (backup.StreamingReader, error)
 
 	createWriter(ctx context.Context, storage model.Storage, opts ...options.Opt) (backup.Writer, error)
+
+	// probe reports whether the backend is reachable and usable with the configured
+	// credentials. It performs the same connectivity work a first read or write would,
+	// so that a broken storage surfaces at startup instead of at the first backup.
+	probe(ctx context.Context, storage model.Storage) error
 }

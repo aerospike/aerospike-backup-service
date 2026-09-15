@@ -106,6 +106,8 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
+	// advisory: reports namespaces the reloaded routines reference but their clusters do not have.
+	s.nsValidator.Validate(r.Context(), config)
 
 	// validate static fields.
 	newConfig := dto.NewConfigFromModel(s.config)

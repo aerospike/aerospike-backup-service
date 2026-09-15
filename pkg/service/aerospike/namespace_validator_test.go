@@ -2,6 +2,7 @@ package aerospike
 
 import (
 	"errors"
+	"strconv"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -57,6 +58,16 @@ func expectPerCluster(
 	mgr.EXPECT().Close(client)
 }
 
+// clusterMap names the clusters a test configures, the way the service configuration does.
+func clusterMap(clusters ...*model.AerospikeCluster) map[string]*model.AerospikeCluster {
+	named := make(map[string]*model.AerospikeCluster, len(clusters))
+	for i, c := range clusters {
+		named["cluster"+strconv.Itoa(i)] = c
+	}
+
+	return named
+}
+
 func TestFindMissingByRoutine_MissingDetected_SingleFetchForSharedCluster(t *testing.T) {
 	env := newTestEnv(t)
 
@@ -69,22 +80,40 @@ func TestFindMissingByRoutine_MissingDetected_SingleFetchForSharedCluster(t *tes
 	env.expectSingleClusterFetch(cluster, []string{"foo"}, nil)
 
 	nv := &namespaceValidator{clientManager: env.mockClientManager}
-	got := nv.findMissingNamespaces(t.Context(), routines)
+	got := nv.findMissingNamespaces(t.Context(), clusterMap(cluster), routines)
 
 	require.Len(t, got, 2)
 	assert.ElementsMatch(t, []string{"bar"}, got["r1"])
 	assert.ElementsMatch(t, []string{"baz"}, got["r2"])
 }
 
-func TestFindMissingByRoutine_NoNamespaces_NoFetch(t *testing.T) {
+// A configured cluster is reached even when no routine names a namespace: connectivity is
+// checked for every cluster in the configuration, and a routine without namespaces simply
+// has nothing to diff against what comes back.
+func TestFindMissingByRoutine_NoNamespaces_NothingMissing(t *testing.T) {
 	env := newTestEnv(t)
 
 	routines := map[string]*model.BackupRoutine{
 		"empty": {SourceCluster: cluster, Namespaces: nil},
 	}
 
+	env.expectSingleClusterFetch(cluster, []string{"ns1"}, nil)
+
 	nv := &namespaceValidator{clientManager: env.mockClientManager}
-	got := nv.findMissingNamespaces(t.Context(), routines)
+	got := nv.findMissingNamespaces(t.Context(), clusterMap(cluster), routines)
+
+	require.Empty(t, got)
+}
+
+// A cluster no routine uses is still reached, so that a credential or address mistake
+// surfaces at startup rather than when the first routine is pointed at it.
+func TestFindMissingByRoutine_UnusedCluster_IsStillReached(t *testing.T) {
+	env := newTestEnv(t)
+
+	env.expectSingleClusterFetch(cluster, []string{"ns1"}, nil)
+
+	nv := &namespaceValidator{clientManager: env.mockClientManager}
+	got := nv.findMissingNamespaces(t.Context(), clusterMap(cluster), nil)
 
 	require.Empty(t, got)
 }
@@ -102,7 +131,7 @@ func TestFindMissingByRoutine_FetchError_SkipsCluster(t *testing.T) {
 		Times(1)
 
 	nv := &namespaceValidator{clientManager: env.mockClientManager}
-	got := nv.findMissingNamespaces(t.Context(), routines)
+	got := nv.findMissingNamespaces(t.Context(), clusterMap(cluster), routines)
 
 	require.Empty(t, got)
 }
@@ -117,7 +146,7 @@ func TestFindMissingByRoutine_InfoError_SkipsCluster(t *testing.T) {
 	env.expectSingleClusterFetch(cluster, nil, errors.New("info failed"))
 
 	nv := &namespaceValidator{clientManager: env.mockClientManager}
-	got := nv.findMissingNamespaces(t.Context(), routines)
+	got := nv.findMissingNamespaces(t.Context(), clusterMap(cluster), routines)
 
 	require.Empty(t, got)
 }
@@ -138,7 +167,7 @@ func TestFindMissingByRoutine_TwoClusters_OK(t *testing.T) {
 	expectPerCluster(t, ctrl, mgr, b, []string{"ns2"}, nil)
 
 	nv := &namespaceValidator{clientManager: mgr}
-	got := nv.findMissingNamespaces(t.Context(), routines)
+	got := nv.findMissingNamespaces(t.Context(), clusterMap(a, b), routines)
 
 	require.Empty(t, got)
 }
@@ -159,7 +188,7 @@ func TestFindMissingByRoutine_TwoClusters_Fail(t *testing.T) {
 	expectPerCluster(t, ctrl, mgr, b, []string{"ns2"}, nil)
 
 	nv := &namespaceValidator{clientManager: mgr}
-	got := nv.findMissingNamespaces(t.Context(), routines)
+	got := nv.findMissingNamespaces(t.Context(), clusterMap(a, b), routines)
 
 	require.Len(t, got, 2)
 }

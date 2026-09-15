@@ -67,6 +67,10 @@ func startService(configFile string, remote bool) error {
 		return err
 	}
 
+	// Advisory: reports unreachable clusters and storage as warnings and never fails,
+	// so that a backend that is down at startup delays its backups, not the service.
+	components.Check(ctx)
+
 	return components.Run(ctx)
 }
 

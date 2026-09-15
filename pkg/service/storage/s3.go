@@ -77,6 +77,13 @@ func (a *S3StorageAccessor) createWriter(
 	return s3.NewWriter(ctx, client, s3s.Bucket, opts...)
 }
 
+// probe creates (and caches) the S3 client, which runs the bucket connectivity,
+// read and upload permission checks.
+func (a *S3StorageAccessor) probe(ctx context.Context, storage model.Storage) error {
+	_, err := a.clientMap.Get(ctx, storage.(*model.S3Storage))
+	return err
+}
+
 func (a *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error) {
 	credentialsProvider, err := a.withCredentialsProvider(ctx, s.Auth)
 	if err != nil {

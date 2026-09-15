@@ -8,8 +8,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// CollectInterval is how often the service refreshes the collected gauges.
-const CollectInterval = 1 * time.Second
+// collectInterval is how often the service refreshes the collected gauges.
+const collectInterval = 1 * time.Second
 
 type MetricsCollector struct {
 	mu            sync.Mutex
@@ -28,8 +28,9 @@ func NewMetricsCollector(
 	}
 }
 
-func (mc *MetricsCollector) Start(ctx context.Context, duration time.Duration) {
-	ticker := time.NewTicker(duration)
+// Start refreshes the collected gauges every collectInterval until ctx is canceled.
+func (mc *MetricsCollector) Start(ctx context.Context) {
+	ticker := time.NewTicker(collectInterval)
 	go func() {
 		defer ticker.Stop()
 		for {

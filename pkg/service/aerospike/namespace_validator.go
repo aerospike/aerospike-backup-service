@@ -10,11 +10,12 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
-// NamespaceValidator checks whether routines reference namespaces
-// that exist in their respective Aerospike source clusters.
-// Validation is advisory: missing namespaces are reported without rejecting configuration.
+// NamespaceValidator checks that every configured Aerospike cluster is reachable and that
+// routines reference namespaces that exist in their respective source clusters.
+// Validation is advisory: unreachable clusters and missing namespaces are reported
+// without rejecting configuration.
 type NamespaceValidator interface {
-	// Validate validates all routines in config against their respective clusters.
+	// Validate connects to every cluster in config and validates all routines against them.
 	Validate(ctx context.Context, cfg *model.Config)
 }
 
@@ -36,7 +37,7 @@ func (nv *namespaceValidator) Validate(ctx context.Context, cfg *model.Config) {
 		return
 	}
 
-	missing := nv.findMissingNamespaces(ctx, cfg.Routines())
+	missing := nv.findMissingNamespaces(ctx, cfg.BackupConfigCopy().AerospikeClusters, cfg.Routines())
 
 	for routine, namespaces := range missing {
 		slog.Warn("Namespaces referenced by routine are missing in the cluster",
@@ -48,37 +49,28 @@ func (nv *namespaceValidator) Validate(ctx context.Context, cfg *model.Config) {
 
 func (nv *namespaceValidator) findMissingNamespaces(
 	ctx context.Context,
+	clusters map[string]*model.AerospikeCluster,
 	routines map[string]*model.BackupRoutine,
 ) NamespacesByRoutine {
-	clusters := nv.collectClusters(routines)
 	namespacesByCluster := nv.fetchNamespacesByCluster(ctx, clusters)
 	return nv.diffRoutineNamespaces(routines, namespacesByCluster)
 }
 
-// collectClusters gathers unique clusters referenced by routines that actually need validation.
-func (nv *namespaceValidator) collectClusters(
-	routines map[string]*model.BackupRoutine,
-) map[*model.AerospikeCluster]struct{} {
-	clusters := make(map[*model.AerospikeCluster]struct{})
-	for _, r := range routines {
-		if len(r.Namespaces) > 0 {
-			clusters[r.SourceCluster] = struct{}{}
-		}
-	}
-
-	return clusters
-}
-
-// fetchNamespacesByCluster fetches namespaces for each cluster.
+// fetchNamespacesByCluster fetches namespaces for each configured cluster. A cluster that
+// cannot be reached is reported by name and left out of the result, so that connectivity
+// is checked for every cluster in the configuration, not only for the ones a routine uses.
 func (nv *namespaceValidator) fetchNamespacesByCluster(
 	ctx context.Context,
-	clusters map[*model.AerospikeCluster]struct{},
+	clusters map[string]*model.AerospikeCluster,
 ) map[*model.AerospikeCluster][]string {
 	namespacesByCluster := make(map[*model.AerospikeCluster][]string, len(clusters))
-	for cluster := range clusters {
+	for name, cluster := range clusters {
 		namespaces, err := nv.fetchClusterNamespaces(ctx, cluster)
 		if err != nil {
-			slog.Error("Failed to fetch namespaces for cluster", attr.Error(err))
+			slog.Warn("Configured Aerospike cluster is not available",
+				slog.String("cluster", name),
+				attr.Error(err),
+			)
 			continue
 		}
 		namespacesByCluster[cluster] = namespaces

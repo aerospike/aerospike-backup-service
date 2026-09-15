@@ -29,9 +29,11 @@ func TestInitComponents_MinimalConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotNil(t, components.Scheduler)
-	require.NotNil(t, components.MetricsCollector)
-	require.NotNil(t, components.TLSProvider)
 	require.Len(t, components.Servers, 1)
+	// The backup state registry, the restore job holder, the scheduler, the metrics
+	// collector and the TLS provider: a component missing from this list is a component
+	// that is wired but never started.
+	require.Len(t, components.components, 5)
 
 	components.Scheduler.Start(ctx)
 }
@@ -235,4 +237,39 @@ func TestInitComponents_BuildContextIsNotALifetime(t *testing.T) {
 
 	cancelRun()
 	require.NoError(t, <-done)
+}
+
+// TestComponents_CheckStartsNothing pins step 2 of the startup sequence: Check is the
+// optional validation pass between building the graph and starting it. It probes the
+// configured clusters and storage and returns - it must not bring any component up, and
+// with nothing configured to probe it must not fail either.
+func TestComponents_CheckStartsNothing(t *testing.T) {
+	before := goleak.IgnoreCurrent()
+
+	port := freePort(t)
+	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	config := fmt.Sprintf(
+		"service:\n  http:\n    address: 127.0.0.1\n    port: %d\nstorage:\n  local:\n    local-storage:\n      path: %s\n",
+		port, t.TempDir())
+	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	components, err := InitComponents(ctx, configPath, false)
+	require.NoError(t, err)
+
+	components.Check(ctx)
+
+	goleak.VerifyNone(t, before,
+		// lumberjack starts its rotation goroutine on the first log write and never stops it.
+		goleak.IgnoreAnyFunction("gopkg.in/natefinch/lumberjack%2ev2.(*Logger).millRun"),
+	)
+	require.False(t, components.Scheduler.IsStarted(), "scheduler is running after Check")
+
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
+	require.NoError(t, err, "the HTTP listener was bound by Check")
+	require.NoError(t, listener.Close())
 }

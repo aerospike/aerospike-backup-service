@@ -69,6 +69,13 @@ func (a *AzureStorageAccessor) createWriter(
 	return azure.NewWriter(ctx, client, azures.ContainerName, opts...)
 }
 
+// probe creates (and caches) the Azure Blob client, which runs the container
+// connectivity and permission checks.
+func (a *AzureStorageAccessor) probe(ctx context.Context, storage model.Storage) error {
+	_, err := a.clientMap.Get(ctx, storage.(*model.AzureStorage))
+	return err
+}
+
 func (a *AzureStorageAccessor) getAzureClient(ctx context.Context, s *model.AzureStorage) (*azblob.Client, error) {
 	client, err := a.createAzureClient(ctx, s)
 	if err != nil {

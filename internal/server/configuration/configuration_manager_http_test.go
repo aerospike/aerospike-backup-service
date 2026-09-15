@@ -8,9 +8,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 func TestHTTPConfigurationManager_Read(t *testing.T) {
@@ -66,12 +64,7 @@ func TestHTTPConfigurationManager_Read(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-
-			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-			mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
-
-			manager := newHTTPConfigurationManager(tt.configURL, mockNsValidator)
+			manager := newHTTPConfigurationManager(tt.configURL)
 			cfg, err := manager.Read(t.Context())
 
 			if tt.expectError != "" {
@@ -86,11 +79,7 @@ func TestHTTPConfigurationManager_Read(t *testing.T) {
 }
 
 func TestHTTPConfigurationManager_Read_ContextCanceled(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-
-	manager := newHTTPConfigurationManager("http://example.com/config.yaml", mockNsValidator)
+	manager := newHTTPConfigurationManager("http://example.com/config.yaml")
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
@@ -101,11 +90,7 @@ func TestHTTPConfigurationManager_Read_ContextCanceled(t *testing.T) {
 }
 
 func TestHTTPConfigurationManager_Write(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-
-	manager := newHTTPConfigurationManager("http://example.com/config.yaml", mockNsValidator)
+	manager := newHTTPConfigurationManager("http://example.com/config.yaml")
 
 	err := manager.Write(t.Context(), model.NewConfig())
 	require.Error(t, err)

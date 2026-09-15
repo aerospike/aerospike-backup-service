@@ -249,6 +249,8 @@ type closingAccessor struct {
 
 func (a *closingAccessor) supports(model.Storage) bool { return true }
 
+func (a *closingAccessor) probe(context.Context, model.Storage) error { return a.err }
+
 func (a *closingAccessor) createReader(
 	context.Context, model.Storage, ...options.Opt,
 ) (backup.StreamingReader, error) {
@@ -315,4 +317,21 @@ func TestOperations_ReadFiles_ErrorReportedBeforeClose(t *testing.T) {
 
 	_, err := ops.ReadFiles(t.Context(), &model.LocalStorage{Path: t.TempDir()}, "", "")
 	require.ErrorContains(t, err, "read failed")
+}
+
+func TestOperations_Probe_DelegatesToAccessor(t *testing.T) {
+	t.Parallel()
+
+	ops := NewOperations(NewLocalStorageAccessor())
+
+	require.NoError(t, ops.Probe(t.Context(), &model.LocalStorage{Path: t.TempDir()}))
+}
+
+func TestOperations_Probe_UnsupportedStorage(t *testing.T) {
+	t.Parallel()
+
+	ops := NewOperations()
+
+	err := ops.Probe(t.Context(), &model.LocalStorage{Path: t.TempDir()})
+	require.ErrorContains(t, err, "unsupported storage type")
 }
