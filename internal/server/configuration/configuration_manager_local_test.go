@@ -99,7 +99,7 @@ func TestFileConfigurationManager_Write(t *testing.T) {
 		{
 			name:        "invalid directory",
 			filePath:    filepath.Join(tempDir, "does-not-exist", "config.yaml"),
-			expectError: "failed to open file for writing",
+			expectError: "failed to create a temporary file",
 		},
 		{
 			name:     "success",

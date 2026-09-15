@@ -46,7 +46,9 @@ COPY --chown=absuser:absgroup --chmod=0755 --from=builder \
     /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH} \
     /usr/bin/aerospike-backup-service
 
-COPY --chown=absuser:absgroup --from=builder \
+# The service rewrites this file through the config API, and it then holds literal cluster
+# passwords, cloud keys and encryption key secrets: absuser is the only reader it needs.
+COPY --chown=absuser:absgroup --chmod=0600 --from=builder \
     /app/aerospike-backup-service/build/package/config/aerospike-backup-service.yml \
     /etc/aerospike-backup-service/aerospike-backup-service.yml
 

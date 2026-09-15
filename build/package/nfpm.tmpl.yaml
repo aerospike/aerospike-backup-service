@@ -20,6 +20,11 @@ contents:
   - src: ${WORKSPACE}/build/package/config/${NAME}.yml
     dst: /etc/${NAME}/${NAME}.yml
     type: config
+    # The service rewrites this file through the config API, and it then holds literal
+    # cluster passwords, cloud keys and encryption key secrets. The unit runs as root,
+    # so nothing else needs to read it.
+    file_info:
+      mode: 0600
   - dst: /var/lib/${NAME}
     file_info:
       mode: 0755
