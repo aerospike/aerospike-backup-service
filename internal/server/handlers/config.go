@@ -109,9 +109,11 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// validate static fields.
-	newConfig := dto.NewConfigFromModel(s.config)
-	oldConfig := dto.NewConfigFromModel(config)
+	// validate static fields. The running configuration is the old one and the file is
+	// the new one, in that order: Compare reports a difference either way, but it words
+	// it as "added" or "removed" from the perspective of its first argument.
+	oldConfig := dto.NewConfigFromModel(s.config)
+	newConfig := dto.NewConfigFromModel(config)
 	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
 		httpError(w, errBadRequest(fmt.Errorf("static configuration has changed: %w", err)))
 		return

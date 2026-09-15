@@ -1,8 +1,11 @@
 package aerospike
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -191,4 +194,123 @@ func TestFindMissingByRoutine_TwoClusters_Fail(t *testing.T) {
 	got := nv.findMissingNamespaces(t.Context(), clusterMap(a, b), routines)
 
 	require.Len(t, got, 2)
+}
+
+// Clusters have to be dialed concurrently: one cluster that is down would otherwise hold
+// up every cluster behind it for its whole connect timeout. Each fetch here waits for all
+// the others, so the call only returns if they overlap.
+func TestFetchNamespacesByCluster_DialsConcurrently(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mgr := NewMockClientManager(ctrl)
+
+	clusters := map[string]*model.AerospikeCluster{
+		"a": {ClusterLabel: "A"},
+		"b": {ClusterLabel: "B"},
+		"c": {ClusterLabel: "C"},
+	}
+
+	var arrived sync.WaitGroup
+	arrived.Add(len(clusters))
+
+	for _, cluster := range clusters {
+		client := NewMockClient(ctrl)
+		info := NewMockInfoGetter(ctrl)
+
+		mgr.EXPECT().GetClient(gomock.Any(), cluster, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(context.Context, *model.AerospikeCluster, any, any) (Client, error) {
+				arrived.Done()
+				arrived.Wait()
+
+				return client, nil
+			})
+		client.EXPECT().InfoClient().Return(info)
+		info.EXPECT().GetNamespacesList(gomock.Any()).Return([]string{"ns1"}, nil)
+		mgr.EXPECT().Close(client)
+	}
+
+	nv := &namespaceValidator{clientManager: mgr}
+	got := nv.fetchNamespacesByCluster(t.Context(), clusters)
+
+	require.Len(t, got, len(clusters))
+}
+
+// A probe that fails because the service is shutting down says nothing about the cluster,
+// so it must not be reported as one that is unavailable. The startup check runs in a
+// goroutine, so it straddles shutdown routinely.
+func TestFetchNamespacesByCluster_CanceledContextIsNotReported(t *testing.T) {
+	env := newTestEnv(t)
+	warnings := captureWarnings(t)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	env.mockClientManager.EXPECT().
+		GetClient(gomock.Any(), cluster, gomock.Any(), gomock.Any()).
+		Return(nil, context.Canceled)
+
+	nv := &namespaceValidator{clientManager: env.mockClientManager}
+
+	require.Empty(t, nv.fetchNamespacesByCluster(ctx, clusterMap(cluster)))
+	assert.Empty(t, warnings.messages())
+}
+
+// A cluster that is genuinely unreachable is still reported, so the guard above cannot
+// pass by silencing everything.
+func TestFetchNamespacesByCluster_UnreachableClusterIsReported(t *testing.T) {
+	env := newTestEnv(t)
+	warnings := captureWarnings(t)
+
+	env.mockClientManager.EXPECT().
+		GetClient(gomock.Any(), cluster, gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("connection refused"))
+
+	nv := &namespaceValidator{clientManager: env.mockClientManager}
+
+	require.Empty(t, nv.fetchNamespacesByCluster(t.Context(), clusterMap(cluster)))
+	assert.Equal(t, []string{"Configured Aerospike cluster is not available"}, warnings.messages())
+}
+
+// recorder collects the warnings the validator writes to the default logger.
+type recorder struct {
+	slog.Handler
+
+	mu      sync.Mutex
+	records []slog.Record
+}
+
+func captureWarnings(t *testing.T) *recorder {
+	t.Helper()
+
+	r := &recorder{Handler: slog.DiscardHandler}
+	previous := slog.Default()
+	slog.SetDefault(slog.New(r))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	return r
+}
+
+func (r *recorder) Enabled(context.Context, slog.Level) bool { return true }
+
+func (r *recorder) Handle(_ context.Context, record slog.Record) error {
+	if record.Level < slog.LevelWarn {
+		return nil
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.records = append(r.records, record)
+
+	return nil
+}
+
+func (r *recorder) messages() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	messages := make([]string, 0, len(r.records))
+	for _, record := range r.records {
+		messages = append(messages, record.Message)
+	}
+
+	return messages
 }

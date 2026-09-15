@@ -73,7 +73,10 @@ func (c *checker) Check(ctx context.Context, backupConfig *model.BackupConfig) {
 
 	for name, s := range backupConfig.Storage {
 		wg.Go(func() {
-			if err := c.storage.Probe(ctx, s); err != nil {
+			if err := c.storage.Probe(ctx, s); err != nil && ctx.Err() == nil {
+				// A probe that failed because ctx was canceled says nothing about the
+				// storage: the service is shutting down, and a warning here would be a
+				// false alarm the operator cannot act on.
 				slog.Warn("Configured storage is not available",
 					slog.String("storage", name),
 					attr.Error(err),

@@ -51,8 +51,9 @@ type component interface {
 // caller that does not want to pay for the probes - a test, an embedder - skips it and
 // goes straight to Run.
 //
-// It must run before Start, so that the warnings reach the operator before the scheduler
-// begins firing backups against the same clusters and storage.
+// It blocks until every probe has finished. Because its only output is log lines, a
+// caller that does not want to hold up startup for them runs it in a goroutine, as
+// cmd/backup does; ctx then bounds the probes.
 func (c *Components) Check(ctx context.Context) {
 	c.preflight.Check(ctx, c.config.BackupConfigCopy())
 }

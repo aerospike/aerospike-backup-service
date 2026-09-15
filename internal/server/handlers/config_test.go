@@ -152,6 +152,18 @@ func TestService_ApplyConfig(t *testing.T) {
 			expectedError:  "static configuration has changed",
 		},
 		{
+			// The running configuration is the old side of the comparison and the file is
+			// the new one. With the two the other way round, this reads "removed".
+			name: "static field added by the file is reported as added",
+			readConfig: func() *model.Config {
+				c := model.NewConfig()
+				c.ServiceConfig.ServerHTTPS = &model.ServerConfigHTTPS{Port: ptr.Of(model.Port(8443))}
+				return c
+			}(),
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "ServerHTTPS added",
+		},
+		{
 			// The reload was accepted and installed; only scheduling it failed.
 			name:             "apply failure",
 			readConfig:       model.NewConfig(),

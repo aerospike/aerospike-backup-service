@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -60,22 +61,43 @@ func (nv *namespaceValidator) findMissingNamespaces(
 // fetchNamespacesByCluster fetches namespaces for each configured cluster. A cluster that
 // cannot be reached is reported by name and left out of the result, so that connectivity
 // is checked for every cluster in the configuration, not only for the ones a routine uses.
+//
+// Clusters are dialed concurrently. They are independent, and one cluster that is down
+// would otherwise hold up every cluster behind it for its whole connect timeout.
 func (nv *namespaceValidator) fetchNamespacesByCluster(
 	ctx context.Context,
 	clusters map[string]*model.AerospikeCluster,
 ) map[*model.AerospikeCluster][]string {
-	namespacesByCluster := make(map[*model.AerospikeCluster][]string, len(clusters))
+	var (
+		mu                  sync.Mutex
+		wg                  sync.WaitGroup
+		namespacesByCluster = make(map[*model.AerospikeCluster][]string, len(clusters))
+	)
+
 	for name, cluster := range clusters {
-		namespaces, err := nv.fetchClusterNamespaces(ctx, cluster)
-		if err != nil {
-			slog.Warn("Configured Aerospike cluster is not available",
-				slog.String("cluster", name),
-				attr.Error(err),
-			)
-			continue
-		}
-		namespacesByCluster[cluster] = namespaces
+		wg.Go(func() {
+			namespaces, err := nv.fetchClusterNamespaces(ctx, cluster)
+			if err != nil {
+				// A failure caused by ctx being canceled says nothing about the cluster:
+				// the service is shutting down, and a warning here would be a false alarm
+				// the operator cannot act on.
+				if ctx.Err() == nil {
+					slog.Warn("Configured Aerospike cluster is not available",
+						slog.String("cluster", name),
+						attr.Error(err),
+					)
+				}
+
+				return
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+			namespacesByCluster[cluster] = namespaces
+		})
 	}
+
+	wg.Wait()
 
 	return namespacesByCluster
 }
