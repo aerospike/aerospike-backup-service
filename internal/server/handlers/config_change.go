@@ -49,14 +49,16 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	// The snapshot has to be taken before the change lands. Both sides are safe to hold:
-	// a change replaces the entity maps wholesale rather than writing into them.
+	// Both snapshots are taken, and the delta computed, before the change lands: until
+	// SetBackupConfig runs, current is a private copy that nothing else can be reading or
+	// writing. RequestCheck only computes that delta and queues it, so the configuration
+	// lock covers the diff and never the probes.
 	previous := s.config.BackupConfigCopy()
 	current := modelConfig.BackupConfigCopy()
+	s.checker.RequestCheck(previous, current)
+
 	s.config.SetBackupConfig(current)
 	s.config.InvalidateRoutines(routinesToInvalidate)
-
-	s.checker.CheckChanges(ctx, previous, current) // validate under the lock
 
 	if err = s.configurationManager.Write(ctx, s.config); err != nil {
 		return fmt.Errorf("failed to write configuration: %w", err)

@@ -71,9 +71,10 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		previous := config.BackupConfigCopy()
 		current := newConfigModel.BackupConfigCopy()
+		s.checker.RequestCheck(previous, current) // diff the copies before current goes live.
+
 		config.SetBackupConfig(current)
 		config.InvalidateAllRoutines()
-		s.checker.CheckChanges(r.Context(), previous, current) // validate under the lock
 		return nil
 	})
 
@@ -119,13 +120,14 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The check runs only once the reload is accepted: a rejected configuration must not
-	// dial its clusters or write probe objects into its buckets.
+	// The check is queued only once the reload is accepted: a rejected configuration must
+	// not dial its clusters or write probe objects into its buckets.
 	previous := s.config.BackupConfigCopy()
 	current := config.BackupConfigCopy()
+	s.checker.RequestCheck(previous, current) // diff the copies before current goes live.
+
 	s.config.SetBackupConfig(current)
 	s.config.InvalidateAllRoutines()
-	s.checker.CheckChanges(r.Context(), previous, current) // advisory, under the lock
 
 	err = s.configApplier.ApplyNewConfig()
 

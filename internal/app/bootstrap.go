@@ -45,17 +45,15 @@ type component interface {
 	Start(ctx context.Context)
 }
 
-// Check probes the configured Aerospike clusters, their namespaces, and the configured
-// storage, and logs a warning for everything it cannot reach. It is the optional step
-// between building the graph and starting it: nothing it finds stops the service, so a
-// caller that does not want to pay for the probes - a test, an embedder - skips it and
-// goes straight to Run.
+// Check queues an advisory check of the whole configuration and returns at once. The
+// probes themselves run once Start has brought the checker up, and everything they find
+// is a warning: nothing here stops the service.
 //
-// It blocks until every probe has finished. Because its only output is log lines, a
-// caller that does not want to hold up startup for them runs it in a goroutine, as
-// cmd/backup does; ctx then bounds the probes.
-func (c *Components) Check(ctx context.Context) {
-	c.preflight.Check(ctx, c.config.BackupConfigCopy())
+// It is the optional step between building the graph and starting it. A caller that does
+// not want the probes at all - a test, an embedder - skips it and goes straight to Run,
+// and nothing is ever queued.
+func (c *Components) Check() {
+	c.preflight.RequestCheck(nil, c.config.BackupConfigCopy())
 }
 
 // Run starts every component and serves until ctx is canceled or a listener stops. It
@@ -206,6 +204,7 @@ func InitComponents(
 			scheduler,
 			metricsCollector,
 			tlsProvider,
+			checker,
 		},
 		preflight: checker,
 		config:    config,

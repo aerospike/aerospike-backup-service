@@ -6,6 +6,7 @@ package preflight
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"reflect"
 	"slices"
 	"sync"
@@ -20,23 +21,34 @@ import (
 // Checker reports which of the configured clusters, namespaces and storage backends
 // cannot be reached.
 //
-// It is advisory and never fails: a cluster that is down at startup delays the backups
-// that use it, not the service. Checking is therefore an optional step - a caller that
-// does not want to pay for the probes simply does not call it.
+// It is advisory and never fails: a cluster that is down delays the backups that use it,
+// not the service. Nothing reads its result - every finding is a log line - so probing is
+// never done on a caller's goroutine. Requests are queued and served by Start.
 type Checker interface {
-	// Check probes every configured cluster and storage backend, logging one warning
-	// per problem found. It returns when every probe has finished.
-	Check(ctx context.Context, backupConfig *model.BackupConfig)
+	// RequestCheck queues a check of whatever current adds or alters relative to
+	// previous, and returns at once. A change that removes something, or that alters
+	// only what the service does not have to reach, queues nothing.
+	//
+	// The delta is computed here, in the caller's goroutine, so that a caller holding
+	// the configuration lock hands over a snapshot nothing can still be changing.
+	// Requests made before Start accumulate, so nothing is probed until the service runs.
+	RequestCheck(previous, current *model.BackupConfig)
 
-	// CheckChanges probes only what current adds or alters relative to previous.
-	// A change that removes something, or that alters only what the service does not
-	// have to reach, probes nothing.
-	CheckChanges(ctx context.Context, previous, current *model.BackupConfig)
+	// Start serves queued checks until ctx is canceled.
+	Start(ctx context.Context)
 }
 
 type checker struct {
 	clusters aerospike.NamespaceValidator
 	storage  storage.Operations
+
+	// pending holds the entities queued checks still have to reach. Deltas merge by
+	// name, so back-to-back changes to one storage probe it once, with the newest
+	// definition. signal has a buffer of one, so a request never blocks and repeated
+	// requests collapse into a single pass.
+	pendingMu sync.Mutex
+	pending   *model.BackupConfig
+	signal    chan struct{}
 }
 
 var _ Checker = (*checker)(nil)
@@ -47,19 +59,68 @@ func NewChecker(clusters aerospike.NamespaceValidator, operations storage.Operat
 	return &checker{
 		clusters: clusters,
 		storage:  operations,
+		pending:  model.NewBackupConfig(),
+		signal:   make(chan struct{}, 1),
 	}
 }
 
-// Check probes every configured cluster and storage backend, logging one warning per
-// problem found. Probes run concurrently: they are independent, and a single unreachable
-// backend would otherwise hold up the whole check for its connect timeout.
-func (c *checker) Check(ctx context.Context, backupConfig *model.BackupConfig) {
-	if backupConfig == nil {
+// RequestCheck queues a check of what current adds or alters relative to previous.
+func (c *checker) RequestCheck(previous, current *model.BackupConfig) {
+	delta := Changes(previous, current)
+	if nothingToReach(delta) {
 		return
 	}
 
-	if len(backupConfig.AerospikeClusters) == 0 && len(backupConfig.Storage) == 0 {
-		return // nothing to reach.
+	c.pendingMu.Lock()
+	maps.Copy(c.pending.AerospikeClusters, delta.AerospikeClusters)
+	maps.Copy(c.pending.Storage, delta.Storage)
+	maps.Copy(c.pending.BackupRoutines, delta.BackupRoutines)
+	c.pendingMu.Unlock()
+
+	select {
+	case c.signal <- struct{}{}:
+	default: // a check is already due; it will pick this up.
+	}
+}
+
+// Start serves queued checks until ctx is canceled.
+func (c *checker) Start(ctx context.Context) {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-c.signal:
+				c.check(ctx, c.takePending())
+			}
+		}
+	}()
+}
+
+// takePending drains the queue, leaving an empty one behind.
+func (c *checker) takePending() *model.BackupConfig {
+	c.pendingMu.Lock()
+	defer c.pendingMu.Unlock()
+
+	pending := c.pending
+	c.pending = model.NewBackupConfig()
+
+	return pending
+}
+
+// nothingToReach reports whether a backup configuration names any external system.
+func nothingToReach(backupConfig *model.BackupConfig) bool {
+	return backupConfig == nil ||
+		(len(backupConfig.AerospikeClusters) == 0 && len(backupConfig.Storage) == 0)
+}
+
+// check probes every cluster and storage backend in backupConfig, logging one warning per
+// problem found, and returns when every probe has finished. Probes run concurrently: they
+// are independent, and a single unreachable backend would otherwise hold up the whole
+// check for its connect timeout.
+func (c *checker) check(ctx context.Context, backupConfig *model.BackupConfig) {
+	if nothingToReach(backupConfig) {
+		return
 	}
 
 	start := time.Now()
@@ -91,26 +152,20 @@ func (c *checker) Check(ctx context.Context, backupConfig *model.BackupConfig) {
 		slog.Duration("duration", time.Since(start)))
 }
 
-// CheckChanges probes only what current adds or alters relative to previous: a cluster or
-// storage that is new or configured differently, and a routine that now reads a different
-// cluster or storage, or names different namespaces.
+// Changes returns a backup configuration holding just the entities current adds or alters
+// relative to previous: a cluster or storage that is new or configured differently, and a
+// routine that now reads a different cluster or storage, or names different namespaces.
 //
 // It replaces the per-handler decision of whether a change is worth validating. A deletion
-// adds nothing, so it probes nothing; so does a change that touches only what the service
+// adds nothing, so it yields nothing; so does a change that touches only what the service
 // never has to reach - a schedule, a policy, a routine being enabled or disabled.
-func (c *checker) CheckChanges(ctx context.Context, previous, current *model.BackupConfig) {
-	c.Check(ctx, changedOnly(previous, current))
-}
-
-// changedOnly returns a backup configuration holding just the entities current adds or
-// alters relative to previous.
 //
 // Comparison is by value, never by pointer: every configuration change round trips through
 // the DTO layer, which allocates fresh entities even for the parts nobody touched, so every
 // pointer differs on every change. It is also done on the model rather than the DTO, because
 // DTO secrets redact themselves - a rotated storage credential would compare equal there,
 // which is precisely a change worth probing.
-func changedOnly(previous, current *model.BackupConfig) *model.BackupConfig {
+func Changes(previous, current *model.BackupConfig) *model.BackupConfig {
 	delta := model.NewBackupConfig()
 	if current == nil {
 		return delta

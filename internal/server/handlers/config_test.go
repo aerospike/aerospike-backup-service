@@ -40,7 +40,7 @@ func newConfigTestService(t *testing.T) (*Service, *gomock.Controller) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	checker := preflight.NewMockChecker(ctrl)
-	checker.EXPECT().CheckChanges(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	checker.EXPECT().RequestCheck(gomock.Any(), gomock.Any()).AnyTimes()
 
 	return &Service{
 		config:    model.NewConfig(),
@@ -196,7 +196,7 @@ func TestService_ApplyConfig(t *testing.T) {
 
 			checker := preflight.NewMockChecker(ctrl)
 			if tt.expectCheck {
-				checker.EXPECT().CheckChanges(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+				checker.EXPECT().RequestCheck(gomock.Any(), gomock.Any()).Times(1)
 			}
 			svc.checker = checker
 

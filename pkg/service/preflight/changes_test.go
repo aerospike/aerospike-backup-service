@@ -108,7 +108,7 @@ func TestChangedOnly(t *testing.T) {
 			changed := baseConfig()
 			tt.mutate(changed)
 
-			delta := changedOnly(previous.build(t), changed.build(t))
+			delta := Changes(previous.build(t), changed.build(t))
 
 			assert.ElementsMatch(t, tt.expectClusters, names(delta.AerospikeClusters), "clusters")
 			assert.ElementsMatch(t, tt.expectStorage, names(delta.Storage), "storage")
@@ -119,14 +119,14 @@ func TestChangedOnly(t *testing.T) {
 
 // A first check has nothing to compare against, so everything counts as new.
 func TestChangedOnly_NoPrevious(t *testing.T) {
-	delta := changedOnly(nil, baseConfig().build(t))
+	delta := Changes(nil, baseConfig().build(t))
 
 	assert.ElementsMatch(t, []string{"cluster1", "cluster2"}, names(delta.AerospikeClusters))
 	assert.ElementsMatch(t, []string{"storage1", "storage2", "bucket"}, names(delta.Storage))
 }
 
 func TestChangedOnly_NoCurrent(t *testing.T) {
-	delta := changedOnly(baseConfig().build(t), nil)
+	delta := Changes(baseConfig().build(t), nil)
 
 	assert.Empty(t, delta.AerospikeClusters)
 	assert.Empty(t, delta.Storage)

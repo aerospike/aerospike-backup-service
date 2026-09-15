@@ -33,7 +33,7 @@ func TestInitComponents_MinimalConfig(t *testing.T) {
 	// The backup state registry, the restore job holder, the scheduler, the metrics
 	// collector and the TLS provider: a component missing from this list is a component
 	// that is wired but never started.
-	require.Len(t, components.components, 5)
+	require.Len(t, components.components, 6)
 
 	components.Start(ctx)
 }
@@ -281,7 +281,7 @@ func TestComponents_CheckStartsNothing(t *testing.T) {
 	components, err := InitComponents(ctx, configPath, false)
 	require.NoError(t, err)
 
-	components.Check(ctx)
+	components.Check()
 
 	goleak.VerifyNone(t, before,
 		// lumberjack starts its rotation goroutine on the first log write and never stops it.

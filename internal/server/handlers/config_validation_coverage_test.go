@@ -1,19 +1,15 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/preflight"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -185,8 +181,13 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 			registry.EXPECT().Cancel(gomock.Any()).AnyTimes()
 			svc.registry = registry
 
-			probed := &probeRecorder{}
-			svc.checker = preflight.NewChecker(probed.validator(ctrl), probed.operations(ctrl))
+			queued := &queuedChecks{}
+			checker := preflight.NewMockChecker(ctrl)
+			checker.EXPECT().
+				RequestCheck(gomock.Any(), gomock.Any()).
+				Do(queued.record).
+				AnyTimes()
+			svc.checker = checker
 
 			req := httptest.NewRequestWithContext(
 				t.Context(), tt.method, "/v1/config/"+tt.pathValue, strings.NewReader(tt.body),
@@ -200,8 +201,8 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 			// expectation would otherwise pass for the wrong reason.
 			assert.Equal(t, tt.expectStatus, w.Code, w.Body.String())
 
-			assert.ElementsMatch(t, tt.expectStorage, probed.storagePaths, "probed storage")
-			assert.ElementsMatch(t, tt.expectClusters, probed.clusters, "reached clusters")
+			assert.ElementsMatch(t, tt.expectStorage, queued.storagePaths(), "storage to probe")
+			assert.ElementsMatch(t, tt.expectClusters, queued.clusterNames(), "clusters to reach")
 		})
 	}
 }
@@ -241,43 +242,35 @@ func addUnusedEntities(t *testing.T, svc *Service) {
 	svc.config.SetBackupConfig(withUnused.BackupConfigCopy())
 }
 
-// probeRecorder stands in for the network: it records what a real preflight.Checker asked
-// it to reach, so a test can assert on the delta an endpoint produced rather than on
-// whether some method was called.
-type probeRecorder struct {
-	mu           sync.Mutex
-	storagePaths []string
-	clusters     []string
+// queuedChecks captures what each handler asked the checker to look at. It runs the real
+// preflight.Changes over the pair, so the assertions are on the delta the checker's worker
+// would actually probe - without needing that worker to run.
+type queuedChecks struct {
+	deltas []*model.BackupConfig
 }
 
-func (p *probeRecorder) operations(ctrl *gomock.Controller) storage.Operations {
-	ops := storage.NewMockOperations(ctrl)
-	ops.EXPECT().
-		Probe(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, s model.Storage) error {
-			p.mu.Lock()
-			defer p.mu.Unlock()
-			p.storagePaths = append(p.storagePaths, s.GetPath())
-
-			return nil
-		}).
-		AnyTimes()
-
-	return ops
+func (q *queuedChecks) record(previous, current *model.BackupConfig) {
+	q.deltas = append(q.deltas, preflight.Changes(previous, current))
 }
 
-func (p *probeRecorder) validator(ctrl *gomock.Controller) aerospike.NamespaceValidator {
-	validator := aerospike.NewMockNamespaceValidator(ctrl)
-	validator.EXPECT().
-		Validate(gomock.Any(), gomock.Any()).
-		Do(func(_ context.Context, backupConfig *model.BackupConfig) {
-			p.mu.Lock()
-			defer p.mu.Unlock()
-			for name := range backupConfig.AerospikeClusters {
-				p.clusters = append(p.clusters, name)
-			}
-		}).
-		AnyTimes()
+func (q *queuedChecks) storagePaths() []string {
+	var paths []string
+	for _, delta := range q.deltas {
+		for _, s := range delta.Storage {
+			paths = append(paths, s.GetPath())
+		}
+	}
 
-	return validator
+	return paths
+}
+
+func (q *queuedChecks) clusterNames() []string {
+	var names []string
+	for _, delta := range q.deltas {
+		for name := range delta.AerospikeClusters {
+			names = append(names, name)
+		}
+	}
+
+	return names
 }
