@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/reugn/go-quartz/quartz"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 )
@@ -28,14 +29,13 @@ func TestInitComponents_MinimalConfig(t *testing.T) {
 	components, err := InitComponents(ctx, configPath, false)
 	require.NoError(t, err)
 
-	require.NotNil(t, components.Scheduler)
 	require.Len(t, components.Servers, 1)
 	// The backup state registry, the restore job holder, the scheduler, the metrics
 	// collector and the TLS provider: a component missing from this list is a component
 	// that is wired but never started.
 	require.Len(t, components.components, 5)
 
-	components.Scheduler.Start(ctx)
+	components.Start(ctx)
 }
 
 // TestInitComponents_StartsNothing is the executable form of the contract in the
@@ -67,7 +67,7 @@ func TestInitComponents_StartsNothing(t *testing.T) {
 		// lumberjack starts its rotation goroutine on the first log write and never stops it.
 		goleak.IgnoreAnyFunction("gopkg.in/natefinch/lumberjack%2ev2.(*Logger).millRun"),
 	)
-	require.False(t, components.Scheduler.IsStarted(), "scheduler is running before Start")
+	require.False(t, scheduler(t, components).IsStarted(), "scheduler is running before Start")
 
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
 	require.NoError(t, err, "the HTTP listener was bound before Start")
@@ -108,7 +108,7 @@ func TestComponents_RunServesUntilCanceled(t *testing.T) {
 
 		return resp.StatusCode == http.StatusOK
 	}, 5*time.Second, 10*time.Millisecond, "Run did not bring the HTTP listener up")
-	require.True(t, components.Scheduler.IsStarted())
+	require.True(t, scheduler(t, components).IsStarted())
 
 	cancel()
 
@@ -120,8 +120,27 @@ func TestComponents_RunServesUntilCanceled(t *testing.T) {
 	}
 	// The scheduler stops itself when the context it was started with is canceled.
 	require.Eventually(t, func() bool {
-		return !components.Scheduler.IsStarted()
+		return !scheduler(t, components).IsStarted()
 	}, time.Second, 10*time.Millisecond, "canceling the run context did not stop the scheduler")
+}
+
+// scheduler returns the quartz scheduler out of the lifecycle list. It is the one
+// component whose run state can be observed from outside, which is what the tests below
+// use to tell a scheduler that is started from one that is merely built. Looking it up
+// here rather than through a field of its own also asserts what the tests care about:
+// that the scheduler is in the list, and so is started with everything else.
+func scheduler(t *testing.T, components *Components) quartz.Scheduler {
+	t.Helper()
+
+	for _, c := range components.components {
+		if s, ok := c.(quartz.Scheduler); ok {
+			return s
+		}
+	}
+
+	t.Fatal("no scheduler among the components")
+
+	return nil
 }
 
 // freePort returns a port that is free at the moment of the call.
@@ -233,7 +252,8 @@ func TestInitComponents_BuildContextIsNotALifetime(t *testing.T) {
 		return resp.StatusCode == http.StatusOK
 	}, 2*time.Second, 10*time.Millisecond, "the service did not come up on a canceled build context")
 
-	require.True(t, components.Scheduler.IsStarted(), "the scheduler took its lifetime from the build context")
+	require.True(t, scheduler(t, components).IsStarted(),
+		"the scheduler took its lifetime from the build context")
 
 	cancelRun()
 	require.NoError(t, <-done)
@@ -267,7 +287,7 @@ func TestComponents_CheckStartsNothing(t *testing.T) {
 		// lumberjack starts its rotation goroutine on the first log write and never stops it.
 		goleak.IgnoreAnyFunction("gopkg.in/natefinch/lumberjack%2ev2.(*Logger).millRun"),
 	)
-	require.False(t, components.Scheduler.IsStarted(), "scheduler is running after Check")
+	require.False(t, scheduler(t, components).IsStarted(), "scheduler is running after Check")
 
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
 	require.NoError(t, err, "the HTTP listener was bound by Check")

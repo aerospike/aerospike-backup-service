@@ -23,18 +23,13 @@ import (
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	u "github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/reugn/go-quartz/quartz"
 )
 
 // Components group the long-running parts of the service.
 // Every field is always a non-nil interface after InitComponents succeeds. A component that
 // has nothing to do is still constructed as a no-op rather than left nil, so callers never nil-check.
 type Components struct {
-	// Scheduler is the one component with externally observable run state, and tests
-	// assert on it to tell a scheduler that is started from one that is merely built.
-	// It is started through components like every other one, not through this field.
-	Scheduler quartz.Scheduler
-	Servers   []server.HTTP
+	Servers []server.HTTP
 
 	// components is the whole background lifecycle of the service, in start order.
 	// A component that is not in here is never started.
@@ -203,8 +198,7 @@ func InitComponents(
 	}
 
 	return &Components{
-		Scheduler: scheduler,
-		Servers:   servers,
+		Servers: servers,
 		components: []component{
 			registry,
 			restoreJobs,
