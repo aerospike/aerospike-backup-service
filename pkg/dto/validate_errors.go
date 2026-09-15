@@ -62,6 +62,12 @@ func errValidationDuplicate[T any](field string, value T) error {
 	return fmt.Errorf("%w: %s contains duplicate value: %v", errDuplicate, field, value)
 }
 
+// errValidationInvalidName reports a name that cannot be used where the configuration puts it,
+// naming the field and echoing the offending value; the reason comes from the checker.
+func errValidationInvalidName(field, name string, err error) error {
+	return fmt.Errorf("%w: %s %q: %w", errInvalidValue, field, name, err)
+}
+
 func errValidationSecret(field string, err error) error {
 	return fmt.Errorf("%s: %w: %w", field, errValidation, err)
 }

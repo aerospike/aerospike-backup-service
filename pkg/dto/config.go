@@ -7,6 +7,12 @@ import (
 )
 
 // Config represents the service configuration file.
+//
+// Every entity name - the key of a cluster, storage, policy, secret agent or routine - must be
+// a single path segment: a routine's name is the folder its backups live in under the storage
+// root, so a name may not be "." or "..", may not contain "/" or "\\" or a NUL byte, and may
+// not start with "~".
+//
 // @Description Config represents the service configuration file.
 //
 //nolint:lll
@@ -14,14 +20,19 @@ type Config struct {
 	// ServiceConfig contains general service settings.
 	ServiceConfig ServiceConfig `yaml:"service,omitempty" json:"service,omitzero"`
 	// AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.
+	// Names must be a single path segment.
 	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
 	// Storage is a map of storages that can be used by backup routines.
+	// Names must be a single path segment.
 	Storage map[string]*Storage `yaml:"storage,omitempty" json:"storage,omitempty"`
 	// BackupPolicies is a map of backup policies that can be used by backup routines.
+	// Names must be a single path segment.
 	BackupPolicies map[string]*BackupPolicy `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
 	// SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication).
+	// Names must be a single path segment.
 	SecretAgents map[string]*SecretAgent `yaml:"secret-agents,omitempty" json:"secret-agents,omitempty"`
 	// BackupRoutines is a map of backup routines.
+	// Names must be a single path segment: the name is the folder the routine's backups live in.
 	BackupRoutines map[string]*BackupRoutine `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
 }
 
@@ -75,8 +86,8 @@ func (c *Config) fromModel(m *model.Config) {
 //nolint:gocognit
 func (c *Config) Validate() error {
 	for name, routine := range c.BackupRoutines {
-		if name == "" {
-			return errValidationEmptyField("routine name")
+		if err := validateEntityName("routine name", name); err != nil {
+			return err
 		}
 		if err := routine.Validate(); err != nil {
 			return fmt.Errorf("backup routine '%s' validation error: %w", name, err)
@@ -84,8 +95,8 @@ func (c *Config) Validate() error {
 	}
 
 	for name, storage := range c.Storage {
-		if name == "" {
-			return errValidationEmptyField("storage name")
+		if err := validateEntityName("storage name", name); err != nil {
+			return err
 		}
 		if err := storage.Validate(); err != nil {
 			return fmt.Errorf("storage '%s' validation error: %w", name, err)
@@ -93,8 +104,8 @@ func (c *Config) Validate() error {
 	}
 
 	for name, cluster := range c.AerospikeClusters {
-		if name == "" {
-			return errValidationEmptyField("cluster name")
+		if err := validateEntityName("cluster name", name); err != nil {
+			return err
 		}
 		if err := cluster.Validate(); err != nil {
 			return fmt.Errorf("cluster '%s' validation error: %w", name, err)
@@ -102,8 +113,8 @@ func (c *Config) Validate() error {
 	}
 
 	for name, policy := range c.BackupPolicies {
-		if name == "" {
-			return errValidationEmptyField("policy name")
+		if err := validateEntityName("policy name", name); err != nil {
+			return err
 		}
 		policyOpts := ValidationDefault
 		if c.backupPolicyHasSecretAgent(name) {
@@ -116,8 +127,8 @@ func (c *Config) Validate() error {
 	}
 
 	for name, agent := range c.SecretAgents {
-		if name == "" {
-			return errValidationEmptyField("secret agent name")
+		if err := validateEntityName("secret agent name", name); err != nil {
+			return err
 		}
 		if agent == nil {
 			return fmt.Errorf("secret agent '%s' validation error: secret agent is not specified", name)

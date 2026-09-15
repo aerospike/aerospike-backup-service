@@ -39,6 +39,8 @@ type BackupRoutine struct {
 	// The list of namespaces to back up.
 	// If empty, the entire cluster is backed up.
 	// The order of namespaces does not determine the backup execution or completion order.
+	// A name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,
+	// "_", "-" and "$", and not the reserved name "null".
 	Namespaces *[]string `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"[\"source-ns1\"]" validate:"required"`
 	// The list of backup set names (optional, an empty list implies backing up all sets).
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1" extensions:"x-nullable"`
@@ -92,6 +94,22 @@ const (
 )
 
 // Validate validates the backup routine configuration.
+// validateNamespaces checks the routine's namespace list for duplicates and each name against
+// the Aerospike naming rules.
+func validateNamespaces(namespaces []string) error {
+	if err := validateUniqueNonEmpty("namespaces", namespaces); err != nil {
+		return err
+	}
+
+	for i, namespace := range namespaces {
+		if err := validateNamespaceName(fmt.Sprintf("namespaces[%d]", i), namespace); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *BackupRoutine) Validate() error {
 	if r == nil {
 		return errors.New("backup routine is not specified")
@@ -130,7 +148,7 @@ func (r *BackupRoutine) Validate() error {
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
 	}
-	if err := validateUniqueNonEmpty("namespaces", *r.Namespaces); err != nil {
+	if err := validateNamespaces(*r.Namespaces); err != nil {
 		return err
 	}
 	if err := validateUniqueNonEmpty("set-list", r.SetList); err != nil {
