@@ -108,8 +108,6 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
-	// advisory: reports whatever the reloaded configuration now points at and cannot reach.
-	s.checker.CheckChanges(r.Context(), s.config.BackupConfigCopy(), config.BackupConfigCopy())
 
 	// validate static fields.
 	newConfig := dto.NewConfigFromModel(s.config)
@@ -119,8 +117,14 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.config.SetBackupConfig(config.BackupConfigCopy())
+	// The check runs only once the reload is accepted: a rejected configuration must not
+	// dial its clusters or write probe objects into its buckets.
+	previous := s.config.BackupConfigCopy()
+	current := config.BackupConfigCopy()
+	s.config.SetBackupConfig(current)
 	s.config.InvalidateAllRoutines()
+	s.checker.CheckChanges(r.Context(), previous, current) // advisory, under the lock
+
 	err = s.configApplier.ApplyNewConfig()
 
 	if err != nil {

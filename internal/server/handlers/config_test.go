@@ -130,6 +130,10 @@ func TestService_ApplyConfig(t *testing.T) {
 		configApplierErr error
 		expectedStatus   int
 		expectedError    string
+		// expectCheck is whether the reloaded configuration reaches the preflight check.
+		// A reload that is rejected must not: it would dial clusters and write probe
+		// objects into buckets on behalf of a configuration that never takes effect.
+		expectCheck bool
 	}{
 		{
 			name:           "read failure",
@@ -148,16 +152,19 @@ func TestService_ApplyConfig(t *testing.T) {
 			expectedError:  "static configuration has changed",
 		},
 		{
+			// The reload was accepted and installed; only scheduling it failed.
 			name:             "apply failure",
 			readConfig:       model.NewConfig(),
 			configApplierErr: errors.New("apply boom"),
 			expectedStatus:   http.StatusInternalServerError,
 			expectedError:    "apply boom",
+			expectCheck:      true,
 		},
 		{
 			name:           "success",
 			readConfig:     model.NewConfig(),
 			expectedStatus: http.StatusOK,
+			expectCheck:    true,
 		},
 	}
 
@@ -174,6 +181,12 @@ func TestService_ApplyConfig(t *testing.T) {
 				mockConfigApplier.EXPECT().ApplyNewConfig().Return(tt.configApplierErr)
 			}
 			svc.configApplier = mockConfigApplier
+
+			checker := preflight.NewMockChecker(ctrl)
+			if tt.expectCheck {
+				checker.EXPECT().CheckChanges(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+			}
+			svc.checker = checker
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/config/apply", nil)
 			w := httptest.NewRecorder()
