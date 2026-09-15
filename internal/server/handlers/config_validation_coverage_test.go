@@ -270,10 +270,10 @@ func (p *probeRecorder) validator(ctrl *gomock.Controller) aerospike.NamespaceVa
 	validator := aerospike.NewMockNamespaceValidator(ctrl)
 	validator.EXPECT().
 		Validate(gomock.Any(), gomock.Any()).
-		Do(func(_ context.Context, config *model.Config) {
+		Do(func(_ context.Context, backupConfig *model.BackupConfig) {
 			p.mu.Lock()
 			defer p.mu.Unlock()
-			for name := range config.BackupConfigCopy().AerospikeClusters {
+			for name := range backupConfig.AerospikeClusters {
 				p.clusters = append(p.clusters, name)
 			}
 		}).

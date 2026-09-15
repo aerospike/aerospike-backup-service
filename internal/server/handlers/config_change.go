@@ -49,11 +49,14 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	previous := configSnapshot(s.config)
-	s.config.SetBackupConfig(modelConfig.BackupConfigCopy())
+	// The snapshot has to be taken before the change lands. Both sides are safe to hold:
+	// a change replaces the entity maps wholesale rather than writing into them.
+	previous := s.config.BackupConfigCopy()
+	current := modelConfig.BackupConfigCopy()
+	s.config.SetBackupConfig(current)
 	s.config.InvalidateRoutines(routinesToInvalidate)
 
-	s.checker.CheckChanges(ctx, previous, s.config) // validate under the lock
+	s.checker.CheckChanges(ctx, previous, current) // validate under the lock
 
 	if err = s.configurationManager.Write(ctx, s.config); err != nil {
 		return fmt.Errorf("failed to write configuration: %w", err)
@@ -64,17 +67,6 @@ func (s *Service) changeBackupConfig(
 	}
 
 	return nil
-}
-
-// configSnapshot captures the backup configuration as it stands, so that a change can be
-// compared against what it replaced. Every change round trips through the DTO layer, which
-// allocates fresh entities, so the entities a snapshot points at are never the ones a later
-// change mutates.
-func configSnapshot(config *model.Config) *model.Config {
-	snapshot := model.NewConfig()
-	snapshot.SetBackupConfig(config.BackupConfigCopy())
-
-	return snapshot
 }
 
 func routinesUsingStorage(config *dto.Config, storageName string) []string {

@@ -108,7 +108,7 @@ func TestChangedOnly(t *testing.T) {
 			changed := baseConfig()
 			tt.mutate(changed)
 
-			delta := changedOnly(previous.build(t), changed.build(t)).BackupConfigCopy()
+			delta := changedOnly(previous.build(t), changed.build(t))
 
 			assert.ElementsMatch(t, tt.expectClusters, names(delta.AerospikeClusters), "clusters")
 			assert.ElementsMatch(t, tt.expectStorage, names(delta.Storage), "storage")
@@ -119,14 +119,14 @@ func TestChangedOnly(t *testing.T) {
 
 // A first check has nothing to compare against, so everything counts as new.
 func TestChangedOnly_NoPrevious(t *testing.T) {
-	delta := changedOnly(nil, baseConfig().build(t)).BackupConfigCopy()
+	delta := changedOnly(nil, baseConfig().build(t))
 
 	assert.ElementsMatch(t, []string{"cluster1", "cluster2"}, names(delta.AerospikeClusters))
 	assert.ElementsMatch(t, []string{"storage1", "storage2", "bucket"}, names(delta.Storage))
 }
 
 func TestChangedOnly_NoCurrent(t *testing.T) {
-	delta := changedOnly(baseConfig().build(t), nil).BackupConfigCopy()
+	delta := changedOnly(baseConfig().build(t), nil)
 
 	assert.Empty(t, delta.AerospikeClusters)
 	assert.Empty(t, delta.Storage)
@@ -180,7 +180,7 @@ func baseConfig() *testConfig {
 	return c
 }
 
-func (c *testConfig) build(t *testing.T) *model.Config {
+func (c *testConfig) build(t *testing.T) *model.BackupConfig {
 	t.Helper()
 
 	config := model.NewConfig()
@@ -202,7 +202,7 @@ func (c *testConfig) build(t *testing.T) *model.Config {
 		}))
 	}
 
-	return config
+	return config.BackupConfigCopy()
 }
 
 func newCluster(port model.Port) *model.AerospikeCluster {

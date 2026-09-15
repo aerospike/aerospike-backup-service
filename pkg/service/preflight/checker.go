@@ -26,12 +26,12 @@ import (
 type Checker interface {
 	// Check probes every configured cluster and storage backend, logging one warning
 	// per problem found. It returns when every probe has finished.
-	Check(ctx context.Context, config *model.Config)
+	Check(ctx context.Context, backupConfig *model.BackupConfig)
 
 	// CheckChanges probes only what current adds or alters relative to previous.
 	// A change that removes something, or that alters only what the service does not
 	// have to reach, probes nothing.
-	CheckChanges(ctx context.Context, previous, current *model.Config)
+	CheckChanges(ctx context.Context, previous, current *model.BackupConfig)
 }
 
 type checker struct {
@@ -53,12 +53,11 @@ func NewChecker(clusters aerospike.NamespaceValidator, operations storage.Operat
 // Check probes every configured cluster and storage backend, logging one warning per
 // problem found. Probes run concurrently: they are independent, and a single unreachable
 // backend would otherwise hold up the whole check for its connect timeout.
-func (c *checker) Check(ctx context.Context, config *model.Config) {
-	if config == nil {
+func (c *checker) Check(ctx context.Context, backupConfig *model.BackupConfig) {
+	if backupConfig == nil {
 		return
 	}
 
-	backupConfig := config.BackupConfigCopy()
 	if len(backupConfig.AerospikeClusters) == 0 && len(backupConfig.Storage) == 0 {
 		return // nothing to reach.
 	}
@@ -69,7 +68,7 @@ func (c *checker) Check(ctx context.Context, config *model.Config) {
 	var wg sync.WaitGroup
 
 	wg.Go(func() {
-		c.clusters.Validate(ctx, config)
+		c.clusters.Validate(ctx, backupConfig)
 	})
 
 	for name, s := range backupConfig.Storage {
@@ -96,39 +95,37 @@ func (c *checker) Check(ctx context.Context, config *model.Config) {
 // It replaces the per-handler decision of whether a change is worth validating. A deletion
 // adds nothing, so it probes nothing; so does a change that touches only what the service
 // never has to reach - a schedule, a policy, a routine being enabled or disabled.
-func (c *checker) CheckChanges(ctx context.Context, previous, current *model.Config) {
+func (c *checker) CheckChanges(ctx context.Context, previous, current *model.BackupConfig) {
 	c.Check(ctx, changedOnly(previous, current))
 }
 
-// changedOnly returns a configuration holding just the entities current adds or alters
-// relative to previous.
+// changedOnly returns a backup configuration holding just the entities current adds or
+// alters relative to previous.
 //
 // Comparison is by value, never by pointer: every configuration change round trips through
 // the DTO layer, which allocates fresh entities even for the parts nobody touched, so every
 // pointer differs on every change. It is also done on the model rather than the DTO, because
 // DTO secrets redact themselves - a rotated storage credential would compare equal there,
 // which is precisely a change worth probing.
-func changedOnly(previous, current *model.Config) *model.Config {
-	delta := model.NewConfig()
+func changedOnly(previous, current *model.BackupConfig) *model.BackupConfig {
+	delta := model.NewBackupConfig()
 	if current == nil {
 		return delta
 	}
 
-	currentBackup := current.BackupConfigCopy()
-	previousBackup := model.NewConfig().BackupConfigCopy()
-	if previous != nil {
-		previousBackup = previous.BackupConfigCopy()
+	if previous == nil {
+		previous = model.NewBackupConfig()
 	}
 
-	for name, cluster := range currentBackup.AerospikeClusters {
-		if !reflect.DeepEqual(previousBackup.AerospikeClusters[name], cluster) {
-			_ = delta.AddCluster(name, cluster)
+	for name, cluster := range current.AerospikeClusters {
+		if !reflect.DeepEqual(previous.AerospikeClusters[name], cluster) {
+			delta.AerospikeClusters[name] = cluster
 		}
 	}
 
-	for name, entry := range currentBackup.Storage {
-		if !reflect.DeepEqual(previousBackup.Storage[name], entry) {
-			_ = delta.AddStorage(name, entry)
+	for name, entry := range current.Storage {
+		if !reflect.DeepEqual(previous.Storage[name], entry) {
+			delta.Storage[name] = entry
 		}
 	}
 
@@ -136,18 +133,18 @@ func changedOnly(previous, current *model.Config) *model.Config {
 	// writes, separately: repointing a routine at another existing cluster changes nothing
 	// about its storage, and editing a cluster changes nothing about the storage of every
 	// routine that happens to use it.
-	for name, routine := range currentBackup.BackupRoutines {
-		previousRoutine := previousBackup.BackupRoutines[name]
+	for name, routine := range current.BackupRoutines {
+		previousRoutine := previous.BackupRoutines[name]
 
 		if routineSourceChanged(previousRoutine, routine) {
-			_ = delta.AddRoutine(routine)
+			delta.BackupRoutines[name] = routine
 			// The namespace diff needs the cluster the routine reads, whether or not
 			// that cluster changed on its own.
-			addNamed(currentBackup.AerospikeClusters, routine.SourceCluster, delta.AddCluster)
+			copyNamed(current.AerospikeClusters, delta.AerospikeClusters, routine.SourceCluster)
 		}
 
 		if routineStorageChanged(previousRoutine, routine) {
-			addNamed(currentBackup.Storage, routine.Storage, delta.AddStorage)
+			copyNamed(current.Storage, delta.Storage, routine.Storage)
 		}
 	}
 
@@ -177,12 +174,12 @@ func routineStorageChanged(previous, current *model.BackupRoutine) bool {
 	return !reflect.DeepEqual(previous.Storage, current.Storage)
 }
 
-// addNamed copies the entry a routine points at into the delta under the name it carries
-// in the full configuration. Adding an entry the delta already holds is a no-op.
-func addNamed[T comparable](entries map[string]T, target T, add func(string, T) error) {
-	for name, entry := range entries {
+// copyNamed copies the entry a routine points at into the delta under the name it carries
+// in the full configuration.
+func copyNamed[T comparable](from, to map[string]T, target T) {
+	for name, entry := range from {
 		if entry == target {
-			_ = add(name, entry)
+			to[name] = entry
 			return
 		}
 	}

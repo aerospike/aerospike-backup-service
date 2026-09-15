@@ -66,11 +66,12 @@ func TestChecker_ChecksClustersWithoutStorage(t *testing.T) {
 
 	config := model.NewConfig()
 	require.NoError(t, config.AddCluster("cluster1", &model.AerospikeCluster{}))
+	backupConfig := config.BackupConfigCopy()
 
 	clusters := aerospike.NewMockNamespaceValidator(ctrl)
-	clusters.EXPECT().Validate(gomock.Any(), config)
+	clusters.EXPECT().Validate(gomock.Any(), backupConfig)
 
-	NewChecker(clusters, storage.NewMockOperations(ctrl)).Check(t.Context(), config)
+	NewChecker(clusters, storage.NewMockOperations(ctrl)).Check(t.Context(), backupConfig)
 }
 
 // There is nothing to say about a configuration that points at nothing, and a delta is
@@ -80,7 +81,7 @@ func TestChecker_NothingToReach_DoesNothing(t *testing.T) {
 
 	// No EXPECT calls: neither collaborator may be touched.
 	NewChecker(aerospike.NewMockNamespaceValidator(ctrl), storage.NewMockOperations(ctrl)).
-		Check(t.Context(), model.NewConfig())
+		Check(t.Context(), model.NewBackupConfig())
 }
 
 func TestChecker_NilConfig_DoesNothing(t *testing.T) {
@@ -119,7 +120,7 @@ func TestChecker_ProbesRunConcurrently(t *testing.T) {
 	NewChecker(clusters, ops).Check(t.Context(), config)
 }
 
-func configWithStorage(t *testing.T, names ...string) *model.Config {
+func configWithStorage(t *testing.T, names ...string) *model.BackupConfig {
 	t.Helper()
 
 	config := model.NewConfig()
@@ -127,7 +128,7 @@ func configWithStorage(t *testing.T, names ...string) *model.Config {
 		require.NoError(t, config.AddStorage(name, &model.LocalStorage{Path: t.TempDir()}))
 	}
 
-	return config
+	return config.BackupConfigCopy()
 }
 
 // recorder collects the warnings the checker writes to the default logger.

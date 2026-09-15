@@ -26,11 +26,12 @@ type BackupConfig struct {
 
 func NewConfig() *Config {
 	return &Config{
-		backupConfig: *newBackupConfig(),
+		backupConfig: *NewBackupConfig(),
 	}
 }
 
-func newBackupConfig() *BackupConfig {
+// NewBackupConfig returns an empty backup configuration with every map ready to write to.
+func NewBackupConfig() *BackupConfig {
 	return &BackupConfig{
 		AerospikeClusters:   make(map[string]*AerospikeCluster),
 		Storage:             make(map[string]Storage),

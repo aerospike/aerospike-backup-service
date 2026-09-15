@@ -54,7 +54,7 @@ type component interface {
 // It must run before Start, so that the warnings reach the operator before the scheduler
 // begins firing backups against the same clusters and storage.
 func (c *Components) Check(ctx context.Context) {
-	c.preflight.Check(ctx, c.config)
+	c.preflight.Check(ctx, c.config.BackupConfigCopy())
 }
 
 // Run starts every component and serves until ctx is canceled or a listener stops. It

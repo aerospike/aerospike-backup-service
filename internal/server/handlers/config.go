@@ -69,10 +69,11 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		previous := configSnapshot(config)
-		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
+		previous := config.BackupConfigCopy()
+		current := newConfigModel.BackupConfigCopy()
+		config.SetBackupConfig(current)
 		config.InvalidateAllRoutines()
-		s.checker.CheckChanges(r.Context(), previous, config) // validate under the lock
+		s.checker.CheckChanges(r.Context(), previous, current) // validate under the lock
 		return nil
 	})
 
@@ -108,7 +109,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// advisory: reports whatever the reloaded configuration now points at and cannot reach.
-	s.checker.CheckChanges(r.Context(), s.config, config)
+	s.checker.CheckChanges(r.Context(), s.config.BackupConfigCopy(), config.BackupConfigCopy())
 
 	// validate static fields.
 	newConfig := dto.NewConfigFromModel(s.config)
