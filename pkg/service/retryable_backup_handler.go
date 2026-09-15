@@ -11,20 +11,7 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// retryableBackupHandler is a wrapper around BackupHandler that adds
-// retry logic and cancellation support.
-//
-// Three contexts take part in a run. The run context is the one the caller passes in: it comes
-// from the scheduler, lives as long as the service does, and is what the backup pipeline is
-// started with and what the success callback runs on. The wait context is derived from it and is
-// this run's cancel handle: the retry loop and every Wait on the inner handler observe it, so
-// Cancel ends both without touching the run context. Ending the wait context alone is enough to
-// stop the pipeline, because the inner handler cancels its own work when the context it is
-// waiting under ends. The cleanup context is the run context with cancellation stripped, so the
-// failure callback can still reach storage to delete the partial backup when the run was canceled
-// or the service is shutting down. The goroutine releases the wait context when the retry loop
-// returns, whatever the outcome: a child context stays registered in its parent until it is
-// canceled, and the parent here outlives every run.
+// retryableBackupHandler wraps a BackupHandler with retries and cancellation.
 type retryableBackupHandler struct {
 	sync.RWMutex
 	handler backupexecutor.BackupHandler
@@ -48,6 +35,10 @@ func newRetryableBackupHandler(
 	callbacks retryableBackupCallbacks,
 	logger *slog.Logger,
 ) *retryableBackupHandler {
+	// A run uses three contexts: the caller's, which starts the pipeline and outlives every run; a
+	// cancelable child of it, which is this run's handle and what Cancel ends; and a cleanup context
+	// that survives cancellation. Ending the child stops the pipeline, because the inner handler
+	// cancels its own work when the context it waits under ends.
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	// Cleanup must still run when the run itself was canceled (shutdown, user cancel), otherwise
 	// the partial backup folder stays in storage.
@@ -57,9 +48,10 @@ func newRetryableBackupHandler(
 		cancel: cancel,
 	}
 
-	// Helper to retry onSuccess only
+	// Helper to retry onSuccess only. The loop observes the wait context, so Cancel stops further
+	// attempts; the write itself runs on the run context and is left to finish once started.
 	retryOnSuccess := func(handler backupexecutor.BackupHandler) error {
-		err := try.Retry(ctx, policy, logger.With(slog.String("label", "write metadata")), func() error {
+		err := try.Retry(ctxWithCancel, policy, logger.With(slog.String("label", "write metadata")), func() error {
 			return callbacks.OnSuccess(ctx, handler.GetStats())
 		}, func() {})
 		if err != nil {
