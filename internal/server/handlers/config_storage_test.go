@@ -39,7 +39,7 @@ func TestAddStorage(t *testing.T) {
 			storageName:    "test-storage",
 			requestBody:    "{noField : 1}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 
@@ -163,7 +163,7 @@ func TestUpdateStorage(t *testing.T) {
 			storageName:    "test-storage",
 			requestBody:    "{nil}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 

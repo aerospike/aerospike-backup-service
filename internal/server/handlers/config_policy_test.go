@@ -44,7 +44,7 @@ func TestAddPolicy(t *testing.T) {
 			policyName:     "test-policy",
 			requestBody:    "{noField : 1}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 
@@ -177,7 +177,7 @@ func TestUpdatePolicy(t *testing.T) {
 			policyName:     "test-policy",
 			requestBody:    "{nil}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 		{
 			name:           "unknown policy name",
