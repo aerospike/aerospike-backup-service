@@ -19,6 +19,7 @@ import (
 // @Param       routine body dto.BackupRoutine true "Backup routine details"
 // @Success     201
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -37,7 +38,7 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		config.BackupRoutines[name] = newRoutine
 		return []string{name}, nil
 	}, withNamespaceValidation); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -95,6 +96,7 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 // @Param        routine body dto.BackupRoutine true "Backup routine details"
 // @Success      200
 // @Failure      400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -114,7 +116,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		config.BackupRoutines[name] = updatedRoutine
 		return []string{name}, nil
 	}, withNamespaceValidation); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -129,6 +131,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup routine name"
 // @Success     204
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -144,7 +147,7 @@ func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 		return []string{name}, nil
 	})
 	if err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -159,6 +162,7 @@ func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success     204 "Routine successfully enabled."
 // @Failure     404 {string} string "The specified routine was not found"
 // @Router      /v1/config/routines/{name}/enable [put]
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -179,7 +183,7 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 			httpError(w, errRoutineNotFound(name))
 			return
 		}
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -194,6 +198,7 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success     204 "Routine successfully disabled."
 // @Failure     404 {string} string "The specified routine was not found"
 // @Router      /v1/config/routines/{name}/disable [put]
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -214,7 +219,7 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 			httpError(w, errRoutineNotFound(name))
 			return
 		}
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 

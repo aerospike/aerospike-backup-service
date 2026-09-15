@@ -18,6 +18,7 @@ import (
 // @Param       cluster body dto.AerospikeCluster true "Aerospike cluster details"
 // @Success     201
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -37,7 +38,7 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		config.AerospikeClusters[name] = newCluster
 		return nil, nil
 	}); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -98,6 +99,7 @@ func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Param       cluster body dto.AerospikeCluster true "Aerospike cluster details"
 // @Success     200
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -117,7 +119,7 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		config.AerospikeClusters[name] = updatedCluster
 		return routinesUsingCluster(config, name), nil
 	}, withNamespaceValidation); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -132,6 +134,7 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 // @Param       name path string true "Aerospike cluster name"
 // @Success     204
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -150,7 +153,7 @@ func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return nil, nil
 	})
 	if err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 

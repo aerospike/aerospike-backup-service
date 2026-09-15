@@ -75,7 +75,7 @@ func TestService_UpdateConfig(t *testing.T) {
 			name:           "write failure",
 			requestBody:    `{}`,
 			writeErr:       errors.New("write boom"),
-			expectedStatus: http.StatusInternalServerError,
+			expectedStatus: http.StatusServiceUnavailable,
 			expectedError:  "write boom",
 		},
 		{
@@ -189,7 +189,7 @@ func TestService_ApplyConfig(t *testing.T) {
 	}
 }
 
-func TestService_changeConfig(t *testing.T) {
+func TestService_replaceConfig(t *testing.T) {
 	svc, ctrl := newConfigTestService(t)
 
 	mockConfigurationManager := configuration.NewMockManager(ctrl)
@@ -200,14 +200,13 @@ func TestService_changeConfig(t *testing.T) {
 	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil)
 	svc.configApplier = mockConfigApplier
 
-	called := false
-	err := svc.changeConfig(t.Context(), func(config *model.Config) error {
-		called = true
-		return nil
-	})
+	newConfig := model.NewConfig()
+	require.NoError(t, newConfig.AddCluster("c1", &model.AerospikeCluster{
+		SeedNodes: []model.SeedNode{{HostName: "localhost", Port: 3000}},
+	}))
 
-	require.NoError(t, err)
-	assert.True(t, called)
+	require.NoError(t, svc.replaceConfig(t.Context(), newConfig))
+	assert.Contains(t, svc.config.BackupConfigCopy().AerospikeClusters, "c1")
 }
 
 func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
@@ -260,15 +259,26 @@ func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
 	assert.Equal(t, "updated-label", updated.ClusterLabel)
 }
 
-func TestService_changeConfig_UpdateFuncError(t *testing.T) {
-	svc, _ := newConfigTestService(t)
+func TestService_replaceConfig_WriteFailureKeepsConfig(t *testing.T) {
+	svc, ctrl := newConfigTestService(t)
 
-	err := svc.changeConfig(t.Context(), func(config *model.Config) error {
-		return errors.New("update boom")
-	})
+	mockConfigurationManager := configuration.NewMockManager(ctrl)
+	mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(errors.New("disk full"))
+	svc.configurationManager = mockConfigurationManager
 
+	mockConfigApplier := service.NewMockConfigApplier(ctrl)
+	mockConfigApplier.EXPECT().ApplyNewConfig().Times(0)
+	svc.configApplier = mockConfigApplier
+
+	newConfig := model.NewConfig()
+	require.NoError(t, newConfig.AddCluster("c1", &model.AerospikeCluster{
+		SeedNodes: []model.SeedNode{{HostName: "localhost", Port: 3000}},
+	}))
+
+	err := svc.replaceConfig(t.Context(), newConfig)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "update boom")
+	assert.Contains(t, err.Error(), "disk full")
+	assert.NotContains(t, svc.config.BackupConfigCopy().AerospikeClusters, "c1")
 }
 
 // commitWriteContext matches the context the persist step runs on: alive although the request

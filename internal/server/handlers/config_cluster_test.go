@@ -191,7 +191,9 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			svc.nsValidator = mockNsValidator
 
 			if tt.runValidation {
-				mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Eq(svc.config))
+				// The candidate configuration is validated, not the live one: the change is
+				// not committed until it has been persisted.
+				mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any())
 			}
 
 			initialCluster := &model.AerospikeCluster{}
@@ -223,7 +225,7 @@ func TestUpdateAerospikeCluster_PreservesSecretOnRoundTrip(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 	svc.nsValidator = mockNsValidator
-	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Eq(svc.config)).AnyTimes()
+	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
 
 	clusterModel := &model.AerospikeCluster{
 		SeedNodes: []model.SeedNode{{HostName: "localhost", Port: 3000}},

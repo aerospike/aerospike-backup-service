@@ -19,8 +19,11 @@ type backupConfigChangeOptions struct {
 }
 
 // changeBackupConfig applies a mutation to the backup configuration DTO, validates and
-// converts the full configuration, and persists the result.
+// converts the full configuration, and persists the result before it becomes visible.
 // The mutate function returns routine names that should be rescheduled and rescanned.
+//
+// The returned error carries the status code the client should see: a rejected change is a
+// bad request, a change that could not be persisted is not.
 func (s *Service) changeBackupConfig(
 	ctx context.Context,
 	mutate func(*dto.Config) ([]string, error),
@@ -37,7 +40,7 @@ func (s *Service) changeBackupConfig(
 	dtoConfig := dto.NewConfigFromModel(s.config)
 	routinesToInvalidate, err := mutate(dtoConfig)
 	if err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
+		return errBadRequest(fmt.Errorf("failed to update configuration: %w", err))
 	}
 
 	// GET responses redact secrets as "[secret]". Before persisting a PUT, copy real secret
@@ -45,38 +48,48 @@ func (s *Service) changeBackupConfig(
 	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
 	existingConfig := dto.NewConfigFromModel(s.config)
 	if err := decoder.MergeSecrets(dtoConfig, existingConfig); err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
+		return errBadRequest(fmt.Errorf("failed to update configuration: %w", err))
 	}
 
 	if err := dtoConfig.Validate(); err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
+		return errBadRequest(fmt.Errorf("failed to update configuration: %w", err))
 	}
 
-	modelConfig, err := dtoConfig.ToModel()
+	candidate, err := dtoConfig.ToModel()
 	if err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
+		return errBadRequest(fmt.Errorf("failed to update configuration: %w", err))
 	}
-	if err := s.tlsProber.Probe(ctx, modelConfig); err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
+	if err := s.tlsProber.Probe(ctx, candidate); err != nil {
+		return errBadRequest(fmt.Errorf("failed to update configuration: %w", err))
 	}
-
-	s.config.SetBackupConfig(modelConfig.BackupConfigCopy())
-	s.config.InvalidateRoutines(routinesToInvalidate)
 
 	if options.validateNamespaces {
-		s.nsValidator.Validate(ctx, s.config)
+		s.nsValidator.Validate(ctx, candidate)
 	}
 
+	return s.commitConfig(ctx, candidate, routinesToInvalidate)
+}
+
+// commitConfig persists candidate and only then makes it the live configuration and
+// reschedules the named routines. A change that did not reach the configuration file never
+// becomes visible, so memory, file and scheduler cannot come to describe different
+// configurations.
+//
+// The caller holds changeConfigLock.
+func (s *Service) commitConfig(ctx context.Context, candidate *model.Config, routinesToInvalidate []string) error {
 	// A write the client can cancel would leave memory, file and scheduler describing different
 	// configurations, so the persist outlives the request and its own timeout bounds it instead.
 	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), configWriteTimeout)
 	defer cancel()
 
-	if err = s.configurationManager.Write(writeCtx, s.config); err != nil {
-		return fmt.Errorf("failed to write configuration: %w", err)
+	if err := s.configurationManager.Write(writeCtx, candidate); err != nil {
+		return errStorageUnavailable(fmt.Errorf("failed to write configuration: %w", err))
 	}
 
-	if err = s.configApplier.ApplyNewConfig(); err != nil {
+	s.config.SetBackupConfig(candidate.BackupConfigCopy())
+	s.config.InvalidateRoutines(routinesToInvalidate)
+
+	if err := s.configApplier.ApplyNewConfig(); err != nil {
 		return fmt.Errorf("failed to apply new configuration: %w", err)
 	}
 

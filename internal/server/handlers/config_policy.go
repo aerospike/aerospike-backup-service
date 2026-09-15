@@ -18,6 +18,7 @@ import (
 // @Param       policy body dto.BackupPolicy true "Backup policy details"
 // @Success     201
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 	newPolicy, ok := decodeBodyValidated[dto.BackupPolicy](w, r)
 	if !ok {
@@ -37,7 +38,7 @@ func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 		config.BackupPolicies[name] = newPolicy
 		return nil, nil
 	}); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -91,6 +92,7 @@ func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 // @Param       policy body dto.BackupPolicy true "Backup policy details"
 // @Success     200
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	updatedPolicy, ok := decodeBodyValidated[dto.BackupPolicy](w, r)
 	if !ok {
@@ -110,7 +112,7 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		config.BackupPolicies[name] = updatedPolicy
 		return routinesUsingPolicy(config, name), nil
 	}); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -125,6 +127,7 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup policy name"
 // @Success     204
 // @Failure     400 {string} string
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -143,7 +146,7 @@ func (s *Service) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 		return nil, nil
 	})
 	if err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
