@@ -66,29 +66,6 @@ generated mocks, entrypoints, and packages that are thin wrappers or hard to uni
 configured in [`.github/workflows/build.yml`](../.github/workflows/build.yml) (currently 53%, matching the
 ~53.5% filtered baseline after including `internal/`). That threshold ratchets up as test coverage improves across follow-up PRs.
 
-## Context and cancellation
-
-Cancellation flows from one root. `cmd/backup` derives the only root context from the process signals; everywhere
-else `context.Background()`, `context.TODO()` and `time.Sleep` are rejected by `forbidigo`, whose message names the
-alternative. `containedctx`, `fatcontext`, `noctx` and `usetesting` guard the rest. The conventions those linters
-cannot see:
-
-- **Build vs. run.** `InitComponents` receives a build context that is for loading only: nothing captures it and
-  nothing is launched on it. Work that outlives a single request takes its lifetime from `Components.Start`, which
-  hands the run context to every component's `Start(ctx)`; a component stops when that context ends. A context lives
-  in a struct only where owning lifetimes is the struct's purpose (`RestoreJobsHolder`), with the reasoning written
-  next to the `containedctx` suppression.
-- **Stopping vs. classifying.** Whether to stop is read from the context (`ctx.Err() != nil`), never inferred from an
-  error: an operation may return `context.Canceled` for reasons of its own, and that is a failure like any other.
-  `errors.Is(err, context.Canceled)` classifies an outcome after the fact, for logs and metrics.
-- **Releasing.** Every `WithCancel`/`WithTimeout` has its cancel invoked when the operation it bounds returns, also
-  when a `Cancel` method exposes the same function: a child stays registered in its parent until it is canceled, and
-  the parents here live for the whole process.
-- **Deadlines.** Neither the signal context nor a request context carries a deadline. An outbound call that could
-  stall gets its bound from its own client, as the remote configuration fetch does. Work that must finish after
-  cancellation, such as the HTTP listener shutdown, runs on `context.WithoutCancel(ctx)` with a timeout of its own.
-- **Waiting.** A wait is a `select` on `ctx.Done()` against a timer or ticker, so shutdown is never held up by a sleep.
-
 ## Generated artifacts
 
 Two sets of files are generated from source and checked into the repository. Each has a `make <x>` target to
