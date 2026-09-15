@@ -23,14 +23,23 @@ type BackupCompletionHandler interface {
 		timestamp time.Time,
 		logger *slog.Logger,
 	)
-	// OnFailure is called when a backup fails (clears failed state in registry).
-	OnFailure(routine *model.BackupRoutine, backupType model.BackupType)
+	// OnFailure is called when a backup run has failed and every namespace of the run has
+	// finished. It clears the failed state in the registry and removes the run's folder.
+	OnFailure(
+		ctx context.Context,
+		routine *model.BackupRoutine,
+		backupType model.BackupType,
+		timestamp time.Time,
+		logger *slog.Logger,
+	)
 }
 
 type backupCompletionHandler struct {
 	registry            BackupStateRegistry
 	retentionManager    BackupRetentionManager
 	clusterConfigWriter ClusterConfigWriter
+	backupWriter        BackupWriter
+	pathService         PathService
 }
 
 // NewBackupCompletionHandler returns a BackupCompletionHandler.
@@ -38,11 +47,15 @@ func NewBackupCompletionHandler(
 	registry BackupStateRegistry,
 	retentionManager BackupRetentionManager,
 	clusterConfigWriter ClusterConfigWriter,
+	backupWriter BackupWriter,
+	pathService PathService,
 ) BackupCompletionHandler {
 	return &backupCompletionHandler{
 		registry:            registry,
 		retentionManager:    retentionManager,
 		clusterConfigWriter: clusterConfigWriter,
+		backupWriter:        backupWriter,
+		pathService:         pathService,
 	}
 }
 
@@ -86,8 +99,21 @@ func (h *backupCompletionHandler) OnSuccess(
 }
 
 func (h *backupCompletionHandler) OnFailure(
+	ctx context.Context,
 	routine *model.BackupRoutine,
 	backupType model.BackupType,
+	timestamp time.Time,
+	logger *slog.Logger,
 ) {
 	h.registry.BackupFailed(routine.Name, backupType)
+
+	// Every namespace of the run has finished, so nothing writes here any more. The folder still
+	// holds the data and metadata of the namespaces that did succeed, and the cluster
+	// configuration if one was taken: a run that failed must leave no restorable backup behind.
+	// The cleanup outlives a canceled run, which is how a canceled backup gets cleaned up too.
+	runFolder := h.pathService.GetTimestampPath(routine.Name, timestamp, backupType)
+	if err := h.backupWriter.Delete(context.WithoutCancel(ctx), routine, runFolder); err != nil {
+		logger.Error("Failed to remove the folder of a failed backup",
+			slog.String("folder", runFolder), attr.Error(err))
+	}
 }

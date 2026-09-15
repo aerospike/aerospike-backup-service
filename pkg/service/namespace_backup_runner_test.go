@@ -199,10 +199,12 @@ func TestBackupExecutorError(t *testing.T) {
 	require.Contains(t, err.Error(), "failed to start backup")
 }
 
+// A namespace that fails removes its own folder and nothing above it: the timestamp folder is
+// shared with the other namespaces of the run, and is cleaned up at run level once they are all
+// finished (see BackupCompletionHandler.OnFailure).
 func TestBackupHandlerError(t *testing.T) {
 	now := time.UnixMilli(123456789000)
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
-	timestampPath := "test-routine/backup/123456789000"
 
 	mocks, runner := initMocks(t)
 	routine := &model.BackupRoutine{
@@ -224,9 +226,9 @@ func TestBackupHandlerError(t *testing.T) {
 		Wait(gomock.Any()).
 		Return(errors.New("handler error"))
 
-	mocks.backupWriter.EXPECT(). // Important: delete all backup files, including configuration
-					Delete(gomock.Any(), routine, timestampPath).
-					Return(nil)
+	mocks.backupWriter.EXPECT().
+		Delete(gomock.Any(), routine, backupFolder).
+		Return(nil)
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
 	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
@@ -240,7 +242,6 @@ func TestBackupHandlerError(t *testing.T) {
 func TestMetadataWriteError(t *testing.T) {
 	now := time.UnixMilli(123456789000)
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
-	timestampPath := "test-routine/backup/123456789000"
 
 	mocks, runner := initMocks(t)
 	routine := &model.BackupRoutine{
@@ -269,12 +270,12 @@ func TestMetadataWriteError(t *testing.T) {
 		GetStats().
 		Return(backupStats)
 
-	mocks.backupWriter.EXPECT(). // backup succeeded, but failed to write metadata => delete all
+	mocks.backupWriter.EXPECT(). // backup succeeded, but failed to write metadata => drop its data
 					WriteBackupMetadata(gomock.Any(), routine, backupFolder, gomock.Any()).
 					Return(metadataError)
 
 	mocks.backupWriter.EXPECT().
-		Delete(gomock.Any(), routine, timestampPath).
+		Delete(gomock.Any(), routine, backupFolder).
 		Return(nil)
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
@@ -289,7 +290,6 @@ func TestMetadataWriteError(t *testing.T) {
 func TestRetryableBackupHandler_Cancel(t *testing.T) {
 	now := time.UnixMilli(123456789000)
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
-	timestampPath := "test-routine/backup/123456789000"
 
 	mocks, runner := initMocks(t)
 	routine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
@@ -313,8 +313,8 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 			return ctx.Err()
 		})
 
-	mocks.backupWriter.EXPECT(). // backup canceled => delete all
-					Delete(gomock.Any(), routine, timestampPath).
+	mocks.backupWriter.EXPECT(). // backup canceled => drop this namespace's data
+					Delete(gomock.Any(), routine, backupFolder).
 					Return(nil)
 
 	handler := runner.Run(
@@ -341,7 +341,6 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 func TestRun_RetryRecalculatesPath(t *testing.T) {
 	startTime1 := time.UnixMilli(123456789000)
 	backupFolder1 := "test-routine/backup/123456789000/data/test-ns"
-	timestampPath1 := "test-routine/backup/123456789000"
 
 	mocks, runner := initMocks(t)
 	routine := &model.BackupRoutine{
@@ -366,7 +365,7 @@ func TestRun_RetryRecalculatesPath(t *testing.T) {
 		Return(errors.New("handler error"))
 
 	mocks.backupWriter.EXPECT().
-		Delete(gomock.Any(), routine, timestampPath1).
+		Delete(gomock.Any(), routine, backupFolder1).
 		Return(nil)
 
 	// Second attempt succeeds with new folder
