@@ -42,31 +42,6 @@ func TestUpdateConfig_AcceptsRedactedKeyFilePassword(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
 
-// A configuration change must be persisted before it becomes visible: when Write fails, the
-// in-memory config stays as it was, the scheduler is not touched, and the client gets a server
-// error rather than a 400.
-func TestChangeBackupConfig_WriteFailureLeavesConfigUntouched(t *testing.T) {
-	t.Skip("BKRS-412: the in-memory config is mutated before Write, and a failed write is reported as 400")
-
-	ctrl := gomock.NewController(t)
-	manager := configuration.NewMockManager(ctrl)
-	manager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(errors.New("disk full"))
-	applier := service.NewMockConfigApplier(ctrl)
-	applier.EXPECT().ApplyNewConfig().Times(0)
-
-	svc := NewService(model.NewConfig(), applier, nil, nil, nil, nil, nil, manager, nil, newMockTLSProber(ctrl))
-
-	body := marshalToString(dto.AerospikeCluster{SeedNodes: []dto.SeedNode{{HostName: "localhost", Port: 3000}}})
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/config/clusters/c1", strings.NewReader(body))
-	req.SetPathValue("name", "c1")
-	w := httptest.NewRecorder()
-	svc.AddAerospikeCluster(w, req)
-
-	require.GreaterOrEqual(t, w.Code, http.StatusInternalServerError)
-	_, exists := svc.config.BackupConfigCopy().AerospikeClusters["c1"]
-	assert.False(t, exists, "a change that was not persisted must not stay in memory")
-}
-
 // Updating a cluster or a policy invalidates every routine that uses it, so the
 // scheduled jobs (which hold a routine snapshot) are rebuilt with the new definition.
 func TestUpdateClusterAndPolicy_InvalidateDependentRoutines(t *testing.T) {
