@@ -73,6 +73,11 @@ func startService(configFile string, remote bool) error {
 		return err
 	}
 
+	// Advisory: reports unreachable clusters and storage as warnings and never fails, so
+	// nothing waits on it. A backend that is down would otherwise hold startup for its
+	// connect timeout; ctx bounds the probes, so shutdown does not wait for them either.
+	go components.Check(ctx)
+
 	return components.Run(ctx)
 }
 

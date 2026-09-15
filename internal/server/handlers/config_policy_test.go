@@ -11,7 +11,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -278,12 +277,7 @@ func TestDeletePolicy_InUseErrorMessage(t *testing.T) {
 }
 
 func TestUpdatePolicy_Case2_ClusterMaxSetBeforeParallelIncrease(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
 	svc := setupTestService(t)
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	svc.nsValidator = mockNsValidator
-	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).Times(1)
 
 	entities := addValidBackupConfig(svc)
 	entities.policy.Parallel = ptr.Of(1)
@@ -338,7 +332,7 @@ func setupTestService(t *testing.T) *Service {
 		nil,
 		nil,
 		mockManager,
-		nil,
+		newPermissiveChecker(ctrl),
 		newMockTLSProber(ctrl),
 	)
 }

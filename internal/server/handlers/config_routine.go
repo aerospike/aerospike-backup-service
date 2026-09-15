@@ -36,7 +36,7 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		}
 		config.BackupRoutines[name] = newRoutine
 		return []string{name}, nil
-	}, withNamespaceValidation); err != nil {
+	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -113,7 +113,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		}
 		config.BackupRoutines[name] = updatedRoutine
 		return []string{name}, nil
-	}, withNamespaceValidation); err != nil {
+	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}

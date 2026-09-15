@@ -116,7 +116,7 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		}
 		config.AerospikeClusters[name] = updatedCluster
 		return routinesUsingCluster(config, name), nil
-	}, withNamespaceValidation); err != nil {
+	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}

@@ -69,9 +69,12 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
+		previous := config.BackupConfigCopy()
+		current := newConfigModel.BackupConfigCopy()
+		s.checkChanges(r.Context(), previous, current) // diff the copies before current goes live.
+
+		config.SetBackupConfig(current)
 		config.InvalidateAllRoutines()
-		s.nsValidator.Validate(r.Context(), config) // validate under the lock
 		return nil
 	})
 
@@ -107,16 +110,25 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// validate static fields.
-	newConfig := dto.NewConfigFromModel(s.config)
-	oldConfig := dto.NewConfigFromModel(config)
+	// validate static fields. The running configuration is the old one and the file is
+	// the new one, in that order: Compare reports a difference either way, but it words
+	// it as "added" or "removed" from the perspective of its first argument.
+	oldConfig := dto.NewConfigFromModel(s.config)
+	newConfig := dto.NewConfigFromModel(config)
 	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
 		httpError(w, errBadRequest(fmt.Errorf("static configuration has changed: %w", err)))
 		return
 	}
 
-	s.config.SetBackupConfig(config.BackupConfigCopy())
+	// The check runs only once the reload is accepted: a rejected configuration must not
+	// dial its clusters or write probe objects into its buckets.
+	previous := s.config.BackupConfigCopy()
+	current := config.BackupConfigCopy()
+	s.checkChanges(r.Context(), previous, current) // diff the copies before current goes live.
+
+	s.config.SetBackupConfig(current)
 	s.config.InvalidateAllRoutines()
+
 	err = s.configApplier.ApplyNewConfig()
 
 	if err != nil {

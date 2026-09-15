@@ -136,15 +136,15 @@ func (m *MockNamespaceValidator) EXPECT() *MockNamespaceValidatorMockRecorder {
 }
 
 // Validate mocks base method.
-func (m *MockNamespaceValidator) Validate(ctx context.Context, cfg *model.Config) {
+func (m *MockNamespaceValidator) Validate(ctx context.Context, backupConfig *model.BackupConfig) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Validate", ctx, cfg)
+	m.ctrl.Call(m, "Validate", ctx, backupConfig)
 }
 
 // Validate indicates an expected call of Validate.
-func (mr *MockNamespaceValidatorMockRecorder) Validate(ctx, cfg any) *gomock.Call {
+func (mr *MockNamespaceValidatorMockRecorder) Validate(ctx, backupConfig any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockNamespaceValidator)(nil).Validate), ctx, cfg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockNamespaceValidator)(nil).Validate), ctx, backupConfig)
 }
 
 // MockClient is a mock of Client interface.

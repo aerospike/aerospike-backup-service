@@ -99,6 +99,20 @@ func (mr *MockOperationsMockRecorder) DeleteFolder(ctx, storage, path any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFolder", reflect.TypeOf((*MockOperations)(nil).DeleteFolder), ctx, storage, path)
 }
 
+// Probe mocks base method.
+func (m *MockOperations) Probe(ctx context.Context, storage model.Storage) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Probe", ctx, storage)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Probe indicates an expected call of Probe.
+func (mr *MockOperationsMockRecorder) Probe(ctx, storage any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Probe", reflect.TypeOf((*MockOperations)(nil).Probe), ctx, storage)
+}
+
 // ReadFile mocks base method.
 func (m *MockOperations) ReadFile(ctx context.Context, storage model.Storage, filePath string) ([]byte, error) {
 	m.ctrl.T.Helper()

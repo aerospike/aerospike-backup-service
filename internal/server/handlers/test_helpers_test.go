@@ -1,11 +1,9 @@
 package handlers
 
 import (
-	"testing"
-
 	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/preflight"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"go.uber.org/mock/gomock"
 )
@@ -61,15 +59,12 @@ func addValidBackupRoutine(svc *Service, routineName string, disabled bool) vali
 	return entities
 }
 
-// newServiceWithNamespaceValidator is setupTestService plus a permissive namespace validator,
-// which the config-changing handlers call under the lock.
-func newServiceWithNamespaceValidator(t *testing.T) *Service {
-	t.Helper()
+// newPermissiveChecker returns a preflight checker that accepts any call: every
+// config-changing handler runs a check, and what that check reaches is decided by the
+// delta, not by the handler. TestConfigEndpoints_ValidationCoverage asserts on the delta.
+func newPermissiveChecker(ctrl *gomock.Controller) preflight.Checker {
+	checker := preflight.NewMockChecker(ctrl)
+	checker.EXPECT().Check(gomock.Any(), gomock.Any()).AnyTimes()
 
-	svc := setupTestService(t)
-	nsValidator := aerospike.NewMockNamespaceValidator(gomock.NewController(t))
-	nsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
-	svc.nsValidator = nsValidator
-
-	return svc
+	return checker
 }

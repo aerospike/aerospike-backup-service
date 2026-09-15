@@ -8,13 +8,14 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/preflight"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,13 +41,13 @@ func TestService_ReadConfig(t *testing.T) {
 func newConfigTestService(t *testing.T) (*Service, *gomock.Controller) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
+	checker := preflight.NewMockChecker(ctrl)
+	checker.EXPECT().Check(gomock.Any(), gomock.Any()).AnyTimes()
 
 	return &Service{
-		config:      model.NewConfig(),
-		nsValidator: mockNsValidator,
-		tlsProber:   newMockTLSProber(ctrl),
+		config:    model.NewConfig(),
+		checker:   checker,
+		tlsProber: newMockTLSProber(ctrl),
 	}, ctrl
 }
 
@@ -131,6 +132,10 @@ func TestService_ApplyConfig(t *testing.T) {
 		configApplierErr error
 		expectedStatus   int
 		expectedError    string
+		// expectCheck is whether the reloaded configuration reaches the preflight check.
+		// A reload that is rejected must not: it would dial clusters and write probe
+		// objects into buckets on behalf of a configuration that never takes effect.
+		expectCheck bool
 	}{
 		{
 			name:           "read failure",
@@ -149,16 +154,31 @@ func TestService_ApplyConfig(t *testing.T) {
 			expectedError:  "static configuration has changed",
 		},
 		{
+			// The running configuration is the old side of the comparison and the file is
+			// the new one. With the two the other way round, this reads "removed".
+			name: "static field added by the file is reported as added",
+			readConfig: func() *model.Config {
+				c := model.NewConfig()
+				c.ServiceConfig.ServerHTTPS = &model.ServerConfigHTTPS{Port: ptr.Of(model.Port(8443))}
+				return c
+			}(),
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "ServerHTTPS added",
+		},
+		{
+			// The reload was accepted and installed; only scheduling it failed.
 			name:             "apply failure",
 			readConfig:       model.NewConfig(),
 			configApplierErr: errors.New("apply boom"),
 			expectedStatus:   http.StatusInternalServerError,
 			expectedError:    "apply boom",
+			expectCheck:      true,
 		},
 		{
 			name:           "success",
 			readConfig:     model.NewConfig(),
 			expectedStatus: http.StatusOK,
+			expectCheck:    true,
 		},
 	}
 
@@ -176,6 +196,18 @@ func TestService_ApplyConfig(t *testing.T) {
 			}
 			svc.configApplier = mockConfigApplier
 
+			// The check runs on its own goroutine, so a call is awaited rather than
+			// asserted straight after the handler returns.
+			checked := make(chan struct{}, 1)
+			checker := preflight.NewMockChecker(ctrl)
+			if tt.expectCheck {
+				checker.EXPECT().
+					Check(gomock.Any(), gomock.Any()).
+					Do(func(context.Context, *model.BackupConfig) { close(checked) }).
+					Times(1)
+			}
+			svc.checker = checker
+
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/config/apply", nil)
 			w := httptest.NewRecorder()
 
@@ -184,6 +216,14 @@ func TestService_ApplyConfig(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+
+			if tt.expectCheck {
+				select {
+				case <-checked:
+				case <-time.After(5 * time.Second):
+					t.Fatal("the accepted reload was never handed to the checker")
+				}
 			}
 		})
 	}

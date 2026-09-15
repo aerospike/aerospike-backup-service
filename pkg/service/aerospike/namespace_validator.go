@@ -2,20 +2,24 @@ package aerospike
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
-// NamespaceValidator checks whether routines reference namespaces
-// that exist in their respective Aerospike source clusters.
-// Validation is advisory: missing namespaces are reported without rejecting configuration.
+// NamespaceValidator checks that every configured Aerospike cluster is reachable and that
+// routines reference namespaces that exist in their respective source clusters.
+// Validation is advisory: unreachable clusters and missing namespaces are reported
+// without rejecting configuration.
 type NamespaceValidator interface {
-	// Validate validates all routines in config against their respective clusters.
-	Validate(ctx context.Context, cfg *model.Config)
+	// Validate connects to every cluster in the backup configuration and validates all
+	// routines against them.
+	Validate(ctx context.Context, backupConfig *model.BackupConfig)
 }
 
 type namespaceValidator struct {
@@ -31,12 +35,12 @@ func NewNamespaceValidator(cm ClientManager) NamespaceValidator {
 // NamespacesByRoutine stores list of namespaces missing in each routine.
 type NamespacesByRoutine map[string][]string
 
-func (nv *namespaceValidator) Validate(ctx context.Context, cfg *model.Config) {
-	if cfg == nil {
+func (nv *namespaceValidator) Validate(ctx context.Context, backupConfig *model.BackupConfig) {
+	if backupConfig == nil {
 		return
 	}
 
-	missing := nv.findMissingNamespaces(ctx, cfg.Routines())
+	missing := nv.findMissingNamespaces(ctx, backupConfig.AerospikeClusters, backupConfig.BackupRoutines)
 
 	for routine, namespaces := range missing {
 		slog.Warn("Namespaces referenced by routine are missing in the cluster",
@@ -48,41 +52,53 @@ func (nv *namespaceValidator) Validate(ctx context.Context, cfg *model.Config) {
 
 func (nv *namespaceValidator) findMissingNamespaces(
 	ctx context.Context,
+	clusters map[string]*model.AerospikeCluster,
 	routines map[string]*model.BackupRoutine,
 ) NamespacesByRoutine {
-	clusters := nv.collectClusters(routines)
 	namespacesByCluster := nv.fetchNamespacesByCluster(ctx, clusters)
 	return nv.diffRoutineNamespaces(routines, namespacesByCluster)
 }
 
-// collectClusters gathers unique clusters referenced by routines that actually need validation.
-func (nv *namespaceValidator) collectClusters(
-	routines map[string]*model.BackupRoutine,
-) map[*model.AerospikeCluster]struct{} {
-	clusters := make(map[*model.AerospikeCluster]struct{})
-	for _, r := range routines {
-		if len(r.Namespaces) > 0 {
-			clusters[r.SourceCluster] = struct{}{}
-		}
-	}
-
-	return clusters
-}
-
-// fetchNamespacesByCluster fetches namespaces for each cluster.
+// fetchNamespacesByCluster fetches namespaces for each configured cluster. A cluster that
+// cannot be reached is reported by name and left out of the result, so that connectivity
+// is checked for every cluster in the configuration, not only for the ones a routine uses.
+//
+// Clusters are dialed concurrently. They are independent, and one cluster that is down
+// would otherwise hold up every cluster behind it for its whole connect timeout.
 func (nv *namespaceValidator) fetchNamespacesByCluster(
 	ctx context.Context,
-	clusters map[*model.AerospikeCluster]struct{},
+	clusters map[string]*model.AerospikeCluster,
 ) map[*model.AerospikeCluster][]string {
-	namespacesByCluster := make(map[*model.AerospikeCluster][]string, len(clusters))
-	for cluster := range clusters {
-		namespaces, err := nv.fetchClusterNamespaces(ctx, cluster)
-		if err != nil {
-			slog.Error("Failed to fetch namespaces for cluster", attr.Error(err))
-			continue
-		}
-		namespacesByCluster[cluster] = namespaces
+	var (
+		mu                  sync.Mutex
+		wg                  sync.WaitGroup
+		namespacesByCluster = make(map[*model.AerospikeCluster][]string, len(clusters))
+	)
+
+	for name, cluster := range clusters {
+		wg.Go(func() {
+			namespaces, err := nv.fetchClusterNamespaces(ctx, cluster)
+			if err != nil {
+				// Cancellation means the service is going away, so the failure says
+				// nothing about the cluster. A deadline does: the cluster accepted the
+				// connection and never answered, which is worth reporting.
+				if !errors.Is(ctx.Err(), context.Canceled) {
+					slog.Warn("Configured Aerospike cluster is not available",
+						slog.String("cluster", name),
+						attr.Error(err),
+					)
+				}
+
+				return
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+			namespacesByCluster[cluster] = namespaces
+		})
 	}
+
+	wg.Wait()
 
 	return namespacesByCluster
 }
@@ -118,7 +134,10 @@ func (nv *namespaceValidator) diffRoutineNamespaces(
 		}
 		clusterNamespaces, ok := namespacesByCluster[r.SourceCluster]
 		if !ok {
-			continue // no data for this cluster; warning already logged
+			// Either the cluster could not be reached, which fetchNamespacesByCluster has
+			// already reported by name, or it was never in the map to begin with, which
+			// Changes reports when it builds the delta. Either way it has been said once.
+			continue
 		}
 
 		missing := collections.MissingElements(r.Namespaces, clusterNamespaces)

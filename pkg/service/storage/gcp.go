@@ -88,6 +88,13 @@ func (a *GcpStorageAccessor) createWriter(
 	return gcp.NewWriter(ctx, client, gcps.BucketName, opts...)
 }
 
+// probe creates (and caches) the GCP client, which runs the bucket connectivity
+// and permission checks.
+func (a *GcpStorageAccessor) probe(ctx context.Context, st model.Storage) error {
+	_, err := a.clientMap.Get(ctx, st.(*model.GcpStorage))
+	return err
+}
+
 func (a *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStorage) (gcp.Client, error) {
 	opts := make([]option.ClientOption, 0)
 

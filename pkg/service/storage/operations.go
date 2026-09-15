@@ -26,8 +26,16 @@ var (
 	clientCacheTTL = ptr.Of(10 * time.Minute)
 )
 
-// connectivityProbeKey is used for optional write probes at client init.
+// connectivityProbeKey is used for optional write probes at client init. It is written
+// under the storage's configured path, not at the root of the bucket or container: a
+// credential scoped to that prefix - the usual way these are granted - can write there and
+// nowhere else, and probing the root would report such a storage as broken.
 const connectivityProbeKey = ".abs-connectivity-check"
+
+// probeKey returns the probe object's full key for a storage rooted at the given path.
+func probeKey(storagePath string) string {
+	return filepath.Join(storagePath, connectivityProbeKey)
+}
 
 // Operations reads and writes files in any supported storage backend, hiding the differences
 // between local disk, S3, GCP, and Azure behind a single set of calls.
@@ -55,6 +63,9 @@ type Operations interface {
 	WriteDataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
 	// DeleteFolder deletes a folder and its contents in the specified storage.
 	DeleteFolder(ctx context.Context, storage model.Storage, path string) error
+	// Probe reports whether the storage is reachable and usable with the configured
+	// credentials, without reading or writing any backup data.
+	Probe(ctx context.Context, storage model.Storage) error
 }
 
 // operations serves each call through the first registered [Accessor] that supports the storage.
@@ -306,6 +317,17 @@ func (s *operations) DeleteFolder(ctx context.Context, storage model.Storage, pa
 		return err
 	}
 	return writer.RemoveFiles(ctx)
+}
+
+// Probe reports whether the storage is reachable and usable with the configured
+// credentials, without reading or writing any backup data.
+func (s *operations) Probe(ctx context.Context, storage model.Storage) error {
+	accessor, err := s.getAccessor(storage)
+	if err != nil {
+		return err
+	}
+
+	return accessor.probe(ctx, storage)
 }
 
 // getAccessor returns the appropriate accessor for the given storage.

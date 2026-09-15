@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -24,6 +25,7 @@ import (
 type AzureStorageAccessor struct {
 	clientMap collections.Cache[*model.AzureStorage, *azblob.Client]
 	resolver  secrets.Resolver
+	probeMu   sync.Mutex
 }
 
 func NewAzureStorageAccessor(resolver secrets.Resolver) *AzureStorageAccessor {
@@ -69,13 +71,29 @@ func (a *AzureStorageAccessor) createWriter(
 	return azure.NewWriter(ctx, client, azures.ContainerName, opts...)
 }
 
+// probe serializes with every other probe on this accessor. The probe object's key is
+// derived from the storage's path, so two storages that share a bucket and a path would
+// otherwise interleave - one deleting the object the other had just written - and report
+// a healthy backend as broken.
+//
+// Creating the client is what runs the connectivity and permission checks, so a cached
+// client is one that already passed them.
+func (a *AzureStorageAccessor) probe(ctx context.Context, storage model.Storage) error {
+	a.probeMu.Lock()
+	defer a.probeMu.Unlock()
+
+	_, err := a.clientMap.Get(ctx, storage.(*model.AzureStorage))
+
+	return err
+}
+
 func (a *AzureStorageAccessor) getAzureClient(ctx context.Context, s *model.AzureStorage) (*azblob.Client, error) {
 	client, err := a.createAzureClient(ctx, s)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob client: %w", err)
 	}
 
-	if err := checkAzureConnectivity(ctx, client, s.ContainerName); err != nil {
+	if err := checkAzureConnectivity(ctx, client, s.ContainerName, s.Path); err != nil {
 		return nil, err
 	}
 
@@ -199,7 +217,7 @@ func azureOptions() *azblob.ClientOptions {
 	}
 }
 
-func checkAzureConnectivity(ctx context.Context, client *azblob.Client, container string) error {
+func checkAzureConnectivity(ctx context.Context, client *azblob.Client, container, storagePath string) error {
 	ctx, cancel := context.WithTimeout(ctx, connectivityTimeout)
 	defer cancel()
 
@@ -210,13 +228,14 @@ func checkAzureConnectivity(ctx context.Context, client *azblob.Client, containe
 	}
 
 	_, err = cc.NewListBlobsFlatPager(&azblob.ListBlobsFlatOptions{
+		Prefix:     ptr.Of(storagePath),
 		MaxResults: ptr.Of(int32(1)),
 	}).NextPage(ctx)
 	if err != nil {
 		return fmt.Errorf("azure blob storage read permission check failed: %w", err)
 	}
 
-	blob := cc.NewBlockBlobClient(connectivityProbeKey)
+	blob := cc.NewBlockBlobClient(probeKey(storagePath))
 	_, err = blob.UploadBuffer(ctx, []byte{}, nil)
 	if err != nil {
 		slog.Warn("azure blob storage upload permission check failed; backup writes may fail at runtime",

@@ -17,7 +17,7 @@ import (
 // Secrets are merged before the static-field comparison, so a GET-edit-PUT round trip
 // carrying a redacted service.https.key-file-password is accepted.
 func TestUpdateConfig_AcceptsRedactedKeyFilePassword(t *testing.T) {
-	svc := newServiceWithNamespaceValidator(t)
+	svc := setupTestService(t)
 	svc.config.ServiceConfig.ServerHTTPS = &model.ServerConfigHTTPS{
 		ListenerConfig:  model.ListenerConfig{Disabled: true},
 		CertFile:        "/c.pem",
@@ -41,7 +41,7 @@ func TestUpdateConfig_AcceptsRedactedKeyFilePassword(t *testing.T) {
 // Updating a cluster or a policy invalidates every routine that uses it, so the
 // scheduled jobs (which hold a routine snapshot) are rebuilt with the new definition.
 func TestUpdateClusterAndPolicy_InvalidateDependentRoutines(t *testing.T) {
-	svc := newServiceWithNamespaceValidator(t)
+	svc := setupTestService(t)
 	entities := addValidBackupConfig(svc)
 	svc.config.PopInvalidatedRoutineNames() // drain the AddRoutine invalidation
 

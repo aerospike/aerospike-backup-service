@@ -17,25 +17,25 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/preflight"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	u "github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/reugn/go-quartz/quartz"
 )
 
 // Components group the long-running parts of the service.
 // Every field is always a non-nil interface after InitComponents succeeds. A component that
 // has nothing to do is still constructed as a no-op rather than left nil, so callers never nil-check.
 type Components struct {
-	Scheduler        quartz.Scheduler
-	Servers          []server.HTTP
-	MetricsCollector *prometheus.MetricsCollector
-	TLSProvider      servertls.TLSProvider
+	Servers []server.HTTP
 
-	registry    service.BackupStateRegistry
-	restoreJobs component
+	// components is the whole background lifecycle of the service, in start order.
+	// A component that is not in here is never started.
+	components []component
+	preflight  preflight.Checker
+	config     *model.Config
 }
 
 // component is anything whose work outlives a single request: it takes the run context
@@ -43,6 +43,18 @@ type Components struct {
 // Start should be called exactly once, by Components.Start.
 type component interface {
 	Start(ctx context.Context)
+}
+
+// Check probes the configured Aerospike clusters, their namespaces, and the configured
+// storage, and logs a warning for everything it cannot reach. It is the optional step
+// between building the graph and starting it: nothing it finds stops the service, so a
+// caller that does not want the probes - a test, an embedder - skips it.
+//
+// It blocks until every probe has finished. Its only output is log lines, so a caller
+// that does not want to hold up startup runs it on a goroutine, as cmd/backup does;
+// ctx then bounds the probes.
+func (c *Components) Check(ctx context.Context) {
+	c.preflight.Check(ctx, c.config.BackupConfigCopy())
 }
 
 // Run starts every component and serves until ctx is canceled or a listener stops. It
@@ -58,11 +70,9 @@ func (c *Components) Run(ctx context.Context) error {
 // context is handed out: a component that outlives a single request takes its lifetime
 // from here, never from the context that built the graph. It is called exactly once.
 func (c *Components) Start(ctx context.Context) {
-	c.registry.Start(ctx)
-	c.restoreJobs.Start(ctx)
-	c.Scheduler.Start(ctx)
-	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
-	c.TLSProvider.Start(ctx)
+	for _, component := range c.components {
+		component.Start(ctx)
+	}
 }
 
 // InitComponents builds the full object graph.
@@ -89,7 +99,7 @@ func InitComponents(
 	operations := newStorageOperations(resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 
-	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations, tlsProber)
+	config, configurationManager, err := configuration.Load(ctx, configFile, remote, operations, tlsProber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -154,6 +164,8 @@ func InitComponents(
 
 	metricsCollector := prometheus.NewMetricsCollector(registry.GetRunningState, restoreJobs.StatusCounts)
 
+	checker := preflight.NewChecker(nsValidator, operations)
+
 	configRetriever := service.NewConfigRetriever(catalog, pathService, operations)
 	srv := handlers.NewService(
 		config,
@@ -164,7 +176,7 @@ func InitComponents(
 		catalog,
 		registry,
 		configurationManager,
-		nsValidator,
+		checker,
 		tlsProber,
 	)
 
@@ -186,12 +198,16 @@ func InitComponents(
 	}
 
 	return &Components{
-		Scheduler:        scheduler,
-		Servers:          servers,
-		MetricsCollector: metricsCollector,
-		TLSProvider:      tlsProvider,
-		registry:         registry,
-		restoreJobs:      restoreJobs,
+		Servers: servers,
+		components: []component{
+			registry,
+			restoreJobs,
+			scheduler,
+			metricsCollector,
+			tlsProvider,
+		},
+		preflight: checker,
+		config:    config,
 	}, nil
 }
 

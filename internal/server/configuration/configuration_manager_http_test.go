@@ -10,9 +10,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 func TestHTTPConfigurationManager_Read(t *testing.T) {
@@ -68,12 +66,7 @@ func TestHTTPConfigurationManager_Read(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-
-			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-			mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
-
-			manager := newHTTPConfigurationManager(tt.configURL, mockNsValidator)
+			manager := newHTTPConfigurationManager(tt.configURL)
 			cfg, err := manager.Read(t.Context())
 
 			if tt.expectError != "" {
@@ -88,11 +81,7 @@ func TestHTTPConfigurationManager_Read(t *testing.T) {
 }
 
 func TestHTTPConfigurationManager_Read_ContextCanceled(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-
-	manager := newHTTPConfigurationManager("http://example.com/config.yaml", mockNsValidator)
+	manager := newHTTPConfigurationManager("http://example.com/config.yaml")
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
@@ -103,11 +92,7 @@ func TestHTTPConfigurationManager_Read_ContextCanceled(t *testing.T) {
 }
 
 func TestHTTPConfigurationManager_Write(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-
-	manager := newHTTPConfigurationManager("http://example.com/config.yaml", mockNsValidator)
+	manager := newHTTPConfigurationManager("http://example.com/config.yaml")
 
 	err := manager.Write(t.Context(), model.NewConfig())
 	require.Error(t, err)
@@ -115,9 +100,6 @@ func TestHTTPConfigurationManager_Write(t *testing.T) {
 }
 
 func TestHTTPConfigurationManager_Read_StalledServer(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-
 	// A server that accepts the connection and then never answers.
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		<-r.Context().Done()
@@ -125,9 +107,8 @@ func TestHTTPConfigurationManager_Read_StalledServer(t *testing.T) {
 	defer server.Close()
 
 	manager := &httpConfigurationManager{
-		configURL:   server.URL + "/config.yaml",
-		nsValidator: mockNsValidator,
-		client:      &http.Client{Timeout: 50 * time.Millisecond},
+		configURL: server.URL + "/config.yaml",
+		client:    &http.Client{Timeout: 50 * time.Millisecond},
 	}
 
 	_, err := manager.Read(t.Context()) // the caller's context has no deadline
@@ -139,11 +120,8 @@ func TestHTTPConfigurationManager_Read_StalledServer(t *testing.T) {
 }
 
 func TestHTTPConfigurationManager_DefaultClientHasTimeout(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-
 	manager, ok := newHTTPConfigurationManager(
-		"http://example.com/config.yaml", mockNsValidator,
+		"http://example.com/config.yaml",
 	).(*httpConfigurationManager)
 	require.True(t, ok)
 	require.Positive(t, manager.client.Timeout)

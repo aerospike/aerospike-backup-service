@@ -204,6 +204,10 @@ generate_mocks \
     "pkg/service/storage" \
     "Operations"
 
+generate_mocks \
+    "pkg/service/preflight" \
+    "Checker"
+
 generate_external_mocks \
     "github.com/aerospike/backup-go" \
     "pkg/service/aerospike" \

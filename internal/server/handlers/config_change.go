@@ -8,29 +8,24 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/preflight"
 )
 
 // configWriteTimeout bounds the persist step of a configuration change: long enough for a cold
 // cloud client, short enough that a stalled backend cannot hold the config lock indefinitely.
 const configWriteTimeout = 60 * time.Second
 
-type backupConfigChangeOptions struct {
-	validateNamespaces bool
-}
-
 // changeBackupConfig applies a mutation to the backup configuration DTO, validates and
 // converts the full configuration, and persists the result.
 // The mutate function returns routine names that should be rescheduled and rescanned.
+//
+// Every change is followed by the advisory preflight check, which probes whatever the
+// change added or altered. No handler decides whether its change is worth validating:
+// a change that reaches nothing new produces an empty delta and probes nothing.
 func (s *Service) changeBackupConfig(
 	ctx context.Context,
 	mutate func(*dto.Config) ([]string, error),
-	opts ...func(*backupConfigChangeOptions),
 ) error {
-	options := backupConfigChangeOptions{}
-	for _, opt := range opts {
-		opt(&options)
-	}
-
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
 
@@ -60,12 +55,12 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	s.config.SetBackupConfig(modelConfig.BackupConfigCopy())
-	s.config.InvalidateRoutines(routinesToInvalidate)
+	previous := s.config.BackupConfigCopy()
+	current := modelConfig.BackupConfigCopy()
+	s.checkChanges(ctx, previous, current)
 
-	if options.validateNamespaces {
-		s.nsValidator.Validate(ctx, s.config)
-	}
+	s.config.SetBackupConfig(current)
+	s.config.InvalidateRoutines(routinesToInvalidate)
 
 	// A write the client can cancel would leave memory, file and scheduler describing different
 	// configurations, so the persist outlives the request and its own timeout bounds it instead.
@@ -83,8 +78,26 @@ func (s *Service) changeBackupConfig(
 	return nil
 }
 
-func withNamespaceValidation(opts *backupConfigChangeOptions) {
-	opts.validateNamespaces = true
+// checkChanges probes whatever current adds or alters relative to previous, and returns
+// at once. Two things are deliberate about it.
+//
+// The delta is computed here, on the caller's goroutine, while it still holds the
+// configuration lock and current is a private copy that SetBackupConfig has not published
+// yet - so the diff never ranges over a map that is simultaneously the live one's. The
+// entities behind those maps are shared, though: BackupConfigCopy clones map headers, not
+// what they point at. That is safe only while a published cluster, storage or routine is
+// treated as immutable and replaced wholesale rather than edited in place.
+//
+// The probes then run without the caller. They can each take a connect timeout, and
+// nothing reads their result, so making a config request wait for them - with the
+// configuration lock held, no less - would buy the operator nothing. The request's values
+// come along for logging; only its cancellation is dropped, because the probes outlive
+// the response. Check applies its own deadline, so dropping that cancellation does not
+// leave the probes unbounded.
+func (s *Service) checkChanges(ctx context.Context, previous, current *model.BackupConfig) {
+	delta := preflight.Changes(previous, current)
+
+	go s.checker.Check(context.WithoutCancel(ctx), delta)
 }
 
 func routinesUsingStorage(config *dto.Config, storageName string) []string {
