@@ -25,7 +25,7 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newStorage, ok := decodeBody(w, r, dto.NewValidatedFromReader[dto.Storage])
+	newStorage, ok := decodeBodyValidated[dto.Storage](w, r)
 	if !ok {
 		return
 	}
@@ -99,7 +99,7 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedStorage, ok := decodeBody(w, r, dto.NewValidatedFromReader[dto.Storage])
+	updatedStorage, ok := decodeBodyValidated[dto.Storage](w, r)
 	if !ok {
 		return
 	}

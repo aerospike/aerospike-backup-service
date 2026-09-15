@@ -24,12 +24,13 @@ seed-nodes:
 	assert.Equal(t, Port(3000), cluster.SeedNodes[0].Port)
 }
 
-func TestNewBackupPolicyFromReader(t *testing.T) {
+func TestBackupPolicyFromReader(t *testing.T) {
 	yamlPolicy := `
 parallel: 4
 `
-	policy, err := NewBackupPolicyFromReader(strings.NewReader(yamlPolicy), decoder.YAML)
+	policy, err := NewFromReader[BackupPolicy](strings.NewReader(yamlPolicy), decoder.YAML)
 	require.NoError(t, err)
+	require.NoError(t, policy.Validate())
 	require.NotNil(t, policy.Parallel)
 	assert.Equal(t, 4, *policy.Parallel)
 }

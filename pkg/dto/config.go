@@ -110,7 +110,7 @@ func (c *Config) Validate() error {
 			policyOpts = ValidationWithSecretAgent
 		}
 
-		if err := policy.Validate(policyOpts); err != nil {
+		if err := policy.ValidateWithOpts(policyOpts); err != nil {
 			return fmt.Errorf("policy '%s' validation error: %w", name, err)
 		}
 	}

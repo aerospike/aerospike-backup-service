@@ -32,7 +32,7 @@ func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
-	newConfig, ok := decodeBody(w, r, dto.NewFromReader[dto.Config])
+	newConfig, ok := decodeBody[dto.Config](w, r)
 	if !ok {
 		return
 	}

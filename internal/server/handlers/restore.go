@@ -42,7 +42,7 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 
 // RestoreIncremental and RestoreFull share same business logic.
 func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
-	request, ok := decodeBody(w, r, dto.NewValidatedFromReader[dto.RestoreRequest])
+	request, ok := decodeBodyValidated[dto.RestoreRequest](w, r)
 	if !ok {
 		return
 	}
@@ -68,7 +68,7 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
-	request, ok := decodeBody(w, r, dto.NewValidatedFromReader[dto.RestoreTimestampRequest])
+	request, ok := decodeBodyValidated[dto.RestoreTimestampRequest](w, r)
 	if !ok {
 		return
 	}

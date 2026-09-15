@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 )
 
@@ -31,25 +32,40 @@ func requestBody(w http.ResponseWriter, r *http.Request) (io.Reader, error) {
 	return bytes.NewReader(data), nil
 }
 
-// dtoFromReader is the shape shared by every dto.NewXxxFromReader constructor.
-type dtoFromReader[T any] func(io.Reader, decoder.SerializationFormat) (T, error)
-
-// decodeBody reads a bounded, non-empty request body with read and returns the decoded value;
-// request bodies are always JSON. On failure it writes the error response and returns false, so
-// the handler just returns.
-func decodeBody[T any](w http.ResponseWriter, r *http.Request, read dtoFromReader[T]) (T, bool) {
-	var zero T
-
+// decodeBody reads a bounded, non-empty request body into a T without validating it; request
+// bodies are always JSON. On failure it writes the error response and returns false, so the
+// handler just returns. Only dto.Config is read this way: its Validate must run after the handler
+// merges stored secrets back into the incoming document. Every other payload validates itself, so
+// use decodeBodyValidated.
+func decodeBody[T any](w http.ResponseWriter, r *http.Request) (*T, bool) {
 	body, err := requestBody(w, r)
 	if err != nil {
 		httpError(w, err)
-		return zero, false
+		return nil, false
 	}
 
-	value, err := read(body, decoder.JSON)
+	value, err := dto.NewFromReader[T](body, decoder.JSON)
 	if err != nil {
 		httpError(w, errBadRequest(err))
-		return zero, false
+		return nil, false
+	}
+
+	return value, true
+}
+
+// decodeBodyValidated decodes the request body into a T and validates it with T's own Validate.
+func decodeBodyValidated[T any, PT interface {
+	*T
+	dto.Validator
+}](w http.ResponseWriter, r *http.Request) (*T, bool) {
+	value, ok := decodeBody[T](w, r)
+	if !ok {
+		return nil, false
+	}
+
+	if err := PT(value).Validate(); err != nil {
+		httpError(w, errBadRequest(err))
+		return nil, false
 	}
 
 	return value, true
