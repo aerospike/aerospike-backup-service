@@ -5,6 +5,7 @@ package preflight
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"reflect"
 	"slices"
@@ -51,6 +52,16 @@ func NewChecker(clusters aerospike.NamespaceValidator, operations storage.Operat
 	}
 }
 
+// shuttingDown reports whether ctx was canceled rather than merely timed out.
+//
+// The distinction decides whether a failed probe is worth reporting. Cancellation means
+// the service is going away, so the failure says nothing about the backend and a warning
+// would be a false alarm. A deadline is the opposite: the backend accepted the connection
+// and never answered, which is exactly what the operator needs to be told.
+func shuttingDown(ctx context.Context) bool {
+	return errors.Is(ctx.Err(), context.Canceled)
+}
+
 // nothingToReach reports whether a backup configuration names any external system.
 func nothingToReach(backupConfig *model.BackupConfig) bool {
 	return backupConfig == nil ||
@@ -80,10 +91,7 @@ func (c *checker) Check(ctx context.Context, backupConfig *model.BackupConfig) {
 
 	for name, s := range backupConfig.Storage {
 		wg.Go(func() {
-			if err := c.storage.Probe(ctx, s); err != nil && ctx.Err() == nil {
-				// A probe that failed because ctx was canceled says nothing about the
-				// storage: the service is shutting down, and a warning here would be a
-				// false alarm the operator cannot act on.
+			if err := c.storage.Probe(ctx, s); err != nil && !shuttingDown(ctx) {
 				slog.Warn("Configured storage is not available",
 					slog.String("storage", name),
 					attr.Error(err),

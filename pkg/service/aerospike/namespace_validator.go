@@ -2,6 +2,7 @@ package aerospike
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -78,10 +79,10 @@ func (nv *namespaceValidator) fetchNamespacesByCluster(
 		wg.Go(func() {
 			namespaces, err := nv.fetchClusterNamespaces(ctx, cluster)
 			if err != nil {
-				// A failure caused by ctx being canceled says nothing about the cluster:
-				// the service is shutting down, and a warning here would be a false alarm
-				// the operator cannot act on.
-				if ctx.Err() == nil {
+				// Cancellation means the service is going away, so the failure says
+				// nothing about the cluster. A deadline does: the cluster accepted the
+				// connection and never answered, which is worth reporting.
+				if !errors.Is(ctx.Err(), context.Canceled) {
 					slog.Warn("Configured Aerospike cluster is not available",
 						slog.String("cluster", name),
 						attr.Error(err),

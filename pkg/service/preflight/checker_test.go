@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -229,4 +230,50 @@ func TestChecker_BoundsProbesWithADeadline(t *testing.T) {
 // newTestChecker returns the concrete checker so a test can drive one pass directly.
 func newTestChecker(clusters aerospike.NamespaceValidator, operations storage.Operations) *checker {
 	return NewChecker(clusters, operations).(*checker)
+}
+
+// A pass whose deadline has passed must still report what it found. Suppressing on any
+// expired context would leave the operator with a "Finished validating" line, no warnings,
+// and a backend that never answered - which reads as success.
+func TestChecker_DeadlineExceededIsStillReported(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	warnings := captureWarnings(t)
+
+	clusters := aerospike.NewMockNamespaceValidator(ctrl)
+	clusters.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
+
+	ops := storage.NewMockOperations(ctrl)
+	ops.EXPECT().
+		Probe(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, _ model.Storage) error { return ctx.Err() })
+
+	// Already past its deadline, so the context Check derives is DeadlineExceeded too.
+	ctx, cancel := context.WithDeadline(t.Context(), time.Now().Add(-time.Second))
+	defer cancel()
+
+	newTestChecker(clusters, ops).Check(ctx, configWithStorage(t, "s1"))
+
+	assert.Equal(t, []string{"Configured storage is not available"}, warnings.messages())
+}
+
+// Cancellation is the opposite: the service is going away, so the failure says nothing
+// about the backend and must not be reported.
+func TestChecker_CanceledContextIsNotReported(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	warnings := captureWarnings(t)
+
+	clusters := aerospike.NewMockNamespaceValidator(ctrl)
+	clusters.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
+
+	ops := storage.NewMockOperations(ctrl)
+	ops.EXPECT().
+		Probe(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, _ model.Storage) error { return ctx.Err() })
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	newTestChecker(clusters, ops).Check(ctx, configWithStorage(t, "s1"))
+
+	assert.Empty(t, warnings.messages())
 }

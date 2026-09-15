@@ -83,7 +83,10 @@ func (s *Service) changeBackupConfig(
 //
 // The delta is computed here, on the caller's goroutine, while it still holds the
 // configuration lock and current is a private copy that SetBackupConfig has not published
-// yet - so the diff never reads maps that are simultaneously the live configuration's.
+// yet - so the diff never ranges over a map that is simultaneously the live one's. The
+// entities behind those maps are shared, though: BackupConfigCopy clones map headers, not
+// what they point at. That is safe only while a published cluster, storage or routine is
+// treated as immutable and replaced wholesale rather than edited in place.
 //
 // The probes then run without the caller. They can each take a connect timeout, and
 // nothing reads their result, so making a config request wait for them - with the
