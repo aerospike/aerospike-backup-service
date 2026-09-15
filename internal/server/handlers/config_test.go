@@ -40,7 +40,7 @@ func newConfigTestService(t *testing.T) (*Service, *gomock.Controller) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	checker := preflight.NewMockChecker(ctrl)
-	checker.EXPECT().Check(gomock.Any(), gomock.Any()).AnyTimes()
+	checker.EXPECT().CheckChanges(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	return &Service{
 		config:    model.NewConfig(),

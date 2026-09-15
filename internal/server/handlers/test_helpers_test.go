@@ -59,11 +59,12 @@ func addValidBackupRoutine(svc *Service, routineName string, disabled bool) vali
 	return entities
 }
 
-// newPermissiveChecker returns a preflight checker that accepts any call: the
-// config-changing handlers run it under the lock on every change that is not opted out.
+// newPermissiveChecker returns a preflight checker that accepts any call: every
+// config-changing handler runs it under the lock, and what it probes is decided by the
+// delta, not by the handler. TestConfigEndpoints_ValidationCoverage asserts on the delta.
 func newPermissiveChecker(ctrl *gomock.Controller) preflight.Checker {
 	checker := preflight.NewMockChecker(ctrl)
-	checker.EXPECT().Check(gomock.Any(), gomock.Any()).AnyTimes()
+	checker.EXPECT().CheckChanges(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	return checker
 }

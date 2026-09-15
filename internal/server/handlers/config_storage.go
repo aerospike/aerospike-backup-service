@@ -142,7 +142,7 @@ func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 		}
 		delete(config.Storage, name)
 		return nil, nil
-	}, withoutValidation)
+	})
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return

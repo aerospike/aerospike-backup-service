@@ -59,17 +59,28 @@ func TestChecker_UnreachableStorage_WarnsPerStorage(t *testing.T) {
 	}
 }
 
-// Clusters are checked even when no storage is configured, and storage is checked even
-// when no cluster is: neither half of the check is conditional on the other.
+// Clusters are checked even when no storage is configured: neither half of the check is
+// conditional on the other.
 func TestChecker_ChecksClustersWithoutStorage(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	config := model.NewConfig()
+	require.NoError(t, config.AddCluster("cluster1", &model.AerospikeCluster{}))
 
 	clusters := aerospike.NewMockNamespaceValidator(ctrl)
 	clusters.EXPECT().Validate(gomock.Any(), config)
 
 	NewChecker(clusters, storage.NewMockOperations(ctrl)).Check(t.Context(), config)
+}
+
+// There is nothing to say about a configuration that points at nothing, and a delta is
+// empty far more often than not - every deletion and every schedule edit produces one.
+func TestChecker_NothingToReach_DoesNothing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	// No EXPECT calls: neither collaborator may be touched.
+	NewChecker(aerospike.NewMockNamespaceValidator(ctrl), storage.NewMockOperations(ctrl)).
+		Check(t.Context(), model.NewConfig())
 }
 
 func TestChecker_NilConfig_DoesNothing(t *testing.T) {

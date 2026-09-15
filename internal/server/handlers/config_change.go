@@ -9,28 +9,17 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-type backupConfigChangeOptions struct {
-	skipValidation bool
-}
-
 // changeBackupConfig applies a mutation to the backup configuration DTO, validates and
 // converts the full configuration, and persists the result.
 // The mutate function returns routine names that should be rescheduled and rescanned.
 //
-// Every change is followed by the advisory preflight check unless the caller opts out
-// with withoutValidation. The polarity is deliberate: a handler that forgets the option
-// probes more than it needs to, which costs a round trip, while the opposite default
-// would let a new handler silently stop validating.
+// Every change is followed by the advisory preflight check, which probes whatever the
+// change added or altered. No handler decides whether its change is worth validating:
+// a change that reaches nothing new produces an empty delta and probes nothing.
 func (s *Service) changeBackupConfig(
 	ctx context.Context,
 	mutate func(*dto.Config) ([]string, error),
-	opts ...func(*backupConfigChangeOptions),
 ) error {
-	options := backupConfigChangeOptions{}
-	for _, opt := range opts {
-		opt(&options)
-	}
-
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
 
@@ -60,12 +49,11 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
+	previous := configSnapshot(s.config)
 	s.config.SetBackupConfig(modelConfig.BackupConfigCopy())
 	s.config.InvalidateRoutines(routinesToInvalidate)
 
-	if !options.skipValidation {
-		s.checker.Check(ctx, s.config) // validate under the lock
-	}
+	s.checker.CheckChanges(ctx, previous, s.config) // validate under the lock
 
 	if err = s.configurationManager.Write(ctx, s.config); err != nil {
 		return fmt.Errorf("failed to write configuration: %w", err)
@@ -78,11 +66,15 @@ func (s *Service) changeBackupConfig(
 	return nil
 }
 
-// withoutValidation skips the preflight check for a change that cannot make anything
-// unreachable: a deletion, a routine being disabled, or a policy edit, none of which
-// point the service at a cluster or storage it was not already using.
-func withoutValidation(opts *backupConfigChangeOptions) {
-	opts.skipValidation = true
+// configSnapshot captures the backup configuration as it stands, so that a change can be
+// compared against what it replaced. Every change round trips through the DTO layer, which
+// allocates fresh entities, so the entities a snapshot points at are never the ones a later
+// change mutates.
+func configSnapshot(config *model.Config) *model.Config {
+	snapshot := model.NewConfig()
+	snapshot.SetBackupConfig(config.BackupConfigCopy())
+
+	return snapshot
 }
 
 func routinesUsingStorage(config *dto.Config, storageName string) []string {

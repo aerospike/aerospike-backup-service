@@ -148,7 +148,7 @@ func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		}
 		delete(config.AerospikeClusters, name)
 		return nil, nil
-	}, withoutValidation)
+	})
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return

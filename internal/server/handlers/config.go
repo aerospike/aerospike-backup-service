@@ -69,9 +69,10 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+		previous := configSnapshot(config)
 		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
 		config.InvalidateAllRoutines()
-		s.checker.Check(r.Context(), config) // validate under the lock
+		s.checker.CheckChanges(r.Context(), previous, config) // validate under the lock
 		return nil
 	})
 
@@ -106,8 +107,8 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
-	// advisory: reports the clusters, namespaces and storage the reloaded config cannot reach.
-	s.checker.Check(r.Context(), config)
+	// advisory: reports whatever the reloaded configuration now points at and cannot reach.
+	s.checker.CheckChanges(r.Context(), s.config, config)
 
 	// validate static fields.
 	newConfig := dto.NewConfigFromModel(s.config)

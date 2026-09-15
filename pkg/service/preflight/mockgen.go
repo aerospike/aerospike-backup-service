@@ -52,3 +52,15 @@ func (mr *MockCheckerMockRecorder) Check(ctx, config any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Check", reflect.TypeOf((*MockChecker)(nil).Check), ctx, config)
 }
+
+// CheckChanges mocks base method.
+func (m *MockChecker) CheckChanges(ctx context.Context, previous, current *model.Config) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "CheckChanges", ctx, previous, current)
+}
+
+// CheckChanges indicates an expected call of CheckChanges.
+func (mr *MockCheckerMockRecorder) CheckChanges(ctx, previous, current any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckChanges", reflect.TypeOf((*MockChecker)(nil).CheckChanges), ctx, previous, current)
+}

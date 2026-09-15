@@ -1,26 +1,32 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/preflight"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
 // TestConfigEndpoints_ValidationCoverage is the executable form of one rule: a config
-// change that points the service at a cluster or storage runs the advisory preflight
-// check, and a change that can only remove or stop work does not.
+// change probes what it added or altered, and nothing else.
 //
-// It exists because the previous rule was not a rule at all - updating a cluster was
-// validated but adding one was not, and storage was never validated on any path. A
-// handler added later that silently stops validating fails here.
+// It exists because the rule used to be a per-handler decision, and not a rule at all -
+// updating a cluster was validated but adding one was not, and storage was never
+// validated on any path. Every handler now runs the same check, so what this pins is the
+// delta each endpoint produces: it drives a real preflight.Checker and records which
+// storage was probed and which clusters were reached.
 func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -28,7 +34,8 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 		method         string
 		body           string
 		pathValue      string
-		expectValidate bool
+		expectStorage  []string
+		expectClusters []string
 		expectStatus   int
 	}{
 		{
@@ -37,7 +44,7 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 			method:         http.MethodPost,
 			pathValue:      "new-cluster",
 			body:           marshalToString(clusterDTO(3000)),
-			expectValidate: true,
+			expectClusters: []string{"new-cluster"},
 			expectStatus:   http.StatusCreated,
 		},
 		{
@@ -46,7 +53,7 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 			method:         http.MethodPut,
 			pathValue:      "cluster1",
 			body:           marshalToString(clusterDTO(3001)),
-			expectValidate: true,
+			expectClusters: []string{"cluster1"},
 			expectStatus:   http.StatusOK,
 		},
 		{
@@ -57,22 +64,22 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 			expectStatus: http.StatusNoContent,
 		},
 		{
-			name:           "add storage",
-			call:           (*Service).AddStorage,
-			method:         http.MethodPost,
-			pathValue:      "new-storage",
-			body:           marshalToString(dto.Storage{LocalStorage: &dto.LocalStorage{Path: "/tmp/new"}}),
-			expectValidate: true,
-			expectStatus:   http.StatusCreated,
+			name:          "add storage",
+			call:          (*Service).AddStorage,
+			method:        http.MethodPost,
+			pathValue:     "new-storage",
+			body:          marshalToString(dto.Storage{LocalStorage: &dto.LocalStorage{Path: "/tmp/new"}}),
+			expectStorage: []string{"/tmp/new"},
+			expectStatus:  http.StatusCreated,
 		},
 		{
-			name:           "update storage",
-			call:           (*Service).UpdateStorage,
-			method:         http.MethodPut,
-			pathValue:      "storage1",
-			body:           marshalToString(dto.Storage{LocalStorage: &dto.LocalStorage{Path: "/tmp/moved"}}),
-			expectValidate: true,
-			expectStatus:   http.StatusOK,
+			name:          "update storage",
+			call:          (*Service).UpdateStorage,
+			method:        http.MethodPut,
+			pathValue:     "storage1",
+			body:          marshalToString(dto.Storage{LocalStorage: &dto.LocalStorage{Path: "/tmp/moved"}}),
+			expectStorage: []string{"/tmp/moved"},
+			expectStatus:  http.StatusOK,
 		},
 		{
 			name:         "delete storage",
@@ -87,16 +94,32 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 			method:         http.MethodPost,
 			pathValue:      "new-routine",
 			body:           marshalToString(validRoutineDTO()),
-			expectValidate: true,
+			expectClusters: []string{"cluster1"},
+			expectStorage:  []string{"/tmp/backup"},
 			expectStatus:   http.StatusCreated,
 		},
 		{
-			name:           "update routine",
-			call:           (*Service).UpdateRoutine,
-			method:         http.MethodPut,
-			pathValue:      "routine1",
-			body:           marshalToString(validRoutineDTO()),
-			expectValidate: true,
+			// Only the schedule differs from what routine1 already has, so the routine
+			// still reads and writes exactly what it did.
+			name:         "update routine, schedule only",
+			call:         (*Service).UpdateRoutine,
+			method:       http.MethodPut,
+			pathValue:    "routine1",
+			body:         marshalToString(validRoutineDTO()),
+			expectStatus: http.StatusOK,
+		},
+		{
+			name:      "update routine, namespaces changed",
+			call:      (*Service).UpdateRoutine,
+			method:    http.MethodPut,
+			pathValue: "routine1",
+			body: marshalToString(func() dto.BackupRoutine {
+				routine := validRoutineDTO()
+				routine.Namespaces = ptr.Of([]string{"source-ns1"})
+
+				return routine
+			}()),
+			expectClusters: []string{"cluster1"},
 			expectStatus:   http.StatusOK,
 		},
 		{
@@ -107,13 +130,13 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 			expectStatus: http.StatusNoContent,
 		},
 		{
-			// Enabling a routine points the service at a cluster and a storage again.
-			name:           "enable routine",
-			call:           (*Service).EnableRoutine,
-			method:         http.MethodPost,
-			pathValue:      "routine1",
-			expectValidate: true,
-			expectStatus:   http.StatusNoContent,
+			// Enabling changes nothing about what the routine reads or writes, so
+			// there is nothing the check has not already seen.
+			name:         "enable routine",
+			call:         (*Service).EnableRoutine,
+			method:       http.MethodPost,
+			pathValue:    "routine1",
+			expectStatus: http.StatusNoContent,
 		},
 		{
 			name:         "disable routine",
@@ -123,7 +146,8 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 			expectStatus: http.StatusNoContent,
 		},
 		{
-			// A policy names neither a cluster nor a storage.
+			// A policy names neither a cluster nor a storage, and a routine that uses
+			// an edited one still reads and writes the same places.
 			name:         "add policy",
 			call:         (*Service).AddPolicy,
 			method:       http.MethodPost,
@@ -161,11 +185,8 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 			registry.EXPECT().Cancel(gomock.Any()).AnyTimes()
 			svc.registry = registry
 
-			checker := preflight.NewMockChecker(ctrl)
-			svc.checker = checker
-			if tt.expectValidate {
-				checker.EXPECT().Check(gomock.Any(), gomock.Eq(svc.config)).Times(1)
-			}
+			probed := &probeRecorder{}
+			svc.checker = preflight.NewChecker(probed.validator(ctrl), probed.operations(ctrl))
 
 			req := httptest.NewRequestWithContext(
 				t.Context(), tt.method, "/v1/config/"+tt.pathValue, strings.NewReader(tt.body),
@@ -175,9 +196,12 @@ func TestConfigEndpoints_ValidationCoverage(t *testing.T) {
 
 			tt.call(svc, w, req)
 
-			// A handler that rejected the request never reaches the check, so the
-			// expectation above would pass for the wrong reason.
+			// A handler that rejected the request never reaches the check, so an empty
+			// expectation would otherwise pass for the wrong reason.
 			assert.Equal(t, tt.expectStatus, w.Code, w.Body.String())
+
+			assert.ElementsMatch(t, tt.expectStorage, probed.storagePaths, "probed storage")
+			assert.ElementsMatch(t, tt.expectClusters, probed.clusters, "reached clusters")
 		})
 	}
 }
@@ -210,9 +234,50 @@ func addUnusedEntities(t *testing.T, svc *Service) {
 	cfg.Storage["unused-storage"] = &dto.Storage{LocalStorage: &dto.LocalStorage{Path: "/tmp/unused"}}
 	cfg.BackupPolicies["unused-policy"] = &dto.BackupPolicy{Parallel: ptr.Of(1)}
 
-	model, err := cfg.ToModel()
+	withUnused, err := cfg.ToModel()
 	if err != nil {
 		t.Fatalf("failed to build test config: %v", err)
 	}
-	svc.config.SetBackupConfig(model.BackupConfigCopy())
+	svc.config.SetBackupConfig(withUnused.BackupConfigCopy())
+}
+
+// probeRecorder stands in for the network: it records what a real preflight.Checker asked
+// it to reach, so a test can assert on the delta an endpoint produced rather than on
+// whether some method was called.
+type probeRecorder struct {
+	mu           sync.Mutex
+	storagePaths []string
+	clusters     []string
+}
+
+func (p *probeRecorder) operations(ctrl *gomock.Controller) storage.Operations {
+	ops := storage.NewMockOperations(ctrl)
+	ops.EXPECT().
+		Probe(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, s model.Storage) error {
+			p.mu.Lock()
+			defer p.mu.Unlock()
+			p.storagePaths = append(p.storagePaths, s.GetPath())
+
+			return nil
+		}).
+		AnyTimes()
+
+	return ops
+}
+
+func (p *probeRecorder) validator(ctrl *gomock.Controller) aerospike.NamespaceValidator {
+	validator := aerospike.NewMockNamespaceValidator(ctrl)
+	validator.EXPECT().
+		Validate(gomock.Any(), gomock.Any()).
+		Do(func(_ context.Context, config *model.Config) {
+			p.mu.Lock()
+			defer p.mu.Unlock()
+			for name := range config.BackupConfigCopy().AerospikeClusters {
+				p.clusters = append(p.clusters, name)
+			}
+		}).
+		AnyTimes()
+
+	return validator
 }
