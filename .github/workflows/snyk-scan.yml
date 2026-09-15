@@ -7,9 +7,9 @@ on:
       - 'v[0-9]+'
   pull_request:
     branches:
-      - dev
-      - main
-      - 'v[0-9]+'
+    - dev
+    - main
+    - 'v[0-9]+'
 
 permissions:
   contents: read
@@ -28,24 +28,30 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run Snyk to check for vulnerabilities
+        id: snyk
         uses: snyk/actions/golang@9adf32b1121593767fc3c057af55b55db032dc04
-        continue-on-error: true # To make sure that SARIF upload gets called
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           snyk-version: v1.1297.3
-          args: --all-projects --sarif-file-output=snyk.sarif
+          args: --all-projects --severity-threshold=high --sarif-file-output=snyk.sarif
 
       - name: Check output file
+        if: always()
         id: out-file
         run: |
           if test -f "snyk.sarif"; then
-            echo "::set-output name=exists::true"; else
-            echo "::set-output name=exists::false"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Upload result to GitHub Code Scanning
-        if: steps.out-file.outputs.exists == 'true'
+        if: always() && steps.out-file.outputs.exists == 'true'
         uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
           sarif_file: snyk.sarif
+
+      - name: Fail on high-severity Snyk findings
+        if: always() && steps.snyk.outcome == 'failure'
+        run: exit 1

@@ -4,8 +4,32 @@ After=network.target
 
 [Service]
 Type=simple
+User=aerospike-backup-service
+Group=aerospike-backup-service
 ExecStart=/usr/bin/aerospike-backup-service --config /etc/aerospike-backup-service/aerospike-backup-service.yml
 Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/etc/aerospike-backup-service /var/lib/aerospike-backup-service /var/log
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallFilter=@system-service
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+ProtectHostname=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RemoveIPC=true
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target

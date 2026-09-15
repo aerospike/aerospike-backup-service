@@ -20,6 +20,12 @@ contents:
   - src: ${WORKSPACE}/build/package/config/${NAME}.yml
     dst: /etc/${NAME}/${NAME}.yml
     type: config
+    file_info:
+      mode: 0640
+  - src: ${WORKSPACE}/build/package/config/${NAME}.log
+    dst: /var/log/${NAME}.log
+    file_info:
+      mode: 0600
   - dst: /var/lib/${NAME}
     file_info:
       mode: 0755
