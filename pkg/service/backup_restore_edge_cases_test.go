@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -11,17 +10,13 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
-	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
-
-// --- helpers -------------------------------------------------------------
 
 var testLockMap collections.LockMap
 
@@ -50,10 +45,6 @@ func writeTestMetadata(t *testing.T, root, routine string, bt model.BackupType, 
 	r := &model.BackupRoutine{Name: routine, Storage: &model.LocalStorage{Path: root}}
 	require.NoError(t, catalog.WriteBackupMetadata(t.Context(), r, ps.GetBackupPath(routine, bt, ns, ts), md))
 }
-
-// --- 1. Sealed backup + retry: Created must stay within the scanned bounds ------------
-
-// --- 6. Retention: multi-namespace duplicates are harmless on local storage -------
 
 // deleteFullBackups issues one Delete per namespace metadata for the same timestamp folder;
 // the second delete of an already-removed folder does not fail the retention run (local storage).
