@@ -3,11 +3,9 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/reugn/go-quartz/quartz"
@@ -95,6 +93,9 @@ const (
 
 // Validate validates the backup routine configuration.
 func (r *BackupRoutine) Validate() error {
+	if r == nil {
+		return errors.New("backup routine is not specified")
+	}
 	if r.SourceCluster == "" {
 		return errValidationEmptyField("source-cluster")
 	}
@@ -106,7 +107,7 @@ func (r *BackupRoutine) Validate() error {
 	}
 	if r.IncrIntervalCron != "" { // incremental interval is optional
 		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
-			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
+			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IncrIntervalCron, err)
 		}
 	}
 	if err := r.ScheduleTimezone.Validate(); err != nil {
@@ -364,20 +365,6 @@ func resolveBackupPolicy(name string, policies map[string]*model.BackupPolicy) (
 	}
 
 	return policy, nil
-}
-
-// NewRoutineFromReader creates a new BackupRoutine object from a given reader.
-func NewRoutineFromReader(r io.Reader, format decoder.SerializationFormat) (*BackupRoutine, error) {
-	b := &BackupRoutine{}
-	if err := decoder.Deserialize(b, r, format); err != nil {
-		return nil, err
-	}
-
-	if err := b.Validate(); err != nil {
-		return nil, err
-	}
-
-	return b, nil
 }
 
 func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRoutine {

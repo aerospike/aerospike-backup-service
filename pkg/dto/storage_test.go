@@ -13,7 +13,7 @@ func TestNewStorageFromReader(t *testing.T) {
 	t.Parallel()
 
 	jsonStorage := `{"local-storage": {"path": "backups"}}`
-	s, err := NewStorageFromReader(strings.NewReader(jsonStorage), decoder.JSON)
+	s, err := NewValidatedFromReader[Storage](strings.NewReader(jsonStorage), decoder.JSON)
 	require.NoError(t, err)
 	require.NotNil(t, s.LocalStorage)
 	assert.Equal(t, "backups", string(s.LocalStorage.Path))
@@ -23,13 +23,13 @@ func TestNewStorageFromReader_ValidationError(t *testing.T) {
 	t.Parallel()
 
 	// No storage type specified: passes deserialization but fails Validate.
-	_, err := NewStorageFromReader(strings.NewReader(`{}`), decoder.JSON)
+	_, err := NewValidatedFromReader[Storage](strings.NewReader(`{}`), decoder.JSON)
 	require.Error(t, err)
 }
 
 func TestNewStorageFromReader_InvalidJSON(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStorageFromReader(strings.NewReader(`{"unknown-field": 1}`), decoder.JSON)
+	_, err := NewValidatedFromReader[Storage](strings.NewReader(`{"unknown-field": 1}`), decoder.JSON)
 	require.Error(t, err)
 }

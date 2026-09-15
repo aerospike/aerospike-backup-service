@@ -59,10 +59,10 @@ func TestService_UpdateConfig(t *testing.T) {
 		expectedError    string
 	}{
 		{
-			name:           "invalid json payload",
+			name:           "invalid request",
 			requestBody:    "{noField : 1}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 		{
 			name:           "static field changed",

@@ -85,7 +85,7 @@ func TestService_restoreByPath(t *testing.T) {
 			requestBody:    "{noField : 1}",
 			setupMock:      func(*service.MockRestoreManager) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 		{
 			name:           "validation error - missing backup data path",
@@ -159,7 +159,7 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 			requestBody:    "{noField : 1}",
 			setupMock:      func(*service.MockRestoreManager) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 		{
 			name: "validation error - missing time",

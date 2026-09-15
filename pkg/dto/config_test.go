@@ -120,7 +120,7 @@ func TestNewConfigFromReader(t *testing.T) {
 	yamlConfig := `
 service:
 `
-	cfg, err := NewConfigFromReader(strings.NewReader(yamlConfig), decoder.YAML)
+	cfg, err := NewFromReader[Config](strings.NewReader(yamlConfig), decoder.YAML)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 }
@@ -128,7 +128,7 @@ service:
 func TestNewConfigFromReader_InvalidYAML(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewConfigFromReader(strings.NewReader("service: [1,2"), decoder.YAML)
+	_, err := NewFromReader[Config](strings.NewReader("service: [1,2"), decoder.YAML)
 	require.Error(t, err)
 }
 

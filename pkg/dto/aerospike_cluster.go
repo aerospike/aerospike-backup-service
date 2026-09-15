@@ -3,9 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"io"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -117,20 +115,6 @@ func (a *AerospikeCluster) validateSeedNodesTLSConsistency() error {
 	}
 
 	return nil
-}
-
-// NewClusterFromReader creates a new Storage object from a given reader.
-func NewClusterFromReader(r io.Reader, format decoder.SerializationFormat) (*AerospikeCluster, error) {
-	a := &AerospikeCluster{}
-	if err := decoder.Deserialize(a, r, format); err != nil {
-		return nil, err
-	}
-
-	if err := a.Validate(); err != nil {
-		return nil, err
-	}
-
-	return a, nil
 }
 
 func NewClusterFromModel(m *model.AerospikeCluster, config *model.BackupConfig) *AerospikeCluster {
