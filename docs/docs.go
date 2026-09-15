@@ -2625,7 +2625,7 @@ const docTemplate = `{
                     "example": 1024
                 },
                 "tps": {
-                    "description": "Rate limiter tokens per second threshold.",
+                    "description": "Rate limiter tokens per second threshold.\nThe budget is per client: an IPv4 address gets its own, an IPv6 address shares one\nwith the rest of its /64.",
                     "type": "integer",
                     "default": 1024,
                     "example": 1024
