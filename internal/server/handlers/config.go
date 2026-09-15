@@ -71,7 +71,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
 		config.InvalidateAllRoutines()
-		s.nsValidator.Validate(r.Context(), config) // validate under the lock
+		s.checker.Check(r.Context(), config) // validate under the lock
 		return nil
 	})
 
@@ -106,8 +106,8 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
-	// advisory: reports namespaces the reloaded routines reference but their clusters do not have.
-	s.nsValidator.Validate(r.Context(), config)
+	// advisory: reports the clusters, namespaces and storage the reloaded config cannot reach.
+	s.checker.Check(r.Context(), config)
 
 	// validate static fields.
 	newConfig := dto.NewConfigFromModel(s.config)

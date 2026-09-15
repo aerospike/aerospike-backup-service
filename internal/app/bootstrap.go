@@ -169,6 +169,8 @@ func InitComponents(
 
 	metricsCollector := prometheus.NewMetricsCollector(registry.GetRunningState, restoreJobs.StatusCounts)
 
+	checker := preflight.NewChecker(nsValidator, operations)
+
 	configRetriever := service.NewConfigRetriever(catalog, pathService, operations)
 	srv := handlers.NewService(
 		config,
@@ -179,7 +181,7 @@ func InitComponents(
 		catalog,
 		registry,
 		configurationManager,
-		nsValidator,
+		checker,
 		tlsProber,
 	)
 
@@ -210,7 +212,7 @@ func InitComponents(
 			metricsCollector,
 			tlsProvider,
 		},
-		preflight: preflight.NewChecker(nsValidator, operations),
+		preflight: checker,
 		config:    config,
 	}, nil
 }

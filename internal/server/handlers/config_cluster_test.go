@@ -10,7 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/preflight"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -187,11 +187,11 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
 			svc := setupTestService(t)
-			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-			svc.nsValidator = mockNsValidator
+			checker := preflight.NewMockChecker(ctrl)
+			svc.checker = checker
 
 			if tt.runValidation {
-				mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Eq(svc.config))
+				checker.EXPECT().Check(gomock.Any(), gomock.Eq(svc.config))
 			}
 
 			initialCluster := &model.AerospikeCluster{}
@@ -221,9 +221,9 @@ func TestUpdateAerospikeCluster_PreservesSecretOnRoundTrip(t *testing.T) {
 
 	svc := setupTestService(t)
 	ctrl := gomock.NewController(t)
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	svc.nsValidator = mockNsValidator
-	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Eq(svc.config)).AnyTimes()
+	checker := preflight.NewMockChecker(ctrl)
+	svc.checker = checker
+	checker.EXPECT().Check(gomock.Any(), gomock.Eq(svc.config)).AnyTimes()
 
 	clusterModel := &model.AerospikeCluster{
 		SeedNodes: []model.SeedNode{{HostName: "localhost", Port: 3000}},

@@ -10,12 +10,17 @@ import (
 )
 
 type backupConfigChangeOptions struct {
-	validateNamespaces bool
+	skipValidation bool
 }
 
 // changeBackupConfig applies a mutation to the backup configuration DTO, validates and
 // converts the full configuration, and persists the result.
 // The mutate function returns routine names that should be rescheduled and rescanned.
+//
+// Every change is followed by the advisory preflight check unless the caller opts out
+// with withoutValidation. The polarity is deliberate: a handler that forgets the option
+// probes more than it needs to, which costs a round trip, while the opposite default
+// would let a new handler silently stop validating.
 func (s *Service) changeBackupConfig(
 	ctx context.Context,
 	mutate func(*dto.Config) ([]string, error),
@@ -58,8 +63,8 @@ func (s *Service) changeBackupConfig(
 	s.config.SetBackupConfig(modelConfig.BackupConfigCopy())
 	s.config.InvalidateRoutines(routinesToInvalidate)
 
-	if options.validateNamespaces {
-		s.nsValidator.Validate(ctx, s.config)
+	if !options.skipValidation {
+		s.checker.Check(ctx, s.config) // validate under the lock
 	}
 
 	if err = s.configurationManager.Write(ctx, s.config); err != nil {
@@ -73,8 +78,11 @@ func (s *Service) changeBackupConfig(
 	return nil
 }
 
-func withNamespaceValidation(opts *backupConfigChangeOptions) {
-	opts.validateNamespaces = true
+// withoutValidation skips the preflight check for a change that cannot make anything
+// unreachable: a deletion, a routine being disabled, or a policy edit, none of which
+// point the service at a cluster or storage it was not already using.
+func withoutValidation(opts *backupConfigChangeOptions) {
+	opts.skipValidation = true
 }
 
 func routinesUsingStorage(config *dto.Config, storageName string) []string {

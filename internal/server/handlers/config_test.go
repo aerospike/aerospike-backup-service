@@ -13,7 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/preflight"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,13 +39,13 @@ func TestService_ReadConfig(t *testing.T) {
 func newConfigTestService(t *testing.T) (*Service, *gomock.Controller) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
+	checker := preflight.NewMockChecker(ctrl)
+	checker.EXPECT().Check(gomock.Any(), gomock.Any()).AnyTimes()
 
 	return &Service{
-		config:      model.NewConfig(),
-		nsValidator: mockNsValidator,
-		tlsProber:   newMockTLSProber(ctrl),
+		config:    model.NewConfig(),
+		checker:   checker,
+		tlsProber: newMockTLSProber(ctrl),
 	}, ctrl
 }
 
