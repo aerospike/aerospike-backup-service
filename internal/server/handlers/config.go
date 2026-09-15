@@ -71,7 +71,6 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
 		config.InvalidateAllRoutines()
-		// Advisory and network-bound: it only logs, so it stays cancelable with the request.
 		s.nsValidator.Validate(r.Context(), config) // validate under the lock
 		return nil
 	})

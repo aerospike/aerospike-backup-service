@@ -64,7 +64,6 @@ func (s *Service) changeBackupConfig(
 	s.config.InvalidateRoutines(routinesToInvalidate)
 
 	if options.validateNamespaces {
-		// Advisory and network-bound: it only logs, so it stays cancelable with the request.
 		s.nsValidator.Validate(ctx, s.config)
 	}
 
