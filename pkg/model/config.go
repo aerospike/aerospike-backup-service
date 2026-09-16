@@ -264,12 +264,18 @@ func (c *Config) AddSecretAgent(name string, agent *SecretAgent) error {
 }
 
 // SetBackupConfig replaces the backup configuration and marks every routine the replacement changed.
+//
+// Invalidations already pending stay pending: they belong to this holder, not to the value
+// being installed, and a change whose apply never ran still has to be applied.
 func (c *Config) SetBackupConfig(other *BackupConfig) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	changed := ChangedRoutines(other, &c.backupConfig)
+	pending := c.backupConfig.invalidatedRoutines
+
 	c.backupConfig = *other
+	c.backupConfig.invalidatedRoutines = pending
 
 	for _, name := range changed {
 		c.invalidateRoutine(name)

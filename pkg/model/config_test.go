@@ -66,6 +66,25 @@ func TestSetBackupConfig_InvalidatesARemovedRoutine(t *testing.T) {
 	assert.Equal(t, []string{"r1"}, cfg.PopInvalidatedRoutineNames())
 }
 
+// A change whose apply never ran leaves its routines pending. The next change must not
+// lose them just because it did not touch them itself.
+func TestSetBackupConfig_KeepsPendingInvalidations(t *testing.T) {
+	cfg := NewConfig()
+	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1", IntervalCron: "@daily"}))
+	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r2", IntervalCron: "@daily"}))
+	cfg.PopInvalidatedRoutineNames()
+
+	first := cfg.BackupConfigCopy()
+	first.BackupRoutines["r1"] = &BackupRoutine{Name: "r1", IntervalCron: "@hourly"}
+	cfg.SetBackupConfig(first)
+
+	second := cfg.BackupConfigCopy()
+	second.BackupRoutines["r2"] = &BackupRoutine{Name: "r2", IntervalCron: "@weekly"}
+	cfg.SetBackupConfig(second)
+
+	assert.Equal(t, []string{"r1", "r2"}, cfg.PopInvalidatedRoutineNames())
+}
+
 func TestConfigAddRejectsNilValues(t *testing.T) {
 	var typedNilStorage *LocalStorage
 

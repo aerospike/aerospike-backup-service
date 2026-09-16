@@ -123,6 +123,64 @@ func TestComponents_RunServesUntilCanceled(t *testing.T) {
 }
 
 // freePort returns a port that is free at the moment of the call.
+// TestInitComponents_SchedulesEveryConfiguredRoutine pins the consequence that startup
+// relies on: a configuration read from disk arrives with every routine pending, so the
+// apply that InitComponents runs schedules all of them. Nothing reaches the network - a
+// routine without namespaces gives the namespace validator no cluster to contact.
+func TestInitComponents_SchedulesEveryConfiguredRoutine(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	config := fmt.Sprintf(`service:
+aerospike-clusters:
+  cluster:
+    seed-nodes:
+      - host-name: 127.0.0.1
+        port: 3000
+storage:
+  disk:
+    local-storage:
+      path: %s
+backup-routines:
+  nightly:
+    source-cluster: cluster
+    storage: disk
+    interval-cron: '@daily'
+    namespaces: []
+  hourly:
+    source-cluster: cluster
+    storage: disk
+    interval-cron: '@daily'
+    incr-interval-cron: '@hourly'
+    namespaces: []
+  parked:
+    source-cluster: cluster
+    storage: disk
+    interval-cron: '@daily'
+    namespaces: []
+    disabled: true
+`, t.TempDir())
+	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	components, err := InitComponents(ctx, configPath, false)
+	require.NoError(t, err)
+
+	keys, err := components.Scheduler.GetJobKeys()
+	require.NoError(t, err)
+
+	scheduled := make([]string, 0, len(keys))
+	for _, key := range keys {
+		scheduled = append(scheduled, key.Group()+"/"+key.Name())
+	}
+
+	require.ElementsMatch(t, []string{
+		"scheduled/nightly-full",
+		"scheduled/hourly-full",
+		"scheduled/hourly-incremental",
+	}, scheduled)
+}
+
 func freePort(t *testing.T) int {
 	t.Helper()
 
