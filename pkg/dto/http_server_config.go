@@ -72,6 +72,8 @@ func (s *ServerConfigHTTP) Compare(other *ServerConfigHTTP) error {
 // @Description RateLimiterConfig is the HTTP server rate limiter configuration.
 type RateLimiterConfig struct {
 	// Rate limiter tokens per second threshold.
+	// The budget is per client: an IPv4 address gets its own, an IPv6 address shares one
+	// with the rest of its /64.
 	Tps *int `yaml:"tps,omitempty" json:"tps,omitempty" default:"1024" example:"1024"`
 	// Rate limiter token bucket size (bursts threshold).
 	Size *int `yaml:"size,omitempty" json:"size,omitempty" default:"1024" example:"1024"`
