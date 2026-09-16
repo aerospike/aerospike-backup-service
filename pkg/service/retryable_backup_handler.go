@@ -20,8 +20,9 @@ type retryableBackupHandler struct {
 	// sets the inner handler again, so the close is guarded.
 	started   chan struct{}
 	startOnce sync.Once
-	// done is closed once the retry loop has returned; err holds its outcome and is only
-	// read after that.
+	// done is closed once the retry loop has returned; err holds its outcome.
+	// err is written before done is closed and read only by waiters that have seen it closed,
+	// so it needs no lock of its own.
 	done chan struct{}
 	err  error
 }
@@ -116,8 +117,9 @@ func (h *retryableBackupHandler) start(ctx context.Context, run func() error) er
 	go func() {
 		defer h.cancel()
 
-		err := run()
-		h.finish(err)
+		h.err = run()
+
+		close(h.done)
 	}()
 
 	return h.waitStarted(ctx)
@@ -147,33 +149,16 @@ func (h *retryableBackupHandler) waitStarted(ctx context.Context) error {
 		default:
 		}
 
-		return h.result()
+		return h.err
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 }
 
-// finish records the run's outcome and releases everyone waiting on it.
-func (h *retryableBackupHandler) finish(err error) {
-	h.Lock()
-	h.err = err
-	h.Unlock()
-
-	close(h.done)
-}
-
-// result returns the run's outcome. It is meaningful only once done is closed.
-func (h *retryableBackupHandler) result() error {
-	h.RLock()
-	defer h.RUnlock()
-
-	return h.err
-}
-
 func (h *retryableBackupHandler) Wait(ctx context.Context) error {
 	select {
 	case <-h.done:
-		return h.result()
+		return h.err
 	case <-ctx.Done():
 		return ctx.Err()
 	}
