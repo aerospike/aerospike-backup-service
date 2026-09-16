@@ -93,9 +93,9 @@ func TestChangedRoutines(t *testing.T) {
 			current := testBackupConfig()
 			tt.change(current)
 
-			assert.Equal(t, tt.changed, current.ChangedRoutines(previous))
+			assert.Equal(t, tt.changed, ChangedRoutines(current, previous))
 			// The comparison is symmetric, so a caller cannot get it wrong by argument order.
-			assert.Equal(t, tt.changed, previous.ChangedRoutines(current))
+			assert.Equal(t, tt.changed, ChangedRoutines(previous, current))
 		})
 	}
 }
@@ -115,7 +115,7 @@ func TestChangedRoutines_ReachesEveryRoutineThatSharesTheEditedEntry(t *testing.
 	})
 	current.AerospikeClusters["cluster1"].SeedNodes[0].Port = 4000
 
-	assert.Equal(t, []string{"routine1", "routine2"}, current.ChangedRoutines(previous))
+	assert.Equal(t, []string{"routine1", "routine2"}, ChangedRoutines(current, previous))
 }
 
 func addRoutineReadingCluster(config *BackupConfig, name string, cluster *AerospikeCluster) {
@@ -163,7 +163,7 @@ func TestChangedRoutines_SameTimezoneIsNotAChange(t *testing.T) {
 	previous.BackupRoutines["routine1"].Timezone = routineLocation(t, "America/New_York")
 	current.BackupRoutines["routine1"].Timezone = routineLocation(t, "America/New_York")
 
-	assert.Empty(t, current.ChangedRoutines(previous))
+	assert.Empty(t, ChangedRoutines(current, previous))
 }
 
 func TestDiff_NilConfigurations(t *testing.T) {
@@ -171,8 +171,8 @@ func TestDiff_NilConfigurations(t *testing.T) {
 
 	assert.Empty(t, absent.Diff(testBackupConfig()).BackupRoutines)
 	assert.Contains(t, testBackupConfig().Diff(absent).BackupRoutines, "routine1")
-	assert.Equal(t, []string{"routine1"}, absent.ChangedRoutines(testBackupConfig()))
-	assert.Empty(t, absent.ChangedRoutines(nil))
+	assert.Equal(t, []string{"routine1"}, ChangedRoutines(absent, testBackupConfig()))
+	assert.Empty(t, ChangedRoutines(absent, nil))
 }
 
 // routineLocation resolves a timezone the way the DTO layer resolves one, allocating a

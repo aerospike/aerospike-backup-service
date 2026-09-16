@@ -38,20 +38,21 @@ func (bc *BackupConfig) Diff(other *BackupConfig) *BackupConfig {
 	return delta
 }
 
-// ChangedRoutines returns the sorted names of every routine that differs between bc and
-// other, including the routines only one of them holds. It is symmetric, so the two
-// configurations can be passed in either order.
+// ChangedRoutines returns the sorted names of every routine that differs between two
+// backup configurations, including the routines only one of them holds. Diff reports what
+// its receiver holds, so this runs it both ways; neither configuration is privileged, and
+// they can be passed in either order.
 //
 // A routine holds its cluster, policy and storage directly rather than by name, so editing
 // any of those is reported here as a change to every routine that uses it. Nothing has to
 // track which routine refers to what.
-func (bc *BackupConfig) ChangedRoutines(other *BackupConfig) []string {
+func ChangedRoutines(a, b *BackupConfig) []string {
 	changed := make(map[string]struct{})
-	for name := range bc.Diff(other).BackupRoutines {
+	for name := range a.Diff(b).BackupRoutines {
 		changed[name] = struct{}{}
 	}
 
-	for name := range other.Diff(bc).BackupRoutines {
+	for name := range b.Diff(a).BackupRoutines {
 		changed[name] = struct{}{}
 	}
 
