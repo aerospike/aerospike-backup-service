@@ -1,6 +1,8 @@
 package decoder
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -104,3 +106,68 @@ func TestContainsRedactable_HandlesRecursiveTypes(t *testing.T) {
 	assert.True(t, containsRedactable(reflect.TypeFor[*node]()))
 	assert.False(t, containsRedactable(reflect.TypeFor[*plainNode]()))
 }
+
+// secretHolder is reached only through an unexported field and carries a credential in an
+// exported one. Copying anything out of such a value is what reflect forbids, so the walk has
+// to stop there rather than rebuild the struct around it.
+type secretHolder struct {
+	Password redact.Secret
+}
+
+type privatePath struct {
+	inner secretHolder
+}
+
+// The walk never panics on a value it cannot copy out of, and never hands the credential back
+// either: the unreachable field is dropped.
+func TestRedactSecrets_UnexportedPathToASecret(t *testing.T) {
+	require.NotPanics(t, func() {
+		redacted, ok := RedactSecrets(privatePath{inner: secretHolder{Password: literalPassword}}).(privatePath)
+		require.True(t, ok)
+		assert.NotEqual(t, redact.Secret(literalPassword), redacted.inner.Password)
+	})
+}
+
+// The merge walk meets the same values and must not panic on them either.
+func TestMergeSecrets_UnexportedPathToASecret(t *testing.T) {
+	incoming := &privatePath{inner: secretHolder{Password: redact.Placeholder}}
+	existing := &privatePath{inner: secretHolder{Password: literalPassword}}
+
+	require.NotPanics(t, func() {
+		assert.NoError(t, MergeSecrets(incoming, existing))
+	})
+}
+
+// An error that carries no credential is handed back exactly as it is: its state is unexported,
+// so rebuilding it would leave an error with an empty message.
+func TestRedactSecrets_KeepsSecretFreeErrors(t *testing.T) {
+	inner := errors.New("inner")
+	wrapped := fmt.Errorf("connect cluster1: %w", inner)
+
+	redacted, ok := RedactSecrets(wrapped).(error)
+	require.True(t, ok)
+	assert.Equal(t, wrapped.Error(), redacted.Error())
+	assert.ErrorIs(t, redacted, inner)
+}
+
+// An error that does carry one is redacted like any other value, rather than being waved
+// through: encoding/json publishes an error's fields, so handing it back as it stands would
+// leak the literal into a marshaled response.
+func TestRedactSecrets_RedactsErrorsCarryingASecret(t *testing.T) {
+	redacted, ok := RedactSecrets(&credentialCarryingError{User: "admin", Password: literalPassword}).(error)
+	require.True(t, ok)
+	assert.Equal(t, "auth failed for admin", redacted.Error(), "the message survives")
+
+	data, err := Marshal(redacted, JSON, false)
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), literalPassword)
+	assert.Contains(t, string(data), redact.Placeholder)
+}
+
+// credentialCarryingError is an error whose exported fields reach a credential.
+type credentialCarryingError struct {
+	User     string
+	Password redact.Secret
+}
+
+func (e *credentialCarryingError) Error() string { return "auth failed for " + e.User }

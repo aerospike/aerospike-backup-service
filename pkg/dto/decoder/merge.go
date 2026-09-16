@@ -3,8 +3,6 @@ package decoder
 import (
 	"errors"
 	"reflect"
-	"slices"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
@@ -60,31 +58,22 @@ func MergeSecrets(incoming, existing any) error {
 	return mergeValue(reflect.ValueOf(incoming), reflect.ValueOf(existing))
 }
 
-// mergeValue stops at these types rather than descending into their unexported state, which
-// carries no secret to merge.
-var skipDeepCopyTypes = []reflect.Type{
-	reflect.TypeFor[time.Time](),
-	reflect.TypeFor[*time.Time](),
-	reflect.TypeFor[time.Location](),
-	reflect.TypeFor[*time.Location](),
-}
-
-func shouldSkipDeepCopy(v reflect.Value) bool {
-	return slices.Contains(skipDeepCopyTypes, v.Type())
-}
-
 //nolint:gocognit,gocyclo,funlen // recursive reflect walk over nested DTO values
 func mergeValue(incoming, existing reflect.Value) error {
 	if !incoming.IsValid() {
 		return nil
 	}
 
-	if isRedactable(incoming) {
-		return setSecretValue(incoming, existing)
+	// A value read through an unexported field is read-only: reflect will neither hand it out
+	// as an interface nor let anything be written to it, so there is no secret to merge into
+	// it. This is what keeps types that hold private state - time.Time, time.Location, a
+	// wrapped error - out of the walk's way without naming any of them.
+	if !incoming.CanInterface() {
+		return nil
 	}
 
-	if shouldSkipDeepCopy(incoming) {
-		return nil
+	if isRedactable(incoming) {
+		return setSecretValue(incoming, existing)
 	}
 
 	switch incoming.Kind() {

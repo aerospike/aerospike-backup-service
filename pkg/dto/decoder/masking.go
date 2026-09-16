@@ -10,7 +10,6 @@ import (
 
 var (
 	redactableType = reflect.TypeFor[redact.Redactable]()
-	errType        = reflect.TypeFor[error]()
 
 	// containsRedactableCache memoizes containsRedactable. A type's answer never changes,
 	// and the walk asks the same question for the same types on every log line.
@@ -45,9 +44,7 @@ func isRedactable(v reflect.Value) bool {
 // redactedValue replaces a credential with its safe display form, keeping the value's own
 // type so it can be stored back into the field, map entry or slice element it came from.
 func redactedValue(v reflect.Value) (reflect.Value, bool) {
-	// A value read out of an unexported field cannot be handed to an interface, and cannot be
-	// stored back into the copy either: the walk leaves it alone and the copy drops it.
-	if !isRedactable(v) || !v.CanInterface() {
+	if !isRedactable(v) {
 		return v, false
 	}
 
@@ -68,12 +65,17 @@ func redactValue(v reflect.Value) reflect.Value {
 		return v
 	}
 
-	if redacted, ok := redactedValue(v); ok {
-		return redacted
+	// A value read through an unexported field is read-only: reflect refuses to assign it
+	// anywhere, so copying it into the rebuilt struct panics. The walk substitutes the zero
+	// value, which is the only thing reflect allows here and the safe direction for a value
+	// that may carry a credential. This is what keeps types that hold private state -
+	// time.Time, sync.Mutex, a wrapped error - out of the walk's way without naming any of them.
+	if !v.CanInterface() {
+		return reflect.Zero(v.Type())
 	}
 
-	if v.Type().Implements(errType) {
-		return v
+	if redacted, ok := redactedValue(v); ok {
+		return redacted
 	}
 
 	if !needsRedaction(v) {
