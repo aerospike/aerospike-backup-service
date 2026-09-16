@@ -51,13 +51,13 @@ type Schedule = cron.Schedule
 
 // FullSchedule returns the schedule the routine's full backups run on.
 func (r *BackupRoutine) FullSchedule() Schedule {
-	return Schedule{Cron: r.IntervalCron, Location: r.Timezone.ResolvedLocation()}
+	return cron.NewSchedule(r.IntervalCron, r.Timezone.ResolvedLocation())
 }
 
 // IncrementalSchedule returns the schedule the routine's incremental backups run on.
 // Incremental backups are optional: the returned schedule is unset when none is configured.
 func (r *BackupRoutine) IncrementalSchedule() Schedule {
-	return Schedule{Cron: r.IncrIntervalCron, Location: r.Timezone.ResolvedLocation()}
+	return cron.NewSchedule(r.IncrIntervalCron, r.Timezone.ResolvedLocation())
 }
 
 // HasIncrementalSchedule reports whether the routine runs incremental backups.

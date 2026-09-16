@@ -23,6 +23,13 @@ type Schedule struct {
 	Location *time.Location
 }
 
+func NewSchedule(cron string, location *time.Location) Schedule {
+	return Schedule{
+		Cron:     cron,
+		Location: location,
+	}
+}
+
 // NextTrigger returns the next instant at which the schedule fires.
 func (s Schedule) NextTrigger() (time.Time, error) {
 	trigger, err := s.trigger()
