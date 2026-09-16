@@ -134,14 +134,7 @@ func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
-		if _, exists := config.Storage[name]; !exists {
-			return fmt.Errorf("delete storage %q: %w", name, model.ErrNotFound)
-		}
-		if err := ensureStorageNotInUse(config, name); err != nil {
-			return err
-		}
-		delete(config.Storage, name)
-		return nil
+		return config.DeleteStorage(name)
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))

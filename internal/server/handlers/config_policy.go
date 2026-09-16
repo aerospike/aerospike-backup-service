@@ -133,14 +133,7 @@ func (s *Service) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
-		if _, exists := config.BackupPolicies[name]; !exists {
-			return fmt.Errorf("delete backup policy %q: %w", name, model.ErrNotFound)
-		}
-		if err := ensurePolicyNotInUse(config, name); err != nil {
-			return err
-		}
-		delete(config.BackupPolicies, name)
-		return nil
+		return config.DeletePolicy(name)
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))

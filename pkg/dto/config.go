@@ -221,3 +221,66 @@ func (c *Config) backupPolicyHasSecretAgent(policyName string) bool {
 
 	return false
 }
+
+// DeleteCluster removes the named cluster. It fails when no such cluster is configured or
+// when a routine still reads from it.
+func (c *Config) DeleteCluster(name string) error {
+	if _, exists := c.AerospikeClusters[name]; !exists {
+		return fmt.Errorf("delete Aerospike cluster %q: %w", name, model.ErrNotFound)
+	}
+	if routine, used := c.routineReferring(name, func(r *BackupRoutine) string { return r.SourceCluster }); used {
+		return fmt.Errorf("delete Aerospike cluster %q: %w: it is used in routine %q", name, model.ErrInUse, routine)
+	}
+	delete(c.AerospikeClusters, name)
+
+	return nil
+}
+
+// DeleteStorage removes the named storage. It fails when no such storage is configured or
+// when a routine still writes to it.
+func (c *Config) DeleteStorage(name string) error {
+	if _, exists := c.Storage[name]; !exists {
+		return fmt.Errorf("delete storage %q: %w", name, model.ErrNotFound)
+	}
+	if routine, used := c.routineReferring(name, func(r *BackupRoutine) string { return r.Storage }); used {
+		return fmt.Errorf("delete storage %q: %w: it is used in routine %q", name, model.ErrInUse, routine)
+	}
+	delete(c.Storage, name)
+
+	return nil
+}
+
+// DeletePolicy removes the named backup policy. It fails when no such policy is configured
+// or when a routine still uses it.
+func (c *Config) DeletePolicy(name string) error {
+	if _, exists := c.BackupPolicies[name]; !exists {
+		return fmt.Errorf("delete backup policy %q: %w", name, model.ErrNotFound)
+	}
+	if routine, used := c.routineReferring(name, func(r *BackupRoutine) string { return r.BackupPolicy }); used {
+		return fmt.Errorf("delete backup policy %q: %w: it is used in routine %q", name, model.ErrInUse, routine)
+	}
+	delete(c.BackupPolicies, name)
+
+	return nil
+}
+
+// DeleteRoutine removes the named backup routine. It fails when no such routine is configured.
+func (c *Config) DeleteRoutine(name string) error {
+	if _, exists := c.BackupRoutines[name]; !exists {
+		return fmt.Errorf("delete backup routine %q: %w", name, model.ErrNotFound)
+	}
+	delete(c.BackupRoutines, name)
+
+	return nil
+}
+
+// routineReferring returns the name of a routine whose ref field names target, if any.
+func (c *Config) routineReferring(target string, ref func(*BackupRoutine) string) (string, bool) {
+	for routineName, routine := range c.BackupRoutines {
+		if routine != nil && ref(routine) == target {
+			return routineName, true
+		}
+	}
+
+	return "", false
+}

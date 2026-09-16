@@ -105,28 +105,6 @@ func (bc *BackupConfig) AddStorage(name string, s Storage) error {
 	return nil
 }
 
-func (bc *BackupConfig) DeleteStorage(name string) error {
-	s, exists := bc.Storage[name]
-	if !exists {
-		return fmt.Errorf("delete storage %q: %w", name, ErrNotFound)
-	}
-	if routine := bc.routineUsesStorage(s); routine != "" {
-		return fmt.Errorf("delete storage %q: %w: it is used in routine %q", name, ErrInUse, routine)
-	}
-	delete(bc.Storage, name)
-
-	return nil
-}
-
-func (bc *BackupConfig) routineUsesStorage(s Storage) string {
-	for name, r := range bc.BackupRoutines {
-		if r.Storage == s {
-			return name
-		}
-	}
-	return ""
-}
-
 func (bc *BackupConfig) AddPolicy(name string, p *BackupPolicy) error {
 	if p == nil {
 		return errors.New("backup policy cannot be nil")
@@ -138,28 +116,6 @@ func (bc *BackupConfig) AddPolicy(name string, p *BackupPolicy) error {
 	bc.BackupPolicies[name] = p
 
 	return nil
-}
-
-func (bc *BackupConfig) DeletePolicy(name string) error {
-	p, exists := bc.BackupPolicies[name]
-	if !exists {
-		return fmt.Errorf("delete backup policy %q: %w", name, ErrNotFound)
-	}
-	if routine := bc.routineUsesPolicy(p); routine != "" {
-		return fmt.Errorf("delete backup policy %q: %w: it is used in routine %q", name, ErrInUse, routine)
-	}
-	delete(bc.BackupPolicies, name)
-
-	return nil
-}
-
-func (bc *BackupConfig) routineUsesPolicy(p *BackupPolicy) string {
-	for name, r := range bc.BackupRoutines {
-		if r.BackupPolicy == p {
-			return name
-		}
-	}
-	return ""
 }
 
 func (c *Config) Routines() map[string]*BackupRoutine {
@@ -212,28 +168,6 @@ func (bc *BackupConfig) AddCluster(name string, cluster *AerospikeCluster) error
 	bc.AerospikeClusters[name] = cluster
 
 	return nil
-}
-
-func (bc *BackupConfig) DeleteCluster(name string) error {
-	cluster, exists := bc.AerospikeClusters[name]
-	if !exists {
-		return fmt.Errorf("delete Aerospike cluster %q: %w", name, ErrNotFound)
-	}
-	if routine := bc.routineUsesCluster(cluster); routine != "" {
-		return fmt.Errorf("delete Aerospike cluster %q: %w: it is used in routine %q", name, ErrInUse, routine)
-	}
-	delete(bc.AerospikeClusters, name)
-
-	return nil
-}
-
-func (bc *BackupConfig) routineUsesCluster(cluster *AerospikeCluster) string {
-	for name, r := range bc.BackupRoutines {
-		if r.SourceCluster == cluster {
-			return name
-		}
-	}
-	return ""
 }
 
 func (bc *BackupConfig) AddSecretAgent(name string, agent *SecretAgent) error {

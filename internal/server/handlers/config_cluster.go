@@ -140,14 +140,7 @@ func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
-		if _, exists := config.AerospikeClusters[name]; !exists {
-			return fmt.Errorf("delete Aerospike cluster %q: %w", name, model.ErrNotFound)
-		}
-		if err := ensureClusterNotInUse(config, name); err != nil {
-			return err
-		}
-		delete(config.AerospikeClusters, name)
-		return nil
+		return config.DeleteCluster(name)
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))

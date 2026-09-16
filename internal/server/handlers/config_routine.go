@@ -138,11 +138,7 @@ func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
-		if _, exists := config.BackupRoutines[name]; !exists {
-			return fmt.Errorf("delete backup routine %q: %w", name, model.ErrNotFound)
-		}
-		delete(config.BackupRoutines, name)
-		return nil
+		return config.DeleteRoutine(name)
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))
