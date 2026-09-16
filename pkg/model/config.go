@@ -263,22 +263,21 @@ func (c *Config) AddSecretAgent(name string, agent *SecretAgent) error {
 	return nil
 }
 
+// SetBackupConfig replaces the backup configuration and marks every routine the
+// replacement changed - one added, removed, edited, or reading an entry that was edited -
+// as needing a reschedule and a history rescan.
+//
+// Both happen under one lock, so no reader can see the new configuration without the
+// invalidations it caused, and a caller cannot install a configuration and forget to say
+// what it changed.
 func (c *Config) SetBackupConfig(other *BackupConfig) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	changed := other.ChangedRoutines(&c.backupConfig)
 	c.backupConfig = *other
-}
 
-// InvalidateRoutines marks the given routines as needing reschedule and history rescan.
-func (c *Config) InvalidateRoutines(names []string) {
-	if len(names) == 0 {
-		return
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	for _, name := range names {
+	for _, name := range changed {
 		c.invalidateRoutine(name)
 	}
 }

@@ -31,27 +31,39 @@ func TestPopInvalidatedRoutineNames_DeduplicatesNames(t *testing.T) {
 	assert.Equal(t, []string{"r1"}, invalidated)
 }
 
-func TestInvalidateRoutines(t *testing.T) {
+func TestSetBackupConfig_InvalidatesOnlyWhatChanged(t *testing.T) {
 	cfg := NewConfig()
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r2"}))
+	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1", IntervalCron: "@daily"}))
+	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r2", IntervalCron: "@daily"}))
 	cfg.PopInvalidatedRoutineNames()
 
-	cfg.InvalidateRoutines([]string{"r1"})
+	next := cfg.BackupConfigCopy()
+	next.BackupRoutines["r1"] = &BackupRoutine{Name: "r1", IntervalCron: "@hourly"}
+	cfg.SetBackupConfig(next)
 
-	invalidated := cfg.PopInvalidatedRoutineNames()
-	assert.Equal(t, []string{"r1"}, invalidated)
+	assert.Equal(t, []string{"r1"}, cfg.PopInvalidatedRoutineNames())
 }
 
-func TestSetBackupConfig_DoesNotInvalidate(t *testing.T) {
+func TestSetBackupConfig_IdenticalConfigurationInvalidatesNothing(t *testing.T) {
 	cfg := NewConfig()
 	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
 	cfg.PopInvalidatedRoutineNames()
 
-	other := cfg.BackupConfigCopy()
-	cfg.SetBackupConfig(other)
+	cfg.SetBackupConfig(cfg.BackupConfigCopy())
 
 	assert.Empty(t, cfg.PopInvalidatedRoutineNames())
+}
+
+func TestSetBackupConfig_InvalidatesARemovedRoutine(t *testing.T) {
+	cfg := NewConfig()
+	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
+	cfg.PopInvalidatedRoutineNames()
+
+	next := cfg.BackupConfigCopy()
+	delete(next.BackupRoutines, "r1")
+	cfg.SetBackupConfig(next)
+
+	assert.Equal(t, []string{"r1"}, cfg.PopInvalidatedRoutineNames())
 }
 
 func TestConfigAddRejectsNilValues(t *testing.T) {

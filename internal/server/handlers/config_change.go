@@ -59,14 +59,7 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	// The mutation is described as a DTO edit, but what has to be rescheduled is a routine,
-	// and a routine is changed as much by an edit to the cluster or storage it names as by an
-	// edit to itself. Comparing the two resolved configurations reports both.
-	previous := s.config.BackupConfigCopy()
-	current := modelConfig.BackupConfigCopy()
-
-	s.config.SetBackupConfig(current)
-	s.config.InvalidateRoutines(current.ChangedRoutines(previous))
+	s.config.SetBackupConfig(modelConfig.BackupConfigCopy())
 
 	if options.validateNamespaces {
 		s.nsValidator.Validate(ctx, s.config)
