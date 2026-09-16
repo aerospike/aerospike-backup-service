@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -166,14 +167,7 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
-		routine, exists := config.BackupRoutines[name]
-		if !exists {
-			return fmt.Errorf("toggle disable for backup routine %q: %w", name, model.ErrNotFound)
-		}
-		routine.Disabled = false
-		return nil
-	})
+	err := s.toggleRoutineDisabled(r.Context(), name, false)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
 			httpError(w, errRoutineNotFound(name))
@@ -201,14 +195,7 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
-		routine, exists := config.BackupRoutines[name]
-		if !exists {
-			return fmt.Errorf("toggle disable for backup routine %q: %w", name, model.ErrNotFound)
-		}
-		routine.Disabled = true
-		return nil
-	})
+	err := s.toggleRoutineDisabled(r.Context(), name, true)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
 			httpError(w, errRoutineNotFound(name))
@@ -221,4 +208,18 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 	s.registry.Cancel(name) // cancel any running job for this routine after disabling it.
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// toggleRoutineDisabled sets the Disabled flag of a routine, leaving the handlers to turn
+// the outcome into a response.
+func (s *Service) toggleRoutineDisabled(ctx context.Context, name string, disabled bool) error {
+	return s.changeBackupConfig(ctx, func(config *dto.Config) error {
+		routine, exists := config.BackupRoutines[name]
+		if !exists {
+			return fmt.Errorf("toggle disable for backup routine %q: %w", name, model.ErrNotFound)
+		}
+		routine.Disabled = disabled
+
+		return nil
+	})
 }
