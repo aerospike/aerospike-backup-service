@@ -20,9 +20,7 @@ const (
 	// reservedNamespaceName is the one name the Aerospike server keeps for itself.
 	reservedNamespaceName = "null"
 	// namespaceNameChars is the full set of characters an Aerospike namespace name may use.
-	namespaceNameChars = "abcdefghijklmnopqrstuvwxyz" +
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-		"0123456789_-$"
+	namespaceNameChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-$"
 )
 
 // NamespaceName represents a validated Aerospike namespace name in the DTO layer.
