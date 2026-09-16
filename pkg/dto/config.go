@@ -214,7 +214,7 @@ func (c *Config) addRoutines(backupConfig *model.BackupConfig, serviceTimezone m
 
 func (c *Config) backupPolicyHasSecretAgent(policyName string) bool {
 	for _, routine := range c.BackupRoutines {
-		if routine != nil && routine.BackupPolicy == policyName && routine.SecretAgent != "" {
+		if routine.BackupPolicy == policyName && routine.SecretAgent != "" {
 			return true
 		}
 	}
