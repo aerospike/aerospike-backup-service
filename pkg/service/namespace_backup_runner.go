@@ -75,7 +75,7 @@ func (e *namespaceBackupRunner) Run(
 	scanLimiter syncutil.Limiter,
 	logger *slog.Logger,
 ) (CancelableBackupHandler, error) {
-	h := newRetryableBackupHandler(
+	h, err := startRetryableBackup(
 		ctx,
 		*routine.BackupPolicy.GetRetryPolicyOrDefault(),
 		retryableBackupCallbacks{
@@ -109,8 +109,7 @@ func (e *namespaceBackupRunner) Run(
 		},
 		logger,
 	)
-
-	if err := h.waitStarted(ctx); err != nil {
+	if err != nil {
 		return nil, err
 	}
 

@@ -28,7 +28,7 @@ type retryableBackupHandler struct {
 
 var _ backupexecutor.BackupHandler = (*retryableBackupHandler)(nil)
 
-// retryableBackupCallbacks configures the backup lifecycle hooks for newRetryableBackupHandler.
+// retryableBackupCallbacks configures the backup lifecycle hooks for startRetryableBackup.
 type retryableBackupCallbacks struct {
 	Start     func(ctx context.Context) (backupexecutor.BackupHandler, error)
 	OnFail    func(ctx context.Context)
@@ -36,12 +36,18 @@ type retryableBackupCallbacks struct {
 	OnRetry   func()
 }
 
-func newRetryableBackupHandler(
+// startRetryableBackup starts a backup with retries and returns once its pipeline is running.
+// The returned handler observes that run: wait for it, read its statistics, cancel it.
+//
+// A run that gives up before ever starting a pipeline - an unreachable cluster, a storage writer
+// that cannot be created - has nothing to observe: it never publishes statistics, so the error
+// that ended the run is returned instead of a handler, and nothing is left running.
+func startRetryableBackup(
 	ctx context.Context,
 	policy models.RetryPolicy,
 	callbacks retryableBackupCallbacks,
 	logger *slog.Logger,
-) *retryableBackupHandler {
+) (*retryableBackupHandler, error) {
 	// A run uses three contexts: the caller's, which starts the pipeline and outlives every run; a
 	// cancelable child of it, which is this run's handle and what Cancel ends; and a cleanup context
 	// that survives cancellation. Ending the child stops the pipeline, because the inner handler
@@ -89,16 +95,32 @@ func newRetryableBackupHandler(
 		return retryOnSuccess(handler)
 	}
 
-	// Start the backup process with retries. The wait context is released as soon as the loop
-	// returns, so a finished run leaves nothing behind in the scheduler context.
-	go func() {
-		defer cancel()
+	backupLogger := logger.With(slog.String("label", "backup"))
+	run := func() error {
+		return try.Retry(ctxWithCancel, policy, backupLogger, processBackup, callbacks.OnRetry)
+	}
 
-		h.finish(try.Retry(ctxWithCancel, policy,
-			logger.With(slog.String("label", "backup")), processBackup, callbacks.OnRetry))
+	if err := h.start(ctx, run); err != nil {
+		h.Cancel()
+
+		return nil, err
+	}
+
+	return h, nil
+}
+
+// start launches the run and blocks until its pipeline is live. Both halves belong together: the
+// signal waited for here is produced by the loop started here. The run's wait context is released
+// as soon as that loop returns, so a finished run leaves nothing behind in the scheduler context.
+func (h *retryableBackupHandler) start(ctx context.Context, run func() error) error {
+	go func() {
+		defer h.cancel()
+
+		err := run()
+		h.finish(err)
 	}()
 
-	return h
+	return h.waitStarted(ctx)
 }
 
 func (h *retryableBackupHandler) setHandler(handler backupexecutor.BackupHandler) {
@@ -111,9 +133,8 @@ func (h *retryableBackupHandler) setHandler(handler backupexecutor.BackupHandler
 	}
 }
 
-// waitStarted blocks until the backup pipeline is running. A run that ends without ever
-// starting one - an unreachable cluster, a storage writer that cannot be created - never
-// publishes statistics, so it returns the error that ended the run instead.
+// waitStarted blocks until the backup pipeline is running, and returns the run's own error if
+// it ends without ever starting one.
 func (h *retryableBackupHandler) waitStarted(ctx context.Context) error {
 	select {
 	case <-h.started:

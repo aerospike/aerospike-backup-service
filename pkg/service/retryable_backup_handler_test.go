@@ -50,9 +50,10 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 		retryCount++
 	}
 
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
 		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: onRetry,
 	}, slog.Default())
+	require.NoError(t, startErr)
 	err := handler.Wait(t.Context())
 
 	require.NoError(t, err)
@@ -97,9 +98,10 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 		retryCount++
 	}
 
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
 		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: onRetry,
 	}, slog.Default())
+	require.NoError(t, startErr)
 	err := handler.Wait(t.Context())
 
 	require.NoError(t, err)
@@ -139,9 +141,10 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, retryableBackupCallbacks{
+	handler, startErr := startRetryableBackup(ctx, retry, retryableBackupCallbacks{
 		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: func() {},
 	}, slog.Default())
+	require.NoError(t, startErr)
 
 	<-waitCalled
 
@@ -178,9 +181,10 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
 		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: func() {},
 	}, slog.Default())
+	require.NoError(t, startErr)
 	err := handler.Wait(t.Context())
 
 	require.Error(t, err)
@@ -190,6 +194,8 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	assert.Equal(t, 0, successCount)
 }
 
+// A run that never starts a pipeline ends the call with the error that ended the run: there is
+// no handler to hand back, because it will never publish statistics.
 func TestStartRetryableBackup_StartFails(t *testing.T) {
 	successCount := 0
 	failureCount := 0
@@ -207,12 +213,12 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+	handler, err := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
 		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: func() {},
 	}, slog.Default())
-	err := handler.Wait(t.Context())
 
 	require.Error(t, err)
+	assert.Nil(t, handler)
 	assert.Contains(t, err.Error(), "failed to start backup")
 	assert.Equal(t, 0, failureCount)
 	assert.Equal(t, 0, successCount)
@@ -248,9 +254,10 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
 		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: func() {},
 	}, slog.Default())
+	require.NoError(t, startErr)
 	var err error
 	var wg sync.WaitGroup
 	wg.Go(func() {
@@ -277,12 +284,13 @@ func TestStartRetryableBackup_ReleasesWaitContextOnCompletion(t *testing.T) {
 	})
 	mockHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
 
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
 		Start:     func(context.Context) (backupexecutor.BackupHandler, error) { return mockHandler, nil },
 		OnFail:    func(context.Context) {},
 		OnSuccess: func(context.Context, *models.BackupStats) error { return nil },
 		OnRetry:   func() {},
 	}, slog.Default())
+	require.NoError(t, startErr)
 
 	require.NoError(t, handler.Wait(t.Context()))
 
@@ -309,7 +317,7 @@ func TestStartRetryableBackup_CancelStopsMetadataRetries(t *testing.T) {
 	firstCall := make(chan struct{})
 	canceled := make(chan struct{})
 
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
 		Start:  func(context.Context) (backupexecutor.BackupHandler, error) { return mockHandler, nil },
 		OnFail: func(context.Context) { failureCount.Add(1) },
 		OnSuccess: func(context.Context, *models.BackupStats) error {
@@ -321,6 +329,7 @@ func TestStartRetryableBackup_CancelStopsMetadataRetries(t *testing.T) {
 		},
 		OnRetry: func() {},
 	}, slog.Default())
+	require.NoError(t, startErr)
 
 	<-firstCall
 	handler.Cancel()
@@ -351,9 +360,10 @@ func TestRetryableBackupHandler_GetStats_GetMetrics(t *testing.T) {
 	}
 	onSuccess := func(_ context.Context, _ *models.BackupStats) error { return nil }
 
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
 		Start: start, OnFail: func(context.Context) {}, OnSuccess: onSuccess, OnRetry: func() {},
 	}, slog.Default())
+	require.NoError(t, startErr)
 
 	require.NoError(t, handler.Wait(t.Context()))
 	assert.Equal(t, metrics, handler.GetMetrics())
@@ -368,17 +378,19 @@ func TestRetryableBackupHandler_GetStats_GetMetrics_BeforeStart(t *testing.T) {
 	assert.Nil(t, h.GetMetrics())
 }
 
-// waitStarted returns as soon as the pipeline is running, while the backup itself goes on.
-func TestRetryableBackupHandler_WaitStarted_ReturnsOnceRunning(t *testing.T) {
+// startRetryableBackup hands back the handler while the backup itself goes on.
+func TestStartRetryableBackup_ReturnsOnceRunning(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
+	inFlight := make(chan struct{})
 	mockHandler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+		close(inFlight)
 		<-ctx.Done()
 
 		return ctx.Err()
 	})
 
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+	handler, err := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
 		Start: func(_ context.Context) (backupexecutor.BackupHandler, error) {
 			return mockHandler, nil
 		},
@@ -386,58 +398,21 @@ func TestRetryableBackupHandler_WaitStarted_ReturnsOnceRunning(t *testing.T) {
 		OnSuccess: func(_ context.Context, _ *models.BackupStats) error { return nil },
 		OnRetry:   func() {},
 	}, slog.Default())
+	require.NoError(t, err)
+	require.NotNil(t, handler)
 	defer handler.Cancel()
 
-	require.NoError(t, handler.waitStarted(t.Context()))
-}
-
-// A run that never starts a pipeline - an unreachable cluster, a storage writer that cannot be
-// created - ends the wait with the error that ended the run, instead of blocking until the
-// caller's context is canceled, which for a scheduled backup is at shutdown.
-func TestRetryableBackupHandler_WaitStarted_ReturnsStartError(t *testing.T) {
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
-		Start: func(_ context.Context) (backupexecutor.BackupHandler, error) {
-			return nil, errors.New("cluster unreachable")
-		},
-		OnFail:    func(_ context.Context) {},
-		OnSuccess: func(_ context.Context, _ *models.BackupStats) error { return nil },
-		OnRetry:   func() {},
-	}, slog.Default())
-
-	err := handler.waitStarted(t.Context())
-
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "cluster unreachable")
-}
-
-// A run that has already finished by the time the wait is reached is a started run.
-func TestRetryableBackupHandler_WaitStarted_AcceptsFinishedRun(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
-	mockHandler.EXPECT().Wait(gomock.Any()).Return(nil)
-	mockHandler.EXPECT().GetStats().Return(models.NewBackupStats())
-
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
-		Start: func(_ context.Context) (backupexecutor.BackupHandler, error) {
-			return mockHandler, nil
-		},
-		OnFail:    func(_ context.Context) {},
-		OnSuccess: func(_ context.Context, _ *models.BackupStats) error { return nil },
-		OnRetry:   func() {},
-	}, slog.Default())
-	require.NoError(t, handler.Wait(t.Context()))
-
-	require.NoError(t, handler.waitStarted(t.Context()))
+	<-inFlight // the caller holds the handler while the backup is still running
 }
 
 // A backup that started and then failed still started: the failure belongs to Wait, so that the
 // whole routine run is reported the same way whenever it fails.
-func TestRetryableBackupHandler_WaitStarted_AcceptsRunThatFailedAfterStarting(t *testing.T) {
+func TestStartRetryableBackup_AcceptsRunThatFailedAfterStarting(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	mockHandler.EXPECT().Wait(gomock.Any()).Return(errors.New("wait failed")).Times(3)
 
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+	handler, err := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
 		Start: func(_ context.Context) (backupexecutor.BackupHandler, error) {
 			return mockHandler, nil
 		},
@@ -445,14 +420,17 @@ func TestRetryableBackupHandler_WaitStarted_AcceptsRunThatFailedAfterStarting(t 
 		OnSuccess: func(_ context.Context, _ *models.BackupStats) error { return nil },
 		OnRetry:   func() {},
 	}, slog.Default())
-	require.Error(t, handler.Wait(t.Context()))
+	require.NoError(t, err)
 
-	require.NoError(t, handler.waitStarted(t.Context()))
+	require.Error(t, handler.Wait(t.Context()))
 }
 
-// The wait is bounded by the caller's context, not by the run.
-func TestRetryableBackupHandler_WaitStarted_HonorsContext(t *testing.T) {
-	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+// The wait for the pipeline is bounded by the caller's context, not by the run.
+func TestStartRetryableBackup_HonorsContext(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Millisecond)
+	defer cancel()
+
+	handler, err := startRetryableBackup(ctx, retry, retryableBackupCallbacks{
 		Start: func(ctx context.Context) (backupexecutor.BackupHandler, error) {
 			<-ctx.Done()
 
@@ -462,10 +440,48 @@ func TestRetryableBackupHandler_WaitStarted_HonorsContext(t *testing.T) {
 		OnSuccess: func(_ context.Context, _ *models.BackupStats) error { return nil },
 		OnRetry:   func() {},
 	}, slog.Default())
-	defer handler.Cancel()
 
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Millisecond)
-	defer cancel()
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Nil(t, handler)
+}
 
-	require.ErrorIs(t, handler.waitStarted(ctx), context.DeadlineExceeded)
+// Only a run that never started is a start failure. Once the pipeline has run, the two channels
+// can close in either order, and the run's own error belongs to Wait.
+func TestRetryableBackupHandler_WaitStarted(t *testing.T) {
+	t.Parallel()
+
+	runErr := errors.New("run failed")
+
+	tests := []struct {
+		name     string
+		started  bool
+		done     bool
+		runErr   error
+		expected error
+	}{
+		{name: "running", started: true},
+		{name: "finished before the wait", started: true, done: true},
+		{name: "failed after starting", started: true, done: true, runErr: runErr},
+		{name: "never started", done: true, runErr: runErr, expected: runErr},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := &retryableBackupHandler{
+				started: make(chan struct{}),
+				done:    make(chan struct{}),
+				err:     tt.runErr,
+			}
+			if tt.started {
+				close(h.started)
+			}
+			if tt.done {
+				close(h.done)
+			}
+
+			require.ErrorIs(t, h.waitStarted(t.Context()), tt.expected)
+		})
+	}
 }
