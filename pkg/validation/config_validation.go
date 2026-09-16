@@ -18,7 +18,11 @@ func ValidateConfiguration(conf *dto.Config) error {
 		return errors.New("config is nil")
 	}
 
-	_, err := conf.ToModel(dto.ValidationSkipTLSFiles)
+	if err := conf.Validate(); err != nil {
+		return err
+	}
+
+	_, err := conf.ToModel()
 	return err
 }
 
@@ -30,12 +34,16 @@ func ValidateRestoreRequest(request *dto.RestoreRequest, conf *dto.Config) error
 		return errors.New("restore request is nil")
 	}
 
-	model, err := conf.ToModel(dto.ValidationSkipTLSFiles)
+	if err := conf.Validate(); err != nil {
+		return fmt.Errorf("config invalid: %w", err)
+	}
+
+	model, err := conf.ToModel()
 	if err != nil {
 		return fmt.Errorf("config invalid: %w", err)
 	}
 
-	err = request.Validate(dto.ValidationSkipTLSFiles)
+	err = request.Validate()
 	if err != nil {
 		return err
 	}
@@ -53,12 +61,16 @@ func ValidateRestoreTimestampRequest(request *dto.RestoreTimestampRequest, conf 
 		return errors.New("restore request is nil")
 	}
 
-	model, err := conf.ToModel(dto.ValidationSkipTLSFiles)
+	if err := conf.Validate(); err != nil {
+		return fmt.Errorf("config invalid: %w", err)
+	}
+
+	model, err := conf.ToModel()
 	if err != nil {
 		return fmt.Errorf("config invalid: %w", err)
 	}
 
-	err = request.Validate(dto.ValidationSkipTLSFiles)
+	err = request.Validate()
 	if err != nil {
 		return err
 	}

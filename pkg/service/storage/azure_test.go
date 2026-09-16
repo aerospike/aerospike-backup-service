@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,14 +23,14 @@ func TestAzureStorage_ConnectivitySuccess(t *testing.T) {
 	key := base64.StdEncoding.EncodeToString([]byte("dummy-key"))
 
 	ctx := t.Context()
-	accessor := NewAzureStorageAccessor(ctx, secrets.NewResolver(ctx))
+	accessor := NewAzureStorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getAzureClient(ctx, &model.AzureStorage{
 		Endpoint:      ts.URL,
 		ContainerName: "test-container",
 		Auth: &model.AzureSharedKeyAuth{
 			AccountName: "testaccount",
-			AccountKey:  key,
+			AccountKey:  redact.Secret(key),
 		},
 	})
 	require.NoError(t, err)
@@ -44,14 +45,14 @@ func TestAzureStorage_ConnectivityReadOnly(t *testing.T) {
 	key := base64.StdEncoding.EncodeToString([]byte("dummy-key"))
 
 	ctx := t.Context()
-	accessor := NewAzureStorageAccessor(ctx, secrets.NewResolver(ctx))
+	accessor := NewAzureStorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getAzureClient(ctx, &model.AzureStorage{
 		Endpoint:      ts.URL,
 		ContainerName: "test-container",
 		Auth: &model.AzureSharedKeyAuth{
 			AccountName: "testaccount",
-			AccountKey:  key,
+			AccountKey:  redact.Secret(key),
 		},
 	})
 	require.NoError(t, err)
@@ -67,15 +68,15 @@ func TestAzureStorage_ConnectivityFailure(t *testing.T) {
 
 	key := base64.StdEncoding.EncodeToString([]byte("dummy-key"))
 
-	ctx := t.Context()
-	accessor := NewAzureStorageAccessor(ctx, secrets.NewResolver(ctx))
+	ctx := connectivityFailureContext(t)
+	accessor := NewAzureStorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getAzureClient(ctx, &model.AzureStorage{
 		Endpoint:      ts.URL,
 		ContainerName: "test-container",
 		Auth: &model.AzureSharedKeyAuth{
 			AccountName: "testaccount",
-			AccountKey:  key,
+			AccountKey:  redact.Secret(key),
 		},
 	})
 	require.Error(t, err)

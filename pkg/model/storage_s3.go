@@ -15,10 +15,10 @@ type S3Storage struct {
 	// S3Profile is the name of the AWS credentials profile to use.
 	S3Profile string
 	// S3EndpointOverride is used to specify a custom S3 endpoint.
-	S3EndpointOverride *string
+	S3EndpointOverride string
 	// S3LogLevel controls the verbosity of the AWS SDK logging.
 	// Valid values are: OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE.
-	S3LogLevel *string
+	S3LogLevel S3LogLevel
 	// MinPartSize is the minimum size in bytes for multipart upload parts.
 	MinPartSize *int
 	// MaxConnsPerHost limits the number of concurrent connections to S3.
@@ -30,8 +30,8 @@ type S3Storage struct {
 }
 
 type S3Authentication struct {
-	KeyIDSecret     string
-	AccessKeySecret string
+	KeyIDSecret     Secret
+	AccessKeySecret Secret
 	SecretAgent     *SecretAgent
 }
 

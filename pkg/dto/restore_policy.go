@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 // BaseRestorePolicy represents the common policy for restore operations.
@@ -63,7 +62,7 @@ type BaseRestorePolicy struct {
 	// Encryption details (algorithm and key). Default is no encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Configuration of retries for each restore write operation.
-	// If nil, the default policy is used (5 retries with a one-minute delay between attempts).
+	// If nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Amount of extra time-to-live to add to records that have expirable void-times.
 	// Must be set in seconds.
@@ -86,8 +85,8 @@ type TimestampRestorePolicy struct {
 
 // Validate validates the base restore policy.
 //
-//nolint:gocognit,funlen
-func (p *BaseRestorePolicy) Validate() error {
+
+func (p *BaseRestorePolicy) Validate(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
@@ -123,24 +122,14 @@ func (p *BaseRestorePolicy) Validate() error {
 		}
 	}
 
-	if duplicates := collections.CheckDuplicates(p.SetList); len(duplicates) > 0 {
-		return errValidationDuplicate("set-list", duplicates)
+	if err := validateUniqueNonEmpty("set-list", p.SetList); err != nil {
+		return err
 	}
-	for i, set := range p.SetList {
-		if set == "" {
-			return errValidationEmptyField(fmt.Sprintf("set-list[%d]", i))
-		}
-	}
-	if duplicates := collections.CheckDuplicates(p.BinList); len(duplicates) > 0 {
-		return errValidationDuplicate("bin-list", duplicates)
-	}
-	for i, bin := range p.BinList {
-		if bin == "" {
-			return errValidationEmptyField(fmt.Sprintf("bin-list[%d]", i))
-		}
+	if err := validateUniqueNonEmpty("bin-list", p.BinList); err != nil {
+		return err
 	}
 
-	if err := p.EncryptionPolicy.Validate(); err != nil {
+	if err := p.EncryptionPolicy.Validate(opts); err != nil {
 		return err
 	}
 	if err := p.RetryPolicy.Validate(); err != nil {
@@ -154,11 +143,11 @@ func (p *BaseRestorePolicy) Validate() error {
 }
 
 // Validate validates the restore policy.
-func (p *RestorePolicy) Validate() error {
+func (p *RestorePolicy) Validate(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
-	if err := p.BaseRestorePolicy.Validate(); err != nil {
+	if err := p.BaseRestorePolicy.Validate(opts); err != nil {
 		return err
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {
@@ -168,11 +157,11 @@ func (p *RestorePolicy) Validate() error {
 }
 
 // Validate validates the timestamp restore policy.
-func (p *TimestampRestorePolicy) Validate() error {
+func (p *TimestampRestorePolicy) Validate(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
-	return p.BaseRestorePolicy.Validate()
+	return p.BaseRestorePolicy.Validate(opts)
 }
 
 func (p *BaseRestorePolicy) validateExistingRecordPolicy() error {

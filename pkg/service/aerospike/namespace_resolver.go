@@ -8,6 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
+// NamespaceResolver selects configured namespaces or discovers them from a routine's source cluster.
 type NamespaceResolver interface {
 	// ResolveNamespaces returns the list of namespaces to back up for the routine.
 	ResolveNamespaces(

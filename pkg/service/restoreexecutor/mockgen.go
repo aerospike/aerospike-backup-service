@@ -44,7 +44,7 @@ func (m *MockRestore) EXPECT() *MockRestoreMockRecorder {
 }
 
 // Run mocks base method.
-func (m *MockRestore) Run(ctx context.Context, client aerospike.Restorer, restoreRequest *model.RestoreRequest) (RestoreHandler, error) {
+func (m *MockRestore) Run(ctx context.Context, client aerospike.Client, restoreRequest *model.RestoreRequest) (RestoreHandler, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run", ctx, client, restoreRequest)
 	ret0, _ := ret[0].(RestoreHandler)

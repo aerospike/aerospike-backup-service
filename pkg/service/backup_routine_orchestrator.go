@@ -14,32 +14,33 @@ import (
 
 var errBackupSkipped = errors.New("backup skipped")
 
-// BackupOrchestrator runs a full or incremental backup for a routine snapshot.
+// BackupOrchestrator runs one full or incremental backup of a routine, from admission
+// through execution to completion handling and reporting.
 type BackupOrchestrator interface {
 	// Backup executes a full or incremental backup for the given routine snapshot.
 	Backup(ctx context.Context, routine *model.BackupRoutine, now time.Time, backupType model.BackupType)
 }
 
-// BackupOrchestratorImpl runs backup operations for a routine.
-type BackupOrchestratorImpl struct {
-	registry          RunningBackupsRegistry
+// backupOrchestrator runs backup operations for a routine.
+type backupOrchestrator struct {
+	registry          BackupStateRegistry
 	completionHandler BackupCompletionHandler
 	outcomeReporter   BackupReporter
 	startController   StartController
 	routineRunner     RoutineBackupRunner
 }
 
-var _ BackupOrchestrator = (*BackupOrchestratorImpl)(nil)
+var _ BackupOrchestrator = (*backupOrchestrator)(nil)
 
-// NewBackupOrchestrator builds a [BackupOrchestratorImpl] from shared service dependencies.
+// NewBackupOrchestrator returns a BackupOrchestrator.
 func NewBackupOrchestrator(
-	registry RunningBackupsRegistry,
+	registry BackupStateRegistry,
 	completionHandler BackupCompletionHandler,
 	reporter BackupReporter,
 	startController StartController,
 	backupRunner RoutineBackupRunner,
-) *BackupOrchestratorImpl {
-	return &BackupOrchestratorImpl{
+) BackupOrchestrator {
+	return &backupOrchestrator{
 		registry:          registry,
 		completionHandler: completionHandler,
 		outcomeReporter:   reporter,
@@ -49,7 +50,7 @@ func NewBackupOrchestrator(
 }
 
 // Backup executes a full or incremental backup for the given routine snapshot.
-func (p *BackupOrchestratorImpl) Backup(
+func (p *backupOrchestrator) Backup(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	now time.Time,
@@ -58,7 +59,7 @@ func (p *BackupOrchestratorImpl) Backup(
 	logger := slog.With(attr.Routine(routine.Name))
 	release, err := p.startController.TryStart(routine, now, backupType)
 	if err != nil {
-		p.outcomeReporter.Report(routine.Name, backupType, now, 0, err, logger)
+		p.outcomeReporter.Report(routine.Name, backupType, 0, err, logger)
 		return
 	}
 	defer release()
@@ -67,29 +68,40 @@ func (p *BackupOrchestratorImpl) Backup(
 		return p.runBackupInternal(ctx, routine, now, backupType, logger)
 	})
 
-	p.outcomeReporter.Report(routine.Name, backupType, now, duration, err, logger)
+	p.outcomeReporter.Report(routine.Name, backupType, duration, err, logger)
 }
 
 // runBackupInternal starts namespace backups, registers the aggregate handler, and runs completion hooks.
-func (p *BackupOrchestratorImpl) runBackupInternal(
+func (p *backupOrchestrator) runBackupInternal(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	now time.Time,
 	backupType model.BackupType,
 	logger *slog.Logger,
 ) error {
-	logger.Info(string(backupType)+" backup started", slog.Time("now", now))
+	if backupType == model.BackupTypeIncremental {
+		logger.Info(
+			"incremental backup started",
+			slog.Time("now", now),
+			slog.String("incrMode", string(routine.BackupPolicy.GetIncrModeOrDefault())),
+		)
+	} else {
+		logger.Info("full backup started", slog.Time("now", now))
+	}
 
 	runSpec := model.BackupRunSpec{
-		Type:       backupType,
-		StartTime:  now,
-		TimeBounds: p.createTimeBounds(backupType, now, routine),
+		Type:      backupType,
+		StartTime: now,
+		TimeBounds: model.TimeBounds{
+			FromTime: p.backupFromTime(routine, backupType),
+			ToTime:   p.backupToTime(routine, now),
+		},
 	}
 	backupHandler, err := p.routineRunner.Run(ctx, routine, runSpec, logger)
 	if err != nil {
 		return err
 	}
-	p.registry.register(routine.Name, backupType, backupHandler)
+	p.registry.BackupStarted(routine.Name, backupType, backupHandler)
 
 	if err = backupHandler.Wait(ctx); err != nil {
 		p.completionHandler.OnFailure(routine, backupType)
@@ -101,24 +113,23 @@ func (p *BackupOrchestratorImpl) runBackupInternal(
 	return nil
 }
 
-// createTimeBounds derives incremental from-time and optional sealed to-time for this run.
-func (p *BackupOrchestratorImpl) createTimeBounds(
-	backupType model.BackupType,
-	now time.Time,
-	routine *model.BackupRoutine,
-) model.TimeBounds {
-	var (
-		fromTime *time.Time
-		toTime   *time.Time
-	)
-
-	if backupType == model.BackupTypeIncremental {
-		fromTime = p.registry.GetRoutineState(routine).LastRunTime.LatestRun()
-	}
-
+func (p *backupOrchestrator) backupToTime(routine *model.BackupRoutine, now time.Time) *time.Time {
 	if routine.BackupPolicy.IsSealedOrDefault() {
-		toTime = &now
+		return &now
 	}
 
-	return model.TimeBounds{FromTime: fromTime, ToTime: toTime}
+	return nil
+}
+
+func (p *backupOrchestrator) backupFromTime(routine *model.BackupRoutine, backupType model.BackupType) *time.Time {
+	if backupType == model.BackupTypeFull {
+		return nil
+	}
+
+	lastRunTime := p.registry.GetRoutineState(routine).LastRunTime
+	if routine.BackupPolicy.GetIncrModeOrDefault() == model.IncrModeCumulative {
+		return lastRunTime.FullBackupTime()
+	}
+
+	return lastRunTime.LatestRun()
 }

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"mime"
@@ -9,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -22,6 +22,11 @@ func (e *statusCodeError) Error() string {
 	return e.Err.Error()
 }
 
+// Unwrap exposes the cause, so errors.Is/As can see through the status code wrapper.
+func (e *statusCodeError) Unwrap() error {
+	return e.Err
+}
+
 // newStatusCodeError creates a new statusCodeError with an associated status code.
 func newStatusCodeError(err error, code int) *statusCodeError {
 	return &statusCodeError{Err: err, Code: code}
@@ -29,10 +34,6 @@ func newStatusCodeError(err error, code int) *statusCodeError {
 
 func errInvalidQueryParam(err error, param string) error {
 	return newStatusCodeError(fmt.Errorf("invalid query param %s: %w", param, err), http.StatusBadRequest)
-}
-
-func errInvalidJSONPayload(err error) error {
-	return newStatusCodeError(fmt.Errorf("invalid JSON payload: %w", err), http.StatusBadRequest)
 }
 
 func errBadRequest(err error) error {
@@ -49,14 +50,29 @@ func errRoutineNotFound(name string) error {
 }
 
 func errNotFound(field string, name any) error {
-	return newStatusCodeError(fmt.Errorf("%s %q not found", field, name), http.StatusNotFound)
+	return newStatusCodeError(fmt.Errorf("%s %s not found", field, quoteName(name)), http.StatusNotFound)
+}
+
+// quoteName quotes string names and prints other identifiers, such as numeric job IDs, as they are;
+// %q would render an integer as a rune literal.
+func quoteName(name any) string {
+	if s, ok := name.(string); ok {
+		return strconv.Quote(s)
+	}
+
+	return fmt.Sprint(name)
 }
 
 // httpError calls http.Error with the appropriate status code based on the error.
 func httpError(w http.ResponseWriter, err error) {
-	var httpErr *statusCodeError
+	var (
+		httpErr     *statusCodeError
+		maxBytesErr *http.MaxBytesError
+	)
 
 	switch {
+	case errors.As(err, &maxBytesErr):
+		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
 	case errors.As(err, &httpErr):
 		http.Error(w, httpErr.Error(), httpErr.Code)
 	case errors.Is(err, model.ErrNotFound):
@@ -66,18 +82,28 @@ func httpError(w http.ResponseWriter, err error) {
 	}
 }
 
+// writeRedactedJSON marshals v to JSON with secret fields redacted and writes it to w.
+func writeRedactedJSON(w http.ResponseWriter, v any) {
+	body, _ := decoder.Marshal(v, decoder.JSON, true)
+
+	// #nosec G705 -- body is JSON from decoder.Marshal with secret redaction, not reflected HTML
+	_, _ = w.Write(body)
+}
+
 // httpOK responds with a JSON-encoded success message and 200 status.
+// Secret fields are redacted in the response body.
 func httpOK(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	_ = json.NewEncoder(w).Encode(data)
+	writeRedactedJSON(w, data)
 }
 
 // httpAcceptedWithJobID responds with a job ID and 202 status.
 func httpAcceptedWithJobID(w http.ResponseWriter, jobID model.RestoreJobID) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
+	// #nosec G705 -- jobID is a numeric identifier issued by the restore manager, written as %d
 	_, _ = fmt.Fprintf(w, "%d", jobID)
 }
 
@@ -102,6 +128,5 @@ func httpContent(w http.ResponseWriter, buf []byte, filename string) {
 
 	w.WriteHeader(http.StatusOK)
 
-	//nolint:gosec // G705 attachment with explicit Content-Type and nosniff; body is file bytes, not HTML document.
 	_, _ = w.Write(buf)
 }

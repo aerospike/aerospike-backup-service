@@ -16,15 +16,17 @@ exclude = [
   # Pre-existing broken link in the Helm chart README, owned by the
   # security plan's docs-supporting item.
   "helm/aerospike-backup-service/examples$",
+  # kubernetes.io is often unreachable from GitHub Actions runners
+  # (connection failed / WAF), so CI cannot reliably verify these links.
+  "^https://kubernetes\\.io/",
   # Stable reference docs that time out or redirect heavily from GitHub
   # Actions runners; not worth failing CI over.
-  "^https://kubernetes\\.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes",
   "^https://docs\\.aerospike\\.com/cloud/kubernetes/operator",
 ]
 
 max_concurrency = 8
-timeout = 20
-retry_wait_time = 2
-max_retries = 3
+timeout = 45
+retry_wait_time = 5
+max_retries = 5
 
 accept = [200, 201, 202, 203, 204, 206, 301, 302, 303, 307, 308]

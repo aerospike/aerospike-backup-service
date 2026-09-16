@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -13,8 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/spf13/cobra"
 )
 
@@ -64,53 +61,23 @@ func run() int {
 func startService(configFile string, remote bool) error {
 	ctx, stop := systemCtx()
 	defer stop()
+	// Shutdown is a one-shot sequence: the first signal cancels ctx and every component winds
+	// down from that cancellation. Once it has fired the process has no further use for the
+	// subscription, so it is dropped right there, which restores the default disposition of the
+	// signals: a second SIGINT or SIGTERM terminates the process at once instead of being
+	// swallowed while the graceful shutdown drains.
+	context.AfterFunc(ctx, stop)
 
-	scheduler, httpService, err := app.InitComponents(ctx, configFile, remote)
+	components, err := app.InitComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
 	}
 
-	// start the scheduler only after all the initialization is done
-	scheduler.Start(ctx)
-
-	err = runHTTPServer(ctx, httpService)
-
-	// stop the scheduler
-	scheduler.Stop()
-
-	return err
+	return components.Run(ctx)
 }
 
 func systemCtx() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
-}
-
-func runHTTPServer(ctx context.Context, service *handlers.Service) error {
-	httpServer := server.NewHTTPServer(service)
-
-	// Channel to capture server startup errors
-	errCh := make(chan error, 1)
-	go func() {
-		if err := httpServer.Start(); err != nil {
-			errCh <- err
-		}
-	}()
-
-	// Wait for either context cancellation or server error
-	select {
-	case err := <-errCh:
-		return fmt.Errorf("HTTP server failed: %w", err)
-	case <-ctx.Done():
-	}
-
-	if err := httpServer.Shutdown(); err != nil {
-		slog.Error("HTTP server shutdown failed", attr.Error(err))
-		return err
-	}
-
-	slog.Info("HTTP server shut down gracefully")
-
-	return nil
 }
 
 func main() {

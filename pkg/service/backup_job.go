@@ -41,7 +41,7 @@ func (j *backupJob) Description() string {
 	return fmt.Sprintf("%s %s backup job", j.routine.Name, j.backupType)
 }
 
-// newBackupJob builds a [quartz.Job] that invokes [BackupOrchestrator.RunBackup] with the given routine copy and type.
+// newBackupJob builds a [quartz.Job] that invokes [BackupOrchestrator.Backup] with the given routine copy and type.
 func newBackupJob(orchestrator BackupOrchestrator, routine *model.BackupRoutine, bt model.BackupType) quartz.Job {
 	return &backupJob{
 		orchestrator: orchestrator,

@@ -28,6 +28,39 @@ Quartz uses either:
 * Shorthand expressions for common schedules:
   `@hourly`, `@daily`, `@weekly`, `@monthly`, `@yearly`
 
+Cron expressions are evaluated in **UTC** unless you set `schedule-timezone`.
+Accepted values:
+
+* omitted or `UTC` — Coordinated Universal Time (the default; existing configs are unchanged)
+* `Local` — the timezone of the host running the service (`TZ` or `/etc/localtime`)
+* an IANA name such as `America/New_York` — useful in containers, which typically run in UTC
+
+`UTC` and `Local` are case-insensitive; IANA names are case-sensitive. Any name Go's
+`time.LoadLocation` resolves is accepted, including legacy aliases such as `Japan` or
+`Turkey`. Prefer canonical `Area/Location` names: `EST` and similar abbreviations resolve
+as fixed offsets with no daylight saving, which is rarely what "Eastern Time" is meant
+to be. Use `America/New_York` if you want DST to apply.
+
+Set a service-wide default under `service.backup` (requires a restart) or override it on a
+routine (can be changed through the routine API):
+
+```yaml
+service:
+  backup:
+    schedule-timezone: America/New_York
+
+backup-routines:
+  nightly:
+    interval-cron: "0 0 2 * * ?"   # 02:00 in America/New_York
+    schedule-timezone: UTC         # optional per-routine override
+```
+
+Backup folder names and the optional `timestamp-format` suffix stay UTC regardless of
+`schedule-timezone`. Daylight saving applies to `Local` and IANA zones: a daily 02:30
+schedule does not fire on the spring-forward day when 02:30 does not exist locally, and
+daily schedules in the repeated fall-back hour fire once. Use UTC to avoid DST-driven
+variations in the elapsed time between runs.
+
 **📆 Quartz Cron Expression Examples for Backup Scheduling**
 
 | Schedule Description                | Cron Expression       | Use Case                                                             |
@@ -61,7 +94,7 @@ secret-agents:
   secret-agent: # <--- Custom secret agent name
     address: localhost
     port: 5000
-    connection-type: tcp
+    connection-type: TCP
 
 storage:
   s3: # <--- Custom storage name
@@ -109,6 +142,10 @@ We recommend experimenting with different values in your environment to find the
 The `service` section configures the operation settings of the Aerospike Backup Service,
 which include logging and HTTP endpoint. See the [`dto.ServiceConfig`](readme/dto/dto.serviceconfig.md)
 for details.
+HTTP rate limiter behavior:
+- Rate limiting applies to all clients by default.
+- Entries in `service.http.rate.white-list` are exempt from rate limiting.
+- If `white-list` contains `0.0.0.0/0`, all clients are exempt and rate limiting is effectively disabled.
 
 ## Configuration with API
 
@@ -133,7 +170,7 @@ See [`POST: /config/clusters`](https://aerospike.github.io/aerospike-backup-serv
 full specification.
 
 :warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/tools/backup#secret-agent-options) to avoid
-including secrets in your configuration.
+including secrets in your configuration. See [Security](security.md) for how secrets are resolved, cached, and rotated.
 
 #### Storage connection
 
@@ -171,7 +208,90 @@ update an existing routine.
 :warning: Incremental backups are deleted if they are empty and after each full backup. System metadata is backed up
 only on full backups.
 
+## Partial backup with filter expressions
+
+The `filter-exp` field on a backup routine applies an Aerospike [filter expression](https://aerospike.com/docs/develop/expressions/#record-filtering-with-expressions)
+during scan-based backups. Only records that match the expression are included in the backup.
+
+Filter expressions are **not** plain text (you cannot write `age > 25` directly in YAML). They are a binary format
+serialized as a **base64 string**. Build the expression with an Aerospike client library, then paste the encoded
+value into your routine configuration.
+
+### Generating a filter expression
+
+Use the [Aerospike Expressions guide](https://aerospike.com/docs/develop/expressions/#record-filtering-with-expressions)
+to understand the expression API, then encode the result with your client:
+
+**Go**
+
+```go
+import as "github.com/aerospike/aerospike-client-go/v8"
+
+exp, err := as.ExpGreater(as.ExpIntBin("age"), as.ExpIntVal(25)).Base64()
+// exp == "kwOTUQKjYWdlGQ=="
+```
+
+**Java**
+
+```java
+Expression filter = Exp.build(Exp.gt(Exp.intBin("age"), Exp.val(25)));
+System.out.println(filter.getBase64());
+```
+
+**Python**
+
+```python
+from aerospike_helpers import expressions as exp
+
+encoded = exp.GT(exp.IntBin("age"), 25).compile()
+# Use client.get_expression_base64(encoded) to get the base64 string
+```
+
+If you already have a filter on the cluster (for example an XDR shipping filter or expression secondary index), you can
+reuse its base64 value:
+
+```bash
+asinfo -v "xdr-get-filter:dc=DC1;namespace=test;b64=true"
+```
+
+### Configuration example
+
+`filter-exp` can only be used when backing up a **single set** (or all sets in a namespace with no `set-list`).
+It is mutually exclusive with multi-set backup.
+
+```yaml
+backup-routines:
+  adultsBackup:
+    interval-cron: "@daily"
+    source-cluster: abs-cluster
+    storage: s3
+    backup-policy: dailyBackupPolicy
+    namespaces:
+      - test
+    set-list:
+      - users
+    filter-exp: "kwOTUQKjYWdlGQ=="  # age > 25
+```
+
+### Common examples
+
+| Filter | Base64 value |
+|--------|--------------|
+| `age > 25` | `kwOTUQKjYWdlGQ==` |
+| `country = "US"` | `kwGTUQOnY291bnRyeaMDVVM=` |
+| `age >= 18 AND (country = "US" OR country = "CA")` | `kxCTBJNRAqNhZ2USkxGTAZNRA6djb3VudHJ5owNVU5MBk1EDp2NvdW50cnmjA0NB` |
+
+For more complex logic (metadata filters, list/map operations, geo filters, etc.), see the
+[Aerospike Expressions documentation](https://aerospike.com/docs/develop/expressions/).
+
 ## FAQ
+
+### What timezone do backup schedules use?
+
+Backup cron expressions are evaluated in UTC by default. Set `schedule-timezone` to `UTC`,
+`Local`, or an IANA name such as `America/New_York` on `service.backup` (service-wide default;
+requires a restart) or on a routine (overrides the default). Backup paths and the
+`timestamp-format` suffix remain UTC for every timezone setting.
 
 ### What happens when a backup doesn't finish before another starts (for the same routine)?
 
@@ -206,8 +326,10 @@ with different behaviors for full and incremental backups:
       The service uses a scan operation with no lower time boundary (modAfter = 0).
 
 * **Incremental Backups:**:
-    * Only capture records that have been modified since the last successful backup (full or incremental). The service
-      tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp
+    * Only capture records that have been modified since the last successful backup. The behavior depends on the `incr-mode` setting in the backup policy:
+        - **Differential (default)**: Captures records modified since the last successful backup (full or incremental).
+        - **Cumulative**: Captures records modified since the last successful full backup.
+      The service tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp
       becomes the lower time boundary (modAfter parameter) for the next incremental backup.
       For the upper time boundary (modBefore), two approaches are available:
 

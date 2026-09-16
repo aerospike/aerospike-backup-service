@@ -1,17 +1,11 @@
 package middleware
 
 import (
-	"bytes"
-	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 )
-
-const maxLogSize = 10_000 // Maximum size of request body to log in bytes.
 
 // RequestLogger returns a middleware that logs request details using provided logger.
 func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
@@ -24,13 +18,6 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 					next.ServeHTTP(w, r)
 					return
 				}
-			}
-
-			body, err := readRequestBody(r)
-			if err != nil {
-				logger.Error("Failed to read request body", attr.Error(err))
-				http.Error(w, "Failed to read request body: "+err.Error(), http.StatusInternalServerError)
-				return
 			}
 
 			rw := newCapturingResponseWriter(w)
@@ -46,11 +33,8 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 				slog.String("ip", r.RemoteAddr),
 			}
 
-			if len(body) > 0 {
-				attrs = append(attrs, slog.String("requestBody", string(body[:min(len(body), maxLogSize)])))
-			}
-
 			// Log based on response status
+
 			var (
 				msg      string
 				logLevel slog.Level
@@ -74,22 +58,6 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 			logger.LogAttrs(r.Context(), logLevel, msg, attrs...)
 		})
 	}
-}
-
-// readRequestBody reads the request body and resets is, so it can be used by subsequent handlers.
-func readRequestBody(r *http.Request) ([]byte, error) {
-	bodyBytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = r.Body.Close(); err != nil {
-		return nil, err
-	}
-
-	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-
-	return bodyBytes, nil
 }
 
 // capturingResponseWriter captures the status code and error message.

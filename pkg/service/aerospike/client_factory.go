@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 )
 
-// ClientFactory defines an interface for creating and checking clients.
+// ClientFactory opens Aerospike connections and wraps them into backup-go clients.
+// Reuse of those clients is handled by [ClientManager].
 type ClientFactory interface {
 	// NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
 	NewClientWithPolicyAndHost(context.Context, *model.AerospikeCluster) (backup.AerospikeClient, error)
@@ -21,25 +22,29 @@ type ClientFactory interface {
 	NewBackupClient(backup.AerospikeClient, ...backup.ClientOpt) (Client, error)
 }
 
-var _ ClientFactory = (*DefaultClientFactory)(nil)
+var _ ClientFactory = (*clientFactory)(nil)
 
-// DefaultClientFactory is the default implementation of ClientFactory.
-type DefaultClientFactory struct {
+type clientFactory struct {
 	passwordResolver secrets.PasswordResolver
+	tlsResolver      secrets.ClusterTLSResolver
 }
 
-func NewClientFactory(passwordResolver secrets.PasswordResolver) *DefaultClientFactory {
-	return &DefaultClientFactory{
+// NewClientFactory returns a ClientFactory.
+func NewClientFactory(
+	passwordResolver secrets.PasswordResolver, tlsResolver secrets.ClusterTLSResolver,
+) ClientFactory {
+	return &clientFactory{
 		passwordResolver: passwordResolver,
+		tlsResolver:      tlsResolver,
 	}
 }
 
-func (f *DefaultClientFactory) NewBackupClient(client backup.AerospikeClient, opt ...backup.ClientOpt) (Client, error) {
+func (f *clientFactory) NewBackupClient(client backup.AerospikeClient, opt ...backup.ClientOpt) (Client, error) {
 	return backup.NewClient(client, opt...)
 }
 
 // NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
-func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
+func (f *clientFactory) NewClientWithPolicyAndHost(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
 ) (backup.AerospikeClient, error) {
@@ -64,16 +69,16 @@ func clientHosts(c *model.AerospikeCluster) []*as.Host {
 }
 
 // clientPolicy builds and returns a new ClientPolicy from the AerospikeCluster configuration.
-func (f *DefaultClientFactory) clientPolicy(ctx context.Context, c *model.AerospikeCluster) (*as.ClientPolicy, error) {
+func (f *clientFactory) clientPolicy(ctx context.Context, c *model.AerospikeCluster) (*as.ClientPolicy, error) {
 	policy := as.NewClientPolicy()
 	if c.Credentials != nil {
-		policy.User = ptr.ValueOrZero(c.GetUser())
+		policy.User = c.GetUser()
 		password, err := f.resolveClusterPassword(ctx, c.Credentials)
 		if err != nil {
 			return nil, err
 		}
 		policy.Password = ptr.ValueOrZero(password)
-		policy.AuthMode = resolveAuth(c.Credentials)
+		policy.AuthMode = c.Credentials.AuthModeOrDefault().ResolveAuth()
 	}
 	if c.ConnTimeout != nil {
 		policy.Timeout = *c.ConnTimeout
@@ -82,7 +87,9 @@ func (f *DefaultClientFactory) clientPolicy(ctx context.Context, c *model.Aerosp
 		policy.UseServicesAlternate = *c.UseServicesAlternate
 	}
 
-	setTLSConfig(c, policy)
+	if err := f.setTLSConfig(ctx, c, policy); err != nil {
+		return nil, err
+	}
 
 	policy.ConnectionQueueSize = 256
 	policy.LimitConnectionsToQueueSize = false
@@ -95,7 +102,7 @@ func (f *DefaultClientFactory) clientPolicy(ctx context.Context, c *model.Aerosp
 	return policy, nil
 }
 
-func (f *DefaultClientFactory) resolveClusterPassword(
+func (f *clientFactory) resolveClusterPassword(
 	ctx context.Context,
 	creds *model.Credentials,
 ) (*string, error) {
@@ -111,47 +118,38 @@ func (f *DefaultClientFactory) resolveClusterPassword(
 	return password, nil
 }
 
-func resolveAuth(creds *model.Credentials) as.AuthMode {
-	switch creds.AuthModeOrDefault() {
-	case model.AuthModeInternal:
-		return as.AuthModeInternal
-	case model.AuthModeExternal:
-		return as.AuthModeExternal
-	case model.AuthModePKI:
-		return as.AuthModePKI
-	default:
-		return as.AuthModeInternal
-	}
-}
-
 func isPKIAuthMode(creds *model.Credentials) bool {
 	return creds.AuthModeOrDefault() == model.AuthModePKI
 }
 
-func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
+// setTLSConfig builds the TLS config for a cluster whose seed nodes require TLS.
+// Failures are returned rather than logged: silently leaving policy.TlsConfig nil
+// would make the client fall back to a plaintext connection to seed nodes that are
+// configured to require TLS.
+func (f *clientFactory) setTLSConfig(ctx context.Context, c *model.AerospikeCluster, policy *as.ClientPolicy) error {
 	if !anySeedNodeHasTLSName(c) {
 		if c.TLS != nil {
 			slog.Warn("A TLS configuration is provided, but no seed nodes have TLS names. Ignoring TLS settings.",
-				slog.String("cluster", ptr.ValueOrZero(c.ClusterLabel)))
+				slog.String("cluster", c.ClusterLabel))
 		}
 
-		return // no TLS configuration needed for this cluster
+		return nil // no TLS configuration needed for this cluster
 	}
 
-	// Seed nodes require TLS, so a TLS configuration is necessary.
-	// If no specific TLS configuration is provided, a default one is used.
-	tlsToApply := c.TLS
-	if tlsToApply == nil {
-		tlsToApply = &model.TLS{}
-	}
-
-	var err error
-	policy.TlsConfig, err = NewTLSConfig(tlsToApply)
+	// Seed nodes require TLS, so a TLS configuration is necessary. A cluster with no
+	// TLS block resolves to the zero value, which builds a default configuration.
+	tlsToApply, err := f.tlsResolver.Resolve(ctx, c)
 	if err != nil {
-		slog.Error("Failed to initialize TLS config",
-			slog.String("cluster", ptr.ValueOrZero(c.ClusterLabel)),
-			attr.Error(err))
+		return fmt.Errorf("cluster %q: %w", c.ClusterLabel, err)
 	}
+
+	tlsConfig, err := tlsconfig.NewTLSConfig(&tlsToApply)
+	if err != nil {
+		return fmt.Errorf("failed to initialize TLS config for cluster %q: %w", c.ClusterLabel, err)
+	}
+	policy.TlsConfig = tlsConfig
+
+	return nil
 }
 
 // anySeedNodeHasTLSName checks if any of the seed nodes are configured with a TLS name.

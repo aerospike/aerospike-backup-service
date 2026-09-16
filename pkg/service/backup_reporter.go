@@ -20,7 +20,6 @@ type BackupReporter interface {
 	Report(
 		routineName string,
 		backupType model.BackupType,
-		startTime time.Time,
 		duration time.Duration,
 		err error,
 		logger *slog.Logger,
@@ -39,7 +38,6 @@ var _ BackupReporter = (*backupReporter)(nil)
 func (r *backupReporter) Report(
 	routineName string,
 	backupType model.BackupType,
-	startTime time.Time,
 	duration time.Duration,
 	err error,
 	logger *slog.Logger,
@@ -49,19 +47,19 @@ func (r *backupReporter) Report(
 	switch {
 	case err == nil:
 		logger.Debug(operation+" finished", slog.Duration("duration", duration))
-		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeSuccess, duration, startTime)
+		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeSuccess, duration)
 
 	case errors.Is(err, errBackupSkipped):
 		logger.Info(operation+" skipped", attr.Error(err))
-		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeSkip, 0, startTime)
+		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeSkip, 0)
 
 	case errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded):
 		logger.Info(operation + " canceled")
-		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeCanceled, duration, startTime)
+		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeCanceled, duration)
 
 	default:
 		r.logFailure(operation, err, logger)
-		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeFailure, duration, startTime)
+		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeFailure, duration)
 	}
 }
 

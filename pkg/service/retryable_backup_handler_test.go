@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,8 +24,6 @@ var retry = models.RetryPolicy{
 
 func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	stats := models.NewBackupStats()
 	mockHandler.EXPECT().Wait(gomock.Any()).Return(nil)
@@ -64,8 +63,6 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 
 func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	failedHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	successHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	stats := models.NewBackupStats()
@@ -114,8 +111,6 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 
 	waitCalled := make(chan struct{})
@@ -164,8 +159,6 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 
 func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	mockHandler.EXPECT().Wait(gomock.Any()).Return(errors.New("wait failed")).Times(3)
 
@@ -227,8 +220,6 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 
 func TestStartRetryableBackup_Cancel(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 
 	// The handler should wait until context is done, then return context.Canceled
@@ -272,4 +263,107 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 	require.Equal(t, 1, failureCount)
 	require.Equal(t, 0, successCount)
+}
+
+func TestStartRetryableBackup_ReleasesWaitContextOnCompletion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
+
+	// The context the inner handler waits under is this run's cancel handle.
+	waitCtxCh := make(chan context.Context, 1)
+	mockHandler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+		waitCtxCh <- ctx
+		return nil
+	})
+	mockHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+
+	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+		Start:     func(context.Context) (backupexecutor.BackupHandler, error) { return mockHandler, nil },
+		OnFail:    func(context.Context) {},
+		OnSuccess: func(context.Context, *models.BackupStats) error { return nil },
+		OnRetry:   func() {},
+	}, slog.Default())
+
+	require.NoError(t, handler.Wait(t.Context()))
+
+	waitCtx := <-waitCtxCh
+
+	// A finished run releases its wait context, so it stops being registered in the long-lived
+	// parent it was derived from.
+	select {
+	case <-waitCtx.Done():
+	case <-time.After(time.Second):
+		t.Fatal("the wait context was still live after the backup finished")
+	}
+}
+
+func TestStartRetryableBackup_CancelStopsMetadataRetries(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
+
+	// The data phase succeeds; the metadata write is what keeps failing.
+	mockHandler.EXPECT().Wait(gomock.Any()).Return(nil)
+	mockHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+
+	var onSuccessCalls, failureCount atomic.Int32
+	firstCall := make(chan struct{})
+	canceled := make(chan struct{})
+
+	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+		Start:  func(context.Context) (backupexecutor.BackupHandler, error) { return mockHandler, nil },
+		OnFail: func(context.Context) { failureCount.Add(1) },
+		OnSuccess: func(context.Context, *models.BackupStats) error {
+			if onSuccessCalls.Add(1) == 1 {
+				close(firstCall)
+			}
+			<-canceled // hold the first write open until the run has been canceled
+			return errors.New("metadata write failed")
+		},
+		OnRetry: func() {},
+	}, slog.Default())
+
+	<-firstCall
+	handler.Cancel()
+	close(canceled)
+
+	err := handler.Wait(t.Context())
+
+	require.ErrorIs(t, err, context.Canceled)
+	require.Equal(t, int32(1), onSuccessCalls.Load(),
+		"Cancel must stop the metadata retry loop, not only the data phase")
+	require.Equal(t, int32(1), failureCount.Load())
+}
+
+func TestRetryableBackupHandler_GetStats_GetMetrics(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
+	stats := models.NewBackupStats()
+	metrics := &models.Metrics{RecordsPerSecond: 42}
+
+	mockHandler.EXPECT().Wait(gomock.Any()).Return(nil)
+	mockHandler.EXPECT().GetStats().Return(stats).AnyTimes()
+	mockHandler.EXPECT().GetMetrics().Return(metrics).AnyTimes()
+
+	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
+		return mockHandler, nil
+	}
+	onSuccess := func(_ context.Context, _ *models.BackupStats) error { return nil }
+
+	handler := newRetryableBackupHandler(t.Context(), retry, retryableBackupCallbacks{
+		Start: start, OnFail: func(context.Context) {}, OnSuccess: onSuccess, OnRetry: func() {},
+	}, slog.Default())
+
+	require.NoError(t, handler.Wait(t.Context()))
+	assert.Equal(t, metrics, handler.GetMetrics())
+	assert.Equal(t, stats, handler.GetStats())
+}
+
+func TestRetryableBackupHandler_GetStats_GetMetrics_BeforeStart(t *testing.T) {
+	t.Parallel()
+
+	h := &retryableBackupHandler{}
+	assert.Nil(t, h.GetStats())
+	assert.Nil(t, h.GetMetrics())
 }

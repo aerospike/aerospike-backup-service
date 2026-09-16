@@ -27,7 +27,7 @@ const (
 )
 
 type GcpStorageAccessor struct {
-	clientMap *collections.LoadingCacheContext[*model.GcpStorage, gcp.Client]
+	clientMap collections.Cache[*model.GcpStorage, gcp.Client]
 	resolver  secrets.Resolver
 }
 
@@ -42,29 +42,28 @@ func (w *clientWrapper) Bucket(name string) *storage.BucketHandle {
 
 var _ gcp.Client = (*clientWrapper)(nil)
 
-func NewGcpStorageAccessor(ctx context.Context, resolver secrets.Resolver) *GcpStorageAccessor {
+func NewGcpStorageAccessor(resolver secrets.Resolver) *GcpStorageAccessor {
 	accessor := &GcpStorageAccessor{
 		resolver: resolver,
 	}
-	accessor.clientMap = collections.NewLoadingCacheContext[*model.GcpStorage, gcp.Client](
-		ctx,
+	accessor.clientMap = collections.NewLoadingCache[*model.GcpStorage, gcp.Client](
 		accessor.getGcpClient,
-		nil,
+		clientCacheTTL,
 	)
 	return accessor
 }
 
-func (a *GcpStorageAccessor) supports(storage model.Storage) bool {
-	_, ok := storage.(*model.GcpStorage)
+func (a *GcpStorageAccessor) supports(st model.Storage) bool {
+	_, ok := st.(*model.GcpStorage)
 	return ok
 }
 
 func (a *GcpStorageAccessor) createReader(
 	ctx context.Context,
-	storage model.Storage,
+	st model.Storage,
 	opts ...options.Opt,
 ) (backup.StreamingReader, error) {
-	gcps := storage.(*model.GcpStorage)
+	gcps := st.(*model.GcpStorage)
 	client, err := a.clientMap.Get(ctx, gcps)
 	if err != nil {
 		return nil, fmt.Errorf("reader failed to create GCP client: %w", err)
@@ -74,9 +73,9 @@ func (a *GcpStorageAccessor) createReader(
 }
 
 func (a *GcpStorageAccessor) createWriter(
-	ctx context.Context, storage model.Storage, opts ...options.Opt,
+	ctx context.Context, st model.Storage, opts ...options.Opt,
 ) (backup.Writer, error) {
-	gcps := storage.(*model.GcpStorage)
+	gcps := st.(*model.GcpStorage)
 	client, err := a.clientMap.Get(ctx, gcps)
 	if err != nil {
 		return nil, fmt.Errorf("writer failed to create GCP client: %w", err)

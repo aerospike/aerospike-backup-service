@@ -6,7 +6,7 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// RestoreHandler represents a restore handler returned by the backup client.
+// RestoreHandler observes a started restore: wait for it to finish and read its statistics.
 type RestoreHandler interface {
 	// GetStats returns the statistics of the restore job.
 	GetStats() *models.RestoreStats

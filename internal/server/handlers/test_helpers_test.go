@@ -1,9 +1,20 @@
 package handlers
 
 import (
+	"testing"
+
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"go.uber.org/mock/gomock"
 )
+
+func newMockTLSProber(ctrl *gomock.Controller) *servertls.MockProber {
+	prober := servertls.NewMockProber(ctrl)
+	prober.EXPECT().Probe(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	return prober
+}
 
 type validTestBackupEntities struct {
 	policyName  string
@@ -48,4 +59,17 @@ func addValidBackupRoutine(svc *Service, routineName string, disabled bool) vali
 	_ = svc.config.AddRoutine(routine)
 
 	return entities
+}
+
+// newServiceWithNamespaceValidator is setupTestService plus a permissive namespace validator,
+// which the config-changing handlers call under the lock.
+func newServiceWithNamespaceValidator(t *testing.T) *Service {
+	t.Helper()
+
+	svc := setupTestService(t)
+	nsValidator := aerospike.NewMockNamespaceValidator(gomock.NewController(t))
+	nsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
+	svc.nsValidator = nsValidator
+
+	return svc
 }

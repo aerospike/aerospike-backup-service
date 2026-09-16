@@ -17,7 +17,7 @@ import (
 )
 
 // NamespaceBackupRunner runs the backup pipeline for one namespace: retries,
-// backend cleanup on failure/cancel, and metadata writes on success.
+// catalog cleanup on failure/cancel, and metadata writes on success.
 type NamespaceBackupRunner interface {
 	// Run starts backup execution for a single namespace and returns a cancelable handler.
 	// scanLimiter is a per-routine limiter shared across all namespace backups within
@@ -32,25 +32,26 @@ type NamespaceBackupRunner interface {
 	) CancelableBackupHandler
 }
 
-// NewNamespaceBackupRunner builds a [NamespaceBackupRunner] from the low-level
-// backup routineRunner, storage writer, and path layout service.
+// NewNamespaceBackupRunner returns a NamespaceBackupRunner.
 func NewNamespaceBackupRunner(
 	backupExecutor backupexecutor.Backup,
-	backendService BackupWriter,
+	backupWriter BackupWriter,
 	pathService PathService,
 ) NamespaceBackupRunner {
-	return &NamespaceBackupRunnerImpl{
+	return &namespaceBackupRunner{
 		backupExecutor: backupExecutor,
-		backendService: backendService,
+		backupWriter:   backupWriter,
 		pathService:    pathService,
 	}
 }
 
-type NamespaceBackupRunnerImpl struct {
+type namespaceBackupRunner struct {
 	backupExecutor backupexecutor.Backup
-	backendService BackupWriter
+	backupWriter   BackupWriter
 	pathService    PathService
 }
+
+var _ NamespaceBackupRunner = (*namespaceBackupRunner)(nil)
 
 // CancelableBackupHandler is a [backupexecutor.BackupHandler] that can be canceled
 // while a backup is in progress.
@@ -64,7 +65,7 @@ type CancelableBackupHandler interface {
 // with cleanup and metadata callbacks wired for the routine's storage layout.
 // scanLimiter is a per-routine limiter shared across all namespace backups within
 // a single routine run to ensure fair resource allocation.
-func (e *NamespaceBackupRunnerImpl) Run(
+func (e *namespaceBackupRunner) Run(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	namespace string,
@@ -100,7 +101,7 @@ func (e *NamespaceBackupRunnerImpl) Run(
 				return e.writeBackupMetadata(ctx, routine, metadata, backupFolder, logger)
 			},
 			OnRetry: func() {
-				prometheus.ObserveBackupEvent(routine.Name, runSpec.Type, prometheus.OutcomeRetry, 0, runSpec.StartTime)
+				prometheus.ObserveBackupEvent(routine.Name, runSpec.Type, prometheus.OutcomeRetry, 0)
 				runSpec.StartTime = time.Now().Truncate(time.Millisecond)
 			},
 		},
@@ -110,13 +111,13 @@ func (e *NamespaceBackupRunnerImpl) Run(
 
 // deleteFolder removes backup data under the given path on failure or cancel; logs
 // errors except when the context was canceled during delete.
-func (e *NamespaceBackupRunnerImpl) deleteFolder(
+func (e *namespaceBackupRunner) deleteFolder(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	path string,
 	logger *slog.Logger,
 ) {
-	err := e.backendService.Delete(ctx, routine, path)
+	err := e.backupWriter.Delete(ctx, routine, path)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			logger.Info("Delete folder context canceled")
@@ -129,14 +130,14 @@ func (e *NamespaceBackupRunnerImpl) deleteFolder(
 }
 
 // writeBackupMetadata persists backup metadata to storage and logs the folder on success.
-func (e *NamespaceBackupRunnerImpl) writeBackupMetadata(
+func (e *namespaceBackupRunner) writeBackupMetadata(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	metadata model.BackupMetadata,
 	backupFolder string,
 	logger *slog.Logger,
 ) error {
-	if err := e.backendService.WriteBackupMetadata(ctx, routine, backupFolder, metadata); err != nil {
+	if err := e.backupWriter.WriteBackupMetadata(ctx, routine, backupFolder, metadata); err != nil {
 		return fmt.Errorf("failed to write backup metadata to %q: %w", backupFolder, err)
 	}
 

@@ -30,6 +30,10 @@ VERSION ?= $(shell cat VERSION)
 
 # Go parameters
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
+# go.uber.org/nilaway has no tagged releases; pin the module pseudo-version.
+NILAWAY_VERSION = v0.0.0-20260808063849-8649a03c818a
+# Keep in sync with golang.org/x/tools in go.mod.
+DEADCODE_VERSION = v0.49.0
 NFPM ?= $(shell which nfpm)
 OS ?= $(shell $(GO) env GOOS)
 ARCH ?= $(shell $(GO) env GOARCH)
@@ -142,6 +146,20 @@ docker-buildx:
 test:
 	$(GOTEST) -v ./...
 
+.PHONY: test-integration
+test-integration:
+	$(GOTEST) -tags=integration -count=1 -v -timeout 5m ./test/integration/...
+
+.PHONY: test-cover
+test-cover:
+	$(GOTEST) -race -tags=ci ./... -coverprofile=coverage.out -covermode=atomic
+	grep -v -E -f .covignore coverage.out > coverage.filtered.out
+	$(GO) tool cover -func=coverage.filtered.out | tail -1
+
+.PHONY: test-cover-html
+test-cover-html: test-cover
+	$(GO) tool cover -html=coverage.filtered.out -o coverage.html
+
 # mocks-generate: runs mockgen over pkg/service* interfaces and writes mockgen.go next to each
 #   package. Used by tests; committed mocks must match this output (see mocks-check).
 .PHONY: mocks-generate
@@ -152,13 +170,13 @@ mocks-generate:
 # The find runs inside the recipe (not at parse time) so it picks up newly created files.
 .PHONY: mocks-check
 mocks-check: mocks-generate
-	@UNTRACKED=$$(git ls-files --others --exclude-standard '*.mockgen.go' '**/mockgen.go'); \
+	@UNTRACKED=$$(git ls-files --others --exclude-standard '*mockgen.go'); \
 	if [ -n "$$UNTRACKED" ]; then \
 		echo "Untracked mock files found — these should be committed:"; \
 		echo "$$UNTRACKED"; \
 		exit 1; \
 	fi
-	@git diff --exit-code -- $$(find . -name 'mockgen.go' -not -path './.git/*') \
+	@git diff --exit-code -- $$(find . -name '*mockgen.go' -not -path './.git/*') \
 		|| (echo "Mock files are out of date. Run 'make mocks-generate' and commit the changes." && exit 1)
 
 .PHONY: format
@@ -170,42 +188,55 @@ format:
 lint:
 	golangci-lint run ./...
 
+# Production packages only: skip tests, generated mocks, the docs generator, and
+# out-of-module code (stdlib/deps). NilAway otherwise traces into net/http and similar.
+.PHONY: nilaway
+nilaway: submodules
+	set -euo pipefail; \
+	packages="$$($(GO) list ./... | grep -vE '/(build/docs|docs)$$')"; \
+	$(GO) run go.uber.org/nilaway/cmd/nilaway@$(NILAWAY_VERSION) \
+		-test=false \
+		-exclude-test-files \
+		-exclude-file-docstrings='Code generated' \
+		-include-pkgs=$$($(GO) list -m) \
+		$$packages
+
+# Whole-program reachability from the service binary. See https://go.dev/blog/deadcode
+# pkg/validation is a standalone API (config/restore checks) not wired from cmd/backup.
+DEADCODE_IGNORE = pkg/validation/
+.PHONY: deadcode
+deadcode: submodules
+	set -euo pipefail; \
+	out="$$($(GO) run golang.org/x/tools/cmd/deadcode@$(DEADCODE_VERSION) \
+		-filter=github.com/aerospike/aerospike-backup-service \
+		./cmd/backup)"; \
+	out="$$(printf '%s' "$$out" | grep -vF '$(DEADCODE_IGNORE)' || true)"; \
+	if [ -n "$$out" ]; then \
+		echo "$$out"; \
+		echo "Unreachable functions found. Run the command above without the Makefile wrapper for details."; \
+		exit 1; \
+	fi
+
 .PHONY: lint-fix
 lint-fix:
 	golangci-lint run --fix ./...
 
-# openapi: runs swag over handlers/DTOs, then swagger2openapi, producing docs/docs.go,
-#   docs/openapi.json, and docs/config.schema.json. Requires Docker and Node (npx).
-.PHONY: openapi
-openapi:
-	$(WORKSPACE)/build/scripts/generate-openapi.sh
+# docs: generates OpenAPI artifacts, config schema, README sections, DTO markdown,
+#   examples, and metrics.json in one pass. Requires Go and Node (npx).
+.PHONY: docs
+docs:
+	cd $(WORKSPACE) && $(GO) run ./build/docs
 
-# Ensure committed OpenAPI artifacts match the output of openapi (no hand-edits, no stale docs).
-.PHONY: openapi-check
-openapi-check: openapi
-	@git diff --exit-code -- docs/docs.go docs/openapi.json docs/config.schema.json \
-		|| (echo "OpenAPI artifacts are out of date. Run 'make openapi' and commit the changes." && exit 1)
-	@UNTRACKED=$$(git ls-files --others --exclude-standard docs/docs.go docs/openapi.json docs/config.schema.json); \
-	if [ -n "$$UNTRACKED" ]; then \
-		echo "Untracked OpenAPI artifacts found — these should be committed:"; \
-		echo "$$UNTRACKED"; \
-		exit 1; \
-	fi
+DOCS_GENERATED := docs/docs.go docs/openapi.json docs/config.schema.json \
+	README.md docs/installation.md docs/configuration.md docs/api-examples.md \
+	docs/monitoring.md docs/migration.md docs/security.md docs/examples/ docs/readme/dto/ docs/metrics.json
 
-# readme: runs build/readme (Go). Reads docs/openapi.json, writes generated sections in README.md and the
-#   other Markdown files listed in targetFiles (build/readme/readme_generator.go), plus docs/examples/*,
-#   docs/readme/dto/*, and docs/metrics.json. Committed files must match (see readme-check).
-.PHONY: readme
-readme:
-	$(GO) run ./build/readme
-
-README_GENERATED_TARGETS := README.md docs/installation.md docs/configuration.md docs/api-examples.md docs/monitoring.md docs/migration.md
-
-.PHONY: readme-check
-readme-check: readme
-	@git diff --exit-code -- $(README_GENERATED_TARGETS) docs/examples/ docs/readme/dto/ docs/metrics.json \
-		|| (echo "README / examples / docs are out of date. Run 'make readme' and commit the changes." && exit 1)
-	@UNTRACKED=$$(git ls-files --others --exclude-standard 'docs/examples/' 'docs/readme/dto/' 'docs/metrics.json'); \
+# Ensure committed generated docs match the output of docs (no hand-edits, no stale docs).
+.PHONY: docs-check
+docs-check: docs
+	@git diff --exit-code -- $(DOCS_GENERATED) \
+		|| (echo "Generated docs are out of date. Run 'make docs' and commit the changes." && exit 1)
+	@UNTRACKED=$$(git ls-files --others --exclude-standard $(DOCS_GENERATED)); \
 	if [ -n "$$UNTRACKED" ]; then \
 		echo "Untracked generated doc files found — these should be committed:"; \
 		echo "$$UNTRACKED"; \
@@ -218,12 +249,16 @@ tidy:
 
 # Verify generated artifacts are committed and up to date (for CI).
 .PHONY: generated-check
-generated-check: mocks-check openapi-check readme-check
+generated-check: mocks-check docs-check
 
 # Full local PR checklist.
 .PHONY: pr
-pr: tidy mocks-check format lint-fix test openapi readme
+pr: tidy mocks-check format lint-fix test docs
 
+# Both variables are required in one invocation: helm-chart-release reads the VERSION that
+# service-release just wrote, so running them separately leaves Chart.yaml describing a
+# release that does not exist yet.
+#   NEXT_VERSION=v3.7.0 NEXT_HELM_CHART_VERSION=2.1.0 make release
 .PHONY: release
 release: service-release helm-chart-release
 

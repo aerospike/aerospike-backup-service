@@ -11,8 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
-// fileConfigurationManager implements the Manager interface,
-// performing I/O operations on local storage.
+// fileConfigurationManager keeps the service configuration in a local file.
 type fileConfigurationManager struct {
 	sync.Mutex
 	FilePath    string

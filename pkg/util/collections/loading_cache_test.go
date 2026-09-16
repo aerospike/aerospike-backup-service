@@ -21,7 +21,7 @@ func TestLoadingCache_GetWithContext(t *testing.T) {
 	}
 
 	ttl := time.Minute
-	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
+	cache := NewLoadingCache(loadFunc, &ttl)
 
 	// First call
 	val, err := cache.Get(ctx, "1")
@@ -50,7 +50,7 @@ func TestLoadingCache_Forever(t *testing.T) {
 		return strconv.Atoi(s)
 	}
 
-	cache := NewLoadingCacheContext(ctx, loadFunc, nil)
+	cache := NewLoadingCache(loadFunc, nil)
 
 	// First call
 	val, err := cache.Get(ctx, "1")
@@ -74,7 +74,7 @@ func TestLoadingCache_Expiry(t *testing.T) {
 	}
 
 	ttl := 50 * time.Millisecond
-	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
+	cache := NewLoadingCache(loadFunc, &ttl)
 
 	// First call
 	val, err := cache.Get(ctx, "1")
@@ -99,7 +99,7 @@ func TestLoadingCache_Error(t *testing.T) {
 	}
 
 	ttl := time.Minute
-	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
+	cache := NewLoadingCache(loadFunc, &ttl)
 
 	val, err := cache.Get(ctx, "1")
 	require.Error(t, err)
@@ -120,7 +120,7 @@ func TestLoadingCache_ZeroTTL(t *testing.T) {
 	}
 
 	ttl := time.Duration(0)
-	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
+	cache := NewLoadingCache(loadFunc, &ttl)
 
 	// First call
 	val, err := cache.Get(ctx, "1")
@@ -135,7 +135,7 @@ func TestLoadingCache_ZeroTTL(t *testing.T) {
 	assert.Equal(t, int32(2), callCount.Load())
 }
 
-func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
+func TestLoadingCache_AccessDoesNotExtendTTL(t *testing.T) {
 	ctx := t.Context()
 	var callCount atomic.Int32
 	loadFunc := func(_ context.Context, s string) (int, error) {
@@ -144,28 +144,25 @@ func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
 	}
 
 	ttl := 500 * time.Millisecond
-	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
+	cache := NewLoadingCache(loadFunc, &ttl)
 
-	// First call
 	_, err := cache.Get(ctx, "1")
 	require.NoError(t, err)
 	assert.Equal(t, int32(1), callCount.Load())
 
-	// Access repeatedly to keep it alive.
-	// Total time is ~500ms (> TTL), refreshed every 100ms
-	for range 5 {
+	// Access repeatedly before TTL expires; entry must not be extended.
+	for range 3 {
 		time.Sleep(100 * time.Millisecond)
 		_, err := cache.Get(ctx, "1")
 		require.NoError(t, err)
 	}
 
-	// Should not have reloaded
+	// Still within the original TTL window.
 	assert.Equal(t, int32(1), callCount.Load())
 
-	// Now wait longer than TTL
-	time.Sleep(600 * time.Millisecond)
+	// Wait for the creation-time timer to evict the entry.
+	time.Sleep(300 * time.Millisecond)
 
-	// Should reload
 	_, err = cache.Get(ctx, "1")
 	require.NoError(t, err)
 	assert.Equal(t, int32(2), callCount.Load())

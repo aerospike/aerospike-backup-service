@@ -10,20 +10,14 @@ import (
 func TestPtr(t *testing.T) {
 	var n int32
 	np := ptr.Of(n)
-	if n != *np {
-		t.Error("Expected to be equal")
-	}
+	assert.Equal(t, n, *np)
 }
 
 func TestValueOrZero(t *testing.T) {
 	i1 := 1
-	if ptr.ValueOrZero(&i1) != 1 {
-		t.Error("Expected 1")
-	}
+	assert.Equal(t, 1, ptr.ValueOrZero(&i1))
 	var i2 *int
-	if ptr.ValueOrZero(i2) != 0 {
-		t.Error("Expected 0")
-	}
+	assert.Equal(t, 0, ptr.ValueOrZero(i2))
 }
 
 func TestMissingElements(t *testing.T) {

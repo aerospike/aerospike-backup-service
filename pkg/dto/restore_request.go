@@ -2,11 +2,8 @@ package dto
 
 import (
 	"fmt"
-	"io"
-	"slices"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -19,21 +16,11 @@ type RestoreRequest struct {
 	// Restore policy to use in the operation.
 	Policy *RestorePolicy `json:"policy"`
 	// Path to the data from storage root.
+	// This path is relative to the storage `path`.
 	// You can obtain this value by:
 	// - Browsing the storage UI, or
 	// - Reading the `key` field in the response from GET `v1/backups/full/{routine}`
-	BackupDataPath string `json:"backup-data-path" validate:"required"`
-}
-
-// NewRestoreRequestFromReader reads and deserializes the restore request from reader.
-func NewRestoreRequestFromReader(r io.Reader) (*RestoreRequest, error) {
-	var req RestoreRequest
-	err := decoder.Deserialize(&req, r, decoder.JSON)
-	if err != nil {
-		return nil, err
-	}
-
-	return &req, nil
+	BackupDataPath Path `json:"backup-data-path" validate:"required"`
 }
 
 // RestoreTimestampRequest represents a request to restore the Aerospike database to a specific point in time.
@@ -54,31 +41,26 @@ type RestoreTimestampRequest struct {
 	DisableReordering bool `json:"disable-reordering,omitempty" default:"false"`
 }
 
-// NewRestoreTimestampRequestFromReader reads and deserializes the restore by timestamp request from reader.
-func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest, error) {
-	var req RestoreTimestampRequest
-	err := decoder.Deserialize(&req, r, decoder.JSON)
-	if err != nil {
-		return nil, err
-	}
-	return &req, nil
-}
-
 // Validate validates the restore operation request.
-func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
-	if len(r.BackupDataPath) == 0 {
-		return errValidationEmptyField("backup-data-path")
+func (r *RestoreRequest) Validate() error {
+	if err := r.BackupDataPath.Validate(ValidationDefault); err != nil {
+		return errValidationInvalidPath("backup-data-path", r.BackupDataPath, err)
 	}
-	if err := r.DestinationClusterConfig.Validate(opts...); err != nil {
+	if err := r.DestinationClusterConfig.Validate(ValidationDefault); err != nil {
 		return err
 	}
-	if err := r.Policy.Validate(); err != nil {
+	if err := r.StorageConfig.Validate(ValidationDefault); err != nil {
 		return err
 	}
-	if err := r.StorageConfig.Validate(opts...); err != nil {
+	//nolint:staticcheck // We want to explicitly call secret agent validation.
+	if err := r.SecretAgentConfig.validate(); err != nil {
 		return err
 	}
-	if err := validateOptionalSecretAgentConfig(r.SecretAgentConfig, opts...); err != nil {
+	policyOpts := ValidationDefault
+	if r.hasSecretAgent() {
+		policyOpts = ValidationWithSecretAgent
+	}
+	if err := r.Policy.Validate(policyOpts); err != nil {
 		return err
 	}
 
@@ -86,20 +68,22 @@ func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
 }
 
 // Validate validates the restore operation request.
-func (r *RestoreTimestampRequest) Validate(opts ...ValidationOption) error {
+func (r *RestoreTimestampRequest) Validate() error {
 	// Storage is an optional override; if omitted, it will be resolved from routine.
-	if err := r.StorageConfig.Validate(append(opts, ValidationAllowEmpty)...); err != nil {
+	if err := r.StorageConfig.Validate(ValidationAllowEmpty); err != nil {
 		return err
 	}
 	// Destination is an optional override; if omitted, it will be resolved from routine.
-	if err := r.DestinationClusterConfig.Validate(append(opts, ValidationAllowEmpty)...); err != nil {
+	if err := r.DestinationClusterConfig.Validate(ValidationAllowEmpty); err != nil {
 		return err
 	}
 	// Secret agent is an optional override; if omitted, it will be resolved from routine.
-	if err := validateOptionalSecretAgentConfig(r.SecretAgentConfig, opts...); err != nil {
+	//nolint:staticcheck // We want to explicitly call secret agent validation.
+	if err := r.SecretAgentConfig.validate(); err != nil {
 		return err
 	}
-	if err := r.Policy.Validate(); err != nil {
+	// Secret agent may also come from the referenced routine at ToModel time.
+	if err := r.Policy.Validate(ValidationWithSecretAgent); err != nil {
 		return err
 	}
 	if r.Time == 0 {
@@ -118,25 +102,26 @@ func (r *RestoreTimestampRequest) Validate(opts ...ValidationOption) error {
 	return nil
 }
 
-func validateOptionalSecretAgentConfig(config *SecretAgentConfig, opts ...ValidationOption) error {
-	if config == nil {
-		return nil
-	}
-	return config.validate(opts...)
-}
-
 func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
-	cluster, err := r.DestinationClusterConfig.ToModel(config)
-	if err != nil {
-		return nil, fmt.Errorf("invalid cluster: %w", err)
-	}
-
 	secretAgent, err := r.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid secret agent: %w", err)
 	}
 
 	routine, found := config.Routine(r.Routine)
+
+	var cluster *model.AerospikeCluster
+	if !r.DestinationClusterConfig.IsEmpty() {
+		cluster, err = r.DestinationClusterConfig.ToModel(config)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cluster: %w", err)
+		}
+	} else {
+		if !found {
+			return nil, errValidationNotFound("routine", r.Routine)
+		}
+		cluster = routine.SourceCluster
+	}
 
 	var storage model.Storage
 	if !r.StorageConfig.IsEmpty() {
@@ -149,13 +134,6 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 			return nil, errValidationNotFound("routine", r.Routine)
 		}
 		storage = routine.Storage
-	}
-
-	if cluster == nil {
-		if !found {
-			return nil, errValidationNotFound("routine", r.Routine)
-		}
-		cluster = routine.SourceCluster // if cluster is not specified, use routine's cluster.
 	}
 
 	if secretAgent == nil && found {
@@ -194,7 +172,7 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 		Policy:             *r.Policy.ToModel(),
 		SourceStorage:      storage,
 		SecretAgent:        secretAgent,
-		BackupDataPath:     r.BackupDataPath,
+		BackupDataPath:     string(r.BackupDataPath),
 	}, nil
 }
 
@@ -213,15 +191,15 @@ func (c *DestinationClusterConfig) IsEmpty() bool {
 	return c.Name == "" && c.Cluster == nil
 }
 
-func (c *DestinationClusterConfig) Validate(opts ...ValidationOption) error {
-	if c.Cluster == nil && c.Name == "" && !slices.Contains(opts, ValidationAllowEmpty) {
+func (c *DestinationClusterConfig) Validate(opts ValidationOptions) error {
+	if c.Cluster == nil && c.Name == "" && !opts.Has(ValidationAllowEmpty) {
 		return errValidationRequiredEither("destination", "destination-name")
 	}
 	if c.Cluster != nil && c.Name != "" {
 		return errValidationMutuallyExclusive("destination", "destination-name")
 	}
 	if c.Cluster != nil {
-		if err := c.Cluster.Validate(opts...); err != nil {
+		if err := c.Cluster.Validate(); err != nil {
 			return err
 		}
 	}
@@ -230,10 +208,6 @@ func (c *DestinationClusterConfig) Validate(opts ...ValidationOption) error {
 }
 
 func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.AerospikeCluster, error) {
-	if c.IsEmpty() {
-		return nil, nil
-	}
-
 	if c.Cluster != nil {
 		return c.Cluster.ToModel(config)
 	}
@@ -261,15 +235,15 @@ func (c *StorageConfig) IsEmpty() bool {
 	return c.Name == "" && c.Storage == nil
 }
 
-func (c *StorageConfig) Validate(opts ...ValidationOption) error {
-	if c.Storage == nil && c.Name == "" && !slices.Contains(opts, ValidationAllowEmpty) {
+func (c *StorageConfig) Validate(opts ValidationOptions) error {
+	if c.Storage == nil && c.Name == "" && !opts.Has(ValidationAllowEmpty) {
 		return errValidationRequiredEither("source", "source-name")
 	}
 	if c.Storage != nil && c.Name != "" {
 		return errValidationMutuallyExclusive("source", "source-name")
 	}
 	if c.Storage != nil {
-		if err := c.Storage.Validate(opts...); err != nil {
+		if err := c.Storage.Validate(); err != nil {
 			return err
 		}
 	}

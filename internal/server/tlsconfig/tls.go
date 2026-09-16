@@ -1,0 +1,234 @@
+// Package tlsconfig builds server-safe TLS configurations for the HTTPS listener.
+package tlsconfig
+
+import (
+	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
+	"fmt"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
+)
+
+var secureCipherSuites = func() map[string]uint16 {
+	suites := make(map[string]uint16)
+	for _, suite := range tls.CipherSuites() {
+		suites[suite.Name] = suite.ID
+	}
+	return suites
+}()
+
+// NewTLSConfig builds a server TLS configuration. It reads no TLS material itself:
+// provider supplies the key pair and, for mTLS, the client CA pool and CRLs on every
+// handshake, so rotated files are picked up without rebuilding the configuration.
+func NewTLSConfig(
+	config *model.ServerConfigHTTPS,
+	provider TLSProvider,
+) (*tls.Config, error) {
+	minVersion, err := parseMinVersion(config.GetMinVersionOrDefault())
+	if err != nil {
+		return nil, err
+	}
+
+	cipherSuites, err := parseCipherSuites(config.GetCipherSuitesOrDefault())
+	if err != nil {
+		return nil, err
+	}
+
+	clientAuth, err := config.GetClientAuthOrDefault().ToTLS()
+	if err != nil {
+		return nil, err
+	}
+	if clientAuth != tls.NoClientCert && config.ClientCAFile == "" {
+		return nil, errors.New("TLS client authentication requires a client CA file")
+	}
+	if config.CRLFile != "" && clientAuth != tls.RequireAndVerifyClientCert {
+		return nil, errors.New("TLS certificate revocation requires require-and-verify client authentication")
+	}
+
+	result := &tls.Config{
+		MinVersion:     minVersion,
+		CipherSuites:   cipherSuites,
+		GetCertificate: provider.GetCertificate,
+	}
+
+	if config.ClientCAFile != "" {
+		attachClientAuth(result, config, provider, clientAuth)
+	}
+
+	return result, nil
+}
+
+// attachClientAuth configures client certificate authentication (mTLS) on the base
+// TLS configuration. To support hot-reloading of trust stores and CRL files without
+// connection disruption, it dynamically hooks into the GetConfigForClient callback.
+func attachClientAuth(
+	result *tls.Config,
+	config *model.ServerConfigHTTPS,
+	provider TLSProvider,
+	clientAuth tls.ClientAuthType,
+) {
+	result.ClientAuth = clientAuth
+	if config.CRLFile != "" {
+		// Session ticket resumption bypasses the full TLS handshake and certificate
+		// verification callbacks. We must disable it when CRL checks are active to
+		// guarantee that every new connection validates against the latest CRL state.
+		result.SessionTicketsDisabled = true
+	}
+	result.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
+		pool, verifier, poolErr := provider.ClientAuth()
+		if poolErr != nil {
+			return nil, poolErr
+		}
+
+		// Since Go's tls.Config is shared across all concurrent handshakes, we must
+		// clone the base configuration per connection before applying hot-reloaded
+		// ClientCAs and VerifyConnection callbacks to prevent concurrent map writes.
+		clone := result.Clone()
+		clone.ClientCAs = pool
+		clone.GetConfigForClient = nil
+		if err := attachCRLVerification(clone, config, verifier); err != nil {
+			return nil, err
+		}
+
+		return clone, nil
+	}
+}
+
+// attachCRLVerification mounts our custom CRL-based revocation checker onto the
+// connection-specific cloned TLS configuration.
+func attachCRLVerification(
+	clone *tls.Config,
+	config *model.ServerConfigHTTPS,
+	verifier ClientCertificateVerifier,
+) error {
+	if config.CRLFile == "" {
+		return nil
+	}
+	if verifier == nil {
+		return errors.New("HTTPS client CRL is not loaded")
+	}
+	// We bind to VerifyConnection rather than VerifyPeerCertificate because VerifyConnection
+	// is executed after Go's crypto/tls has successfully established a cryptographic chain
+	// of trust. This guarantees that our verifier receives pre-verified certificate chains.
+	clone.VerifyConnection = verifier.Verify
+
+	return nil
+}
+
+func loadKeyPair(certFile, keyFile, password string) (tls.Certificate, error) {
+	if password == "" {
+		certificate, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return tls.Certificate{}, fmt.Errorf("failed to load HTTPS certificate and key: %w", err)
+		}
+		return certificate, nil
+	}
+
+	certPEM, err := safepath.ReadFile(certFile)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to read HTTPS certificate: %w", err)
+	}
+	keyPEM, err := safepath.ReadFile(keyFile)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to read HTTPS private key: %w", err)
+	}
+
+	keyBlock, rest := pem.Decode(keyPEM)
+	if keyBlock == nil {
+		return tls.Certificate{}, errors.New("failed to decode PEM block in HTTPS private key")
+	}
+
+	//nolint:staticcheck // Legacy PEM encryption is supported for compatibility with existing TLS configuration.
+	//noinspection GoDeprecation
+	if x509.IsEncryptedPEMBlock(keyBlock) {
+		//nolint:staticcheck // Legacy PEM encryption is supported for compatibility with existing TLS configuration.
+		//noinspection GoDeprecation
+		decrypted, decryptErr := x509.DecryptPEMBlock(keyBlock, []byte(password))
+		if decryptErr != nil {
+			return tls.Certificate{}, fmt.Errorf("failed to decrypt HTTPS private key: %w", decryptErr)
+		}
+		keyBlock.Bytes = decrypted
+		keyBlock.Headers = nil
+		keyPEM = append(pem.EncodeToMemory(keyBlock), rest...)
+	}
+
+	certificate, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to load HTTPS certificate and key: %w", err)
+	}
+
+	return certificate, nil
+}
+
+func loadClientCAs(path string) (*x509.CertPool, error) {
+	caPEM, err := safepath.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read client CA file: %w", err)
+	}
+
+	pool := x509.NewCertPool()
+	certificateCount := 0
+	remaining := caPEM
+	for {
+		remaining = bytes.TrimSpace(remaining)
+		if len(remaining) == 0 {
+			break
+		}
+		if !bytes.HasPrefix(remaining, []byte("-----BEGIN CERTIFICATE-----")) {
+			if certificateCount == 0 {
+				return nil, fmt.Errorf("client CA file %q contains no certificates", path)
+			}
+			return nil, fmt.Errorf("client CA file %q contains invalid data after a certificate", path)
+		}
+
+		block, rest := pem.Decode(remaining)
+		if block == nil {
+			return nil, fmt.Errorf("client CA file %q contains an invalid certificate PEM block", path)
+		}
+		certificate, parseErr := x509.ParseCertificate(block.Bytes)
+		if parseErr != nil {
+			return nil, fmt.Errorf("client CA file %q contains an invalid certificate: %w", path, parseErr)
+		}
+
+		pool.AddCert(certificate)
+		certificateCount++
+		remaining = rest
+	}
+	if certificateCount == 0 {
+		return nil, fmt.Errorf("client CA file %q contains no certificates", path)
+	}
+
+	return pool, nil
+}
+
+func parseMinVersion(version model.TLSMinVersion) (uint16, error) {
+	switch version {
+	case model.TLSMinVersion12:
+		return tls.VersionTLS12, nil
+	case model.TLSMinVersion13:
+		return tls.VersionTLS13, nil
+	default:
+		return 0, fmt.Errorf("unsupported minimum TLS version %q", version)
+	}
+}
+
+func parseCipherSuites(names []string) ([]uint16, error) {
+	if len(names) == 0 {
+		return nil, nil
+	}
+
+	result := make([]uint16, 0, len(names))
+	for _, name := range names {
+		id, ok := secureCipherSuites[name]
+		if !ok {
+			return nil, fmt.Errorf("unsupported or insecure TLS cipher suite %q", name)
+		}
+		result = append(result, id)
+	}
+
+	return result, nil
+}

@@ -18,19 +18,25 @@ type AzureStorage struct {
 	ContainerName string `yaml:"container-name" json:"container-name" validate:"required"`
 	// Path is the root path for the backup repository within the container.
 	// If not specified, backups will be saved in the container's root.
-	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
+	Path Path `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
 	// AccountName is the Azure storage account name for Shared Key authentication.
 	AccountName string `yaml:"account-name,omitempty" json:"account-name,omitempty" extensions:"x-nullable"`
 	// AccountKey is the Azure storage account key for Shared Key authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	AccountKey string `yaml:"account-key,omitempty" json:"account-key,omitempty" extensions:"x-nullable"`
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	AccountKey Secret `yaml:"account-key,omitempty" json:"account-key,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// TenantID is the Azure Active Directory tenant ID for AAD authentication.
-	TenantID string `yaml:"tenant-id,omitempty" json:"tenant-id,omitempty" extensions:"x-nullable"`
+	// This is sensitive information. Can be a path in secret agent or an actual value.
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	TenantID Secret `yaml:"tenant-id,omitempty" json:"tenant-id,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// ClientID is the Azure Active Directory client ID for AAD authentication.
-	ClientID string `yaml:"client-id,omitempty" json:"client-id,omitempty" extensions:"x-nullable"`
+	// This is sensitive information. Can be a path in secret agent or an actual value.
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	ClientID Secret `yaml:"client-id,omitempty" json:"client-id,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// ClientSecret is the Azure Active Directory client secret for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty" extensions:"x-nullable"`
+	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
+	ClientSecret Secret `yaml:"client-secret,omitempty" json:"client-secret,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 	// The minimum size in bytes of individual Azure Blob chunks.
 	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" minimum:"1048576"`
 	// StorageClass defines the storage tier for data and metadata objects.
@@ -42,12 +48,15 @@ type AzureStorage struct {
 const azureMinUploadBlockSize = 1024 * 1024 // 1 MiB
 
 // Validate checks if the AzureStorage is valid.
-func (a *AzureStorage) Validate(opts ...ValidationOption) error {
+func (a *AzureStorage) Validate() error {
 	if a.Endpoint == "" {
 		return errors.New("azure storage endpoint is not specified")
 	}
 	if a.ContainerName == "" {
 		return errors.New("azure storage container name is not specified")
+	}
+	if err := a.Path.Validate(ValidationAllowEmpty); err != nil {
+		return errValidationInvalidPath("path", a.Path, err)
 	}
 
 	// Check for valid authentication method.
@@ -58,6 +67,12 @@ func (a *AzureStorage) Validate(opts ...ValidationOption) error {
 		return errors.New(`azure storage authentication method is ambiguous:
 use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 	}
+	if (a.AccountName != "" || a.AccountKey != "") && !hasSharedKey {
+		return errors.New("azure storage shared key authentication requires both account-name and account-key")
+	}
+	if (a.TenantID != "" || a.ClientID != "" || a.ClientSecret != "") && !hasAAD {
+		return errors.New("azure storage AAD authentication requires tenant-id, client-id and client-secret")
+	}
 	if err := a.StorageClass.Validate(); err != nil {
 		return fmt.Errorf("invalid storage class: %w", err)
 	}
@@ -66,8 +81,22 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 		return errValidationInvalidValue("min-part-size", *a.MinPartSize, "at least 1MiB")
 	}
 
+	withAgent := a.hasSecretAgent()
+	if err := validateSecret("account-key", a.AccountKey, withAgent); err != nil {
+		return err
+	}
+	if err := validateSecret("tenant-id", a.TenantID, withAgent); err != nil {
+		return err
+	}
+	if err := validateSecret("client-id", a.ClientID, withAgent); err != nil {
+		return err
+	}
+	if err := validateSecret("client-secret", a.ClientSecret, withAgent); err != nil {
+		return err
+	}
+
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-	return a.SecretAgentConfig.validate(opts...)
+	return a.SecretAgentConfig.validate()
 }
 
 func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
@@ -76,10 +105,11 @@ func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &model.AzureStorage{
 		Endpoint:      a.Endpoint,
 		ContainerName: a.ContainerName,
-		Path:          a.Path,
+		Path:          string(a.Path),
 		Auth:          getAzureAuth(a),
 		SecretAgent:   agent,
 		MinPartSize:   a.MinPartSize,
@@ -110,7 +140,7 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 	azureStorage := &AzureStorage{
 		Endpoint:          s.Endpoint,
 		ContainerName:     s.ContainerName,
-		Path:              s.Path,
+		Path:              Path(s.Path),
 		MinPartSize:       s.MinPartSize,
 		SecretAgentConfig: ResolveSecretAgentFromModel(s.SecretAgent, config),
 		StorageClass:      newAzureStorageClassFromModel(s.StorageClass),

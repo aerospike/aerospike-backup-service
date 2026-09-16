@@ -9,21 +9,35 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
+	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"gopkg.in/yaml.v3"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
+// Manager reads and writes the whole service configuration in its backing source:
+// a local file, an HTTP endpoint, or a storage backend.
 type Manager interface {
 	// Read reads the configuration from the source.
 	Read(ctx context.Context) (*model.Config, error)
 	// Write writes the configuration to the source.
 	Write(ctx context.Context, config *model.Config) error
 }
+
+// remoteConfigTimeout bounds one fetch of a configuration served over HTTP(S).
+const remoteConfigTimeout = 30 * time.Second
+
+// remoteConfigHTTPClient fetches configuration served over HTTP(S). The contexts that reach
+// these requests carry cancellation but no deadline: at startup it is the signal context from
+// main, at runtime the context of the request that asked for a reload. The client's own timeout
+// is therefore what bounds a server that accepts the connection and then stalls; without it the
+// service would sit in Load until it is killed.
+var remoteConfigHTTPClient = &http.Client{Timeout: remoteConfigTimeout}
 
 //nolint:lll
 const schemaHeader = "# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/%s/docs/config.schema.json\n"
@@ -33,7 +47,8 @@ func Load(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
-	operations storageReaderWriter,
+	operations storage.Operations,
+	tlsProber servertls.Prober,
 ) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
@@ -48,6 +63,9 @@ func Load(
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read configuration: %w", err)
 	}
+	if err := tlsProber.Probe(ctx, config); err != nil {
+		return nil, nil, fmt.Errorf("failed to validate TLS configuration: %w", err)
+	}
 
 	return config, manager, nil
 }
@@ -61,11 +79,14 @@ func readConfig(
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration content: %w", err)
 	}
-	slog.Info("Service configuration:\n" + string(configBytes))
 
-	config := &dto.Config{}
-	if err := decoder.Deserialize(config, bytes.NewReader(configBytes), decoder.YAML); err != nil {
+	config, err := dto.NewFromReader[dto.Config](bytes.NewReader(configBytes), decoder.YAML)
+	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
+	}
+
+	if err := config.Validate(); err != nil {
+		return nil, fmt.Errorf("failed to validate configuration: %w", err)
 	}
 
 	modelConfig, err := config.ToModel()
@@ -80,7 +101,7 @@ func readConfig(
 
 func writeConfig(writer io.Writer, config *model.Config) error {
 	dtoConfig := dto.NewConfigFromModel(config)
-	data, err := yaml.Marshal(dtoConfig)
+	data, err := decoder.Marshal(dtoConfig, decoder.YAML, false)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration: %w", err)
 	}
@@ -94,7 +115,7 @@ func newConfigManager(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
-	operations storageReaderWriter,
+	operations storage.Operations,
 ) (Manager, error) {
 	if remote {
 		s, err := readStorage(ctx, configFile)
@@ -116,7 +137,7 @@ func readStorage(ctx context.Context, configURI string) (model.Storage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load file content: %w", err)
 	}
-	slog.Info("Configuration storage:\n" + string(content))
+
 	configStorage := &dto.Storage{}
 	if err = decoder.Deserialize(configStorage, bytes.NewReader(content), decoder.YAML); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal storage configuration: %w", err)
@@ -148,7 +169,7 @@ func readFromHTTP(ctx context.Context, url string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request for %s: %w", url, err)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := remoteConfigHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed HTTP GET request to %s: %w", url, err)
 	}

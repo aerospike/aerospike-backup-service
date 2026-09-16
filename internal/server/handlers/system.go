@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,6 +8,7 @@ import (
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	_ "github.com/aerospike/aerospike-backup-service/v3/docs" // auto-generated Swagger spec
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
@@ -20,10 +20,23 @@ import (
 // @Router      / [get]
 // @Success 	200
 func RootActionHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
+	// The route is registered as "GET <context-path>", which the mux treats as a subtree, so
+	// every path under the context path without a route of its own lands here. Only the exact
+	// context path is the root endpoint; the matched pattern tells us where that is.
+	if r.URL.Path != rootPath(r) {
 		w.WriteHeader(http.StatusNotFound)
 	}
 	_, _ = fmt.Fprintf(w, "")
+}
+
+// rootPath returns the path the root route was registered with, or "/" when the handler is
+// served outside a mux (r.Pattern is empty then).
+func rootPath(r *http.Request) string {
+	if _, path, ok := strings.Cut(r.Pattern, " "); ok && path != "" {
+		return path
+	}
+
+	return "/"
 }
 
 // HealthActionHandler
@@ -60,7 +73,9 @@ func VersionActionHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(response)
+
+	body, _ := decoder.Marshal(response, decoder.JSON, false)
+	_, _ = w.Write(body)
 }
 
 // MetricsActionHandler

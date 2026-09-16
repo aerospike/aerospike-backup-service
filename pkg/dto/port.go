@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -40,53 +39,4 @@ func NewPortFromModel(m *model.Port) *Port {
 
 	port := Port(*m)
 	return &port
-}
-
-// PortRange represents a range of network ports.
-// @Description PortRange is a range of ports (inclusive).
-type PortRange struct {
-	// Start port of the range (inclusive).
-	Start Port `json:"start" yaml:"start"`
-
-	// End port of the range (inclusive).
-	End Port `json:"end" yaml:"end"`
-}
-
-func (p *PortRange) Validate() error {
-	if p == nil {
-		return nil
-	}
-	if err := p.Start.Validate(); err != nil {
-		return fmt.Errorf("invalid start port: %w", err)
-	}
-	if err := p.End.Validate(); err != nil {
-		return fmt.Errorf("invalid end port: %w", err)
-	}
-	if p.Start > p.End {
-		return errors.New("start port must be less than or equal to end port")
-	}
-
-	return nil
-}
-
-func (p *PortRange) ToModel() *model.PortRange {
-	if p == nil {
-		return nil
-	}
-
-	return &model.PortRange{
-		Start: model.Port(p.Start),
-		End:   model.Port(p.End),
-	}
-}
-
-func newPortRangeFromModel(m *model.PortRange) *PortRange {
-	if m == nil {
-		return nil
-	}
-
-	return &PortRange{
-		Start: Port(m.Start),
-		End:   Port(m.End),
-	}
 }
