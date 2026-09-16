@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 )
 
 // Configuration names end up in the storage layout: a routine's backups live under
@@ -18,6 +19,10 @@ const (
 	maxNamespaceNameLength = 31
 	// reservedNamespaceName is the one name the Aerospike server keeps for itself.
 	reservedNamespaceName = "null"
+	// namespaceNameChars is the full set of characters an Aerospike namespace name may use.
+	namespaceNameChars = "abcdefghijklmnopqrstuvwxyz" +
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+		"0123456789_-$"
 )
 
 // NamespaceName represents a validated Aerospike namespace name in the DTO layer.
@@ -46,25 +51,16 @@ func (n NamespaceName) Validate() error {
 		return fmt.Errorf("%q is reserved by the Aerospike server", reservedNamespaceName)
 	}
 
-	for _, r := range n {
-		if !isNamespaceNameRune(r) {
-			return fmt.Errorf(
-				"must contain only Latin letters, digits, \"_\", \"-\" and \"$\", found %q", r)
-		}
+	// TrimLeft drops the leading run of allowed characters, so the remainder, if any,
+	// starts with the first character that is not allowed.
+	if rest := strings.TrimLeft(string(n), namespaceNameChars); rest != "" {
+		r, _ := utf8.DecodeRuneInString(rest)
+
+		return fmt.Errorf(
+			"must contain only Latin letters, digits, \"_\", \"-\" and \"$\", found %q", r)
 	}
 
 	return nil
-}
-
-func isNamespaceNameRune(r rune) bool {
-	switch {
-	case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
-		return true
-	case r == '_', r == '-', r == '$':
-		return true
-	default:
-		return false
-	}
 }
 
 // newNamespaceNames adopts the model's plain strings as namespace names.
