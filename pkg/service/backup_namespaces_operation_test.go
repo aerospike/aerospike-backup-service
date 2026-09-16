@@ -15,12 +15,12 @@ func TestBackupNamespacesOperation_Wait_Success(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	h1 := NewMockNamespaceBackupHandler(ctrl)
+	h1 := NewMockCancelableBackupHandler(ctrl)
 	h1.EXPECT().Wait(gomock.Any()).Return(nil)
-	h2 := NewMockNamespaceBackupHandler(ctrl)
+	h2 := NewMockCancelableBackupHandler(ctrl)
 	h2.EXPECT().Wait(gomock.Any()).Return(nil)
 
-	op := &BackupNamespacesOperation{handlers: map[string]NamespaceBackupHandler{"ns1": h1, "ns2": h2}}
+	op := &BackupNamespacesOperation{handlers: map[string]CancelableBackupHandler{"ns1": h1, "ns2": h2}}
 	require.NoError(t, op.Wait(t.Context()))
 }
 
@@ -28,12 +28,12 @@ func TestBackupNamespacesOperation_Wait_AggregatesErrors(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	h1 := NewMockNamespaceBackupHandler(ctrl)
+	h1 := NewMockCancelableBackupHandler(ctrl)
 	h1.EXPECT().Wait(gomock.Any()).Return(errors.New("ns1 failed"))
-	h2 := NewMockNamespaceBackupHandler(ctrl)
+	h2 := NewMockCancelableBackupHandler(ctrl)
 	h2.EXPECT().Wait(gomock.Any()).Return(errors.New("ns2 failed"))
 
-	op := &BackupNamespacesOperation{handlers: map[string]NamespaceBackupHandler{"ns1": h1, "ns2": h2}}
+	op := &BackupNamespacesOperation{handlers: map[string]CancelableBackupHandler{"ns1": h1, "ns2": h2}}
 	err := op.Wait(t.Context())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "ns1 failed")
@@ -44,12 +44,12 @@ func TestBackupNamespacesOperation_Cancel(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	h1 := NewMockNamespaceBackupHandler(ctrl)
+	h1 := NewMockCancelableBackupHandler(ctrl)
 	h1.EXPECT().Cancel()
-	h2 := NewMockNamespaceBackupHandler(ctrl)
+	h2 := NewMockCancelableBackupHandler(ctrl)
 	h2.EXPECT().Cancel()
 
-	op := &BackupNamespacesOperation{handlers: map[string]NamespaceBackupHandler{"ns1": h1, "ns2": h2}}
+	op := &BackupNamespacesOperation{handlers: map[string]CancelableBackupHandler{"ns1": h1, "ns2": h2}}
 	op.Cancel()
 }
 
@@ -57,12 +57,12 @@ func TestBackupNamespacesOperation_GetMetrics(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	h1 := NewMockNamespaceBackupHandler(ctrl)
+	h1 := NewMockCancelableBackupHandler(ctrl)
 	h1.EXPECT().GetMetrics().Return(&models.Metrics{RecordsPerSecond: 10})
-	h2 := NewMockNamespaceBackupHandler(ctrl)
+	h2 := NewMockCancelableBackupHandler(ctrl)
 	h2.EXPECT().GetMetrics().Return(&models.Metrics{RecordsPerSecond: 20})
 
-	op := &BackupNamespacesOperation{handlers: map[string]NamespaceBackupHandler{"ns1": h1, "ns2": h2}}
+	op := &BackupNamespacesOperation{handlers: map[string]CancelableBackupHandler{"ns1": h1, "ns2": h2}}
 	metrics := op.GetMetrics()
 	require.NotNil(t, metrics)
 	assert.Equal(t, uint64(30), metrics.RecordsPerSecond)
@@ -72,10 +72,10 @@ func TestBackupNamespacesOperation_GetStats_NoneStarted(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	h1 := NewMockNamespaceBackupHandler(ctrl)
+	h1 := NewMockCancelableBackupHandler(ctrl)
 	h1.EXPECT().GetStats().Return(nil)
 
-	op := &BackupNamespacesOperation{handlers: map[string]NamespaceBackupHandler{"ns1": h1}}
+	op := &BackupNamespacesOperation{handlers: map[string]CancelableBackupHandler{"ns1": h1}}
 	assert.Nil(t, op.GetStats())
 }
 
@@ -99,16 +99,16 @@ func TestBackupNamespacesOperation_GetStats_Aggregated(t *testing.T) {
 	// aggregation result is deterministic regardless of map iteration order.
 	stats2.StartTime = start
 
-	h1 := NewMockNamespaceBackupHandler(ctrl)
+	h1 := NewMockCancelableBackupHandler(ctrl)
 	h1.EXPECT().GetStats().Return(stats1)
-	h2 := NewMockNamespaceBackupHandler(ctrl)
+	h2 := NewMockCancelableBackupHandler(ctrl)
 	h2.EXPECT().GetStats().Return(stats2)
 	// Not started yet: excluded from aggregation.
-	h3 := NewMockNamespaceBackupHandler(ctrl)
+	h3 := NewMockCancelableBackupHandler(ctrl)
 	h3.EXPECT().GetStats().Return(nil)
 
 	op := &BackupNamespacesOperation{
-		handlers: map[string]NamespaceBackupHandler{"ns1": h1, "ns2": h2, "ns3": h3},
+		handlers: map[string]CancelableBackupHandler{"ns1": h1, "ns2": h2, "ns3": h3},
 	}
 	result := op.GetStats()
 	require.NotNil(t, result)

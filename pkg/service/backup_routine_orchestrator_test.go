@@ -50,12 +50,12 @@ func newBackupNamespacesOperation(
 	namespaces []string,
 	stats *models.BackupStats,
 ) *BackupNamespacesOperation {
-	h := NewMockNamespaceBackupHandler(ctrl)
+	h := NewMockCancelableBackupHandler(ctrl)
 	h.EXPECT().Wait(gomock.Any()).Return(nil).Times(len(namespaces))
 	if stats != nil {
 		h.EXPECT().GetStats().Return(stats).AnyTimes()
 	}
-	handlers := make(map[string]NamespaceBackupHandler, len(namespaces))
+	handlers := make(map[string]CancelableBackupHandler, len(namespaces))
 	for _, ns := range namespaces {
 		handlers[ns] = h
 	}

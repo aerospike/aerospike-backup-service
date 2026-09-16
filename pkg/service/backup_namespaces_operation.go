@@ -13,7 +13,7 @@ import (
 // waits for their execution.
 // Implements CancelableBackupHandler, so it can be treated as a unified handler externally.
 type BackupNamespacesOperation struct {
-	handlers map[string]NamespaceBackupHandler
+	handlers map[string]CancelableBackupHandler
 }
 
 var _ CancelableBackupHandler = (*BackupNamespacesOperation)(nil)

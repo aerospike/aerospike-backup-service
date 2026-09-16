@@ -16,6 +16,10 @@ type retryableBackupHandler struct {
 	sync.RWMutex
 	handler backupexecutor.BackupHandler
 	cancel  context.CancelFunc
+	// started is closed once the pipeline is running. Every retry attempt that gets past Start
+	// sets the inner handler again, so the close is guarded.
+	started   chan struct{}
+	startOnce sync.Once
 	// done is closed once the retry loop has returned; err holds its outcome and is only
 	// read after that.
 	done chan struct{}
@@ -47,8 +51,9 @@ func newRetryableBackupHandler(
 	// the partial backup folder stays in storage.
 	cleanupCtx := context.WithoutCancel(ctx)
 	h := &retryableBackupHandler{
-		done:   make(chan struct{}),
-		cancel: cancel,
+		started: make(chan struct{}),
+		done:    make(chan struct{}),
+		cancel:  cancel,
 	}
 
 	// Helper to retry onSuccess only. The loop observes the wait context, so Cancel stops further
@@ -98,8 +103,33 @@ func newRetryableBackupHandler(
 
 func (h *retryableBackupHandler) setHandler(handler backupexecutor.BackupHandler) {
 	h.Lock()
-	defer h.Unlock()
 	h.handler = handler
+	h.Unlock()
+
+	if handler != nil {
+		h.startOnce.Do(func() { close(h.started) })
+	}
+}
+
+// waitStarted blocks until the backup pipeline is running. A run that ends without ever
+// starting one - an unreachable cluster, a storage writer that cannot be created - never
+// publishes statistics, so it returns the error that ended the run instead.
+func (h *retryableBackupHandler) waitStarted(ctx context.Context) error {
+	select {
+	case <-h.started:
+		return nil
+	case <-h.done:
+		// A run can start and finish before this is reached; that is a started run.
+		select {
+		case <-h.started:
+			return nil
+		default:
+		}
+
+		return h.result()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // finish records the run's outcome and releases everyone waiting on it.
@@ -111,14 +141,8 @@ func (h *retryableBackupHandler) finish(err error) {
 	close(h.done)
 }
 
-// Done is closed once the run has finished, successfully or not. A run whose pipeline never
-// started ends here with GetStats still nil, so a caller waiting for the start has to watch it.
-func (h *retryableBackupHandler) Done() <-chan struct{} {
-	return h.done
-}
-
-// Err returns the run's outcome. It is meaningful only once Done is closed.
-func (h *retryableBackupHandler) Err() error {
+// result returns the run's outcome. It is meaningful only once done is closed.
+func (h *retryableBackupHandler) result() error {
 	h.RLock()
 	defer h.RUnlock()
 
@@ -128,7 +152,7 @@ func (h *retryableBackupHandler) Err() error {
 func (h *retryableBackupHandler) Wait(ctx context.Context) error {
 	select {
 	case <-h.done:
-		return h.Err()
+		return h.result()
 	case <-ctx.Done():
 		return ctx.Err()
 	}

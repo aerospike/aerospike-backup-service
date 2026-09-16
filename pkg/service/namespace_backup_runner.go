@@ -19,7 +19,8 @@ import (
 // NamespaceBackupRunner runs the backup pipeline for one namespace: retries,
 // catalog cleanup on failure/cancel, and metadata writes on success.
 type NamespaceBackupRunner interface {
-	// Run starts backup execution for a single namespace and returns a cancelable handler.
+	// Run starts backup execution for a single namespace and returns a cancelable handler
+	// once the backup pipeline is running. It fails when the pipeline cannot be started.
 	// scanLimiter is a per-routine limiter shared across all namespace backups within
 	// a single routine run to ensure fair resource allocation.
 	Run(
@@ -29,7 +30,7 @@ type NamespaceBackupRunner interface {
 		runSpec model.BackupRunSpec,
 		scanLimiter syncutil.Limiter,
 		logger *slog.Logger,
-	) NamespaceBackupHandler
+	) (CancelableBackupHandler, error)
 }
 
 // NewNamespaceBackupRunner returns a NamespaceBackupRunner.
@@ -61,20 +62,9 @@ type CancelableBackupHandler interface {
 	Cancel()
 }
 
-// NamespaceBackupHandler is one namespace's backup run: a CancelableBackupHandler that also
-// reports when the run itself is over. A run whose pipeline never started - an unreachable
-// cluster, a storage writer that cannot be created - never publishes statistics, so a caller
-// waiting for it to start needs the run's own outcome to know that it never will.
-type NamespaceBackupHandler interface {
-	CancelableBackupHandler
-	// Done is closed once the run has finished, successfully or not.
-	Done() <-chan struct{}
-	// Err returns the run's outcome. It is meaningful only once Done is closed.
-	Err() error
-}
-
 // Run starts a retryable backup for one namespace via [backupexecutor.Backup.Run],
-// with cleanup and metadata callbacks wired for the routine's storage layout.
+// with cleanup and metadata callbacks wired for the routine's storage layout, and returns
+// once the pipeline is running. A run that gives up before starting one returns its error.
 // scanLimiter is a per-routine limiter shared across all namespace backups within
 // a single routine run to ensure fair resource allocation.
 func (e *namespaceBackupRunner) Run(
@@ -84,8 +74,8 @@ func (e *namespaceBackupRunner) Run(
 	runSpec model.BackupRunSpec,
 	scanLimiter syncutil.Limiter,
 	logger *slog.Logger,
-) NamespaceBackupHandler {
-	return newRetryableBackupHandler(
+) (CancelableBackupHandler, error) {
+	h := newRetryableBackupHandler(
 		ctx,
 		*routine.BackupPolicy.GetRetryPolicyOrDefault(),
 		retryableBackupCallbacks{
@@ -119,6 +109,12 @@ func (e *namespaceBackupRunner) Run(
 		},
 		logger,
 	)
+
+	if err := h.waitStarted(ctx); err != nil {
+		return nil, err
+	}
+
+	return h, nil
 }
 
 // deleteFolder removes backup data under the given path on failure or cancel; logs
