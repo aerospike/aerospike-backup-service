@@ -13,12 +13,7 @@ import (
 // The comparison is one-directional: an entry other has and bc does not is absent from the
 // result, and running Diff the other way round is what reports it.
 //
-// Entries are compared by value, never by pointer. Every configuration change round trips
-// through the DTO layer, which allocates fresh entries even for the parts nobody touched,
-// so every pointer differs on every change. The comparison is deep rather than a list of
-// the fields that matter, because it can only ever report too much: a caller that reacts to
-// a change it did not need to pays for a redundant reaction, where a field an explicit list
-// forgets leaves that caller acting on configuration the service no longer holds.
+// Entries are compared by value, never by pointer.
 func (bc *BackupConfig) Diff(other *BackupConfig) *BackupConfig {
 	delta := newBackupConfig()
 	if bc == nil {
