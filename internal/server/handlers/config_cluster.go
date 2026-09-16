@@ -30,12 +30,12 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
 		if _, exists := config.AerospikeClusters[name]; exists {
-			return nil, fmt.Errorf("add Aerospike cluster %q: %w", name, model.ErrAlreadyExists)
+			return fmt.Errorf("add Aerospike cluster %q: %w", name, model.ErrAlreadyExists)
 		}
 		config.AerospikeClusters[name] = newCluster
-		return nil, nil
+		return nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -110,12 +110,12 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
 		if _, exists := config.AerospikeClusters[name]; !exists {
-			return nil, fmt.Errorf("update Aerospike cluster %q: %w", name, model.ErrNotFound)
+			return fmt.Errorf("update Aerospike cluster %q: %w", name, model.ErrNotFound)
 		}
 		config.AerospikeClusters[name] = updatedCluster
-		return routinesUsingCluster(config, name), nil
+		return nil
 	}, withNamespaceValidation); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -139,15 +139,15 @@ func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
 		if _, exists := config.AerospikeClusters[name]; !exists {
-			return nil, fmt.Errorf("delete Aerospike cluster %q: %w", name, model.ErrNotFound)
+			return fmt.Errorf("delete Aerospike cluster %q: %w", name, model.ErrNotFound)
 		}
 		if err := ensureClusterNotInUse(config, name); err != nil {
-			return nil, err
+			return err
 		}
 		delete(config.AerospikeClusters, name)
-		return nil, nil
+		return nil
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))

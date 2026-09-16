@@ -283,32 +283,6 @@ func (c *Config) InvalidateRoutines(names []string) {
 	}
 }
 
-// InvalidateAllRoutines marks every configured routine as invalidated.
-func (c *Config) InvalidateAllRoutines() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	for _, r := range c.backupConfig.BackupRoutines {
-		c.invalidateRoutine(r.Name)
-	}
-}
-
-// ToggleRoutineDisabled sets the Disabled field of the BackupRoutine based on the provided state.
-func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	routine, exists := c.backupConfig.BackupRoutines[name]
-	if !exists {
-		return fmt.Errorf("toggle disable for backup routine %q: %w", name, ErrNotFound)
-	}
-
-	c.backupConfig.BackupRoutines[name].Disabled = isDisabled
-	c.invalidateRoutine(routine.Name)
-
-	return nil
-}
-
 // PopInvalidatedRoutineNames returns all invalidated routine names since the last call.
 func (c *Config) PopInvalidatedRoutineNames() []string {
 	c.mu.Lock()

@@ -19,11 +19,11 @@ type backupConfigChangeOptions struct {
 }
 
 // changeBackupConfig applies a mutation to the backup configuration DTO, validates and
-// converts the full configuration, and persists the result.
-// The mutate function returns routine names that should be rescheduled and rescanned.
+// converts the full configuration, and persists the result. Every routine the mutation
+// left configured differently is rescheduled and its backup history rescanned.
 func (s *Service) changeBackupConfig(
 	ctx context.Context,
-	mutate func(*dto.Config) ([]string, error),
+	mutate func(*dto.Config) error,
 	opts ...func(*backupConfigChangeOptions),
 ) error {
 	options := backupConfigChangeOptions{}
@@ -35,8 +35,7 @@ func (s *Service) changeBackupConfig(
 	defer s.changeConfigLock.Unlock()
 
 	dtoConfig := dto.NewConfigFromModel(s.config)
-	routinesToInvalidate, err := mutate(dtoConfig)
-	if err != nil {
+	if err := mutate(dtoConfig); err != nil {
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
@@ -60,8 +59,14 @@ func (s *Service) changeBackupConfig(
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	s.config.SetBackupConfig(modelConfig.BackupConfigCopy())
-	s.config.InvalidateRoutines(routinesToInvalidate)
+	// The mutation is described as a DTO edit, but what has to be rescheduled is a routine,
+	// and a routine is changed as much by an edit to the cluster or storage it names as by an
+	// edit to itself. Comparing the two resolved configurations reports both.
+	previous := s.config.BackupConfigCopy()
+	current := modelConfig.BackupConfigCopy()
+
+	s.config.SetBackupConfig(current)
+	s.config.InvalidateRoutines(current.ChangedRoutines(previous))
 
 	if options.validateNamespaces {
 		s.nsValidator.Validate(ctx, s.config)
@@ -85,36 +90,6 @@ func (s *Service) changeBackupConfig(
 
 func withNamespaceValidation(opts *backupConfigChangeOptions) {
 	opts.validateNamespaces = true
-}
-
-func routinesUsingStorage(config *dto.Config, storageName string) []string {
-	var names []string
-	for name, routine := range config.BackupRoutines {
-		if routine != nil && routine.Storage == storageName {
-			names = append(names, name)
-		}
-	}
-	return names
-}
-
-func routinesUsingCluster(config *dto.Config, clusterName string) []string {
-	var names []string
-	for name, routine := range config.BackupRoutines {
-		if routine != nil && routine.SourceCluster == clusterName {
-			names = append(names, name)
-		}
-	}
-	return names
-}
-
-func routinesUsingPolicy(config *dto.Config, policyName string) []string {
-	var names []string
-	for name, routine := range config.BackupRoutines {
-		if routine != nil && routine.BackupPolicy == policyName {
-			names = append(names, name)
-		}
-	}
-	return names
 }
 
 func ensurePolicyNotInUse(config *dto.Config, policyName string) error {

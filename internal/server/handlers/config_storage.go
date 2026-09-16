@@ -30,12 +30,12 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
 		if _, exists := config.Storage[name]; exists {
-			return nil, fmt.Errorf("add storage %q: %w", name, model.ErrAlreadyExists)
+			return fmt.Errorf("add storage %q: %w", name, model.ErrAlreadyExists)
 		}
 		config.Storage[name] = newStorage
-		return nil, nil
+		return nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -104,12 +104,12 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
 		if _, exists := config.Storage[name]; !exists {
-			return nil, fmt.Errorf("update storage %q: %w", name, model.ErrNotFound)
+			return fmt.Errorf("update storage %q: %w", name, model.ErrNotFound)
 		}
 		config.Storage[name] = updatedStorage
-		return routinesUsingStorage(config, name), nil
+		return nil
 	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -133,15 +133,15 @@ func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) error {
 		if _, exists := config.Storage[name]; !exists {
-			return nil, fmt.Errorf("delete storage %q: %w", name, model.ErrNotFound)
+			return fmt.Errorf("delete storage %q: %w", name, model.ErrNotFound)
 		}
 		if err := ensureStorageNotInUse(config, name); err != nil {
-			return nil, err
+			return err
 		}
 		delete(config.Storage, name)
-		return nil, nil
+		return nil
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))

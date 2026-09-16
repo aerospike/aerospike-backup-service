@@ -316,6 +316,6 @@ func TestService_changeBackupConfig_CommitOutlivesRequest(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	err := svc.changeBackupConfig(ctx, func(*dto.Config) ([]string, error) { return nil, nil })
+	err := svc.changeBackupConfig(ctx, func(*dto.Config) error { return nil })
 	require.NoError(t, err)
 }

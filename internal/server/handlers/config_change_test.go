@@ -65,3 +65,39 @@ func TestUpdateClusterAndPolicy_InvalidateDependentRoutines(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.Equal(t, []string{entities.routineName}, svc.config.PopInvalidatedRoutineNames())
 }
+
+// A change that leaves a routine's effective configuration untouched does not reschedule it
+// or rescan its history, so a GET-edit-PUT round trip that edits nothing costs nothing.
+func TestUpdateRoutine_UnchangedPayloadInvalidatesNothing(t *testing.T) {
+	svc := newServiceWithNamespaceValidator(t)
+	entities := addValidBackupConfig(svc)
+	svc.config.PopInvalidatedRoutineNames() // drain the AddRoutine invalidation
+
+	// Simulate GET /v1/config/routines/{name}: put the response body straight back.
+	stored := dto.NewConfigFromModel(svc.config).BackupRoutines[entities.routineName]
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPut,
+		"/v1/config/routines/"+entities.routineName, strings.NewReader(marshalToString(stored)))
+	req.SetPathValue("name", entities.routineName)
+	w := httptest.NewRecorder()
+	svc.UpdateRoutine(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Empty(t, svc.config.PopInvalidatedRoutineNames())
+}
+
+// A deleted routine is invalidated too: the new configuration holds nothing to compare
+// against, and its scheduled jobs still have to be torn down.
+func TestDeleteRoutine_InvalidatesTheRemovedRoutine(t *testing.T) {
+	svc := newServiceWithNamespaceValidator(t)
+	entities := addValidBackupConfig(svc)
+	svc.config.PopInvalidatedRoutineNames() // drain the AddRoutine invalidation
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete,
+		"/v1/config/routines/"+entities.routineName, nil)
+	req.SetPathValue("name", entities.routineName)
+	w := httptest.NewRecorder()
+	svc.DeleteRoutine(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code, w.Body.String())
+	assert.Equal(t, []string{entities.routineName}, svc.config.PopInvalidatedRoutineNames())
+}
