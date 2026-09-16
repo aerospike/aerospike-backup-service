@@ -3,6 +3,9 @@ package model
 import (
 	"errors"
 	"fmt"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/aerospike/backup-go"
 )
 
 // EncryptionPolicy contains backup encryption information.
@@ -15,6 +18,21 @@ type EncryptionPolicy struct {
 	KeyEnv string
 	// The secret keyword in Aerospike Secret Agent containing the encryption key.
 	KeySecret Secret
+}
+
+// ToLibraryPolicy converts the policy into its backup-go representation.
+// A nil policy yields nil, which backup-go reads as "no encryption".
+func (p *EncryptionPolicy) ToLibraryPolicy() *backup.EncryptionPolicy {
+	if p == nil {
+		return nil
+	}
+
+	return &backup.EncryptionPolicy{
+		Mode:      p.Mode.String(),
+		KeyFile:   ptr.StringOrNil(p.KeyFile),
+		KeySecret: ptr.StringOrNil(p.KeySecret.Reveal()),
+		KeyEnv:    ptr.StringOrNil(p.KeyEnv),
+	}
 }
 
 // ValidateCanDecrypt reports whether this policy can read data written with mode.
