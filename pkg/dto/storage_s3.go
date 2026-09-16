@@ -89,7 +89,7 @@ func (s *S3Storage) Validate() error {
 	return s.SecretAgentConfig.validate()
 }
 
-func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
+func (s *S3Storage) toModel(config *model.BackupConfig) (*model.S3Storage, error) {
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 	agent, err := s.SecretAgentConfig.ToModel(config)
 	if err != nil {

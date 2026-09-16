@@ -56,7 +56,7 @@ func (s *Storage) Validate() error {
 }
 
 // ToModel converts the Storage DTO to its corresponding model.
-func (s *Storage) ToModel(c *model.Config) (model.Storage, error) {
+func (s *Storage) ToModel(c *model.BackupConfig) (model.Storage, error) {
 	if s.LocalStorage != nil {
 		return s.LocalStorage.toModel()
 	}

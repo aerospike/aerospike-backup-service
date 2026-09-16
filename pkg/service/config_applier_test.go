@@ -26,12 +26,14 @@ func TestConfigApplier_ApplyNewConfig_NoInvalidations(t *testing.T) {
 func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	cfg := model.NewConfig()
-	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
+	backupConfig := model.NewBackupConfig()
+	require.NoError(t, backupConfig.AddRoutine(&model.BackupRoutine{
 		Name:         "routine-1",
 		IntervalCron: "0 0 * * * *",
 		Timezone:     model.NewServiceLocation("", nil),
 	}))
+	cfg := model.NewConfig()
+	cfg.SetBackupConfig(backupConfig)
 
 	scheduler := NewMockJobScheduler(ctrl)
 	scheduler.EXPECT().DeleteJob(jobKey("routine-1", model.BackupTypeFull)).Return(nil)
@@ -53,15 +55,17 @@ func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T
 func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	cfg := model.NewConfig()
-	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
+	backupConfig := model.NewBackupConfig()
+	require.NoError(t, backupConfig.AddRoutine(&model.BackupRoutine{
 		Name:         "removed-routine",
 		IntervalCron: "0 0 * * * *",
 		Timezone:     model.NewServiceLocation("", nil),
 	}))
+	cfg := model.NewConfig()
+	cfg.SetBackupConfig(backupConfig)
 
 	// Installing a configuration that no longer holds the routine is what invalidates it.
-	cfg.SetBackupConfig(model.NewConfig().BackupConfigCopy())
+	cfg.SetBackupConfig(model.NewBackupConfig())
 
 	scheduler := NewMockJobScheduler(ctrl)
 	scheduler.EXPECT().DeleteJob(jobKey("removed-routine", model.BackupTypeFull)).Return(nil)
@@ -81,12 +85,14 @@ func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 
 func TestConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	cfg := model.NewConfig()
-	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
+	backupConfig := model.NewBackupConfig()
+	require.NoError(t, backupConfig.AddRoutine(&model.BackupRoutine{
 		Name:         "routine-1",
 		IntervalCron: "not-a-cron",
 		Timezone:     model.NewServiceLocation("", nil),
 	}))
+	cfg := model.NewConfig()
+	cfg.SetBackupConfig(backupConfig)
 
 	scheduler := NewMockJobScheduler(ctrl)
 	scheduler.EXPECT().DeleteJob(gomock.Any()).Return(nil).Times(2)
@@ -104,12 +110,14 @@ func TestConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
 
 func TestConfigApplier_ApplyNewConfig_ScheduleJobError(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	cfg := model.NewConfig()
-	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
+	backupConfig := model.NewBackupConfig()
+	require.NoError(t, backupConfig.AddRoutine(&model.BackupRoutine{
 		Name:         "routine-1",
 		IntervalCron: "0 0 * * * *",
 		Timezone:     model.NewServiceLocation("", nil),
 	}))
+	cfg := model.NewConfig()
+	cfg.SetBackupConfig(backupConfig)
 
 	scheduleErr := errors.New("schedule failed")
 	scheduler := NewMockJobScheduler(ctrl)

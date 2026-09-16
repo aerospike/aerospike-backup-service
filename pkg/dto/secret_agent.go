@@ -39,7 +39,7 @@ func (c *SecretAgentConfig) hasSecretAgent() bool {
 	return c.SecretAgent != nil || c.SecretAgentName != ""
 }
 
-func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, error) {
+func (c *SecretAgentConfig) ToModel(config *model.BackupConfig) (*model.SecretAgent, error) {
 	if c == nil { // secret agent is optional
 		return nil, nil
 	}
@@ -49,7 +49,7 @@ func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, e
 	}
 
 	if c.SecretAgentName != "" {
-		agent, exists := config.BackupConfigCopy().SecretAgents[c.SecretAgentName]
+		agent, exists := config.SecretAgents[c.SecretAgentName]
 		if !exists {
 			return nil, fmt.Errorf("unknown secret agent %q", c.SecretAgentName)
 		}

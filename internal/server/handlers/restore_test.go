@@ -420,7 +420,7 @@ func TestService_RetrieveConfig(t *testing.T) {
 			routineName: "routine1",
 			timestamp:   "1000",
 			setupSvc: func(s *Service) {
-				_ = s.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
+				_ = addRoutine(s.config, &model.BackupRoutine{Name: "routine1"})
 			},
 			setupMock: func(m *service.MockConfigRetriever) {
 				m.EXPECT().
@@ -435,7 +435,7 @@ func TestService_RetrieveConfig(t *testing.T) {
 			routineName: "routine1",
 			timestamp:   "1000",
 			setupSvc: func(s *Service) {
-				_ = s.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
+				_ = addRoutine(s.config, &model.BackupRoutine{Name: "routine1"})
 			},
 			setupMock: func(m *service.MockConfigRetriever) {
 				m.EXPECT().

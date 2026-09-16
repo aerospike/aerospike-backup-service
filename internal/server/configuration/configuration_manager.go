@@ -147,7 +147,7 @@ func readStorage(ctx context.Context, configURI string) (model.Storage, error) {
 		return nil, fmt.Errorf("validate storage configuration error: %w", err)
 	}
 
-	return configStorage.ToModel(model.NewConfig())
+	return configStorage.ToModel(model.NewBackupConfig())
 }
 
 func loadFileContent(ctx context.Context, configFile string) ([]byte, error) {

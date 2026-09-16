@@ -76,14 +76,17 @@ func TestHistoryScan(t *testing.T) {
 func configWithRoutines(t *testing.T, names ...string) *model.Config {
 	t.Helper()
 
-	cfg := model.NewConfig()
+	backupConfig := model.NewBackupConfig()
 	for _, name := range names {
-		require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
+		require.NoError(t, backupConfig.AddRoutine(&model.BackupRoutine{
 			Name:         name,
 			IntervalCron: "@daily",
 			Timezone:     model.NewServiceLocation("", nil),
 		}))
 	}
+
+	cfg := model.NewConfig()
+	cfg.SetBackupConfig(backupConfig)
 
 	return cfg
 }

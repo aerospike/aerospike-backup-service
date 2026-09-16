@@ -103,7 +103,7 @@ func (r *RestoreTimestampRequest) Validate() error {
 }
 
 func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
-	secretAgent, err := r.SecretAgentConfig.ToModel(config)
+	secretAgent, err := r.SecretAgentConfig.ToModel(config.BackupConfigCopy())
 	if err != nil {
 		return nil, fmt.Errorf("invalid secret agent: %w", err)
 	}
@@ -162,7 +162,7 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 		return nil, fmt.Errorf("invalid storage: %w", err)
 	}
 
-	secretAgent, err := r.SecretAgentConfig.ToModel(config)
+	secretAgent, err := r.SecretAgentConfig.ToModel(config.BackupConfigCopy())
 	if err != nil {
 		return nil, fmt.Errorf("invalid secret agent: %w", err)
 	}
@@ -208,11 +208,12 @@ func (c *DestinationClusterConfig) Validate(opts ValidationOptions) error {
 }
 
 func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.AerospikeCluster, error) {
+	backupConfig := config.BackupConfigCopy()
 	if c.Cluster != nil {
-		return c.Cluster.ToModel(config)
+		return c.Cluster.ToModel(backupConfig)
 	}
 
-	configCluster, exists := config.BackupConfigCopy().AerospikeClusters[c.Name]
+	configCluster, exists := backupConfig.AerospikeClusters[c.Name]
 	if !exists {
 		return nil, errValidationNotFound("cluster", c.Name)
 	}
@@ -252,11 +253,12 @@ func (c *StorageConfig) Validate(opts ValidationOptions) error {
 }
 
 func (c *StorageConfig) ToModel(config *model.Config) (model.Storage, error) {
+	backupConfig := config.BackupConfigCopy()
 	if c.Storage != nil {
-		return c.Storage.ToModel(config)
+		return c.Storage.ToModel(backupConfig)
 	}
 
-	configStorage, exists := config.BackupConfigCopy().Storage[c.Name]
+	configStorage, exists := backupConfig.Storage[c.Name]
 	if !exists {
 		return nil, errValidationNotFound("storage", c.Name)
 	}

@@ -135,68 +135,81 @@ func (c *Config) Validate() error {
 }
 
 func (c *Config) ToModel() (*model.Config, error) {
-	config := c.ServiceConfig
-	modelConfig := model.NewConfig()
-	modelConfig.ServiceConfig = *config.ToModel()
+	backupConfig := model.NewBackupConfig()
 
 	for k, v := range c.SecretAgents {
-		if err := modelConfig.AddSecretAgent(k, v.ToModel()); err != nil {
+		if err := backupConfig.AddSecretAgent(k, v.ToModel()); err != nil {
 			return nil, err
 		}
 	}
+
+	serviceConfig := c.ServiceConfig.ToModel()
 	if c.ServiceConfig.ServerHTTPS != nil {
 		// Resolve the HTTPS Secret Agent after the top-level agents have been added.
-		agent, err := c.ServiceConfig.ServerHTTPS.SecretAgentConfig.ToModel(modelConfig)
+		agent, err := c.ServiceConfig.ServerHTTPS.SecretAgentConfig.ToModel(backupConfig)
 		if err != nil {
 			return nil, fmt.Errorf("invalid HTTPS server secret agent: %w", err)
 		}
-		modelConfig.ServiceConfig.ServerHTTPS.SecretAgent = agent
+		serviceConfig.ServerHTTPS.SecretAgent = agent
 	}
 
 	// storage must be added after secret agents.
 	for k, v := range c.Storage {
-		toModel, err := v.ToModel(modelConfig)
+		toModel, err := v.ToModel(backupConfig)
 		if err != nil {
 			return nil, fmt.Errorf("invalid storage %q: %w", k, err)
 		}
-		if err := modelConfig.AddStorage(k, toModel); err != nil {
+		if err := backupConfig.AddStorage(k, toModel); err != nil {
 			return nil, err
 		}
 	}
 
 	for k, v := range c.BackupPolicies {
-		if err := modelConfig.AddPolicy(k, v.ToModel()); err != nil {
+		if err := backupConfig.AddPolicy(k, v.ToModel()); err != nil {
 			return nil, err
 		}
 	}
 
 	// clusters must be added after secret agents.
 	for k, v := range c.AerospikeClusters {
-		toModel, err := v.ToModel(modelConfig)
+		toModel, err := v.ToModel(backupConfig)
 		if err != nil {
 			return nil, fmt.Errorf("invalid cluster %q: %w", k, err)
 		}
 
-		if err := modelConfig.AddCluster(k, toModel); err != nil {
+		if err := backupConfig.AddCluster(k, toModel); err != nil {
 			return nil, err
 		}
 	}
 
-	backupConfig := modelConfig.BackupConfigCopy()
-	serviceTimezone := modelConfig.ServiceConfig.GetBackupCommonOrDefault().Timezone
 	// routines must be added after storage, secret agents and policies.
+	if err := c.addRoutines(backupConfig, serviceConfig.GetBackupCommonOrDefault().Timezone); err != nil {
+		return nil, err
+	}
+
+	// The finished value goes into an empty Config, which leaves every routine pending:
+	// nothing has been scheduled from this configuration yet.
+	modelConfig := model.NewConfig()
+	modelConfig.ServiceConfig = *serviceConfig
+	modelConfig.SetBackupConfig(backupConfig)
+
+	return modelConfig, nil
+}
+
+// addRoutines resolves every routine against the entries already in backupConfig and adds it.
+func (c *Config) addRoutines(backupConfig *model.BackupConfig, serviceTimezone model.Location) error {
 	for k, v := range c.BackupRoutines {
 		toModel, err := v.ToModel(backupConfig, k, serviceTimezone)
 		if err != nil {
-			return nil, fmt.Errorf("invalid backup routine %q: %w", k, err)
+			return fmt.Errorf("invalid backup routine %q: %w", k, err)
 		}
 
-		if err := modelConfig.AddRoutine(toModel); err != nil {
-			return nil, err
+		if err := backupConfig.AddRoutine(toModel); err != nil {
+			return err
 		}
 	}
 
-	return modelConfig, nil
+	return nil
 }
 
 func (c *Config) backupPolicyHasSecretAgent(policyName string) bool {

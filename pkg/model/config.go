@@ -8,47 +8,53 @@ import (
 	"sync"
 )
 
-// Config represents the service configuration.
+// Config is the live service configuration: the backup configuration currently installed,
+// the service settings, and the routines a change to either has left needing a reschedule.
 type Config struct {
 	mu            sync.RWMutex
 	backupConfig  BackupConfig
 	ServiceConfig ServiceConfig
+	// invalidated holds the routines the last configuration changes left needing a
+	// reschedule and a history rescan, until PopInvalidatedRoutineNames drains them.
+	invalidated map[string]struct{}
 }
 
+// BackupConfig is the value part of the configuration: what is configured, with no record of
+// what changed. Entries are added and removed here; installing the result into a Config is
+// what works out which routines that affected.
 type BackupConfig struct {
-	AerospikeClusters   map[string]*AerospikeCluster
-	Storage             map[string]Storage // Storage is an interface
-	BackupPolicies      map[string]*BackupPolicy
-	BackupRoutines      map[string]*BackupRoutine
-	SecretAgents        map[string]*SecretAgent
-	invalidatedRoutines map[string]struct{} // set of routines that need to be rescanned after a change
+	AerospikeClusters map[string]*AerospikeCluster
+	Storage           map[string]Storage // Storage is an interface
+	BackupPolicies    map[string]*BackupPolicy
+	BackupRoutines    map[string]*BackupRoutine
+	SecretAgents      map[string]*SecretAgent
 }
 
 func NewConfig() *Config {
 	return &Config{
-		backupConfig: *newBackupConfig(),
+		backupConfig: *NewBackupConfig(),
+		invalidated:  make(map[string]struct{}),
 	}
 }
 
-func newBackupConfig() *BackupConfig {
+// NewBackupConfig returns an empty backup configuration ready to have entries added.
+func NewBackupConfig() *BackupConfig {
 	return &BackupConfig{
-		AerospikeClusters:   make(map[string]*AerospikeCluster),
-		Storage:             make(map[string]Storage),
-		BackupPolicies:      make(map[string]*BackupPolicy),
-		BackupRoutines:      make(map[string]*BackupRoutine),
-		SecretAgents:        make(map[string]*SecretAgent),
-		invalidatedRoutines: make(map[string]struct{}),
+		AerospikeClusters: make(map[string]*AerospikeCluster),
+		Storage:           make(map[string]Storage),
+		BackupPolicies:    make(map[string]*BackupPolicy),
+		BackupRoutines:    make(map[string]*BackupRoutine),
+		SecretAgents:      make(map[string]*SecretAgent),
 	}
 }
 
 func (bc BackupConfig) copy() BackupConfig {
 	return BackupConfig{
-		AerospikeClusters:   maps.Clone(bc.AerospikeClusters),
-		Storage:             maps.Clone(bc.Storage),
-		BackupPolicies:      maps.Clone(bc.BackupPolicies),
-		BackupRoutines:      maps.Clone(bc.BackupRoutines),
-		SecretAgents:        maps.Clone(bc.SecretAgents),
-		invalidatedRoutines: make(map[string]struct{}),
+		AerospikeClusters: maps.Clone(bc.AerospikeClusters),
+		Storage:           maps.Clone(bc.Storage),
+		BackupPolicies:    maps.Clone(bc.BackupPolicies),
+		BackupRoutines:    maps.Clone(bc.BackupRoutines),
+		SecretAgents:      maps.Clone(bc.SecretAgents),
 	}
 }
 
@@ -65,7 +71,7 @@ func (c *Config) BackupConfigCopy() *BackupConfig {
 	return &config
 }
 
-func (c *Config) AddStorage(name string, s Storage) error {
+func (bc *BackupConfig) AddStorage(name string, s Storage) error {
 	if s == nil {
 		return errors.New("storage cannot be nil")
 	}
@@ -91,35 +97,29 @@ func (c *Config) AddStorage(name string, s Storage) error {
 		return fmt.Errorf("unsupported storage type %T", s)
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, exists := c.backupConfig.Storage[name]; exists {
+	if _, exists := bc.Storage[name]; exists {
 		return fmt.Errorf("add storage %q: %w", name, ErrAlreadyExists)
 	}
-	c.backupConfig.Storage[name] = s
+	bc.Storage[name] = s
 
 	return nil
 }
 
-func (c *Config) DeleteStorage(name string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	s, exists := c.backupConfig.Storage[name]
+func (bc *BackupConfig) DeleteStorage(name string) error {
+	s, exists := bc.Storage[name]
 	if !exists {
 		return fmt.Errorf("delete storage %q: %w", name, ErrNotFound)
 	}
-	if routine := c.routineUsesStorage(s); routine != "" {
+	if routine := bc.routineUsesStorage(s); routine != "" {
 		return fmt.Errorf("delete storage %q: %w: it is used in routine %q", name, ErrInUse, routine)
 	}
-	delete(c.backupConfig.Storage, name)
+	delete(bc.Storage, name)
 
 	return nil
 }
 
-func (c *Config) routineUsesStorage(s Storage) string {
-	for name, r := range c.backupConfig.BackupRoutines {
+func (bc *BackupConfig) routineUsesStorage(s Storage) string {
+	for name, r := range bc.BackupRoutines {
 		if r.Storage == s {
 			return name
 		}
@@ -127,40 +127,34 @@ func (c *Config) routineUsesStorage(s Storage) string {
 	return ""
 }
 
-func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
+func (bc *BackupConfig) AddPolicy(name string, p *BackupPolicy) error {
 	if p == nil {
 		return errors.New("backup policy cannot be nil")
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, exists := c.backupConfig.BackupPolicies[name]; exists {
+	if _, exists := bc.BackupPolicies[name]; exists {
 		return fmt.Errorf("add backup policy %q: %w", name, ErrAlreadyExists)
 	}
-	c.backupConfig.BackupPolicies[name] = p
+	bc.BackupPolicies[name] = p
 
 	return nil
 }
 
-func (c *Config) DeletePolicy(name string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	p, exists := c.backupConfig.BackupPolicies[name]
+func (bc *BackupConfig) DeletePolicy(name string) error {
+	p, exists := bc.BackupPolicies[name]
 	if !exists {
 		return fmt.Errorf("delete backup policy %q: %w", name, ErrNotFound)
 	}
-	if routine := c.routineUsesPolicy(p); routine != "" {
+	if routine := bc.routineUsesPolicy(p); routine != "" {
 		return fmt.Errorf("delete backup policy %q: %w: it is used in routine %q", name, ErrInUse, routine)
 	}
-	delete(c.backupConfig.BackupPolicies, name)
+	delete(bc.BackupPolicies, name)
 
 	return nil
 }
 
-func (c *Config) routineUsesPolicy(p *BackupPolicy) string {
-	for name, r := range c.backupConfig.BackupRoutines {
+func (bc *BackupConfig) routineUsesPolicy(p *BackupPolicy) string {
+	for name, r := range bc.BackupRoutines {
 		if r.BackupPolicy == p {
 			return name
 		}
@@ -190,7 +184,7 @@ func (c *Config) Routine(name string) (*BackupRoutine, bool) {
 	return routine, true
 }
 
-func (c *Config) AddRoutine(r *BackupRoutine) error {
+func (bc *BackupConfig) AddRoutine(r *BackupRoutine) error {
 	if r == nil {
 		return errors.New("backup routine cannot be nil")
 	}
@@ -199,52 +193,42 @@ func (c *Config) AddRoutine(r *BackupRoutine) error {
 		return errors.New("backup routine name is empty")
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, exists := c.backupConfig.BackupRoutines[r.Name]; exists {
+	if _, exists := bc.BackupRoutines[r.Name]; exists {
 		return fmt.Errorf("add backup routine %q: %w", r.Name, ErrAlreadyExists)
 	}
-	c.backupConfig.BackupRoutines[r.Name] = r
-	c.invalidateRoutine(r.Name)
+	bc.BackupRoutines[r.Name] = r
 
 	return nil
 }
 
-func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
+func (bc *BackupConfig) AddCluster(name string, cluster *AerospikeCluster) error {
 	if cluster == nil {
 		return errors.New("cluster cannot be nil")
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, exists := c.backupConfig.AerospikeClusters[name]; exists {
+	if _, exists := bc.AerospikeClusters[name]; exists {
 		return fmt.Errorf("add Aerospike cluster %q: %w", name, ErrAlreadyExists)
 	}
-	c.backupConfig.AerospikeClusters[name] = cluster
+	bc.AerospikeClusters[name] = cluster
 
 	return nil
 }
 
-func (c *Config) DeleteCluster(name string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	cluster, exists := c.backupConfig.AerospikeClusters[name]
+func (bc *BackupConfig) DeleteCluster(name string) error {
+	cluster, exists := bc.AerospikeClusters[name]
 	if !exists {
 		return fmt.Errorf("delete Aerospike cluster %q: %w", name, ErrNotFound)
 	}
-	if routine := c.routineUsesCluster(cluster); routine != "" {
+	if routine := bc.routineUsesCluster(cluster); routine != "" {
 		return fmt.Errorf("delete Aerospike cluster %q: %w: it is used in routine %q", name, ErrInUse, routine)
 	}
-	delete(c.backupConfig.AerospikeClusters, name)
+	delete(bc.AerospikeClusters, name)
 
 	return nil
 }
 
-func (c *Config) routineUsesCluster(cluster *AerospikeCluster) string {
-	for name, r := range c.backupConfig.BackupRoutines {
+func (bc *BackupConfig) routineUsesCluster(cluster *AerospikeCluster) string {
+	for name, r := range bc.BackupRoutines {
 		if r.SourceCluster == cluster {
 			return name
 		}
@@ -252,34 +236,23 @@ func (c *Config) routineUsesCluster(cluster *AerospikeCluster) string {
 	return ""
 }
 
-func (c *Config) AddSecretAgent(name string, agent *SecretAgent) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, exists := c.backupConfig.SecretAgents[name]; exists {
+func (bc *BackupConfig) AddSecretAgent(name string, agent *SecretAgent) error {
+	if _, exists := bc.SecretAgents[name]; exists {
 		return fmt.Errorf("add Secret agent %q: %w", name, ErrAlreadyExists)
 	}
-	c.backupConfig.SecretAgents[name] = agent
+	bc.SecretAgents[name] = agent
 	return nil
 }
 
 // SetBackupConfig replaces the backup configuration and marks every routine the replacement changed.
-//
-// Invalidations already pending stay pending: they belong to this holder, not to the value
-// being installed, and a change whose apply never ran still has to be applied.
 func (c *Config) SetBackupConfig(other *BackupConfig) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	changed := ChangedRoutines(other, &c.backupConfig)
-	pending := c.backupConfig.invalidatedRoutines
-
-	c.backupConfig = *other
-	c.backupConfig.invalidatedRoutines = pending
-
-	for _, name := range changed {
+	for _, name := range ChangedRoutines(other, &c.backupConfig) {
 		c.invalidateRoutine(name)
 	}
+	c.backupConfig = *other
 }
 
 // PopInvalidatedRoutineNames returns all invalidated routine names since the last call.
@@ -287,10 +260,10 @@ func (c *Config) PopInvalidatedRoutineNames() []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	names := slices.Sorted(maps.Keys(c.backupConfig.invalidatedRoutines))
+	names := slices.Sorted(maps.Keys(c.invalidated))
 
 	// Drain invalidations so the next call only returns newly invalidated routines.
-	clear(c.backupConfig.invalidatedRoutines)
+	clear(c.invalidated)
 
 	return names
 }
@@ -298,5 +271,5 @@ func (c *Config) PopInvalidatedRoutineNames() []string {
 // invalidateRoutine marks a routine as invalidated.
 // Caller must hold c.mu.
 func (c *Config) invalidateRoutine(name string) {
-	c.backupConfig.invalidatedRoutines[name] = struct{}{}
+	c.invalidated[name] = struct{}{}
 }

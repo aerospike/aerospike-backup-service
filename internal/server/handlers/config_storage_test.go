@@ -70,8 +70,8 @@ func TestReadAllStorage(t *testing.T) {
 	svc := setupTestService(t)
 	svc.config = model.NewConfig()
 
-	_ = svc.config.AddStorage("storage1", &model.LocalStorage{})
-	_ = svc.config.AddStorage("storage2", &model.LocalStorage{})
+	_ = addStorage(svc.config, "storage1", &model.LocalStorage{})
+	_ = addStorage(svc.config, "storage2", &model.LocalStorage{})
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/storage", nil)
 	w := httptest.NewRecorder()
@@ -120,7 +120,7 @@ func TestReadStorage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService(t)
 			if tt.storage != nil {
-				_ = svc.config.AddStorage(tt.storageName, tt.storage)
+				_ = addStorage(svc.config, tt.storageName, tt.storage)
 			}
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/storage/"+tt.storageName, nil)
@@ -171,7 +171,7 @@ func TestUpdateStorage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService(t)
 			initialStorage := &model.LocalStorage{Path: "/"}
-			_ = svc.config.AddStorage("test-storage", initialStorage)
+			_ = addStorage(svc.config, "test-storage", initialStorage)
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -222,7 +222,7 @@ func TestDeleteStorage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService(t)
-			_ = svc.config.AddStorage("test-storage", &model.LocalStorage{})
+			_ = addStorage(svc.config, "test-storage", &model.LocalStorage{})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/storage/"+tt.storageName, nil)
 			req.SetPathValue("name", tt.storageName)

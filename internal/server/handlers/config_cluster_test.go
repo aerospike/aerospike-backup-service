@@ -82,8 +82,8 @@ func TestReadAerospikeClusters(t *testing.T) {
 	svc := setupTestService(t)
 	svc.config = model.NewConfig()
 
-	_ = svc.config.AddCluster("cluster1", &model.AerospikeCluster{})
-	_ = svc.config.AddCluster("cluster2", &model.AerospikeCluster{})
+	_ = addCluster(svc.config, "cluster1", &model.AerospikeCluster{})
+	_ = addCluster(svc.config, "cluster2", &model.AerospikeCluster{})
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/clusters", nil)
 	w := httptest.NewRecorder()
@@ -133,7 +133,7 @@ func TestReadAerospikeCluster(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService(t)
 			if tt.cluster != nil {
-				_ = svc.config.AddCluster(tt.clusterName, tt.cluster)
+				_ = addCluster(svc.config, tt.clusterName, tt.cluster)
 			}
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config/clusters/"+tt.clusterName, nil)
@@ -195,7 +195,7 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			}
 
 			initialCluster := &model.AerospikeCluster{}
-			_ = svc.config.AddCluster("test-cluster", initialCluster)
+			_ = addCluster(svc.config, "test-cluster", initialCluster)
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -233,7 +233,7 @@ func TestUpdateAerospikeCluster_PreservesSecretOnRoundTrip(t *testing.T) {
 			AuthMode: model.AuthModeInternal,
 		},
 	}
-	require.NoError(t, svc.config.AddCluster("test-cluster", clusterModel))
+	require.NoError(t, addCluster(svc.config, "test-cluster", clusterModel))
 
 	getReq := httptest.NewRequestWithContext(
 		t.Context(), http.MethodGet, "/v1/config/clusters/test-cluster", nil,
@@ -297,7 +297,7 @@ func TestDeleteAerospikeCluster(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService(t)
-			_ = svc.config.AddCluster("test-cluster", &model.AerospikeCluster{})
+			_ = addCluster(svc.config, "test-cluster", &model.AerospikeCluster{})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/clusters/"+tt.clusterName, nil)
 			req.SetPathValue("name", tt.clusterName)

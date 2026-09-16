@@ -43,9 +43,10 @@ func addValidBackupRoutine(svc *Service, routineName string, disabled bool) vali
 		storage: &model.LocalStorage{Path: "/tmp/backup"},
 	}
 
-	_ = svc.config.AddPolicy(entities.policyName, entities.policy)
-	_ = svc.config.AddCluster(entities.clusterName, entities.cluster)
-	_ = svc.config.AddStorage(entities.storageName, entities.storage)
+	backupConfig := svc.config.BackupConfigCopy()
+	_ = backupConfig.AddPolicy(entities.policyName, entities.policy)
+	_ = backupConfig.AddCluster(entities.clusterName, entities.cluster)
+	_ = backupConfig.AddStorage(entities.storageName, entities.storage)
 
 	routine := &model.BackupRoutine{
 		Name:          routineName,
@@ -56,9 +57,38 @@ func addValidBackupRoutine(svc *Service, routineName string, disabled bool) vali
 		Namespaces:    []string{},
 		Disabled:      disabled,
 	}
-	_ = svc.config.AddRoutine(routine)
+	_ = backupConfig.AddRoutine(routine)
+	svc.config.SetBackupConfig(backupConfig)
 
 	return entities
+}
+
+// installInto applies edit to a copy of cfg's backup configuration and installs the result,
+// the way every production change reaches the holder.
+func installInto(cfg *model.Config, edit func(*model.BackupConfig) error) error {
+	backupConfig := cfg.BackupConfigCopy()
+	if err := edit(backupConfig); err != nil {
+		return err
+	}
+	cfg.SetBackupConfig(backupConfig)
+
+	return nil
+}
+
+func addCluster(cfg *model.Config, name string, cluster *model.AerospikeCluster) error {
+	return installInto(cfg, func(bc *model.BackupConfig) error { return bc.AddCluster(name, cluster) })
+}
+
+func addStorage(cfg *model.Config, name string, storage model.Storage) error {
+	return installInto(cfg, func(bc *model.BackupConfig) error { return bc.AddStorage(name, storage) })
+}
+
+func addPolicy(cfg *model.Config, name string, policy *model.BackupPolicy) error {
+	return installInto(cfg, func(bc *model.BackupConfig) error { return bc.AddPolicy(name, policy) })
+}
+
+func addRoutine(cfg *model.Config, routine *model.BackupRoutine) error {
+	return installInto(cfg, func(bc *model.BackupConfig) error { return bc.AddRoutine(routine) })
 }
 
 // newServiceWithNamespaceValidator is setupTestService plus a permissive namespace validator,

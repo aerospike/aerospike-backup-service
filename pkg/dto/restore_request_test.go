@@ -118,7 +118,9 @@ func TestStorageConfig_Validate(t *testing.T) {
 func TestDestinationClusterConfig_ToModel(t *testing.T) {
 	config := model.NewConfig()
 	cluster := &model.AerospikeCluster{}
-	_ = config.AddCluster("test-cluster", cluster)
+	backupConfig := model.NewBackupConfig()
+	_ = backupConfig.AddCluster("test-cluster", cluster)
+	config.SetBackupConfig(backupConfig)
 
 	tests := []struct {
 		name       string
@@ -450,10 +452,12 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 	secretAgent := &model.SecretAgent{
 		Address: "test-address",
 	}
+	backupConfig := config.BackupConfigCopy()
 	clusterName := "test-cluster"
-	_ = config.AddCluster(clusterName, cluster)
+	_ = backupConfig.AddCluster(clusterName, cluster)
 	storageName := "test-storage"
-	_ = config.AddStorage(storageName, storage)
+	_ = backupConfig.AddStorage(storageName, storage)
+	config.SetBackupConfig(backupConfig)
 
 	tests := []struct {
 		name    string
@@ -582,7 +586,8 @@ func TestNewRestoreTimestampRequestFromReader_InvalidJSON(t *testing.T) {
 func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 	config := model.NewConfig()
 	cluster := &model.AerospikeCluster{}
-	_ = config.AddCluster("test-cluster", cluster)
+	backupConfig := model.NewBackupConfig()
+	_ = backupConfig.AddCluster("test-cluster", cluster)
 	routineCluster := &model.AerospikeCluster{ClusterLabel: "routine-cluster"}
 	routineStorage := &model.LocalStorage{Path: "routine-path"}
 	routine := &model.BackupRoutine{
@@ -590,8 +595,9 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 		SourceCluster: routineCluster,
 		Storage:       routineStorage,
 	}
-	_ = config.AddRoutine(routine)
-	_ = config.AddStorage("test-storage", &model.LocalStorage{Path: "test-path"})
+	_ = backupConfig.AddRoutine(routine)
+	_ = backupConfig.AddStorage("test-storage", &model.LocalStorage{Path: "test-path"})
+	config.SetBackupConfig(backupConfig)
 
 	tests := []struct {
 		name    string

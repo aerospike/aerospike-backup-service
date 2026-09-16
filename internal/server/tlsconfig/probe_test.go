@@ -70,11 +70,13 @@ func TestProbeCluster(t *testing.T) {
 
 func TestProbeReportsClusterName(t *testing.T) {
 	config := model.NewConfig()
-	require.NoError(t, config.AddCluster("broken", &model.AerospikeCluster{
+	backupConfig := model.NewBackupConfig()
+	require.NoError(t, backupConfig.AddCluster("broken", &model.AerospikeCluster{
 		TLS: &model.TLS{ClientTLS: model.ClientTLS{
 			CAFile: filepath.Join(t.TempDir(), "missing.pem"),
 		}},
 	}))
+	config.SetBackupConfig(backupConfig)
 
 	err := NewProber(newPassthroughTLSResolver(t)).Probe(t.Context(), config)
 	require.ErrorContains(t, err, `cluster "broken" TLS validation failed`)
@@ -86,7 +88,8 @@ func TestProbeSecretAgent(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 		config := model.NewConfig()
-		require.NoError(t, config.AddSecretAgent("agent", &model.SecretAgent{
+		backupConfig := model.NewBackupConfig()
+		require.NoError(t, backupConfig.AddSecretAgent("agent", &model.SecretAgent{
 			ClientTLS: model.ClientTLS{
 				CAFile:   files.caFile,
 				Name:     "secret-agent",
@@ -94,31 +97,37 @@ func TestProbeSecretAgent(t *testing.T) {
 				Keyfile:  files.keyFile,
 			},
 		}))
+		config.SetBackupConfig(backupConfig)
 		require.NoError(t, prober.Probe(t.Context(), config))
 	})
 
 	t.Run("missing CA", func(t *testing.T) {
 		config := model.NewConfig()
-		require.NoError(t, config.AddSecretAgent("broken", &model.SecretAgent{
+		backupConfig := model.NewBackupConfig()
+		require.NoError(t, backupConfig.AddSecretAgent("broken", &model.SecretAgent{
 			ClientTLS: model.ClientTLS{
 				CAFile: filepath.Join(t.TempDir(), "missing.pem"),
 			},
 		}))
+		config.SetBackupConfig(backupConfig)
 		err := prober.Probe(t.Context(), config)
 		require.ErrorContains(t, err, `secret agent "broken" TLS validation failed`)
 	})
 
 	t.Run("no TLS files", func(t *testing.T) {
 		config := model.NewConfig()
-		require.NoError(t, config.AddSecretAgent("plain", &model.SecretAgent{
+		backupConfig := model.NewBackupConfig()
+		require.NoError(t, backupConfig.AddSecretAgent("plain", &model.SecretAgent{
 			Address: "localhost",
 		}))
+		config.SetBackupConfig(backupConfig)
 		require.NoError(t, prober.Probe(t.Context(), config))
 	})
 
 	t.Run("inline agent of cluster", func(t *testing.T) {
 		config := model.NewConfig()
-		require.NoError(t, config.AddCluster("source", &model.AerospikeCluster{
+		backupConfig := model.NewBackupConfig()
+		require.NoError(t, backupConfig.AddCluster("source", &model.AerospikeCluster{
 			Credentials: &model.Credentials{
 				SecretAgent: &model.SecretAgent{
 					ClientTLS: model.ClientTLS{
@@ -127,6 +136,7 @@ func TestProbeSecretAgent(t *testing.T) {
 				},
 			},
 		}))
+		config.SetBackupConfig(backupConfig)
 
 		err := prober.Probe(t.Context(), config)
 		require.ErrorContains(t, err, `secret agent of cluster "source" TLS validation failed`)

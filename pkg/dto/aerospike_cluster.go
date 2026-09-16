@@ -143,7 +143,7 @@ func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster, config *model.Ba
 	a.PreferRacks = m.PreferRacks
 }
 
-func (a *AerospikeCluster) ToModel(config *model.Config) (*model.AerospikeCluster, error) {
+func (a *AerospikeCluster) ToModel(config *model.BackupConfig) (*model.AerospikeCluster, error) {
 	credentials, err := a.Credentials.toModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("credentials error: %w", err)
@@ -229,7 +229,7 @@ func (c *Credentials) Validate() error {
 	return c.SecretAgentConfig.validate()
 }
 
-func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) {
+func (c *Credentials) toModel(config *model.BackupConfig) (*model.Credentials, error) {
 	if c == nil {
 		return nil, nil
 	}

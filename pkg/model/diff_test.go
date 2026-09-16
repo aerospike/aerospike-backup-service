@@ -16,7 +16,7 @@ func testBackupConfig() *BackupConfig {
 	policy := &BackupPolicy{Parallel: ptr.Of(8)}
 	storage := &LocalStorage{Path: "/data/backup"}
 
-	config := newBackupConfig()
+	config := NewBackupConfig()
 	config.AerospikeClusters["cluster1"] = cluster
 	config.BackupPolicies["policy1"] = policy
 	config.Storage["storage1"] = storage
@@ -141,7 +141,7 @@ func TestDiff_ReportsOnlyWhatTheReceiverHolds(t *testing.T) {
 
 // Every kind of entry a configuration holds takes part in the comparison.
 func TestDiff_ReportsEntriesOfEveryKind(t *testing.T) {
-	previous := newBackupConfig()
+	previous := NewBackupConfig()
 	current := testBackupConfig()
 	current.SecretAgents["agent1"] = &SecretAgent{Address: "localhost"}
 

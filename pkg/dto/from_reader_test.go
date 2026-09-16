@@ -120,10 +120,12 @@ func TestNewRoutineFromModel(t *testing.T) {
 	cluster := &model.AerospikeCluster{}
 	storage := &model.LocalStorage{Path: "/tmp"}
 
+	backupConfig := model.NewBackupConfig()
+	require.NoError(t, backupConfig.AddPolicy("policy1", policy))
+	require.NoError(t, backupConfig.AddCluster("cluster1", cluster))
+	require.NoError(t, backupConfig.AddStorage("storage1", storage))
 	config := model.NewConfig()
-	require.NoError(t, config.AddPolicy("policy1", policy))
-	require.NoError(t, config.AddCluster("cluster1", cluster))
-	require.NoError(t, config.AddStorage("storage1", storage))
+	config.SetBackupConfig(backupConfig)
 
 	routineModel := &model.BackupRoutine{
 		BackupPolicy:  policy,
@@ -154,9 +156,11 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 	config.ServiceConfig.Backup = &model.BackupCommonConfig{
 		Timezone: serviceLocation(t, "America/New_York"),
 	}
-	require.NoError(t, config.AddPolicy("policy1", policy))
-	require.NoError(t, config.AddCluster("cluster1", cluster))
-	require.NoError(t, config.AddStorage("storage1", storage))
+	backupConfig := model.NewBackupConfig()
+	require.NoError(t, backupConfig.AddPolicy("policy1", policy))
+	require.NoError(t, backupConfig.AddCluster("cluster1", cluster))
+	require.NoError(t, backupConfig.AddStorage("storage1", storage))
+	config.SetBackupConfig(backupConfig)
 
 	newRoutine := func(configured string) *model.BackupRoutine {
 		return &model.BackupRoutine{

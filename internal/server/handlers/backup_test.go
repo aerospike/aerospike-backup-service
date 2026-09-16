@@ -75,7 +75,7 @@ func TestService_GetAllFullBackups(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			backupReader := service.NewMockBackupReader(ctrl)
 			cfg := model.NewConfig()
-			_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
+			_ = addRoutine(cfg, &model.BackupRoutine{Name: "routine1"})
 
 			tt.setupMock(backupReader)
 
@@ -138,7 +138,7 @@ func TestService_TriggerIncrementalBackup(t *testing.T) {
 
 func TestService_ScheduleBackupHappyPath(t *testing.T) {
 	config := model.NewConfig()
-	_ = config.AddRoutine(&model.BackupRoutine{Name: "test-routine"})
+	_ = addRoutine(config, &model.BackupRoutine{Name: "test-routine"})
 
 	svc := &Service{
 		config: config,
@@ -200,7 +200,7 @@ func testScheduleBackupValidation(
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := model.NewConfig()
-			_ = config.AddRoutine(&model.BackupRoutine{Name: tt.routineName})
+			_ = addRoutine(config, &model.BackupRoutine{Name: tt.routineName})
 
 			svc := &Service{
 				backupScheduler: service.NewBackupScheduler(nil, nil),
@@ -249,7 +249,7 @@ func TestService_CancelCurrentBackup_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	cfg := model.NewConfig()
-	_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
+	_ = addRoutine(cfg, &model.BackupRoutine{Name: "routine1"})
 
 	mockRegistry := service.NewMockBackupStateRegistry(ctrl)
 	mockRegistry.EXPECT().Cancel("routine1")
@@ -287,7 +287,7 @@ func TestService_GetCurrentBackupInfo(t *testing.T) {
 			name:        "success",
 			routineName: "routine1",
 			setupSvc: func(svc *Service, ctrl *gomock.Controller) {
-				_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
+				_ = addRoutine(svc.config, &model.BackupRoutine{Name: "routine1"})
 				mockRegistry := service.NewMockBackupStateRegistry(ctrl)
 				mockRegistry.EXPECT().GetRoutineState(gomock.Any()).Return(model.RoutineState{
 					LastRunTime: model.NewNoBackupTime(),
@@ -377,7 +377,7 @@ func TestService_GetFullBackupsForRoutine(t *testing.T) {
 			tt.setupMock(mockBackends)
 
 			cfg := model.NewConfig()
-			_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
+			_ = addRoutine(cfg, &model.BackupRoutine{Name: "routine1"})
 
 			svc := &Service{config: cfg, backupReader: mockBackends}
 
@@ -434,7 +434,7 @@ func TestService_GetAllIncrementalBackups(t *testing.T) {
 			tt.setupMock(mockBackends)
 
 			cfg := model.NewConfig()
-			_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
+			_ = addRoutine(cfg, &model.BackupRoutine{Name: "routine1"})
 
 			svc := &Service{config: cfg, backupReader: mockBackends}
 
@@ -495,7 +495,7 @@ func TestService_GetIncrementalBackupsForRoutine(t *testing.T) {
 			tt.setupMock(mockBackends)
 
 			cfg := model.NewConfig()
-			_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
+			_ = addRoutine(cfg, &model.BackupRoutine{Name: "routine1"})
 
 			svc := &Service{config: cfg, backupReader: mockBackends}
 

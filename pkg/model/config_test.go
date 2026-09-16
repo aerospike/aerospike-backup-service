@@ -7,35 +7,48 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPopInvalidatedRoutineNames_DrainsQueue(t *testing.T) {
+// configWithRoutines returns a Config holding the given routines with nothing pending, the
+// way a service that has applied its configuration holds it.
+func configWithRoutines(t *testing.T, routines ...*BackupRoutine) *Config {
+	t.Helper()
+
+	backupConfig := NewBackupConfig()
+	for _, r := range routines {
+		require.NoError(t, backupConfig.AddRoutine(r))
+	}
+
 	cfg := NewConfig()
+	cfg.SetBackupConfig(backupConfig)
+	cfg.PopInvalidatedRoutineNames()
 
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r2"}))
+	return cfg
+}
 
-	first := cfg.PopInvalidatedRoutineNames()
-	assert.Equal(t, []string{"r1", "r2"}, first)
+func TestPopInvalidatedRoutineNames_DrainsQueue(t *testing.T) {
+	backupConfig := NewBackupConfig()
+	require.NoError(t, backupConfig.AddRoutine(&BackupRoutine{Name: "r1"}))
+	require.NoError(t, backupConfig.AddRoutine(&BackupRoutine{Name: "r2"}))
 
-	second := cfg.PopInvalidatedRoutineNames()
-	assert.Empty(t, second)
+	cfg := NewConfig()
+	cfg.SetBackupConfig(backupConfig)
+
+	assert.Equal(t, []string{"r1", "r2"}, cfg.PopInvalidatedRoutineNames())
+	assert.Empty(t, cfg.PopInvalidatedRoutineNames())
 }
 
 func TestPopInvalidatedRoutineNames_DeduplicatesNames(t *testing.T) {
 	cfg := NewConfig()
-
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
 	cfg.invalidateRoutine("r1")
 	cfg.invalidateRoutine("r1")
 
-	invalidated := cfg.PopInvalidatedRoutineNames()
-	assert.Equal(t, []string{"r1"}, invalidated)
+	assert.Equal(t, []string{"r1"}, cfg.PopInvalidatedRoutineNames())
 }
 
 func TestSetBackupConfig_InvalidatesOnlyWhatChanged(t *testing.T) {
-	cfg := NewConfig()
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1", IntervalCron: "@daily"}))
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r2", IntervalCron: "@daily"}))
-	cfg.PopInvalidatedRoutineNames()
+	cfg := configWithRoutines(t,
+		&BackupRoutine{Name: "r1", IntervalCron: "@daily"},
+		&BackupRoutine{Name: "r2", IntervalCron: "@daily"},
+	)
 
 	next := cfg.BackupConfigCopy()
 	next.BackupRoutines["r1"] = &BackupRoutine{Name: "r1", IntervalCron: "@hourly"}
@@ -45,9 +58,7 @@ func TestSetBackupConfig_InvalidatesOnlyWhatChanged(t *testing.T) {
 }
 
 func TestSetBackupConfig_IdenticalConfigurationInvalidatesNothing(t *testing.T) {
-	cfg := NewConfig()
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
-	cfg.PopInvalidatedRoutineNames()
+	cfg := configWithRoutines(t, &BackupRoutine{Name: "r1"})
 
 	cfg.SetBackupConfig(cfg.BackupConfigCopy())
 
@@ -55,9 +66,7 @@ func TestSetBackupConfig_IdenticalConfigurationInvalidatesNothing(t *testing.T) 
 }
 
 func TestSetBackupConfig_InvalidatesARemovedRoutine(t *testing.T) {
-	cfg := NewConfig()
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
-	cfg.PopInvalidatedRoutineNames()
+	cfg := configWithRoutines(t, &BackupRoutine{Name: "r1"})
 
 	next := cfg.BackupConfigCopy()
 	delete(next.BackupRoutines, "r1")
@@ -69,10 +78,10 @@ func TestSetBackupConfig_InvalidatesARemovedRoutine(t *testing.T) {
 // A change whose apply never ran leaves its routines pending. The next change must not
 // lose them just because it did not touch them itself.
 func TestSetBackupConfig_KeepsPendingInvalidations(t *testing.T) {
-	cfg := NewConfig()
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1", IntervalCron: "@daily"}))
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r2", IntervalCron: "@daily"}))
-	cfg.PopInvalidatedRoutineNames()
+	cfg := configWithRoutines(t,
+		&BackupRoutine{Name: "r1", IntervalCron: "@daily"},
+		&BackupRoutine{Name: "r2", IntervalCron: "@daily"},
+	)
 
 	first := cfg.BackupConfigCopy()
 	first.BackupRoutines["r1"] = &BackupRoutine{Name: "r1", IntervalCron: "@hourly"}
@@ -85,17 +94,17 @@ func TestSetBackupConfig_KeepsPendingInvalidations(t *testing.T) {
 	assert.Equal(t, []string{"r1", "r2"}, cfg.PopInvalidatedRoutineNames())
 }
 
-func TestConfigAddRejectsNilValues(t *testing.T) {
+func TestBackupConfigAddRejectsNilValues(t *testing.T) {
 	var typedNilStorage *LocalStorage
 
 	tests := []struct {
 		name    string
-		add     func(*Config) error
+		add     func(*BackupConfig) error
 		wantErr bool
 	}{
 		{
 			name: "valid values",
-			add: func(cfg *Config) error {
+			add: func(cfg *BackupConfig) error {
 				if err := cfg.AddCluster("cluster", &AerospikeCluster{}); err != nil {
 					return err
 				}
@@ -111,35 +120,34 @@ func TestConfigAddRejectsNilValues(t *testing.T) {
 		},
 		{
 			name:    "cluster",
-			add:     func(cfg *Config) error { return cfg.AddCluster("cluster", nil) },
+			add:     func(cfg *BackupConfig) error { return cfg.AddCluster("cluster", nil) },
 			wantErr: true,
 		},
 		{
 			name:    "routine",
-			add:     func(cfg *Config) error { return cfg.AddRoutine(nil) },
+			add:     func(cfg *BackupConfig) error { return cfg.AddRoutine(nil) },
 			wantErr: true,
 		},
 		{
 			name:    "policy",
-			add:     func(cfg *Config) error { return cfg.AddPolicy("policy", nil) },
+			add:     func(cfg *BackupConfig) error { return cfg.AddPolicy("policy", nil) },
 			wantErr: true,
 		},
 		{
 			name:    "storage",
-			add:     func(cfg *Config) error { return cfg.AddStorage("storage", nil) },
+			add:     func(cfg *BackupConfig) error { return cfg.AddStorage("storage", nil) },
 			wantErr: true,
 		},
 		{
 			name:    "typed nil storage",
-			add:     func(cfg *Config) error { return cfg.AddStorage("typed-nil-storage", typedNilStorage) },
+			add:     func(cfg *BackupConfig) error { return cfg.AddStorage("typed-nil-storage", typedNilStorage) },
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := NewConfig()
-			err := tt.add(cfg)
+			err := tt.add(NewBackupConfig())
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {

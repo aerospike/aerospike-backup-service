@@ -15,13 +15,13 @@ import (
 //
 // Entries are compared by value, never by pointer.
 func (bc *BackupConfig) Diff(other *BackupConfig) *BackupConfig {
-	delta := newBackupConfig()
+	delta := NewBackupConfig()
 	if bc == nil {
 		return delta
 	}
 
 	if other == nil {
-		other = newBackupConfig()
+		other = NewBackupConfig()
 	}
 
 	diffEntries(delta.AerospikeClusters, bc.AerospikeClusters, other.AerospikeClusters)

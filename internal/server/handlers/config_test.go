@@ -23,7 +23,7 @@ import (
 
 func TestService_ReadConfig(t *testing.T) {
 	svc := &Service{config: model.NewConfig()}
-	_ = svc.config.AddCluster("cluster1", &model.AerospikeCluster{})
+	_ = addCluster(svc.config, "cluster1", &model.AerospikeCluster{})
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config", nil)
 	w := httptest.NewRecorder()
@@ -222,7 +222,7 @@ func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
 			AuthMode: model.AuthModeInternal,
 		},
 	}
-	require.NoError(t, svc.config.AddCluster("test-cluster", clusterModel))
+	require.NoError(t, addCluster(svc.config, "test-cluster", clusterModel))
 
 	mockConfigurationManager := configuration.NewMockManager(ctrl)
 	mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil)
