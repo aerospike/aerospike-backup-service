@@ -41,22 +41,19 @@ func isRedactable(v reflect.Value) bool {
 	return v.Kind() == reflect.String && v.Type().Implements(redactableType)
 }
 
-// redactedValue replaces a credential with its safe display form, keeping the value's own
+// redactedCredential replaces a credential with its safe display form, keeping the value's own
 // type so it can be stored back into the field, map entry or slice element it came from.
-func redactedValue(v reflect.Value) (reflect.Value, bool) {
-	if !isRedactable(v) {
-		return v, false
-	}
-
+// The caller establishes that v is one, through isRedactable.
+func redactedCredential(v reflect.Value) reflect.Value {
 	r, ok := v.Interface().(redact.Redactable)
 	if !ok {
-		return v, false
+		return v
 	}
 
 	dst := reflect.New(v.Type()).Elem()
 	dst.SetString(r.DisplayString())
 
-	return dst, true
+	return dst
 }
 
 //nolint:gocognit,funlen // recursive reflect walk over nested DTO values
@@ -74,12 +71,12 @@ func redactValue(v reflect.Value) reflect.Value {
 		return reflect.Zero(v.Type())
 	}
 
-	if redacted, ok := redactedValue(v); ok {
-		return redacted
+	if isRedactable(v) {
+		return redactedCredential(v) // this value IS the credential
 	}
 
 	if !needsRedaction(v) {
-		return v
+		return v // nothing inside is one — don't bother
 	}
 
 	switch v.Kind() {
