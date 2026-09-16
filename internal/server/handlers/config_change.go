@@ -19,8 +19,7 @@ type backupConfigChangeOptions struct {
 }
 
 // changeBackupConfig applies a mutation to the backup configuration DTO, validates and
-// converts the full configuration, and persists the result. Every routine the mutation
-// left configured differently is rescheduled and its backup history rescanned.
+// converts the full configuration, and persists the result.
 func (s *Service) changeBackupConfig(
 	ctx context.Context,
 	mutate func(*dto.Config) error,
