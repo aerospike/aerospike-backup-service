@@ -277,7 +277,7 @@ func (c *Config) DeleteRoutine(name string) error {
 // routineReferring returns the name of a routine whose ref field names target, if any.
 func (c *Config) routineReferring(target string, ref func(*BackupRoutine) string) (string, bool) {
 	for routineName, routine := range c.BackupRoutines {
-		if routine != nil && ref(routine) == target {
+		if ref(routine) == target {
 			return routineName, true
 		}
 	}
