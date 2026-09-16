@@ -2214,28 +2214,28 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "aerospike-clusters": {
-                    "description": "AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.\nNames must be a single path segment.",
+                    "description": "AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.AerospikeCluster"
                     }
                 },
                 "backup-policies": {
-                    "description": "BackupPolicies is a map of backup policies that can be used by backup routines.\nNames must be a single path segment.",
+                    "description": "BackupPolicies is a map of backup policies that can be used by backup routines.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.BackupPolicy"
                     }
                 },
                 "backup-routines": {
-                    "description": "BackupRoutines is a map of backup routines.\nNames must be a single path segment: the name is the folder the routine's backups live in.",
+                    "description": "BackupRoutines is a map of backup routines.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.BackupRoutine"
                     }
                 },
                 "secret-agents": {
-                    "description": "SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication).\nNames must be a single path segment.",
+                    "description": "SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication).",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.SecretAgent"
@@ -2250,7 +2250,7 @@ const docTemplate = `{
                     ]
                 },
                 "storage": {
-                    "description": "Storage is a map of storages that can be used by backup routines.\nNames must be a single path segment.",
+                    "description": "Storage is a map of storages that can be used by backup routines.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.Storage"
@@ -2756,12 +2756,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "destination": {
-                    "description": "Name of the destination namespace to restore data into.",
+                    "description": "Name of the destination namespace to restore data into.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "string",
                     "example": "destination-ns"
                 },
                 "source": {
-                    "description": "Original namespace name.\nThis field is required as a safeguard to ensure intentional namespace remapping.",
+                    "description": "Original namespace name.\nThis field is required as a safeguard to ensure intentional namespace remapping.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "string",
                     "example": "source-ns"
                 }

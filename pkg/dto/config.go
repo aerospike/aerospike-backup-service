@@ -20,19 +20,14 @@ type Config struct {
 	// ServiceConfig contains general service settings.
 	ServiceConfig ServiceConfig `yaml:"service,omitempty" json:"service,omitzero"`
 	// AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.
-	// Names must be a single path segment.
 	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
 	// Storage is a map of storages that can be used by backup routines.
-	// Names must be a single path segment.
 	Storage map[string]*Storage `yaml:"storage,omitempty" json:"storage,omitempty"`
 	// BackupPolicies is a map of backup policies that can be used by backup routines.
-	// Names must be a single path segment.
 	BackupPolicies map[string]*BackupPolicy `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
 	// SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication).
-	// Names must be a single path segment.
 	SecretAgents map[string]*SecretAgent `yaml:"secret-agents,omitempty" json:"secret-agents,omitempty"`
 	// BackupRoutines is a map of backup routines.
-	// Names must be a single path segment: the name is the folder the routine's backups live in.
 	BackupRoutines map[string]*BackupRoutine `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
 }
 

@@ -20,62 +20,33 @@ const (
 	reservedNamespaceName = "null"
 )
 
-// validateEntityName checks that the key of a routine, storage, cluster, policy or secret
-// agent is a single path segment.
-func validateEntityName(field, name string) error {
-	if name == "" {
-		return errValidationEmptyField(field)
-	}
+// NamespaceName represents a validated Aerospike namespace name in the DTO layer.
+// A namespace is not only a name in the cluster: it is also the folder a routine's data for
+// that namespace is written to, so an unchecked name reaches the storage layout.
+type NamespaceName string
 
-	if err := checkPathSegment(name); err != nil {
-		return errValidationInvalidName(field, name, err)
-	}
-
-	return nil
-}
-
-// validateNamespaceName checks a namespace name against the Aerospike naming rules, which are
-// stricter than a path segment needs to be and therefore cover that too.
+// Validate checks the name against the Aerospike naming rules: at most 31 bytes of Latin
+// letters, digits, '_', '-' and '$', and not the reserved name "null". Those rules are
+// stricter than a single path segment has to be, so they cover the storage layout as well.
 // See https://aerospike.com/docs/database/reference/limitations/#namespace
-func validateNamespaceName(field, namespace string) error {
-	if namespace == "" {
-		return errValidationEmptyField(field)
+//
+// Validate reports only the reason. Call sites must wrap with errValidationInvalidName, which
+// adds the field name and the offending value, and classifies the error (errEmpty for a
+// missing name, errInvalidValue for an unusable one).
+func (n NamespaceName) Validate() error {
+	if n == "" {
+		return errEmpty
 	}
 
-	if err := checkNamespaceName(namespace); err != nil {
-		return errValidationInvalidName(field, namespace, err)
-	}
-
-	return nil
-}
-
-// checkPathSegment reports why name cannot be used as one element of a path.
-func checkPathSegment(name string) error {
-	switch {
-	case strings.ContainsRune(name, 0):
-		return errors.New("must not contain a NUL byte")
-	case name == "." || name == "..":
-		return errors.New("must not be \".\" or \"..\" (path traversal not allowed)")
-	case strings.ContainsAny(name, `/\`):
-		return errors.New(`must not contain a path separator ("/" or "\")`)
-	case strings.HasPrefix(name, "~"):
-		return errors.New(`must not start with "~": home-directory expansion is not supported`)
-	}
-
-	return nil
-}
-
-// checkNamespaceName reports why namespace is not a valid Aerospike namespace name.
-func checkNamespaceName(namespace string) error {
-	if len(namespace) > maxNamespaceNameLength {
+	if len(n) > maxNamespaceNameLength {
 		return fmt.Errorf("must not exceed %d bytes", maxNamespaceNameLength)
 	}
 
-	if namespace == reservedNamespaceName {
+	if n == reservedNamespaceName {
 		return fmt.Errorf("%q is reserved by the Aerospike server", reservedNamespaceName)
 	}
 
-	for _, r := range namespace {
+	for _, r := range n {
 		if !isNamespaceNameRune(r) {
 			return fmt.Errorf(
 				"must contain only Latin letters, digits, \"_\", \"-\" and \"$\", found %q", r)
@@ -94,4 +65,48 @@ func isNamespaceNameRune(r rune) bool {
 	default:
 		return false
 	}
+}
+
+// newNamespaceNames adopts the model's plain strings as namespace names.
+func newNamespaceNames(values []string) []NamespaceName {
+	names := make([]NamespaceName, len(values))
+	for i, value := range values {
+		names[i] = NamespaceName(value)
+	}
+
+	return names
+}
+
+// namespaceStrings returns the names as the plain strings the model carries.
+func namespaceStrings(names []NamespaceName) []string {
+	values := make([]string, len(names))
+	for i, name := range names {
+		values[i] = string(name)
+	}
+
+	return values
+}
+
+// validateEntityName checks that the key of a routine, storage, cluster, policy or secret
+// agent is a single path segment.
+func validateEntityName(field, name string) error {
+	return errValidationInvalidName(field, name, checkPathSegment(name))
+}
+
+// checkPathSegment reports why name cannot be used as one element of a path.
+func checkPathSegment(name string) error {
+	switch {
+	case name == "":
+		return errEmpty
+	case strings.ContainsRune(name, 0):
+		return errors.New("must not contain a NUL byte")
+	case name == "." || name == "..":
+		return errors.New("must not be \".\" or \"..\" (path traversal not allowed)")
+	case strings.ContainsAny(name, `/\`):
+		return errors.New(`must not contain a path separator ("/" or "\")`)
+	case strings.HasPrefix(name, "~"):
+		return errors.New(`must not start with "~": home-directory expansion is not supported`)
+	}
+
+	return nil
 }

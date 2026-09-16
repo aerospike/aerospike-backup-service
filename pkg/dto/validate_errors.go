@@ -62,10 +62,22 @@ func errValidationDuplicate[T any](field string, value T) error {
 	return fmt.Errorf("%w: %s contains duplicate value: %v", errDuplicate, field, value)
 }
 
-// errValidationInvalidName reports a name that cannot be used where the configuration puts it,
-// naming the field and echoing the offending value; the reason comes from the checker.
+// errValidationInvalidName is the single wrapper for every name check: NamespaceName.Validate
+// and checkPathSegment. It supplies the field name and the offending value, which the checker
+// itself cannot know; the checker returns only the reason.
+//
+// A missing name is reported as an empty field rather than an invalid one, the way
+// errValidationInvalidPath treats an empty path: echoing back an empty value tells the caller
+// nothing they don't already know.
 func errValidationInvalidName(field, name string, err error) error {
-	return fmt.Errorf("%w: %s %q: %w", errInvalidValue, field, name, err)
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, errEmpty):
+		return errValidationEmptyField(field)
+	default:
+		return fmt.Errorf("%w: %s %q: %w", errInvalidValue, field, name, err)
+	}
 }
 
 func errValidationSecret(field string, err error) error {

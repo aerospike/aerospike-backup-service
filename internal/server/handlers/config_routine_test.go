@@ -353,7 +353,7 @@ func TestAddRoutine_RejectsPathTraversal(t *testing.T) {
 	tests := []struct {
 		name        string
 		routineName string
-		namespace   string
+		namespace   dto.NamespaceName
 	}{
 		{name: "in the routine name", routineName: "../../escaped-routine", namespace: "source-ns1"},
 		{name: "in a namespace", routineName: "new-routine", namespace: "../../escaped-ns"},
@@ -374,7 +374,7 @@ func TestAddRoutine_RejectsPathTraversal(t *testing.T) {
 				Storage:       entities.storageName,
 				BackupPolicy:  entities.policyName,
 				IntervalCron:  "@daily",
-				Namespaces:    &[]string{tt.namespace},
+				Namespaces:    &[]dto.NamespaceName{tt.namespace},
 			})
 			req := httptest.NewRequestWithContext(
 				t.Context(), http.MethodPost, "/v1/config/routines/x", strings.NewReader(body))
