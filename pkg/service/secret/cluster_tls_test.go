@@ -73,6 +73,26 @@ func TestClusterTLSResolverSkipsResolverWhenNothingToResolve(t *testing.T) {
 	}
 }
 
+// TestClusterTLSResolverResolvesWithoutAnAgent pins that a cluster with no credentials
+// still resolves: it has no Secret Agent, so the resolver is asked to treat the
+// key-file-password as a literal value.
+func TestClusterTLSResolverResolvesWithoutAnAgent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	resolver := NewMockResolver(ctrl)
+	resolver.EXPECT().
+		Resolve(gomock.Any(), nil, redact.Secret("plain-password")).
+		Return("plain-password", nil)
+
+	cluster := &model.AerospikeCluster{
+		ClusterLabel: "test-cluster",
+		TLS:          &model.TLS{KeyfilePassword: "plain-password"},
+	}
+
+	result, err := NewClusterTLSResolver(resolver).Resolve(t.Context(), cluster)
+	require.NoError(t, err)
+	require.Equal(t, redact.Secret("plain-password"), result.KeyfilePassword)
+}
+
 func TestClusterTLSResolverPropagatesResolverError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resolver := NewMockResolver(ctrl)
