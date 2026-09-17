@@ -52,7 +52,7 @@ func TestDocumentedConfigSnippetsDecode(t *testing.T) {
 		checked++
 
 		t.Run(snippet.At(), func(t *testing.T) {
-			_, err := dto.NewConfigFromReader(strings.NewReader(snippet.Body), decoder.YAML)
+			_, err := dto.NewValidatedFromReader[dto.Config](strings.NewReader(snippet.Body), decoder.YAML)
 			require.NoErrorf(t, err,
 				"the configuration example at %s does not decode; a reader who copies it "+
 					"cannot start the service", snippet.At())
