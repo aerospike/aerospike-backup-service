@@ -96,7 +96,7 @@ func (s *Suite) baseConfig(backupDir string) *dto.Config {
 				SourceCluster: clusterName,
 				Storage:       storageName,
 				IntervalCron:  "@yearly",
-				Namespaces:    ptr.Of([]string{namespace}),
+				Namespaces:    ptr.Of([]dto.NamespaceName{namespace}),
 			},
 		},
 	}
