@@ -7,9 +7,9 @@ on:
       - 'v[0-9]+'
   pull_request:
     branches:
-    - dev
-    - main
-    - 'v[0-9]+'
+      - dev
+      - main
+      - 'v[0-9]+'
 
 permissions:
   contents: read
@@ -18,6 +18,9 @@ permissions:
 jobs:
   snyk-security:
     runs-on: ubuntu-latest
+    # Forks get no secrets, so SNYK_TOKEN is empty there and the scan can only
+    # fail. Skip rather than block the pull request on a credential it cannot have.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -26,32 +29,77 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # modules/schema/schema.go embeds schemas/json/aerospike from the
+          # modules/schema/schemas submodule. Without it `go list` fails with
+          # "pattern schemas/json/aerospike: no matching files found", and Snyk
+          # cannot resolve dependencies at all.
+          submodules: recursive
 
+      # Scanned at full severity so the SARIF carries every finding: upload-sarif
+      # replaces the previous result set for this tool, so a filtered upload would
+      # resolve existing medium and low alerts. The gate below is what enforces
+      # the high-severity threshold.
       - name: Run Snyk to check for vulnerabilities
         id: snyk
+        continue-on-error: true
         uses: snyk/actions/golang@9adf32b1121593767fc3c057af55b55db032dc04
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           snyk-version: v1.1297.3
-          args: --all-projects --severity-threshold=high --sarif-file-output=snyk.sarif
-
-      - name: Check output file
-        if: always()
-        id: out-file
-        run: |
-          if test -f "snyk.sarif"; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+          args: >-
+            --all-projects
+            --sarif-file-output=snyk.sarif
+            --json-file-output=snyk.json
 
       - name: Upload result to GitHub Code Scanning
-        if: always() && steps.out-file.outputs.exists == 'true'
+        if: always() && hashFiles('snyk.sarif') != ''
         uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
           sarif_file: snyk.sarif
 
-      - name: Fail on high-severity Snyk findings
-        if: always() && steps.snyk.outcome == 'failure'
-        run: exit 1
+      # Snyk exits 0 with no issues, 1 when it found some, and 2 or 3 when the scan
+      # itself failed. Without this split a broken scan and a real vulnerability look
+      # identical on the pull request -- which is how a dependency-resolution failure
+      # went unnoticed behind continue-on-error for months.
+      - name: Report scan outcome
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [ ! -f snyk.json ]; then
+            echo "::error title=Snyk scan failed::Snyk produced no results file, so nothing was scanned. This is a scan failure, not a vulnerability. Check the 'Run Snyk' step above for the underlying error."
+            exit 1
+          fi
+
+          # --all-projects emits either one object or an array of them.
+          counts=$(jq -r '[ (if type == "array" then .[] else . end)
+                            | (.vulnerabilities // [])[] .severity ]
+                          | group_by(.) | map({(.[0]): length}) | add // {}' snyk.json)
+          high=$(echo "$counts" | jq -r '(.high // 0) + (.critical // 0)')
+          total=$(echo "$counts" | jq -r '[.[]] | add // 0')
+
+          {
+            echo "### Snyk"
+            echo
+            echo "| severity | count |"
+            echo "| --- | --- |"
+            for s in critical high medium low; do
+              echo "| $s | $(echo "$counts" | jq -r --arg s "$s" '.[$s] // 0') |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "total findings: ${total}, high or critical: ${high}"
+
+          if [ "${high}" -gt 0 ]; then
+            echo "::error title=Snyk found high-severity vulnerabilities::${high} high or critical finding(s). See the Security tab for details."
+            exit 1
+          fi
+
+          if [ "${{ steps.snyk.outcome }}" = "failure" ] && [ "${total}" -eq 0 ]; then
+            echo "::error title=Snyk scan failed::Snyk exited non-zero but reported no findings, which means the scan did not complete."
+            exit 1
+          fi
+
+          echo "No high-severity findings."
