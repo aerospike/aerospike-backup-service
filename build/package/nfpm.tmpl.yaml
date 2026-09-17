@@ -10,34 +10,52 @@ vendor: "${VENDOR}"
 homepage: "${HOMEPAGE}"
 license: "${LICENSE}"
 contents:
+  # The unit is vendor-owned and lives in /usr/lib/systemd/system, not /etc. In /etc it
+  # was a conffile, so an operator who had ever edited it kept their copy on upgrade --
+  # which silently shadowed User= and the whole sandbox. Customisation belongs in a
+  # drop-in (systemctl edit), which /etc still overrides cleanly.
   - src: ${WORKSPACE}/build/package/config/${NAME}.service
-    dst: /etc/systemd/system/${NAME}.service
-    type: config
-  - src: /etc/systemd/system/${NAME}.service
+    dst: /usr/lib/systemd/system/${NAME}.service
+  - src: /usr/lib/systemd/system/${NAME}.service
     dst: /etc/systemd/system/multi-user.target.wants/${NAME}.service
     type: symlink
     packager: deb
+  # Owned by the service user at unpack time: the preinstall script creates the account
+  # before any file lands, so nothing has to be chowned afterwards.
   - src: ${WORKSPACE}/build/package/config/${NAME}.yml
     dst: /etc/${NAME}/${NAME}.yml
     type: config
     file_info:
       mode: 0640
-  - src: ${WORKSPACE}/build/package/config/${NAME}.log
-    dst: /var/log/${NAME}.log
-    file_info:
-      mode: 0600
+      owner: ${NAME}
+      group: ${NAME}
   - dst: /var/lib/${NAME}
-    file_info:
-      mode: 0755
     type: dir
+    file_info:
+      mode: 0750
+      owner: ${NAME}
+      group: ${NAME}
+  - src: ${WORKSPACE}/build/package/config/local-storage-path.conf.example
+    dst: /usr/share/doc/${NAME}/local-storage-path.conf.example
+    type: config|noreplace
   - src: ${WORKSPACE}/build/target/${NAME}_${OS}_${ARCH}
     dst: /usr/bin/${NAME}
 scripts:
+  preinstall: ${WORKSPACE}/build/package/scripts/preinstall.sh
   postinstall: ${WORKSPACE}/build/package/scripts/postinstall.sh
   preremove: ${WORKSPACE}/build/package/scripts/preremove.sh
-umask: 0o002
+  postremove: ${WORKSPACE}/build/package/scripts/postremove.sh
+# 0o022 so the binary and the unit ship 0755/0644 rather than group-writable 0775/0664.
+umask: 0o022
+overrides:
+  deb:
+    depends:
+      # useradd/groupadd, used by the preinstall script.
+      - passwd
+  rpm:
+    depends:
+      - shadow-utils
 rpm:
   compression: xz
 deb:
   compression: xz
-

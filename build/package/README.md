@@ -1,3 +1,117 @@
+# Hardened service account and sandbox
+
+The packages now run the service as the unprivileged system account
+`aerospike-backup-service`, created by the package, under a systemd sandbox. The points
+below are the ones that change behaviour for an existing installation.
+
+## Paths the service can write
+
+`ProtectSystem=strict` makes the filesystem read-only except for:
+
+| Path | Created by | Mode |
+| --- | --- | --- |
+| `/etc/aerospike-backup-service` | package | config file `0640` |
+| `/var/lib/aerospike-backup-service` | `StateDirectory=` | `0750` |
+| `/var/log/aerospike-backup-service` | `LogsDirectory=` | `0750` |
+
+A backup routine whose `local-storage` path points anywhere else fails with
+`read-only file system`. Add the path with a drop-in:
+
+```shell
+sudo systemctl edit aerospike-backup-service
+```
+
+```ini
+[Service]
+ReadWritePaths=/srv/backups
+```
+
+```shell
+sudo chown -R aerospike-backup-service:aerospike-backup-service /srv/backups
+sudo systemctl daemon-reload && sudo systemctl restart aerospike-backup-service
+```
+
+A worked example ships at
+`/usr/share/doc/aerospike-backup-service/local-storage-path.conf.example`.
+
+## Unit file location
+
+The unit ships at `/usr/lib/systemd/system/aerospike-backup-service.service` and is
+vendor-owned: package upgrades always replace it. Customisation belongs in a drop-in
+(`systemctl edit aerospike-backup-service`), which `/etc` still overrides cleanly.
+
+Earlier releases shipped it as a conffile in `/etc/systemd/system`. If you had edited
+that copy, it would have kept overriding the hardened unit, so the postinstall script
+moves it to `aerospike-backup-service.service.pre-hardening.bak` and says so. Re-apply
+any local changes as a drop-in.
+
+**Downgrading** to a pre-hardening package therefore needs a purge first — dpkg does not
+restore a conffile that is no longer present, so the old package's `postinst` fails on
+`systemctl enable`:
+
+```shell
+sudo apt-get purge -y aerospike-backup-service
+sudo apt-get install -y ./aerospike-backup-service_<old-version>_amd64.deb
+```
+
+## Credentials
+
+`ProtectHome=true` hides `/root` and `/home`, and the service account's home is
+`/var/lib/aerospike-backup-service`. Cloud credentials that used to sit in
+`/root/.aws/credentials` are no longer reachable. Either move them under the service
+account's home:
+
+```shell
+sudo install -d -o aerospike-backup-service -g aerospike-backup-service -m 0700 \
+    /var/lib/aerospike-backup-service/.aws
+sudo install -o aerospike-backup-service -g aerospike-backup-service -m 0600 \
+    /root/.aws/credentials /var/lib/aerospike-backup-service/.aws/credentials
+```
+
+or supply them through the environment, which the unit reads from
+`/etc/default/aerospike-backup-service` (deb) or `/etc/sysconfig/aerospike-backup-service`
+(rpm):
+
+```shell
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+```
+
+TLS keys, CA files and `password-path` files must be readable by the service account —
+a `0600 root:root` key is not. Prefer `0640 root:aerospike-backup-service`.
+
+## File modes
+
+`UMask=0027` means backup artifacts are created `0640`, directories `0750`, owned by
+`aerospike-backup-service`. They are no longer world-readable. To let an operator
+account read them, add it to the group:
+
+```shell
+sudo usermod -aG aerospike-backup-service alice
+```
+
+## Ports below 1024
+
+The unit drops every capability, so `service.http.port` under 1024 fails to bind. Grant
+the one capability back with a drop-in:
+
+```ini
+[Service]
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+```
+
+## Logs
+
+Logs move from `/var/log/aerospike-backup-service.log` to
+`/var/log/aerospike-backup-service/aerospike-backup-service.log`. The postinstall script
+moves an existing log and its rotated siblings into the new directory. If you kept a
+customised configuration file, update `service.logger.file-writer.filename` to match —
+the old path is no longer writable.
+
+On el8 (systemd 239) `ProtectKernelLogs`, `ProtectClock` and `ProtectHostname` are not
+recognised and are ignored; the rest of the sandbox applies.
+
 # DEB package
 
 ## Install
