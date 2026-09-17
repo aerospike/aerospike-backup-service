@@ -144,7 +144,7 @@ var originalConfig = &Config{
 		SourceCluster: "cluster1",
 		Storage:       "aws 1",
 		IntervalCron:  "@daily",
-		Namespaces:    ptr.Of([]string{}),
+		Namespaces:    ptr.Of([]NamespaceName{}),
 	}},
 	SecretAgents: map[string]*SecretAgent{"agent1": {
 		Address:        "host",
