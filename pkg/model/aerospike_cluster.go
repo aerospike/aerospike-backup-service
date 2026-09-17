@@ -34,6 +34,15 @@ func (c *AerospikeCluster) GetUser() string {
 	return ""
 }
 
+// GetSecretAgent safely returns the Secret Agent the cluster reads its secrets from.
+// A cluster without credentials has no agent, and its secrets are literal values.
+func (c *AerospikeCluster) GetSecretAgent() *SecretAgent {
+	if c.Credentials != nil {
+		return c.Credentials.SecretAgent
+	}
+	return nil
+}
+
 // Hash returns a unique identifier for the AerospikeCluster.
 func (c *AerospikeCluster) Hash() uint64 {
 	if c == nil {

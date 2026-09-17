@@ -19,7 +19,8 @@ import (
 // NamespaceBackupRunner runs the backup pipeline for one namespace: retries,
 // catalog cleanup on failure/cancel, and metadata writes on success.
 type NamespaceBackupRunner interface {
-	// Run starts backup execution for a single namespace and returns a cancelable handler.
+	// Run starts backup execution for a single namespace and returns a cancelable handler
+	// once the backup pipeline is running. It fails when the pipeline cannot be started.
 	// scanLimiter is a per-routine limiter shared across all namespace backups within
 	// a single routine run to ensure fair resource allocation.
 	Run(
@@ -29,7 +30,7 @@ type NamespaceBackupRunner interface {
 		runSpec model.BackupRunSpec,
 		scanLimiter syncutil.Limiter,
 		logger *slog.Logger,
-	) CancelableBackupHandler
+	) (CancelableBackupHandler, error)
 }
 
 // NewNamespaceBackupRunner returns a NamespaceBackupRunner.
@@ -62,7 +63,8 @@ type CancelableBackupHandler interface {
 }
 
 // Run starts a retryable backup for one namespace via [backupexecutor.Backup.Run],
-// with cleanup and metadata callbacks wired for the routine's storage layout.
+// with cleanup and metadata callbacks wired for the routine's storage layout, and returns
+// once the pipeline is running. A run that gives up before starting one returns its error.
 // scanLimiter is a per-routine limiter shared across all namespace backups within
 // a single routine run to ensure fair resource allocation.
 func (e *namespaceBackupRunner) Run(
@@ -72,8 +74,8 @@ func (e *namespaceBackupRunner) Run(
 	runSpec model.BackupRunSpec,
 	scanLimiter syncutil.Limiter,
 	logger *slog.Logger,
-) CancelableBackupHandler {
-	return newRetryableBackupHandler(
+) (CancelableBackupHandler, error) {
+	h, err := startRetryableBackup(
 		ctx,
 		*routine.BackupPolicy.GetRetryPolicyOrDefault(),
 		retryableBackupCallbacks{
@@ -107,6 +109,11 @@ func (e *namespaceBackupRunner) Run(
 		},
 		logger,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return h, nil
 }
 
 // deleteFolder removes backup data under the given path on failure or cancel; logs
