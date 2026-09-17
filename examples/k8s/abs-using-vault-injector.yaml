@@ -40,8 +40,21 @@ spec:
                       - aerospike-backup-service
               topologyKey: kubernetes.io/hostname
       automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: aerospike-backup-service
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
           image: aerospike.jfrog.io/ecosystem-container-prod-local/aerospike-backup-service:latest
           imagePullPolicy: Always
           ports:
@@ -68,6 +81,8 @@ spec:
             successThreshold: 1
             timeoutSeconds: 1
           volumeMounts:
+            - mountPath: /tmp
+              name: tmp
             - mountPath: /etc/aerospike-backup-service/aerospike-backup-service.yml
               mountPropagation: None
               name: backup-config
@@ -75,6 +90,8 @@ spec:
       restartPolicy: Always
       serviceAccountName: backup-service
       volumes:
+        - emptyDir: {}
+          name: tmp
         - configMap:
             name: aerospike-backup-service-cm
             optional: true
