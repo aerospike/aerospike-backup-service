@@ -37,7 +37,7 @@ type TLS struct {
 	// RSA key-exchange, 3DES, RC4, and CBC-SHA256 are not offered.
 	// This field does not select TLS 1.3 suites.
 	CipherSuite string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" extensions:"x-nullable"`
-	// Passphrase for an encrypted TLS key file.
+	// Passphrase for an encrypted TLS key file, in PKCS#8 (the OpenSSL 3 default) or legacy PEM encryption.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
 	KeyfilePassword Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
