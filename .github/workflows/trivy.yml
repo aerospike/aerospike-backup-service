@@ -47,8 +47,41 @@ jobs:
             --exit-code 1 \
             .
 
+      # `trivy fs` renders the Helm chart with its DEFAULT values, i.e.
+      # configmap.create: true. The config-injector init container only exists when
+      # that value is false, so the scan above cannot see it at all. Scan the
+      # init-container path explicitly. Trivy renders Helm natively, so no helm
+      # binary or extra action is needed.
+      - name: Generate Trivy SARIF report (Helm init-container path)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.74.0
+          scan-type: config
+          scan-ref: helm/aerospike-backup-service
+          severity: HIGH,CRITICAL
+          format: sarif
+          output: trivy-helm-initcontainer.sarif
+          exit-code: '0'
+        env:
+          TRIVY_HELM_SET: configmap.create=false
+
+      - name: Enforce HIGH and CRITICAL findings policy (Helm init-container path)
+        run: |
+          trivy config \
+            --helm-set configmap.create=false \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            helm/aerospike-backup-service
+
       - name: Upload Trivy results to GitHub Code Scanning
         if: always()
         uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
           sarif_file: trivy-results.sarif
+
+      - name: Upload Helm init-container results to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          sarif_file: trivy-helm-initcontainer.sarif
+          category: helm-initcontainer
