@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -51,77 +50,6 @@ type Snippet struct {
 	Body string
 	// Generated reports whether build/docs rendered this block from source.
 	Generated bool
-}
-
-// fence matches a fenced block and captures its language and body.
-var fence = regexp.MustCompile("(?ms)^```([a-zA-Z0-9_-]*)[ \t]*\r?\n(.*?)^```[ \t]*$")
-
-// marker matches the opening tag that build/docs writes above a block it
-// renders, such as <!-- tag DefaultConfig --> or <!-- tag RestoreFullRequest -->.
-//
-// The literal "tag" keyword is required, and is the whole point: a generic
-// <!-- word --> would also match the <!-- toc --> a table-of-contents tool
-// leaves above a fence, and would then exempt a hand-written block from every
-// check below. This pattern is build/docs/markers.go's openTag, anchored.
-var marker = regexp.MustCompile(`^<!--\s*tag\s+\S+[ \t]*.*?-->$`)
-
-// isGenerated reports whether the fence starting at offset is preceded by a
-// generator marker. A generated block is reproduced byte-for-byte from source
-// and verified by "make docs-check", so checking its content again would only
-// test the generator twice.
-func isGenerated(text string, offset int) bool {
-	preceding := strings.TrimRight(text[:offset], " \t\r\n")
-
-	lastBreak := strings.LastIndex(preceding, "\n")
-	line := strings.TrimSpace(preceding[lastBreak+1:])
-
-	// A one-line region such as <!-- tag restoreFull -->`POST …`<!-- /tag --> also
-	// starts with an opening marker, but it is complete on its own line and the
-	// fence below it is hand-written. The opening marker alone carries one "-->".
-	return marker.MatchString(line) && strings.Count(line, "-->") == 1
-}
-
-// Snippets returns every fenced block in the given Markdown files whose language
-// is one of langs. Paths are relative to the repository root.
-func Snippets(t *testing.T, root string, files []string, langs ...string) []Snippet {
-	t.Helper()
-
-	wanted := make(map[string]bool, len(langs))
-	for _, lang := range langs {
-		wanted[lang] = true
-	}
-
-	var snippets []Snippet
-
-	for _, file := range files {
-		content, err := os.ReadFile(filepath.Join(root, file))
-		if err != nil {
-			t.Fatalf("read %s: %v", file, err)
-		}
-
-		text := string(content)
-		for _, match := range fence.FindAllStringSubmatchIndex(text, -1) {
-			language := text[match[2]:match[3]]
-			if !wanted[language] {
-				continue
-			}
-
-			snippets = append(snippets, Snippet{
-				File:      file,
-				Line:      1 + strings.Count(text[:match[0]], "\n"),
-				Language:  language,
-				Body:      text[match[4]:match[5]],
-				Generated: isGenerated(text, match[0]),
-			})
-		}
-	}
-
-	return snippets
-}
-
-// At renders the snippet's origin the way an editor understands it.
-func (s Snippet) At() string {
-	return s.File + ":" + strconv.Itoa(s.Line)
 }
 
 // DefaultTag is a documented default: the `default:` struct tag on a DTO field.
