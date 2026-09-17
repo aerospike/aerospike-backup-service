@@ -46,11 +46,7 @@ func (p *prober) Probe(ctx context.Context, config *model.Config) error {
 	}
 
 	for name, cluster := range backupConfig.AerospikeClusters {
-		var agent *model.SecretAgent
-		if cluster.Credentials != nil {
-			agent = cluster.Credentials.SecretAgent
-		}
-		if err := probeSecretAgent(agent); err != nil {
+		if err := probeSecretAgent(cluster.GetSecretAgent()); err != nil {
 			return fmt.Errorf("secret agent of cluster %q TLS validation failed: %w", name, err)
 		}
 		if err := p.probeCluster(ctx, cluster); err != nil {

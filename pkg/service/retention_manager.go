@@ -102,20 +102,19 @@ func (e *backupRetentionManager) deleteFullBackups(
 	return errs
 }
 
+// deleteIncrementalBackups removes the incremental backups that fall outside the retention window.
 func (e *backupRetentionManager) deleteIncrementalBackups(
 	ctx context.Context, timestamps []time.Time, retainCount int, routine *model.BackupRoutine,
 ) error {
-	if retainCount == 0 { // Delete all incremental backups.
-		path := backupRootPath(routine.Name, model.BackupTypeIncremental)
-		return e.catalog.Delete(ctx, routine, path)
-	}
-
-	if len(timestamps) <= retainCount {
+	if retainCount > 0 && len(timestamps) <= retainCount {
 		return nil
 	}
+	filter := NewIncrementalBackupFilter(routine)
+	if retainCount > 0 {
+		filter = filter.WithToTime(timestamps[len(timestamps)-retainCount])
+	}
 
-	earliest := timestamps[len(timestamps)-retainCount]
-	incrBackups, err := e.catalog.GetBackups(ctx, NewIncrementalBackupFilter(routine).WithToTime(earliest))
+	incrBackups, err := e.catalog.GetBackups(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to fetch incremental backups: %w", err)
 	}

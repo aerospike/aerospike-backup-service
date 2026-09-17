@@ -69,20 +69,8 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 	config.BatchSize = restoreRequest.Policy.GetBatchSizeOrDefault()
 	config.DisableBatchWrites = ptr.ValueOrZero(restoreRequest.Policy.DisableBatchWrites)
 
-	if restoreRequest.Policy.CompressionPolicy != nil {
-		config.CompressionPolicy = &backup.CompressionPolicy{
-			Mode:  restoreRequest.Policy.CompressionPolicy.Mode.String(),
-			Level: int(restoreRequest.Policy.CompressionPolicy.Level),
-		}
-	}
-	if restoreRequest.Policy.EncryptionPolicy != nil {
-		config.EncryptionPolicy = &backup.EncryptionPolicy{
-			Mode:      restoreRequest.Policy.EncryptionPolicy.Mode.String(),
-			KeyFile:   ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyFile),
-			KeySecret: ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeySecret.Reveal()),
-			KeyEnv:    ptr.StringOrNil(restoreRequest.Policy.EncryptionPolicy.KeyEnv),
-		}
-	}
+	config.CompressionPolicy = restoreRequest.Policy.CompressionPolicy.ToLibraryPolicy()
+	config.EncryptionPolicy = restoreRequest.Policy.EncryptionPolicy.ToLibraryPolicy()
 
 	config.ExtraTTL = ptr.ValueOrZero(restoreRequest.Policy.ExtraTTL)
 

@@ -72,3 +72,70 @@ func TestBackupRoutineCopy_GobRegistrations(t *testing.T) {
 		})
 	}
 }
+
+func TestBackupRoutine_Schedules(t *testing.T) {
+	zone := time.FixedZone("UTC+3", 3*60*60)
+	routine := &BackupRoutine{
+		IntervalCron:     "@daily",
+		IncrIntervalCron: "@hourly",
+		Timezone:         Location{resolved: zone},
+	}
+
+	require.Equal(t, Schedule{Cron: "@daily", Location: zone}, routine.FullSchedule())
+	require.Equal(t, Schedule{Cron: "@hourly", Location: zone}, routine.IncrementalSchedule())
+	require.True(t, routine.HasIncrementalSchedule())
+}
+
+func TestBackupRoutine_Schedules_DefaultTimezone(t *testing.T) {
+	routine := &BackupRoutine{IntervalCron: "@daily"}
+
+	require.Equal(t, DefaultScheduleTimezone, routine.FullSchedule().Location)
+	require.False(t, routine.HasIncrementalSchedule())
+}
+
+func TestBackupRoutine_NextRun(t *testing.T) {
+	routine := &BackupRoutine{
+		IntervalCron:     "@daily",
+		IncrIntervalCron: "@hourly",
+	}
+
+	next, err := routine.NextRun()
+
+	require.NoError(t, err)
+	require.NotNil(t, next.FullBackupTime())
+	require.NotNil(t, next.IncrementalBackupTime())
+}
+
+func TestBackupRoutine_NextRun_WithoutIncremental(t *testing.T) {
+	routine := &BackupRoutine{IntervalCron: "@daily"}
+
+	next, err := routine.NextRun()
+
+	require.NoError(t, err)
+	require.NotNil(t, next.FullBackupTime())
+	require.Nil(t, next.IncrementalBackupTime())
+}
+
+func TestBackupRoutine_NextRun_InvalidCron(t *testing.T) {
+	tests := map[string]struct {
+		routine *BackupRoutine
+		wantErr string
+	}{
+		"invalid full cron": {
+			routine: &BackupRoutine{IntervalCron: "not a cron"},
+			wantErr: "failed to parse full backup cron",
+		},
+		"invalid incremental cron": {
+			routine: &BackupRoutine{IntervalCron: "@daily", IncrIntervalCron: "not a cron"},
+			wantErr: "failed to parse incremental backup cron",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := tt.routine.NextRun()
+
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
