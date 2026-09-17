@@ -8,12 +8,8 @@ import (
 )
 
 // The worked examples the documentation shows, built from the DTO structs so
-// that an example can never describe a shape the service would reject. Each key
-// is a tag id: <!-- tag RestoreFullRequest --> renders the entry below it.
-//
-// They live apart from the generator because they are content, not machinery —
-// reviewing a change to an example should not mean reading past the engine that
-// renders it.
+// that an example can never describe a shape the service would reject.
+
 const (
 	valLocal          = "local"
 	valBackups        = "backups"

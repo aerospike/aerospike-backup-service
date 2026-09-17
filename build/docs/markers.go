@@ -12,12 +12,6 @@ import (
 //
 //	<!-- tag <id> [args] --> … generated … <!-- /tag -->
 //
-// One form, one engine. Before this there was a regex per kind of generated
-// content, each with its own idea of how far the generated text reached — a
-// fenced block, a table, a link, the rest of the line — and each one a chance to
-// match too much or too little. The closing marker answers that question once,
-// so adding a kind of generated content means registering a renderer.
-//
 // The literal "tag" keyword is what separates this project's markers from the
 // ones other tools leave in the same documents, such as the <!-- toc --> written
 // by the table-of-contents generator. Anything that is not a tag is left alone.
