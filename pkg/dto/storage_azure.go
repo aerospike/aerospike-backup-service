@@ -67,6 +67,12 @@ func (a *AzureStorage) Validate() error {
 		return errors.New(`azure storage authentication method is ambiguous:
 use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 	}
+	if (a.AccountName != "" || a.AccountKey != "") && !hasSharedKey {
+		return errors.New("azure storage shared key authentication requires both account-name and account-key")
+	}
+	if (a.TenantID != "" || a.ClientID != "" || a.ClientSecret != "") && !hasAAD {
+		return errors.New("azure storage AAD authentication requires tenant-id, client-id and client-secret")
+	}
 	if err := a.StorageClass.Validate(); err != nil {
 		return fmt.Errorf("invalid storage class: %w", err)
 	}

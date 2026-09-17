@@ -85,12 +85,11 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 		jobKey(routine.Name, model.BackupTypeFull),
 	)
 
-	location := routine.Timezone.ResolvedLocation()
-	if err := s.scheduleCronJob(routine.IntervalCron, location, fullJob); err != nil {
+	if err := s.scheduleCronJob(routine.FullSchedule(), fullJob); err != nil {
 		return fmt.Errorf("failed to schedule full backup: %w", err)
 	}
 
-	if len(routine.IncrIntervalCron) == 0 {
+	if !routine.HasIncrementalSchedule() {
 		// Incremental scheduling is optional and skipped when cron is not configured.
 		return nil
 	}
@@ -99,7 +98,7 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 		newBackupJob(s.orchestrator, routine, model.BackupTypeIncremental),
 		jobKey(routine.Name, model.BackupTypeIncremental),
 	)
-	if err := s.scheduleCronJob(routine.IncrIntervalCron, location, incrementalJob); err != nil {
+	if err := s.scheduleCronJob(routine.IncrementalSchedule(), incrementalJob); err != nil {
 		return fmt.Errorf("failed to schedule incremental backup: %w", err)
 	}
 
@@ -107,8 +106,8 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 }
 
 // scheduleCronJob attaches a cron trigger to jobDetail and schedules it on the underlying Quartz scheduler.
-func (s *BackupScheduler) scheduleCronJob(interval string, loc *time.Location, jobDetail *quartz.JobDetail) error {
-	cronTrigger, err := quartz.NewCronTriggerWithLoc(interval, loc)
+func (s *BackupScheduler) scheduleCronJob(schedule model.Schedule, jobDetail *quartz.JobDetail) error {
+	cronTrigger, err := quartz.NewCronTriggerWithLoc(schedule.Cron, schedule.Location)
 	if err != nil {
 		return err
 	}

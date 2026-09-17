@@ -848,11 +848,12 @@ func (m *MockNamespaceBackupRunner) EXPECT() *MockNamespaceBackupRunnerMockRecor
 }
 
 // Run mocks base method.
-func (m *MockNamespaceBackupRunner) Run(ctx context.Context, routine *model.BackupRoutine, namespace string, runSpec model.BackupRunSpec, scanLimiter syncutil.Limiter, logger *slog.Logger) CancelableBackupHandler {
+func (m *MockNamespaceBackupRunner) Run(ctx context.Context, routine *model.BackupRoutine, namespace string, runSpec model.BackupRunSpec, scanLimiter syncutil.Limiter, logger *slog.Logger) (CancelableBackupHandler, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run", ctx, routine, namespace, runSpec, scanLimiter, logger)
 	ret0, _ := ret[0].(CancelableBackupHandler)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Run indicates an expected call of Run.

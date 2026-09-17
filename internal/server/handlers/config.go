@@ -32,24 +32,24 @@ func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
-	newConfig, err := dto.NewConfigFromReader(r.Body, decoder.JSON)
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
+	newConfig, ok := decodeBody[dto.Config](w, r)
+	if !ok {
 		return
 	}
 
-	// validate static fields.
 	oldConfig := dto.NewConfigFromModel(s.config)
-	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
-		httpError(w, errBadRequest(fmt.Errorf("static configuration has changed: %w", err)))
-		return
-	}
 
-	// GET responses redact secrets as "[secret]". Before persisting a PUT, copy real secret
+	// GET responses redact secrets as "[secret]". Before comparing or persisting a PUT, copy real secret
 	// values from the stored config into the incoming payload wherever the sentinel appears,
 	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
 	if err := decoder.MergeSecrets(newConfig, oldConfig); err != nil {
 		httpError(w, errBadRequest(err))
+		return
+	}
+
+	// validate static fields (after the merge, so a redacted secret does not count as a change).
+	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
+		httpError(w, errBadRequest(fmt.Errorf("static configuration has changed: %w", err)))
 		return
 	}
 
@@ -127,6 +127,8 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// changeConfig applies updateFunc to the live configuration, persists the result and reschedules
+// the routines. The caller has already validated the change, so everything here is the commit.
 func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
 	// ApplyConfig and changeConfig must be synchronized to prevent race conditions
 	// where one operation reads/writes config while another is in the middle of updating it
@@ -138,7 +140,12 @@ func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Confi
 		return fmt.Errorf("failed to update configuration: %w", err)
 	}
 
-	err = s.configurationManager.Write(ctx, s.config)
+	// A write the client can cancel would leave memory, file and scheduler describing different
+	// configurations, so the persist outlives the request and its own timeout bounds it instead.
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), configWriteTimeout)
+	defer cancel()
+
+	err = s.configurationManager.Write(writeCtx, s.config)
 	if err != nil {
 		return fmt.Errorf("failed to write configuration: %w", err)
 	}

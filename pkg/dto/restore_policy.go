@@ -62,7 +62,7 @@ type BaseRestorePolicy struct {
 	// Encryption details (algorithm and key). Default is no encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Configuration of retries for each restore write operation.
-	// If nil, the default policy is used (5 retries with a one-minute delay between attempts).
+	// If nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Amount of extra time-to-live to add to records that have expirable void-times.
 	// Must be set in seconds.

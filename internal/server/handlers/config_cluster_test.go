@@ -44,14 +44,14 @@ func TestAddAerospikeCluster(t *testing.T) {
 			clusterName:    "test-cluster",
 			requestBody:    "{noField : 1}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 		{
 			name:           "invalid cluster config",
 			clusterName:    "test-cluster",
 			requestBody:    marshalToString(dto.AerospikeCluster{}),
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 
@@ -178,7 +178,7 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			clusterName:    "test-cluster",
 			requestBody:    "{nil}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 

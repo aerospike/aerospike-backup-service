@@ -94,7 +94,10 @@ func InitComponents(
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	appLogger := initLogger(config)
+	appLogger, err := initLogger(config)
+	if err != nil {
+		return nil, err
+	}
 
 	scheduler, err := service.NewScheduler(appLogger)
 	if err != nil {
@@ -229,8 +232,12 @@ func newAerospikeLayer(resolver secrets.Resolver) (aerospike.ClientManager, aero
 	return clientManager, aerospike.NewNamespaceValidator(clientManager)
 }
 
-func initLogger(config *model.Config) *slog.Logger {
-	logger := slog.New(log.NewHandler(config.ServiceConfig.GetLoggerOrDefault()))
+func initLogger(config *model.Config) (*slog.Logger, error) {
+	logHandler, err := log.NewHandler(config.ServiceConfig.GetLoggerOrDefault())
+	if err != nil {
+		return nil, fmt.Errorf("failed to configure logging: %w", err)
+	}
+	logger := slog.New(logHandler)
 	slog.SetDefault(logger)
 	configStr, _ := decoder.Marshal(dto.NewConfigFromModel(config), decoder.JSON, true)
 	slog.Info("Aerospike Backup Service",
@@ -239,5 +246,5 @@ func initLogger(config *model.Config) *slog.Logger {
 		slog.String("buildTime", backup.BuildTime),
 		slog.String("config", string(configStr)))
 
-	return logger
+	return logger, nil
 }

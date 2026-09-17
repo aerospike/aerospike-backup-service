@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -129,4 +130,34 @@ func Test_canceled_context_interrupts_backoff(t *testing.T) {
 	require.ErrorContains(t, err, "mock error")
 	require.Equal(t, 1, attempts, "no attempt should follow a canceled context")
 	require.Less(t, time.Since(start), policy.BaseTimeout, "back-off outlived the context")
+}
+
+func Test_own_cancellation_error_is_retried(t *testing.T) {
+	attempts := 0
+
+	err := Retry(t.Context(), testRetryPolicy, slog.Default(), func() error {
+		attempts++
+		// The operation canceled itself; the caller's context is still live.
+		return fmt.Errorf("pipeline stopped: %w", context.Canceled)
+	}, func() {})
+
+	require.ErrorIs(t, err, context.Canceled)
+	require.Equal(t, int(testRetryPolicy.MaxRetries)+1, attempts,
+		"a Canceled error from f alone must not stop the loop")
+}
+
+func Test_canceled_context_stops_before_next_attempt(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	attempts := 0
+
+	err := Retry(ctx, testRetryPolicy, slog.Default(), func() error {
+		attempts++
+		cancel()
+		return fmt.Errorf("wait: %w", context.Canceled)
+	}, func() {})
+
+	require.ErrorIs(t, err, context.Canceled)
+	require.Equal(t, 1, attempts, "no attempt should follow a canceled context")
+	require.Equal(t, 1, strings.Count(err.Error(), context.Canceled.Error()),
+		"a failure that already carries the context error is not joined with it again")
 }

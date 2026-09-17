@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -549,7 +550,7 @@ func TestNewRestoreRequestFromReader(t *testing.T) {
 	t.Parallel()
 
 	jsonReq := `{"backup-data-path": "daily/backup/data"}`
-	req, err := NewRestoreRequestFromReader(strings.NewReader(jsonReq))
+	req, err := NewFromReader[RestoreRequest](strings.NewReader(jsonReq), decoder.JSON)
 	require.NoError(t, err)
 	assert.Equal(t, "daily/backup/data", string(req.BackupDataPath))
 }
@@ -557,7 +558,7 @@ func TestNewRestoreRequestFromReader(t *testing.T) {
 func TestNewRestoreRequestFromReader_InvalidJSON(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewRestoreRequestFromReader(strings.NewReader(`{"unknown-field": 1}`))
+	_, err := NewFromReader[RestoreRequest](strings.NewReader(`{"unknown-field": 1}`), decoder.JSON)
 	require.Error(t, err)
 }
 
@@ -565,7 +566,7 @@ func TestNewRestoreTimestampRequestFromReader(t *testing.T) {
 	t.Parallel()
 
 	jsonReq := `{"time": 1739538000000, "routine": "daily"}`
-	req, err := NewRestoreTimestampRequestFromReader(strings.NewReader(jsonReq))
+	req, err := NewFromReader[RestoreTimestampRequest](strings.NewReader(jsonReq), decoder.JSON)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1739538000000), req.Time)
 	assert.Equal(t, "daily", req.Routine)
@@ -574,7 +575,7 @@ func TestNewRestoreTimestampRequestFromReader(t *testing.T) {
 func TestNewRestoreTimestampRequestFromReader_InvalidJSON(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewRestoreTimestampRequestFromReader(strings.NewReader(`{"unknown-field": 1}`))
+	_, err := NewFromReader[RestoreTimestampRequest](strings.NewReader(`{"unknown-field": 1}`), decoder.JSON)
 	require.Error(t, err)
 }
 

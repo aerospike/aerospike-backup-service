@@ -17,19 +17,20 @@ seed-nodes:
   - host-name: localhost
     port: 3000
 `
-	cluster, err := NewClusterFromReader(strings.NewReader(yamlCluster), decoder.YAML)
+	cluster, err := NewValidatedFromReader[AerospikeCluster](strings.NewReader(yamlCluster), decoder.YAML)
 	require.NoError(t, err)
 	require.Len(t, cluster.SeedNodes, 1)
 	assert.Equal(t, "localhost", cluster.SeedNodes[0].HostName)
 	assert.Equal(t, Port(3000), cluster.SeedNodes[0].Port)
 }
 
-func TestNewBackupPolicyFromReader(t *testing.T) {
+func TestBackupPolicyFromReader(t *testing.T) {
 	yamlPolicy := `
 parallel: 4
 `
-	policy, err := NewBackupPolicyFromReader(strings.NewReader(yamlPolicy), decoder.YAML)
+	policy, err := NewFromReader[BackupPolicy](strings.NewReader(yamlPolicy), decoder.YAML)
 	require.NoError(t, err)
+	require.NoError(t, policy.Validate())
 	require.NotNil(t, policy.Parallel)
 	assert.Equal(t, 4, *policy.Parallel)
 }
@@ -41,7 +42,7 @@ storage: storage1
 interval-cron: "@daily"
 namespaces: []
 `
-	routine, err := NewRoutineFromReader(strings.NewReader(yamlRoutine), decoder.YAML)
+	routine, err := NewValidatedFromReader[BackupRoutine](strings.NewReader(yamlRoutine), decoder.YAML)
 	require.NoError(t, err)
 	assert.Equal(t, "cluster1", routine.SourceCluster)
 	assert.Equal(t, "storage1", routine.Storage)
@@ -140,7 +141,7 @@ func TestNewRoutineFromModel(t *testing.T) {
 	assert.Equal(t, "storage1", routine.Storage)
 	assert.Equal(t, "@hourly", routine.IntervalCron)
 	require.NotNil(t, routine.Namespaces)
-	assert.Equal(t, []string{"ns1"}, *routine.Namespaces)
+	assert.Equal(t, []NamespaceName{"ns1"}, *routine.Namespaces)
 	assert.True(t, routine.Disabled)
 }
 
@@ -194,7 +195,7 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 }
 
 func TestNewClusterFromReader_InvalidYAML(t *testing.T) {
-	_, err := NewClusterFromReader(strings.NewReader("seed-nodes: []"), decoder.YAML)
+	_, err := NewValidatedFromReader[AerospikeCluster](strings.NewReader("seed-nodes: []"), decoder.YAML)
 	require.Error(t, err)
 }
 

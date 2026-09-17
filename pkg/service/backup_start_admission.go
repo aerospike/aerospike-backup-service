@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 	"github.com/google/uuid"
 )
 
@@ -152,6 +151,6 @@ func (s *startController) buildStartFacts(routine *model.BackupRoutine, now time
 		IncrementalRunningNow: incrRunning,
 		// History still comes from registry.
 		HasCompletedFull: !state.LastRunTime.NoFullBackup(),
-		FullScheduledNow: timeutil.IsCronFireTime(routine.IntervalCron, now, routine.Timezone.ResolvedLocation()),
+		FullScheduledNow: routine.FullSchedule().IsFireTime(now),
 	}
 }

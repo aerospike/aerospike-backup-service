@@ -22,6 +22,11 @@ func (e *statusCodeError) Error() string {
 	return e.Err.Error()
 }
 
+// Unwrap exposes the cause, so errors.Is/As can see through the status code wrapper.
+func (e *statusCodeError) Unwrap() error {
+	return e.Err
+}
+
 // newStatusCodeError creates a new statusCodeError with an associated status code.
 func newStatusCodeError(err error, code int) *statusCodeError {
 	return &statusCodeError{Err: err, Code: code}
@@ -29,10 +34,6 @@ func newStatusCodeError(err error, code int) *statusCodeError {
 
 func errInvalidQueryParam(err error, param string) error {
 	return newStatusCodeError(fmt.Errorf("invalid query param %s: %w", param, err), http.StatusBadRequest)
-}
-
-func errInvalidJSONPayload(err error) error {
-	return newStatusCodeError(fmt.Errorf("invalid JSON payload: %w", err), http.StatusBadRequest)
 }
 
 func errBadRequest(err error) error {
@@ -49,14 +50,29 @@ func errRoutineNotFound(name string) error {
 }
 
 func errNotFound(field string, name any) error {
-	return newStatusCodeError(fmt.Errorf("%s %q not found", field, name), http.StatusNotFound)
+	return newStatusCodeError(fmt.Errorf("%s %s not found", field, quoteName(name)), http.StatusNotFound)
+}
+
+// quoteName quotes string names and prints other identifiers, such as numeric job IDs, as they are;
+// %q would render an integer as a rune literal.
+func quoteName(name any) string {
+	if s, ok := name.(string); ok {
+		return strconv.Quote(s)
+	}
+
+	return fmt.Sprint(name)
 }
 
 // httpError calls http.Error with the appropriate status code based on the error.
 func httpError(w http.ResponseWriter, err error) {
-	var httpErr *statusCodeError
+	var (
+		httpErr     *statusCodeError
+		maxBytesErr *http.MaxBytesError
+	)
 
 	switch {
+	case errors.As(err, &maxBytesErr):
+		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
 	case errors.As(err, &httpErr):
 		http.Error(w, httpErr.Error(), httpErr.Code)
 	case errors.Is(err, model.ErrNotFound):
@@ -87,6 +103,7 @@ func httpOK(w http.ResponseWriter, data any) {
 func httpAcceptedWithJobID(w http.ResponseWriter, jobID model.RestoreJobID) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
+	// #nosec G705 -- jobID is a numeric identifier issued by the restore manager, written as %d
 	_, _ = fmt.Fprintf(w, "%d", jobID)
 }
 

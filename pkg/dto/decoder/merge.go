@@ -64,12 +64,16 @@ func mergeValue(incoming, existing reflect.Value) error {
 		return nil
 	}
 
-	if isRedactable(incoming) {
-		return setSecretValue(incoming, existing)
+	// A value read through an unexported field is read-only: reflect will neither hand it out
+	// as an interface nor let anything be written to it, so there is no secret to merge into
+	// it. This is what keeps types that hold private state - time.Time, time.Location, a
+	// wrapped error - out of the walk's way without naming any of them.
+	if !incoming.CanInterface() {
+		return nil
 	}
 
-	if shouldSkipDeepCopy(incoming) {
-		return nil
+	if isRedactable(incoming) {
+		return setSecretValue(incoming, existing)
 	}
 
 	switch incoming.Kind() {

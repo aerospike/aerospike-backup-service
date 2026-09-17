@@ -175,6 +175,19 @@ func TestScanCancellation(t *testing.T) {
 	assert.False(t, cancel2Called)
 }
 
+func TestSetLastRun_KeepsScanCancel(t *testing.T) {
+	t.Parallel()
+	tracker := newRoutineTracker()
+
+	cancelCalled := false
+	tracker.setScanCancel(func() { cancelCalled = true })
+
+	// An older scan storing its result must not take the newer scan's handle with it.
+	tracker.setLastRun(model.NewNoBackupTime())
+	tracker.cancelScan()
+	assert.True(t, cancelCalled)
+}
+
 func TestFinishScan_Idempotency(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()

@@ -3,9 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"io"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -97,18 +95,4 @@ func NewStorageFromModel(m model.Storage, config *model.BackupConfig) *Storage {
 	default:
 		panic(fmt.Sprintf("unsupported model storage type %T", m)) // Unreachable
 	}
-}
-
-// NewStorageFromReader creates a new Storage object from a given reader.
-func NewStorageFromReader(r io.Reader, format decoder.SerializationFormat) (*Storage, error) {
-	s := &Storage{}
-	if err := decoder.Deserialize(s, r, format); err != nil {
-		return nil, err
-	}
-
-	if err := s.Validate(); err != nil {
-		return nil, err
-	}
-
-	return s, nil
 }

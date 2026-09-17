@@ -76,6 +76,7 @@ var defaultConfig = struct {
 		FileLimit:             ptr.Of(250),
 		Sealed:                ptr.Of(false),
 		Compact:               ptr.Of(false),
+		WithClusterConfig:     ptr.Of(false),
 		UseCompression:        ptr.Of(false),
 		ConcurrentIncremental: ptr.Of(false),
 		IncrMode:              IncrModeDifferential,

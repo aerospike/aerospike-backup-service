@@ -61,6 +61,12 @@ func run() int {
 func startService(configFile string, remote bool) error {
 	ctx, stop := systemCtx()
 	defer stop()
+	// Shutdown is a one-shot sequence: the first signal cancels ctx and every component winds
+	// down from that cancellation. Once it has fired the process has no further use for the
+	// subscription, so it is dropped right there, which restores the default disposition of the
+	// signals: a second SIGINT or SIGTERM terminates the process at once instead of being
+	// swallowed while the graceful shutdown drains.
+	context.AfterFunc(ctx, stop)
 
 	components, err := app.InitComponents(ctx, configFile, remote)
 	if err != nil {

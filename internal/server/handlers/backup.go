@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -258,6 +260,10 @@ func (s *Service) scheduleBackup(
 	w.WriteHeader(http.StatusAccepted)
 }
 
+// maxDelayMillis is the largest delay that still fits in a time.Duration; anything above it
+// would overflow when converted and run the backup immediately.
+const maxDelayMillis = int(math.MaxInt64 / int64(time.Millisecond))
+
 func parseDelay(delayParameter string) (int, error) {
 	if delayParameter == "" {
 		return 0, nil
@@ -266,6 +272,9 @@ func parseDelay(delayParameter string) (int, error) {
 	delayMillis, err := strconv.Atoi(delayParameter)
 	if err != nil || delayMillis < 0 {
 		return 0, errInvalidQueryParam(errors.New("should be a positive integer"), "delay")
+	}
+	if delayMillis > maxDelayMillis {
+		return 0, errInvalidQueryParam(fmt.Errorf("should not exceed %d milliseconds", maxDelayMillis), "delay")
 	}
 
 	return delayMillis, nil

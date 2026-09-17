@@ -3,6 +3,9 @@ package model
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/cron"
 )
 
 // BackupRoutine represents a scheduled backup operation routine.
@@ -42,6 +45,44 @@ type BackupRoutine struct {
 	FilterExpression string
 	// Whether this routine is disabled and should not run.
 	Disabled bool
+}
+
+type Schedule = cron.Schedule
+
+// FullSchedule returns the schedule the routine's full backups run on.
+func (r *BackupRoutine) FullSchedule() Schedule {
+	return cron.NewSchedule(r.IntervalCron, r.Timezone.ResolvedLocation())
+}
+
+// IncrementalSchedule returns the schedule the routine's incremental backups run on.
+// Incremental backups are optional: the returned schedule is unset when none is configured.
+func (r *BackupRoutine) IncrementalSchedule() Schedule {
+	return cron.NewSchedule(r.IncrIntervalCron, r.Timezone.ResolvedLocation())
+}
+
+// HasIncrementalSchedule reports whether the routine runs incremental backups.
+func (r *BackupRoutine) HasIncrementalSchedule() bool {
+	return r.IncrIntervalCron != ""
+}
+
+// NextRun returns the next full backup time and, when the routine has an incremental
+// schedule, the next incremental backup time alongside it.
+func (r *BackupRoutine) NextRun() (*BackupTime, error) {
+	nextFullBackup, err := r.FullSchedule().NextTrigger()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse full backup cron: %w", err)
+	}
+
+	if !r.HasIncrementalSchedule() {
+		return NewFullBackupTime(nextFullBackup), nil
+	}
+
+	nextIncrementalBackup, err := r.IncrementalSchedule().NextTrigger()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse incremental backup cron: %w", err)
+	}
+
+	return NewBackupTime(nextFullBackup, nextIncrementalBackup), nil
 }
 
 func init() {

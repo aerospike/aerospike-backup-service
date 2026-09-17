@@ -2,13 +2,17 @@ package dto
 
 import (
 	"fmt"
-	"io"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // Config represents the service configuration file.
+//
+// Every entity name - the key of a cluster, storage, policy, secret agent or routine - must be
+// a single path segment: a routine's name is the folder its backups live in under the storage
+// root, so a name may not be "." or "..", may not contain "/" or "\\" or a NUL byte, and may
+// not start with "~".
+//
 // @Description Config represents the service configuration file.
 //
 //nolint:lll
@@ -72,23 +76,13 @@ func (c *Config) fromModel(m *model.Config) {
 	}
 }
 
-// NewConfigFromReader creates a new Config object from a given reader.
-func NewConfigFromReader(r io.Reader, format decoder.SerializationFormat) (*Config, error) {
-	c := &Config{}
-	if err := decoder.Deserialize(c, r, format); err != nil {
-		return nil, err
-	}
-
-	return c, nil
-}
-
 // Validate validates the configuration.
 //
 //nolint:gocognit
 func (c *Config) Validate() error {
 	for name, routine := range c.BackupRoutines {
-		if name == "" {
-			return errValidationEmptyField("routine name")
+		if err := validateEntityName("routine name", name); err != nil {
+			return err
 		}
 		if err := routine.Validate(); err != nil {
 			return fmt.Errorf("backup routine '%s' validation error: %w", name, err)
@@ -96,8 +90,8 @@ func (c *Config) Validate() error {
 	}
 
 	for name, storage := range c.Storage {
-		if name == "" {
-			return errValidationEmptyField("storage name")
+		if err := validateEntityName("storage name", name); err != nil {
+			return err
 		}
 		if err := storage.Validate(); err != nil {
 			return fmt.Errorf("storage '%s' validation error: %w", name, err)
@@ -105,8 +99,8 @@ func (c *Config) Validate() error {
 	}
 
 	for name, cluster := range c.AerospikeClusters {
-		if name == "" {
-			return errValidationEmptyField("cluster name")
+		if err := validateEntityName("cluster name", name); err != nil {
+			return err
 		}
 		if err := cluster.Validate(); err != nil {
 			return fmt.Errorf("cluster '%s' validation error: %w", name, err)
@@ -114,22 +108,25 @@ func (c *Config) Validate() error {
 	}
 
 	for name, policy := range c.BackupPolicies {
-		if name == "" {
-			return errValidationEmptyField("policy name")
+		if err := validateEntityName("policy name", name); err != nil {
+			return err
 		}
 		policyOpts := ValidationDefault
 		if c.backupPolicyHasSecretAgent(name) {
 			policyOpts = ValidationWithSecretAgent
 		}
 
-		if err := policy.Validate(policyOpts); err != nil {
+		if err := policy.ValidateWithOpts(policyOpts); err != nil {
 			return fmt.Errorf("policy '%s' validation error: %w", name, err)
 		}
 	}
 
 	for name, agent := range c.SecretAgents {
-		if name == "" {
-			return errValidationEmptyField("secret agent name")
+		if err := validateEntityName("secret agent name", name); err != nil {
+			return err
+		}
+		if agent == nil {
+			return fmt.Errorf("secret agent '%s' validation error: secret agent is not specified", name)
 		}
 		if err := agent.validate(); err != nil {
 			return fmt.Errorf("secret agent '%s' validation error: %w", name, err)
