@@ -54,6 +54,7 @@ var _ PathService = (*pathService)(nil)
 func NewPathService(format *model.TimestampFormat) PathService {
 	return &pathService{
 		format: format,
+		// path contains full or incremental backup folder tag, followed by 13 digits timestamp of the Unix-milliseconds.
 		timestampPattern: regexp.MustCompile(
 			fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})(?:_[^/]*)?/`,
 				fullBackupDirectory,

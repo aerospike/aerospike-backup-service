@@ -190,23 +190,8 @@ func validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
 // validateBackupsEncryption validates that the backups encryption matches the provided policy.
 func validateBackupsEncryption(backups []model.BackupDetails, policy *model.EncryptionPolicy) error {
 	for _, b := range backups {
-		if b.Encryption == "" || b.Encryption == model.EncryptionModeNone {
-			continue
-		}
-		if policy == nil {
-			return fmt.Errorf("backup is encrypted with mode '%s', "+
-				"but no encryption policy was provided in the restore request", b.Encryption)
-		}
-
-		if policy.Mode != b.Encryption {
-			return fmt.Errorf("backup is encrypted with mode '%s', "+
-				"but the provided encryption policy specifies mode '%s'", b.Encryption, policy.Mode)
-		}
-		if policy.KeyFile == "" &&
-			policy.KeyEnv == "" &&
-			policy.KeySecret == "" {
-			return errors.New("backup is encrypted, " +
-				"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
+		if err := policy.ValidateCanDecrypt(b.Encryption); err != nil {
+			return err
 		}
 	}
 
