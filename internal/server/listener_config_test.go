@@ -110,9 +110,9 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 								Address: "127.0.0.1",
 							},
 							Port:         ptr.Of(dto.Port(httpsPort)),
-							CertFile:     certs.serverCertFile,
-							KeyFile:      certs.serverKeyFile,
-							ClientCAFile: certs.caFile,
+							CertFile:     dto.Path(certs.serverCertFile),
+							KeyFile:      dto.Path(certs.serverKeyFile),
+							ClientCAFile: dto.Path(certs.caFile),
 							ClientAuth:   dto.TLSClientAuthNone,
 						},
 					},
@@ -160,9 +160,9 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 								Address: "127.0.0.1",
 							},
 							Port:         ptr.Of(dto.Port(httpsPort)),
-							CertFile:     certs.serverCertFile,
-							KeyFile:      certs.serverKeyFile,
-							ClientCAFile: certs.caFile,
+							CertFile:     dto.Path(certs.serverCertFile),
+							KeyFile:      dto.Path(certs.serverKeyFile),
+							ClientCAFile: dto.Path(certs.caFile),
 							ClientAuth:   dto.TLSClientAuthRequest,
 						},
 					},
@@ -187,9 +187,9 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 								Address: "127.0.0.1",
 							},
 							Port:         ptr.Of(dto.Port(httpsPort)),
-							CertFile:     certs.serverCertFile,
-							KeyFile:      certs.serverKeyFile,
-							ClientCAFile: certs.caFile,
+							CertFile:     dto.Path(certs.serverCertFile),
+							KeyFile:      dto.Path(certs.serverKeyFile),
+							ClientCAFile: dto.Path(certs.caFile),
 							ClientAuth:   dto.TLSClientAuthRequireAndVerify,
 						},
 					},
@@ -214,9 +214,9 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 								Address: "127.0.0.1",
 							},
 							Port:         ptr.Of(dto.Port(httpsPort)),
-							CertFile:     certs.serverCertFile,
-							KeyFile:      certs.serverKeyFile,
-							ClientCAFile: certs.caFile,
+							CertFile:     dto.Path(certs.serverCertFile),
+							KeyFile:      dto.Path(certs.serverKeyFile),
+							ClientCAFile: dto.Path(certs.caFile),
 							ClientAuth:   dto.TLSClientAuthNone,
 						},
 					},
@@ -234,7 +234,6 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 			cfg := test.config(httpPort, httpsPort, certs)
 
 			components := initListenerComponents(t, cfg)
-			t.Cleanup(components.Scheduler.Stop)
 
 			httpURL := fmt.Sprintf("http://127.0.0.1:%d", httpPort)
 			httpsURL := fmt.Sprintf("https://127.0.0.1:%d", httpsPort)
@@ -303,7 +302,6 @@ func TestConfiguredContextPathPrefixesRoutes(t *testing.T) {
 	}
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -340,14 +338,13 @@ func TestHTTPSListenerNegotiatesHTTP2(t *testing.T) {
 					Address: "127.0.0.1",
 				},
 				Port:     ptr.Of(dto.Port(httpsPort)),
-				CertFile: certs.serverCertFile,
-				KeyFile:  certs.serverKeyFile,
+				CertFile: dto.Path(certs.serverCertFile),
+				KeyFile:  dto.Path(certs.serverKeyFile),
 			},
 		},
 	}
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -385,7 +382,6 @@ func TestConfiguredHTTPSContextPathPrefixesRoutes(t *testing.T) {
 	cfg.ServiceConfig.ServerHTTPS.ContextPath = "/abs"
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -405,11 +401,10 @@ func TestHTTPSRequestClientCertificateAllowsAnonymousClient(t *testing.T) {
 	httpPort := freeListenerPort(t)
 	httpsPort := freeListenerPort(t)
 	cfg := httpsOnlyConfig(httpPort, httpsPort, certs)
-	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = certs.caFile
+	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = dto.Path(certs.caFile)
 	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequest
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -428,11 +423,10 @@ func TestHTTPSRequireAndVerifyRejectsMissingClientCertificate(t *testing.T) {
 	httpPort := freeListenerPort(t)
 	httpsPort := freeListenerPort(t)
 	cfg := httpsOnlyConfig(httpPort, httpsPort, certs)
-	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = certs.caFile
+	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = dto.Path(certs.caFile)
 	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequireAndVerify
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -463,11 +457,10 @@ func TestHTTPSRequireAndVerifyRejectsUntrustedClientCertificate(t *testing.T) {
 	httpPort := freeListenerPort(t)
 	httpsPort := freeListenerPort(t)
 	cfg := httpsOnlyConfig(httpPort, httpsPort, certs)
-	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = certs.caFile
+	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = dto.Path(certs.caFile)
 	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequireAndVerify
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -508,11 +501,10 @@ func TestHTTPSRequireAndVerifyRejectsExpiredClientCertificate(t *testing.T) {
 	httpPort := freeListenerPort(t)
 	httpsPort := freeListenerPort(t)
 	cfg := httpsOnlyConfig(httpPort, httpsPort, certs)
-	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = certs.caFile
+	cfg.ServiceConfig.ServerHTTPS.ClientCAFile = dto.Path(certs.caFile)
 	cfg.ServiceConfig.ServerHTTPS.ClientAuth = dto.TLSClientAuthRequireAndVerify
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -571,13 +563,12 @@ func TestHTTPSRejectsExpiredServerCertificate(t *testing.T) {
 		rand.Reader, serverTemplate, certs.caCert, &serverKey.PublicKey, certs.caKey,
 	)
 	require.NoError(t, err)
-	cfg.ServiceConfig.ServerHTTPS.CertFile = writePEM(t, dir, "server.pem", "CERTIFICATE", serverDER)
-	cfg.ServiceConfig.ServerHTTPS.KeyFile = writePEM(
+	cfg.ServiceConfig.ServerHTTPS.CertFile = dto.Path(writePEM(t, dir, "server.pem", "CERTIFICATE", serverDER))
+	cfg.ServiceConfig.ServerHTTPS.KeyFile = dto.Path(writePEM(
 		t, dir, "server-key.pem", "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(serverKey),
-	)
+	))
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	srvCtx, srvCancel := context.WithCancel(t.Context())
 	errCh := startListeners(t, srvCtx, components)
@@ -626,14 +617,13 @@ func TestRunFailsFastWhenListenerCannotBind(t *testing.T) {
 			ServerHTTPS: &dto.ServerConfigHTTPS{
 				ListenerConfig: dto.ListenerConfig{Address: "127.0.0.1"},
 				Port:           ptr.Of(dto.Port(httpsPort)),
-				CertFile:       certs.serverCertFile,
-				KeyFile:        certs.serverKeyFile,
+				CertFile:       dto.Path(certs.serverCertFile),
+				KeyFile:        dto.Path(certs.serverKeyFile),
 			},
 		},
 	}
 
 	components := initListenerComponents(t, cfg)
-	t.Cleanup(components.Scheduler.Stop)
 
 	err := server.Run(t.Context(), components.Servers)
 	require.ErrorContains(t, err, fmt.Sprintf("HTTP listener 127.0.0.1:%d", httpPort))
@@ -656,7 +646,7 @@ func TestHTTPSStartFailsWhenPortIsOccupied(t *testing.T) {
 	tlsConfig, err := servertls.NewTLSConfig(serverConfig, tlsProvider)
 	require.NoError(t, err)
 
-	srv := server.NewServerHTTPS(t.Context(), serverConfig, newListenerHandler(t), tlsConfig)
+	srv := server.NewServerHTTPS(serverConfig, newListenerHandler(t), tlsConfig)
 
 	err = srv.Start()
 	require.Error(t, err)
@@ -711,8 +701,8 @@ func httpsOnlyConfig(httpPort, httpsPort int, certs listenerCertificates) dto.Co
 					Address: "127.0.0.1",
 				},
 				Port:     ptr.Of(dto.Port(httpsPort)),
-				CertFile: certs.serverCertFile,
-				KeyFile:  certs.serverKeyFile,
+				CertFile: dto.Path(certs.serverCertFile),
+				KeyFile:  dto.Path(certs.serverKeyFile),
 			},
 		},
 	}
@@ -768,10 +758,8 @@ func newListenerHandler(t *testing.T) *handlers.Service {
 	t.Helper()
 
 	return handlers.NewService(
-		t.Context(),
 		model.NewConfig(),
-		nil, nil, nil, nil, nil, nil, nil, nil,
-		servertls.NewProber(secrets.NewResolver()),
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 }
 

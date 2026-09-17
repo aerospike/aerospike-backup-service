@@ -12,8 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/spf13/cobra"
 )
 
@@ -63,22 +61,19 @@ func run() int {
 func startService(configFile string, remote bool) error {
 	ctx, stop := systemCtx()
 	defer stop()
+	// Shutdown is a one-shot sequence: the first signal cancels ctx and every component winds
+	// down from that cancellation. Once it has fired the process has no further use for the
+	// subscription, so it is dropped right there, which restores the default disposition of the
+	// signals: a second SIGINT or SIGTERM terminates the process at once instead of being
+	// swallowed while the graceful shutdown drains.
+	context.AfterFunc(ctx, stop)
 
 	components, err := app.InitComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
 	}
 
-	components.Scheduler.Start(ctx)
-	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
-	components.TLSProvider.Start(ctx)
-
-	err = server.Run(ctx, components.Servers)
-
-	// stop the scheduler
-	components.Scheduler.Stop()
-
-	return err
+	return components.Run(ctx)
 }
 
 func systemCtx() (context.Context, context.CancelFunc) {

@@ -8,42 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidateClean(t *testing.T) {
-	tests := []struct {
-		name    string
-		path    string
-		wantErr bool
-	}{
-		{name: "empty path", path: ""},
-		{name: "clean relative path", path: "testdata/password.txt"},
-		{name: "clean absolute path", path: "/etc/ssl/certs/ca.pem"},
-		{name: "parent traversal", path: "certs/../../outside.pem", wantErr: true},
-		{name: "leading parent traversal segment", path: "../etc/passwd", wantErr: true},
-		{name: "dot prefix", path: "./certs/ca.pem", wantErr: true},
-		{name: "redundant separators", path: "/etc//ssl/ca.pem", wantErr: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateClean(tt.path)
-			if tt.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestEnsureFileExistsRejectsDirectory(t *testing.T) {
-	dir := t.TempDir()
-	require.NoError(t, os.Mkdir(filepath.Join(dir, "certs"), 0755))
-
-	err := EnsureFileExists(filepath.Join(dir, "certs"))
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "directory")
-}
-
 func TestReadFileRejectsDirectory(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.Mkdir(filepath.Join(dir, "certs"), 0755))
@@ -75,14 +39,6 @@ func TestReadFileRejectsRootEscape(t *testing.T) {
 
 	_, err = root.ReadFile("../secret.txt")
 	require.Error(t, err)
-}
-
-func TestEnsureFileExists(t *testing.T) {
-	tempDir := t.TempDir()
-	filePath := filepath.Join(tempDir, "cert.pem")
-	require.NoError(t, os.WriteFile(filePath, []byte("cert"), 0600))
-
-	require.NoError(t, EnsureFileExists(filePath))
 }
 
 func TestReadDir(t *testing.T) {

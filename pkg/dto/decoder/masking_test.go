@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -66,9 +67,9 @@ func TestRedactSecrets_ComplexFixture(t *testing.T) {
 		_ = RedactSecrets(original)
 
 		assert.Equal(t, before, original)
-		assert.Equal(t, Secret(literalPassword), before.AerospikeClusters["cluster1"].Credentials.Password)
-		assert.Equal(t, Secret(literalAccessKey), before.StorageProviders["s3-main"].AccessKeyID)
-		assert.Equal(t, Secret(literalPassword), before.Routines[0].Keys[0])
+		assert.Equal(t, redact.Secret(literalPassword), before.AerospikeClusters["cluster1"].Credentials.Password)
+		assert.Equal(t, redact.Secret(literalAccessKey), before.StorageProviders["s3-main"].AccessKeyID)
+		assert.Equal(t, redact.Secret(literalPassword), before.Routines[0].Keys[0])
 	})
 
 	t.Run("preserves time values", func(t *testing.T) {
@@ -93,31 +94,31 @@ func TestRedactSecrets_ComplexFixture(t *testing.T) {
 		require.NoError(t, err)
 		clusterOutput := string(clusterData)
 		assert.Contains(t, clusterOutput, `"password":""`)
-		assert.NotContains(t, clusterOutput, `"password":"`+redactedSecret+`"`)
+		assert.NotContains(t, clusterOutput, `"password":"`+redact.Placeholder+`"`)
 
 		storageData, err := Marshal(redacted.StorageProviders["s3-ref"], JSON, false)
 		require.NoError(t, err)
 		storageOutput := string(storageData)
 		assert.Contains(t, storageOutput, `"secret-access-key":""`)
-		assert.NotContains(t, storageOutput, `"secret-access-key":"`+redactedSecret+`"`)
+		assert.NotContains(t, storageOutput, `"secret-access-key":"`+redact.Placeholder+`"`)
 	})
 
 	t.Run("preserves valid secret ref", func(t *testing.T) {
 		redacted := RedactSecrets(original).(testConfig)
 
-		assert.Equal(t, Secret(validSecretRef), redacted.AerospikeClusters["cluster2"].Credentials.Password)
-		assert.Equal(t, Secret(validSecretRef), redacted.StorageProviders["s3-ref"].AccessKeyID)
-		assert.Equal(t, Secret(validSecretRef), redacted.Routines[0].Keys[1])
+		assert.Equal(t, redact.Secret(validSecretRef), redacted.AerospikeClusters["cluster2"].Credentials.Password)
+		assert.Equal(t, redact.Secret(validSecretRef), redacted.StorageProviders["s3-ref"].AccessKeyID)
+		assert.Equal(t, redact.Secret(validSecretRef), redacted.Routines[0].Keys[1])
 	})
 
 	t.Run("redacts malformed secret ref", func(t *testing.T) {
 		redacted := RedactSecrets(original).(testConfig)
 
-		assert.Equal(t, Secret(redactedSecret), redacted.AerospikeClusters["cluster2"].Encryption.KeySecret)
+		assert.Equal(t, redact.Secret(redact.Placeholder), redacted.AerospikeClusters["cluster2"].Encryption.KeySecret)
 
 		data, err := Marshal(&redacted, JSON, false)
 		require.NoError(t, err)
-		assert.Contains(t, string(data), `"key-secret":"`+redactedSecret+`"`)
+		assert.Contains(t, string(data), `"key-secret":"`+redact.Placeholder+`"`)
 		assert.NotContains(t, string(data), malformedSecretRef)
 	})
 
@@ -166,7 +167,7 @@ func assertRedactedOutput(t *testing.T, output string, literals, nonSecrets []st
 		assert.Contains(t, output, value)
 	}
 
-	assert.Contains(t, output, redactedSecret)
+	assert.Contains(t, output, redact.Placeholder)
 }
 
 func TestRedactSecrets_PreservesTime(t *testing.T) {
@@ -189,6 +190,38 @@ func TestRedactSecrets_PreservesTime(t *testing.T) {
 	assert.Equal(t, created, redacted["routine1"][0].Created)
 	assert.Equal(t, finished, redacted["routine1"][0].Finished)
 	assert.Equal(t, int64(1000), redacted["routine1"][0].Timestamp)
+}
+
+func TestRedactSecrets_UnexportedTimePointerFields(t *testing.T) {
+	// Mirrors model.BackupTime: unexported *time.Time fields panic when redactValue
+	// tries to deep-copy through reflect without skipping *time.Time.
+	type backupTimeLike struct {
+		full *time.Time
+	}
+
+	now := time.Now()
+	backupTime := &backupTimeLike{full: &now}
+
+	assert.NotPanics(t, func() {
+		RedactSecrets(backupTime)
+	})
+}
+
+func TestRedactSecrets_UnexportedLocationPointerFields(t *testing.T) {
+	// Mirrors model.Location: unexported *time.Location field.
+	type locationLike struct {
+		resolved   *time.Location
+		Configured string
+	}
+
+	loc, err := time.LoadLocation("America/New_York")
+	require.NoError(t, err)
+
+	location := locationLike{resolved: loc, Configured: "America/New_York"}
+
+	assert.NotPanics(t, func() {
+		RedactSecrets(location)
+	})
 }
 
 // credentialError mirrors aerospike.AerospikeError: exported fields on a type
@@ -215,7 +248,7 @@ func TestRedactSecrets_WrappedError(t *testing.T) {
 // RedactSecrets returns errors untouched, so a secret interpolated into an error
 // message can only be masked by Secret's Stringer at construction time.
 func TestSecret_MaskedInErrorMessages(t *testing.T) {
-	secret := Secret(literalPassword)
+	secret := redact.Secret(literalPassword)
 
 	tests := []struct {
 		name string
@@ -245,7 +278,7 @@ func TestSecret_MaskedInErrorMessages(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Contains(t, tt.err.Error(), redactedSecret)
+			assert.Contains(t, tt.err.Error(), redact.Placeholder)
 			assert.NotContains(t, tt.err.Error(), literalPassword)
 
 			redacted, ok := RedactSecrets(tt.err).(error)
@@ -255,7 +288,7 @@ func TestSecret_MaskedInErrorMessages(t *testing.T) {
 	}
 
 	t.Run("secret ref preserved", func(t *testing.T) {
-		err := fmt.Errorf("cannot resolve %v", Secret(validSecretRef))
+		err := fmt.Errorf("cannot resolve %v", redact.Secret(validSecretRef))
 		assert.Contains(t, err.Error(), validSecretRef)
 	})
 
@@ -267,13 +300,13 @@ func TestSecret_MaskedInErrorMessages(t *testing.T) {
 
 		logger.Error("connect failed", slog.Any("error", fmt.Errorf("bad password %s", secret)))
 
-		assert.Contains(t, buf.String(), redactedSecret)
+		assert.Contains(t, buf.String(), redact.Placeholder)
 		assert.NotContains(t, buf.String(), literalPassword)
 	})
 
 	t.Run("%q verb", func(t *testing.T) {
 		err := fmt.Errorf("password %q", secret)
-		assert.Contains(t, err.Error(), redactedSecret)
+		assert.Contains(t, err.Error(), redact.Placeholder)
 		assert.NotContains(t, err.Error(), literalPassword)
 	})
 

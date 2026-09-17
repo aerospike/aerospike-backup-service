@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
@@ -13,7 +12,6 @@ import (
 
 // Service holds all dependencies required to access business logic from endpoints.
 type Service struct {
-	sysCtx               context.Context //nolint:containedctx
 	config               *model.Config
 	configApplier        service.ConfigApplier
 	backupScheduler      service.AdHocScheduler
@@ -29,7 +27,6 @@ type Service struct {
 }
 
 func NewService(
-	ctx context.Context,
 	config *model.Config,
 	configApplier service.ConfigApplier,
 	backupScheduler service.AdHocScheduler,
@@ -42,7 +39,6 @@ func NewService(
 	tlsProber servertls.Prober,
 ) *Service {
 	return &Service{
-		sysCtx:               ctx,
 		config:               config,
 		configApplier:        configApplier,
 		backupScheduler:      backupScheduler,

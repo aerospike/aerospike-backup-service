@@ -81,15 +81,12 @@ func Test_GetClientParallel(t *testing.T) {
 	var client, client2 Client
 	var err, err2 error
 	wg := sync.WaitGroup{}
-	wg.Add(2)
-	go func() {
+	wg.Go(func() {
 		client, err = clientManager.GetClient(t.Context(), cluster, nil, nil)
-		wg.Done()
-	}()
-	go func() {
+	})
+	wg.Go(func() {
 		client2, err2 = clientManager.GetClient(t.Context(), cluster, nil, nil)
-		wg.Done()
-	}()
+	})
 	wg.Wait()
 	require.NoError(t, err)
 	require.NotNil(t, client)
@@ -144,17 +141,22 @@ func Test_GetClient_UnhealthyConnection(t *testing.T) {
 	infoGetter := NewMockInfoGetter(ctrl)
 	infoGetter.EXPECT().GetStatus(gomock.Any()).Return("fail", nil)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
+	// The dead connection is closed and forgotten, so the next GetClient reconnects.
+	mockAsClient.EXPECT().Close()
 
-	clientManager := NewClientManager(
+	manager := NewClientManager(
 		clientFactory,
 		10*time.Second,
 	)
 
 	// Try to get client - should fail due to unhealthy connection
-	client, err := clientManager.GetClient(t.Context(), cluster, nil, nil)
+	client, err := manager.GetClient(t.Context(), cluster, nil, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "aerospike cluster connection lost")
 	assert.Nil(t, client)
+
+	_, cached := manager.(*clientManager).clients.Load(cluster.Hash())
+	assert.False(t, cached, "dead client must not stay cached")
 }
 
 func Test_CreateClient_Errors(t *testing.T) {

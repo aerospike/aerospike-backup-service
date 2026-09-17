@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 var secureServerCipherSuites = func() map[string]bool {
@@ -32,24 +31,24 @@ type ServerConfigHTTPS struct {
 	Port *Port `yaml:"port,omitempty" json:"port,omitempty" default:"8443" example:"8443"`
 	// Path to the HTTPS server certificate in PEM format.
 	// Rewriting this file at the same path reloads the served key pair without a restart; changing the path requires a restart.
-	CertFile string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/server.pem" extensions:"x-nullable"`
+	CertFile Path `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/server.pem" extensions:"x-nullable"`
 	// Path to the HTTPS server private key in PEM format.
 	// Rewriting this file at the same path reloads the served key pair without a restart; changing the path requires a restart.
-	KeyFile string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/server-key.pem" extensions:"x-nullable"`
+	KeyFile Path `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/server-key.pem" extensions:"x-nullable"`
 	// Passphrase for an encrypted HTTPS server private key.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	KeyFilePassword secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
+	KeyFilePassword Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
 	// Minimum accepted TLS protocol version.
 	MinVersion TLSMinVersion `yaml:"min-version,omitempty" json:"min-version,omitempty" default:"1.2" enums:"1.2,1.3"`
 	// Allowed TLS cipher suite names. An empty list uses Go's secure defaults.
 	CipherSuites []string `yaml:"cipher-suites,omitempty" json:"cipher-suites,omitempty" extensions:"x-nullable"`
 	// Path to trusted client CA certificates in PEM format.
 	// Rewriting this file at the same path reloads the mTLS trust pool without a restart; changing the path requires a restart.
-	ClientCAFile string `yaml:"client-ca-file,omitempty" json:"client-ca-file,omitempty" example:"/path/to/client-ca.pem" extensions:"x-nullable"`
+	ClientCAFile Path `yaml:"client-ca-file,omitempty" json:"client-ca-file,omitempty" example:"/path/to/client-ca.pem" extensions:"x-nullable"`
 	// Path to one DER-encoded CRL or one or more PEM-encoded CRLs for client certificates.
 	// Rewriting this file at the same path reloads revocation state without a restart; changing the path requires a restart.
-	CRLFile string `yaml:"crl-file,omitempty" json:"crl-file,omitempty" example:"/path/to/client.crl" extensions:"x-nullable"`
+	CRLFile Path `yaml:"crl-file,omitempty" json:"crl-file,omitempty" example:"/path/to/client.crl" extensions:"x-nullable"`
 	// Client certificate authentication mode.
 	ClientAuth TLSClientAuth `yaml:"client-auth,omitempty" json:"client-auth,omitempty" default:"none"`
 }
@@ -96,17 +95,17 @@ func (s *ServerConfigHTTPS) validateTLSFields() error {
 	if s.KeyFilePassword != "" && s.KeyFile == "" {
 		return errValidationRequires("key-file-password", keyField)
 	}
-	if err := s.KeyFilePassword.Validate(s.hasSecretAgent()); err != nil {
-		return errValidationSecret("key-file-password", err)
+	if err := validateSecret("key-file-password", s.KeyFilePassword, s.hasSecretAgent()); err != nil {
+		return err
 	}
 
-	for field, path := range map[string]string{
+	for field, path := range map[string]Path{
 		certField:     s.CertFile,
 		keyField:      s.KeyFile,
 		clientCAField: s.ClientCAFile,
 		crlField:      s.CRLFile,
 	} {
-		if err := safepath.ValidateClean(path); err != nil {
+		if err := path.Validate(ValidationOptionalLocalFile); err != nil {
 			return errValidationInvalidPath(field, path, err)
 		}
 	}
@@ -159,14 +158,14 @@ func (s *ServerConfigHTTPS) ToModel() *model.ServerConfigHTTPS {
 	return &model.ServerConfigHTTPS{
 		ListenerConfig:  s.ListenerConfig.toModel(),
 		Port:            s.Port.ToModel(),
-		CertFile:        s.CertFile,
-		KeyFile:         s.KeyFile,
-		KeyFilePassword: string(s.KeyFilePassword),
+		CertFile:        string(s.CertFile),
+		KeyFile:         string(s.KeyFile),
+		KeyFilePassword: s.KeyFilePassword,
 		SecretAgent:     s.SecretAgent.ToModel(),
 		MinVersion:      minVersion,
 		CipherSuites:    s.CipherSuites,
-		ClientCAFile:    s.ClientCAFile,
-		CRLFile:         s.CRLFile,
+		ClientCAFile:    string(s.ClientCAFile),
+		CRLFile:         string(s.CRLFile),
 		ClientAuth:      clientAuth,
 	}
 }
@@ -178,13 +177,13 @@ func (s *ServerConfigHTTPS) fromModel(m *model.ServerConfigHTTPS) {
 
 	s.ListenerConfig = newListenerFromModel(m.ListenerConfig)
 	s.Port = NewPortFromModel(m.Port)
-	s.CertFile = m.CertFile
-	s.KeyFile = m.KeyFile
-	s.KeyFilePassword = secret(m.KeyFilePassword)
+	s.CertFile = Path(m.CertFile)
+	s.KeyFile = Path(m.KeyFile)
+	s.KeyFilePassword = m.KeyFilePassword
 	s.MinVersion = NewTLSMinVersionFromModel(m.MinVersion)
 	s.CipherSuites = m.CipherSuites
-	s.ClientCAFile = m.ClientCAFile
-	s.CRLFile = m.CRLFile
+	s.ClientCAFile = Path(m.ClientCAFile)
+	s.CRLFile = Path(m.CRLFile)
 	s.ClientAuth = NewTLSClientAuthFromModel(m.ClientAuth)
 	s.SecretAgent = newSecretAgentFromModel(m.SecretAgent)
 }

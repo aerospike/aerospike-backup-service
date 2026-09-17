@@ -63,14 +63,15 @@ func TestBackupServiceConfig_Validate_ScheduleTimezone(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		value   string
+		value   ScheduleTimezone
 		wantErr string
 	}{
 		{name: "omitted", value: ""},
 		{name: "utc", value: "UTC"},
 		{name: "local", value: "local"},
 		{name: "iana", value: "America/New_York"},
-		{name: "EST rejected", value: "EST", wantErr: "EST"},
+		{name: "slashless iana", value: "Japan"},
+		{name: "iana EST accepted as fixed offset", value: "EST"},
 		{name: "unknown name", value: "Not/AZone", wantErr: "Not/AZone"},
 	}
 
@@ -130,8 +131,8 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 			config: &ServiceConfig{
 				ServerHTTP: &ServerConfigHTTP{ListenerConfig: ListenerConfig{Disabled: true}},
 				ServerHTTPS: &ServerConfigHTTPS{
-					CertFile: certs.certFile,
-					KeyFile:  certs.keyFile,
+					CertFile: Path(certs.certFile),
+					KeyFile:  Path(certs.keyFile),
 				},
 			},
 		},
@@ -141,8 +142,8 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 				ServerHTTP: &ServerConfigHTTP{Port: ptr.Of(Port(8080))},
 				ServerHTTPS: &ServerConfigHTTPS{
 					Port:     ptr.Of(Port(8443)),
-					CertFile: certs.certFile,
-					KeyFile:  certs.keyFile,
+					CertFile: Path(certs.certFile),
+					KeyFile:  Path(certs.keyFile),
 				},
 			},
 		},
@@ -167,8 +168,8 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 				ServerHTTP: &ServerConfigHTTP{Port: ptr.Of(Port(8443))},
 				ServerHTTPS: &ServerConfigHTTPS{
 					Port:     ptr.Of(Port(8443)),
-					CertFile: certs.certFile,
-					KeyFile:  certs.keyFile,
+					CertFile: Path(certs.certFile),
+					KeyFile:  Path(certs.keyFile),
 				},
 			},
 			wantErr: "cannot use the same port 8443",

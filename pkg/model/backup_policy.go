@@ -94,6 +94,16 @@ func (p *BackupPolicy) UseCompressionOrDefault() bool {
 	return *defaultConfig.backupPolicy.UseCompression
 }
 
+// WithClusterConfigOrDefault reports whether a full backup also stores the cluster
+// configuration. If the property is not set, it returns the default value.
+func (p *BackupPolicy) WithClusterConfigOrDefault() bool {
+	if p != nil && p.WithClusterConfig != nil {
+		return *p.WithClusterConfig
+	}
+
+	return *defaultConfig.backupPolicy.WithClusterConfig
+}
+
 func (p *BackupPolicy) CompactOrDefault() bool {
 	if p != nil && p.Compact != nil {
 		return *p.Compact

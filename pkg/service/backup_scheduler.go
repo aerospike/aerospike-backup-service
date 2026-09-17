@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,7 +9,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -87,12 +85,11 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 		jobKey(routine.Name, model.BackupTypeFull),
 	)
 
-	location := routine.Timezone.ResolvedLocation()
-	if err := s.scheduleCronJob(routine.IntervalCron, location, fullJob); err != nil {
+	if err := s.scheduleCronJob(routine.FullSchedule(), fullJob); err != nil {
 		return fmt.Errorf("failed to schedule full backup: %w", err)
 	}
 
-	if len(routine.IncrIntervalCron) == 0 {
+	if !routine.HasIncrementalSchedule() {
 		// Incremental scheduling is optional and skipped when cron is not configured.
 		return nil
 	}
@@ -101,7 +98,7 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 		newBackupJob(s.orchestrator, routine, model.BackupTypeIncremental),
 		jobKey(routine.Name, model.BackupTypeIncremental),
 	)
-	if err := s.scheduleCronJob(routine.IncrIntervalCron, location, incrementalJob); err != nil {
+	if err := s.scheduleCronJob(routine.IncrementalSchedule(), incrementalJob); err != nil {
 		return fmt.Errorf("failed to schedule incremental backup: %w", err)
 	}
 
@@ -109,8 +106,8 @@ func (s *BackupScheduler) scheduleRoutineBackups(routine *model.BackupRoutine) e
 }
 
 // scheduleCronJob attaches a cron trigger to jobDetail and schedules it on the underlying Quartz scheduler.
-func (s *BackupScheduler) scheduleCronJob(interval string, loc *time.Location, jobDetail *quartz.JobDetail) error {
-	cronTrigger, err := quartz.NewCronTriggerWithLoc(interval, loc)
+func (s *BackupScheduler) scheduleCronJob(schedule model.Schedule, jobDetail *quartz.JobDetail) error {
+	cronTrigger, err := quartz.NewCronTriggerWithLoc(schedule.Cron, schedule.Location)
 	if err != nil {
 		return err
 	}
@@ -150,14 +147,24 @@ func (s *BackupScheduler) triggerAdHocBackup(
 }
 
 // NewScheduler creates a new quartz.Scheduler.
-func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler, error) {
+func NewScheduler(appLogger *slog.Logger) (quartz.Scheduler, error) {
 	warnOnlyLogger := log.NewMinLevelLogger(appLogger, slog.LevelWarn)
 	scheduler, err := quartz.NewStdScheduler(
 		quartz.WithOutdatedThreshold(time.Second),
-		quartz.WithLogger(logger.NewSlogLogger(ctx, warnOnlyLogger)),
+		quartz.WithLogger(schedulerLogger{warnOnlyLogger}),
 		quartz.WithJobMetadata(),
 	)
+
 	return scheduler, err
+}
+
+// schedulerLogger adapts a slog.Logger to the logger quartz wants.
+type schedulerLogger struct {
+	*slog.Logger
+}
+
+func (l schedulerLogger) Trace(msg string, args ...any) {
+	l.Debug(msg, args...)
 }
 
 // jobKey returns the stable Quartz key for a periodic full or incremental job in the scheduled group.

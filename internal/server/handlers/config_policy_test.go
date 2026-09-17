@@ -44,7 +44,7 @@ func TestAddPolicy(t *testing.T) {
 			policyName:     "test-policy",
 			requestBody:    "{noField : 1}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 
@@ -177,7 +177,7 @@ func TestUpdatePolicy(t *testing.T) {
 			policyName:     "test-policy",
 			requestBody:    "{nil}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 		{
 			name:           "unknown policy name",
@@ -327,10 +327,9 @@ func setupTestService(t *testing.T) *Service {
 	mockManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	mockConfigApplier := service.NewMockConfigApplier(ctrl)
-	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil).AnyTimes()
+	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil).AnyTimes()
 
 	return NewService(
-		t.Context(),
 		model.NewConfig(),
 		mockConfigApplier,
 		nil,

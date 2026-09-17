@@ -55,7 +55,7 @@ func (h *backupCompletionHandler) OnSuccess(
 	timestamp time.Time,
 	logger *slog.Logger,
 ) {
-	go h.registry.BackupSucceeded(routine, backupType)
+	go h.registry.BackupSucceeded(ctx, routine, backupType)
 
 	if backupType != model.BackupTypeFull {
 		return
@@ -72,7 +72,7 @@ func (h *backupCompletionHandler) OnSuccess(
 	}()
 
 	go func() {
-		if routine.BackupPolicy.WithClusterConfig != nil && *routine.BackupPolicy.WithClusterConfig {
+		if routine.BackupPolicy.WithClusterConfigOrDefault() {
 			if err := h.clusterConfigWriter.Write(ctx, routine, timestamp); err != nil {
 				if errors.Is(err, context.Canceled) {
 					logger.Info("Cluster configuration backup context canceled")

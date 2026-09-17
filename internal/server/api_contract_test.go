@@ -84,7 +84,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		{http.MethodGet, "/v1/config/clusters", "", http.StatusOK, "{}"},
 		{
 			http.MethodPost, "/v1/config/clusters/cluster1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: seed nodes are not specified\n",
+			"invalid request: seed nodes are not specified\n",
 		},
 		{
 			http.MethodGet, "/v1/config/clusters/cluster1", "", http.StatusNotFound,
@@ -92,7 +92,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		},
 		{
 			http.MethodPut, "/v1/config/clusters/cluster1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: seed nodes are not specified\n",
+			"invalid request: seed nodes are not specified\n",
 		},
 		{
 			http.MethodDelete, "/v1/config/clusters/cluster1", "", http.StatusBadRequest,
@@ -102,7 +102,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		{http.MethodGet, "/v1/config/storage", "", http.StatusOK, "{}"},
 		{
 			http.MethodPost, "/v1/config/storage/storage1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: no storage type specified\n",
+			"invalid request: no storage type specified\n",
 		},
 		{
 			http.MethodGet, "/v1/config/storage/storage1", "", http.StatusNotFound,
@@ -110,7 +110,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		},
 		{
 			http.MethodPut, "/v1/config/storage/storage1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: no storage type specified\n",
+			"invalid request: no storage type specified\n",
 		},
 		{
 			http.MethodDelete, "/v1/config/storage/storage1", "", http.StatusBadRequest,
@@ -135,7 +135,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		{http.MethodGet, "/v1/config/routines", "", http.StatusOK, "{}"},
 		{
 			http.MethodPost, "/v1/config/routines/routine1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: empty field validation error: \"source-cluster\" required\n",
+			"invalid request: empty field validation error: \"source-cluster\" required\n",
 		},
 		{
 			http.MethodGet, "/v1/config/routines/routine1", "", http.StatusNotFound,
@@ -143,7 +143,7 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		},
 		{
 			http.MethodPut, "/v1/config/routines/routine1", "{}", http.StatusBadRequest,
-			"invalid JSON payload: empty field validation error: \"source-cluster\" required\n",
+			"invalid request: empty field validation error: \"source-cluster\" required\n",
 		},
 		{
 			http.MethodDelete, "/v1/config/routines/routine1", "", http.StatusBadRequest,
@@ -203,12 +203,12 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 		},
 		{
 			http.MethodGet, "/v1/restore/status/1", "", http.StatusNotFound,
-			"job '\\x01' not found\n",
+			"job 1 not found\n",
 		},
 		{http.MethodGet, "/v1/restore/jobs", "", http.StatusOK, "{}"},
 		{
 			http.MethodPost, "/v1/restore/cancel/1", "", http.StatusNotFound,
-			"job '\\x01' not found\n",
+			"job 1 not found\n",
 		},
 		{
 			http.MethodGet, "/v1/retrieve/configuration/routine1/1000", "", http.StatusNotFound,
@@ -269,4 +269,45 @@ func keysOf(m map[string]any) []string {
 	}
 
 	return keys
+}
+
+// TestUnconfiguredService_SentinelSecretValidation tests that creating new entities with
+// redacted secret sentinels is rejected with a 400 error.
+func TestUnconfiguredService_SentinelSecretValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		method      string
+		path        string
+		body        string
+		wantStatus  int
+		wantBodyReg string
+	}{
+		{
+			name:   "new cluster with redacted password sentinel",
+			method: http.MethodPost,
+			path:   "/v1/config/clusters/newcluster",
+			body: "{\"seed-nodes\":[{\"host-name\":\"localhost\",\"port\":3000}]," +
+				"\"credentials\":{\"user\":\"admin\",\"password\":\"[secret]\"}}",
+			wantStatus:  http.StatusBadRequest,
+			wantBodyReg: "cannot use redacted secret.*for a new entity",
+		},
+		{
+			name:   "new storage with redacted secret access key sentinel",
+			method: http.MethodPost,
+			path:   "/v1/config/storage/newstorage",
+			body: "{\"s3-storage\":{\"bucket\":\"test\",\"s3-region\":\"us-east-1\"," +
+				"\"access-key-id\":\"key\",\"secret-access-key\":\"[secret]\"}}",
+			wantStatus:  http.StatusBadRequest,
+			wantBodyReg: "cannot use redacted secret.*for a new entity",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := serve(t, newUnconfiguredService(t), tt.method, tt.path, tt.body)
+
+			assert.Equal(t, tt.wantStatus, w.Code)
+			assert.Regexp(t, tt.wantBodyReg, w.Body.String())
+		})
+	}
 }

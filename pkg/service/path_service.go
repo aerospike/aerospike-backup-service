@@ -40,7 +40,7 @@ type PathService interface {
 	GetConfigurationFilePath(routineName string, timestamp time.Time, index int) string
 
 	// ExtractTimestampFromPath extracts the timestamp string from a given path.
-	ExtractTimestampFromPath(path string) string
+	ExtractTimestampFromPath(inputPath string) string
 }
 
 type pathService struct {
@@ -54,6 +54,7 @@ var _ PathService = (*pathService)(nil)
 func NewPathService(format *model.TimestampFormat) PathService {
 	return &pathService{
 		format: format,
+		// path contains full or incremental backup folder tag, followed by 13 digits timestamp of the Unix-milliseconds.
 		timestampPattern: regexp.MustCompile(
 			fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})(?:_[^/]*)?/`,
 				fullBackupDirectory,
@@ -101,13 +102,13 @@ func (s *pathService) formatTimestamp(t time.Time) string {
 }
 
 // ExtractTimestampFromPath extracts the timestamp part from a path.
-func (s *pathService) ExtractTimestampFromPath(path string) string {
-	matches := s.timestampPattern.FindStringSubmatch(path)
+func (s *pathService) ExtractTimestampFromPath(inputPath string) string {
+	matches := s.timestampPattern.FindStringSubmatch(inputPath)
 	if len(matches) >= 3 {
 		return matches[2] // The timestamp is in the second capturing group
 	}
 
-	slog.Warn("Failed to extract timestamp", slog.String("path", path))
+	slog.Warn("Failed to extract timestamp", slog.String("path", inputPath))
 	return ""
 }
 

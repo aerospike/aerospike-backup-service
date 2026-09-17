@@ -116,12 +116,13 @@ func (cm *clientManager) GetClient(
 	// We have a valid aeroClient, but is it connected?
 	status, err := client.InfoClient().GetStatus(ctx)
 	if err != nil {
+		cm.dropUnusedClient(info, clusterKey)
 		return nil, err
 	}
 
 	if status != "ok" {
-		// Connection is dead.
-		// The caller will have to retry (which will trigger a new connection).
+		// Connection is dead. Drop it, so the caller's retry opens a new one.
+		cm.dropUnusedClient(info, clusterKey)
 		return nil, fmt.Errorf("aerospike cluster connection lost: %s", status)
 	}
 
@@ -134,6 +135,26 @@ func (cm *clientManager) GetClient(
 
 	// 4. Create the wrapper for this specific request
 	return client, nil
+}
+
+// dropUnusedClient closes and forgets a cached client that failed its health check, unless other
+// callers still hold it: they release it through Close, which schedules the closing.
+// The caller must hold info.mu.
+func (cm *clientManager) dropUnusedClient(info *clientInfo, clusterKey uint64) {
+	if info.count > 0 || info.aeroClient == nil {
+		return
+	}
+
+	if info.closeTimer != nil {
+		info.closeTimer.Stop()
+		info.closeTimer = nil
+	}
+
+	cm.clients.Remove(clusterKey)
+	info.aeroClient.Close()
+	info.aeroClient = nil
+
+	slog.Warn("Aerospike client dropped after a failed health check", slog.Any("id", clusterKey))
 }
 
 func newInfo(cluster *model.AerospikeCluster) *clientInfo {
@@ -170,10 +191,9 @@ func (cm *clientManager) Close(client Client) {
 
 	// We need to find which info struct owns this client.
 	// Since Client interface wraps the underlying AerospikeClient, we compare pointers.
-	found := false
 	cm.clients.Iterate(func(key uint64, info *clientInfo) {
-		if found {
-			return // Optimization: stop if already found
+		if targetInfo != nil {
+			return
 		}
 
 		// We must lock to read info.aeroClient safely,
@@ -182,12 +202,11 @@ func (cm *clientManager) Close(client Client) {
 		if info.aeroClient == client.AerospikeClient() {
 			targetInfo = info
 			targetKey = key
-			found = true
 		}
 		info.mu.RUnlock()
 	})
 
-	if found {
+	if targetInfo != nil {
 		cm.decrementRef(targetInfo, targetKey)
 	} else {
 		// If it's not in our cache, we must close it immediately because we aren't managing its lifecycle.

@@ -163,6 +163,21 @@ func (mr *MockInfoGetterMockRecorder) GetRestoreStatus(ctx, namespace any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRestoreStatus", reflect.TypeOf((*MockInfoGetter)(nil).GetRestoreStatus), ctx, namespace)
 }
 
+// GetSIndexInfo mocks base method.
+func (m *MockInfoGetter) GetSIndexInfo(ctx context.Context, namespace string) (models.SIndexInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSIndexInfo", ctx, namespace)
+	ret0, _ := ret[0].(models.SIndexInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSIndexInfo indicates an expected call of GetSIndexInfo.
+func (mr *MockInfoGetterMockRecorder) GetSIndexInfo(ctx, namespace any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSIndexInfo", reflect.TypeOf((*MockInfoGetter)(nil).GetSIndexInfo), ctx, namespace)
+}
+
 // GetSIndexes mocks base method.
 func (m *MockInfoGetter) GetSIndexes(ctx context.Context, namespace string) ([]*models.SIndex, error) {
 	m.ctrl.T.Helper()
@@ -251,21 +266,6 @@ func (m *MockInfoGetter) GetVersion(ctx context.Context) (models0.AerospikeVersi
 func (mr *MockInfoGetterMockRecorder) GetVersion(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersion", reflect.TypeOf((*MockInfoGetter)(nil).GetVersion), ctx)
-}
-
-// HasExpressionSIndex mocks base method.
-func (m *MockInfoGetter) HasExpressionSIndex(ctx context.Context, namespace string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasExpressionSIndex", ctx, namespace)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// HasExpressionSIndex indicates an expected call of HasExpressionSIndex.
-func (mr *MockInfoGetterMockRecorder) HasExpressionSIndex(ctx, namespace any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasExpressionSIndex", reflect.TypeOf((*MockInfoGetter)(nil).HasExpressionSIndex), ctx, namespace)
 }
 
 // PrepareServerRestore mocks base method.

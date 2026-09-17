@@ -13,15 +13,15 @@ import (
 type GcpStorage struct {
 	SecretAgentConfig `yaml:",inline"`
 	// Path to the file containing the service account key in JSON format.
-	KeyFile string `yaml:"key-file-path,omitempty" json:"key-file-path,omitempty" extensions:"x-nullable"`
+	KeyFile Path `yaml:"key-file-path,omitempty" json:"key-file-path,omitempty" extensions:"x-nullable"`
 	// Key is the service account key in JSON format.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	Key secret `yaml:"key,omitempty" json:"key,omitempty" format:"password" extensions:"x-nullable"`
+	Key Secret `yaml:"key,omitempty" json:"key,omitempty" format:"password" extensions:"x-nullable"`
 	// GCP storage bucket name.
 	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
 	// The root path for the backup repository. If not specified, backups will be saved in the bucket's root.
-	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
+	Path Path `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
 	// Alternative url.
 	// It is not recommended to use an alternate URL in a production environment.
 	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty" extensions:"x-nullable"`
@@ -40,8 +40,11 @@ func (s *GcpStorage) Validate() error {
 	if s.BucketName == "" {
 		return errors.New("GCP bucket name is not specified")
 	}
-	if err := validateObjectStoragePath(s.Path); err != nil {
-		return err
+	if err := s.Path.Validate(ValidationAllowEmpty); err != nil {
+		return errValidationInvalidPath("path", s.Path, err)
+	}
+	if err := s.KeyFile.Validate(ValidationOptionalLocalFile); err != nil {
+		return errValidationInvalidPath("key-file-path", s.KeyFile, err)
 	}
 	if s.KeyFile != "" && s.Key != "" {
 		return errValidationMutuallyExclusive("key-file-path", "key-json")
@@ -54,8 +57,8 @@ func (s *GcpStorage) Validate() error {
 	}
 
 	withAgent := s.hasSecretAgent()
-	if err := s.Key.Validate(withAgent); err != nil {
-		return errValidationSecret("key-json", err)
+	if err := validateSecret("key-json", s.Key, withAgent); err != nil {
+		return err
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
@@ -70,11 +73,11 @@ func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
 	}
 
 	return &model.GcpStorage{
-		KeyFile:      s.KeyFile,
+		KeyFile:      string(s.KeyFile),
 		BucketName:   s.BucketName,
-		Path:         s.Path,
+		Path:         string(s.Path),
 		Endpoint:     s.Endpoint,
-		KeyJSON:      string(s.Key),
+		KeyJSON:      s.Key,
 		SecretAgent:  agent,
 		MinPartSize:  s.MinPartSize,
 		StorageClass: s.StorageClass.ToModel(),
@@ -83,11 +86,11 @@ func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
 
 func newGcpStorageFromModel(s *model.GcpStorage, config *model.BackupConfig) *GcpStorage {
 	return &GcpStorage{
-		KeyFile:           s.KeyFile,
+		KeyFile:           Path(s.KeyFile),
 		BucketName:        s.BucketName,
-		Path:              s.Path,
+		Path:              Path(s.Path),
 		Endpoint:          s.Endpoint,
-		Key:               secret(s.KeyJSON),
+		Key:               s.KeyJSON,
 		MinPartSize:       s.MinPartSize,
 		SecretAgentConfig: ResolveSecretAgentFromModel(s.SecretAgent, config),
 		StorageClass:      newGcpStorageClassFromModel(s.StorageClass),

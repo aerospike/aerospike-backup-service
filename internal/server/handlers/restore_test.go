@@ -47,10 +47,9 @@ func TestService_RestoreHandlers(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
 			mockManager := service.NewMockRestoreManager(ctrl)
-			mockManager.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(tt.jobID, nil)
+			mockManager.EXPECT().Restore(gomock.Any()).Return(tt.jobID)
 
 			svc := &Service{
-				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
 			}
@@ -86,7 +85,7 @@ func TestService_restoreByPath(t *testing.T) {
 			requestBody:    "{noField : 1}",
 			setupMock:      func(*service.MockRestoreManager) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 		{
 			name:           "validation error - missing backup data path",
@@ -106,20 +105,6 @@ func TestService_restoreByPath(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name: "restore manager error",
-			requestBody: marshalToString(dto.RestoreRequest{
-				DestinationClusterConfig: dto.DestinationClusterConfig{Cluster: &validRestoreCluster},
-				StorageConfig:            dto.StorageConfig{Storage: &validRestoreStorage},
-				Policy:                   &dto.RestorePolicy{},
-				BackupDataPath:           "test/path",
-			}),
-			setupMock: func(m *service.MockRestoreManager) {
-				m.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(model.RestoreJobID(0), errors.New("boom"))
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "boom",
-		},
-		{
 			name: "success",
 			requestBody: marshalToString(dto.RestoreRequest{
 				DestinationClusterConfig: dto.DestinationClusterConfig{Cluster: &validRestoreCluster},
@@ -128,7 +113,7 @@ func TestService_restoreByPath(t *testing.T) {
 				BackupDataPath:           "test/path",
 			}),
 			setupMock: func(m *service.MockRestoreManager) {
-				m.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(model.RestoreJobID(42), nil)
+				m.EXPECT().Restore(gomock.Any()).Return(model.RestoreJobID(42))
 			},
 			expectedStatus: http.StatusAccepted,
 		},
@@ -142,7 +127,6 @@ func TestService_restoreByPath(t *testing.T) {
 			tt.setupMock(mockManager)
 
 			svc := &Service{
-				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
 			}
@@ -175,7 +159,7 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 			requestBody:    "{noField : 1}",
 			setupMock:      func(*service.MockRestoreManager) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 		{
 			name: "validation error - missing time",
@@ -198,21 +182,6 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name: "restore manager error",
-			requestBody: marshalToString(dto.RestoreTimestampRequest{
-				DestinationClusterConfig: dto.DestinationClusterConfig{Cluster: &validRestoreCluster},
-				StorageConfig:            dto.StorageConfig{Storage: &validRestoreStorage},
-				Policy:                   &dto.TimestampRestorePolicy{},
-				Time:                     1739538000000,
-				Routine:                  "daily",
-			}),
-			setupMock: func(m *service.MockRestoreManager) {
-				m.EXPECT().RestoreByTime(gomock.Any(), gomock.Any()).Return(model.RestoreJobID(0), errors.New("boom"))
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "boom",
-		},
-		{
 			name: "success",
 			requestBody: marshalToString(dto.RestoreTimestampRequest{
 				DestinationClusterConfig: dto.DestinationClusterConfig{Cluster: &validRestoreCluster},
@@ -222,7 +191,7 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 				Routine:                  "daily",
 			}),
 			setupMock: func(m *service.MockRestoreManager) {
-				m.EXPECT().RestoreByTime(gomock.Any(), gomock.Any()).Return(model.RestoreJobID(7), nil)
+				m.EXPECT().RestoreByTime(gomock.Any()).Return(model.RestoreJobID(7))
 			},
 			expectedStatus: http.StatusAccepted,
 		},
@@ -236,7 +205,6 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 			tt.setupMock(mockManager)
 
 			svc := &Service{
-				sysCtx:         t.Context(),
 				config:         model.NewConfig(),
 				restoreManager: mockManager,
 			}

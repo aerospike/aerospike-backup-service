@@ -41,12 +41,8 @@ func newBackupConfig() *BackupConfig {
 	}
 }
 
-func (bc *BackupConfig) copy() *BackupConfig {
-	if bc == nil {
-		return nil
-	}
-
-	newConfig := &BackupConfig{
+func (bc BackupConfig) copy() BackupConfig {
+	return BackupConfig{
 		AerospikeClusters:   maps.Clone(bc.AerospikeClusters),
 		Storage:             maps.Clone(bc.Storage),
 		BackupPolicies:      maps.Clone(bc.BackupPolicies),
@@ -54,8 +50,6 @@ func (bc *BackupConfig) copy() *BackupConfig {
 		SecretAgents:        maps.Clone(bc.SecretAgents),
 		invalidatedRoutines: make(map[string]struct{}),
 	}
-
-	return newConfig
 }
 
 var (
@@ -67,10 +61,36 @@ var (
 func (c *Config) BackupConfigCopy() *BackupConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.backupConfig.copy()
+	config := c.backupConfig.copy()
+	return &config
 }
 
 func (c *Config) AddStorage(name string, s Storage) error {
+	if s == nil {
+		return errors.New("storage cannot be nil")
+	}
+
+	switch storage := s.(type) {
+	case *LocalStorage:
+		if storage == nil {
+			return errors.New("storage cannot be nil")
+		}
+	case *S3Storage:
+		if storage == nil {
+			return errors.New("storage cannot be nil")
+		}
+	case *GcpStorage:
+		if storage == nil {
+			return errors.New("storage cannot be nil")
+		}
+	case *AzureStorage:
+		if storage == nil {
+			return errors.New("storage cannot be nil")
+		}
+	default:
+		return fmt.Errorf("unsupported storage type %T", s)
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -108,6 +128,10 @@ func (c *Config) routineUsesStorage(s Storage) string {
 }
 
 func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
+	if p == nil {
+		return errors.New("backup policy cannot be nil")
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -115,6 +139,7 @@ func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
 		return fmt.Errorf("add backup policy %q: %w", name, ErrAlreadyExists)
 	}
 	c.backupConfig.BackupPolicies[name] = p
+
 	return nil
 }
 
@@ -166,6 +191,10 @@ func (c *Config) Routine(name string) (*BackupRoutine, bool) {
 }
 
 func (c *Config) AddRoutine(r *BackupRoutine) error {
+	if r == nil {
+		return errors.New("backup routine cannot be nil")
+	}
+
 	if r.Name == "" {
 		return errors.New("backup routine name is empty")
 	}
@@ -183,6 +212,10 @@ func (c *Config) AddRoutine(r *BackupRoutine) error {
 }
 
 func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
+	if cluster == nil {
+		return errors.New("cluster cannot be nil")
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -190,6 +223,7 @@ func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
 		return fmt.Errorf("add Aerospike cluster %q: %w", name, ErrAlreadyExists)
 	}
 	c.backupConfig.AerospikeClusters[name] = cluster
+
 	return nil
 }
 

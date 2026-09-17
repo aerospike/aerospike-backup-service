@@ -22,8 +22,8 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "valid config",
 			config: &ServerConfigHTTPS{
-				CertFile: certs.certFile,
-				KeyFile:  certs.keyFile,
+				CertFile: Path(certs.certFile),
+				KeyFile:  Path(certs.keyFile),
 			},
 		},
 		{
@@ -34,15 +34,15 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			name: "disabled with valid certificate",
 			config: &ServerConfigHTTPS{
 				ListenerConfig: ListenerConfig{Disabled: true},
-				CertFile:       certs.certFile,
-				KeyFile:        certs.keyFile,
+				CertFile:       Path(certs.certFile),
+				KeyFile:        Path(certs.keyFile),
 			},
 		},
 		{
 			name: "valid TLS 1.3 and secure cipher suite",
 			config: &ServerConfigHTTPS{
-				CertFile:     certs.certFile,
-				KeyFile:      certs.keyFile,
+				CertFile:     Path(certs.certFile),
+				KeyFile:      Path(certs.keyFile),
 				MinVersion:   "1.3",
 				CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 			},
@@ -50,18 +50,18 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "valid mutual TLS",
 			config: &ServerConfigHTTPS{
-				CertFile:     certs.certFile,
-				KeyFile:      certs.keyFile,
-				ClientCAFile: certs.caFile,
+				CertFile:     Path(certs.certFile),
+				KeyFile:      Path(certs.keyFile),
+				ClientCAFile: Path(certs.caFile),
 				ClientAuth:   "require-and-verify",
 			},
 		},
 		{
 			name: "valid mutual TLS with CRL",
 			config: &ServerConfigHTTPS{
-				CertFile:     certs.certFile,
-				KeyFile:      certs.keyFile,
-				ClientCAFile: certs.caFile,
+				CertFile:     Path(certs.certFile),
+				KeyFile:      Path(certs.keyFile),
+				ClientCAFile: Path(certs.caFile),
 				CRLFile:      "/path/to/client.crl",
 				ClientAuth:   "require-and-verify",
 			},
@@ -69,9 +69,9 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "valid request client certificate",
 			config: &ServerConfigHTTPS{
-				CertFile:     certs.certFile,
-				KeyFile:      certs.keyFile,
-				ClientCAFile: certs.caFile,
+				CertFile:     Path(certs.certFile),
+				KeyFile:      Path(certs.keyFile),
+				ClientCAFile: Path(certs.caFile),
 				ClientAuth:   "request",
 			},
 		},
@@ -89,20 +89,20 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		},
 		{
 			name:    "missing certificate",
-			config:  &ServerConfigHTTPS{KeyFile: certs.keyFile},
+			config:  &ServerConfigHTTPS{KeyFile: Path(certs.keyFile)},
 			wantErr: "cert-file",
 		},
 		{
 			name:    "missing key",
-			config:  &ServerConfigHTTPS{CertFile: certs.certFile},
+			config:  &ServerConfigHTTPS{CertFile: Path(certs.certFile)},
 			wantErr: "key-file",
 		},
 		{
 			name: "invalid port",
 			config: &ServerConfigHTTPS{
 				Port:     ptr.Of(Port(99999)),
-				CertFile: certs.certFile,
-				KeyFile:  certs.keyFile,
+				CertFile: Path(certs.certFile),
+				KeyFile:  Path(certs.keyFile),
 			},
 			wantErr: "port number",
 		},
@@ -110,8 +110,8 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			name: "context path without leading slash",
 			config: &ServerConfigHTTPS{
 				ListenerConfig: ListenerConfig{ContextPath: "abs"},
-				CertFile:       certs.certFile,
-				KeyFile:        certs.keyFile,
+				CertFile:       Path(certs.certFile),
+				KeyFile:        Path(certs.keyFile),
 			},
 			wantErr: "context-path",
 		},
@@ -119,7 +119,7 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			name: "disabled with certificate and no key",
 			config: &ServerConfigHTTPS{
 				ListenerConfig: ListenerConfig{Disabled: true},
-				CertFile:       certs.certFile,
+				CertFile:       Path(certs.certFile),
 			},
 			wantErr: "key-file",
 		},
@@ -127,7 +127,7 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			name: "disabled with key and no certificate",
 			config: &ServerConfigHTTPS{
 				ListenerConfig: ListenerConfig{Disabled: true},
-				KeyFile:        certs.keyFile,
+				KeyFile:        Path(certs.keyFile),
 			},
 			wantErr: "cert-file",
 		},
@@ -143,15 +143,15 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			name: "dirty certificate path",
 			config: &ServerConfigHTTPS{
 				CertFile: "/tmp/../server.pem",
-				KeyFile:  certs.keyFile,
+				KeyFile:  Path(certs.keyFile),
 			},
 			wantErr: "cert-file",
 		},
 		{
 			name: "dirty client CA path",
 			config: &ServerConfigHTTPS{
-				CertFile:     certs.certFile,
-				KeyFile:      certs.keyFile,
+				CertFile:     Path(certs.certFile),
+				KeyFile:      Path(certs.keyFile),
 				ClientCAFile: "/tmp/../ca.pem",
 			},
 			wantErr: "client-ca-file",
@@ -159,9 +159,9 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "dirty CRL path",
 			config: &ServerConfigHTTPS{
-				CertFile:     certs.certFile,
-				KeyFile:      certs.keyFile,
-				ClientCAFile: certs.caFile,
+				CertFile:     Path(certs.certFile),
+				KeyFile:      Path(certs.keyFile),
+				ClientCAFile: Path(certs.caFile),
 				CRLFile:      "/tmp/../client.crl",
 				ClientAuth:   "require-and-verify",
 			},
@@ -170,23 +170,23 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "mismatched certificate and key is structurally valid",
 			config: &ServerConfigHTTPS{
-				CertFile: certs.certFile,
-				KeyFile:  otherCerts.keyFile,
+				CertFile: Path(certs.certFile),
+				KeyFile:  Path(otherCerts.keyFile),
 			},
 		},
 		{
 			name: "disabled with mismatched certificate and key is structurally valid",
 			config: &ServerConfigHTTPS{
 				ListenerConfig: ListenerConfig{Disabled: true},
-				CertFile:       certs.certFile,
-				KeyFile:        otherCerts.keyFile,
+				CertFile:       Path(certs.certFile),
+				KeyFile:        Path(otherCerts.keyFile),
 			},
 		},
 		{
 			name: "client authentication without CA",
 			config: &ServerConfigHTTPS{
-				CertFile:   certs.certFile,
-				KeyFile:    certs.keyFile,
+				CertFile:   Path(certs.certFile),
+				KeyFile:    Path(certs.keyFile),
 				ClientAuth: "request",
 			},
 			wantErr: "client-ca-file",
@@ -194,8 +194,8 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "CRL without client CA",
 			config: &ServerConfigHTTPS{
-				CertFile:   certs.certFile,
-				KeyFile:    certs.keyFile,
+				CertFile:   Path(certs.certFile),
+				KeyFile:    Path(certs.keyFile),
 				CRLFile:    "/path/to/client.crl",
 				ClientAuth: "require-and-verify",
 			},
@@ -204,9 +204,9 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "CRL without require-and-verify",
 			config: &ServerConfigHTTPS{
-				CertFile:     certs.certFile,
-				KeyFile:      certs.keyFile,
-				ClientCAFile: certs.caFile,
+				CertFile:     Path(certs.certFile),
+				KeyFile:      Path(certs.keyFile),
+				ClientCAFile: Path(certs.caFile),
 				CRLFile:      "/path/to/client.crl",
 				ClientAuth:   "request",
 			},
@@ -215,8 +215,8 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "invalid minimum version",
 			config: &ServerConfigHTTPS{
-				CertFile:   certs.certFile,
-				KeyFile:    certs.keyFile,
+				CertFile:   Path(certs.certFile),
+				KeyFile:    Path(certs.keyFile),
 				MinVersion: "1.1",
 			},
 			wantErr: "min-version",
@@ -224,8 +224,8 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "insecure cipher suite",
 			config: &ServerConfigHTTPS{
-				CertFile:     certs.certFile,
-				KeyFile:      certs.keyFile,
+				CertFile:     Path(certs.certFile),
+				KeyFile:      Path(certs.keyFile),
 				CipherSuites: []string{"TLS_RSA_WITH_3DES_EDE_CBC_SHA"},
 			},
 			wantErr: "cipher-suites",
@@ -233,8 +233,8 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "unknown client authentication",
 			config: &ServerConfigHTTPS{
-				CertFile:   certs.certFile,
-				KeyFile:    certs.keyFile,
+				CertFile:   Path(certs.certFile),
+				KeyFile:    Path(certs.keyFile),
 				ClientAuth: "verify-if-given",
 			},
 			wantErr: "client-auth",
@@ -242,8 +242,8 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "secret agent password reference with agent",
 			config: &ServerConfigHTTPS{
-				CertFile:        certs.certFile,
-				KeyFile:         certs.keyFile,
+				CertFile:        Path(certs.certFile),
+				KeyFile:         Path(certs.keyFile),
 				KeyFilePassword: "secrets:agent1:tls-key",
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgentName: "agent1",
@@ -253,8 +253,8 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "secret agent password reference without agent",
 			config: &ServerConfigHTTPS{
-				CertFile:        certs.certFile,
-				KeyFile:         certs.keyFile,
+				CertFile:        Path(certs.certFile),
+				KeyFile:         Path(certs.keyFile),
 				KeyFilePassword: "secrets:agent1:tls-key",
 			},
 			wantErr: "secret agent",
@@ -262,8 +262,8 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "mutually exclusive secret agent settings",
 			config: &ServerConfigHTTPS{
-				CertFile: certs.certFile,
-				KeyFile:  certs.keyFile,
+				CertFile: Path(certs.certFile),
+				KeyFile:  Path(certs.keyFile),
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent:     &SecretAgent{Address: "localhost", ConnectionType: "tcp"},
 					SecretAgentName: "agent1",
@@ -395,8 +395,8 @@ func TestServerHTTPSConfigToModel_ResolvesSecretAgentName(t *testing.T) {
 	config := &Config{
 		ServiceConfig: ServiceConfig{
 			ServerHTTPS: &ServerConfigHTTPS{
-				CertFile:        certs.certFile,
-				KeyFile:         certs.keyFile,
+				CertFile:        Path(certs.certFile),
+				KeyFile:         Path(certs.keyFile),
 				KeyFilePassword: "secrets:agent1:tls-key",
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgentName: "agent1",

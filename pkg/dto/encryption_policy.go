@@ -10,13 +10,13 @@ type EncryptionPolicy struct {
 	// The encryption mode to be used (NONE, AES128, AES256)
 	Mode EncryptionMode `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE"`
 	// The path to the file containing the encryption key.
-	KeyFile string `yaml:"key-file,omitempty" json:"key-file,omitempty" extensions:"x-nullable"`
+	KeyFile Path `yaml:"key-file,omitempty" json:"key-file,omitempty" extensions:"x-nullable"`
 	// The name of the environment variable containing the encryption key.
 	KeyEnv string `yaml:"key-env,omitempty" json:"key-env,omitempty" extensions:"x-nullable"`
 	// The secret keyword in Aerospike Secret Agent containing the encryption key.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	KeySecret secret `yaml:"key-secret,omitempty" json:"key-secret,omitempty" format:"password" extensions:"x-nullable"`
+	KeySecret Secret `yaml:"key-secret,omitempty" json:"key-secret,omitempty" format:"password" extensions:"x-nullable"` //nolint:lll
 }
 
 // Validate validates the encryption policy.
@@ -62,8 +62,12 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 		return errValidationMutuallyExclusive("key-env", "key-secret")
 	}
 
-	if err := p.KeySecret.Validate(opts.Has(ValidationWithSecretAgent)); err != nil {
-		return errValidationSecret("key-secret", err)
+	if err := validateSecret("key-secret", p.KeySecret, opts.Has(ValidationWithSecretAgent)); err != nil {
+		return err
+	}
+
+	if err := p.KeyFile.Validate(ValidationOptionalLocalFile); err != nil {
+		return errValidationInvalidPath("key-file", p.KeyFile, err)
 	}
 
 	return nil
@@ -76,9 +80,9 @@ func (p *EncryptionPolicy) ToModel() *model.EncryptionPolicy {
 
 	return &model.EncryptionPolicy{
 		Mode:      p.Mode.ToModel(),
-		KeyFile:   p.KeyFile,
+		KeyFile:   string(p.KeyFile),
 		KeyEnv:    p.KeyEnv,
-		KeySecret: string(p.KeySecret),
+		KeySecret: p.KeySecret,
 	}
 }
 
@@ -93,7 +97,7 @@ func newEncryptionPolicyFromModel(m *model.EncryptionPolicy) *EncryptionPolicy {
 
 func (p *EncryptionPolicy) fromModel(m *model.EncryptionPolicy) {
 	p.Mode = NewEncryptionModeFromModel(m.Mode)
-	p.KeyFile = m.KeyFile
+	p.KeyFile = Path(m.KeyFile)
 	p.KeyEnv = m.KeyEnv
-	p.KeySecret = secret(m.KeySecret)
+	p.KeySecret = m.KeySecret
 }

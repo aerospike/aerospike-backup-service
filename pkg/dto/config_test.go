@@ -20,14 +20,14 @@ func validConfig() *Config {
 				SourceCluster: "cluster1",
 				BackupPolicy:  "policy1",
 				Storage:       "storage1",
-				Namespaces:    ptr.Of([]string{"ns1"}),
+				Namespaces:    ptr.Of([]NamespaceName{"ns1"}),
 				IntervalCron:  "* * * * * *",
 			},
 			"routine2": {
 				SourceCluster: "cluster2",
 				BackupPolicy:  "policy2",
 				Storage:       "storage2",
-				Namespaces:    ptr.Of([]string{"ns2"}),
+				Namespaces:    ptr.Of([]NamespaceName{"ns2"}),
 				IntervalCron:  "* * * * * *",
 			},
 		},
@@ -120,7 +120,7 @@ func TestNewConfigFromReader(t *testing.T) {
 	yamlConfig := `
 service:
 `
-	cfg, err := NewConfigFromReader(strings.NewReader(yamlConfig), decoder.YAML)
+	cfg, err := NewFromReader[Config](strings.NewReader(yamlConfig), decoder.YAML)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 }
@@ -128,7 +128,7 @@ service:
 func TestNewConfigFromReader_InvalidYAML(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewConfigFromReader(strings.NewReader("service: [1,2"), decoder.YAML)
+	_, err := NewFromReader[Config](strings.NewReader("service: [1,2"), decoder.YAML)
 	require.Error(t, err)
 }
 
@@ -143,8 +143,9 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 
 		modelConfig, err := validConfig().ToModel()
 		require.NoError(t, err)
-		assert.Equal(t, model.DefaultScheduleTimezone, modelConfig.Routines()["routine1"].Timezone.ResolvedLocation())
-		assert.Equal(t, model.LocationSourceDefault, modelConfig.Routines()["routine1"].Timezone.Source)
+		routine1 := modelConfig.Routines()["routine1"]
+		assert.Equal(t, model.DefaultScheduleTimezone, routine1.Timezone.ResolvedLocation())
+		assert.False(t, routine1.Timezone.IsExplicit())
 	})
 
 	t.Run("inherits service timezone", func(t *testing.T) {
@@ -155,10 +156,12 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 
 		modelConfig, err := config.ToModel()
 		require.NoError(t, err)
-		assert.Equal(t, ny.String(), modelConfig.Routines()["routine1"].Timezone.ResolvedLocation().String())
-		assert.Equal(t, model.LocationSourceService, modelConfig.Routines()["routine1"].Timezone.Source)
-		assert.Equal(t, ny.String(), modelConfig.Routines()["routine2"].Timezone.ResolvedLocation().String())
-		assert.Equal(t, model.LocationSourceService, modelConfig.Routines()["routine2"].Timezone.Source)
+		routine1 := modelConfig.Routines()["routine1"]
+		routine2 := modelConfig.Routines()["routine2"]
+		assert.Equal(t, ny.String(), routine1.Timezone.ResolvedLocation().String())
+		assert.False(t, routine1.Timezone.IsExplicit())
+		assert.Equal(t, ny.String(), routine2.Timezone.ResolvedLocation().String())
+		assert.False(t, routine2.Timezone.IsExplicit())
 	})
 
 	t.Run("whitespace routine timezone inherits service timezone", func(t *testing.T) {
@@ -173,7 +176,7 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 		routine := modelConfig.Routines()["routine1"]
 		assert.Equal(t, ny.String(), routine.Timezone.ResolvedLocation().String())
 		assert.Equal(t, " \t ", routine.Timezone.Configured)
-		assert.Equal(t, model.LocationSourceService, routine.Timezone.Source)
+		assert.False(t, routine.Timezone.IsExplicit())
 	})
 
 	t.Run("routine override wins", func(t *testing.T) {
@@ -185,10 +188,12 @@ func TestConfig_ToModel_ResolvesScheduleTimezone(t *testing.T) {
 
 		modelConfig, err := config.ToModel()
 		require.NoError(t, err)
-		assert.Equal(t, model.DefaultScheduleTimezone, modelConfig.Routines()["routine1"].Timezone.ResolvedLocation())
-		assert.Equal(t, model.LocationSourceRoutine, modelConfig.Routines()["routine1"].Timezone.Source)
-		assert.Equal(t, ny.String(), modelConfig.Routines()["routine2"].Timezone.ResolvedLocation().String())
-		assert.Equal(t, model.LocationSourceService, modelConfig.Routines()["routine2"].Timezone.Source)
+		routine1 := modelConfig.Routines()["routine1"]
+		routine2 := modelConfig.Routines()["routine2"]
+		assert.Equal(t, model.DefaultScheduleTimezone, routine1.Timezone.ResolvedLocation())
+		assert.True(t, routine1.Timezone.IsExplicit())
+		assert.Equal(t, ny.String(), routine2.Timezone.ResolvedLocation().String())
+		assert.False(t, routine2.Timezone.IsExplicit())
 	})
 }
 
@@ -200,8 +205,8 @@ func TestConfig_ScheduleTimezoneRoundTrip(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		serviceTimezone  string
-		routineTimezone  string
+		serviceTimezone  ScheduleTimezone
+		routineTimezone  ScheduleTimezone
 		expectedResolved string
 	}{
 		{

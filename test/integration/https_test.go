@@ -20,7 +20,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
@@ -66,9 +66,9 @@ func withHTTPSListener(certs httpsCertificates, agent *dto.SecretAgent, port int
 		c.ServiceConfig.ServerHTTPS = &dto.ServerConfigHTTPS{
 			ListenerConfig:  dto.ListenerConfig{Address: "127.0.0.1"},
 			Port:            ptr.Of(dto.Port(port)),
-			CertFile:        certs.certFile,
-			KeyFile:         certs.encryptedKeyFile,
-			KeyFilePassword: decoder.Secret(secretRef()),
+			CertFile:        dto.Path(certs.certFile),
+			KeyFile:         dto.Path(certs.encryptedKeyFile),
+			KeyFilePassword: redact.Secret(secretRef()),
 			SecretAgentConfig: dto.SecretAgentConfig{
 				SecretAgent: agent,
 			},

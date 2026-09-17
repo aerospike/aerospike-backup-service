@@ -195,7 +195,7 @@ func defaultRestoreRequest(key string) dto.RestoreRequest {
 			Name: storageName,
 		},
 		Policy:         &dto.RestorePolicy{},
-		BackupDataPath: key,
+		BackupDataPath: dto.Path(key),
 	}
 }
 

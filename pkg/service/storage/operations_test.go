@@ -2,11 +2,15 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/io/storage/options"
+	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -235,4 +239,80 @@ func TestOperations_UnsupportedStorage_ErrorPaths(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported storage type")
 	})
+}
+
+// closingAccessor hands out a reader that closes the readers channel without producing a file,
+// which is how backup-go signals both "nothing to read" and any failure it reports on errorsCh.
+type closingAccessor struct {
+	err error
+}
+
+func (a *closingAccessor) supports(model.Storage) bool { return true }
+
+func (a *closingAccessor) createReader(
+	context.Context, model.Storage, ...options.Opt,
+) (backup.StreamingReader, error) {
+	return &closingReader{err: a.err}, nil
+}
+
+func (a *closingAccessor) createWriter(
+	context.Context, model.Storage, ...options.Opt,
+) (backup.Writer, error) {
+	return nil, errors.New("not supported")
+}
+
+type closingReader struct {
+	backup.StreamingReader
+
+	err error
+}
+
+func (r *closingReader) StreamFiles(
+	_ context.Context, readersCh chan<- models.File, errorsCh chan<- error, _ []string,
+) {
+	if r.err != nil {
+		errorsCh <- r.err
+	}
+
+	close(readersCh)
+}
+
+func TestOperations_ReadFile_ClosedWithoutFile(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		err         error
+		expectError string
+	}{
+		{
+			name:        "error reported before close",
+			err:         errors.New("read failed"),
+			expectError: "read failed",
+		},
+		{
+			name:        "closed without error",
+			expectError: "not found in storage",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ops := &operations{accessors: []Accessor{&closingAccessor{err: tt.err}}}
+
+			_, err := ops.ReadFile(t.Context(), &model.LocalStorage{Path: t.TempDir()}, "config.yml")
+			require.ErrorContains(t, err, tt.expectError)
+		})
+	}
+}
+
+func TestOperations_ReadFiles_ErrorReportedBeforeClose(t *testing.T) {
+	t.Parallel()
+
+	ops := &operations{accessors: []Accessor{&closingAccessor{err: errors.New("read failed")}}}
+
+	_, err := ops.ReadFiles(t.Context(), &model.LocalStorage{Path: t.TempDir()}, "", "")
+	require.ErrorContains(t, err, "read failed")
 }

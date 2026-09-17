@@ -3,11 +3,8 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"io"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -120,25 +117,7 @@ func (a *AerospikeCluster) validateSeedNodesTLSConsistency() error {
 	return nil
 }
 
-// NewClusterFromReader creates a new Storage object from a given reader.
-func NewClusterFromReader(r io.Reader, format decoder.SerializationFormat) (*AerospikeCluster, error) {
-	a := &AerospikeCluster{}
-	if err := decoder.Deserialize(a, r, format); err != nil {
-		return nil, err
-	}
-
-	if err := a.Validate(); err != nil {
-		return nil, err
-	}
-
-	return a, nil
-}
-
 func NewClusterFromModel(m *model.AerospikeCluster, config *model.BackupConfig) *AerospikeCluster {
-	if m == nil {
-		return nil
-	}
-
 	a := &AerospikeCluster{}
 	a.fromModel(m, config)
 	return a
@@ -201,17 +180,17 @@ type Credentials struct {
 	// The password for the cluster authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
-	Password secret `yaml:"password,omitempty" json:"password,omitempty" format:"password" extensions:"x-nullable"`
+	Password Secret `yaml:"password,omitempty" json:"password,omitempty" format:"password" extensions:"x-nullable"`
 	// The file path with the password string.
-	PasswordPath string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
+	PasswordPath Path `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
 	// The authentication mode (INTERNAL, EXTERNAL, PKI).
 	AuthMode AuthMode `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" default:"INTERNAL"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
 	c.User = m.User
-	c.Password = secret(m.Password)
-	c.PasswordPath = m.PasswordPath
+	c.Password = m.Password
+	c.PasswordPath = Path(m.PasswordPath)
 	c.AuthMode = NewAuthModeFromModel(m.AuthMode)
 
 	c.SecretAgentConfig = ResolveSecretAgentFromModel(m.SecretAgent, config)
@@ -233,8 +212,8 @@ func (c *Credentials) Validate() error {
 		return errValidationMutuallyExclusive("password", "password-path")
 	}
 
-	if err := safepath.ValidateClean(c.PasswordPath); err != nil {
-		return fmt.Errorf("%w: invalid password-path", errInvalidPath)
+	if err := c.PasswordPath.Validate(ValidationOptionalLocalFile); err != nil {
+		return errValidationInvalidPath("password-path", c.PasswordPath, err)
 	}
 
 	if err := c.AuthMode.Validate(); err != nil {
@@ -242,8 +221,8 @@ func (c *Credentials) Validate() error {
 	}
 
 	withAgent := c.hasSecretAgent()
-	if err := c.Password.Validate(withAgent); err != nil {
-		return errValidationSecret("password", err)
+	if err := validateSecret("password", c.Password, withAgent); err != nil {
+		return err
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
@@ -262,8 +241,8 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 
 	return &model.Credentials{
 		User:         c.User,
-		Password:     string(c.Password),
-		PasswordPath: c.PasswordPath,
+		Password:     c.Password,
+		PasswordPath: string(c.PasswordPath),
 		AuthMode:     c.AuthMode.ToModel(),
 		SecretAgent:  agent,
 	}, nil

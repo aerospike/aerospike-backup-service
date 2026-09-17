@@ -44,12 +44,11 @@ func (s *BackupSuite) TestBackupRestoreWithIndexes() {
 	s.Require().NoError(err)
 	s.Require().NoError(<-task.OnComplete())
 
-	// TODO: uncomment when https://aerospike.atlassian.net/browse/BKRS-334 fixed
 	// Create a set index on namespace & set
-	// setTask, err := s.client.CreateSetIndex(nil, namespace, setName, "set_sidx")
-	// s.Require().NoError(err)
-	// s.Require().NoError(<-setTask.OnComplete())
-	// expectedIndexCount++
+	setTask, err := s.client.CreateSetIndex(nil, namespace, setName, "set_sidx")
+	s.Require().NoError(err)
+	s.Require().NoError(<-setTask.OnComplete())
+	expectedIndexCount++
 
 	s.triggerFullBackup(e)
 

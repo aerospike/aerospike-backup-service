@@ -97,7 +97,7 @@ var jsonExamples = map[string]any{
 			SourceCluster: "absDefaultCluster",
 			Storage:       valLocal,
 			IntervalCron:  "@yearly",
-			Namespaces:    ptr.Of([]string{"test-namespace"}),
+			Namespaces:    ptr.Of([]dto.NamespaceName{"test-namespace"}),
 		},
 		"routine2": {
 			BackupPolicy:     "removeFilesPolicy",
@@ -105,7 +105,7 @@ var jsonExamples = map[string]any{
 			Storage:          valLocal,
 			IntervalCron:     "@monthly",
 			IncrIntervalCron: "@daily",
-			Namespaces:       ptr.Of([]string{"test-namespace"}),
+			Namespaces:       ptr.Of([]dto.NamespaceName{"test-namespace"}),
 			SetList:          []string{"backupSet"},
 			BinList:          []string{"backupBin"},
 		},
@@ -373,12 +373,9 @@ func updateDefaultConfigSection(readme []byte) []byte {
 		panic(fmt.Errorf("failed to read config YAML: %w", err))
 	}
 
-	config, err := dto.NewConfigFromReader(bytes.NewReader(configContent), decoder.YAML)
+	_, err = dto.NewValidatedFromReader[dto.Config](bytes.NewReader(configContent), decoder.YAML)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse default config YAML: %w", err))
-	}
-	if err = config.Validate(); err != nil {
-		panic(fmt.Errorf("failed to validate default config YAML: %w", err))
 	}
 
 	return configRe.ReplaceAllFunc(readme, func(_ []byte) []byte {

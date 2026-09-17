@@ -45,11 +45,9 @@ func newTimeRestoreRunner(
 	}
 }
 
-func (r *timeRestoreRunner) RestoreByTime(
-	ctx context.Context, request *model.RestoreTimestampRequest,
-) (model.RestoreJobID, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
+func (r *timeRestoreRunner) RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID {
+	jobID, ctx := r.restoreJobs.newJob(request.RoutineName)
+
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore by time job",
 		slog.String("routine", request.RoutineName),
@@ -60,7 +58,7 @@ func (r *timeRestoreRunner) RestoreByTime(
 		r.restoreJobs.finishJob(jobID, err, logger)
 	}()
 
-	return jobID, nil
+	return jobID
 }
 
 // findBackupsToRestore returns list of backups for each namespace, sorted by creation date. First is full backup.
@@ -308,6 +306,16 @@ func (r *timeRestoreRunner) restoreNamespace(
 	return r.executeNamespaceRestore(ctx, client, request, jobID, backups, policy, logger)
 }
 
+// destinationNamespace returns the namespace the records are written to: the policy's destination
+// when the restore remaps namespaces, otherwise the source namespace itself.
+func destinationNamespace(policy model.RestorePolicy, source string) string {
+	if policy.Namespace != nil && policy.Namespace.Destination != "" {
+		return policy.Namespace.Destination
+	}
+
+	return source
+}
+
 // prepareNamespaceRestore determines the effective restore policy and may reorder
 // backups in place via slices.Reverse; the caller passes the same slice to execution.
 func prepareNamespaceRestore(
@@ -333,10 +341,13 @@ func prepareNamespaceRestore(
 		return effectivePolicy, nil
 	}
 
-	counter, err := infoClient.GetRecordCount(ctx, namespace, effectivePolicy.SetList)
+	// The emptiness check decides how existing records are treated, so it must look at the
+	// namespace the records are written to, not the one they were backed up from.
+	target := destinationNamespace(effectivePolicy, namespace)
+	counter, err := infoClient.GetRecordCount(ctx, target, effectivePolicy.SetList)
 	if err != nil {
 		return model.RestorePolicy{}, fmt.Errorf(
-			"failed to determine if namespace %s is empty: %w", namespace, err,
+			"failed to determine if namespace %s is empty: %w", target, err,
 		)
 	}
 

@@ -1,6 +1,6 @@
 package model
 
-import saClient "github.com/aerospike/backup-go/pkg/secret-agent"
+import saClient "github.com/aerospike/backup-go/pkg/secretagent"
 
 // ConnectionType is the Secret Agent connection type.
 type ConnectionType string

@@ -52,7 +52,7 @@ type ServerConfigHTTPS struct {
 	KeyFile string
 	// KeyFilePassword is the passphrase for an encrypted server private key.
 	// This may be a literal value or a Secret Agent reference.
-	KeyFilePassword string
+	KeyFilePassword Secret
 	// SecretAgent is used to resolve KeyFilePassword when it is a Secret Agent reference.
 	SecretAgent *SecretAgent
 	// MinVersion is the minimum accepted TLS protocol version.

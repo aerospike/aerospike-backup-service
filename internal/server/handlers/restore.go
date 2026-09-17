@@ -42,13 +42,8 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 
 // RestoreIncremental and RestoreFull share same business logic.
 func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
-	request, err := dto.NewRestoreRequestFromReader(r.Body)
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
-		return
-	}
-	if err = request.Validate(); err != nil {
-		httpError(w, errBadRequest(err))
+	request, ok := decodeBodyValidated[dto.RestoreRequest](w, r)
+	if !ok {
 		return
 	}
 
@@ -58,13 +53,7 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, err := s.restoreManager.Restore(s.sysCtx, restoreRequest)
-	if err != nil {
-		httpError(w, err)
-		return
-	}
-
-	httpAcceptedWithJobID(w, jobID)
+	httpAcceptedWithJobID(w, s.restoreManager.Restore(restoreRequest))
 }
 
 // RestoreByTimeHandler
@@ -79,14 +68,8 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
-	request, err := dto.NewRestoreTimestampRequestFromReader(r.Body)
-
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
-		return
-	}
-	if err = request.Validate(); err != nil {
-		httpError(w, errBadRequest(err))
+	request, ok := decodeBodyValidated[dto.RestoreTimestampRequest](w, r)
+	if !ok {
 		return
 	}
 
@@ -96,13 +79,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, err := s.restoreManager.RestoreByTime(s.sysCtx, restoreRequest)
-	if err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-
-	httpAcceptedWithJobID(w, jobID)
+	httpAcceptedWithJobID(w, s.restoreManager.RestoreByTime(restoreRequest))
 }
 
 // RestoreStatusHandler

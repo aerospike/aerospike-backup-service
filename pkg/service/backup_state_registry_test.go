@@ -33,7 +33,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 
 	stat := registry.GetRoutineState(&model.BackupRoutine{
 		Name:     routineName,
-		Timezone: model.NewServiceLocation(""),
+		Timezone: model.NewServiceLocation("", nil),
 	})
 
 	assert.NotNil(t, stat.Full)
@@ -48,7 +48,7 @@ func TestHistoryScan(t *testing.T) {
 	backupTime := model.NewBackupTime(time.Now(), time.Now().Add(-1*time.Hour))
 	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(backupTime, nil).Times(1)
 	registry := newTestBackupStateRegistry(historyMgr, nil)
-	registry.SynchroniseBackupHistory(t.Context(), []*model.BackupRoutine{{Name: routineName}})
+	registry.synchroniseBackupHistory(t.Context(), []*model.BackupRoutine{{Name: routineName}})
 
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
@@ -62,12 +62,91 @@ func TestHistoryScan(t *testing.T) {
 	stat := registry.GetRoutineState(&model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
-		Timezone:     model.NewServiceLocation(""),
+		Timezone:     model.NewServiceLocation("", nil),
 	})
 	assert.NotNil(t, stat.Full)
 	assert.Equal(t, uint64(100), stat.Full.TotalRecords)
 	assert.Nil(t, stat.Incremental)
 	assert.Equal(t, stat.LastRunTime, backupTime)
+}
+
+// configWithRoutines returns a configuration holding one routine per given name. The
+// registry resolves a queued name against this when it drains, so a request for a routine
+// that is not here is a request for a routine that no longer exists.
+func configWithRoutines(t *testing.T, names ...string) *model.Config {
+	t.Helper()
+
+	cfg := model.NewConfig()
+	for _, name := range names {
+		require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
+			Name:         name,
+			IntervalCron: "@daily",
+			Timezone:     model.NewServiceLocation("", nil),
+		}))
+	}
+
+	return cfg
+}
+
+func TestRequestHistorySync_WaitsForStart(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	historyMgr := NewMockHistoryManager(ctrl)
+	scanned := make(chan struct{}, 1)
+	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(context.Context, *model.BackupRoutine) (*model.BackupTime, error) {
+			scanned <- struct{}{}
+			return model.NewNoBackupTime(), nil
+		}).Times(1)
+	registry := newTestBackupStateRegistry(historyMgr, configWithRoutines(t, routineName))
+
+	// Before Start there is no context to scan on, so a request only queues.
+	registry.RequestHistorySync([]string{routineName})
+	select {
+	case <-scanned:
+		t.Fatal("history was scanned before Start")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	registry.Start(t.Context())
+	waitAsyncDone(t, scanned, "history scan after Start")
+}
+
+func TestRequestHistorySync_CoalescesRequestsPerRoutine(t *testing.T) {
+	cfg := configWithRoutines(t, routineName, "other")
+	registry := newTestBackupStateRegistry(nil, cfg)
+
+	registry.RequestHistorySync([]string{routineName, "other"})
+	registry.RequestHistorySync([]string{routineName})
+
+	pending := registry.takePending()
+	require.Len(t, pending, 2, "a routine named twice is scanned once")
+	assert.Equal(t, "other", pending[0].Name)
+	assert.Same(t, cfg.Routines()[routineName], pending[1], "the scan uses the configured routine")
+	assert.Empty(t, registry.takePending(), "taking drains the queue")
+}
+
+func TestRequestHistorySync_SkipsRoutineDeletedSinceTheRequest(t *testing.T) {
+	registry := newTestBackupStateRegistry(nil, configWithRoutines(t, "survivor"))
+
+	registry.RequestHistorySync([]string{"survivor", "deleted-since"})
+
+	pending := registry.takePending()
+	require.Len(t, pending, 1)
+	assert.Equal(t, "survivor", pending[0].Name)
+}
+
+func TestRequestHistorySync_EmptyRequestQueuesNothing(t *testing.T) {
+	registry := newTestBackupStateRegistry(nil, configWithRoutines(t))
+
+	registry.RequestHistorySync(nil)
+
+	assert.Empty(t, registry.takePending())
+	select {
+	case <-registry.signal:
+		t.Fatal("an empty request must not signal a scan")
+	default:
+	}
 }
 
 func TestFinishFull(t *testing.T) {
@@ -86,13 +165,13 @@ func TestFinishFull(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
-		Timezone:     model.NewServiceLocation(""),
+		Timezone:     model.NewServiceLocation("", nil),
 	}
 
 	registry.BackupStarted(routineName, model.BackupTypeFull, handler)
 	registry.getTracker(routineName).markScanDone()
 
-	registry.BackupSucceeded(routine, model.BackupTypeFull)
+	registry.BackupSucceeded(t.Context(), routine, model.BackupTypeFull)
 
 	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)
@@ -116,13 +195,13 @@ func TestFinishIncremental(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
-		Timezone:     model.NewServiceLocation(""),
+		Timezone:     model.NewServiceLocation("", nil),
 	}
 
 	registry.BackupStarted(routineName, model.BackupTypeIncremental, handler)
 	registry.getTracker(routineName).markScanDone()
 
-	registry.BackupSucceeded(routine, model.BackupTypeIncremental)
+	registry.BackupSucceeded(t.Context(), routine, model.BackupTypeIncremental)
 
 	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)
@@ -141,7 +220,7 @@ func TestCanceledHistoryScanKeepsPreviousLastRun(t *testing.T) {
 	routine := &model.BackupRoutine{
 		Name:         routineName,
 		IntervalCron: "@daily",
-		Timezone:     model.NewServiceLocation(""),
+		Timezone:     model.NewServiceLocation("", nil),
 	}
 	registry.getTracker(routineName).setLastRun(previous)
 	registry.getTracker(routineName).markScanDone()
@@ -164,12 +243,12 @@ func TestGetAllCurrentStats(t *testing.T) {
 		routine1: {
 			Name:         routine1,
 			IntervalCron: "@daily",
-			Timezone:     model.NewServiceLocation(""),
+			Timezone:     model.NewServiceLocation("", nil),
 		},
 		routine2: {
 			Name:         routine2,
 			IntervalCron: "@daily",
-			Timezone:     model.NewServiceLocation(""),
+			Timezone:     model.NewServiceLocation("", nil),
 		},
 	}).AnyTimes()
 
@@ -206,12 +285,12 @@ func TestGetRoutineState_NextRunTimeUsesScheduleTimezone(t *testing.T) {
 	nyRoutine := &model.BackupRoutine{
 		Name:         "ny",
 		IntervalCron: "@daily",
-		Timezone:     model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+		Timezone:     testLocation,
 	}
 	utcRoutine := &model.BackupRoutine{
 		Name:         "utc",
 		IntervalCron: "@daily",
-		Timezone:     model.NewServiceLocation(""),
+		Timezone:     model.NewServiceLocation("", nil),
 	}
 
 	registry := newTestBackupStateRegistry(nil, nil)
@@ -237,13 +316,13 @@ func TestGetRoutineState_NextRunTimeUsesScheduleTimezoneForIncremental(t *testin
 		Name:             "ny",
 		IntervalCron:     "@daily",
 		IncrIntervalCron: "0 0 2 * * *",
-		Timezone:         model.NewRoutineLocation("America/New_York", model.NewServiceLocation("")),
+		Timezone:         testLocation,
 	}
 	utcRoutine := &model.BackupRoutine{
 		Name:             "utc",
 		IntervalCron:     "@daily",
 		IncrIntervalCron: "0 0 2 * * *",
-		Timezone:         model.NewServiceLocation(""),
+		Timezone:         model.NewServiceLocation("", nil),
 	}
 
 	registry := newTestBackupStateRegistry(nil, nil)

@@ -99,12 +99,14 @@ func (t *routineTracker) clearBackup(backupType model.BackupType) {
 
 // setLastRun updates the history state from a storage scan result.
 // It replaces the entire lastRun value, making storage the single source of truth.
+// The scan cancel handle is not touched here: each scan owns its handle and releases it when
+// it returns, and by the time one scan stores its result a newer scan may already have
+// installed its own handle, which has to stay reachable for cancelScan to end that scan.
 func (t *routineTracker) setLastRun(lastRun *model.BackupTime) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	t.lastRun = lastRun
-	t.scanCancel = nil
 }
 
 // cancel stops all ongoing backups for this routine.
@@ -160,15 +162,6 @@ func (t *routineTracker) beginScan() chan struct{} {
 // Safe to call if the channel was already closed (e.g. by a subsequent beginScan).
 func (t *routineTracker) endScan(ch chan struct{}) {
 	closeChan(ch)
-}
-
-// markScanDone closes the current scanDone channel without starting a new scan.
-// Used in tests to skip the scan wait.
-func (t *routineTracker) markScanDone() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	closeChan(t.scanDone)
 }
 
 func closeChan(ch chan struct{}) {

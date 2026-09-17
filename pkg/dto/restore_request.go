@@ -2,13 +2,9 @@ package dto
 
 import (
 	"fmt"
-	"io"
-	"path/filepath"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
 
 // RestoreRequest represents a restore operation request from custom storage
@@ -24,18 +20,7 @@ type RestoreRequest struct {
 	// You can obtain this value by:
 	// - Browsing the storage UI, or
 	// - Reading the `key` field in the response from GET `v1/backups/full/{routine}`
-	BackupDataPath string `json:"backup-data-path" validate:"required"`
-}
-
-// NewRestoreRequestFromReader reads and deserializes the restore request from reader.
-func NewRestoreRequestFromReader(r io.Reader) (*RestoreRequest, error) {
-	var req RestoreRequest
-	err := decoder.Deserialize(&req, r, decoder.JSON)
-	if err != nil {
-		return nil, err
-	}
-
-	return &req, nil
+	BackupDataPath Path `json:"backup-data-path" validate:"required"`
 }
 
 // RestoreTimestampRequest represents a request to restore the Aerospike database to a specific point in time.
@@ -56,26 +41,10 @@ type RestoreTimestampRequest struct {
 	DisableReordering bool `json:"disable-reordering,omitempty" default:"false"`
 }
 
-// NewRestoreTimestampRequestFromReader reads and deserializes the restore by timestamp request from reader.
-func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest, error) {
-	var req RestoreTimestampRequest
-	err := decoder.Deserialize(&req, r, decoder.JSON)
-	if err != nil {
-		return nil, err
-	}
-	return &req, nil
-}
-
 // Validate validates the restore operation request.
 func (r *RestoreRequest) Validate() error {
-	if len(r.BackupDataPath) == 0 {
-		return errValidationEmptyField("backup-data-path")
-	}
-	if !filepath.IsLocal(r.BackupDataPath) {
-		return fmt.Errorf("%w: backup-data-path must be local", errValidation)
-	}
-	if err := safepath.ValidateClean(r.BackupDataPath); err != nil {
-		return fmt.Errorf("%w: backup-data-path: %w", errValidation, err)
+	if err := r.BackupDataPath.Validate(ValidationDefault); err != nil {
+		return errValidationInvalidPath("backup-data-path", r.BackupDataPath, err)
 	}
 	if err := r.DestinationClusterConfig.Validate(ValidationDefault); err != nil {
 		return err
@@ -134,17 +103,25 @@ func (r *RestoreTimestampRequest) Validate() error {
 }
 
 func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
-	cluster, err := r.DestinationClusterConfig.ToModel(config)
-	if err != nil {
-		return nil, fmt.Errorf("invalid cluster: %w", err)
-	}
-
 	secretAgent, err := r.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid secret agent: %w", err)
 	}
 
 	routine, found := config.Routine(r.Routine)
+
+	var cluster *model.AerospikeCluster
+	if !r.DestinationClusterConfig.IsEmpty() {
+		cluster, err = r.DestinationClusterConfig.ToModel(config)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cluster: %w", err)
+		}
+	} else {
+		if !found {
+			return nil, errValidationNotFound("routine", r.Routine)
+		}
+		cluster = routine.SourceCluster
+	}
 
 	var storage model.Storage
 	if !r.StorageConfig.IsEmpty() {
@@ -157,13 +134,6 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 			return nil, errValidationNotFound("routine", r.Routine)
 		}
 		storage = routine.Storage
-	}
-
-	if cluster == nil {
-		if !found {
-			return nil, errValidationNotFound("routine", r.Routine)
-		}
-		cluster = routine.SourceCluster // if cluster is not specified, use routine's cluster.
 	}
 
 	if secretAgent == nil && found {
@@ -202,7 +172,7 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 		Policy:             *r.Policy.ToModel(),
 		SourceStorage:      storage,
 		SecretAgent:        secretAgent,
-		BackupDataPath:     r.BackupDataPath,
+		BackupDataPath:     string(r.BackupDataPath),
 	}, nil
 }
 
@@ -238,10 +208,6 @@ func (c *DestinationClusterConfig) Validate(opts ValidationOptions) error {
 }
 
 func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.AerospikeCluster, error) {
-	if c.IsEmpty() {
-		return nil, nil
-	}
-
 	if c.Cluster != nil {
 		return c.Cluster.ToModel(config)
 	}

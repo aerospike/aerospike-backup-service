@@ -62,10 +62,41 @@ func errValidationDuplicate[T any](field string, value T) error {
 	return fmt.Errorf("%w: %s contains duplicate value: %v", errDuplicate, field, value)
 }
 
+// errValidationInvalidName is the single wrapper for every name check: NamespaceName.Validate
+// and checkPathSegment. It supplies the field name and the offending value, which the checker
+// itself cannot know; the checker returns only the reason.
+//
+// A missing name is reported as an empty field rather than an invalid one, the way
+// errValidationInvalidPath treats an empty path: echoing back an empty value tells the caller
+// nothing they don't already know.
+func errValidationInvalidName(field, name string, err error) error {
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, errEmpty):
+		return errValidationEmptyField(field)
+	default:
+		return fmt.Errorf("%w: %s %q: %w", errInvalidValue, field, name, err)
+	}
+}
+
 func errValidationSecret(field string, err error) error {
 	return fmt.Errorf("%s: %w: %w", field, errValidation, err)
 }
 
-func errValidationInvalidPath(field, path string, err error) error {
-	return fmt.Errorf("%w: %q for %q: %w", errInvalidPath, path, field, err)
+// errValidationInvalidPath is the single wrapper for every Path.Validate call site.
+// It supplies the field name and the offending value, which Path itself cannot know;
+// Path returns only the reason, so the value is reported exactly once:
+//
+//	invalid path validation error: ca-file "/etc//passwd": must be in canonical form (expected "/etc/passwd")
+//
+// A missing path is reported as an empty field rather than an invalid one. Path
+// signals that case with errEmpty, and echoing back an empty value for an empty
+// path tells the caller nothing they don't already know.
+func errValidationInvalidPath(field string, path Path, err error) error {
+	if errors.Is(err, errEmpty) {
+		return errValidationEmptyField(field)
+	}
+
+	return fmt.Errorf("%w: %s %q: %w", errInvalidPath, field, path, err)
 }

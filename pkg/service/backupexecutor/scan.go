@@ -83,8 +83,8 @@ func makeBackupConfig(
 	config.ModBefore = timeBounds.ToTime
 	config.ModAfter = timeBounds.FromTime
 
-	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
-	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)
+	config.CompressionPolicy = backupPolicy.CompressionPolicy.ToLibraryPolicy()
+	config.EncryptionPolicy = backupPolicy.EncryptionPolicy.ToLibraryPolicy()
 	config.Compact = backupPolicy.CompactOrDefault()
 	config.SecretAgentConfig = routine.SecretAgent.ToSecretAgentConfig()
 
@@ -128,28 +128,4 @@ func buildScanPolicy(
 	}
 
 	return scanPolicy, nil
-}
-
-func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy {
-	if policy == nil || policy.CompressionPolicy == nil {
-		return nil
-	}
-
-	return &backup.CompressionPolicy{
-		Mode:  policy.CompressionPolicy.Mode.String(),
-		Level: int(policy.CompressionPolicy.Level),
-	}
-}
-
-func makeEncryptionPolicy(policy *model.BackupPolicy) *backup.EncryptionPolicy {
-	if policy == nil || policy.EncryptionPolicy == nil {
-		return nil
-	}
-
-	return &backup.EncryptionPolicy{
-		Mode:      policy.EncryptionPolicy.Mode.String(),
-		KeyFile:   ptr.StringOrNil(policy.EncryptionPolicy.KeyFile),
-		KeySecret: ptr.StringOrNil(policy.EncryptionPolicy.KeySecret),
-		KeyEnv:    ptr.StringOrNil(policy.EncryptionPolicy.KeyEnv),
-	}
 }
