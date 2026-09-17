@@ -5,10 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"net/url"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
+	"github.com/aws/smithy-go"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -317,4 +322,137 @@ func TestSecret_MaskedInErrorMessages(t *testing.T) {
 		assert.Contains(t, err.Error(), literalPassword)
 		assert.Equal(t, err.Error(), RedactSecrets(err).(error).Error())
 	})
+}
+
+type selfPointer struct {
+	Name   string
+	Secret redact.Secret
+	Peer   *selfPointer
+}
+
+type selfInterface struct {
+	Secret  redact.Secret
+	Payload any
+}
+
+type noSecret struct {
+	Name    string
+	Payload any
+}
+
+func TestRedactSecrets_CyclicStructures(t *testing.T) {
+	t.Run("A — cycle through a typed pointer", func(t *testing.T) {
+		v := &selfPointer{Name: "a", Secret: redact.Secret("hunter2")}
+		v.Peer = v
+
+		res, ok := RedactSecrets(v).(*selfPointer)
+		require.True(t, ok)
+		require.NotNil(t, res)
+
+		assert.NotSame(t, v, res)
+		assert.NotEqual(t, redact.Secret("hunter2"), res.Secret)
+		assert.Same(t, res, res.Peer)
+	})
+
+	t.Run("B — cycle through an interface field", func(t *testing.T) {
+		v := &selfInterface{Secret: redact.Secret("hunter2")}
+		v.Payload = v
+
+		res, ok := RedactSecrets(v).(*selfInterface)
+		require.True(t, ok)
+		require.NotNil(t, res)
+
+		assert.NotSame(t, v, res)
+		assert.NotEqual(t, redact.Secret("hunter2"), res.Secret)
+		assert.Same(t, res, res.Payload)
+	})
+
+	t.Run("C — no secret anywhere, interface cycle", func(t *testing.T) {
+		v := &noSecret{Name: "a"}
+		v.Payload = v
+
+		res := RedactSecrets(v)
+		assert.Equal(t, v, res)
+	})
+
+	t.Run("D — map containing itself", func(t *testing.T) {
+		v := map[string]any{"secret": redact.Secret("hunter2")}
+		v["self"] = v
+
+		res, ok := RedactSecrets(v).(map[string]any)
+		require.True(t, ok)
+
+		assert.NotEqual(t, redact.Secret("hunter2"), res["secret"])
+
+		selfVal, ok := res["self"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, reflect.ValueOf(res).Pointer(), reflect.ValueOf(selfVal).Pointer())
+	})
+
+	t.Run("E — slice containing itself", func(t *testing.T) {
+		v := make([]any, 2)
+		v[0] = redact.Secret("hunter2")
+		v[1] = v
+
+		res, ok := RedactSecrets(v).([]any)
+		require.True(t, ok)
+
+		assert.NotEqual(t, redact.Secret("hunter2"), res[0])
+
+		selfSlice, ok := res[1].([]any)
+		require.True(t, ok)
+		assert.Equal(t, reflect.ValueOf(res).Pointer(), reflect.ValueOf(selfSlice).Pointer())
+	})
+}
+
+func TestRedactSecrets_RealS3ErrorChainCycle(t *testing.T) {
+	// 1. Build real net/http back-pointer cycle
+	req := &http.Request{
+		Method: http.MethodGet,
+		URL: &url.URL{
+			Scheme: "https",
+			Host:   "my-bucket.s3.us-west-2.amazonaws.com",
+			Path:   "/backup-file.tar.gz",
+		},
+		Header: http.Header{
+			"Authorization": []string{"AWS4-HMAC-SHA256 Credential=secret-access-key"},
+		},
+	}
+
+	resp := &http.Response{
+		StatusCode: http.StatusForbidden,
+		Status:     "403 Forbidden",
+		Request:    req,
+	}
+
+	// stdlib cycle: http.Request.Response points back to http.Response
+	req.Response = resp
+
+	// 2. Wrap into real AWS SDK v2 / Smithy S3 error structures
+	genericAPIErr := &smithy.GenericAPIError{
+		Code:    "AccessDenied",
+		Message: "Access Denied to S3 bucket",
+	}
+
+	smithyRespErr := &smithyhttp.ResponseError{
+		Response: &smithyhttp.Response{
+			Response: resp,
+		},
+		Err: genericAPIErr,
+	}
+
+	smithyOpErr := &smithy.OperationError{
+		ServiceID:     "S3",
+		OperationName: "GetObject",
+		Err:           smithyRespErr,
+	}
+
+	// 3. 4x fmt.wrapError chain wrapping the AWS error
+	errChain := fmt.Errorf("backup service failed: %w",
+		fmt.Errorf("failed to download object: %w",
+			fmt.Errorf("s3 client call failed: %w",
+				fmt.Errorf("smithy error: %w", smithyOpErr))))
+
+	redacted := RedactSecrets(errChain)
+	require.NotNil(t, redacted)
 }
