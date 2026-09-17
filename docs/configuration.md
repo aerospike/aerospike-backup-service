@@ -130,7 +130,7 @@ service:
   logger:
     level: INFO
     file-writer:
-      filename: /var/log/aerospike-backup-service.log
+      filename: /var/log/aerospike-backup-service/aerospike-backup-service.log
 ```
 
 See the [`dto.Config`](readme/dto/dto.config.md) for details.
