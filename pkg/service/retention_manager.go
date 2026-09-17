@@ -102,19 +102,15 @@ func (e *backupRetentionManager) deleteFullBackups(
 	return errs
 }
 
-// deleteIncrementalBackups removes the incremental backups that fall outside the retention
-// window. It deletes the folders the catalog lists, never the incremental root itself: a folder
-// without metadata is a backup still being written - with concurrent-incremental one may well be
-// writing while retention runs right after a full - and deleting the root would take its data
-// out from under it.
+// deleteIncrementalBackups removes the incremental backups that fall outside the retention window.
 func (e *backupRetentionManager) deleteIncrementalBackups(
 	ctx context.Context, timestamps []time.Time, retainCount int, routine *model.BackupRoutine,
 ) error {
+	if retainCount > 0 && len(timestamps) <= retainCount {
+		return nil
+	}
 	filter := NewIncrementalBackupFilter(routine)
-	if retainCount > 0 { // retainCount of 0 deletes every completed incremental backup.
-		if len(timestamps) <= retainCount {
-			return nil
-		}
+	if retainCount > 0 {
 		filter = filter.WithToTime(timestamps[len(timestamps)-retainCount])
 	}
 
