@@ -78,7 +78,7 @@ func (a *S3StorageAccessor) createWriter(
 }
 
 func (a *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error) {
-	credentialsProvider, err := a.withCredentialsProvider(ctx, s.Auth)
+	credentialsProvider, err := a.withCredentialsProvider(ctx, s.Auth, s.SecretAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -144,9 +144,13 @@ func (a *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage)
 	return client, nil
 }
 
+// withCredentialsProvider builds the static credentials provider from auth, resolving both
+// secrets through agent. Without static credentials the AWS SDK default chain is left in place,
+// so a storage that only names a secret agent still authenticates through the environment.
 func (a *S3StorageAccessor) withCredentialsProvider(
 	ctx context.Context,
 	auth *model.S3Authentication,
+	agent *model.SecretAgent,
 ) (config.LoadOptionsFunc, error) {
 	if auth == nil {
 		return func(*config.LoadOptions) error {
@@ -154,12 +158,12 @@ func (a *S3StorageAccessor) withCredentialsProvider(
 		}, nil
 	}
 
-	keyID, err := a.resolver.Resolve(ctx, auth.SecretAgent, auth.KeyIDSecret)
+	keyID, err := a.resolver.Resolve(ctx, agent, auth.KeyIDSecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve key ID: %w", err)
 	}
 
-	accessKey, err := a.resolver.Resolve(ctx, auth.SecretAgent, auth.AccessKeySecret)
+	accessKey, err := a.resolver.Resolve(ctx, agent, auth.AccessKeySecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve access key: %w", err)
 	}

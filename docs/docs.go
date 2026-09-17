@@ -2112,7 +2112,7 @@ const docTemplate = `{
                     "example": "0 0 * * * *"
                 },
                 "namespaces": {
-                    "description": "The list of namespaces to back up.\nIf empty, the entire cluster is backed up.\nThe order of namespaces does not determine the backup execution or completion order.",
+                    "description": "The list of namespaces to back up.\nIf empty, the entire cluster is backed up.\nThe order of namespaces does not determine the backup execution or completion order.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -2625,7 +2625,7 @@ const docTemplate = `{
                     "example": 1024
                 },
                 "tps": {
-                    "description": "Rate limiter tokens per second threshold.",
+                    "description": "Rate limiter tokens per second threshold.\nThe budget is per client: an IPv4 address gets its own, an IPv6 address shares one\nwith the rest of its /64.",
                     "type": "integer",
                     "default": 1024,
                     "example": 1024
@@ -2756,12 +2756,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "destination": {
-                    "description": "Name of the destination namespace to restore data into.",
+                    "description": "Name of the destination namespace to restore data into.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "string",
                     "example": "destination-ns"
                 },
                 "source": {
-                    "description": "Original namespace name.\nThis field is required as a safeguard to ensure intentional namespace remapping.",
+                    "description": "Original namespace name.\nThis field is required as a safeguard to ensure intentional namespace remapping.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "string",
                     "example": "source-ns"
                 }
