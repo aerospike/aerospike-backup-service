@@ -104,7 +104,7 @@ func (p *backupOrchestrator) runBackupInternal(
 	p.registry.BackupStarted(routine.Name, backupType, backupHandler)
 
 	if err = backupHandler.Wait(ctx); err != nil {
-		p.completionHandler.OnFailure(routine, backupType)
+		p.completionHandler.OnFailure(ctx, routine, backupType, now, logger)
 		return fmt.Errorf("%s backup failed: %w", backupType, err)
 	}
 
