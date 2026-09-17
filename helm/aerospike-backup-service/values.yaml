@@ -249,8 +249,11 @@ securityContext:
     drop:
       - ALL
   runAsNonRoot: true
-  # Matches USER absuser (uid 65532) in the official image.
+  # Matches USER absuser (uid 65532) and group abgroup (gid 65532) in the official image.
+  # runAsGroup is declared explicitly rather than inherited from the image so the
+  # rendered manifest is self-describing (and so static scanners can see it).
   runAsUser: 65532
+  runAsGroup: 65532
   seccompProfile:
     type: RuntimeDefault
 

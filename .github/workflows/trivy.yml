@@ -33,6 +33,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           skip-dirs: tmp,.git
+          trivyignores: .trivyignore.yaml
           format: sarif
           output: trivy-results.sarif
           exit-code: '0'
@@ -44,6 +45,7 @@ jobs:
             --severity HIGH,CRITICAL \
             --ignore-unfixed \
             --skip-dirs tmp,.git \
+            --ignorefile .trivyignore.yaml \
             --exit-code 1 \
             .
 
@@ -59,6 +61,7 @@ jobs:
           scan-type: config
           scan-ref: helm/aerospike-backup-service
           severity: HIGH,CRITICAL
+          trivyignores: .trivyignore.yaml
           format: sarif
           output: trivy-helm-initcontainer.sarif
           exit-code: '0'
@@ -70,6 +73,7 @@ jobs:
           trivy config \
             --helm-set configmap.create=false \
             --severity HIGH,CRITICAL \
+            --ignorefile .trivyignore.yaml \
             --exit-code 1 \
             helm/aerospike-backup-service
 
