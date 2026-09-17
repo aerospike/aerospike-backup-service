@@ -2381,13 +2381,11 @@ const docTemplate = `{
                 "maxage": {
                     "description": "Maximum number of days to retain old log files based on the\ntimestamp encoded in their filename. The default is not to remove old log files\nbased on age.",
                     "type": "integer",
-                    "default": 0,
                     "x-nullable": true
                 },
                 "maxbackups": {
                     "description": "Maximum number of old log files to retain. The default\nis to retain all old log files.",
                     "type": "integer",
-                    "default": 0,
                     "x-nullable": true
                 },
                 "maxsize": {

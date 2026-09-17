@@ -111,11 +111,6 @@ var applied = map[string]appliedDefault{
 	"RestoreCompressionPolicy.Mode": {applied: value(model.CompressionModeNone)},
 	"EncryptionPolicy.Mode":         {applied: value(model.EncryptionModeNone)},
 
-	// Rotation settings that nothing applies, so lumberjack keeps every log
-	// file forever. The field descriptions say so; the tags used to disagree.
-	"FileLoggerConfig.MaxAge":     {applied: value(0)},
-	"FileLoggerConfig.MaxBackups": {applied: value(0)},
-
 	// Entries with no value to compare against.
 	"LoggerConfig.FileWriter": {
 		reason: "the tag is empty: it marks the section as optional rather than publishing a value",
