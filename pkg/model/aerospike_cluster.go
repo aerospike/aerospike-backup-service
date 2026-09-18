@@ -43,6 +43,19 @@ func (c *AerospikeCluster) GetSecretAgent() *SecretAgent {
 	return nil
 }
 
+// Label returns a human-readable identifier for the cluster, for logging and error messages:
+// the configured label, or the first seed node when no label is set, or "unknown" when the
+// cluster has neither.
+func (c *AerospikeCluster) Label() string {
+	if c.ClusterLabel != "" {
+		return c.ClusterLabel
+	}
+	if len(c.SeedNodes) > 0 {
+		return c.SeedNodes[0].String()
+	}
+	return "unknown"
+}
+
 // Hash returns a unique identifier for the AerospikeCluster.
 func (c *AerospikeCluster) Hash() uint64 {
 	if c == nil {
