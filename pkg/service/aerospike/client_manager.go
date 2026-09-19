@@ -42,6 +42,12 @@ type Cluster interface {
 // clientManager shares one connection per cluster: the first GetClient opens it, later calls
 // reuse it, and Close decrements a reference counter. The connection is closed once the counter
 // reaches zero and closeDelay has passed.
+//
+// Lock order: clientInfo.mu is acquired before the clients map, never the other way round.
+// dropUnusedClient and scheduleClosing hold clientInfo.mu while calling clients.Remove, and
+// SafeMap.Iterate holds the map lock for the whole callback, so acquiring clientInfo.mu from
+// inside an Iterate callback deadlocks against them. Snapshot the entries and release the map
+// first, as findOwner does.
 type clientManager struct {
 	// clients holds the state for each cluster.
 	clients       *collections.SafeMap[uint64, *clientInfo]
@@ -184,36 +190,51 @@ func (cm *clientManager) createBackupClient(
 
 // Close ensures that the specified backup client is released.
 func (cm *clientManager) Close(client Client) {
-	var (
-		targetInfo *clientInfo
-		targetKey  uint64
-	)
+	aeroClient := client.AerospikeClient()
 
-	// We need to find which info struct owns this client.
-	// Since Client interface wraps the underlying AerospikeClient, we compare pointers.
+	targetInfo, targetKey, cached := cm.findOwner(aeroClient)
+	if !cached {
+		// If it's not in our cache, we must close it immediately because we aren't managing its lifecycle.
+		aeroClient.Close()
+		slog.Info("Closed Aerospike client not managed by the cache",
+			slog.Any("hosts", aeroClient.Cluster().GetSeeds()))
+
+		return
+	}
+
+	cm.decrementRef(targetInfo, targetKey)
+}
+
+// findOwner returns the cached entry holding aeroClient. Since Client wraps the underlying
+// AerospikeClient, entries are matched by pointer.
+//
+// The entries are snapshotted first and clientInfo.mu is taken only afterwards, so the map
+// lock is never held while waiting for clientInfo.mu. See the lock order on [clientManager]:
+// SafeMap.Iterate holds the map lock for the whole callback, so matching inside it would
+// deadlock against dropUnusedClient and scheduleClosing, which hold clientInfo.mu while
+// removing from the map.
+func (cm *clientManager) findOwner(aeroClient backup.AerospikeClient) (*clientInfo, uint64, bool) {
+	type entry struct {
+		key  uint64
+		info *clientInfo
+	}
+
+	var entries []entry
 	cm.clients.Iterate(func(key uint64, info *clientInfo) {
-		if targetInfo != nil {
-			return
-		}
-
-		// We must lock to read info.aeroClient safely,
-		// just in case it's being modified (though unlikely after init).
-		info.mu.RLock()
-		if info.aeroClient == client.AerospikeClient() {
-			targetInfo = info
-			targetKey = key
-		}
-		info.mu.RUnlock()
+		entries = append(entries, entry{key: key, info: info})
 	})
 
-	if targetInfo != nil {
-		cm.decrementRef(targetInfo, targetKey)
-	} else {
-		// If it's not in our cache, we must close it immediately because we aren't managing its lifecycle.
-		client.AerospikeClient().Close()
-		slog.Info("Closed Aerospike client not managed by the cache",
-			slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()))
+	for _, e := range entries {
+		e.info.mu.RLock()
+		owns := e.info.aeroClient == aeroClient
+		e.info.mu.RUnlock()
+
+		if owns {
+			return e.info, e.key, true
+		}
 	}
+
+	return nil, 0, false
 }
 
 // decrementRef decreases the reference count and schedules closing if count reaches zero.

@@ -161,9 +161,18 @@ func (t *routineTracker) beginScan() chan struct{} {
 // endScan signals that a specific scan has completed.
 // Safe to call if the channel was already closed (e.g. by a subsequent beginScan).
 func (t *routineTracker) endScan(ch chan struct{}) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	closeChan(ch)
 }
 
+// closeChan closes ch unless it is already closed.
+//
+// Callers must hold t.mu exclusively. The check and the close are a single decision, and
+// beginScan and endScan can target the same channel concurrently: a scan ending while the next
+// one starts. Without the lock both can observe an open channel and both call close, which
+// panics and, happening on a scan goroutine, takes the process down.
 func closeChan(ch chan struct{}) {
 	select {
 	case <-ch:

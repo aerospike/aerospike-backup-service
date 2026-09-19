@@ -301,7 +301,7 @@ func Test_Close_NotExisting(t *testing.T) {
 	aeroClient.EXPECT().Close()
 
 	client := NewMockClient(ctrl)
-	client.EXPECT().AerospikeClient().Return(aeroClient).Times(2)
+	client.EXPECT().AerospikeClient().Return(aeroClient)
 	aeroClient.EXPECT().Cluster().Return(&aerospike.Cluster{})
 
 	clientManager.Close(client)
@@ -317,4 +317,74 @@ func assertClientExists(t *testing.T, manager ClientManager,
 
 func clientCacheSize(manager ClientManager) int {
 	return manager.(*clientManager).clients.Size()
+}
+
+// Test_Close_DoesNotHoldClientMapWhileWaitingForClientInfo pins the manager's lock order.
+//
+// dropUnusedClient and scheduleClosing hold clientInfo.mu and then take the clients map write
+// lock to Remove. Close must therefore never hold the map while waiting for clientInfo.mu:
+// SafeMap.Iterate holds the map lock for the whole callback, so matching the owner inside it
+// deadlocks against those two paths, and a pending map writer then blocks every later reader,
+// hanging all backups and restores.
+func Test_Close_DoesNotHoldClientMapWhileWaitingForClientInfo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockAsClient := NewMockAerospikeClient(ctrl)
+
+	mockBackupClient := NewMockClient(ctrl)
+	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient).AnyTimes()
+
+	infoGetter := NewMockInfoGetter(ctrl)
+	infoGetter.EXPECT().GetStatus(gomock.Any()).Return("ok", nil)
+	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
+
+	clientFactory := NewMockClientFactory(ctrl)
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
+
+	// A long close delay keeps the idle timer from firing while the test runs.
+	manager := NewClientManager(clientFactory, time.Hour)
+	cm := manager.(*clientManager)
+
+	client, err := manager.GetClient(t.Context(), cluster, nil, nil)
+	require.NoError(t, err)
+
+	info, cached := cm.clients.Load(cluster.Hash())
+	require.True(t, cached)
+
+	// Put Close in the position a concurrent dropUnusedClient would: clientInfo.mu is taken.
+	info.mu.Lock()
+
+	closeReturned := make(chan struct{})
+	go func() {
+		defer close(closeReturned)
+
+		manager.Close(client)
+	}()
+
+	// Let Close reach the clientInfo.mu it cannot have yet.
+	time.Sleep(50 * time.Millisecond)
+
+	mapWritable := make(chan struct{})
+	go func() {
+		defer close(mapWritable)
+
+		cm.clients.Remove(0)
+	}()
+
+	select {
+	case <-mapWritable:
+	case <-time.After(3 * time.Second):
+		info.mu.Unlock()
+		t.Fatal("Close holds the clients map while waiting for clientInfo.mu; " +
+			"a concurrent dropUnusedClient or scheduleClosing would deadlock against it")
+	}
+
+	info.mu.Unlock()
+
+	select {
+	case <-closeReturned:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Close did not return after clientInfo.mu was released")
+	}
 }
