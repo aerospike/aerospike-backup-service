@@ -9,3 +9,14 @@ type RestoreNamespace struct {
 	// Destination namespace name.
 	Destination string
 }
+
+// DestinationOr returns the namespace records from source are written to: the configured
+// Destination when remapping is set, otherwise source itself. A nil remapping (no Namespace
+// configured on the restore policy) behaves the same as one with no Destination set.
+func (n *RestoreNamespace) DestinationOr(source string) string {
+	if n != nil && n.Destination != "" {
+		return n.Destination
+	}
+
+	return source
+}
