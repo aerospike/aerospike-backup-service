@@ -65,6 +65,13 @@ func (r *BackupRoutine) HasIncrementalSchedule() bool {
 	return r.IncrIntervalCron != ""
 }
 
+// BacksUpWholeCluster reports whether the routine backs up every namespace of its source
+// cluster rather than a configured list. Such a routine discovers the namespaces from the
+// cluster when a backup runs, so its Namespaces field says nothing about what it touches.
+func (r *BackupRoutine) BacksUpWholeCluster() bool {
+	return len(r.Namespaces) == 0
+}
+
 // NextRun returns the next full backup time and, when the routine has an incremental
 // schedule, the next incremental backup time alongside it.
 func (r *BackupRoutine) NextRun() (*BackupTime, error) {
