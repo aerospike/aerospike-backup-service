@@ -12,8 +12,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
-	"github.com/aws/smithy-go"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -286,10 +284,7 @@ func TestSecret_MaskedInErrorMessages(t *testing.T) {
 			assert.Contains(t, tt.err.Error(), redact.Placeholder)
 			assert.NotContains(t, tt.err.Error(), literalPassword)
 
-			var redacted error
-			ok := errors.As(RedactSecrets(tt.err), &redacted)
-			require.True(t, ok)
-			assert.NotContains(t, redacted.Error(), literalPassword)
+			assert.NotContains(t, RedactSecrets(tt.err).Error(), literalPassword)
 		})
 	}
 
@@ -321,11 +316,7 @@ func TestSecret_MaskedInErrorMessages(t *testing.T) {
 	t.Run("raw string conversion leaks", func(t *testing.T) {
 		err := fmt.Errorf("password %s", string(secret))
 		assert.Contains(t, err.Error(), literalPassword)
-		assert.Equal(t, err.Error(), func() error {
-			var target error
-			_ = errors.As(RedactSecrets(err), &target)
-			return target
-		}().Error())
+		assert.Equal(t, err.Error(), RedactSecrets(err).Error())
 	})
 }
 
@@ -346,114 +337,174 @@ type noSecret struct {
 }
 
 func TestRedactSecrets_CyclicStructures(t *testing.T) {
-	t.Run("A — cycle through a typed pointer", func(t *testing.T) {
-		v := &selfPointer{Name: "a", Secret: redact.Secret("hunter2")}
+	placeholder := redact.Secret(redact.Placeholder)
+
+	t.Run("cycle through a typed pointer", func(t *testing.T) {
+		v := &selfPointer{Name: "a", Secret: literalPassword}
 		v.Peer = v
 
 		res := RedactSecrets(v)
-		require.NotNil(t, res)
 
-		assert.NotSame(t, v, res)
-		assert.NotEqual(t, redact.Secret("hunter2"), res.Secret)
-		assert.Same(t, res, res.Peer)
+		assert.NotSame(t, v, res, "a value holding a secret is rebuilt")
+		assert.Equal(t, placeholder, res.Secret)
+		assert.Equal(t, "a", res.Name)
+		assert.Same(t, res, res.Peer, "the copy closes the cycle on itself")
+		assert.Equal(t, redact.Secret(literalPassword), v.Secret, "the original is untouched")
 	})
 
-	t.Run("B — cycle through an interface field", func(t *testing.T) {
-		v := &selfInterface{Secret: redact.Secret("hunter2")}
+	t.Run("cycle through an interface field", func(t *testing.T) {
+		v := &selfInterface{Secret: literalPassword}
 		v.Payload = v
 
 		res := RedactSecrets(v)
-		require.NotNil(t, res)
 
 		assert.NotSame(t, v, res)
-		assert.NotEqual(t, redact.Secret("hunter2"), res.Secret)
+		assert.Equal(t, placeholder, res.Secret)
 		assert.Same(t, res, res.Payload)
 	})
 
-	t.Run("C — no secret anywhere, interface cycle", func(t *testing.T) {
+	t.Run("cycle with no secret is returned as it stands", func(t *testing.T) {
 		v := &noSecret{Name: "a"}
 		v.Payload = v
 
-		res := RedactSecrets(v)
-		assert.Equal(t, v, res)
+		assert.Same(t, v, RedactSecrets(v))
 	})
 
-	t.Run("D — map containing itself", func(t *testing.T) {
-		v := map[string]any{"secret": redact.Secret("hunter2")}
+	t.Run("map containing itself", func(t *testing.T) {
+		v := map[string]any{"secret": redact.Secret(literalPassword)}
 		v["self"] = v
 
 		res := RedactSecrets(v)
 
-		assert.NotEqual(t, redact.Secret("hunter2"), res["secret"])
-
-		selfVal, ok := res["self"].(map[string]any)
-		require.True(t, ok)
-		assert.Equal(t, reflect.ValueOf(res).Pointer(), reflect.ValueOf(selfVal).Pointer())
+		assert.Equal(t, placeholder, res["secret"])
+		assert.Equal(t, reflect.ValueOf(res).Pointer(), reflect.ValueOf(res["self"]).Pointer())
 	})
 
-	t.Run("E — slice containing itself", func(t *testing.T) {
+	t.Run("slice containing itself", func(t *testing.T) {
 		v := make([]any, 2)
-		v[0] = redact.Secret("hunter2")
+		v[0] = redact.Secret(literalPassword)
 		v[1] = v
 
 		res := RedactSecrets(v)
 
-		assert.NotEqual(t, redact.Secret("hunter2"), res[0])
+		assert.Equal(t, placeholder, res[0])
+		assert.Equal(t, reflect.ValueOf(res).Pointer(), reflect.ValueOf(res[1]).Pointer())
+	})
 
-		selfSlice, ok := res[1].([]any)
-		require.True(t, ok)
-		assert.Equal(t, reflect.ValueOf(res).Pointer(), reflect.ValueOf(selfSlice).Pointer())
+	t.Run("two-node cycle", func(t *testing.T) {
+		a := &selfPointer{Name: "a", Secret: literalPassword}
+		b := &selfPointer{Name: "b", Peer: a}
+		a.Peer = b
+
+		res := RedactSecrets(a)
+
+		assert.Equal(t, placeholder, res.Secret)
+		assert.Equal(t, "b", res.Peer.Name)
+		assert.Same(t, res, res.Peer.Peer)
 	})
 }
 
-func TestRedactSecrets_RealS3ErrorChainCycle(t *testing.T) {
-	// 1. Build real net/http back-pointer cycle
+// A pointer reachable by two paths is copied once, so the copy has the shape of the original.
+func TestRedactSecrets_SharedPointerIsCopiedOnce(t *testing.T) {
+	shared := &selfPointer{Name: "shared", Secret: literalPassword}
+	v := struct{ Left, Right *selfPointer }{Left: shared, Right: shared}
+
+	res := RedactSecrets(v)
+
+	assert.Same(t, res.Left, res.Right)
+	assert.Equal(t, redact.Secret(redact.Placeholder), res.Left.Secret)
+}
+
+// Two slices over one backing array share a data pointer but are different values, so each
+// must be walked and copied on its own: neither the shorter view's length nor its verdict on
+// holding a secret may stand in for the longer one's.
+func TestRedactSecrets_SlicesOverOneArray(t *testing.T) {
+	t.Run("each view keeps its own length", func(t *testing.T) {
+		full := []redact.Secret{"s0", "s1", "s2"}
+		v := struct{ Head, Full []redact.Secret }{Head: full[:1], Full: full}
+
+		res := RedactSecrets(v)
+
+		require.Len(t, res.Head, 1)
+		require.Len(t, res.Full, 3)
+		for _, s := range res.Full {
+			assert.Equal(t, redact.Secret(redact.Placeholder), s)
+		}
+	})
+
+	t.Run("secret beyond the shorter view is still redacted", func(t *testing.T) {
+		type entry struct{ Payload any }
+		full := []entry{{Payload: "harmless"}, {Payload: redact.Secret(literalPassword)}}
+		v := struct{ Head, Full []entry }{Head: full[:1], Full: full}
+
+		res := RedactSecrets(v)
+
+		require.Len(t, res.Full, 2)
+		assert.Equal(t, redact.Secret(redact.Placeholder), res.Full[1].Payload)
+	})
+}
+
+// requestCarryingError stands for an SDK error that keeps the failed request: through the
+// stdlib's own Request.Response / Response.Request back-pointers the value graph is cyclic.
+type requestCarryingError struct {
+	Op      string
+	Request *http.Request
+	Secret  redact.Secret
+}
+
+func (e *requestCarryingError) Error() string { return e.Op + " failed" }
+
+func TestRedactSecrets_ErrorWithRequestResponseCycle(t *testing.T) {
 	req := &http.Request{
 		Method: http.MethodGet,
-		URL: &url.URL{
-			Scheme: "https",
-			Host:   "my-bucket.s3.us-west-2.amazonaws.com",
-			Path:   "/backup-file.tar.gz",
-		},
-		Header: http.Header{
-			"Authorization": []string{"AWS4-HMAC-SHA256 Credential=secret-access-key"},
-		},
+		URL:    &url.URL{Scheme: "https", Host: "my-bucket.s3.amazonaws.com", Path: "/backup.tar.gz"},
+		Header: http.Header{"X-Request-Id": []string{"abc"}},
+	}
+	req.Response = &http.Response{StatusCode: http.StatusForbidden, Request: req}
+
+	err := &requestCarryingError{Op: "GetObject", Request: req, Secret: literalPassword}
+
+	redacted := RedactSecrets(err)
+
+	assert.Equal(t, redact.Secret(redact.Placeholder), redacted.Secret)
+	assert.Equal(t, err.Error(), redacted.Error())
+	assert.Equal(t, "/backup.tar.gz", redacted.Request.URL.Path)
+	assert.Equal(t, http.StatusForbidden, redacted.Request.Response.StatusCode)
+	assert.Same(t, redacted.Request, redacted.Request.Response.Request, "the stdlib cycle is preserved in the copy")
+	assert.Equal(t, redact.Secret(literalPassword), err.Secret, "the original is untouched")
+}
+
+// credentialPair is a Redactable that is not a string: it redacts itself as a unit, and the
+// walk stores what it hands back without knowing how it is represented.
+type credentialPair struct {
+	User     string
+	Password string
+}
+
+func (c credentialPair) DisplayString() string { return c.User + ":" + redact.Placeholder }
+func (c credentialPair) IsRedacted() bool      { return c.Password == redact.Placeholder }
+func (c credentialPair) Redacted() redact.Redactable {
+	return credentialPair{User: c.User, Password: redact.Placeholder}
+}
+
+func TestRedactSecrets_RedactableDecidesItsOwnForm(t *testing.T) {
+	type holder struct {
+		Pair    credentialPair
+		PairPtr *credentialPair
+		Pairs   map[string]credentialPair
 	}
 
-	resp := &http.Response{
-		StatusCode: http.StatusForbidden,
-		Status:     "403 Forbidden",
-		Request:    req,
+	v := holder{
+		Pair:    credentialPair{User: "admin", Password: literalPassword},
+		PairPtr: &credentialPair{User: "root", Password: literalPassword},
+		Pairs:   map[string]credentialPair{"c1": {User: "c1", Password: literalPassword}},
 	}
 
-	// stdlib cycle: http.Request.Response points back to http.Response
-	req.Response = resp
+	res := RedactSecrets(v)
 
-	// 2. Wrap into real AWS SDK v2 / Smithy S3 error structures
-	genericAPIErr := &smithy.GenericAPIError{
-		Code:    "AccessDenied",
-		Message: "Access Denied to S3 bucket",
-	}
-
-	smithyRespErr := &smithyhttp.ResponseError{
-		Response: &smithyhttp.Response{
-			Response: resp,
-		},
-		Err: genericAPIErr,
-	}
-
-	smithyOpErr := &smithy.OperationError{
-		ServiceID:     "S3",
-		OperationName: "GetObject",
-		Err:           smithyRespErr,
-	}
-
-	// 3. 4x fmt.wrapError chain wrapping the AWS error
-	errChain := fmt.Errorf("backup service failed: %w",
-		fmt.Errorf("failed to download object: %w",
-			fmt.Errorf("s3 client call failed: %w",
-				fmt.Errorf("smithy error: %w", smithyOpErr))))
-
-	redacted := RedactSecrets(errChain)
-	require.Error(t, redacted)
+	assert.Equal(t, credentialPair{User: "admin", Password: redact.Placeholder}, res.Pair)
+	assert.Equal(t, credentialPair{User: "root", Password: redact.Placeholder}, *res.PairPtr,
+		"the pointer is followed, not redacted")
+	assert.Equal(t, credentialPair{User: "c1", Password: redact.Placeholder}, res.Pairs["c1"])
+	assert.Equal(t, literalPassword, v.Pair.Password, "the original is untouched")
 }
