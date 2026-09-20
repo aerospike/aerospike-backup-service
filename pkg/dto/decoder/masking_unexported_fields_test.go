@@ -139,7 +139,8 @@ func TestRedactSecrets_KeepsSecretFreeErrors(t *testing.T) {
 	inner := errors.New("inner")
 	wrapped := fmt.Errorf("connect cluster1: %w", inner)
 
-	redacted, ok := RedactSecrets(wrapped).(error)
+	var redacted error
+	ok := errors.As(RedactSecrets(wrapped), &redacted)
 	require.True(t, ok)
 	assert.Equal(t, wrapped.Error(), redacted.Error())
 	assert.ErrorIs(t, redacted, inner)

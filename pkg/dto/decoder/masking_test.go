@@ -286,7 +286,8 @@ func TestSecret_MaskedInErrorMessages(t *testing.T) {
 			assert.Contains(t, tt.err.Error(), redact.Placeholder)
 			assert.NotContains(t, tt.err.Error(), literalPassword)
 
-			redacted, ok := RedactSecrets(tt.err).(error)
+			var redacted error
+			ok := errors.As(RedactSecrets(tt.err), &redacted)
 			require.True(t, ok)
 			assert.NotContains(t, redacted.Error(), literalPassword)
 		})
@@ -320,7 +321,11 @@ func TestSecret_MaskedInErrorMessages(t *testing.T) {
 	t.Run("raw string conversion leaks", func(t *testing.T) {
 		err := fmt.Errorf("password %s", string(secret))
 		assert.Contains(t, err.Error(), literalPassword)
-		assert.Equal(t, err.Error(), RedactSecrets(err).(error).Error())
+		assert.Equal(t, err.Error(), func() error {
+			var target error
+			_ = errors.As(RedactSecrets(err), &target)
+			return target
+		}().Error())
 	})
 }
 
@@ -450,5 +455,5 @@ func TestRedactSecrets_RealS3ErrorChainCycle(t *testing.T) {
 				fmt.Errorf("smithy error: %w", smithyOpErr))))
 
 	redacted := RedactSecrets(errChain)
-	require.NotNil(t, redacted)
+	require.Error(t, redacted)
 }
