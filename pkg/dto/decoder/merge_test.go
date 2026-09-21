@@ -10,7 +10,7 @@ import (
 
 func TestMergeSecrets_ComplexFixture(t *testing.T) {
 	original := testComplexConfig()
-	redacted := RedactSecrets(original).(testConfig)
+	redacted := RedactSecrets(original)
 
 	// Simulate editing non-secret fields on a GET response payload.
 	redacted.AerospikeClusters["cluster1"].Credentials.User = "updatedUser"

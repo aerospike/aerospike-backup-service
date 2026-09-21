@@ -21,13 +21,15 @@ type Secret string
 // Redactable is implemented by credential-bearing values that know how to render themselves
 // safely. The reflective walks in pkg/dto/decoder key on this interface rather than on Secret
 // itself, so a second secret-bearing type is redacted, and merge-preserved, without touching
-// them. An implementation must have string as its underlying type, because redaction replaces
-// the value with DisplayString.
+// them: the walk stores whatever Redacted returns where the value was found, and never looks
+// at how the value is represented.
 type Redactable interface {
-	// DisplayString returns the value as it may safely appear in logs, errors and API responses.
-	DisplayString() string
 	// IsRedacted reports whether the value is the redaction placeholder itself.
 	IsRedacted() bool
+	// Redacted returns the value as it may be handed to anyone, with the credential replaced.
+	// It must have the same type as its receiver, so it fits the field, map entry or slice
+	// element the receiver came from; the receiver itself is untouched.
+	Redacted() Redactable
 }
 
 var _ Redactable = Secret("")
@@ -65,6 +67,12 @@ func (s Secret) DisplayString() string {
 	}
 
 	return Placeholder
+}
+
+// Redacted returns the value as it is shown: a literal becomes the Placeholder, a well-formed
+// secret agent reference and an empty value stay as they are.
+func (s Secret) Redacted() Redactable {
+	return Secret(s.DisplayString())
 }
 
 // String implements fmt.Stringer for "%s" and "%v".
