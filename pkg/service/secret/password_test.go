@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"errors"
 	"os"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 const (
@@ -100,6 +102,27 @@ func TestResolve(t *testing.T) {
 			_ = os.RemoveAll(testdataFolder)
 		})
 	}
+}
+
+// TestResolve_SecretAgentResolutionErrorPropagates guards the Secret Agent path
+// through resolveClusterPassword: an unreachable or erroring agent must fail
+// password resolution, not silently fall back to an empty or literal password.
+func TestResolve_SecretAgentResolutionErrorPropagates(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockResolver := NewMockResolver(ctrl)
+	mockResolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return("", errors.New("secret agent unreachable"))
+
+	resolver := NewPasswordResolver(mockResolver)
+	creds := &model.Credentials{
+		User:     "user",
+		Password: "secrets:agent:password",
+	}
+
+	password, err := resolver.Resolve(t.Context(), creds)
+	require.ErrorContains(t, err, "failed to read password from secret agent")
+	assert.Nil(t, password)
 }
 
 func createFile(content string) {
