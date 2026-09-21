@@ -223,7 +223,7 @@ func (s *AuthSuite) startSecureAerospike(ctx context.Context, profile authProfil
 		// Docker Desktop hands out a new host port whenever a container is stopped and
 		// started, but the port has to be baked into tls-alternate-access-port before the
 		// restart. Pinning the binding at create time keeps it stable across the restart.
-		mappedTLSPort := availableHostPort(ctx, s)
+		mappedTLSPort := availableHostPort(ctx, &s.Suite)
 		options = append(
 			options,
 			testcontainers.WithExposedPorts(tlsPort),
@@ -371,7 +371,7 @@ namespace test {
 	)
 }
 
-func availableHostPort(ctx context.Context, s *AuthSuite) int {
+func availableHostPort(ctx context.Context, s *Suite) int {
 	var listenConfig net.ListenConfig
 	listener, err := listenConfig.Listen(ctx, "tcp4", "127.0.0.1:0")
 	s.Require().NoError(err)

@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -29,13 +30,29 @@ const (
 	secretsFilePath    = "/secretagent/secrets.json"
 )
 
+// secretRef returns the secret-agent reference for the single-secret helper below
+// (startSecretAgent). For a multi-secret agent (startSecretAgentWithKeys), use
+// secretRefKey instead.
 func secretRef() string {
-	return fmt.Sprintf("secrets:%s:%s", secretResource, secretKeyName)
+	return secretRefKey(secretKeyName)
+}
+
+func secretRefKey(key string) string {
+	return fmt.Sprintf("secrets:%s:%s", secretResource, key)
 }
 
 // startSecretAgent starts Aerospike Secret Agent with the file backend described in
-// https://github.com/aerospike/aerospike-secret-agent/blob/main/docs/file.md
+// https://github.com/aerospike/aerospike-secret-agent/blob/main/docs/file.md, holding
+// a single secret under secretKeyName. Use startSecretAgentWithKeys when a test needs
+// more than one secret resolved from the same agent (e.g. an access key and a secret
+// key together).
 func (s *Suite) startSecretAgent(secret string) *dto.SecretAgent {
+	return s.startSecretAgentWithKeys(map[string]string{secretKeyName: secret})
+}
+
+// startSecretAgentWithKeys starts a Secret Agent whose file backend holds one entry per
+// map key, each addressable as secretRefKey(key).
+func (s *Suite) startSecretAgentWithKeys(secrets map[string]string) *dto.SecretAgent {
 	ctx := s.T().Context()
 
 	agent, err := testcontainers.Run(ctx, secretAgentImage,
@@ -48,7 +65,7 @@ func (s *Suite) startSecretAgent(secret string) *dto.SecretAgent {
 				FileMode:          0o644,
 			},
 			testcontainers.ContainerFile{
-				Reader:            strings.NewReader(secretsJSON(secret)),
+				Reader:            strings.NewReader(secretsJSON(secrets)),
 				ContainerFilePath: secretsFilePath,
 				FileMode:          0o600,
 			},
@@ -101,9 +118,19 @@ func (s *Suite) secretAgentConfigYAML() string {
 	return string(data)
 }
 
-func secretsJSON(secret string) string {
+func secretsJSON(secrets map[string]string) string {
 	// File-backend values must be base64-encoded strings.
-	return fmt.Sprintf(`{%q:%q}`, secretKeyName, base64.StdEncoding.EncodeToString([]byte(secret)))
+	encoded := make(map[string]string, len(secrets))
+	for key, value := range secrets {
+		encoded[key] = base64.StdEncoding.EncodeToString([]byte(value))
+	}
+
+	data, err := json.Marshal(encoded)
+	if err != nil {
+		panic(err) // encoded is a map[string]string; Marshal cannot fail on it.
+	}
+
+	return string(data)
 }
 
 func (s *Suite) cleanupContainer(c testcontainers.Container) {

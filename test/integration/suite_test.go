@@ -15,3 +15,7 @@ func TestIntegration(t *testing.T) {
 func TestClusterAuth(t *testing.T) {
 	suite.Run(t, new(AuthSuite))
 }
+
+func TestStorage(t *testing.T) {
+	suite.Run(t, new(StorageSuite))
+}
