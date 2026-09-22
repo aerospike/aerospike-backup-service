@@ -60,7 +60,7 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	backupConfig := s.config.BackupConfigCopy()
-	storage, err := backupConfig.FindStorage(name)
+	storage, err := backupConfig.GetStorage(name)
 	if err != nil {
 		httpError(w, err)
 		return

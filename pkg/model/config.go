@@ -52,12 +52,12 @@ func (bc BackupConfig) copy() BackupConfig {
 	}
 }
 
-// FindStorage and FindCluster read from a snapshot the caller already holds, because rendering
+// GetStorage and Cluster read from a snapshot the caller already holds, because rendering
 // either one resolves its secret agent by identity against that same snapshot's agents; looking
 // the entity up under a separate lock could pair it with a map that no longer holds its agent.
 // They are named Find because Storage is a field on this type. Lookups that need no snapshot are
 // Routine and Policy on Config.
-func (bc *BackupConfig) FindStorage(name string) (Storage, error) {
+func (bc *BackupConfig) GetStorage(name string) (Storage, error) {
 	storage, ok := bc.Storage[name]
 	if !ok {
 		return nil, NotFound("storage", name)
@@ -66,7 +66,7 @@ func (bc *BackupConfig) FindStorage(name string) (Storage, error) {
 	return storage, nil
 }
 
-func (bc *BackupConfig) FindCluster(name string) (*AerospikeCluster, error) {
+func (bc *BackupConfig) Cluster(name string) (*AerospikeCluster, error) {
 	cluster, ok := bc.AerospikeClusters[name]
 	if !ok {
 		return nil, NotFound("cluster", name)

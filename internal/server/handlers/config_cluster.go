@@ -67,7 +67,7 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	backupConfig := s.config.BackupConfigCopy()
-	cluster, err := backupConfig.FindCluster(name)
+	cluster, err := backupConfig.Cluster(name)
 	if err != nil {
 		httpError(w, err)
 		return
