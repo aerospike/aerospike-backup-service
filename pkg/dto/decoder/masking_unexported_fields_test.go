@@ -38,7 +38,8 @@ func TestRedactSecrets_PreservesUnexportedFields(t *testing.T) {
 	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	holder := &stateHolder{full: &now}
 
-	redacted := RedactSecrets(holder)
+	redacted, ok := RedactSecrets(holder).(*stateHolder)
+	require.True(t, ok)
 	assert.Equal(t, holder.String(), redacted.String())
 }
 
@@ -46,7 +47,8 @@ func TestRedactSecrets_PreservesUnexportedFields(t *testing.T) {
 func TestRedactSecrets_PreservesUnexportedFieldsInSlice(t *testing.T) {
 	keys := []*keyLike{{name: "routine", group: "backup"}}
 
-	redacted := RedactSecrets(keys)
+	redacted, ok := RedactSecrets(keys).([]*keyLike)
+	require.True(t, ok)
 	require.Len(t, redacted, 1)
 	assert.Equal(t, *keys[0], *redacted[0])
 }
@@ -62,10 +64,11 @@ func TestRedactSecrets_RedactsThroughInterface(t *testing.T) {
 		Note    string
 	}
 
-	redacted := RedactSecrets(envelope{
+	redacted, ok := RedactSecrets(envelope{
 		Payload: &secretHolder{Password: literalPassword},
 		Note:    "note",
-	})
+	}).(envelope)
+	require.True(t, ok)
 
 	payload, ok := redacted.Payload.(*secretHolder)
 	require.True(t, ok)
@@ -81,7 +84,8 @@ func TestRedactSecrets_PreservesUnexportedFieldsBehindInterface(t *testing.T) {
 	}
 
 	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
-	redacted := RedactSecrets(envelope{Payload: &stateHolder{full: &now}})
+	redacted, ok := RedactSecrets(envelope{Payload: &stateHolder{full: &now}}).(envelope)
+	require.True(t, ok)
 
 	payload, ok := redacted.Payload.(*stateHolder)
 	require.True(t, ok)
@@ -118,7 +122,8 @@ type privatePath struct {
 // either: the unreachable field is dropped.
 func TestRedactSecrets_UnexportedPathToASecret(t *testing.T) {
 	require.NotPanics(t, func() {
-		redacted := RedactSecrets(privatePath{inner: secretHolder{Password: literalPassword}})
+		redacted, ok := RedactSecrets(privatePath{inner: secretHolder{Password: literalPassword}}).(privatePath)
+		require.True(t, ok)
 		assert.NotEqual(t, redact.Secret(literalPassword), redacted.inner.Password)
 	})
 }
@@ -149,7 +154,8 @@ func TestRedactSecrets_KeepsSecretFreeErrors(t *testing.T) {
 // through: encoding/json publishes an error's fields, so handing it back as it stands would
 // leak the literal into a marshaled response.
 func TestRedactSecrets_RedactsErrorsCarryingASecret(t *testing.T) {
-	redacted := RedactSecrets(&credentialCarryingError{User: "admin", Password: literalPassword})
+	redacted, ok := RedactSecrets(&credentialCarryingError{User: "admin", Password: literalPassword}).(error)
+	require.True(t, ok)
 	assert.Equal(t, "auth failed for admin", redacted.Error(), "the message survives")
 
 	data, err := Marshal(redacted, JSON, false)

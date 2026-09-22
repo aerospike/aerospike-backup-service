@@ -24,19 +24,13 @@ type visitKey struct {
 // RedactSecrets returns a deep copy of v with all Secret-typed values replaced by redact.Placeholder.
 // Values that hold no such secret are returned as they are: rebuilding them through reflection
 // would drop the state their unexported fields hold. The walk handles cyclical value graphs safely.
-func RedactSecrets[T any](v T) T {
-	rv := reflect.ValueOf(v)
-	if !rv.IsValid() {
-		return v
+func RedactSecrets(v any) any {
+	if v == nil {
+		return nil
 	}
 
 	visited := make(map[visitKey]reflect.Value)
-	res := redactValue(rv, visited)
-	if !res.IsValid() {
-		return v
-	}
-
-	return res.Interface().(T)
+	return redactValue(reflect.ValueOf(v), visited).Interface()
 }
 
 // RedactSecretsReplaceAttr returns a slog ReplaceAttr function that redacts Secret-typed values.

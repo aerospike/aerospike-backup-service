@@ -48,7 +48,7 @@ func TestRedactSecrets_ComplexFixture(t *testing.T) {
 	})
 
 	t.Run("redact secrets value", func(t *testing.T) {
-		redacted := RedactSecrets(original)
+		redacted := RedactSecrets(original).(testConfig)
 
 		data, err := Marshal(&redacted, JSON, false)
 		require.NoError(t, err)
@@ -81,7 +81,7 @@ func TestRedactSecrets_ComplexFixture(t *testing.T) {
 		created := original.BackupHistory["routine1"][0].Created
 		finished := original.BackupHistory["routine1"][0].Finished
 
-		redacted := RedactSecrets(original)
+		redacted := RedactSecrets(original).(testConfig)
 		entry := redacted.BackupHistory["routine1"][0]
 
 		assert.Equal(t, created, entry.Created)
@@ -90,7 +90,7 @@ func TestRedactSecrets_ComplexFixture(t *testing.T) {
 	})
 
 	t.Run("preserves empty secret", func(t *testing.T) {
-		redacted := RedactSecrets(original)
+		redacted := RedactSecrets(original).(testConfig)
 
 		assert.Empty(t, redacted.AerospikeClusters["cluster3"].Credentials.Password)
 		assert.Empty(t, redacted.StorageProviders["s3-ref"].SecretAccessKey)
@@ -109,7 +109,7 @@ func TestRedactSecrets_ComplexFixture(t *testing.T) {
 	})
 
 	t.Run("preserves valid secret ref", func(t *testing.T) {
-		redacted := RedactSecrets(original)
+		redacted := RedactSecrets(original).(testConfig)
 
 		assert.Equal(t, redact.Secret(validSecretRef), redacted.AerospikeClusters["cluster2"].Credentials.Password)
 		assert.Equal(t, redact.Secret(validSecretRef), redacted.StorageProviders["s3-ref"].AccessKeyID)
@@ -117,7 +117,7 @@ func TestRedactSecrets_ComplexFixture(t *testing.T) {
 	})
 
 	t.Run("redacts malformed secret ref", func(t *testing.T) {
-		redacted := RedactSecrets(original)
+		redacted := RedactSecrets(original).(testConfig)
 
 		assert.Equal(t, redact.Secret(redact.Placeholder), redacted.AerospikeClusters["cluster2"].Encryption.KeySecret)
 
@@ -128,11 +128,11 @@ func TestRedactSecrets_ComplexFixture(t *testing.T) {
 	})
 
 	t.Run("nil input", func(t *testing.T) {
-		assert.Nil(t, RedactSecrets[*testConfig](nil))
+		assert.Nil(t, RedactSecrets(nil))
 	})
 
 	t.Run("nil pointer fields", func(t *testing.T) {
-		redacted := RedactSecrets(original)
+		redacted := RedactSecrets(original).(testConfig)
 
 		assert.Nil(t, redacted.AerospikeClusters["cluster2"].TLS)
 	})
@@ -190,7 +190,7 @@ func TestRedactSecrets_PreservesTime(t *testing.T) {
 		},
 	}
 
-	redacted := RedactSecrets(original)
+	redacted := RedactSecrets(original).(map[string][]testBackupDetails)
 	require.Len(t, redacted["routine1"], 1)
 	assert.Equal(t, created, redacted["routine1"][0].Created)
 	assert.Equal(t, finished, redacted["routine1"][0].Finished)
@@ -345,7 +345,8 @@ func TestRedactSecrets_CyclicStructures(t *testing.T) {
 		v := &selfPointer{Name: "a", Secret: redact.Secret("hunter2")}
 		v.Peer = v
 
-		res := RedactSecrets(v)
+		res, ok := RedactSecrets(v).(*selfPointer)
+		require.True(t, ok)
 		require.NotNil(t, res)
 
 		assert.NotSame(t, v, res)
@@ -357,7 +358,8 @@ func TestRedactSecrets_CyclicStructures(t *testing.T) {
 		v := &selfInterface{Secret: redact.Secret("hunter2")}
 		v.Payload = v
 
-		res := RedactSecrets(v)
+		res, ok := RedactSecrets(v).(*selfInterface)
+		require.True(t, ok)
 		require.NotNil(t, res)
 
 		assert.NotSame(t, v, res)
@@ -377,7 +379,8 @@ func TestRedactSecrets_CyclicStructures(t *testing.T) {
 		v := map[string]any{"secret": redact.Secret("hunter2")}
 		v["self"] = v
 
-		res := RedactSecrets(v)
+		res, ok := RedactSecrets(v).(map[string]any)
+		require.True(t, ok)
 
 		assert.NotEqual(t, redact.Secret("hunter2"), res["secret"])
 
@@ -391,7 +394,8 @@ func TestRedactSecrets_CyclicStructures(t *testing.T) {
 		v[0] = redact.Secret("hunter2")
 		v[1] = v
 
-		res := RedactSecrets(v)
+		res, ok := RedactSecrets(v).([]any)
+		require.True(t, ok)
 
 		assert.NotEqual(t, redact.Secret("hunter2"), res[0])
 
