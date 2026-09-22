@@ -4,8 +4,60 @@ After=network.target
 
 [Service]
 Type=simple
+User=aerospike-backup-service
+Group=aerospike-backup-service
 ExecStart=/usr/bin/aerospike-backup-service --config /etc/aerospike-backup-service/aerospike-backup-service.yml
 Restart=on-failure
+
+# Credentials that must not live in the configuration file. ProtectHome= below hides
+# /root and /home, so an AWS/GCP/Azure credential file under a home directory is not
+# reachable: supply those through the environment instead. Both paths are optional.
+EnvironmentFile=-/etc/default/aerospike-backup-service
+EnvironmentFile=-/etc/sysconfig/aerospike-backup-service
+
+# systemd creates and owns /var/log/aerospike-backup-service on every start, which is
+# where service.logger.file-writer.filename points. Lumberjack rotates and compresses
+# inside that directory, so it needs the directory and not just the file.
+LogsDirectory=aerospike-backup-service
+LogsDirectoryMode=0750
+StateDirectory=aerospike-backup-service
+StateDirectoryMode=0750
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+# A leading "-" keeps a missing path from failing the unit at step NAMESPACE.
+# A backup routine writing anywhere else needs its path added here; see
+# /usr/share/doc/aerospike-backup-service/local-storage-path.conf.example.
+ReadWritePaths=-/etc/aerospike-backup-service -/var/lib/aerospike-backup-service
+CapabilityBoundingSet=
+AmbientCapabilities=
+# SystemCallArchitectures= is what stops the filter being bypassed through the 32-bit
+# compat entry, and SystemCallErrorNumber= turns a blocked call into an error the
+# service can report rather than a SIGSYS kill under Restart=on-failure.
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+SystemCallErrorNumber=EPERM
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ProtectProc=invisible
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+ProtectHostname=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RemoveIPC=true
+# 0027, not 0077: backup artifacts stay unreadable to the world but remain readable to
+# the aerospike-backup-service group, so an operator account added to that group can
+# still run asrestore or ship the files. See build/package/README.md.
+UMask=0027
 
 [Install]
 WantedBy=multi-user.target
