@@ -131,7 +131,7 @@ service:
   logger:
     level: INFO
     file-writer:
-      filename: /var/log/aerospike-backup-service.log
+      filename: /var/log/aerospike-backup-service/aerospike-backup-service.log
 ```
 <!-- /tag -->
 

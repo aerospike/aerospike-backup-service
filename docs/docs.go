@@ -3533,7 +3533,7 @@ const docTemplate = `{
                     "example": "/path/to/server-key.pem"
                 },
                 "key-file-password": {
-                    "description": "Passphrase for an encrypted HTTPS server private key.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
+                    "description": "Passphrase for an encrypted HTTPS server private key, in PKCS#8 (the OpenSSL 3 default) or legacy PEM encryption.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
                     "format": "password",
                     "x-nullable": true
@@ -3706,7 +3706,7 @@ const docTemplate = `{
                     "example": "/path/to/key.pem"
                 },
                 "key-file-password": {
-                    "description": "Passphrase for an encrypted TLS key file.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
+                    "description": "Passphrase for an encrypted TLS key file, in PKCS#8 (the OpenSSL 3 default) or legacy PEM encryption.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
                     "format": "password",
                     "x-nullable": true

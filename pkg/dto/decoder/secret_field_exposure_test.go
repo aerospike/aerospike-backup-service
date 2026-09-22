@@ -61,12 +61,12 @@ func TestSecretFieldsDoNotShareAStructWithUnexportedFields(t *testing.T) {
 	}
 }
 
-// isRedactableFieldType mirrors isRedactable in masking.go: a Redactable value must have
-// string as its underlying type, since redaction replaces it with its DisplayString.
+// isRedactableFieldType mirrors isRedactable in masking.go: a Redactable value, but not a
+// pointer to one - the walk follows the pointer and redacts what it finds behind it.
 func isRedactableFieldType(t types.Type, redactable *types.Interface) bool {
-	basic, ok := t.Underlying().(*types.Basic)
+	_, isPointer := t.Underlying().(*types.Pointer)
 
-	return ok && basic.Info()&types.IsString != 0 && types.Implements(t, redactable)
+	return !isPointer && types.Implements(t, redactable)
 }
 
 func redactableInterface(t *testing.T, pkgs []*packages.Package) *types.Interface {

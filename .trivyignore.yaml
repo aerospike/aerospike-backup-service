@@ -1,0 +1,51 @@
+# Trivy ignore policy.
+#
+# Only accepted, deliberate conditions belong here. Anything representing a real
+# hardening gap must stay visible - in particular the unpinned busybox images
+# (KSV-0013) and the missing securityContext on templates/tests/test-connection.yaml
+# are NOT ignored.
+#
+# Every entry needs a statement saying why it is accepted. Review when the chart's
+# resource or image-publishing story changes.
+
+misconfigurations:
+  # --- Chart deliberately leaves resource sizing to the operator -------------
+  # values.yaml ships `resources: {}` by design: "We usually recommend not to
+  # specify default resources and to leave this as a conscious choice for the
+  # user." Sizing depends entirely on namespace count, parallelism and storage
+  # backend, so the chart cannot pick a sensible default.
+  #
+  # NOTE: the consequence is that `autoscaling.enabled: true` cannot work as
+  # shipped - an HPA with targetCPUUtilizationPercentage needs CPU requests.
+  # Anyone enabling autoscaling must also set resources.requests.cpu.
+  - id: KSV-0011
+    statement: >-
+      CPU limit intentionally unset; resources are left to the operator
+      (values.yaml `resources: {}`).
+  - id: KSV-0015
+    statement: >-
+      CPU request intentionally unset; resources are left to the operator
+      (values.yaml `resources: {}`).
+  - id: KSV-0016
+    statement: >-
+      Memory request intentionally unset; resources are left to the operator
+      (values.yaml `resources: {}`).
+  - id: KSV-0018
+    statement: >-
+      Memory limit intentionally unset; resources are left to the operator
+      (values.yaml `resources: {}`).
+
+  # --- Registry -------------------------------------------------------------
+  - id: KSV-0125
+    statement: >-
+      The image is the project's own official release, published to Docker Hub as
+      aerospike/aerospike-backup-service. Docker Hub is not in Trivy's default
+      trusted-registry list; this is our publishing location, not an untrusted
+      third party.
+
+  # --- Scan artefact, not a chart property ----------------------------------
+  - id: KSV-0110
+    statement: >-
+      `helm template` renders without a namespace, so the scanner sees
+      "default". Real installs set one via `helm install --namespace`; the chart
+      never hardcodes a namespace.

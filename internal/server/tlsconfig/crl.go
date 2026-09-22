@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -58,54 +57,29 @@ func loadCRLs(path string) (*crlIndex, error) {
 	return index, nil
 }
 
+// parseCRLs reads one DER-encoded CRL or a PEM file of one or more CRLs. A file with a PEM
+// block anywhere in it is PEM; anything else is DER and is passed through untrimmed, because
+// whitespace bytes can be part of the encoding.
 func parseCRLs(data []byte, path string) ([]*x509.RevocationList, error) {
-	remaining := bytes.TrimSpace(data)
-	if len(remaining) == 0 {
+	if len(bytes.TrimSpace(data)) == 0 {
 		return nil, fmt.Errorf("client CRL file %q contains no CRLs", path)
 	}
 
-	if bytes.HasPrefix(remaining, []byte("-----BEGIN ")) {
-		return parsePEMCRLs(remaining, path)
-	}
-
-	// DER CRLs are binary; do not trim whitespace bytes that may be part of the encoding.
-	list, err := x509.ParseRevocationList(data)
+	ders, err := decodePEMBlocks(data, pemCRLType)
 	if err != nil {
-		return nil, fmt.Errorf("client CRL file %q contains an invalid CRL: %w", path, err)
+		return nil, fmt.Errorf("client CRL file %q: %w", path, err)
+	}
+	if len(ders) == 0 {
+		ders = [][]byte{data}
 	}
 
-	return []*x509.RevocationList{list}, nil
-}
-
-func parsePEMCRLs(data []byte, path string) ([]*x509.RevocationList, error) {
-	var lists []*x509.RevocationList
-	remaining := data
-	for {
-		remaining = bytes.TrimSpace(remaining)
-		if len(remaining) == 0 {
-			break
-		}
-		if !bytes.HasPrefix(remaining, []byte("-----BEGIN "+pemCRLType+"-----")) {
-			if len(lists) == 0 {
-				return nil, fmt.Errorf("client CRL file %q contains no CRLs", path)
-			}
-
-			return nil, fmt.Errorf("client CRL file %q contains invalid data after a CRL", path)
-		}
-
-		block, rest := pem.Decode(remaining)
-		if block == nil {
-			return nil, fmt.Errorf("client CRL file %q contains an invalid CRL PEM block", path)
-		}
-		list, err := x509.ParseRevocationList(block.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("client CRL file %q contains an invalid CRL: %w", path, err)
+	lists := make([]*x509.RevocationList, 0, len(ders))
+	for _, der := range ders {
+		list, parseErr := x509.ParseRevocationList(der)
+		if parseErr != nil {
+			return nil, fmt.Errorf("client CRL file %q contains an invalid CRL: %w", path, parseErr)
 		}
 		lists = append(lists, list)
-		remaining = rest
-	}
-	if len(lists) == 0 {
-		return nil, fmt.Errorf("client CRL file %q contains no CRLs", path)
 	}
 
 	return lists, nil
