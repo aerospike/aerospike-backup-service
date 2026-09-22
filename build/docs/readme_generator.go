@@ -20,12 +20,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const (
-	examplesDir = "docs/examples"
-
-	// openAPIRelPath is written earlier in the same run by generateOpenAPI.
-	openAPIRelPath = "docs/openapi.json"
-)
+const examplesDir = "docs/examples"
 
 // targetFiles lists every Markdown file that may contain generated sections
 // (DTO examples, the default config block, the metrics table, or the RBAC
@@ -92,7 +87,7 @@ func newRenderers(endpoints map[string]endpoint, metricsTable string) map[string
 	}
 
 	for id := range endpoints {
-		add(openAPIRelPath, id, func(args string) string { return renderEndpoint(id, args, endpoints) })
+		add(openapi, id, func(args string) string { return renderEndpoint(id, args, endpoints) })
 	}
 
 	for id := range jsonExamples {
@@ -173,7 +168,7 @@ func renderEndpoint(operationID, args string, endpoints map[string]endpoint) str
 
 	operation, found := endpoints[operationID]
 	if !found {
-		panic(fmt.Errorf("unknown operation %q: no such operationId in %s", operationID, openAPIRelPath))
+		panic(fmt.Errorf("unknown operation %q: no such operationId in %s", operationID, openapi))
 	}
 
 	// A call-out on its own line addresses the service through the {{baseUrl}}
@@ -206,9 +201,9 @@ func parseEndpointArgs(operationID, args string) (asLink bool, query string) {
 
 // loadEndpoints indexes the generated OpenAPI document by operation id.
 func loadEndpoints() map[string]endpoint {
-	content, err := os.ReadFile(openAPIRelPath)
+	content, err := os.ReadFile(openapi)
 	if err != nil {
-		panic(fmt.Errorf("failed to read %s: %w", openAPIRelPath, err))
+		panic(fmt.Errorf("failed to read %s: %w", openapi, err))
 	}
 
 	var document struct {
@@ -219,7 +214,7 @@ func loadEndpoints() map[string]endpoint {
 	}
 
 	if err := json.Unmarshal(content, &document); err != nil {
-		panic(fmt.Errorf("failed to parse %s: %w", openAPIRelPath, err))
+		panic(fmt.Errorf("failed to parse %s: %w", openapi, err))
 	}
 
 	endpoints := make(map[string]endpoint)

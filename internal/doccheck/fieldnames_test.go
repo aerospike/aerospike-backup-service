@@ -25,6 +25,8 @@ var fieldToken = regexp.MustCompile("`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`")
 //nolint:gochecknoglobals // a table, read by the test below.
 var nonFieldTokens = map[string]bool{}
 
+const openapi = "docs/openapi.json"
+
 // TestDocumentedFieldNamesExist checks that every field the prose names is real.
 //
 // The configuration examples are generated from Go structs and the endpoint
@@ -70,15 +72,13 @@ func schemaProperties(t *testing.T) map[string]bool {
 		"aerospike-backup-service": true,
 	}
 
-	for _, file := range []string{"docs/config.schema.json", "docs/openapi.json"} {
-		content, err := os.ReadFile(filepath.Join(root, file))
-		require.NoErrorf(t, err, "read %s", file)
+	content, err := os.ReadFile(filepath.Join(root, openapi))
+	require.NoErrorf(t, err, "read %s", openapi)
 
-		var document any
-		require.NoErrorf(t, json.Unmarshal(content, &document), "parse %s", file)
+	var document any
+	require.NoErrorf(t, json.Unmarshal(content, &document), "parse %s", openapi)
 
-		collectProperties(document, known)
-	}
+	collectProperties(document, known)
 
 	return known
 }
