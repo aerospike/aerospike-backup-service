@@ -14,10 +14,9 @@ var (
 	ErrInUse         = errors.New("is in use")
 )
 
-// entityError names the entity a request could not act on and why. It carries the name so no
-// layer above has to restate it, which is what let a reported status and its message drift apart:
-// every caller now renders the same sentence, `routine "daily" not found`, from the error itself.
-// The cause stays reachable through errors.Is.
+// entityError names the entity a request could not act on and why. It is the single rendering of
+// kind, name and cause, `routine "daily" not found`, so no layer above restates any of them, and
+// the cause stays reachable through errors.Is.
 type entityError struct {
 	// Kind is the entity as the API names it: routine, storage, cluster, policy, job.
 	Kind string
