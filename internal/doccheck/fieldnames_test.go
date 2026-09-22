@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"testing"
 
@@ -56,10 +55,7 @@ func TestDocumentedFieldNamesExist(t *testing.T) {
 			at := fmt.Sprintf("%s:%d", file, 1+strings.Count(text[:match[0]], "\n"))
 
 			t.Run(at+"/"+name, func(t *testing.T) {
-				t.Errorf("%s names the field %q, which is in neither docs/config.schema.json "+
-					"nor docs/openapi.json.\nDid you mean one of: %s?\n"+
-					"If it is not a field at all, add it to nonFieldTokens.",
-					at, name, strings.Join(similar(name, known), ", "))
+				t.Errorf("%s names the field %q, which is in neither docs/config.schema.json nor docs/openapi.json", at, name)
 			})
 		}
 	}
@@ -70,7 +66,9 @@ func schemaProperties(t *testing.T) map[string]bool {
 	t.Helper()
 
 	root := doccheck.Root(t)
-	known := make(map[string]bool)
+	known := map[string]bool{
+		"aerospike-backup-service": true,
+	}
 
 	for _, file := range []string{"docs/config.schema.json", "docs/openapi.json"} {
 		content, err := os.ReadFile(filepath.Join(root, file))
@@ -105,60 +103,4 @@ func collectProperties(node any, known map[string]bool) {
 			collectProperties(child, known)
 		}
 	}
-}
-
-// similar suggests the known fields closest to the one the prose named, which is
-// usually enough to see the mistake: `storage-name` next to `source-name`.
-//
-// Candidates are ranked by edit distance. Alphabetical order would bury the
-// answer, and so would a prefix match: a dozen fields end in "-name", and
-// "source-name" shares only one letter with "storage-name" that names it wrongly.
-func similar(name string, known map[string]bool) []string {
-	candidates := make([]string, 0, len(known))
-	for candidate := range known {
-		candidates = append(candidates, candidate)
-	}
-
-	sort.Slice(candidates, func(i, j int) bool {
-		left, right := distance(name, candidates[i]), distance(name, candidates[j])
-		if left != right {
-			return left < right
-		}
-
-		return candidates[i] < candidates[j]
-	})
-
-	const maxSuggestions = 4
-	if len(candidates) > maxSuggestions {
-		candidates = candidates[:maxSuggestions]
-	}
-
-	return candidates
-}
-
-// distance is the Levenshtein distance between two field names.
-func distance(a, b string) int {
-	previous := make([]int, len(b)+1)
-	current := make([]int, len(b)+1)
-
-	for j := range previous {
-		previous[j] = j
-	}
-
-	for i := 1; i <= len(a); i++ {
-		current[0] = i
-
-		for j := 1; j <= len(b); j++ {
-			cost := 1
-			if a[i-1] == b[j-1] {
-				cost = 0
-			}
-
-			current[j] = min(previous[j]+1, min(current[j-1]+1, previous[j-1]+cost))
-		}
-
-		previous, current = current, previous
-	}
-
-	return previous[len(b)]
 }
