@@ -7,7 +7,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // configWriteTimeout bounds the persist step of a configuration change: long enough for a cold
@@ -85,62 +84,4 @@ func (s *Service) changeBackupConfig(
 
 func withNamespaceValidation(opts *backupConfigChangeOptions) {
 	opts.validateNamespaces = true
-}
-
-func routinesUsingStorage(config *dto.Config, storageName string) []string {
-	var names []string
-	for name, routine := range config.BackupRoutines {
-		if routine != nil && routine.Storage == storageName {
-			names = append(names, name)
-		}
-	}
-	return names
-}
-
-func routinesUsingCluster(config *dto.Config, clusterName string) []string {
-	var names []string
-	for name, routine := range config.BackupRoutines {
-		if routine != nil && routine.SourceCluster == clusterName {
-			names = append(names, name)
-		}
-	}
-	return names
-}
-
-func routinesUsingPolicy(config *dto.Config, policyName string) []string {
-	var names []string
-	for name, routine := range config.BackupRoutines {
-		if routine != nil && routine.BackupPolicy == policyName {
-			names = append(names, name)
-		}
-	}
-	return names
-}
-
-func ensurePolicyNotInUse(config *dto.Config, policyName string) error {
-	for routineName, routine := range config.BackupRoutines {
-		if routine != nil && routine.BackupPolicy == policyName {
-			return fmt.Errorf("delete backup policy %q: %w: it is used in routine %q", policyName, model.ErrInUse, routineName)
-		}
-	}
-	return nil
-}
-
-func ensureClusterNotInUse(config *dto.Config, clusterName string) error {
-	for routineName, routine := range config.BackupRoutines {
-		if routine != nil && routine.SourceCluster == clusterName {
-			return fmt.Errorf(
-				"delete Aerospike cluster %q: %w: it is used in routine %q", clusterName, model.ErrInUse, routineName)
-		}
-	}
-	return nil
-}
-
-func ensureStorageNotInUse(config *dto.Config, storageName string) error {
-	for routineName, routine := range config.BackupRoutines {
-		if routine != nil && routine.Storage == storageName {
-			return fmt.Errorf("delete storage %q: %w: it is used in routine %q", storageName, model.ErrInUse, routineName)
-		}
-	}
-	return nil
 }

@@ -53,6 +53,26 @@ func errNotFound(field string, name any) error {
 	return newStatusCodeError(fmt.Errorf("%s %s not found", field, quoteName(name)), http.StatusNotFound)
 }
 
+func errAlreadyExists(field string, name any) error {
+	return newStatusCodeError(fmt.Errorf("%s %s already exists", field, quoteName(name)), http.StatusConflict)
+}
+
+// errConfigChange maps a configuration change failure onto the status the API reports for it:
+// a missing entity reads exactly as it does on GET, a clash with the stored configuration is a
+// conflict, and everything else describes a request the service cannot accept.
+func errConfigChange(err error, entity, name string) error {
+	switch {
+	case errors.Is(err, model.ErrNotFound):
+		return errNotFound(entity, name)
+	case errors.Is(err, model.ErrAlreadyExists):
+		return errAlreadyExists(entity, name)
+	case errors.Is(err, model.ErrInUse):
+		return newStatusCodeError(err, http.StatusConflict)
+	default:
+		return errBadRequest(err)
+	}
+}
+
 // quoteName quotes string names and prints other identifiers, such as numeric job IDs, as they are;
 // %q would render an integer as a rune literal.
 func quoteName(name any) string {

@@ -201,8 +201,8 @@ func TestDeleteRoutine(t *testing.T) {
 		{
 			name:           "unknown routine name",
 			routineName:    "unknown-routine",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid request",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  errNotFound("routine", "unknown-routine").Error(),
 		},
 	}
 

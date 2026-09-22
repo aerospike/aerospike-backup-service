@@ -183,8 +183,8 @@ func TestUpdatePolicy(t *testing.T) {
 			name:           "unknown policy name",
 			policyName:     "unknown-policy",
 			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid request",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  errNotFound("policy", "unknown-policy").Error(),
 		},
 	}
 
@@ -237,8 +237,8 @@ func TestDeletePolicy(t *testing.T) {
 		{
 			name:           "unknown policy name",
 			policyName:     "unknown-policy",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid request",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  errNotFound("policy", "unknown-policy").Error(),
 		},
 	}
 
@@ -272,7 +272,7 @@ func TestDeletePolicy_InUseErrorMessage(t *testing.T) {
 
 	svc.DeletePolicy(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(),
 		"delete backup policy \"test-policy\": item is in use: it is used in routine \"routine1\"")
 }

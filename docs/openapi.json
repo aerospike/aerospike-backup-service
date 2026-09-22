@@ -759,6 +759,16 @@
                                 }
                             }
                         }
+                    },
+                    "404": {
+                        "description": "The specified cluster was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -795,6 +805,16 @@
                                 }
                             }
                         }
+                    },
+                    "409": {
+                        "description": "A cluster with that name already exists",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -821,6 +841,26 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "The specified cluster was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "The cluster is still used by a backup routine",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -940,6 +980,16 @@
                                 }
                             }
                         }
+                    },
+                    "404": {
+                        "description": "The specified policy was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -976,6 +1026,16 @@
                                 }
                             }
                         }
+                    },
+                    "409": {
+                        "description": "A policy with that name already exists",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1002,6 +1062,26 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "The specified policy was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "The policy is still used by a backup routine",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1131,6 +1211,16 @@
                                 }
                             }
                         }
+                    },
+                    "404": {
+                        "description": "The specified routine was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1167,6 +1257,16 @@
                                 }
                             }
                         }
+                    },
+                    "409": {
+                        "description": "A routine with that name already exists",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1193,6 +1293,16 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "The specified routine was not found",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1382,6 +1492,16 @@
                                 }
                             }
                         }
+                    },
+                    "404": {
+                        "description": "The specified storage was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1418,6 +1538,16 @@
                                 }
                             }
                         }
+                    },
+                    "409": {
+                        "description": "A storage with that name already exists",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1444,6 +1574,26 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "The specified storage was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "The storage is still used by a backup routine",
                         "content": {
                             "*/*": {
                                 "schema": {
