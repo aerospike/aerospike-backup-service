@@ -24,10 +24,6 @@ func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingPolicyName)
-		return
-	}
 
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.AddPolicy(name, newPolicy)
@@ -63,10 +59,6 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Failure     404 {string} string "The specified policy was not found"
 func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingPolicyName)
-		return
-	}
 	policy, err := s.config.Policy(name)
 	if err != nil {
 		httpError(w, err)
@@ -94,10 +86,6 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingPolicyName)
-		return
-	}
 
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.UpdatePolicy(name, updatedPolicy)
@@ -121,10 +109,6 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Failure     409 {string} string "The policy is still used by a backup routine"
 func (s *Service) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingPolicyName)
-		return
-	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.DeletePolicy(name)

@@ -20,10 +20,6 @@ import (
 // @Failure     409 {string} string "A routine with that name already exists"
 func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 	newRoutine, ok := decodeBodyValidated[dto.BackupRoutine](w, r)
 	if !ok {
 		return
@@ -67,10 +63,6 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Failure     404 {string} string "The specified routine was not found"
 func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 	routine, err := s.config.Routine(name)
 	if err != nil {
 		httpError(w, err)
@@ -93,10 +85,6 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {string} string "The specified routine was not found"
 func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
 	updatedRoutine, ok := decodeBodyValidated[dto.BackupRoutine](w, r)
 	if !ok {
@@ -124,10 +112,6 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure     404 {string} string "The specified routine was not found"
 func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.DeleteRoutine(name)
@@ -150,10 +134,6 @@ func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/routines/{name}/enable [put]
 func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.SetRoutineDisabled(name, false)
@@ -176,10 +156,6 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/routines/{name}/disable [put]
 func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.SetRoutineDisabled(name, true)

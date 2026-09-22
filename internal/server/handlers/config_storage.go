@@ -19,10 +19,6 @@ import (
 // @Failure     409 {string} string "A storage with that name already exists"
 func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 
 	newStorage, ok := decodeBodyValidated[dto.Storage](w, r)
 	if !ok {
@@ -63,10 +59,6 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Failure     404 {string} string "The specified storage was not found"
 func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 	backupConfig := s.config.BackupConfigCopy()
 	storage, err := backupConfig.FindStorage(name)
 	if err != nil {
@@ -90,10 +82,6 @@ func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 // @Failure     404 {string} string "The specified storage was not found"
 func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 
 	updatedStorage, ok := decodeBodyValidated[dto.Storage](w, r)
 	if !ok {
@@ -122,10 +110,6 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 // @Failure     409 {string} string "The storage is still used by a backup routine"
 func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.DeleteStorage(name)

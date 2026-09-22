@@ -173,15 +173,7 @@ func (s *Service) RetrieveRestoreJobs(w http.ResponseWriter, r *http.Request) {
 // @Failure     405 {string} string
 func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 	timestampStr := r.PathValue("timestamp")
-	if timestampStr == "" {
-		httpError(w, errMissingTimestamp)
-		return
-	}
 
 	timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
 	if err != nil {

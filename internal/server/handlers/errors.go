@@ -40,12 +40,6 @@ func errBadRequest(err error) error {
 	return newBadRequestError(fmt.Errorf("invalid request: %w", err))
 }
 
-var errMissingRoutineName = newBadRequestError(errors.New("routine name required"))
-var errMissingClusterName = newBadRequestError(errors.New("cluster name required"))
-var errMissingPolicyName = newBadRequestError(errors.New("policy name required"))
-var errMissingStorageName = newBadRequestError(errors.New("storage name required"))
-var errMissingTimestamp = newBadRequestError(errors.New("timestamp required"))
-
 // httpError is the one place an error becomes a status code.
 func httpError(w http.ResponseWriter, err error) {
 	var (

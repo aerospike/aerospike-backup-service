@@ -33,13 +33,6 @@ func TestAddPolicy(t *testing.T) {
 			expectedStatus: http.StatusCreated,
 		},
 		{
-			name:           "missing policy name",
-			policyName:     "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingPolicyName.Error(),
-		},
-		{
 			name:           "invalid json",
 			policyName:     "test-policy",
 			requestBody:    "{noField : 1}",
@@ -108,12 +101,6 @@ func TestReadPolicy(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "missing policy name",
-			policyName:     "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingPolicyName.Error(),
-		},
-		{
 			name:           "non-existent policy",
 			policyName:     "non-existent",
 			expectedStatus: http.StatusNotFound,
@@ -164,13 +151,6 @@ func TestUpdatePolicy(t *testing.T) {
 			policyName:     "test-policy",
 			requestBody:    "{}",
 			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "missing policy name",
-			policyName:     "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingPolicyName.Error(),
 		},
 		{
 			name:           "invalid json",
@@ -227,12 +207,6 @@ func TestDeletePolicy(t *testing.T) {
 			name:           "successful delete",
 			policyName:     "test-policy",
 			expectedStatus: http.StatusNoContent,
-		},
-		{
-			name:           "missing policy name",
-			policyName:     "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingPolicyName.Error(),
 		},
 		{
 			name:           "unknown policy name",

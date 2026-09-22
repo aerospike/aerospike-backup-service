@@ -92,6 +92,8 @@ func checkPathSegment(name string) error {
 	switch {
 	case name == "":
 		return errEmpty
+	case strings.TrimSpace(name) == "":
+		return errors.New("must not be blank")
 	case strings.ContainsRune(name, 0):
 		return errors.New("must not contain a NUL byte")
 	case name == "." || name == "..":

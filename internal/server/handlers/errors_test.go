@@ -64,12 +64,6 @@ func TestHTTPErrorStatus(t *testing.T) {
 			wantBody:   "invalid request: seed nodes are not specified",
 		},
 		{
-			name:       "a missing path value is a bad request",
-			err:        errMissingRoutineName,
-			wantStatus: http.StatusBadRequest,
-			wantBody:   "routine name required",
-		},
-		{
 			name:       "an oversized body outranks every other case",
 			err:        errBadRequest(&http.MaxBytesError{Limit: 10}),
 			wantStatus: http.StatusRequestEntityTooLarge,

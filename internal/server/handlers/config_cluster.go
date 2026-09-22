@@ -20,10 +20,6 @@ import (
 // @Failure     409 {string} string "A cluster with that name already exists"
 func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingClusterName)
-		return
-	}
 
 	newCluster, ok := decodeBodyValidated[dto.AerospikeCluster](w, r)
 	if !ok {
@@ -70,10 +66,6 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 // @Failure     404 {string} string "The specified cluster was not found"
 func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingClusterName)
-		return
-	}
 	backupConfig := s.config.BackupConfigCopy()
 	cluster, err := backupConfig.FindCluster(name)
 	if err != nil {
@@ -97,10 +89,6 @@ func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Failure     404 {string} string "The specified cluster was not found"
 func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingClusterName)
-		return
-	}
 
 	updatedCluster, ok := decodeBodyValidated[dto.AerospikeCluster](w, r)
 	if !ok {
@@ -129,10 +117,6 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 // @Failure     409 {string} string "The cluster is still used by a backup routine"
 func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingClusterName)
-		return
-	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.DeleteCluster(name)

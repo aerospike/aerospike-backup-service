@@ -127,3 +127,37 @@ func TestConfigChangeStatusCodes(t *testing.T) {
 		})
 	}
 }
+
+// The mux never routes an empty path segment, so a handler has no empty name to guard against —
+// but it does route "%20". A blank name would otherwise reach storage as a folder named with a
+// run of spaces, so validation rejects it and the request reads as malformed, not as not-found.
+func TestConfigChangeRejectsBlankName(t *testing.T) {
+	tests := []struct {
+		name       string
+		handler    func(*Service) http.HandlerFunc
+		entityName string
+		body       func(validTestBackupEntities) string
+	}{
+		{"routine", func(s *Service) http.HandlerFunc { return s.AddRoutine }, " ", routineBody},
+		{"storage", func(s *Service) http.HandlerFunc { return s.AddStorage }, " ", storageBody},
+		{"cluster", func(s *Service) http.HandlerFunc { return s.AddAerospikeCluster }, " ", clusterBody},
+		{"policy", func(s *Service) http.HandlerFunc { return s.AddPolicy }, "\t", policyBody},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := newServiceWithNamespaceValidator(t)
+			entities := addValidBackupConfig(svc)
+
+			req := httptest.NewRequestWithContext(
+				t.Context(), http.MethodPost, "/v1/config/x", strings.NewReader(tt.body(entities)))
+			req.SetPathValue("name", tt.entityName)
+			w := httptest.NewRecorder()
+
+			tt.handler(svc)(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+			assert.Contains(t, w.Body.String(), "must not be blank")
+		})
+	}
+}

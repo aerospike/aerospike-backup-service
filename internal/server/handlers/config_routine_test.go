@@ -25,13 +25,6 @@ func TestAddRoutine(t *testing.T) {
 		expectedError  string
 	}{
 		{
-			name:           "missing routine name",
-			routineName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "invalid json",
 			routineName:    "test-routine",
 			requestBody:    "{noField : 1}",
@@ -100,11 +93,6 @@ func TestReadRoutine(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "missing routine name",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "non-existent routine",
 			routineName:    "non-existent",
 			expectedStatus: http.StatusNotFound,
@@ -141,13 +129,6 @@ func TestUpdateRoutine(t *testing.T) {
 		expectedStatus int
 		expectedError  string
 	}{
-		{
-			name:           "missing routine name",
-			routineName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
 		{
 			name:           "invalid json",
 			routineName:    "test-routine",
@@ -193,12 +174,6 @@ func TestDeleteRoutine(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:           "missing routine name",
-			routineName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "unknown routine name",
 			routineName:    "unknown-routine",
 			expectedStatus: http.StatusNotFound,
@@ -238,13 +213,6 @@ func TestEnableRoutine(t *testing.T) {
 			routineName:    "test-routine",
 			addRoutine:     true,
 			expectedStatus: http.StatusNoContent,
-		},
-		{
-			name:           "missing routine name",
-			routineName:    "",
-			expectedStatus: http.StatusBadRequest,
-			addRoutine:     true,
-			expectedError:  errMissingRoutineName.Error(),
 		},
 		{
 			name:           "non-existent routine",
@@ -297,12 +265,6 @@ func TestDisableRoutine(t *testing.T) {
 			routineName:        "test-routine",
 			expectedStatus:     http.StatusNoContent,
 			expectedCancelRuns: 1,
-		},
-		{
-			name:           "missing routine name",
-			routineName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
 		},
 		{
 			name:           "non-existent routine",

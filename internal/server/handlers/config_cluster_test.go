@@ -33,13 +33,6 @@ func TestAddAerospikeCluster(t *testing.T) {
 			expectedStatus: http.StatusCreated,
 		},
 		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
-		},
-		{
 			name:           "invalid json",
 			clusterName:    "test-cluster",
 			requestBody:    "{noField : 1}",
@@ -116,12 +109,6 @@ func TestReadAerospikeCluster(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
-		},
-		{
 			name:           "non-existent cluster",
 			clusterName:    "non-existent",
 			expectedStatus: http.StatusNotFound,
@@ -165,13 +152,6 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			requestBody:    marshalToString(cluster),
 			expectedStatus: http.StatusOK,
 			runValidation:  true,
-		},
-		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
 		},
 		{
 			name:           "invalid json",
@@ -279,12 +259,6 @@ func TestDeleteAerospikeCluster(t *testing.T) {
 			name:           "successful delete",
 			clusterName:    "test-cluster",
 			expectedStatus: http.StatusNoContent,
-		},
-		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
 		},
 		{
 			name:           "unknown cluster name",
