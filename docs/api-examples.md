@@ -12,9 +12,9 @@ recommended for a more convenient and user-friendly experience.
 
 #### Trigger On-Demand Backup
 
-ℹ️ **Available since v1.0**
+ℹ️ *Available since v1.0*
 
-These requests start a backup for the specified routine, regardless of its configured schedule.
+This request starts the backup operation for the specified routine, regardless of its configured schedule.
 
 <!-- tag scheduleFullBackup link ?delay=<timeout> -->
 [`POST {{baseUrl}}/v1/backups/schedule/{name}?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/scheduleFullBackup)
