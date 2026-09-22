@@ -266,8 +266,10 @@ jobs:
       # immutable tag and `{version}` by default -- `{major}` and `latest` are no longer emitted
       # unless versions-override asks for them. Both of those are moving tags, and a hotfix off an
       # older line must not drag them backwards, so compute the ones this release has actually
-      # earned at build time (major only — `latest` is deferred to release.yml after PROD) and
-      # pass them explicitly.
+      # earned at build time and pass them explicitly. Major only: `latest` is never published
+      # from this repository -- public registries are served by the central artifact-publisher
+      # off the PROD promotion webhook, per
+      # https://aerospike.atlassian.net/wiki/spaces/DevOps/pages/4648566799.
       - name: Resolve Docker moving tags
         id: docker-tags
         env:
@@ -327,7 +329,7 @@ jobs:
             echo "| Highest release in \`$major.x\` | \`$highest_in_major\` |"
             echo "| Tags published now (besides the immutable tag) | \`$overrides\` |"
             echo ""
-            echo "Docker \`latest\` is **not** set here — \`release.yml\` applies it after PROD promotion, once it can compare against every final release tag."
+            echo "Docker \`latest\` is not published by this repository at all — public registries are served by artifact-publisher off the PROD promotion webhook."
             if [ "$current" = "$highest_in_major" ]; then
               echo "This is the newest release in its major line, so major tag \`${major}\` moves to it."
             else
