@@ -2133,7 +2133,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "socket-timeout": {
-                    "description": "Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "default": 600000
                 },
@@ -2976,7 +2976,7 @@ const docTemplate = `{
                     ]
                 },
                 "socket-timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "default": 600000,
                     "example": 1000
@@ -3967,7 +3967,7 @@ const docTemplate = `{
                     ]
                 },
                 "socket-timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "default": 600000,
                     "example": 1000
