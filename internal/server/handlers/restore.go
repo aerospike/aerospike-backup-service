@@ -179,7 +179,7 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	timestampStr := r.PathValue("timestamp")
 	if timestampStr == "" {
-		httpError(w, errMissingStorageName)
+		httpError(w, errMissingTimestamp)
 		return
 	}
 

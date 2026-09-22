@@ -44,10 +44,9 @@ var errMissingRoutineName = newBadRequestError(errors.New("routine name required
 var errMissingClusterName = newBadRequestError(errors.New("cluster name required"))
 var errMissingPolicyName = newBadRequestError(errors.New("policy name required"))
 var errMissingStorageName = newBadRequestError(errors.New("storage name required"))
+var errMissingTimestamp = newBadRequestError(errors.New("timestamp required"))
 
-// httpError is the one place an error becomes a status code. The entity causes are matched before
-// the bad-request wrapper, so wrapping one can never hide it the way it did before BKRS-439; a cause with
-// no case here is a fault in the service, not in the request, and reads as 500.
+// httpError is the one place an error becomes a status code.
 func httpError(w http.ResponseWriter, err error) {
 	var (
 		badRequest  *badRequestError
