@@ -94,6 +94,10 @@ func checkPathSegment(name string) error {
 		return errEmpty
 	case strings.TrimSpace(name) == "":
 		return errors.New("must not be blank")
+	case strings.TrimSpace(name) != name:
+		// Surrounding whitespace survives into the folder name, where "daily " and "daily" are
+		// two routines that list identically and cannot be told apart by an operator.
+		return errors.New("must not start or end with whitespace")
 	case strings.ContainsRune(name, 0):
 		return errors.New("must not contain a NUL byte")
 	case name == "." || name == "..":

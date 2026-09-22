@@ -74,6 +74,32 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
 
   Upgrades from this release onward are unaffected. The `.deb` path does not have this problem.
 
+- **Entity names may not be blank or padded with whitespace** — the name of a routine, storage,
+  cluster, policy or secret agent becomes a folder under the storage root, so it is validated as a
+  single path segment. Two rules are new: a name that is entirely whitespace is rejected, and a
+  name that starts or ends with whitespace is rejected. Whitespace *inside* a name is still
+  allowed, so `my routine` remains valid; `daily ` and ` daily` do not.
+
+  This is checked when the configuration file is read, so a service whose config carries such a
+  name **fails to start** after the upgrade. The error names the offending key, so it tells you
+  exactly what to rename:
+
+  ```text
+  failed to validate configuration: backup routine 'weekly ' validation error: invalid value
+  validation error: routine name "weekly ": must not start or end with whitespace
+  ```
+
+  To find them before upgrading, look for quoted keys padded with whitespace and unquoted keys
+  with a space before the colon:
+
+  ```shell
+  grep -nE '("[[:space:]][^"]*"|"[^"]*[[:space:]]"|[[:space:]])[[:space:]]*:' /etc/aerospike-backup-service/aerospike-backup-service.yml
+  ```
+
+  Renaming a **routine** also changes the folder its backups are written to, so the existing
+  backups stay under the old folder name. Move them alongside the rename if you need the history
+  to remain visible to the service.
+
 - **Configuration API error status codes** — the endpoints that change configuration
   (`POST`/`PUT`/`DELETE` under `/v1/config/routines`, `/v1/config/storage`, `/v1/config/clusters` and
   `/v1/config/policies`, plus the routine `enable`/`disable` toggles) now answer with the status that describes
