@@ -16,21 +16,15 @@ var (
 	containsRedactableCache sync.Map // reflect.Type -> bool
 )
 
-type visitKey struct {
-	ptr uintptr
-	typ reflect.Type
-}
-
 // RedactSecrets returns a deep copy of v with all Secret-typed values replaced by redact.Placeholder.
 // Values that hold no such secret are returned as they are: rebuilding them through reflection
-// would drop the state their unexported fields hold. The walk handles cyclical value graphs safely.
+// would drop the state their unexported fields hold. The walk assumes an acyclic value graph.
 func RedactSecrets(v any) any {
 	if v == nil {
 		return nil
 	}
 
-	visited := make(map[visitKey]reflect.Value)
-	return redactValue(reflect.ValueOf(v), visited).Interface()
+	return redactValue(reflect.ValueOf(v)).Interface()
 }
 
 // RedactSecretsReplaceAttr returns a slog ReplaceAttr function that redacts Secret-typed values.
@@ -63,7 +57,7 @@ func redactedCredential(v reflect.Value) reflect.Value {
 }
 
 //nolint:gocognit,funlen // recursive reflect walk over nested DTO values
-func redactValue(v reflect.Value, visited map[visitKey]reflect.Value) reflect.Value {
+func redactValue(v reflect.Value) reflect.Value {
 	if !v.IsValid() {
 		return v
 	}
@@ -91,15 +85,8 @@ func redactValue(v reflect.Value, visited map[visitKey]reflect.Value) reflect.Va
 			return reflect.Zero(v.Type())
 		}
 
-		key := visitKey{ptr: v.Pointer(), typ: v.Type()}
-		if dst, ok := visited[key]; ok {
-			return dst
-		}
-
 		dst := reflect.New(v.Elem().Type())
-		visited[key] = dst
-
-		dst.Elem().Set(redactValue(v.Elem(), visited))
+		dst.Elem().Set(redactValue(v.Elem()))
 
 		return dst
 
@@ -108,12 +95,12 @@ func redactValue(v reflect.Value, visited map[visitKey]reflect.Value) reflect.Va
 			return reflect.Zero(v.Type())
 		}
 
-		return redactValue(v.Elem(), visited)
+		return redactValue(v.Elem())
 
 	case reflect.Struct:
 		dst := reflect.New(v.Type()).Elem()
 		for i := 0; i < v.NumField(); i++ {
-			redacted := redactValue(v.Field(i), visited)
+			redacted := redactValue(v.Field(i))
 			dstField := dst.Field(i)
 			if dstField.CanSet() && redacted.IsValid() {
 				setField(dstField, redacted)
@@ -127,19 +114,9 @@ func redactValue(v reflect.Value, visited map[visitKey]reflect.Value) reflect.Va
 			return reflect.Zero(v.Type())
 		}
 
-		key := visitKey{ptr: v.Pointer(), typ: v.Type()}
-		if dst, ok := visited[key]; ok {
-			return dst
-		}
-
 		dst := reflect.MakeMapWithSize(v.Type(), v.Len())
-		visited[key] = dst
-
-		for _, mapKey := range v.MapKeys() {
-			dst.SetMapIndex(
-				redactValue(mapKey, visited),
-				redactValue(v.MapIndex(mapKey), visited),
-			)
+		for _, key := range v.MapKeys() {
+			dst.SetMapIndex(key, redactValue(v.MapIndex(key)))
 		}
 
 		return dst
@@ -149,25 +126,9 @@ func redactValue(v reflect.Value, visited map[visitKey]reflect.Value) reflect.Va
 			return reflect.Zero(v.Type())
 		}
 
-		if v.Pointer() != 0 {
-			key := visitKey{ptr: v.Pointer(), typ: v.Type()}
-			if dst, ok := visited[key]; ok {
-				return dst
-			}
-
-			dst := reflect.MakeSlice(v.Type(), v.Len(), v.Cap())
-			visited[key] = dst
-
-			for i := 0; i < v.Len(); i++ {
-				dst.Index(i).Set(redactValue(v.Index(i), visited))
-			}
-
-			return dst
-		}
-
 		dst := reflect.MakeSlice(v.Type(), v.Len(), v.Cap())
 		for i := 0; i < v.Len(); i++ {
-			dst.Index(i).Set(redactValue(v.Index(i), visited))
+			dst.Index(i).Set(redactValue(v.Index(i)))
 		}
 
 		return dst
@@ -175,7 +136,7 @@ func redactValue(v reflect.Value, visited map[visitKey]reflect.Value) reflect.Va
 	case reflect.Array:
 		dst := reflect.New(v.Type()).Elem()
 		for i := 0; i < v.Len(); i++ {
-			dst.Index(i).Set(redactValue(v.Index(i), visited))
+			dst.Index(i).Set(redactValue(v.Index(i)))
 		}
 
 		return dst
@@ -192,10 +153,6 @@ func redactValue(v reflect.Value, visited map[visitKey]reflect.Value) reflect.Va
 // The type of v answers the question on its own unless an interface stands in the way, in
 // which case the dynamic value behind it decides.
 func needsRedaction(v reflect.Value) bool {
-	return needsRedactionVisited(v, make(map[visitKey]bool))
-}
-
-func needsRedactionVisited(v reflect.Value, visited map[visitKey]bool) bool {
 	if !v.IsValid() {
 		return false
 	}
@@ -208,72 +165,27 @@ func needsRedactionVisited(v reflect.Value, visited map[visitKey]bool) bool {
 		return false
 	}
 
-	return walkTree(v, visited)
-}
-
-func walkTree(v reflect.Value, visited map[visitKey]bool) bool {
 	switch v.Kind() {
-	case reflect.Pointer:
-		if v.IsNil() {
-			return false
-		}
-		key := visitKey{ptr: v.Pointer(), typ: v.Type()}
-		if visited[key] {
-			return false
-		}
-		visited[key] = true
-
-		return needsRedactionVisited(v.Elem(), visited)
-
-	case reflect.Interface:
-		if v.IsNil() {
-			return false
-		}
-
-		return needsRedactionVisited(v.Elem(), visited)
+	case reflect.Pointer, reflect.Interface:
+		return !v.IsNil() && needsRedaction(v.Elem())
 
 	case reflect.Struct:
-		return anyFieldNeedsRedaction(v, visited)
+		return anyFieldNeedsRedaction(v)
 
 	case reflect.Map:
-		if v.IsNil() {
-			return false
-		}
-		if v.Pointer() != 0 {
-			key := visitKey{ptr: v.Pointer(), typ: v.Type()}
-			if visited[key] {
-				return false
-			}
-			visited[key] = true
-		}
+		return anyEntryNeedsRedaction(v)
 
-		return anyEntryNeedsRedaction(v, visited)
-
-	case reflect.Slice:
-		if v.IsNil() {
-			return false
-		}
-		if v.Pointer() != 0 {
-			key := visitKey{ptr: v.Pointer(), typ: v.Type()}
-			if visited[key] {
-				return false
-			}
-			visited[key] = true
-		}
-
-		return anyElementNeedsRedaction(v, visited)
-
-	case reflect.Array:
-		return anyElementNeedsRedaction(v, visited)
+	case reflect.Slice, reflect.Array:
+		return anyElementNeedsRedaction(v)
 
 	default:
 		return false
 	}
 }
 
-func anyFieldNeedsRedaction(v reflect.Value, visited map[visitKey]bool) bool {
+func anyFieldNeedsRedaction(v reflect.Value) bool {
 	for i := range v.NumField() {
-		if needsRedactionVisited(v.Field(i), visited) {
+		if needsRedaction(v.Field(i)) {
 			return true
 		}
 	}
@@ -281,13 +193,13 @@ func anyFieldNeedsRedaction(v reflect.Value, visited map[visitKey]bool) bool {
 	return false
 }
 
-func anyEntryNeedsRedaction(v reflect.Value, visited map[visitKey]bool) bool {
+func anyEntryNeedsRedaction(v reflect.Value) bool {
 	if v.IsNil() {
 		return false
 	}
 
 	for _, key := range v.MapKeys() {
-		if needsRedactionVisited(key, visited) || needsRedactionVisited(v.MapIndex(key), visited) {
+		if needsRedaction(key) || needsRedaction(v.MapIndex(key)) {
 			return true
 		}
 	}
@@ -295,9 +207,9 @@ func anyEntryNeedsRedaction(v reflect.Value, visited map[visitKey]bool) bool {
 	return false
 }
 
-func anyElementNeedsRedaction(v reflect.Value, visited map[visitKey]bool) bool {
+func anyElementNeedsRedaction(v reflect.Value) bool {
 	for i := range v.Len() {
-		if needsRedactionVisited(v.Index(i), visited) {
+		if needsRedaction(v.Index(i)) {
 			return true
 		}
 	}
