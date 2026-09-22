@@ -600,7 +600,7 @@ func TestCertificateReloaderLoadReturnsErrorForMissingKeyPair(t *testing.T) {
 
 	err := tlsProvider.Load(t.Context())
 	require.Error(t, err)
-	require.ErrorContains(t, err, "failed to load HTTPS certificate and key")
+	require.ErrorContains(t, err, "failed to read HTTPS certificate")
 }
 
 func TestRunFailsFastWhenListenerCannotBind(t *testing.T) {

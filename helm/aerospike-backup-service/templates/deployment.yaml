@@ -34,9 +34,22 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      {{- if not .Values.configmap.create }}
+      {{- if or (not .Values.configmap.create) .Values.initContainers }}
       initContainers:
+      {{- end }}
+      {{- if not .Values.configmap.create }}
         - name: config-injector
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
           image: busybox
           command:
             - /bin/sh
@@ -47,8 +60,8 @@ spec:
             - name: aerospike-backup-service-config
               mountPath: /etc/aerospike-backup-service
       {{- end }}
-      {{- if .Values.initContainers }}
-      {{- toYaml .Values.initContainers | nindent 8 }}
+      {{- with .Values.initContainers }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
@@ -83,14 +96,14 @@ spec:
           {{- range .Values.extraVolumeMounts }}
             - name: {{ .name }}
               mountPath: {{ .mountPath }}
-              readOnly: {{ if kindIs "bool" .readOnly }}{{ .readOnly }}{{ else }}true{{ end }}
+              readOnly: {{ include "aerospike-backup-service.readOnly" .readOnly }}
           {{- end }}
           {{- end }}
           {{- if .Values.extraSecretVolumeMounts }}
           {{- range .Values.extraSecretVolumeMounts }}
             - name: {{ .name }}
               mountPath: {{ .mountPath }}
-              readOnly: {{ if kindIs "bool" .readOnly }}{{ .readOnly }}{{ else }}true{{ end }}
+              readOnly: {{ include "aerospike-backup-service.readOnly" .readOnly }}
               subPath: {{ .subPath }}
           {{- end }}
           {{- end }}

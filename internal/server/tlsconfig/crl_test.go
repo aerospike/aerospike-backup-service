@@ -1,6 +1,8 @@
 package tlsconfig
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -216,6 +218,37 @@ func TestParseCRLs(t *testing.T) {
 		assert.Len(t, index.byRawIssuer[string(pki.clients[0].cert.RawIssuer)], 2)
 	})
 
+	t.Run("PEM CRL with an openssl -text dump before the CRL", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "crl-text.pem")
+		pki.writeCRL(
+			t, path, []*big.Int{pki.clients[0].cert.SerialNumber},
+			now.Add(-time.Minute), now.Add(time.Hour), 2, true,
+		)
+		require.NoError(t, os.WriteFile(path, concat([]byte(opensslCRLText), readFile(t, path)), 0o600))
+		index, err := loadCRLs(path)
+		require.NoError(t, err)
+		chosen := index.byRawIssuer[string(pki.clients[0].cert.RawIssuer)][0]
+		_, revoked := chosen.revokedSerials[serialKey(pki.clients[0].cert.SerialNumber)]
+		assert.True(t, revoked)
+	})
+
+	t.Run("PEM bundle with an openssl -text dump before every CRL", func(t *testing.T) {
+		dir := t.TempDir()
+		first := filepath.Join(dir, "one.pem")
+		second := filepath.Join(dir, "two.pem")
+		path := filepath.Join(dir, "bundle-text.pem")
+		pki.writeCRL(t, first, nil, now.Add(-time.Minute), now.Add(time.Hour), 1, true)
+		pki.writeCRL(t, second, nil, now.Add(-time.Minute), now.Add(time.Hour), 2, true)
+		bundle := concat(
+			[]byte(opensslCRLText), readFile(t, first),
+			[]byte(opensslCRLText), readFile(t, second),
+		)
+		require.NoError(t, os.WriteFile(path, bundle, 0o600))
+		index, err := loadCRLs(path)
+		require.NoError(t, err)
+		assert.Len(t, index.byRawIssuer[string(pki.clients[0].cert.RawIssuer)], 2)
+	})
+
 	t.Run("empty file", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "empty.crl")
 		require.NoError(t, os.WriteFile(path, []byte("   \n"), 0o600))
@@ -229,14 +262,21 @@ func TestParseCRLs(t *testing.T) {
 		partial := append(readFile(t, path), []byte("\n-----BEGIN X509 CRL-----\ntruncated\n")...)
 		require.NoError(t, os.WriteFile(path, partial, 0o600))
 		_, err := loadCRLs(path)
-		require.ErrorContains(t, err, "invalid CRL PEM block")
+		require.ErrorContains(t, err, "malformed PEM block")
 	})
 
 	t.Run("unsupported PEM block", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "unsupported.pem")
 		require.NoError(t, os.WriteFile(path, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: []byte("x")}), 0o600))
 		_, err := loadCRLs(path)
-		require.ErrorContains(t, err, "contains no CRLs")
+		require.ErrorContains(t, err, `unexpected "CERTIFICATE" PEM block, want "X509 CRL"`)
+	})
+
+	t.Run("text that is neither PEM nor DER", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "not-a-crl.txt")
+		require.NoError(t, os.WriteFile(path, []byte("not a crl"), 0o600))
+		_, err := loadCRLs(path)
+		require.ErrorContains(t, err, "contains an invalid CRL")
 	})
 }
 
@@ -469,4 +509,51 @@ func TestVerifyClientLeafWithIntermediateCA(t *testing.T) {
 
 		require.NoError(t, index.verifyClientLeaf(state, now))
 	})
+}
+
+// FuzzParseCRLs checks that no input panics the parser and that success always yields a CRL.
+func FuzzParseCRLs(f *testing.F) {
+	der := fuzzCRL(f)
+	pemCRL := pem.EncodeToMemory(&pem.Block{Type: pemCRLType, Bytes: der})
+	f.Add(der)
+	f.Add(pemCRL)
+	f.Add(concat([]byte(opensslCRLText), pemCRL))
+	f.Add(concat(pemCRL, pemCRL))
+	f.Add([]byte("not a crl"))
+	f.Add([]byte("-----BEGIN X509 CRL-----\ntruncated\n"))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		lists, err := parseCRLs(data, "fuzz")
+		if err == nil {
+			require.NotEmpty(t, lists)
+		}
+	})
+}
+
+func fuzzCRL(f *testing.F) []byte {
+	f.Helper()
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(f, err)
+	now := time.Now()
+	template := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "fuzz CA"},
+		NotBefore:             now.Add(-time.Hour),
+		NotAfter:              now.Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+	}
+	caDER, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	require.NoError(f, err)
+	ca, err := x509.ParseCertificate(caDER)
+	require.NoError(f, err)
+	der, err := x509.CreateRevocationList(rand.Reader, &x509.RevocationList{
+		Number:     big.NewInt(1),
+		ThisUpdate: now.Add(-time.Minute),
+		NextUpdate: now.Add(time.Hour),
+	}, ca, key)
+	require.NoError(f, err)
+
+	return der
 }

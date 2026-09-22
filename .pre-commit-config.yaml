@@ -11,7 +11,9 @@ repos:
     rev: v4.4.0
     hooks:
       - id: end-of-file-fixer
+        exclude: ^internal/tlsfixtures/testdata/
       - id: trailing-whitespace
+        exclude: ^internal/tlsfixtures/testdata/
   - repo: https://github.com/golangci/golangci-lint
     rev: v2.12.2
     hooks:
