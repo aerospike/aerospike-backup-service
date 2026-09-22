@@ -10,7 +10,7 @@ Entries below `v3.0.0` predate this file; see the
 Detailed upgrade instructions (breaking changes and how to adapt existing configuration) live in
 [docs/migration.md](docs/migration.md); this file is the changelog, that one is the upgrade guide.
 
-## [3.7.0]
+## [Unreleased]
 
 ### Security
 
