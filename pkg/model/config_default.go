@@ -63,9 +63,7 @@ var defaultConfig = struct {
 		Format:       LogFormatPlain,
 		StdoutWriter: ptr.Of(true),
 		FileWriter: &FileLoggerConfig{
-			MaxSize:    100,
-			MaxAge:     7,
-			MaxBackups: 3,
+			MaxSize: 100,
 		},
 	},
 	backupPolicy: BackupPolicy{
