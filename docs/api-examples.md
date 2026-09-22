@@ -12,28 +12,28 @@ recommended for a more convenient and user-friendly experience.
 
 #### Trigger On-Demand Backup
 
-ℹ️ *Available since v3.5.0*
+ℹ️ **Available since v1.0**
 
 These requests start a backup for the specified routine, regardless of its configured schedule.
 
-<!-- tag triggerFullBackup link ?delay=<timeout> -->
-[`POST {{baseUrl}}/v1/backups/full/{name}?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/triggerFullBackup)
+<!-- tag scheduleFullBackup link ?delay=<timeout> -->
+[`POST {{baseUrl}}/v1/backups/schedule/{name}?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/scheduleFullBackup)
 <!-- /tag -->
 
-<!-- tag triggerIncrementalBackup link ?delay=<timeout> -->
+> ⚠️ **Deprecated:** Use the full or incremental backup endpoints below instead.
+>
+><!-- tag triggerFullBackup link ?delay=<timeout> -->
+[`POST {{baseUrl}}/v1/backups/full/{name}?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/triggerFullBackup)
+<!-- /tag -->
+>
+><!-- tag triggerIncrementalBackup link ?delay=<timeout> -->
 [`POST {{baseUrl}}/v1/backups/incremental/{name}?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/triggerIncrementalBackup)
 <!-- /tag -->
 
 * `name`: The name of the backup routine to trigger.
-* delay (optional): Time in milliseconds to delay the start of the backup.
+* `delay` (optional): The time in milliseconds to delay the start of the backup.
 
-If the request is accepted, the server responds with Http 202 Accepted — the backup itself runs afterwards. A
-triggered incremental backup is skipped at run time if the routine has not yet completed a full backup, or if a full
-backup is running or falls on the same instant; see
-[What happens when a backup doesn't finish before another starts](configuration.md#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine).
-
-⚠️ *Deprecated:* <!-- tag scheduleFullBackup ?delay=<timeout> -->`POST /v1/backups/schedule/{name}?delay=<timeout>`<!-- /tag --> is an alias of the full-backup
-trigger above, kept for compatibility with v1.0 clients. Use `/v1/backups/full/{name}` instead.
+If the request is accepted, the server responds with Http 202 Accepted.
 
 #### Get Current Backup
 
@@ -213,7 +213,8 @@ This request restores a backup from a specified path to a designated destination
 
 The `no-generation` parameter allows overwriting of existing keys if set to `true`.
 
-In the `source` section, `path` is the `key` value returned as a response in the [Retrieve Backup List](#retrieve-backup-list)
+In the `source` section, `path` is the `key` value returned as a response in
+the [Retrieve Backup List](#retrieve-backup-list)
 example.
 
 The `destination` field says where to restore to. It can be any Aerospike cluster.
@@ -239,7 +240,8 @@ up to the target timestamp.
 
 There is no need to specify individual backup paths or storage locations — the system handles this internally. The
 restore process requires a full backup as a foundation; incremental backups cannot be used on their own.
-If the backup policy is configured with `incr-mode: cumulative`, only the latest incremental backup before the timestamp is restored, skipping the intermediate ones.
+If the backup policy is configured with `incr-mode: cumulative`, only the latest incremental backup before the timestamp
+is restored, skipping the intermediate ones.
 
 By default, backups are applied in chronological order. However, when restoring to an empty namespace, the system may
 reverse the order of application and use the `CREATE_ONLY` policy. This optimization ensures that each record is written
@@ -298,6 +300,7 @@ should provide a pair `time` and `routine`.
 `time` is epoch milliseconds (an absolute instant); `schedule-timezone` does not change how it is interpreted.
 
 Optional overrides:
+
 - `destination` / `destination-name` overrides destination cluster from routine.
 - `source` / `source-name` overrides storage from routine.
 - Any omitted value falls back to the referenced routine config.
@@ -371,8 +374,8 @@ Provides a list of all restore jobs, with optional filtering by time range and s
 - `to` (optional): Upper bound timestamp filter in milliseconds since epoch.
 - `status` (optional): Comma-separated status filter over the job statuses `running`, `success`, `failure` and
   `canceled` — the same values the `status` field of a job carries. Matching is case-insensitive, so
-  `Running,Success` and `running,success` are equivalent. Use a `!` prefix to exclude statuses instead
-  (e.g. `!failure,canceled`). `done` and `failed` are accepted as deprecated aliases of `success` and `failure`.
+  `Running,Success` and `running,success` are equivalent. Use a `!` prefix to exclude statuses instead (e.g.
+  `!failure,canceled`). `done` and `failed` are accepted as deprecated aliases of `success` and `failure`.
 
 <details>
     <summary>Response example</summary>
