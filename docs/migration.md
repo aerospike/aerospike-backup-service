@@ -189,7 +189,7 @@ reliability of backup and restore routines. Notable fixes address:
 
 - Independent tuning of read and write parallelism.
   New field `parallel-write` can now be configured separately in [backup policy](readme/dto/dto.backuppolicy.md)
-  giving operators finer control over performance. By default it is equal to `parallel-read`.
+  giving operators finer control over performance. By default it is equal to `parallel`.
 
 ## v3.1 -> v3.2
 
@@ -210,7 +210,7 @@ It is focused on stability and bug fixes, and includes an updated, faster versio
 
 #### New Features
 
-- **Restore Jobs Endpoint**: A new endpoint [`GET /v1/restore/jobs`](api-examples.md#retrieve-restore-jobs)
+- **Restore Jobs Endpoint**: A new endpoint [<!-- tag retrieveRestoreJobs -->`GET /v1/restore/jobs`<!-- /tag -->](api-examples.md#retrieve-restore-jobs)
   has been added to retrieve a list of all restore jobs, with options to filter by time range and status.
 - **Add min-part-size to Azure and GCP**:
   The `min-part-size` property, previously available only for S3 storage,
@@ -308,7 +308,7 @@ storage types.
 
 Example:
 
-<!-- Storage -->
+<!-- tag Storage -->
 
 ```yaml
 aws-s3:
@@ -332,8 +332,8 @@ gcp-gcs:
 local:
   local-storage:
     path: backups
-
 ```
+<!-- /tag -->
 
 #### Configuration Management Update
 

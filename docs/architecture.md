@@ -59,7 +59,7 @@ flowchart TB
   registry and restore jobs on a fixed interval and exposes the metrics documented in [Monitoring](monitoring.md).
 
 All of these are wired together once, at startup, in
-[`internal/app/bootstrap.go`](../internal/app/bootstrap.go#L30) (`InitComponents`) — that function is the fastest way
+[`internal/app/bootstrap.go`](../internal/app/bootstrap.go) (`InitComponents`) — that function is the fastest way
 to see the full object graph and every dependency between components.
 
 ## Request lifecycle
@@ -67,20 +67,20 @@ to see the full object graph and every dependency between components.
 Backup and restore triggers are asynchronous by design: an Aerospike cluster backup or restore can run for hours, far
 longer than an HTTP client should be expected to hold a connection open.
 
-1. A client calls e.g. `POST /v1/backups/full/{name}` or `POST /v1/restore/full`.
+1. A client calls e.g. <!-- tag triggerFullBackup -->`POST /v1/backups/full/{name}`<!-- /tag --> or <!-- tag restoreFull -->`POST /v1/restore/full`<!-- /tag -->.
 2. The handler validates the request, looks up the routine/policy from the in-memory config, and hands off to the
    service layer (`BackupScheduler.TriggerAdHocFullBackup`, `RestoreManager.Restore`, ...), which starts the job on a
    goroutine and registers it in the running-backups registry or the restore jobs holder.
 3. The handler immediately returns **`202 Accepted`** (see
    [`TriggerFullBackup`](../internal/server/handlers/backup.go#L195) and the restore handlers) — it does not wait for
    the job to finish.
-4. The client polls status separately: `GET /v1/backups/currentBackup/{name}` for backups, or
-   `GET /v1/restore/status/{jobId}` for restores (see [API examples](api-examples.md)). Progress is also exported as
+4. The client polls status separately: <!-- tag getCurrentBackup -->`GET /v1/backups/currentBackup/{name}`<!-- /tag --> for backups, or
+   <!-- tag restoreStatus -->`GET /v1/restore/status/{jobId}`<!-- /tag --> for restores (see [API examples](api-examples.md)). Progress is also exported as
    Prometheus metrics.
 5. Triggered jobs run with a context tied to the process lifetime (derived from the top-level context created in
    [`cmd/backup/main.go`](../cmd/backup/main.go)), not the originating HTTP request's context. A job that has started
    must not be canceled just because the client that triggered it disconnected; it can only be stopped explicitly via
-   `POST /v1/backups/cancel/{name}`.
+   <!-- tag cancelCurrentBackup -->`POST /v1/backups/cancel/{name}`<!-- /tag -->.
 
 Scheduled (cron-triggered) backups follow the same execution path, minus the initial HTTP request — Quartz invokes
 the same orchestration code that ad-hoc triggers use.
@@ -92,7 +92,7 @@ ABS keeps two parallel representations of every configuration entity (routine, p
 - **`pkg/dto`** is the wire format. Its structs carry `json`/`yaml` struct tags, `validate` rules, and
   `swag`/OpenAPI annotations, and they mirror exactly what the YAML configuration file and the REST API accept and
   return. It changes whenever the public API or config file format changes, and it is what gets versioned across
-  the [migration guide](../README.md#migration-guide).
+  the [migration guide](migration.md).
 - **`pkg/model`** is the internal domain representation used by the service layer and the scheduler. It has no
   serialization concerns and is free to include derived/runtime state (for example, invalidated-routine bookkeeping
   in [`pkg/model/config.go`](../pkg/model/config.go)) that should never be part of the public API surface.
@@ -105,7 +105,7 @@ purposes. This means:
   refactors to `pkg/service`.
 - Internal fields never leak into API responses or the config file by accident.
 - Breaking API changes are visible as changes to `pkg/dto`, which is exactly the set of files the
-  [migration guide](../README.md#migration-guide) needs to track.
+  [migration guide](migration.md) needs to track.
 
 ## Configuration management
 
