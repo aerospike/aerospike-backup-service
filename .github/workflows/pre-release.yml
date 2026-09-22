@@ -570,10 +570,7 @@ jobs:
     needs: [sign-packages, sign-helm]
     permissions:
       contents: read
-    # ubuntu-22.04: dpkg-sig is not packaged for 24.04 (the same constraint the legacy
-    # signing job ran under, and the reason post-release-verify-artifacts.yml's GPG job
-    # also stays on 22.04).
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -596,7 +593,9 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y dpkg-sig rpm
+          # dpkg-sig is absent here on purpose: it was dropped from the archive after jammy
+          # and has no 24.04 package. The deb check below runs it in a pinned container.
+          sudo apt-get install -y rpm
 
       - name: Import GPG public key
         env:
@@ -608,8 +607,18 @@ jobs:
             exit 1
           fi
           echo "$GPG_PUBLIC_KEY" | gpg --import
-          # rpm --checksig reads its own keyring, not GnuPG's.
-          echo "$GPG_PUBLIC_KEY" | sudo rpm --import /dev/stdin
+          # rpm --checksig reads its own keyring, not GnuPG's, so the key goes in twice.
+          #
+          # Via a real file, not a pipe: rpm --import sizes its read buffer from the fstat
+          # of the argument, which is 0 for a pipe, so `rpm --import /dev/stdin` reads
+          # nothing and dies with "import read failed(0)".
+          #
+          # And WITHOUT sudo: Debian/Ubuntu's rpm keeps a per-user database (%_dbpath is
+          # ~/.rpmdb, not /var/lib/rpm), so `sudo rpm --import` files the key under
+          # /root/.rpmdb while the verification below reads /home/runner/.rpmdb. The import
+          # succeeds, then every package reports NOKEY as "digests SIGNATURES NOT OK".
+          printf '%s\n' "$GPG_PUBLIC_KEY" > "${RUNNER_TEMP}/gpg-public-key.asc"
+          rpm --import "${RUNNER_TEMP}/gpg-public-key.asc"
 
       - name: Verify every artifact carries a valid signature
         run: |
@@ -636,13 +645,38 @@ jobs:
 
           for pkg in "${debs[@]}"; do
             check_detached "$pkg"
+          done
+
+          # `apt` checks the signature embedded by dpkg-sig as the ar member `_gpgbuilder`,
+          # and dpkg-sig itself is the only tool that reads that format -- but it was dropped
+          # from the archive after jammy, so a 24.04 runner cannot install it. Run the real
+          # tool in a pinned jammy container rather than reimplementing its manifest checks
+          # here, where a subtly incomplete reimplementation would quietly weaken this gate.
+          #
+          # -i is required: without it the container gets no stdin, so `bash -s` reads an
+          # empty script, verifies nothing and exits 0.
+          if ! docker run --rm -i \
+              -v "$PWD:/w" -w /w \
+              -v "${RUNNER_TEMP}/gpg-public-key.asc:/key.asc:ro" \
+              ubuntu:22.04 bash -s -- "${debs[@]}" <<'CONTAINER'
+          set -euo pipefail
+          apt-get update -qq >/dev/null
+          apt-get install -y -qq dpkg-sig >/dev/null
+          gpg --quiet --import /key.asc
+          rc=0
+          for pkg in "$@"; do
             out="$(dpkg-sig --verify "$pkg" || true)"
             echo "$out"
             if ! grep -q 'GOODSIG' <<< "$out"; then
               echo "::error::dpkg-sig reports no GOODSIG for ${pkg}."
-              fail=1
+              rc=1
             fi
           done
+          exit $rc
+          CONTAINER
+          then
+            fail=1
+          fi
 
           for pkg in "${rpms[@]}"; do
             check_detached "$pkg"
