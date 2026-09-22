@@ -32,7 +32,7 @@ func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.AddPolicy(name, newPolicy)
 	}); err != nil {
-		httpError(w, errConfigChange(err, "policy", name))
+		httpError(w, err)
 		return
 	}
 
@@ -67,9 +67,9 @@ func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingPolicyName)
 		return
 	}
-	policy, ok := s.config.BackupConfigCopy().BackupPolicies[name]
-	if !ok {
-		httpError(w, errNotFound("policy", name))
+	policy, err := s.config.Policy(name)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -102,7 +102,7 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.UpdatePolicy(name, updatedPolicy)
 	}); err != nil {
-		httpError(w, errConfigChange(err, "policy", name))
+		httpError(w, err)
 		return
 	}
 
@@ -130,7 +130,7 @@ func (s *Service) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 		return config.DeletePolicy(name)
 	})
 	if err != nil {
-		httpError(w, errConfigChange(err, "policy", name))
+		httpError(w, err)
 		return
 	}
 

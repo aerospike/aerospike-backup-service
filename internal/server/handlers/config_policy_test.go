@@ -117,7 +117,7 @@ func TestReadPolicy(t *testing.T) {
 			name:           "non-existent policy",
 			policyName:     "non-existent",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errNotFound("policy", "non-existent").Error(),
+			expectedError:  model.NotFound("policy", "non-existent").Error(),
 		},
 	}
 
@@ -184,7 +184,7 @@ func TestUpdatePolicy(t *testing.T) {
 			policyName:     "unknown-policy",
 			requestBody:    "{}",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errNotFound("policy", "unknown-policy").Error(),
+			expectedError:  model.NotFound("policy", "unknown-policy").Error(),
 		},
 	}
 
@@ -238,7 +238,7 @@ func TestDeletePolicy(t *testing.T) {
 			name:           "unknown policy name",
 			policyName:     "unknown-policy",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errNotFound("policy", "unknown-policy").Error(),
+			expectedError:  model.NotFound("policy", "unknown-policy").Error(),
 		},
 	}
 
@@ -274,7 +274,7 @@ func TestDeletePolicy_InUseErrorMessage(t *testing.T) {
 
 	assert.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(),
-		"delete backup policy \"test-policy\": item is in use: it is used in routine \"routine1\"")
+		"policy \"test-policy\" is in use: it is used in routine \"routine1\"")
 }
 
 func TestUpdatePolicy_Case2_ClusterMaxSetBeforeParallelIncrease(t *testing.T) {

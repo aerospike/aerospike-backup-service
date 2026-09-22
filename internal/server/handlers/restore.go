@@ -103,7 +103,7 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var jobErr *service.JobNotFoundError
 		if errors.As(err, &jobErr) {
-			httpError(w, errNotFound("job", jobID))
+			httpError(w, model.NotFound("job", jobID))
 		} else {
 			httpError(w, err)
 		}
@@ -189,9 +189,9 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -224,7 +224,7 @@ func (s *Service) CancelRestoreHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var jobErr *service.JobNotFoundError
 		if errors.As(err, &jobErr) {
-			httpError(w, errNotFound("job", jobID))
+			httpError(w, model.NotFound("job", jobID))
 		} else {
 			httpError(w, fmt.Errorf("failed to cancel restore: %w", err))
 		}

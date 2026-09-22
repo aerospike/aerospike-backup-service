@@ -52,11 +52,28 @@ func (bc BackupConfig) copy() BackupConfig {
 	}
 }
 
-var (
-	ErrAlreadyExists = errors.New("item already exists")
-	ErrNotFound      = errors.New("item not found")
-	ErrInUse         = errors.New("item is in use")
-)
+// FindStorage and FindCluster read from a snapshot the caller already holds, because rendering
+// either one resolves its secret agent by identity against that same snapshot's agents; looking
+// the entity up under a separate lock could pair it with a map that no longer holds its agent.
+// They are named Find because Storage is a field on this type. Lookups that need no snapshot are
+// Routine and Policy on Config.
+func (bc *BackupConfig) FindStorage(name string) (Storage, error) {
+	storage, ok := bc.Storage[name]
+	if !ok {
+		return nil, NotFound("storage", name)
+	}
+
+	return storage, nil
+}
+
+func (bc *BackupConfig) FindCluster(name string) (*AerospikeCluster, error) {
+	cluster, ok := bc.AerospikeClusters[name]
+	if !ok {
+		return nil, NotFound("cluster", name)
+	}
+
+	return cluster, nil
+}
 
 func (c *Config) BackupConfigCopy() *BackupConfig {
 	c.mu.RLock()
@@ -95,7 +112,7 @@ func (c *Config) AddStorage(name string, s Storage) error {
 	defer c.mu.Unlock()
 
 	if _, exists := c.backupConfig.Storage[name]; exists {
-		return fmt.Errorf("add storage %q: %w", name, ErrAlreadyExists)
+		return AlreadyExists("storage", name)
 	}
 	c.backupConfig.Storage[name] = s
 
@@ -108,10 +125,10 @@ func (c *Config) DeleteStorage(name string) error {
 
 	s, exists := c.backupConfig.Storage[name]
 	if !exists {
-		return fmt.Errorf("delete storage %q: %w", name, ErrNotFound)
+		return NotFound("storage", name)
 	}
 	if routine := c.routineUsesStorage(s); routine != "" {
-		return fmt.Errorf("delete storage %q: %w: it is used in routine %q", name, ErrInUse, routine)
+		return InUse("storage", name, fmt.Sprintf("it is used in routine %q", routine))
 	}
 	delete(c.backupConfig.Storage, name)
 
@@ -136,7 +153,7 @@ func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
 	defer c.mu.Unlock()
 
 	if _, exists := c.backupConfig.BackupPolicies[name]; exists {
-		return fmt.Errorf("add backup policy %q: %w", name, ErrAlreadyExists)
+		return AlreadyExists("policy", name)
 	}
 	c.backupConfig.BackupPolicies[name] = p
 
@@ -149,10 +166,10 @@ func (c *Config) DeletePolicy(name string) error {
 
 	p, exists := c.backupConfig.BackupPolicies[name]
 	if !exists {
-		return fmt.Errorf("delete backup policy %q: %w", name, ErrNotFound)
+		return NotFound("policy", name)
 	}
 	if routine := c.routineUsesPolicy(p); routine != "" {
-		return fmt.Errorf("delete backup policy %q: %w: it is used in routine %q", name, ErrInUse, routine)
+		return InUse("policy", name, fmt.Sprintf("it is used in routine %q", routine))
 	}
 	delete(c.backupConfig.BackupPolicies, name)
 
@@ -178,16 +195,30 @@ func (c *Config) Routines() map[string]*BackupRoutine {
 	return routines
 }
 
-func (c *Config) Routine(name string) (*BackupRoutine, bool) {
+// Routine and Policy return the named entity, or an EntityError naming what was missing, so a
+// caller reports a lookup failure by passing the error on rather than restating what it asked for.
+func (c *Config) Routine(name string) (*BackupRoutine, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	routine, found := c.backupConfig.BackupRoutines[name]
-	if !found {
-		return nil, false
+	routine, ok := c.backupConfig.BackupRoutines[name]
+	if !ok {
+		return nil, NotFound("routine", name)
 	}
 
-	return routine, true
+	return routine, nil
+}
+
+func (c *Config) Policy(name string) (*BackupPolicy, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	policy, ok := c.backupConfig.BackupPolicies[name]
+	if !ok {
+		return nil, NotFound("policy", name)
+	}
+
+	return policy, nil
 }
 
 func (c *Config) AddRoutine(r *BackupRoutine) error {
@@ -203,7 +234,7 @@ func (c *Config) AddRoutine(r *BackupRoutine) error {
 	defer c.mu.Unlock()
 
 	if _, exists := c.backupConfig.BackupRoutines[r.Name]; exists {
-		return fmt.Errorf("add backup routine %q: %w", r.Name, ErrAlreadyExists)
+		return AlreadyExists("routine", r.Name)
 	}
 	c.backupConfig.BackupRoutines[r.Name] = r
 	c.invalidateRoutine(r.Name)
@@ -220,7 +251,7 @@ func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
 	defer c.mu.Unlock()
 
 	if _, exists := c.backupConfig.AerospikeClusters[name]; exists {
-		return fmt.Errorf("add Aerospike cluster %q: %w", name, ErrAlreadyExists)
+		return AlreadyExists("cluster", name)
 	}
 	c.backupConfig.AerospikeClusters[name] = cluster
 
@@ -233,10 +264,10 @@ func (c *Config) DeleteCluster(name string) error {
 
 	cluster, exists := c.backupConfig.AerospikeClusters[name]
 	if !exists {
-		return fmt.Errorf("delete Aerospike cluster %q: %w", name, ErrNotFound)
+		return NotFound("cluster", name)
 	}
 	if routine := c.routineUsesCluster(cluster); routine != "" {
-		return fmt.Errorf("delete Aerospike cluster %q: %w: it is used in routine %q", name, ErrInUse, routine)
+		return InUse("cluster", name, fmt.Sprintf("it is used in routine %q", routine))
 	}
 	delete(c.backupConfig.AerospikeClusters, name)
 
@@ -257,7 +288,7 @@ func (c *Config) AddSecretAgent(name string, agent *SecretAgent) error {
 	defer c.mu.Unlock()
 
 	if _, exists := c.backupConfig.SecretAgents[name]; exists {
-		return fmt.Errorf("add Secret agent %q: %w", name, ErrAlreadyExists)
+		return AlreadyExists("secret agent", name)
 	}
 	c.backupConfig.SecretAgents[name] = agent
 	return nil
@@ -300,7 +331,7 @@ func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
 
 	routine, exists := c.backupConfig.BackupRoutines[name]
 	if !exists {
-		return fmt.Errorf("toggle disable for backup routine %q: %w", name, ErrNotFound)
+		return NotFound("routine", name)
 	}
 
 	c.backupConfig.BackupRoutines[name].Disabled = isDisabled

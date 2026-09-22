@@ -66,9 +66,9 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -134,9 +134,9 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -239,9 +239,9 @@ func (s *Service) scheduleBackup(
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -297,9 +297,9 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -322,8 +322,8 @@ func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, found := s.config.Routine(routineName); !found {
-		httpError(w, errRoutineNotFound(routineName))
+	if _, err := s.config.Routine(routineName); err != nil {
+		httpError(w, err)
 		return
 	}
 

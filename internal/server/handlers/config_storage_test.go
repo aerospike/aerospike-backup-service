@@ -112,7 +112,7 @@ func TestReadStorage(t *testing.T) {
 			name:           "non-existent storage",
 			storageName:    "non-existent",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errNotFound("storage", "non-existent").Error(),
+			expectedError:  model.NotFound("storage", "non-existent").Error(),
 		},
 	}
 
@@ -215,7 +215,7 @@ func TestDeleteStorage(t *testing.T) {
 			name:           "unknown storage name",
 			storageName:    "unknown-storage",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errNotFound("storage", "unknown-storage").Error(),
+			expectedError:  model.NotFound("storage", "unknown-storage").Error(),
 		},
 	}
 
@@ -249,7 +249,7 @@ func TestDeleteStorage_InUseErrorMessage(t *testing.T) {
 	svc.DeleteStorage(w, req)
 
 	assert.Equal(t, http.StatusConflict, w.Code)
-	assert.Contains(t, w.Body.String(), "delete storage \"storage1\": item is in use: it is used in routine \"routine1\"")
+	assert.Contains(t, w.Body.String(), "storage \"storage1\" is in use: it is used in routine \"routine1\"")
 }
 
 func marshalToString(obj any) string {

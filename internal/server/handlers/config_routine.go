@@ -32,7 +32,7 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.AddRoutine(name, newRoutine)
 	}, withNamespaceValidation); err != nil {
-		httpError(w, errConfigChange(err, "routine", name))
+		httpError(w, err)
 		return
 	}
 
@@ -71,9 +71,9 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	routine, found := s.config.Routine(name)
-	if !found {
-		httpError(w, errRoutineNotFound(name))
+	routine, err := s.config.Routine(name)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -106,7 +106,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.UpdateRoutine(name, updatedRoutine)
 	}, withNamespaceValidation); err != nil {
-		httpError(w, errConfigChange(err, "routine", name))
+		httpError(w, err)
 		return
 	}
 
@@ -133,7 +133,7 @@ func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 		return config.DeleteRoutine(name)
 	})
 	if err != nil {
-		httpError(w, errConfigChange(err, "routine", name))
+		httpError(w, err)
 		return
 	}
 
@@ -159,7 +159,7 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 		return config.SetRoutineDisabled(name, false)
 	})
 	if err != nil {
-		httpError(w, errConfigChange(err, "routine", name))
+		httpError(w, err)
 		return
 	}
 
@@ -185,7 +185,7 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 		return config.SetRoutineDisabled(name, true)
 	})
 	if err != nil {
-		httpError(w, errConfigChange(err, "routine", name))
+		httpError(w, err)
 		return
 	}
 

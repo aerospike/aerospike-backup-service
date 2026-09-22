@@ -36,7 +36,7 @@ func (s *Service) changeBackupConfig(
 	dtoConfig := dto.NewConfigFromModel(s.config)
 	routinesToInvalidate, err := mutate(dtoConfig)
 	if err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
+		return err
 	}
 
 	// GET responses redact secrets as "[secret]". Before persisting a PUT, copy real secret
@@ -44,19 +44,19 @@ func (s *Service) changeBackupConfig(
 	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
 	existingConfig := dto.NewConfigFromModel(s.config)
 	if err := decoder.MergeSecrets(dtoConfig, existingConfig); err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
+		return errBadRequest(fmt.Errorf("failed to update configuration: %w", err))
 	}
 
 	if err := dtoConfig.Validate(); err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
+		return errBadRequest(fmt.Errorf("failed to update configuration: %w", err))
 	}
 
 	modelConfig, err := dtoConfig.ToModel()
 	if err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
+		return errBadRequest(fmt.Errorf("failed to update configuration: %w", err))
 	}
 	if err := s.tlsProber.Probe(ctx, modelConfig); err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
+		return errBadRequest(fmt.Errorf("failed to update configuration: %w", err))
 	}
 
 	s.config.SetBackupConfig(modelConfig.BackupConfigCopy())

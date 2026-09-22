@@ -32,7 +32,7 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.AddStorage(name, newStorage)
 	}); err != nil {
-		httpError(w, errConfigChange(err, "storage", name))
+		httpError(w, err)
 		return
 	}
 
@@ -68,9 +68,9 @@ func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	backupConfig := s.config.BackupConfigCopy()
-	storage, ok := backupConfig.Storage[name]
-	if !ok {
-		httpError(w, errNotFound("storage", name))
+	storage, err := backupConfig.FindStorage(name)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -103,7 +103,7 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.UpdateStorage(name, updatedStorage)
 	}); err != nil {
-		httpError(w, errConfigChange(err, "storage", name))
+		httpError(w, err)
 		return
 	}
 
@@ -131,7 +131,7 @@ func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 		return config.DeleteStorage(name)
 	})
 	if err != nil {
-		httpError(w, errConfigChange(err, "storage", name))
+		httpError(w, err)
 		return
 	}
 

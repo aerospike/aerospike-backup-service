@@ -108,7 +108,7 @@ func TestReadRoutine(t *testing.T) {
 			name:           "non-existent routine",
 			routineName:    "non-existent",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errRoutineNotFound("non-existent").Error(),
+			expectedError:  model.NotFound("routine", "non-existent").Error(),
 		},
 	}
 
@@ -202,7 +202,7 @@ func TestDeleteRoutine(t *testing.T) {
 			name:           "unknown routine name",
 			routineName:    "unknown-routine",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errNotFound("routine", "unknown-routine").Error(),
+			expectedError:  model.NotFound("routine", "unknown-routine").Error(),
 		},
 	}
 
@@ -250,7 +250,7 @@ func TestEnableRoutine(t *testing.T) {
 			name:           "non-existent routine",
 			routineName:    "unknown-routine",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errRoutineNotFound("unknown-routine").Error(),
+			expectedError:  model.NotFound("routine", "unknown-routine").Error(),
 		},
 	}
 
@@ -276,8 +276,8 @@ func TestEnableRoutine(t *testing.T) {
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
 			} else {
-				updated, ok := svc.config.Routine(tt.routineName)
-				require.True(t, ok)
+				updated, err := svc.config.Routine(tt.routineName)
+				require.NoError(t, err)
 				assert.False(t, updated.Disabled)
 			}
 		})
@@ -308,7 +308,7 @@ func TestDisableRoutine(t *testing.T) {
 			name:           "non-existent routine",
 			routineName:    "unknown-routine",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errRoutineNotFound("unknown-routine").Error(),
+			expectedError:  model.NotFound("routine", "unknown-routine").Error(),
 		},
 	}
 
@@ -338,8 +338,8 @@ func TestDisableRoutine(t *testing.T) {
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
 			} else {
-				updated, ok := svc.config.Routine(tt.routineName)
-				require.True(t, ok)
+				updated, err := svc.config.Routine(tt.routineName)
+				require.NoError(t, err)
 				assert.True(t, updated.Disabled)
 			}
 		})

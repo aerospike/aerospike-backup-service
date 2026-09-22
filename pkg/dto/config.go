@@ -212,7 +212,7 @@ func (c *Config) ToModel() (*model.Config, error) {
 
 func (c *Config) AddRoutine(name string, routine *BackupRoutine) ([]string, error) {
 	if _, exists := c.BackupRoutines[name]; exists {
-		return nil, fmt.Errorf("add backup routine %q: %w", name, model.ErrAlreadyExists)
+		return nil, model.AlreadyExists("routine", name)
 	}
 	c.BackupRoutines[name] = routine
 
@@ -221,7 +221,7 @@ func (c *Config) AddRoutine(name string, routine *BackupRoutine) ([]string, erro
 
 func (c *Config) UpdateRoutine(name string, routine *BackupRoutine) ([]string, error) {
 	if _, exists := c.BackupRoutines[name]; !exists {
-		return nil, fmt.Errorf("update backup routine %q: %w", name, model.ErrNotFound)
+		return nil, model.NotFound("routine", name)
 	}
 	c.BackupRoutines[name] = routine
 
@@ -230,7 +230,7 @@ func (c *Config) UpdateRoutine(name string, routine *BackupRoutine) ([]string, e
 
 func (c *Config) DeleteRoutine(name string) ([]string, error) {
 	if _, exists := c.BackupRoutines[name]; !exists {
-		return nil, fmt.Errorf("delete backup routine %q: %w", name, model.ErrNotFound)
+		return nil, model.NotFound("routine", name)
 	}
 	delete(c.BackupRoutines, name)
 
@@ -240,7 +240,7 @@ func (c *Config) DeleteRoutine(name string) ([]string, error) {
 func (c *Config) SetRoutineDisabled(name string, disabled bool) ([]string, error) {
 	routine, exists := c.BackupRoutines[name]
 	if !exists {
-		return nil, fmt.Errorf("toggle disable for backup routine %q: %w", name, model.ErrNotFound)
+		return nil, model.NotFound("routine", name)
 	}
 	routine.Disabled = disabled
 
@@ -249,7 +249,7 @@ func (c *Config) SetRoutineDisabled(name string, disabled bool) ([]string, error
 
 func (c *Config) AddStorage(name string, storage *Storage) ([]string, error) {
 	if _, exists := c.Storage[name]; exists {
-		return nil, fmt.Errorf("add storage %q: %w", name, model.ErrAlreadyExists)
+		return nil, model.AlreadyExists("storage", name)
 	}
 	c.Storage[name] = storage
 
@@ -258,7 +258,7 @@ func (c *Config) AddStorage(name string, storage *Storage) ([]string, error) {
 
 func (c *Config) UpdateStorage(name string, storage *Storage) ([]string, error) {
 	if _, exists := c.Storage[name]; !exists {
-		return nil, fmt.Errorf("update storage %q: %w", name, model.ErrNotFound)
+		return nil, model.NotFound("storage", name)
 	}
 	c.Storage[name] = storage
 
@@ -267,10 +267,10 @@ func (c *Config) UpdateStorage(name string, storage *Storage) ([]string, error) 
 
 func (c *Config) DeleteStorage(name string) ([]string, error) {
 	if _, exists := c.Storage[name]; !exists {
-		return nil, fmt.Errorf("delete storage %q: %w", name, model.ErrNotFound)
+		return nil, model.NotFound("storage", name)
 	}
 	if routines := c.routinesUsingStorage(name); len(routines) > 0 {
-		return nil, fmt.Errorf("delete storage %q: %w: it is used in routine %q", name, model.ErrInUse, routines[0])
+		return nil, model.InUse("storage", name, fmt.Sprintf("it is used in routine %q", routines[0]))
 	}
 	delete(c.Storage, name)
 
@@ -279,7 +279,7 @@ func (c *Config) DeleteStorage(name string) ([]string, error) {
 
 func (c *Config) AddCluster(name string, cluster *AerospikeCluster) ([]string, error) {
 	if _, exists := c.AerospikeClusters[name]; exists {
-		return nil, fmt.Errorf("add Aerospike cluster %q: %w", name, model.ErrAlreadyExists)
+		return nil, model.AlreadyExists("cluster", name)
 	}
 	c.AerospikeClusters[name] = cluster
 
@@ -288,7 +288,7 @@ func (c *Config) AddCluster(name string, cluster *AerospikeCluster) ([]string, e
 
 func (c *Config) UpdateCluster(name string, cluster *AerospikeCluster) ([]string, error) {
 	if _, exists := c.AerospikeClusters[name]; !exists {
-		return nil, fmt.Errorf("update Aerospike cluster %q: %w", name, model.ErrNotFound)
+		return nil, model.NotFound("cluster", name)
 	}
 	c.AerospikeClusters[name] = cluster
 
@@ -297,11 +297,10 @@ func (c *Config) UpdateCluster(name string, cluster *AerospikeCluster) ([]string
 
 func (c *Config) DeleteCluster(name string) ([]string, error) {
 	if _, exists := c.AerospikeClusters[name]; !exists {
-		return nil, fmt.Errorf("delete Aerospike cluster %q: %w", name, model.ErrNotFound)
+		return nil, model.NotFound("cluster", name)
 	}
 	if routines := c.routinesUsingCluster(name); len(routines) > 0 {
-		return nil, fmt.Errorf(
-			"delete Aerospike cluster %q: %w: it is used in routine %q", name, model.ErrInUse, routines[0])
+		return nil, model.InUse("cluster", name, fmt.Sprintf("it is used in routine %q", routines[0]))
 	}
 	delete(c.AerospikeClusters, name)
 
@@ -310,7 +309,7 @@ func (c *Config) DeleteCluster(name string) ([]string, error) {
 
 func (c *Config) AddPolicy(name string, policy *BackupPolicy) ([]string, error) {
 	if _, exists := c.BackupPolicies[name]; exists {
-		return nil, fmt.Errorf("add backup policy %q: %w", name, model.ErrAlreadyExists)
+		return nil, model.AlreadyExists("policy", name)
 	}
 	c.BackupPolicies[name] = policy
 
@@ -319,7 +318,7 @@ func (c *Config) AddPolicy(name string, policy *BackupPolicy) ([]string, error) 
 
 func (c *Config) UpdatePolicy(name string, policy *BackupPolicy) ([]string, error) {
 	if _, exists := c.BackupPolicies[name]; !exists {
-		return nil, fmt.Errorf("update backup policy %q: %w", name, model.ErrNotFound)
+		return nil, model.NotFound("policy", name)
 	}
 	c.BackupPolicies[name] = policy
 
@@ -328,10 +327,10 @@ func (c *Config) UpdatePolicy(name string, policy *BackupPolicy) ([]string, erro
 
 func (c *Config) DeletePolicy(name string) ([]string, error) {
 	if _, exists := c.BackupPolicies[name]; !exists {
-		return nil, fmt.Errorf("delete backup policy %q: %w", name, model.ErrNotFound)
+		return nil, model.NotFound("policy", name)
 	}
 	if routines := c.routinesUsingPolicy(name); len(routines) > 0 {
-		return nil, fmt.Errorf("delete backup policy %q: %w: it is used in routine %q", name, model.ErrInUse, routines[0])
+		return nil, model.InUse("policy", name, fmt.Sprintf("it is used in routine %q", routines[0]))
 	}
 	delete(c.BackupPolicies, name)
 

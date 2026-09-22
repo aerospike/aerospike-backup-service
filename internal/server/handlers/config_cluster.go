@@ -33,7 +33,7 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.AddCluster(name, newCluster)
 	}); err != nil {
-		httpError(w, errConfigChange(err, "cluster", name))
+		httpError(w, err)
 		return
 	}
 
@@ -75,9 +75,9 @@ func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	backupConfig := s.config.BackupConfigCopy()
-	cluster, ok := backupConfig.AerospikeClusters[name]
-	if !ok {
-		httpError(w, errNotFound("cluster", name))
+	cluster, err := backupConfig.FindCluster(name)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -110,7 +110,7 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.UpdateCluster(name, updatedCluster)
 	}, withNamespaceValidation); err != nil {
-		httpError(w, errConfigChange(err, "cluster", name))
+		httpError(w, err)
 		return
 	}
 
@@ -138,7 +138,7 @@ func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return config.DeleteCluster(name)
 	})
 	if err != nil {
-		httpError(w, errConfigChange(err, "cluster", name))
+		httpError(w, err)
 		return
 	}
 

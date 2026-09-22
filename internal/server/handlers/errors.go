@@ -12,91 +12,57 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// statusCodeError represents an error with an associated HTTP status code.
-type statusCodeError struct {
-	Err  error
-	Code int
+// badRequestError marks an error as the client's fault: the request was understood but cannot be
+// accepted. It carries no status of its own — every other code comes from a model.EntityError
+// cause or from one of httpError's own cases, so there is a single place each status is decided.
+type badRequestError struct {
+	Err error
 }
 
-func (e *statusCodeError) Error() string {
+func (e *badRequestError) Error() string {
 	return e.Err.Error()
 }
 
-// Unwrap exposes the cause, so errors.Is/As can see through the status code wrapper.
-func (e *statusCodeError) Unwrap() error {
+// Unwrap exposes the cause, so errors.Is/As can see through the wrapper.
+func (e *badRequestError) Unwrap() error {
 	return e.Err
 }
 
-// newStatusCodeError creates a new statusCodeError with an associated status code.
-func newStatusCodeError(err error, code int) *statusCodeError {
-	return &statusCodeError{Err: err, Code: code}
+func newBadRequestError(err error) *badRequestError {
+	return &badRequestError{Err: err}
 }
 
 func errInvalidQueryParam(err error, param string) error {
-	return newStatusCodeError(fmt.Errorf("invalid query param %s: %w", param, err), http.StatusBadRequest)
+	return newBadRequestError(fmt.Errorf("invalid query param %s: %w", param, err))
 }
 
 func errBadRequest(err error) error {
-	return newStatusCodeError(fmt.Errorf("invalid request: %w", err), http.StatusBadRequest)
+	return newBadRequestError(fmt.Errorf("invalid request: %w", err))
 }
 
-var errMissingRoutineName = newStatusCodeError(errors.New("routine name required"), http.StatusBadRequest)
-var errMissingClusterName = newStatusCodeError(errors.New("cluster name required"), http.StatusBadRequest)
-var errMissingPolicyName = newStatusCodeError(errors.New("policy name required"), http.StatusBadRequest)
-var errMissingStorageName = newStatusCodeError(errors.New("storage name required"), http.StatusBadRequest)
+var errMissingRoutineName = newBadRequestError(errors.New("routine name required"))
+var errMissingClusterName = newBadRequestError(errors.New("cluster name required"))
+var errMissingPolicyName = newBadRequestError(errors.New("policy name required"))
+var errMissingStorageName = newBadRequestError(errors.New("storage name required"))
 
-func errRoutineNotFound(name string) error {
-	return errNotFound("routine", name)
-}
-
-func errNotFound(field string, name any) error {
-	return newStatusCodeError(fmt.Errorf("%s %s not found", field, quoteName(name)), http.StatusNotFound)
-}
-
-func errAlreadyExists(field string, name any) error {
-	return newStatusCodeError(fmt.Errorf("%s %s already exists", field, quoteName(name)), http.StatusConflict)
-}
-
-// errConfigChange maps a configuration change failure onto the status the API reports for it:
-// a missing entity reads exactly as it does on GET, a clash with the stored configuration is a
-// conflict, and everything else describes a request the service cannot accept.
-func errConfigChange(err error, entity, name string) error {
-	switch {
-	case errors.Is(err, model.ErrNotFound):
-		return errNotFound(entity, name)
-	case errors.Is(err, model.ErrAlreadyExists):
-		return errAlreadyExists(entity, name)
-	case errors.Is(err, model.ErrInUse):
-		return newStatusCodeError(err, http.StatusConflict)
-	default:
-		return errBadRequest(err)
-	}
-}
-
-// quoteName quotes string names and prints other identifiers, such as numeric job IDs, as they are;
-// %q would render an integer as a rune literal.
-func quoteName(name any) string {
-	if s, ok := name.(string); ok {
-		return strconv.Quote(s)
-	}
-
-	return fmt.Sprint(name)
-}
-
-// httpError calls http.Error with the appropriate status code based on the error.
+// httpError is the one place an error becomes a status code. The entity causes are matched before
+// the bad-request wrapper, so wrapping one can never hide it the way it did before BKRS-439; a cause with
+// no case here is a fault in the service, not in the request, and reads as 500.
 func httpError(w http.ResponseWriter, err error) {
 	var (
-		httpErr     *statusCodeError
+		badRequest  *badRequestError
 		maxBytesErr *http.MaxBytesError
 	)
 
 	switch {
 	case errors.As(err, &maxBytesErr):
 		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
-	case errors.As(err, &httpErr):
-		http.Error(w, httpErr.Error(), httpErr.Code)
 	case errors.Is(err, model.ErrNotFound):
 		http.Error(w, err.Error(), http.StatusNotFound)
+	case errors.Is(err, model.ErrAlreadyExists), errors.Is(err, model.ErrInUse):
+		http.Error(w, err.Error(), http.StatusConflict)
+	case errors.As(err, &badRequest):
+		http.Error(w, badRequest.Error(), http.StatusBadRequest)
 	default:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
