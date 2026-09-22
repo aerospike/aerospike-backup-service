@@ -119,31 +119,6 @@ func (c *Config) AddStorage(name string, s Storage) error {
 	return nil
 }
 
-func (c *Config) DeleteStorage(name string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	s, exists := c.backupConfig.Storage[name]
-	if !exists {
-		return NotFound("storage", name)
-	}
-	if routine := c.routineUsesStorage(s); routine != "" {
-		return InUse("storage", name, fmt.Sprintf("it is used in routine %q", routine))
-	}
-	delete(c.backupConfig.Storage, name)
-
-	return nil
-}
-
-func (c *Config) routineUsesStorage(s Storage) string {
-	for name, r := range c.backupConfig.BackupRoutines {
-		if r.Storage == s {
-			return name
-		}
-	}
-	return ""
-}
-
 func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
 	if p == nil {
 		return errors.New("backup policy cannot be nil")
@@ -160,31 +135,6 @@ func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
 	return nil
 }
 
-func (c *Config) DeletePolicy(name string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	p, exists := c.backupConfig.BackupPolicies[name]
-	if !exists {
-		return NotFound("policy", name)
-	}
-	if routine := c.routineUsesPolicy(p); routine != "" {
-		return InUse("policy", name, fmt.Sprintf("it is used in routine %q", routine))
-	}
-	delete(c.backupConfig.BackupPolicies, name)
-
-	return nil
-}
-
-func (c *Config) routineUsesPolicy(p *BackupPolicy) string {
-	for name, r := range c.backupConfig.BackupRoutines {
-		if r.BackupPolicy == p {
-			return name
-		}
-	}
-	return ""
-}
-
 func (c *Config) Routines() map[string]*BackupRoutine {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -195,7 +145,7 @@ func (c *Config) Routines() map[string]*BackupRoutine {
 	return routines
 }
 
-// Routine and Policy return the named entity, or an EntityError naming what was missing, so a
+// Routine and Policy return the named entity, or an entityError naming what was missing, so a
 // caller reports a lookup failure by passing the error on rather than restating what it asked for.
 func (c *Config) Routine(name string) (*BackupRoutine, error) {
 	c.mu.RLock()
@@ -258,31 +208,6 @@ func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
 	return nil
 }
 
-func (c *Config) DeleteCluster(name string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	cluster, exists := c.backupConfig.AerospikeClusters[name]
-	if !exists {
-		return NotFound("cluster", name)
-	}
-	if routine := c.routineUsesCluster(cluster); routine != "" {
-		return InUse("cluster", name, fmt.Sprintf("it is used in routine %q", routine))
-	}
-	delete(c.backupConfig.AerospikeClusters, name)
-
-	return nil
-}
-
-func (c *Config) routineUsesCluster(cluster *AerospikeCluster) string {
-	for name, r := range c.backupConfig.BackupRoutines {
-		if r.SourceCluster == cluster {
-			return name
-		}
-	}
-	return ""
-}
-
 func (c *Config) AddSecretAgent(name string, agent *SecretAgent) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -322,22 +247,6 @@ func (c *Config) InvalidateAllRoutines() {
 	for _, r := range c.backupConfig.BackupRoutines {
 		c.invalidateRoutine(r.Name)
 	}
-}
-
-// ToggleRoutineDisabled sets the Disabled field of the BackupRoutine based on the provided state.
-func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	routine, exists := c.backupConfig.BackupRoutines[name]
-	if !exists {
-		return NotFound("routine", name)
-	}
-
-	c.backupConfig.BackupRoutines[name].Disabled = isDisabled
-	c.invalidateRoutine(routine.Name)
-
-	return nil
 }
 
 // PopInvalidatedRoutineNames returns all invalidated routine names since the last call.

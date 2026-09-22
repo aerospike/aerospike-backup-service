@@ -51,7 +51,7 @@ func TestEntityErrorUnwrapsToItsCause(t *testing.T) {
 	require.NotErrorIs(t, err, ErrAlreadyExists)
 	require.NotErrorIs(t, err, ErrInUse)
 
-	var entityErr *EntityError
+	var entityErr *entityError
 	require.ErrorAs(t, err, &entityErr)
 	assert.Equal(t, "routine", entityErr.Kind)
 	assert.Equal(t, "daily", entityErr.Name)

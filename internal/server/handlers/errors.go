@@ -13,7 +13,7 @@ import (
 )
 
 // badRequestError marks an error as the client's fault: the request was understood but cannot be
-// accepted. It carries no status of its own — every other code comes from a model.EntityError
+// accepted. It carries no status of its own — every other code comes from a model.entityError
 // cause or from one of httpError's own cases, so there is a single place each status is decided.
 type badRequestError struct {
 	Err error

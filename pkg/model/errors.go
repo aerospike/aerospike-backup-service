@@ -14,11 +14,11 @@ var (
 	ErrInUse         = errors.New("is in use")
 )
 
-// EntityError names the entity a request could not act on and why. It carries the name so no
+// entityError names the entity a request could not act on and why. It carries the name so no
 // layer above has to restate it, which is what let a reported status and its message drift apart:
 // every caller now renders the same sentence, `routine "daily" not found`, from the error itself.
 // The cause stays reachable through errors.Is.
-type EntityError struct {
+type entityError struct {
 	// Kind is the entity as the API names it: routine, storage, cluster, policy, job.
 	Kind string
 	// Name identifies the entity. Numeric identifiers, such as restore job IDs, print bare.
@@ -29,7 +29,7 @@ type EntityError struct {
 	Detail string
 }
 
-func (e *EntityError) Error() string {
+func (e *entityError) Error() string {
 	if e.Detail == "" {
 		return fmt.Sprintf("%s %s %s", e.Kind, quoteName(e.Name), e.Cause)
 	}
@@ -37,20 +37,20 @@ func (e *EntityError) Error() string {
 	return fmt.Sprintf("%s %s %s: %s", e.Kind, quoteName(e.Name), e.Cause, e.Detail)
 }
 
-func (e *EntityError) Unwrap() error {
+func (e *entityError) Unwrap() error {
 	return e.Cause
 }
 
 func NotFound(kind string, name any) error {
-	return &EntityError{Kind: kind, Name: name, Cause: ErrNotFound}
+	return &entityError{Kind: kind, Name: name, Cause: ErrNotFound}
 }
 
 func AlreadyExists(kind string, name any) error {
-	return &EntityError{Kind: kind, Name: name, Cause: ErrAlreadyExists}
+	return &entityError{Kind: kind, Name: name, Cause: ErrAlreadyExists}
 }
 
 func InUse(kind string, name any, detail string) error {
-	return &EntityError{Kind: kind, Name: name, Cause: ErrInUse, Detail: detail}
+	return &entityError{Kind: kind, Name: name, Cause: ErrInUse, Detail: detail}
 }
 
 // quoteName quotes string names and prints other identifiers, such as numeric job IDs, as they
