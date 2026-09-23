@@ -60,6 +60,13 @@ type CancelableBackupHandler interface {
 	Cancel()
 }
 
+// namespaceRun is the backup of one namespace within a routine run.
+type namespaceRun struct {
+	routine   *model.BackupRoutine
+	namespace string
+	spec      model.BackupRunSpec
+}
+
 // Run starts a retryable backup for one namespace via [backupexecutor.Backup.Run],
 // writing each attempt to a folder of its own in the routine's storage layout, and returns
 // once the pipeline is running. A run that gives up before starting one returns its error.
@@ -73,14 +80,13 @@ func (e *namespaceBackupRunner) Run(
 	scanLimiter syncutil.Limiter,
 	logger *slog.Logger,
 ) (CancelableBackupHandler, error) {
+	run := namespaceRun{routine: routine, namespace: namespace, spec: runSpec}
+
 	// Every attempt writes to a folder of its own under the run's timestamp, so a retry never
 	// shares a folder with the attempt it replaces, and the run keeps one timestamp however many
 	// attempts its namespaces needed. A failed attempt's folder has no metadata, which keeps it out
 	// of the catalog; it is removed once a later attempt has completed.
 	attempt := 1
-	attemptFolder := func() string {
-		return e.pathService.GetBackupAttemptPath(routine.Name, runSpec.Type, namespace, runSpec.StartTime, attempt)
-	}
 	var failedFolders []string
 
 	h, err := startRetryableBackup(
@@ -88,10 +94,11 @@ func (e *namespaceBackupRunner) Run(
 		*routine.BackupPolicy.GetRetryPolicyOrDefault(),
 		retryableBackupCallbacks{
 			Start: func(ctx context.Context) (backupexecutor.BackupHandler, error) {
-				return e.backupExecutor.Run(ctx, routine, runSpec.TimeBounds, namespace, attemptFolder(), scanLimiter, logger)
+				folder := e.attemptFolder(run, attempt)
+				return e.backupExecutor.Run(ctx, routine, runSpec.TimeBounds, namespace, folder, scanLimiter, logger)
 			},
 			OnSuccess: func(ctx context.Context, stats *models.BackupStats) error {
-				if err := e.completeAttempt(ctx, routine, namespace, runSpec, stats, attemptFolder(), logger); err != nil {
+				if err := e.writeBackupMetadata(ctx, run, stats, e.attemptFolder(run, attempt), logger); err != nil {
 					return err
 				}
 
@@ -101,7 +108,7 @@ func (e *namespaceBackupRunner) Run(
 			},
 			OnRetry: func() {
 				prometheus.ObserveBackupEvent(routine.Name, runSpec.Type, prometheus.OutcomeRetry, 0)
-				failedFolders = append(failedFolders, attemptFolder())
+				failedFolders = append(failedFolders, e.attemptFolder(run, attempt))
 				attempt++
 			},
 		},
@@ -112,6 +119,11 @@ func (e *namespaceBackupRunner) Run(
 	}
 
 	return h, nil
+}
+
+// attemptFolder returns the folder the given attempt of a namespace run writes to.
+func (e *namespaceBackupRunner) attemptFolder(run namespaceRun, attempt int) string {
+	return e.pathService.GetBackupAttemptPath(run.routine.Name, run.spec.Type, run.namespace, run.spec.StartTime, attempt)
 }
 
 // removeFailedAttempts removes the folders of attempts that a later attempt has replaced. The
@@ -132,41 +144,28 @@ func (e *namespaceBackupRunner) removeFailedAttempts(
 	}
 }
 
-// completeAttempt writes the metadata that makes an attempt's folder a backup. An empty
-// incremental backup has nothing to restore, so its folder gets none.
-func (e *namespaceBackupRunner) completeAttempt(
+// writeBackupMetadata writes the metadata that makes a namespace run's folder a backup, and logs
+// the folder on success. An empty incremental backup has nothing to restore, so its folder gets none.
+func (e *namespaceBackupRunner) writeBackupMetadata(
 	ctx context.Context,
-	routine *model.BackupRoutine,
-	namespace string,
-	runSpec model.BackupRunSpec,
+	run namespaceRun,
 	stats *models.BackupStats,
 	backupFolder string,
 	logger *slog.Logger,
 ) error {
-	if runSpec.Type == model.BackupTypeIncremental && stats.IsEmpty() {
+	if run.spec.Type == model.BackupTypeIncremental && stats.IsEmpty() {
 		return nil
 	}
 
 	metadata := model.NewBackupMetadata(
 		stats,
-		namespace,
-		ptr.ValueOrZero(runSpec.TimeBounds.FromTime),
-		runSpec.StartTime,
-		routine.BackupPolicy,
+		run.namespace,
+		ptr.ValueOrZero(run.spec.TimeBounds.FromTime),
+		run.spec.StartTime,
+		run.routine.BackupPolicy,
 	)
 
-	return e.writeBackupMetadata(ctx, routine, metadata, backupFolder, logger)
-}
-
-// writeBackupMetadata persists backup metadata to storage and logs the folder on success.
-func (e *namespaceBackupRunner) writeBackupMetadata(
-	ctx context.Context,
-	routine *model.BackupRoutine,
-	metadata model.BackupMetadata,
-	backupFolder string,
-	logger *slog.Logger,
-) error {
-	if err := e.backupWriter.WriteBackupMetadata(ctx, routine, backupFolder, metadata); err != nil {
+	if err := e.backupWriter.WriteBackupMetadata(ctx, run.routine, backupFolder, metadata); err != nil {
 		return fmt.Errorf("failed to write backup metadata to %q: %w", backupFolder, err)
 	}
 
