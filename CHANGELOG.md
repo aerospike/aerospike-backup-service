@@ -21,6 +21,7 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
   artifacts are no longer world-readable. See [docs/migration.md](docs/migration.md) for the
   upgrade steps — local-storage paths, cloud credentials, TLS file modes and privileged ports all
   need attention on an existing installation.
+  Config element names (routine, policy, and storage) have stricter validation: they cannot start or end with whitespace or contain path traversal sequences.
 
 ### Changed
 

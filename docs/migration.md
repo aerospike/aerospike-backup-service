@@ -48,8 +48,8 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
   `0750`, owned by `aerospike-backup-service`. Anything that read them as another unprivileged user — a separate
   `asrestore` account, a log shipper, rsync, an NFS consumer — needs to join the group:
   `sudo usermod -aG aerospike-backup-service <user>`.
-- **The log file moves** — from `/var/log/aerospike-backup-service.log` to
-  `/var/log/aerospike-backup-service/aerospike-backup-service.log`, a directory systemd creates and owns. The
+- **The log file directory moves** — from `/var/log/` to
+  `/var/log/aerospike-backup-service/`, a directory systemd creates and owns. The
   postinstall script moves an existing log and its rotated siblings into it. If you kept a customised configuration
   file, update `service.logger.file-writer.filename` to match: the old path is no longer writable, and file logging
   fails silently when it is not (the journal still has everything).
