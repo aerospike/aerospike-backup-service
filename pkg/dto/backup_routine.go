@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"strconv"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -186,9 +186,10 @@ func validateRoutineSelectorExclusivity(partitionList string, rackList []int, no
 	return nil
 }
 
-// validateFilterExpression checks that filter-exp decodes as base64, which is the only
-// guarantee available here: the decoded payload is msgpack that the server parses, and the
-// Aerospike client packs expressions without offering any decoder to check them against.
+// validateFilterExpression checks that filter-exp carries the encoding the Aerospike client
+// expects, leaving that encoding the client's business rather than this package's. Decoding is
+// the whole guarantee: the client hands back the payload without inspecting it and offers no
+// way to parse it, so only the server ever rejects a meaningless expression.
 func validateFilterExpression(filterExpression string, setList []string) error {
 	if filterExpression == "" {
 		return nil
@@ -196,8 +197,8 @@ func validateFilterExpression(filterExpression string, setList []string) error {
 	if len(setList) > 1 {
 		return errors.New("filter-exp cannot be used when backing up multiple sets")
 	}
-	if _, err := base64.StdEncoding.DecodeString(filterExpression); err != nil {
-		return fmt.Errorf("filter-exp is not valid base64: %w", err)
+	if _, err := as.ExpFromBase64(filterExpression); err != nil {
+		return fmt.Errorf("failed to decode filter expression: %w", err)
 	}
 
 	return nil
