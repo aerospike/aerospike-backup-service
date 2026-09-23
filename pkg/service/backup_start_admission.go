@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 	"github.com/google/uuid"
 )
 
@@ -89,8 +88,7 @@ func (s *startController) TryStart(
 
 // HasBackupRunning reports whether a full or incremental backup is active for the routine.
 func (s *startController) HasBackupRunning(routine *model.BackupRoutine) bool {
-	state := s.registry.GetRoutineState(routine)
-	if state.Full != nil || state.Incremental != nil {
+	if s.registry.GetRoutineState(routine).IsRunning() {
 		return true
 	}
 
@@ -152,6 +150,6 @@ func (s *startController) buildStartFacts(routine *model.BackupRoutine, now time
 		IncrementalRunningNow: incrRunning,
 		// History still comes from registry.
 		HasCompletedFull: !state.LastRunTime.NoFullBackup(),
-		FullScheduledNow: timeutil.IsCronFireTime(routine.IntervalCron, now, routine.Timezone.ResolvedLocation()),
+		FullScheduledNow: routine.FullSchedule().IsFireTime(now),
 	}
 }

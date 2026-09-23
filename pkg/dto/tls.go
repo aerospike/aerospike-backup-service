@@ -26,7 +26,9 @@ type TLS struct {
 	// Path to a directory of trusted CA certificates.
 	CAPath Path `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
-	Protocols string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
+	// Empty by default, which leaves the choice to Go and negotiates TLS 1.2 or 1.3.
+	// Setting a single version pins both the minimum and the maximum to it.
+	Protocols string `yaml:"protocols,omitempty" json:"protocols,omitempty" extensions:"x-nullable"`
 	// Colon-separated IANA TLS 1.2 cipher suite names (not OpenSSL nicknames).
 	// The suite must match the certificate key type (RSA vs ECDSA).
 	// If omitted, the client offers Go crypto/tls TLS 1.2 defaults:
@@ -37,7 +39,7 @@ type TLS struct {
 	// RSA key-exchange, 3DES, RC4, and CBC-SHA256 are not offered.
 	// This field does not select TLS 1.3 suites.
 	CipherSuite string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" extensions:"x-nullable"`
-	// Passphrase for an encrypted TLS key file.
+	// Passphrase for an encrypted TLS key file, in PKCS#8 (the OpenSSL 3 default) or legacy PEM encryption.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
 	KeyfilePassword Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`

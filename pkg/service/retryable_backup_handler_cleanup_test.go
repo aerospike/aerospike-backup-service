@@ -27,13 +27,15 @@ func TestRetryableBackupHandler_OnFailKeepsLiveContextOnShutdown(t *testing.T) {
 	parent, cancelParent := context.WithCancel(t.Context())
 
 	onFailCtxErr := make(chan error, 1)
-	h := newRetryableBackupHandler(parent, models.RetryPolicy{MaxRetries: 0, BaseTimeout: time.Millisecond, Multiplier: 1},
+	policy := models.RetryPolicy{MaxRetries: 0, BaseTimeout: time.Millisecond, Multiplier: 1}
+	h, startErr := startRetryableBackup(parent, policy,
 		retryableBackupCallbacks{
 			Start:     func(context.Context) (backupexecutor.BackupHandler, error) { return inner, nil },
 			OnFail:    func(ctx context.Context) { onFailCtxErr <- ctx.Err() },
 			OnSuccess: func(context.Context, *models.BackupStats) error { return nil },
 			OnRetry:   func() {},
 		}, slog.Default())
+	require.NoError(t, startErr)
 
 	// Simulate SIGTERM: the scheduler context is canceled.
 	cancelParent()

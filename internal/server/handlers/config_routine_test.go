@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -23,13 +24,6 @@ func TestAddRoutine(t *testing.T) {
 		expectedStatus int
 		expectedError  string
 	}{
-		{
-			name:           "missing routine name",
-			routineName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
 		{
 			name:           "invalid json",
 			routineName:    "test-routine",
@@ -99,15 +93,10 @@ func TestReadRoutine(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "missing routine name",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "non-existent routine",
 			routineName:    "non-existent",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errRoutineNotFound("non-existent").Error(),
+			expectedError:  model.NotFound("routine", "non-existent").Error(),
 		},
 	}
 
@@ -140,13 +129,6 @@ func TestUpdateRoutine(t *testing.T) {
 		expectedStatus int
 		expectedError  string
 	}{
-		{
-			name:           "missing routine name",
-			routineName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
 		{
 			name:           "invalid json",
 			routineName:    "test-routine",
@@ -192,16 +174,10 @@ func TestDeleteRoutine(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:           "missing routine name",
-			routineName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "unknown routine name",
 			routineName:    "unknown-routine",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid request",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  model.NotFound("routine", "unknown-routine").Error(),
 		},
 	}
 
@@ -239,17 +215,10 @@ func TestEnableRoutine(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:           "missing routine name",
-			routineName:    "",
-			expectedStatus: http.StatusBadRequest,
-			addRoutine:     true,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "non-existent routine",
 			routineName:    "unknown-routine",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errRoutineNotFound("unknown-routine").Error(),
+			expectedError:  model.NotFound("routine", "unknown-routine").Error(),
 		},
 	}
 
@@ -275,8 +244,8 @@ func TestEnableRoutine(t *testing.T) {
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
 			} else {
-				updated, ok := svc.config.Routine(tt.routineName)
-				require.True(t, ok)
+				updated, err := svc.config.Routine(tt.routineName)
+				require.NoError(t, err)
 				assert.False(t, updated.Disabled)
 			}
 		})
@@ -298,16 +267,10 @@ func TestDisableRoutine(t *testing.T) {
 			expectedCancelRuns: 1,
 		},
 		{
-			name:           "missing routine name",
-			routineName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "non-existent routine",
 			routineName:    "unknown-routine",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errRoutineNotFound("unknown-routine").Error(),
+			expectedError:  model.NotFound("routine", "unknown-routine").Error(),
 		},
 	}
 
@@ -337,10 +300,53 @@ func TestDisableRoutine(t *testing.T) {
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
 			} else {
-				updated, ok := svc.config.Routine(tt.routineName)
-				require.True(t, ok)
+				updated, err := svc.config.Routine(tt.routineName)
+				require.NoError(t, err)
 				assert.True(t, updated.Disabled)
 			}
+		})
+	}
+}
+
+// A routine name arrives from the request path, where the mux decodes "..%2F..%2Fescape" into
+// "../../escape". Such a name, and a namespace carrying the same, would place the routine's
+// backups outside the storage root, so the request is rejected and nothing is persisted.
+func TestAddRoutine_RejectsPathTraversal(t *testing.T) {
+	tests := []struct {
+		name        string
+		routineName string
+		namespace   dto.NamespaceName
+	}{
+		{name: "in the routine name", routineName: "../../escaped-routine", namespace: "source-ns1"},
+		{name: "in a namespace", routineName: "new-routine", namespace: "../../escaped-ns"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			manager := configuration.NewMockManager(ctrl)
+			manager.EXPECT().Write(gomock.Any(), gomock.Any()).Times(0)
+
+			svc := setupTestService(t)
+			svc.configurationManager = manager
+			entities := addValidBackupConfig(svc)
+
+			body := marshalToString(dto.BackupRoutine{
+				SourceCluster: entities.clusterName,
+				Storage:       entities.storageName,
+				BackupPolicy:  entities.policyName,
+				IntervalCron:  "@daily",
+				Namespaces:    &[]dto.NamespaceName{tt.namespace},
+			})
+			req := httptest.NewRequestWithContext(
+				t.Context(), http.MethodPost, "/v1/config/routines/x", strings.NewReader(body))
+			req.SetPathValue("name", tt.routineName)
+			w := httptest.NewRecorder()
+
+			svc.AddRoutine(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+			assert.NotContains(t, svc.config.BackupConfigCopy().BackupRoutines, tt.routineName)
 		})
 	}
 }

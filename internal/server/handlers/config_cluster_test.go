@@ -33,13 +33,6 @@ func TestAddAerospikeCluster(t *testing.T) {
 			expectedStatus: http.StatusCreated,
 		},
 		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
-		},
-		{
 			name:           "invalid json",
 			clusterName:    "test-cluster",
 			requestBody:    "{noField : 1}",
@@ -116,16 +109,10 @@ func TestReadAerospikeCluster(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
-		},
-		{
 			name:           "non-existent cluster",
 			clusterName:    "non-existent",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errNotFound("cluster", "non-existent").Error(),
+			expectedError:  model.NotFound("cluster", "non-existent").Error(),
 		},
 	}
 
@@ -165,13 +152,6 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			requestBody:    marshalToString(cluster),
 			expectedStatus: http.StatusOK,
 			runValidation:  true,
-		},
-		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
 		},
 		{
 			name:           "invalid json",
@@ -281,16 +261,10 @@ func TestDeleteAerospikeCluster(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
-		},
-		{
 			name:           "unknown cluster name",
 			clusterName:    "unknown-cluster",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid request",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  model.NotFound("cluster", "unknown-cluster").Error(),
 		},
 	}
 
@@ -323,7 +297,7 @@ func TestDeleteAerospikeCluster_InUseErrorMessage(t *testing.T) {
 
 	svc.DeleteAerospikeCluster(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(),
-		"delete Aerospike cluster \"cluster1\": item is in use: it is used in routine \"routine1\"")
+		"cluster \"cluster1\" is in use: it is used in routine \"routine1\"")
 }

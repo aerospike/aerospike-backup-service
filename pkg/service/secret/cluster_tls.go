@@ -46,12 +46,7 @@ func (r *clusterTLSResolver) Resolve(
 		return tlsConfig, nil
 	}
 
-	var agent *model.SecretAgent
-	if cluster.Credentials != nil {
-		agent = cluster.Credentials.SecretAgent
-	}
-
-	password, err := r.resolver.Resolve(ctx, agent, tlsConfig.KeyfilePassword)
+	password, err := r.resolver.Resolve(ctx, cluster.GetSecretAgent(), tlsConfig.KeyfilePassword)
 	if err != nil {
 		return model.TLS{}, fmt.Errorf("failed to resolve TLS key-file-password: %w", err)
 	}

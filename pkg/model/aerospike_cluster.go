@@ -34,6 +34,28 @@ func (c *AerospikeCluster) GetUser() string {
 	return ""
 }
 
+// GetSecretAgent safely returns the Secret Agent the cluster reads its secrets from.
+// A cluster without credentials has no agent, and its secrets are literal values.
+func (c *AerospikeCluster) GetSecretAgent() *SecretAgent {
+	if c.Credentials != nil {
+		return c.Credentials.SecretAgent
+	}
+	return nil
+}
+
+// Label returns a human-readable identifier for the cluster, for logging and error messages:
+// the configured label, or the first seed node when no label is set, or "unknown" when the
+// cluster has neither.
+func (c *AerospikeCluster) Label() string {
+	if c.ClusterLabel != "" {
+		return c.ClusterLabel
+	}
+	if len(c.SeedNodes) > 0 {
+		return c.SeedNodes[0].String()
+	}
+	return "unknown"
+}
+
 // Hash returns a unique identifier for the AerospikeCluster.
 func (c *AerospikeCluster) Hash() uint64 {
 	if c == nil {

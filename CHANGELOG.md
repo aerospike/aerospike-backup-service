@@ -12,6 +12,37 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
 
 ## [Unreleased]
 
+### Security
+
+- The `.deb` and `.rpm` packages run the service as the unprivileged system account
+  `aerospike-backup-service` instead of root, under a systemd sandbox (`ProtectSystem=strict`,
+  `ProtectHome=true`, empty capability set, `SystemCallFilter=@system-service` with
+  `SystemCallArchitectures=native`, `UMask=0027`). The configuration file ships `0640` and backup
+  artifacts are no longer world-readable. See [docs/migration.md](docs/migration.md) for the
+  upgrade steps — local-storage paths, cloud credentials, TLS file modes and privileged ports all
+  need attention on an existing installation.
+
+### Changed
+
+- Entity names may no longer be entirely whitespace, nor start or end with it; whitespace inside
+  a name is still allowed. A config carrying such a name fails validation on load.
+- Configuration-mutation endpoints answer with the status code that describes the outcome instead
+  of collapsing everything onto `400`: a routine, storage, cluster or policy that does not exist is
+  `404`, a name that is already taken or an entity a backup routine still references is `409`. A
+  malformed or invalid payload is still `400`. `GET` already answered `404`; the mutating verbs now
+  match it, body text included. See [docs/migration.md](docs/migration.md).
+- The unit file moves to `/usr/lib/systemd/system` as a vendor file; customise it with a drop-in
+  (`systemctl edit aerospike-backup-service`).
+- Logs move to `/var/log/aerospike-backup-service/aerospike-backup-service.log`, a directory
+  systemd creates and owns. An existing log and its rotated siblings are migrated on upgrade.
+
+### Fixed
+
+- An `.rpm` upgrade no longer leaves the service stopped and disabled: the pre-removal scriptlet
+  now runs only on a real removal, not on the upgrade half of a transaction.
+- The packaged log file no longer replaces an operator's log on upgrade, and is no longer deleted
+  by a plain `remove`.
+
 ### Added
 
 - `schedule-timezone` on `service.backup` and on backup routines so cron schedules can be

@@ -14,7 +14,7 @@ import (
 // configuration document, which stays far below this limit.
 const maxRequestBodyBytes = 8 << 20 // 8 MiB
 
-var errEmptyRequestBody = newStatusCodeError(errors.New("request body is empty"), http.StatusBadRequest)
+var errEmptyRequestBody = newBadRequestError(errors.New("request body is empty"))
 
 // requestBody returns the request body bounded to maxRequestBodyBytes and rejects a body that
 // carries no document at all (empty or whitespace only). Without that check an empty PUT /v1/config

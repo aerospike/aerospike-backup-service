@@ -82,7 +82,8 @@ func TestRun_SuccessfulFullBackup(t *testing.T) {
 		})
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	require.NoError(t, startErr)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
@@ -127,7 +128,8 @@ func TestSuccessfulIncrementalBackup(t *testing.T) {
 		})
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeIncremental, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	require.NoError(t, startErr)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
@@ -162,7 +164,8 @@ func TestEmptyIncrementalBackup(t *testing.T) {
 	// No WriteBackupMetadata call expected for empty incremental backup.
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeIncremental, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	require.NoError(t, startErr)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
@@ -191,12 +194,10 @@ func TestBackupExecutorError(t *testing.T) {
 
 	// backup fails to start => nothing is written via backupWriter
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
-
-	require.NotNil(t, handler)
-	err := handler.Wait(t.Context())
+	handler, err := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to start backup")
+	require.Nil(t, handler)
 }
 
 // A namespace that fails removes its own folder and nothing above it: the timestamp folder is
@@ -231,7 +232,8 @@ func TestBackupHandlerError(t *testing.T) {
 		Return(nil)
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	require.NoError(t, startErr)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
@@ -279,7 +281,8 @@ func TestMetadataWriteError(t *testing.T) {
 		Return(nil)
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	require.NoError(t, startErr)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())
@@ -317,7 +320,7 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 					Delete(gomock.Any(), routine, backupFolder).
 					Return(nil)
 
-	handler := runner.Run(
+	handler, startErr := runner.Run(
 		t.Context(),
 		routine,
 		testNamespace,
@@ -325,6 +328,7 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 		nil,
 		slog.Default(),
 	)
+	require.NoError(t, startErr)
 
 	// Wait for the handler.Wait to be called
 	wg.Wait()
@@ -400,7 +404,8 @@ func TestRun_RetryRecalculatesPath(t *testing.T) {
 		Return(nil)
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: startTime1, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	require.NoError(t, startErr)
 
 	require.NotNil(t, handler)
 	err := handler.Wait(t.Context())

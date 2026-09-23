@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -39,7 +40,9 @@ type BackupRoutine struct {
 	// The list of namespaces to back up.
 	// If empty, the entire cluster is backed up.
 	// The order of namespaces does not determine the backup execution or completion order.
-	Namespaces *[]string `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"[\"source-ns1\"]" validate:"required"`
+	// A name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,
+	// "_", "-" and "$", and not the reserved name "null".
+	Namespaces *[]NamespaceName `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"[\"source-ns1\"]" validate:"required"`
 	// The list of backup set names (optional, an empty list implies backing up all sets).
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1" extensions:"x-nullable"`
 	// The list of backup bin names (optional, an empty list implies backing up all bins) extensions:"x-nullable".
@@ -92,6 +95,23 @@ const (
 )
 
 // Validate validates the backup routine configuration.
+// validateNamespaces checks the routine's namespace list for duplicates and each name against
+// the Aerospike naming rules.
+func validateNamespaces(namespaces []NamespaceName) error {
+	if err := validateUnique("namespaces", namespaces); err != nil {
+		return err
+	}
+
+	for i, namespace := range namespaces {
+		field := fmt.Sprintf("namespaces[%d]", i)
+		if err := errValidationInvalidName(field, string(namespace), namespace.Validate()); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *BackupRoutine) Validate() error {
 	if r == nil {
 		return errors.New("backup routine is not specified")
@@ -130,7 +150,7 @@ func (r *BackupRoutine) Validate() error {
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
 	}
-	if err := validateUniqueNonEmpty("namespaces", *r.Namespaces); err != nil {
+	if err := validateNamespaces(*r.Namespaces); err != nil {
 		return err
 	}
 	if err := validateUniqueNonEmpty("set-list", r.SetList); err != nil {
@@ -166,6 +186,8 @@ func validateRoutineSelectorExclusivity(partitionList string, rackList []int, no
 	return nil
 }
 
+// validateFilterExpression checks that filter-exp carries the encoding the Aerospike client
+// expects, leaving that encoding the client's business rather than this package's.
 func validateFilterExpression(filterExpression string, setList []string) error {
 	if filterExpression == "" {
 		return nil
@@ -283,7 +305,7 @@ func (r *BackupRoutine) ToModel(
 		IntervalCron:     r.IntervalCron,
 		IncrIntervalCron: r.IncrIntervalCron,
 		Timezone:         r.ScheduleTimezone.ToRoutineLocation(serviceTimezone),
-		Namespaces:       *r.Namespaces,
+		Namespaces:       namespaceStrings(*r.Namespaces),
 		SetList:          r.SetList,
 		BinList:          r.BinList,
 		RackList:         r.RackList,
@@ -384,7 +406,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
 	r.ScheduleTimezone = ScheduleTimezone(m.Timezone.Configured)
-	r.Namespaces = &m.Namespaces
+	r.Namespaces = ptr.Of(newNamespaceNames(m.Namespaces))
 	r.SetList = m.SetList
 	r.BinList = m.BinList
 	r.RackList = m.RackList
