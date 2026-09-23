@@ -338,21 +338,10 @@ func TestRun_RetryWritesNextAttemptFolder(t *testing.T) {
 	attempt3 := "test-routine/backup/123456789000/data/test-ns.3"
 
 	mocks, runner := initMocks(t)
-	routine := &model.BackupRoutine{
-		Name:          routineName,
-		SourceCluster: &model.AerospikeCluster{},
-		BackupPolicy: &model.BackupPolicy{
-			RetryPolicy: &model.RetryPolicy{
-				MaxRetries:  optional.Of(2),
-				BaseTimeout: optional.Of(time.Millisecond),
-			},
-		},
-	}
+	routine := retryingRoutine(2)
 	timeBounds := model.TimeBounds{}
 
-	failed := backupexecutor.NewMockBackupHandler(mocks.ctrl)
-	failed.EXPECT().Wait(gomock.Any()).Return(errors.New("handler error")).Times(2)
-	failed.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+	failed := failingBackupHandler(mocks.ctrl, 2)
 
 	backupStats := models.NewBackupStats()
 	mocks.backupHandler.EXPECT().Wait(gomock.Any()).Return(nil)
@@ -393,21 +382,10 @@ func TestRun_FailedAttemptRemovalErrorDoesNotFailBackup(t *testing.T) {
 	attempt2 := "test-routine/backup/123456789000/data/test-ns.2"
 
 	mocks, runner := initMocks(t)
-	routine := &model.BackupRoutine{
-		Name:          routineName,
-		SourceCluster: &model.AerospikeCluster{},
-		BackupPolicy: &model.BackupPolicy{
-			RetryPolicy: &model.RetryPolicy{
-				MaxRetries:  optional.Of(1),
-				BaseTimeout: optional.Of(time.Millisecond),
-			},
-		},
-	}
+	routine := retryingRoutine(1)
 	timeBounds := model.TimeBounds{}
 
-	failed := backupexecutor.NewMockBackupHandler(mocks.ctrl)
-	failed.EXPECT().Wait(gomock.Any()).Return(errors.New("handler error"))
-	failed.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+	failed := failingBackupHandler(mocks.ctrl, 1)
 	mocks.backupHandler.EXPECT().Wait(gomock.Any()).Return(nil)
 	mocks.backupHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
 
@@ -427,4 +405,95 @@ func TestRun_FailedAttemptRemovalErrorDoesNotFailBackup(t *testing.T) {
 
 	require.NoError(t, handler.Wait(t.Context()))
 	assert.Contains(t, logBuf.String(), "Failed to remove the folder of a failed backup attempt")
+}
+
+// An empty incremental backup writes no metadata, but it still replaces the attempts before it.
+func TestRun_EmptyIncrementalRetryRemovesFailedAttempt(t *testing.T) {
+	startTime := time.UnixMilli(123456789000)
+	fromTime := time.UnixMilli(100000000000)
+	attempt1 := "test-routine/incremental/123456789000/data/test-ns"
+	attempt2 := "test-routine/incremental/123456789000/data/test-ns.2"
+
+	mocks, runner := initMocks(t)
+	routine := retryingRoutine(1)
+	timeBounds := model.TimeBounds{FromTime: &fromTime}
+
+	failed := failingBackupHandler(mocks.ctrl, 1)
+	mocks.backupHandler.EXPECT().Wait(gomock.Any()).Return(nil)
+	mocks.backupHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+
+	mocks.backupExecutor.EXPECT().
+		Run(gomock.Any(), routine, timeBounds, testNamespace, attempt1, gomock.Any(), gomock.Any()).
+		Return(failed, nil)
+	mocks.backupExecutor.EXPECT().
+		Run(gomock.Any(), routine, timeBounds, testNamespace, attempt2, gomock.Any(), gomock.Any()).
+		Return(mocks.backupHandler, nil)
+	mocks.backupWriter.EXPECT().Delete(gomock.Any(), routine, attempt1).Return(nil)
+
+	spec := model.BackupRunSpec{Type: model.BackupTypeIncremental, StartTime: startTime, TimeBounds: timeBounds}
+	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	require.NoError(t, startErr)
+
+	require.NoError(t, handler.Wait(t.Context()))
+}
+
+// A metadata write that fails is retried on its own; the failed attempts are removed once, after
+// the write that succeeds.
+func TestRun_MetadataRetryRemovesFailedAttemptsOnce(t *testing.T) {
+	startTime := time.UnixMilli(123456789000)
+	attempt1 := "test-routine/backup/123456789000/data/test-ns"
+	attempt2 := "test-routine/backup/123456789000/data/test-ns.2"
+
+	mocks, runner := initMocks(t)
+	routine := retryingRoutine(2)
+	timeBounds := model.TimeBounds{}
+
+	failed := failingBackupHandler(mocks.ctrl, 1)
+	mocks.backupHandler.EXPECT().Wait(gomock.Any()).Return(nil)
+	mocks.backupHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+
+	gomock.InOrder(
+		mocks.backupExecutor.EXPECT().
+			Run(gomock.Any(), routine, timeBounds, testNamespace, attempt1, gomock.Any(), gomock.Any()).
+			Return(failed, nil),
+		mocks.backupExecutor.EXPECT().
+			Run(gomock.Any(), routine, timeBounds, testNamespace, attempt2, gomock.Any(), gomock.Any()).
+			Return(mocks.backupHandler, nil),
+		mocks.backupWriter.EXPECT().
+			WriteBackupMetadata(gomock.Any(), routine, attempt2, gomock.Any()).
+			Return(errors.New("write failed")),
+		mocks.backupWriter.EXPECT().
+			WriteBackupMetadata(gomock.Any(), routine, attempt2, gomock.Any()).
+			Return(nil),
+		mocks.backupWriter.EXPECT().Delete(gomock.Any(), routine, attempt1).Return(nil),
+	)
+
+	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: startTime, TimeBounds: timeBounds}
+	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	require.NoError(t, startErr)
+
+	require.NoError(t, handler.Wait(t.Context()))
+}
+
+// retryingRoutine returns a routine that retries a failed backup maxRetries times without delay.
+func retryingRoutine(maxRetries int) *model.BackupRoutine {
+	return &model.BackupRoutine{
+		Name:          routineName,
+		SourceCluster: &model.AerospikeCluster{},
+		BackupPolicy: &model.BackupPolicy{
+			RetryPolicy: &model.RetryPolicy{
+				MaxRetries:  optional.Of(maxRetries),
+				BaseTimeout: optional.Of(time.Millisecond),
+			},
+		},
+	}
+}
+
+// failingBackupHandler returns a backup handler whose pipeline fails the given number of times.
+func failingBackupHandler(ctrl *gomock.Controller, times int) *backupexecutor.MockBackupHandler {
+	failed := backupexecutor.NewMockBackupHandler(ctrl)
+	failed.EXPECT().Wait(gomock.Any()).Return(errors.New("handler error")).Times(times)
+	failed.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+
+	return failed
 }

@@ -34,9 +34,6 @@ type retryableBackupCallbacks struct {
 	Start     func(ctx context.Context) (backupexecutor.BackupHandler, error)
 	OnSuccess func(ctx context.Context, stats *models.BackupStats) error
 	OnRetry   func()
-	// AfterSuccess runs once the backup and its OnSuccess have both succeeded. It cannot fail the
-	// backup: it is housekeeping on a backup that is already complete.
-	AfterSuccess func(ctx context.Context)
 }
 
 // startRetryableBackup starts a backup with retries and returns once its pipeline is running.
@@ -85,13 +82,7 @@ func startRetryableBackup(
 			return fmt.Errorf("backup failed: %w", err)
 		}
 
-		if err = retryOnSuccess(handler); err != nil {
-			return err
-		}
-
-		callbacks.AfterSuccess(ctx)
-
-		return nil
+		return retryOnSuccess(handler)
 	}
 
 	backupLogger := logger.With(slog.String("label", "backup"))
