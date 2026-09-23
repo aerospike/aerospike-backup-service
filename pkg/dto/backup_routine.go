@@ -186,6 +186,8 @@ func validateRoutineSelectorExclusivity(partitionList string, rackList []int, no
 	return nil
 }
 
+// validateFilterExpression checks that filter-exp carries the encoding the Aerospike client
+// expects, leaving that encoding the client's business rather than this package's.
 func validateFilterExpression(filterExpression string, setList []string) error {
 	if filterExpression == "" {
 		return nil

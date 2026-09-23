@@ -25,13 +25,6 @@ func TestAddRoutine(t *testing.T) {
 		expectedError  string
 	}{
 		{
-			name:           "missing routine name",
-			routineName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "invalid json",
 			routineName:    "test-routine",
 			requestBody:    "{noField : 1}",
@@ -100,15 +93,10 @@ func TestReadRoutine(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "missing routine name",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "non-existent routine",
 			routineName:    "non-existent",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errRoutineNotFound("non-existent").Error(),
+			expectedError:  model.NotFound("routine", "non-existent").Error(),
 		},
 	}
 
@@ -141,13 +129,6 @@ func TestUpdateRoutine(t *testing.T) {
 		expectedStatus int
 		expectedError  string
 	}{
-		{
-			name:           "missing routine name",
-			routineName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
 		{
 			name:           "invalid json",
 			routineName:    "test-routine",
@@ -193,16 +174,10 @@ func TestDeleteRoutine(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:           "missing routine name",
-			routineName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "unknown routine name",
 			routineName:    "unknown-routine",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid request",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  model.NotFound("routine", "unknown-routine").Error(),
 		},
 	}
 
@@ -240,17 +215,10 @@ func TestEnableRoutine(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:           "missing routine name",
-			routineName:    "",
-			expectedStatus: http.StatusBadRequest,
-			addRoutine:     true,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "non-existent routine",
 			routineName:    "unknown-routine",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errRoutineNotFound("unknown-routine").Error(),
+			expectedError:  model.NotFound("routine", "unknown-routine").Error(),
 		},
 	}
 
@@ -276,8 +244,8 @@ func TestEnableRoutine(t *testing.T) {
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
 			} else {
-				updated, ok := svc.config.Routine(tt.routineName)
-				require.True(t, ok)
+				updated, err := svc.config.Routine(tt.routineName)
+				require.NoError(t, err)
 				assert.False(t, updated.Disabled)
 			}
 		})
@@ -299,16 +267,10 @@ func TestDisableRoutine(t *testing.T) {
 			expectedCancelRuns: 1,
 		},
 		{
-			name:           "missing routine name",
-			routineName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "non-existent routine",
 			routineName:    "unknown-routine",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errRoutineNotFound("unknown-routine").Error(),
+			expectedError:  model.NotFound("routine", "unknown-routine").Error(),
 		},
 	}
 
@@ -338,8 +300,8 @@ func TestDisableRoutine(t *testing.T) {
 			if tt.expectedError != "" {
 				assert.Contains(t, w.Body.String(), tt.expectedError)
 			} else {
-				updated, ok := svc.config.Routine(tt.routineName)
-				require.True(t, ok)
+				updated, err := svc.config.Routine(tt.routineName)
+				require.NoError(t, err)
 				assert.True(t, updated.Disabled)
 			}
 		})

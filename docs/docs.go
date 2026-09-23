@@ -661,6 +661,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified cluster was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -700,6 +706,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A cluster with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -724,6 +736,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified cluster was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The cluster is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -830,6 +854,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified policy was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -869,6 +899,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A policy with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -893,6 +929,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified policy was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The policy is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -1005,6 +1053,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified routine was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1044,6 +1098,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A routine with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1068,6 +1128,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1232,6 +1298,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified storage was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1271,6 +1343,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A storage with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1295,6 +1373,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified storage was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The storage is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -2043,7 +2133,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "socket-timeout": {
-                    "description": "Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "default": 600000
                 },
@@ -2886,7 +2976,7 @@ const docTemplate = `{
                     ]
                 },
                 "socket-timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "default": 600000,
                     "example": 1000
@@ -3877,7 +3967,7 @@ const docTemplate = `{
                     ]
                 },
                 "socket-timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "default": 600000,
                     "example": 1000

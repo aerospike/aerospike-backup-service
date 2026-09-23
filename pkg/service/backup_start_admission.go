@@ -88,8 +88,7 @@ func (s *startController) TryStart(
 
 // HasBackupRunning reports whether a full or incremental backup is active for the routine.
 func (s *startController) HasBackupRunning(routine *model.BackupRoutine) bool {
-	state := s.registry.GetRoutineState(routine)
-	if state.Full != nil || state.Incremental != nil {
+	if s.registry.GetRoutineState(routine).IsRunning() {
 		return true
 	}
 

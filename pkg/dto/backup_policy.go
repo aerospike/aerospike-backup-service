@@ -18,7 +18,7 @@ type BackupPolicy struct {
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1" default:"8" minimum:"1"`
 	// Maximum number of threads to use for writing backup files. If not specified, same values as `parallel` is used.
 	ParallelWrite *int `yaml:"parallel-write,omitempty" json:"parallel-write,omitempty" example:"1" default:"8" minimum:"1"`
-	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
+	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
 	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" default:"600000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.

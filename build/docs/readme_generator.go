@@ -16,6 +16,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	metrics "github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
+	"github.com/aerospike/backup-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
 )
@@ -109,6 +110,9 @@ func newRenderers(endpoints map[string]endpoint, metricsTable string) map[string
 	}))
 	add("generator", "StorageClientCacheTTL", noArgs("StorageClientCacheTTL", func() string {
 		return renderDuration(storage.ClientCacheTTL)
+	}))
+	add("generator", "estimates", noArgs("estimates", func() string {
+		return renderDuration(backup.RecordsRecountInterval)
 	}))
 	add("generator", "GoVersion", noArgs("GoVersion", renderGoVersion))
 	add("generator", "FilterExpressions", noArgs("FilterExpressions", renderFilterExpressions))
