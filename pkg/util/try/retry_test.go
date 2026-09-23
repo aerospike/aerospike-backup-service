@@ -12,7 +12,7 @@ import (
 
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/aerospike-client-go/v8/types"
-	"github.com/aerospike/backup-go/errclass"
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	"github.com/stretchr/testify/require"
@@ -22,7 +22,7 @@ import (
 // the class marks where it came from, and the client's own error stays in the chain.
 func asFailure(code types.ResultCode) error {
 	return fmt.Errorf("%w: failed to read record: %w",
-		errclass.ErrAerospike, &as.AerospikeError{ResultCode: code})
+		backup.ErrAerospike, &as.AerospikeError{ResultCode: code})
 }
 
 func Test_retry_classification(t *testing.T) {
@@ -47,11 +47,11 @@ func Test_retry_classification(t *testing.T) {
 			wantAttempts: 1,
 		},
 		"invalid config is not retried": {
-			err:          fmt.Errorf("wrapped: %w", errclass.ErrInvalidConfig),
+			err:          fmt.Errorf("wrapped: %w", backup.ErrInvalidConfig),
 			wantAttempts: 1,
 		},
 		"corrupt data is not retried": {
-			err:          fmt.Errorf("wrapped: %w", errclass.ErrCorruptData),
+			err:          fmt.Errorf("wrapped: %w", backup.ErrCorruptData),
 			wantAttempts: 1,
 		},
 	}
