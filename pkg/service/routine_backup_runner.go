@@ -93,7 +93,12 @@ func (r *routineBackupRunner) startNamespaces(
 
 	for _, namespace := range namespaces {
 		group.Go(func() error {
-			h, err := r.nsRunner.Run(ctx, routine, namespace, runSpec, scanLimiter, logger)
+			h, err := r.nsRunner.Run(
+				ctx,
+				model.NamespaceRun{Routine: routine, Namespace: namespace, Spec: runSpec},
+				scanLimiter,
+				logger,
+			)
 			if err != nil {
 				return fmt.Errorf("namespace %s: %w", namespace, err)
 			}

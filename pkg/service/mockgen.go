@@ -848,18 +848,18 @@ func (m *MockNamespaceBackupRunner) EXPECT() *MockNamespaceBackupRunnerMockRecor
 }
 
 // Run mocks base method.
-func (m *MockNamespaceBackupRunner) Run(ctx context.Context, routine *model.BackupRoutine, namespace string, runSpec model.BackupRunSpec, scanLimiter syncutil.Limiter, logger *slog.Logger) (CancelableBackupHandler, error) {
+func (m *MockNamespaceBackupRunner) Run(ctx context.Context, run model.NamespaceRun, scanLimiter syncutil.Limiter, logger *slog.Logger) (CancelableBackupHandler, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx, routine, namespace, runSpec, scanLimiter, logger)
+	ret := m.ctrl.Call(m, "Run", ctx, run, scanLimiter, logger)
 	ret0, _ := ret[0].(CancelableBackupHandler)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockNamespaceBackupRunnerMockRecorder) Run(ctx, routine, namespace, runSpec, scanLimiter, logger any) *gomock.Call {
+func (mr *MockNamespaceBackupRunnerMockRecorder) Run(ctx, run, scanLimiter, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockNamespaceBackupRunner)(nil).Run), ctx, routine, namespace, runSpec, scanLimiter, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockNamespaceBackupRunner)(nil).Run), ctx, run, scanLimiter, logger)
 }
 
 // MockBackupReporter is a mock of BackupReporter interface.
