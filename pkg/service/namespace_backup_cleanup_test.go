@@ -17,10 +17,11 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-// When one namespace of a multi-namespace routine fails, its cleanup removes only that
-// namespace's folder: the timestamp folder <routine>/backup/<ts> is shared with the sibling
-// namespaces of the same run, which may still be writing into it.
-func TestNamespaceBackupRunner_FailureDeletesOnlyItsOwnFolder(t *testing.T) {
+// When one namespace of a multi-namespace routine fails while another is still writing, nothing is
+// deleted: the timestamp folder <routine>/backup/<ts> is shared by every namespace of the run, and
+// the failed namespace's own folder has no metadata, so it stays out of the catalog. The sibling
+// finishes and writes its metadata untouched. The mock writer fails the test on any Delete.
+func TestNamespaceBackupRunner_FailureDeletesNothing(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -29,9 +30,8 @@ func TestNamespaceBackupRunner_FailureDeletesOnlyItsOwnFolder(t *testing.T) {
 	nsRunner := NewNamespaceBackupRunner(executor, writer, NewPathService(nil))
 
 	start := time.UnixMilli(1700000000000)
-	sharedTimestampDir := "multi/backup/1700000000000"
-	folderA := sharedTimestampDir + "/data/nsA"
-	folderB := sharedTimestampDir + "/data/nsB"
+	folderA := "multi/backup/1700000000000/data/nsA"
+	folderB := "multi/backup/1700000000000/data/nsB"
 
 	routine := &model.BackupRoutine{
 		Name:          "multi",
@@ -43,7 +43,7 @@ func TestNamespaceBackupRunner_FailureDeletesOnlyItsOwnFolder(t *testing.T) {
 
 	// nsB is a long-running backup that is still in flight when nsA fails.
 	bStillRunning := make(chan struct{})
-	cleanupDone := make(chan struct{})
+	aFailed := make(chan struct{})
 	handlerB := backupexecutor.NewMockBackupHandler(ctrl)
 	statsB := models.NewBackupStats()
 	statsB.TotalRecords.Store(10)
@@ -51,7 +51,7 @@ func TestNamespaceBackupRunner_FailureDeletesOnlyItsOwnFolder(t *testing.T) {
 	handlerB.EXPECT().GetStats().Return(statsB).AnyTimes()
 	handlerB.EXPECT().Wait(gomock.Any()).DoAndReturn(func(context.Context) error {
 		close(bStillRunning)
-		<-cleanupDone // keep "writing" until nsA's cleanup has run
+		<-aFailed // keep "writing" until nsA has failed
 
 		return nil
 	})
@@ -64,6 +64,7 @@ func TestNamespaceBackupRunner_FailureDeletesOnlyItsOwnFolder(t *testing.T) {
 	handlerA.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
 	handlerA.EXPECT().Wait(gomock.Any()).DoAndReturn(func(context.Context) error {
 		<-bStillRunning
+		close(aFailed)
 
 		return errors.New("nsA scan failed")
 	})
@@ -73,18 +74,8 @@ func TestNamespaceBackupRunner_FailureDeletesOnlyItsOwnFolder(t *testing.T) {
 
 	var (
 		mu      sync.Mutex
-		deleted []string
 		written []string
 	)
-	writer.EXPECT().Delete(gomock.Any(), routine, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ *model.BackupRoutine, path string) error {
-			mu.Lock()
-			deleted = append(deleted, path)
-			mu.Unlock()
-			close(cleanupDone)
-
-			return nil
-		})
 	writer.EXPECT().WriteBackupMetadata(gomock.Any(), routine, gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ *model.BackupRoutine, folder string, _ model.BackupMetadata) error {
 			mu.Lock()
@@ -95,14 +86,15 @@ func TestNamespaceBackupRunner_FailureDeletesOnlyItsOwnFolder(t *testing.T) {
 		})
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: start}
-	hA := nsRunner.Run(t.Context(), routine, "nsA", spec, nil, slog.Default())
-	hB := nsRunner.Run(t.Context(), routine, "nsB", spec, nil, slog.Default())
+	hA, err := nsRunner.Run(t.Context(), routine, "nsA", spec, nil, slog.Default())
+	require.NoError(t, err)
+	hB, err := nsRunner.Run(t.Context(), routine, "nsB", spec, nil, slog.Default())
+	require.NoError(t, err)
 
 	require.Error(t, hA.Wait(t.Context()))
 	require.NoError(t, hB.Wait(t.Context()))
 
 	mu.Lock()
 	defer mu.Unlock()
-	assert.Equal(t, []string{folderA}, deleted, "cleanup is scoped to the failed namespace")
 	assert.Equal(t, []string{folderB}, written, "the sibling namespace completes untouched")
 }

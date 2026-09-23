@@ -30,15 +30,15 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	mockHandler.EXPECT().GetStats().Return(stats)
 
 	successCount := 0
-	failureCount := 0
+	afterSuccessCount := 0
 	retryCount := 0
 
 	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		return mockHandler, nil
 	}
 
-	onFail := func(_ context.Context) {
-		failureCount++
+	afterSuccess := func(_ context.Context) {
+		afterSuccessCount++
 	}
 
 	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
@@ -51,13 +51,13 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	}
 
 	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
-		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: onRetry,
+		Start: start, AfterSuccess: afterSuccess, OnSuccess: onSuccess, OnRetry: onRetry,
 	}, slog.Default())
 	require.NoError(t, startErr)
 	err := handler.Wait(t.Context())
 
 	require.NoError(t, err)
-	assert.Equal(t, 0, failureCount)
+	assert.Equal(t, 1, afterSuccessCount)
 	assert.Equal(t, 1, successCount)
 	assert.Equal(t, 0, retryCount)
 }
@@ -74,7 +74,7 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 
 	attemptCount := 0
 	successCount := 0
-	failureCount := 0
+	afterSuccessCount := 0
 	retryCount := 0
 
 	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
@@ -85,8 +85,8 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 		return successHandler, nil
 	}
 
-	onFail := func(_ context.Context) {
-		failureCount++
+	afterSuccess := func(_ context.Context) {
+		afterSuccessCount++
 	}
 
 	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
@@ -99,13 +99,13 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	}
 
 	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
-		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: onRetry,
+		Start: start, AfterSuccess: afterSuccess, OnSuccess: onSuccess, OnRetry: onRetry,
 	}, slog.Default())
 	require.NoError(t, startErr)
 	err := handler.Wait(t.Context())
 
 	require.NoError(t, err)
-	assert.Equal(t, 1, failureCount)
+	assert.Equal(t, 1, afterSuccessCount)
 	assert.Equal(t, 1, successCount)
 	assert.Equal(t, 1, retryCount)
 }
@@ -123,17 +123,17 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	})
 
 	successCount := 0
-	failureCount := 0
+	afterSuccessCount := 0
 	var mu sync.Mutex
 
 	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		return mockHandler, nil
 	}
 
-	onFail := func(_ context.Context) {
+	afterSuccess := func(_ context.Context) {
 		mu.Lock()
 		defer mu.Unlock()
-		failureCount++
+		afterSuccessCount++
 	}
 
 	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
@@ -142,7 +142,7 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	}
 
 	handler, startErr := startRetryableBackup(ctx, retry, retryableBackupCallbacks{
-		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: func() {},
+		Start: start, AfterSuccess: afterSuccess, OnSuccess: onSuccess, OnRetry: func() {},
 	}, slog.Default())
 	require.NoError(t, startErr)
 
@@ -156,7 +156,7 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	defer mu.Unlock()
 
 	require.ErrorIs(t, err, context.Canceled)
-	assert.Equal(t, 1, failureCount)
+	assert.Equal(t, 0, afterSuccessCount)
 	assert.Equal(t, 0, successCount)
 }
 
@@ -166,14 +166,14 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	mockHandler.EXPECT().Wait(gomock.Any()).Return(errors.New("wait failed")).Times(3)
 
 	successCount := 0
-	failureCount := 0
+	afterSuccessCount := 0
 
 	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		return mockHandler, nil
 	}
 
-	onFail := func(_ context.Context) {
-		failureCount++
+	afterSuccess := func(_ context.Context) {
+		afterSuccessCount++
 	}
 
 	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
@@ -182,7 +182,7 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	}
 
 	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
-		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: func() {},
+		Start: start, AfterSuccess: afterSuccess, OnSuccess: onSuccess, OnRetry: func() {},
 	}, slog.Default())
 	require.NoError(t, startErr)
 	err := handler.Wait(t.Context())
@@ -190,7 +190,7 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed after 3 attempts")
 	assert.Contains(t, err.Error(), "backup failed")
-	assert.Equal(t, 3, failureCount)
+	assert.Equal(t, 0, afterSuccessCount)
 	assert.Equal(t, 0, successCount)
 }
 
@@ -198,14 +198,14 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 // no handler to hand back, because it will never publish statistics.
 func TestStartRetryableBackup_StartFails(t *testing.T) {
 	successCount := 0
-	failureCount := 0
+	afterSuccessCount := 0
 
 	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		return nil, errors.New("start failed")
 	}
 
-	onFail := func(_ context.Context) {
-		failureCount++
+	afterSuccess := func(_ context.Context) {
+		afterSuccessCount++
 	}
 
 	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
@@ -214,13 +214,13 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 	}
 
 	handler, err := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
-		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: func() {},
+		Start: start, AfterSuccess: afterSuccess, OnSuccess: onSuccess, OnRetry: func() {},
 	}, slog.Default())
 
 	require.Error(t, err)
 	assert.Nil(t, handler)
 	assert.Contains(t, err.Error(), "failed to start backup")
-	assert.Equal(t, 0, failureCount)
+	assert.Equal(t, 0, afterSuccessCount)
 	assert.Equal(t, 0, successCount)
 }
 
@@ -239,14 +239,14 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 	})
 
 	successCount := 0
-	failureCount := 0
+	afterSuccessCount := 0
 
 	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		return mockHandler, nil
 	}
 
-	onFail := func(_ context.Context) {
-		failureCount++
+	afterSuccess := func(_ context.Context) {
+		afterSuccessCount++
 	}
 
 	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
@@ -255,7 +255,7 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 	}
 
 	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
-		Start: start, OnFail: onFail, OnSuccess: onSuccess, OnRetry: func() {},
+		Start: start, AfterSuccess: afterSuccess, OnSuccess: onSuccess, OnRetry: func() {},
 	}, slog.Default())
 	require.NoError(t, startErr)
 	var err error
@@ -268,7 +268,7 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 	wg.Wait()
 
 	require.ErrorIs(t, err, context.Canceled)
-	require.Equal(t, 1, failureCount)
+	require.Equal(t, 0, afterSuccessCount)
 	require.Equal(t, 0, successCount)
 }
 
@@ -285,10 +285,10 @@ func TestStartRetryableBackup_ReleasesWaitContextOnCompletion(t *testing.T) {
 	mockHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
 
 	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
-		Start:     func(context.Context) (backupexecutor.BackupHandler, error) { return mockHandler, nil },
-		OnFail:    func(context.Context) {},
-		OnSuccess: func(context.Context, *models.BackupStats) error { return nil },
-		OnRetry:   func() {},
+		Start:        func(context.Context) (backupexecutor.BackupHandler, error) { return mockHandler, nil },
+		AfterSuccess: func(context.Context) {},
+		OnSuccess:    func(context.Context, *models.BackupStats) error { return nil },
+		OnRetry:      func() {},
 	}, slog.Default())
 	require.NoError(t, startErr)
 
@@ -313,13 +313,13 @@ func TestStartRetryableBackup_CancelStopsMetadataRetries(t *testing.T) {
 	mockHandler.EXPECT().Wait(gomock.Any()).Return(nil)
 	mockHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
 
-	var onSuccessCalls, failureCount atomic.Int32
+	var onSuccessCalls, afterSuccessCount atomic.Int32
 	firstCall := make(chan struct{})
 	canceled := make(chan struct{})
 
 	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
-		Start:  func(context.Context) (backupexecutor.BackupHandler, error) { return mockHandler, nil },
-		OnFail: func(context.Context) { failureCount.Add(1) },
+		Start:        func(context.Context) (backupexecutor.BackupHandler, error) { return mockHandler, nil },
+		AfterSuccess: func(context.Context) { afterSuccessCount.Add(1) },
 		OnSuccess: func(context.Context, *models.BackupStats) error {
 			if onSuccessCalls.Add(1) == 1 {
 				close(firstCall)
@@ -340,7 +340,7 @@ func TestStartRetryableBackup_CancelStopsMetadataRetries(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 	require.Equal(t, int32(1), onSuccessCalls.Load(),
 		"Cancel must stop the metadata retry loop, not only the data phase")
-	require.Equal(t, int32(1), failureCount.Load())
+	require.Equal(t, int32(0), afterSuccessCount.Load())
 }
 
 func TestRetryableBackupHandler_GetStats_GetMetrics(t *testing.T) {
@@ -361,7 +361,7 @@ func TestRetryableBackupHandler_GetStats_GetMetrics(t *testing.T) {
 	onSuccess := func(_ context.Context, _ *models.BackupStats) error { return nil }
 
 	handler, startErr := startRetryableBackup(t.Context(), retry, retryableBackupCallbacks{
-		Start: start, OnFail: func(context.Context) {}, OnSuccess: onSuccess, OnRetry: func() {},
+		Start: start, AfterSuccess: func(context.Context) {}, OnSuccess: onSuccess, OnRetry: func() {},
 	}, slog.Default())
 	require.NoError(t, startErr)
 
@@ -394,9 +394,9 @@ func TestStartRetryableBackup_ReturnsOnceRunning(t *testing.T) {
 		Start: func(_ context.Context) (backupexecutor.BackupHandler, error) {
 			return mockHandler, nil
 		},
-		OnFail:    func(_ context.Context) {},
-		OnSuccess: func(_ context.Context, _ *models.BackupStats) error { return nil },
-		OnRetry:   func() {},
+		AfterSuccess: func(context.Context) {},
+		OnSuccess:    func(_ context.Context, _ *models.BackupStats) error { return nil },
+		OnRetry:      func() {},
 	}, slog.Default())
 	require.NoError(t, err)
 	require.NotNil(t, handler)
@@ -416,9 +416,9 @@ func TestStartRetryableBackup_AcceptsRunThatFailedAfterStarting(t *testing.T) {
 		Start: func(_ context.Context) (backupexecutor.BackupHandler, error) {
 			return mockHandler, nil
 		},
-		OnFail:    func(_ context.Context) {},
-		OnSuccess: func(_ context.Context, _ *models.BackupStats) error { return nil },
-		OnRetry:   func() {},
+		AfterSuccess: func(context.Context) {},
+		OnSuccess:    func(_ context.Context, _ *models.BackupStats) error { return nil },
+		OnRetry:      func() {},
 	}, slog.Default())
 	require.NoError(t, err)
 
@@ -436,9 +436,9 @@ func TestStartRetryableBackup_HonorsContext(t *testing.T) {
 
 			return nil, ctx.Err()
 		},
-		OnFail:    func(_ context.Context) {},
-		OnSuccess: func(_ context.Context, _ *models.BackupStats) error { return nil },
-		OnRetry:   func() {},
+		AfterSuccess: func(context.Context) {},
+		OnSuccess:    func(_ context.Context, _ *models.BackupStats) error { return nil },
+		OnRetry:      func() {},
 	}, slog.Default())
 
 	require.ErrorIs(t, err, context.DeadlineExceeded)

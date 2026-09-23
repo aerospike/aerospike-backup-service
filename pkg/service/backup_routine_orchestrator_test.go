@@ -354,39 +354,3 @@ func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine
 
 	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")
 }
-
-// A run whose namespaces have all finished and failed hands the completion handler the run's
-// own timestamp and type, which is what identifies the folder to remove.
-func TestRunFullBackupInternal_FailureReportsTheRunFolder(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	routine := testRoutine()
-	now := time.Now()
-
-	handler := NewMockCancelableBackupHandler(ctrl)
-	handler.EXPECT().Wait(gomock.Any()).Return(errors.New("scan failed")).Times(len(routine.Namespaces))
-	handlers := make(map[string]CancelableBackupHandler, len(routine.Namespaces))
-	for _, ns := range routine.Namespaces {
-		handlers[ns] = handler
-	}
-
-	mockRegistry := NewMockBackupStateRegistry(ctrl)
-	mockRegistry.EXPECT().BackupStarted(routineName, model.BackupTypeFull, gomock.Any())
-	mockRunner := NewMockRoutineBackupRunner(ctrl)
-	mockRunner.EXPECT().Run(gomock.Any(), routine, gomock.Any(), gomock.Any()).
-		Return(&BackupNamespacesOperation{handlers: handlers}, nil)
-
-	mockCompletionHandler := NewMockBackupCompletionHandler(ctrl)
-	mockCompletionHandler.EXPECT().
-		OnFailure(gomock.Any(), routine, model.BackupTypeFull, newTimeMatcher(now), gomock.Any())
-
-	mockReporter := NewMockBackupReporter(ctrl)
-	mockReporter.EXPECT().
-		Report(routine.Name, model.BackupTypeFull, gomock.Any(), gomock.Not(gomock.Nil()), gomock.Any())
-
-	mockStartController := NewMockStartController(ctrl)
-	mockStartController.EXPECT().TryStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(func() {}, nil)
-
-	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
-	p.Backup(t.Context(), routine, now, model.BackupTypeFull)
-}

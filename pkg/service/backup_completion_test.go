@@ -14,8 +14,6 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-// A run that failed leaves nothing restorable behind: the whole timestamp folder goes, with the
-// data of the namespaces that did succeed and the cluster configuration if one was taken.
 func TestBackupCompletionHandler_OnFailure(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -23,46 +21,8 @@ func TestBackupCompletionHandler_OnFailure(t *testing.T) {
 	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().BackupFailed("routine-1", model.BackupTypeFull)
 
-	writer := NewMockBackupWriter(ctrl)
-	writer.EXPECT().Delete(gomock.Any(), routine, "routine-1/backup/1700000000000").Return(nil)
-
-	handler := NewBackupCompletionHandler(
-		registry, NewMockBackupRetentionManager(ctrl), NewMockClusterConfigWriter(ctrl),
-		writer, NewPathService(nil),
-	)
-	handler.OnFailure(
-		t.Context(), routine, model.BackupTypeFull,
-		time.UnixMilli(1700000000000), slog.New(slog.DiscardHandler),
-	)
-}
-
-// The cleanup outlives the run's context, so a canceled backup is cleaned up too.
-func TestBackupCompletionHandler_OnFailure_CleansUpAfterCancellation(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	routine := &model.BackupRoutine{Name: "routine-1"}
-	registry := NewMockBackupStateRegistry(ctrl)
-	registry.EXPECT().BackupFailed("routine-1", model.BackupTypeIncremental)
-
-	writer := NewMockBackupWriter(ctrl)
-	writer.EXPECT().Delete(gomock.Any(), routine, "routine-1/incremental/1700000000000").
-		DoAndReturn(func(ctx context.Context, _ *model.BackupRoutine, _ string) error {
-			require.NoError(t, ctx.Err(), "cleanup must not run on a canceled context")
-
-			return nil
-		})
-
-	canceled, cancel := context.WithCancel(t.Context())
-	cancel()
-
-	handler := NewBackupCompletionHandler(
-		registry, NewMockBackupRetentionManager(ctrl), NewMockClusterConfigWriter(ctrl),
-		writer, NewPathService(nil),
-	)
-	handler.OnFailure(
-		canceled, routine, model.BackupTypeIncremental,
-		time.UnixMilli(1700000000000), slog.New(slog.DiscardHandler),
-	)
+	handler := NewBackupCompletionHandler(registry, nil, nil)
+	handler.OnFailure(routine, model.BackupTypeFull)
 }
 
 func TestBackupCompletionHandler_OnSuccess_Incremental(t *testing.T) {
@@ -78,8 +38,6 @@ func TestBackupCompletionHandler_OnSuccess_Incremental(t *testing.T) {
 		registry,
 		NewMockBackupRetentionManager(ctrl),
 		NewMockClusterConfigWriter(ctrl),
-		NewMockBackupWriter(ctrl),
-		NewPathService(nil),
 	)
 	handler.OnSuccess(
 		t.Context(),
@@ -125,9 +83,7 @@ func TestBackupCompletionHandler_OnSuccess_FullRunsRetentionAndClusterConfig(t *
 			return nil
 		})
 
-	handler := NewBackupCompletionHandler(
-		registry, retention, clusterWriter, NewMockBackupWriter(ctrl), NewPathService(nil),
-	)
+	handler := NewBackupCompletionHandler(registry, retention, clusterWriter)
 	handler.OnSuccess(ctx, routine, model.BackupTypeFull, timestamp, slog.New(slog.DiscardHandler))
 
 	waitAsyncDone(t, recorded, "successful full backup recorded")
@@ -158,9 +114,7 @@ func TestBackupCompletionHandler_OnSuccess_FullSkipsClusterConfigWhenDisabled(t 
 			return nil
 		})
 
-	handler := NewBackupCompletionHandler(
-		registry, retention, NewMockClusterConfigWriter(ctrl), NewMockBackupWriter(ctrl), NewPathService(nil),
-	)
+	handler := NewBackupCompletionHandler(registry, retention, NewMockClusterConfigWriter(ctrl))
 	handler.OnSuccess(ctx, routine, model.BackupTypeFull, time.Now(), slog.New(slog.DiscardHandler))
 
 	waitAsyncDone(t, recorded, "successful full backup recorded")
@@ -184,7 +138,7 @@ func TestBackupCompletionHandler_OnSuccess_LogsRetentionFailure(t *testing.T) {
 	registry.EXPECT().BackupSucceeded(gomock.Any(), routine, model.BackupTypeFull).AnyTimes()
 	retention.EXPECT().ApplyRetention(ctx, routine).Return(retentionErr)
 
-	handler := NewBackupCompletionHandler(registry, retention, nil, NewMockBackupWriter(ctrl), NewPathService(nil))
+	handler := NewBackupCompletionHandler(registry, retention, nil)
 	handler.OnSuccess(ctx, routine, model.BackupTypeFull, time.Now(), logger)
 
 	require.Eventually(t, func() bool {

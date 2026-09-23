@@ -115,9 +115,7 @@ func InitComponents(
 		operations,
 		aerospike.NewClusterConfigSource(clientManager),
 	)
-	completionHandler := service.NewBackupCompletionHandler(
-		registry, retentionManager, clusterConfigWriter, catalog, pathService,
-	)
+	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
 	backupExecutor := backupexecutor.NewBackupExecutor(clientManager, operations)
 	startController := service.NewStartController(registry, service.NewStartDecider())
 	namespaceRunner := service.NewNamespaceBackupRunner(backupExecutor, catalog, pathService)

@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"golang.org/x/sync/semaphore"
 )
 
 type testMocks struct {
@@ -200,9 +199,8 @@ func TestBackupExecutorError(t *testing.T) {
 	require.Nil(t, handler)
 }
 
-// A namespace that fails removes its own folder and nothing above it: the timestamp folder is
-// shared with the other namespaces of the run, and is cleaned up at run level once they are all
-// finished (see BackupCompletionHandler.OnFailure).
+// A namespace that fails deletes nothing: its folder has no metadata, so it stays out of the
+// catalog, and the timestamp folder above it holds the other namespaces of the run.
 func TestBackupHandlerError(t *testing.T) {
 	now := time.UnixMilli(123456789000)
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
@@ -226,10 +224,6 @@ func TestBackupHandlerError(t *testing.T) {
 	mocks.backupHandler.EXPECT().
 		Wait(gomock.Any()).
 		Return(errors.New("handler error"))
-
-	mocks.backupWriter.EXPECT().
-		Delete(gomock.Any(), routine, backupFolder).
-		Return(nil)
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
 	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
@@ -272,13 +266,9 @@ func TestMetadataWriteError(t *testing.T) {
 		GetStats().
 		Return(backupStats)
 
-	mocks.backupWriter.EXPECT(). // backup succeeded, but failed to write metadata => drop its data
+	mocks.backupWriter.EXPECT(). // no metadata => the folder stays out of the catalog, nothing is deleted
 					WriteBackupMetadata(gomock.Any(), routine, backupFolder, gomock.Any()).
 					Return(metadataError)
-
-	mocks.backupWriter.EXPECT().
-		Delete(gomock.Any(), routine, backupFolder).
-		Return(nil)
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
 	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
@@ -316,10 +306,6 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 			return ctx.Err()
 		})
 
-	mocks.backupWriter.EXPECT(). // backup canceled => drop this namespace's data
-					Delete(gomock.Any(), routine, backupFolder).
-					Return(nil)
-
 	handler, startErr := runner.Run(
 		t.Context(),
 		routine,
@@ -342,9 +328,69 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 	require.Contains(t, err.Error(), "context canceled")
 }
 
-func TestRun_RetryRecalculatesPath(t *testing.T) {
-	startTime1 := time.UnixMilli(123456789000)
-	backupFolder1 := "test-routine/backup/123456789000/data/test-ns"
+// A retry writes to the next attempt folder under the same timestamp, so the run keeps one
+// timestamp and metadata keeps the run's start time. Once the namespace is backed up, the folders
+// of the failed attempts are removed, and only after the metadata is written.
+func TestRun_RetryWritesNextAttemptFolder(t *testing.T) {
+	startTime := time.UnixMilli(123456789000)
+	attempt1 := "test-routine/backup/123456789000/data/test-ns"
+	attempt2 := "test-routine/backup/123456789000/data/test-ns.2"
+	attempt3 := "test-routine/backup/123456789000/data/test-ns.3"
+
+	mocks, runner := initMocks(t)
+	routine := &model.BackupRoutine{
+		Name:          routineName,
+		SourceCluster: &model.AerospikeCluster{},
+		BackupPolicy: &model.BackupPolicy{
+			RetryPolicy: &model.RetryPolicy{
+				MaxRetries:  optional.Of(2),
+				BaseTimeout: optional.Of(time.Millisecond),
+			},
+		},
+	}
+	timeBounds := model.TimeBounds{}
+
+	failed := backupexecutor.NewMockBackupHandler(mocks.ctrl)
+	failed.EXPECT().Wait(gomock.Any()).Return(errors.New("handler error")).Times(2)
+	failed.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+
+	backupStats := models.NewBackupStats()
+	mocks.backupHandler.EXPECT().Wait(gomock.Any()).Return(nil)
+	mocks.backupHandler.EXPECT().GetStats().Return(backupStats).AnyTimes()
+
+	gomock.InOrder(
+		mocks.backupExecutor.EXPECT().
+			Run(gomock.Any(), routine, timeBounds, testNamespace, attempt1, gomock.Any(), gomock.Any()).
+			Return(failed, nil),
+		mocks.backupExecutor.EXPECT().
+			Run(gomock.Any(), routine, timeBounds, testNamespace, attempt2, gomock.Any(), gomock.Any()).
+			Return(failed, nil),
+		mocks.backupExecutor.EXPECT().
+			Run(gomock.Any(), routine, timeBounds, testNamespace, attempt3, gomock.Any(), gomock.Any()).
+			Return(mocks.backupHandler, nil),
+		mocks.backupWriter.EXPECT().
+			WriteBackupMetadata(gomock.Any(), routine, attempt3, gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ *model.BackupRoutine, _ string, md model.BackupMetadata) error {
+				assert.Equal(t, startTime, md.Created, "a retry keeps the run's start time")
+				return nil
+			}),
+		mocks.backupWriter.EXPECT().Delete(gomock.Any(), routine, attempt1).Return(nil),
+		mocks.backupWriter.EXPECT().Delete(gomock.Any(), routine, attempt2).Return(nil),
+	)
+
+	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: startTime, TimeBounds: timeBounds}
+	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	require.NoError(t, startErr)
+
+	require.NoError(t, handler.Wait(t.Context()))
+}
+
+// Removing a failed attempt is housekeeping on a namespace that is already backed up: storage may
+// not allow deletes, so a failure is logged and the backup still succeeds.
+func TestRun_FailedAttemptRemovalErrorDoesNotFailBackup(t *testing.T) {
+	startTime := time.UnixMilli(123456789000)
+	attempt1 := "test-routine/backup/123456789000/data/test-ns"
+	attempt2 := "test-routine/backup/123456789000/data/test-ns.2"
 
 	mocks, runner := initMocks(t)
 	routine := &model.BackupRoutine{
@@ -359,97 +405,26 @@ func TestRun_RetryRecalculatesPath(t *testing.T) {
 	}
 	timeBounds := model.TimeBounds{}
 
-	// First attempt fails
+	failed := backupexecutor.NewMockBackupHandler(mocks.ctrl)
+	failed.EXPECT().Wait(gomock.Any()).Return(errors.New("handler error"))
+	failed.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+	mocks.backupHandler.EXPECT().Wait(gomock.Any()).Return(nil)
+	mocks.backupHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+
 	mocks.backupExecutor.EXPECT().
-		Run(gomock.Any(), routine, timeBounds, testNamespace, backupFolder1, gomock.Any(), gomock.Any()).
+		Run(gomock.Any(), routine, timeBounds, testNamespace, attempt1, gomock.Any(), gomock.Any()).
+		Return(failed, nil)
+	mocks.backupExecutor.EXPECT().
+		Run(gomock.Any(), routine, timeBounds, testNamespace, attempt2, gomock.Any(), gomock.Any()).
 		Return(mocks.backupHandler, nil)
+	mocks.backupWriter.EXPECT().WriteBackupMetadata(gomock.Any(), routine, attempt2, gomock.Any()).Return(nil)
+	mocks.backupWriter.EXPECT().Delete(gomock.Any(), routine, attempt1).Return(errors.New("access denied"))
 
-	mocks.backupHandler.EXPECT().
-		Wait(gomock.Any()).
-		Return(errors.New("handler error"))
-
-	mocks.backupWriter.EXPECT().
-		Delete(gomock.Any(), routine, backupFolder1).
-		Return(nil)
-
-	// Second attempt succeeds with new folder
-	// We use DoAndReturn to capture the startTime updated in OnRetry
-	mocks.backupExecutor.EXPECT().
-		Run(gomock.Any(), routine, timeBounds, testNamespace, gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(
-			_ context.Context,
-			_ *model.BackupRoutine,
-			_ model.TimeBounds,
-			_ string,
-			backupFolder string,
-			_ *semaphore.Weighted,
-			_ *slog.Logger,
-		) (backupexecutor.BackupHandler, error) {
-			assert.NotEqual(t, backupFolder1, backupFolder)
-			assert.Contains(t, backupFolder, "test-routine/backup/")
-			return mocks.backupHandler, nil
-		})
-
-	mocks.backupHandler.EXPECT().
-		Wait(gomock.Any()).
-		Return(nil)
-
-	backupStats := models.NewBackupStats()
-	mocks.backupHandler.EXPECT().
-		GetStats().
-		Return(backupStats)
-
-	mocks.backupWriter.EXPECT().
-		WriteBackupMetadata(gomock.Any(), routine, gomock.Any(), gomock.Any()).
-		Return(nil)
-
-	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: startTime1, TimeBounds: timeBounds}
-	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	logger, logBuf := newTestLogger(t)
+	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: startTime, TimeBounds: timeBounds}
+	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, logger)
 	require.NoError(t, startErr)
 
-	require.NotNil(t, handler)
-	err := handler.Wait(t.Context())
-	require.NoError(t, err)
-}
-
-func TestNamespaceBackupRunner_DeleteFolder_Success(t *testing.T) {
-	mocks, runner := initMocks(t)
-	impl, ok := runner.(*namespaceBackupRunner)
-	require.True(t, ok)
-
-	routine := &model.BackupRoutine{Name: routineName}
-	mocks.backupWriter.EXPECT().Delete(t.Context(), routine, "some/path").Return(nil)
-
-	impl.deleteFolder(t.Context(), routine, "some/path", slog.New(slog.DiscardHandler))
-}
-
-func TestNamespaceBackupRunner_DeleteFolder_ContextCanceled(t *testing.T) {
-	mocks, runner := initMocks(t)
-	impl, ok := runner.(*namespaceBackupRunner)
-	require.True(t, ok)
-
-	routine := &model.BackupRoutine{Name: routineName}
-	logger, logBuf := newTestLogger(t)
-
-	mocks.backupWriter.EXPECT().Delete(t.Context(), routine, "some/path").Return(context.Canceled)
-
-	impl.deleteFolder(t.Context(), routine, "some/path", logger)
-
-	require.Contains(t, logBuf.String(), "Delete folder context canceled")
-}
-
-func TestNamespaceBackupRunner_DeleteFolder_Error(t *testing.T) {
-	mocks, runner := initMocks(t)
-	impl, ok := runner.(*namespaceBackupRunner)
-	require.True(t, ok)
-
-	routine := &model.BackupRoutine{Name: routineName}
-	logger, logBuf := newTestLogger(t)
-	deleteErr := errors.New("delete failed")
-
-	mocks.backupWriter.EXPECT().Delete(t.Context(), routine, "some/path").Return(deleteErr)
-
-	impl.deleteFolder(t.Context(), routine, "some/path", logger)
-
-	require.Contains(t, logBuf.String(), "Failed to delete folder")
+	require.NoError(t, handler.Wait(t.Context()))
+	assert.Contains(t, logBuf.String(), "Failed to remove the folder of a failed backup attempt")
 }

@@ -656,15 +656,15 @@ func (m *MockBackupCompletionHandler) EXPECT() *MockBackupCompletionHandlerMockR
 }
 
 // OnFailure mocks base method.
-func (m *MockBackupCompletionHandler) OnFailure(ctx context.Context, routine *model.BackupRoutine, backupType model.BackupType, timestamp time.Time, logger *slog.Logger) {
+func (m *MockBackupCompletionHandler) OnFailure(routine *model.BackupRoutine, backupType model.BackupType) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "OnFailure", ctx, routine, backupType, timestamp, logger)
+	m.ctrl.Call(m, "OnFailure", routine, backupType)
 }
 
 // OnFailure indicates an expected call of OnFailure.
-func (mr *MockBackupCompletionHandlerMockRecorder) OnFailure(ctx, routine, backupType, timestamp, logger any) *gomock.Call {
+func (mr *MockBackupCompletionHandlerMockRecorder) OnFailure(routine, backupType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnFailure", reflect.TypeOf((*MockBackupCompletionHandler)(nil).OnFailure), ctx, routine, backupType, timestamp, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnFailure", reflect.TypeOf((*MockBackupCompletionHandler)(nil).OnFailure), routine, backupType)
 }
 
 // OnSuccess mocks base method.
