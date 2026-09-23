@@ -33,7 +33,7 @@ func (r *clusterNamespaceResolver) ResolveNamespaces(
 	routine *model.BackupRoutine,
 	logger *slog.Logger,
 ) ([]string, error) {
-	if len(routine.Namespaces) > 0 {
+	if !routine.BacksUpWholeCluster() {
 		return routine.Namespaces, nil
 	}
 
