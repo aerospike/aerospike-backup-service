@@ -130,7 +130,7 @@ func (p *BaseRestorePolicy) Validate(opts ValidationOptions) error {
 	}
 
 	if err := p.EncryptionPolicy.Validate(opts); err != nil {
-		return err
+		return fmt.Errorf("invalid encryption policy: %w", err)
 	}
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retry policy invalid: %w", err)
@@ -151,7 +151,7 @@ func (p *RestorePolicy) Validate(opts ValidationOptions) error {
 		return err
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {
-		return err
+		return fmt.Errorf("invalid compression policy: %w", err)
 	}
 	return nil
 }

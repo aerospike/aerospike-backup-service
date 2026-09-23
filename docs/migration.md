@@ -95,6 +95,11 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
   instead — a delete-if-present flow, for example, becomes "treat `404` as already deleted".
 - **Config element names** — Routine, policy, storage, secret agent have stricter validation: they cannot start or end with whitespace or contain path traversal sequences.
 
+- **Compression and encryption policies must state their mode** — a `compression` or `encryption` block that is
+  present must set `mode` explicitly; A `compression` block without `mode` is now rejected at startup.
+  For compression, `ZSTD` requires `level` (-1 to 22) and `NONE` must not set it. To disable compression or
+  encryption, either set `mode: NONE` or omit the block.
+
 #### Improvements
 
 - **HTTPS listener configuration** — Optional [`service.https`](readme/dto/dto.serverconfighttps.md) defines a sibling

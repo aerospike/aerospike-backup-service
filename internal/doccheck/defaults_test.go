@@ -98,18 +98,9 @@ var applied = map[string]appliedDefault{
 	"BaseRestorePolicy.NoGeneration":        {applied: value(false)},
 	"BaseRestorePolicy.ExtraTTL":            {applied: value(0)},
 	"BackupRoutine.Disabled":                {applied: value(false)},
-	"CompressionPolicy.Level":               {applied: value(0)},
 	"ListenerConfig.Disabled":               {applied: value(false)},
 	"FileLoggerConfig.Compress":             {applied: value(false)},
 	"SecretAgent.IsBase64":                  {applied: value(false)},
-
-	// Modes whose default is the absence of the policy block: omitting it means
-	// no compression and no encryption, which is exactly what NONE names. A
-	// block that is present must state a valid mode, so this is the only case
-	// in which the default applies.
-	"CompressionPolicy.Mode":        {applied: value(model.CompressionModeNone)},
-	"RestoreCompressionPolicy.Mode": {applied: value(model.CompressionModeNone)},
-	"EncryptionPolicy.Mode":         {applied: value(model.EncryptionModeNone)},
 
 	// Entries with no value to compare against.
 	"LoggerConfig.FileWriter": {

@@ -118,10 +118,10 @@ func (p *BackupPolicy) ValidateWithOpts(opts ValidationOptions) error {
 		return fmt.Errorf("invalid retention policy: %w", err)
 	}
 	if err := p.EncryptionPolicy.Validate(opts); err != nil {
-		return err
+		return fmt.Errorf("invalid encryption policy: %w", err)
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {
-		return err
+		return fmt.Errorf("invalid compression policy: %w", err)
 	}
 	if err := p.IncrMode.Validate(); err != nil {
 		return err
