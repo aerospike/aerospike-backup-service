@@ -2280,17 +2280,19 @@ const docTemplate = `{
         "dto.CompressionPolicy": {
             "description": "CompressionPolicy contains backup compression information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "level": {
-                    "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).\nThis field is ignored if the compression mode is NONE.",
+                    "description": "The compression level to use, from -1 to 22.\nA higher value gives better compression at the cost of speed,\nbut not every step changes the result: neighboring levels may compress the same way.\nRequired for ZSTD; must not be set if the compression mode is NONE.",
                     "type": "integer",
-                    "default": 0,
                     "maximum": 22,
-                    "minimum": -1
+                    "minimum": -1,
+                    "x-nullable": true
                 },
                 "mode": {
-                    "description": "The compression mode to be used (default is NONE).",
-                    "default": "NONE",
+                    "description": "The compression mode to be used. Required.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.CompressionMode"
@@ -2423,6 +2425,9 @@ const docTemplate = `{
         "dto.EncryptionPolicy": {
             "description": "EncryptionPolicy contains backup encryption information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "key-env": {
                     "description": "The name of the environment variable containing the encryption key.",
@@ -2441,8 +2446,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "mode": {
-                    "description": "The encryption mode to be used (NONE, AES128, AES256)",
-                    "default": "NONE",
+                    "description": "The encryption mode to be used (NONE, AES128, AES256). Required.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.EncryptionMode"
@@ -2731,10 +2735,12 @@ const docTemplate = `{
         "dto.RestoreCompressionPolicy": {
             "description": "RestoreCompressionPolicy contains restore compression information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "mode": {
-                    "description": "The compression mode to be used (default is NONE).",
-                    "default": "NONE",
+                    "description": "The compression mode to be used. Required.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.CompressionMode"
