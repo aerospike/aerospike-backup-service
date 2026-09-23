@@ -21,7 +21,7 @@ type BaseRestorePolicy struct {
 	// Do not restore any UDF modules.
 	NoUdfs *bool `json:"no-udfs,omitempty" default:"false"`
 	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
+	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
 	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000" default:"600000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.

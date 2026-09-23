@@ -24,6 +24,13 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
 
 ### Changed
 
+- Entity names may no longer be entirely whitespace, nor start or end with it; whitespace inside
+  a name is still allowed. A config carrying such a name fails validation on load.
+- Configuration-mutation endpoints answer with the status code that describes the outcome instead
+  of collapsing everything onto `400`: a routine, storage, cluster or policy that does not exist is
+  `404`, a name that is already taken or an entity a backup routine still references is `409`. A
+  malformed or invalid payload is still `400`. `GET` already answered `404`; the mutating verbs now
+  match it, body text included. See [docs/migration.md](docs/migration.md).
 - The unit file moves to `/usr/lib/systemd/system` as a vendor file; customise it with a drop-in
   (`systemctl edit aerospike-backup-service`).
 - Logs move to `/var/log/aerospike-backup-service/aerospike-backup-service.log`, a directory

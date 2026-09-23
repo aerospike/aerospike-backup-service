@@ -103,7 +103,7 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var jobErr *service.JobNotFoundError
 		if errors.As(err, &jobErr) {
-			httpError(w, errNotFound("job", jobID))
+			httpError(w, model.NotFound("job", jobID))
 		} else {
 			httpError(w, err)
 		}
@@ -173,15 +173,7 @@ func (s *Service) RetrieveRestoreJobs(w http.ResponseWriter, r *http.Request) {
 // @Failure     405 {string} string
 func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 	timestampStr := r.PathValue("timestamp")
-	if timestampStr == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 
 	timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
 	if err != nil {
@@ -189,9 +181,9 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -224,7 +216,7 @@ func (s *Service) CancelRestoreHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var jobErr *service.JobNotFoundError
 		if errors.As(err, &jobErr) {
-			httpError(w, errNotFound("job", jobID))
+			httpError(w, model.NotFound("job", jobID))
 		} else {
 			httpError(w, fmt.Errorf("failed to cancel restore: %w", err))
 		}

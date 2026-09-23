@@ -48,8 +48,8 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
   `0750`, owned by `aerospike-backup-service`. Anything that read them as another unprivileged user — a separate
   `asrestore` account, a log shipper, rsync, an NFS consumer — needs to join the group:
   `sudo usermod -aG aerospike-backup-service <user>`.
-- **The log file moves** — from `/var/log/aerospike-backup-service.log` to
-  `/var/log/aerospike-backup-service/aerospike-backup-service.log`, a directory systemd creates and owns. The
+- **The log file directory moves** — from `/var/log/` to
+  `/var/log/aerospike-backup-service/`, a directory systemd creates and owns. The
   postinstall script moves an existing log and its rotated siblings into it. If you kept a customised configuration
   file, update `service.logger.file-writer.filename` to match: the old path is no longer writable, and file logging
   fails silently when it is not (the journal still has everything).
@@ -73,6 +73,27 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
   ```
 
   Upgrades from this release onward are unaffected. The `.deb` path does not have this problem.
+
+- **Configuration API error status codes** — the endpoints that change configuration
+  (`POST`/`PUT`/`DELETE` under `/v1/config/routines`, `/v1/config/storage`, `/v1/config/clusters` and
+  `/v1/config/policies`, plus the routine `enable`/`disable` toggles) now answer with the status that describes
+  the outcome, instead of collapsing everything onto `400 Bad Request`:
+
+  | Condition | Before | Now |
+  | --- | --- | --- |
+  | The named routine, storage, cluster or policy does not exist | `400` | `404 Not Found` |
+  | The name is already taken (`POST`) | `400` | `409 Conflict` |
+  | A backup routine still references the entity being deleted | `400` | `409 Conflict` |
+  | Malformed body, failed validation, unreachable TLS endpoint | `400` | `400` (unchanged) |
+
+  `GET` already answered `404` for a name it could not resolve; the mutating verbs now match it, and a `404` body
+  reads the same as the `GET` one (`routine "daily" not found`) rather than the nested
+  `invalid request: failed to update configuration: ...` string.
+
+  A client that treats any non-2xx as a failure needs no change. A client that branches on `400`, or that
+  string-matches the response body to tell "does not exist" from "bad payload", must branch on the status code
+  instead — a delete-if-present flow, for example, becomes "treat `404` as already deleted".
+- **Config element names** — Routine, policy, storage, secret agent have stricter validation: they cannot start or end with whitespace or contain path traversal sequences.
 
 #### Improvements
 
