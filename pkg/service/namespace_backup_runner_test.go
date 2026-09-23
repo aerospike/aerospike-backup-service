@@ -81,7 +81,8 @@ func TestRun_SuccessfulFullBackup(t *testing.T) {
 		})
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	run := model.NamespaceRun{Routine: routine, Namespace: testNamespace, Spec: spec}
+	handler, startErr := runner.Run(t.Context(), run, nil, slog.Default())
 	require.NoError(t, startErr)
 
 	require.NotNil(t, handler)
@@ -127,7 +128,8 @@ func TestSuccessfulIncrementalBackup(t *testing.T) {
 		})
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeIncremental, StartTime: now, TimeBounds: timeBounds}
-	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	run := model.NamespaceRun{Routine: routine, Namespace: testNamespace, Spec: spec}
+	handler, startErr := runner.Run(t.Context(), run, nil, slog.Default())
 	require.NoError(t, startErr)
 
 	require.NotNil(t, handler)
@@ -163,7 +165,8 @@ func TestEmptyIncrementalBackup(t *testing.T) {
 	// No WriteBackupMetadata call expected for empty incremental backup.
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeIncremental, StartTime: now, TimeBounds: timeBounds}
-	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	run := model.NamespaceRun{Routine: routine, Namespace: testNamespace, Spec: spec}
+	handler, startErr := runner.Run(t.Context(), run, nil, slog.Default())
 	require.NoError(t, startErr)
 
 	require.NotNil(t, handler)
@@ -193,7 +196,8 @@ func TestBackupExecutorError(t *testing.T) {
 
 	// backup fails to start => nothing is written via backupWriter
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler, err := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	run := model.NamespaceRun{Routine: routine, Namespace: testNamespace, Spec: spec}
+	handler, err := runner.Run(t.Context(), run, nil, slog.Default())
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to start backup")
 	require.Nil(t, handler)
@@ -226,7 +230,8 @@ func TestBackupHandlerError(t *testing.T) {
 		Return(errors.New("handler error"))
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	run := model.NamespaceRun{Routine: routine, Namespace: testNamespace, Spec: spec}
+	handler, startErr := runner.Run(t.Context(), run, nil, slog.Default())
 	require.NoError(t, startErr)
 
 	require.NotNil(t, handler)
@@ -271,7 +276,8 @@ func TestMetadataWriteError(t *testing.T) {
 					Return(metadataError)
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	run := model.NamespaceRun{Routine: routine, Namespace: testNamespace, Spec: spec}
+	handler, startErr := runner.Run(t.Context(), run, nil, slog.Default())
 	require.NoError(t, startErr)
 
 	require.NotNil(t, handler)
@@ -308,9 +314,11 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 
 	handler, startErr := runner.Run(
 		t.Context(),
-		routine,
-		testNamespace,
-		model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds},
+		model.NamespaceRun{
+			Routine:   routine,
+			Namespace: testNamespace,
+			Spec:      model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds},
+		},
 		nil,
 		slog.Default(),
 	)
@@ -368,7 +376,8 @@ func TestRun_RetryWritesNextAttemptFolder(t *testing.T) {
 	)
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: startTime, TimeBounds: timeBounds}
-	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	run := model.NamespaceRun{Routine: routine, Namespace: testNamespace, Spec: spec}
+	handler, startErr := runner.Run(t.Context(), run, nil, slog.Default())
 	require.NoError(t, startErr)
 
 	require.NoError(t, handler.Wait(t.Context()))
@@ -400,7 +409,8 @@ func TestRun_FailedAttemptRemovalErrorDoesNotFailBackup(t *testing.T) {
 
 	logger, logBuf := newTestLogger(t)
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: startTime, TimeBounds: timeBounds}
-	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, logger)
+	run := model.NamespaceRun{Routine: routine, Namespace: testNamespace, Spec: spec}
+	handler, startErr := runner.Run(t.Context(), run, nil, logger)
 	require.NoError(t, startErr)
 
 	require.NoError(t, handler.Wait(t.Context()))
@@ -431,7 +441,8 @@ func TestRun_EmptyIncrementalRetryRemovesFailedAttempt(t *testing.T) {
 	mocks.backupWriter.EXPECT().Delete(gomock.Any(), routine, attempt1).Return(nil)
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeIncremental, StartTime: startTime, TimeBounds: timeBounds}
-	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	run := model.NamespaceRun{Routine: routine, Namespace: testNamespace, Spec: spec}
+	handler, startErr := runner.Run(t.Context(), run, nil, slog.Default())
 	require.NoError(t, startErr)
 
 	require.NoError(t, handler.Wait(t.Context()))
@@ -469,7 +480,8 @@ func TestRun_MetadataRetryRemovesFailedAttemptsOnce(t *testing.T) {
 	)
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: startTime, TimeBounds: timeBounds}
-	handler, startErr := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	run := model.NamespaceRun{Routine: routine, Namespace: testNamespace, Spec: spec}
+	handler, startErr := runner.Run(t.Context(), run, nil, slog.Default())
 	require.NoError(t, startErr)
 
 	require.NoError(t, handler.Wait(t.Context()))

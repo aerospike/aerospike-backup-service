@@ -86,9 +86,10 @@ func TestNamespaceBackupRunner_FailureDeletesNothing(t *testing.T) {
 		})
 
 	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: start}
-	hA, err := nsRunner.Run(t.Context(), routine, "nsA", spec, nil, slog.Default())
+	logger := slog.Default()
+	hA, err := nsRunner.Run(t.Context(), model.NamespaceRun{Routine: routine, Namespace: "nsA", Spec: spec}, nil, logger)
 	require.NoError(t, err)
-	hB, err := nsRunner.Run(t.Context(), routine, "nsB", spec, nil, slog.Default())
+	hB, err := nsRunner.Run(t.Context(), model.NamespaceRun{Routine: routine, Namespace: "nsB", Spec: spec}, nil, logger)
 	require.NoError(t, err)
 
 	require.Error(t, hA.Wait(t.Context()))

@@ -19,3 +19,13 @@ type BackupRunSpec struct {
 	// TimeBounds constrains what data is included (incremental from/to, sealed to-time).
 	TimeBounds TimeBounds
 }
+
+// NamespaceRun is the backup of one namespace within a routine run.
+type NamespaceRun struct {
+	// Routine is the routine being backed up.
+	Routine *BackupRoutine
+	// Namespace is the namespace this backup covers.
+	Namespace string
+	// Spec is the routine run this backup belongs to.
+	Spec BackupRunSpec
+}
