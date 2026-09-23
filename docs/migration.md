@@ -48,8 +48,8 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
   `0750`, owned by `aerospike-backup-service`. Anything that read them as another unprivileged user — a separate
   `asrestore` account, a log shipper, rsync, an NFS consumer — needs to join the group:
   `sudo usermod -aG aerospike-backup-service <user>`.
-- **The log file moves** — from `/var/log/aerospike-backup-service.log` to
-  `/var/log/aerospike-backup-service/aerospike-backup-service.log`, a directory systemd creates and owns. The
+- **The log file directory moves** — from `/var/log/` to
+  `/var/log/aerospike-backup-service/`, a directory systemd creates and owns. The
   postinstall script moves an existing log and its rotated siblings into it. If you kept a customised configuration
   file, update `service.logger.file-writer.filename` to match: the old path is no longer writable, and file logging
   fails silently when it is not (the journal still has everything).
@@ -93,6 +93,7 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
   A client that treats any non-2xx as a failure needs no change. A client that branches on `400`, or that
   string-matches the response body to tell "does not exist" from "bad payload", must branch on the status code
   instead — a delete-if-present flow, for example, becomes "treat `404` as already deleted".
+- **Config element names** — Routine, policy, storage, secret agent have stricter validation: they cannot start or end with whitespace or contain path traversal sequences.
 
 #### Improvements
 
