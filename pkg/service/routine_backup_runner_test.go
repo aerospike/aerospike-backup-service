@@ -34,10 +34,10 @@ func TestRoutineBackupRunner_Run_Success(t *testing.T) {
 	handler2.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
 
 	nsRunner.EXPECT().
-		Run(gomock.Any(), gomock.Any(), "ns1", gomock.Any(), gomock.Any(), gomock.Any()).
+		Run(gomock.Any(), forNamespace("ns1"), gomock.Any(), gomock.Any()).
 		Return(handler1, nil)
 	nsRunner.EXPECT().
-		Run(gomock.Any(), gomock.Any(), "ns2", gomock.Any(), gomock.Any(), gomock.Any()).
+		Run(gomock.Any(), forNamespace("ns2"), gomock.Any(), gomock.Any()).
 		Return(handler2, nil)
 
 	runner := NewRoutineBackupRunner(nsRunner, resolver)
@@ -86,7 +86,7 @@ func TestRoutineBackupRunner_Run_ReturnsStartError(t *testing.T) {
 
 	startErr := errors.New("cluster unreachable")
 	nsRunner.EXPECT().
-		Run(gomock.Any(), gomock.Any(), "ns1", gomock.Any(), gomock.Any(), gomock.Any()).
+		Run(gomock.Any(), forNamespace("ns1"), gomock.Any(), gomock.Any()).
 		Return(nil, startErr)
 
 	runner := NewRoutineBackupRunner(nsRunner, resolver)
@@ -120,10 +120,10 @@ func TestRoutineBackupRunner_Run_CancelsStartedNamespacesOnFailure(t *testing.T)
 	running.EXPECT().Cancel().Times(1)
 
 	nsRunner.EXPECT().
-		Run(gomock.Any(), gomock.Any(), "ns1", gomock.Any(), gomock.Any(), gomock.Any()).
+		Run(gomock.Any(), forNamespace("ns1"), gomock.Any(), gomock.Any()).
 		Return(running, nil)
 	nsRunner.EXPECT().
-		Run(gomock.Any(), gomock.Any(), "ns2", gomock.Any(), gomock.Any(), gomock.Any()).
+		Run(gomock.Any(), forNamespace("ns2"), gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("cluster unreachable"))
 
 	runner := NewRoutineBackupRunner(nsRunner, resolver)
@@ -212,4 +212,9 @@ func TestRoutineBackupRunner_Run_StartWaitHonorsContext(t *testing.T) {
 	op, err := runner.Run(ctx, routine, model.BackupRunSpec{Type: model.BackupTypeFull}, slog.Default())
 	require.Error(t, err)
 	assert.Nil(t, op)
+}
+
+// forNamespace matches the namespace run of the given namespace.
+func forNamespace(namespace string) gomock.Matcher {
+	return gomock.Cond(func(run model.NamespaceRun) bool { return run.Namespace == namespace })
 }
