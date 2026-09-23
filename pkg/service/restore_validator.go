@@ -174,7 +174,7 @@ func validateNoRunningBackupConflict(
 			return errRestoreConflictsWithBackup(routine.Name, cluster, "all namespaces")
 		}
 
-		if ns, ok := coll.FirstCommon(destinationNamespaces, routine.Namespaces); ok {
+		if ns, ok := coll.FirstMatch(destinationNamespaces, routine.Namespaces); ok {
 			return errRestoreConflictsWithBackup(routine.Name, cluster, fmt.Sprintf("namespace %q", ns))
 		}
 	}

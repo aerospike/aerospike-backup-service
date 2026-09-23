@@ -16,8 +16,8 @@ func MissingElements(subset, superset []string) []string {
 	return missing
 }
 
-// FirstCommon returns the first element of b that also appears in a, or ("", false) if none.
-func FirstCommon(a, b []string) (string, bool) {
+// FirstMatch returns the first element of b that also appears in a, or ("", false) if none.
+func FirstMatch(a, b []string) (string, bool) {
 	for _, v := range b {
 		if slices.Contains(a, v) {
 			return v, true

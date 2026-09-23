@@ -106,7 +106,7 @@ func TestFirstCommon(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, ok := FirstCommon(tt.a, tt.b)
+			got, ok := FirstMatch(tt.a, tt.b)
 
 			assert.Equal(t, tt.wantOK, ok)
 			assert.Equal(t, tt.want, got)
