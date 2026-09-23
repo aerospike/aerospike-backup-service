@@ -457,7 +457,7 @@ func TestBackupRoutine_Validate_InvalidFilterExpression(t *testing.T) {
 
 	err := r.Validate()
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to decode filter expression")
+	assert.Contains(t, err.Error(), "failed to parse filter expression")
 }
 
 func TestBackupRoutine_Validate_RejectsStructurallyInvalidFilterExpression(t *testing.T) {
