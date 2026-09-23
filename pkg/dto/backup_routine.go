@@ -187,9 +187,7 @@ func validateRoutineSelectorExclusivity(partitionList string, rackList []int, no
 }
 
 // validateFilterExpression checks that filter-exp carries the encoding the Aerospike client
-// expects, leaving that encoding the client's business rather than this package's. Decoding is
-// the whole guarantee: the client hands back the payload without inspecting it and offers no
-// way to parse it, so only the server ever rejects a meaningless expression.
+// expects, leaving that encoding the client's business rather than this package's.
 func validateFilterExpression(filterExpression string, setList []string) error {
 	if filterExpression == "" {
 		return nil
@@ -198,7 +196,7 @@ func validateFilterExpression(filterExpression string, setList []string) error {
 		return errors.New("filter-exp cannot be used when backing up multiple sets")
 	}
 	if _, err := as.ExpFromBase64(filterExpression); err != nil {
-		return fmt.Errorf("failed to decode filter expression: %w", err)
+		return fmt.Errorf("failed to parse filter expression: %w", err)
 	}
 
 	return nil
