@@ -115,7 +115,7 @@ How the total is estimated depends on whether the scan carries a filter:
   `filter-exp`, `partition-list` or `node-list`. One partition is scanned for metadata only and the sample count is
   multiplied by the number of partitions being backed up (4096 for a routine that backs up the whole namespace).
 
-The total is not a one-time estimate: it is recalculated every 10 minutes for as long as the backup runs. A recount
+The total is not a one-time estimate: it is recalculated every <!-- tag estimates -->10 minutes<!-- /tag --> for as long as the backup runs. A recount
 that raises the denominator makes `aerospike_backup_service_backup_progress_pct` move backwards.
 
 **Duration Estimation**

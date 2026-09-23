@@ -108,7 +108,11 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 		return nil, fmt.Errorf("invalid secret agent: %w", err)
 	}
 
-	routine, found := config.Routine(r.Routine)
+	// The routine names a field of this request, not the resource the request addresses, so a name
+	// that does not resolve is a validation failure and not the model's not found: passing that
+	// error on would report a restore of a mistyped routine as a missing endpoint. The lookup only
+	// answers whether the routine is available to fall back on below.
+	routine, routineErr := config.Routine(r.Routine)
 
 	var cluster *model.AerospikeCluster
 	if !r.DestinationClusterConfig.IsEmpty() {
@@ -117,7 +121,7 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 			return nil, fmt.Errorf("invalid cluster: %w", err)
 		}
 	} else {
-		if !found {
+		if routineErr != nil {
 			return nil, errValidationNotFound("routine", r.Routine)
 		}
 		cluster = routine.SourceCluster
@@ -130,13 +134,13 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 			return nil, fmt.Errorf("invalid storage: %w", err)
 		}
 	} else {
-		if !found {
+		if routineErr != nil {
 			return nil, errValidationNotFound("routine", r.Routine)
 		}
 		storage = routine.Storage
 	}
 
-	if secretAgent == nil && found {
+	if secretAgent == nil && routineErr == nil {
 		secretAgent = routine.SecretAgent // use routine's secret agent if not specified.
 	}
 

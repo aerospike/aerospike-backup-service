@@ -12,71 +12,50 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// statusCodeError represents an error with an associated HTTP status code.
-type statusCodeError struct {
-	Err  error
-	Code int
+// badRequestError marks an error as the client's fault: the request was understood but cannot be
+// accepted. It carries no status of its own — every other code comes from a model.entityError
+// cause or from one of httpError's own cases, so there is a single place each status is decided.
+type badRequestError struct {
+	Err error
 }
 
-func (e *statusCodeError) Error() string {
+func (e *badRequestError) Error() string {
 	return e.Err.Error()
 }
 
-// Unwrap exposes the cause, so errors.Is/As can see through the status code wrapper.
-func (e *statusCodeError) Unwrap() error {
+// Unwrap exposes the cause, so errors.Is/As can see through the wrapper.
+func (e *badRequestError) Unwrap() error {
 	return e.Err
 }
 
-// newStatusCodeError creates a new statusCodeError with an associated status code.
-func newStatusCodeError(err error, code int) *statusCodeError {
-	return &statusCodeError{Err: err, Code: code}
+func newBadRequestError(err error) *badRequestError {
+	return &badRequestError{Err: err}
 }
 
 func errInvalidQueryParam(err error, param string) error {
-	return newStatusCodeError(fmt.Errorf("invalid query param %s: %w", param, err), http.StatusBadRequest)
+	return newBadRequestError(fmt.Errorf("invalid query param %s: %w", param, err))
 }
 
 func errBadRequest(err error) error {
-	return newStatusCodeError(fmt.Errorf("invalid request: %w", err), http.StatusBadRequest)
+	return newBadRequestError(fmt.Errorf("invalid request: %w", err))
 }
 
-var errMissingRoutineName = newStatusCodeError(errors.New("routine name required"), http.StatusBadRequest)
-var errMissingClusterName = newStatusCodeError(errors.New("cluster name required"), http.StatusBadRequest)
-var errMissingPolicyName = newStatusCodeError(errors.New("policy name required"), http.StatusBadRequest)
-var errMissingStorageName = newStatusCodeError(errors.New("storage name required"), http.StatusBadRequest)
-
-func errRoutineNotFound(name string) error {
-	return errNotFound("routine", name)
-}
-
-func errNotFound(field string, name any) error {
-	return newStatusCodeError(fmt.Errorf("%s %s not found", field, quoteName(name)), http.StatusNotFound)
-}
-
-// quoteName quotes string names and prints other identifiers, such as numeric job IDs, as they are;
-// %q would render an integer as a rune literal.
-func quoteName(name any) string {
-	if s, ok := name.(string); ok {
-		return strconv.Quote(s)
-	}
-
-	return fmt.Sprint(name)
-}
-
-// httpError calls http.Error with the appropriate status code based on the error.
+// httpError is the one place an error becomes a status code.
 func httpError(w http.ResponseWriter, err error) {
 	var (
-		httpErr     *statusCodeError
+		badRequest  *badRequestError
 		maxBytesErr *http.MaxBytesError
 	)
 
 	switch {
 	case errors.As(err, &maxBytesErr):
 		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
-	case errors.As(err, &httpErr):
-		http.Error(w, httpErr.Error(), httpErr.Code)
 	case errors.Is(err, model.ErrNotFound):
 		http.Error(w, err.Error(), http.StatusNotFound)
+	case errors.Is(err, model.ErrAlreadyExists), errors.Is(err, model.ErrInUse):
+		http.Error(w, err.Error(), http.StatusConflict)
+	case errors.As(err, &badRequest):
+		http.Error(w, badRequest.Error(), http.StatusBadRequest)
 	default:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
