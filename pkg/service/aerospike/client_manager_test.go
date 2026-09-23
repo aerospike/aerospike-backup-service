@@ -301,10 +301,69 @@ func Test_Close_NotExisting(t *testing.T) {
 	aeroClient.EXPECT().Close()
 
 	client := NewMockClient(ctrl)
-	client.EXPECT().AerospikeClient().Return(aeroClient).Times(2)
+	client.EXPECT().AerospikeClient().Return(aeroClient)
 	aeroClient.EXPECT().Cluster().Return(&aerospike.Cluster{})
 
 	clientManager.Close(client)
+}
+
+// Close must not wait for a cached cluster's lock while holding the client map: a GetClient whose
+// health check fails holds that cluster's lock and then removes the cluster from the map.
+// Closing a client the cache does not manage visits every cached entry, so it always reaches the
+// cluster whose health check is in progress.
+func Test_Close_DuringFailingHealthCheck(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	clientFactory := NewMockClientFactory(ctrl)
+	cachedAsClient := NewMockAerospikeClient(ctrl)
+	cachedAsClient.EXPECT().Close()
+	cachedBackupClient := NewMockClient(ctrl)
+
+	healthCheckStarted := make(chan struct{})
+	healthCheckDone := make(chan struct{})
+	infoGetter := NewMockInfoGetter(ctrl)
+	infoGetter.EXPECT().GetStatus(gomock.Any()).DoAndReturn(func(context.Context) (string, error) {
+		close(healthCheckStarted)
+		<-healthCheckDone
+		return "fail", nil
+	})
+	cachedBackupClient.EXPECT().InfoClient().Return(infoGetter)
+
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), cluster).Return(cachedAsClient, nil)
+	clientFactory.EXPECT().NewBackupClient(cachedAsClient, gomock.Any()).Return(cachedBackupClient, nil)
+
+	unmanagedAsClient := NewMockAerospikeClient(ctrl)
+	unmanagedAsClient.EXPECT().Close()
+	unmanagedAsClient.EXPECT().Cluster().Return(&aerospike.Cluster{})
+	unmanagedClient := NewMockClient(ctrl)
+	unmanagedClient.EXPECT().AerospikeClient().Return(unmanagedAsClient)
+
+	manager := NewClientManager(clientFactory, 10*time.Second)
+
+	getClientDone := make(chan struct{})
+	go func() {
+		defer close(getClientDone)
+		_, err := manager.GetClient(t.Context(), cluster, nil, nil)
+		assert.Error(t, err)
+	}()
+	<-healthCheckStarted
+
+	closeDone := make(chan struct{})
+	go func() {
+		defer close(closeDone)
+		manager.Close(unmanagedClient)
+	}()
+	time.Sleep(50 * time.Millisecond) // let Close reach the cluster being health-checked
+	close(healthCheckDone)
+
+	for _, done := range []chan struct{}{getClientDone, closeDone} {
+		select {
+		case <-done:
+		case <-time.After(3 * time.Second):
+			t.Fatal("GetClient and Close deadlocked")
+		}
+	}
+	assertClientExists(t, manager, cluster, false)
 }
 
 func assertClientExists(t *testing.T, manager ClientManager,

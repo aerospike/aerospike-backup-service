@@ -184,36 +184,39 @@ func (cm *clientManager) createBackupClient(
 
 // Close ensures that the specified backup client is released.
 func (cm *clientManager) Close(client Client) {
-	var (
-		targetInfo *clientInfo
-		targetKey  uint64
-	)
+	aeroClient := client.AerospikeClient()
+	key, info, found := cm.findInfo(aeroClient)
+	if !found {
+		// If it's not in our cache, we must close it immediately because we aren't managing its lifecycle.
+		aeroClient.Close()
+		slog.Info("Closed Aerospike client not managed by the cache",
+			slog.Any("hosts", aeroClient.Cluster().GetSeeds()))
+		return
+	}
 
-	// We need to find which info struct owns this client.
-	// Since Client interface wraps the underlying AerospikeClient, we compare pointers.
+	cm.decrementRef(info, key)
+}
+
+// findInfo returns the cached state that owns aeroClient.
+// Entries are copied out of the map before their locks are taken: GetClient and the idle-close
+// timer hold info.mu while removing from the map, so locking info.mu under the map lock deadlocks.
+func (cm *clientManager) findInfo(aeroClient backup.AerospikeClient) (uint64, *clientInfo, bool) {
+	infos := make(map[uint64]*clientInfo)
 	cm.clients.Iterate(func(key uint64, info *clientInfo) {
-		if targetInfo != nil {
-			return
-		}
-
-		// We must lock to read info.aeroClient safely,
-		// just in case it's being modified (though unlikely after init).
-		info.mu.RLock()
-		if info.aeroClient == client.AerospikeClient() {
-			targetInfo = info
-			targetKey = key
-		}
-		info.mu.RUnlock()
+		infos[key] = info
 	})
 
-	if targetInfo != nil {
-		cm.decrementRef(targetInfo, targetKey)
-	} else {
-		// If it's not in our cache, we must close it immediately because we aren't managing its lifecycle.
-		client.AerospikeClient().Close()
-		slog.Info("Closed Aerospike client not managed by the cache",
-			slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()))
+	for key, info := range infos {
+		info.mu.RLock()
+		owns := info.aeroClient == aeroClient
+		info.mu.RUnlock()
+
+		if owns {
+			return key, info, true
+		}
 	}
+
+	return 0, nil, false
 }
 
 // decrementRef decreases the reference count and schedules closing if count reaches zero.
