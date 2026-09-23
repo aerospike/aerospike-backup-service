@@ -25,12 +25,7 @@ env:
 
 jobs:
   verify-github-release:
-    # ubuntu-22.04, not 24.04: aerospike/shared-workflows' own setup-gpg action hard-fails on any
-    # other Ubuntu version ("This action only supports Ubuntu 22.04"), reflecting a real GnuPG
-    # behavior difference between the two. This job's GPG usage here is much lighter (import a
-    # public key + verify, no signing/agent/pinentry setup), but there's no reason to gamble on
-    # 24.04 compatibility when the org has already established this constraint elsewhere.
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       helm-chart-file: ${{ steps.list.outputs.helm-chart-file }}
     steps:
@@ -121,25 +116,61 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y dpkg-sig rpm
+          # dpkg-sig is absent here on purpose: it was dropped from the archive after jammy
+          # and has no 24.04 package. The deb check below runs it in a pinned container.
+          sudo apt-get install -y rpm
+
           # rpm --checksig reads its own keyring, not GnuPG's (which the key was imported
           # into two steps up).
-          echo "$GPG_PUBLIC_KEY" | sudo rpm --import /dev/stdin
+          #
+          # Via a real file, not a pipe: rpm --import sizes its read buffer from the fstat
+          # of the argument, which is 0 for a pipe, so `rpm --import /dev/stdin` reads
+          # nothing and dies with "import read failed(0)".
+          #
+          # And WITHOUT sudo: Debian/Ubuntu's rpm keeps a per-user database (%_dbpath is
+          # ~/.rpmdb, not /var/lib/rpm), so `sudo rpm --import` files the key under
+          # /root/.rpmdb while the verification below reads /home/runner/.rpmdb. The import
+          # succeeds, then every package reports NOKEY as "digests SIGNATURES NOT OK".
+          printf '%s\n' "$GPG_PUBLIC_KEY" > "${RUNNER_TEMP}/gpg-public-key.asc"
+          rpm --import "${RUNNER_TEMP}/gpg-public-key.asc"
 
           cd release-assets
           fail=0
           shopt -s nullglob
 
-          for pkg in *.deb; do
+          # `apt` checks the signature embedded by dpkg-sig as the ar member `_gpgbuilder`,
+          # and dpkg-sig itself is the only tool that reads that format -- but it was dropped
+          # from the archive after jammy, so a 24.04 runner cannot install it. Run the real
+          # tool in a pinned jammy container rather than reimplementing its manifest checks
+          # here, where a subtly incomplete reimplementation would quietly weaken this check.
+          #
+          # -i is required: without it the container gets no stdin, so `bash -s` reads an
+          # empty script, verifies nothing and exits 0.
+          debs=(*.deb)
+          if [ "${#debs[@]}" -gt 0 ] && ! docker run --rm -i \
+              -v "$PWD:/w" -w /w \
+              -v "${RUNNER_TEMP}/gpg-public-key.asc:/key.asc:ro" \
+              ubuntu:22.04 bash -s -- "${debs[@]}" <<'CONTAINER'
+          set -euo pipefail
+          apt-get update -qq >/dev/null
+          apt-get install -y -qq dpkg-sig >/dev/null
+          gpg --quiet --import /key.asc
+          rc=0
+          for pkg in "$@"; do
             out="$(dpkg-sig --verify "$pkg" || true)"
             echo "$out"
             if grep -q 'GOODSIG' <<< "$out"; then
               echo "Embedded signature OK: ${pkg}"
             else
               echo "::error::dpkg-sig reports no GOODSIG for ${pkg}"
-              fail=1
+              rc=1
             fi
           done
+          exit $rc
+          CONTAINER
+          then
+            fail=1
+          fi
 
           for pkg in *.rpm; do
             out="$(rpm --checksig "$pkg" || true)"

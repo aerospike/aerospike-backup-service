@@ -225,18 +225,18 @@ The following steps apply to both regular releases and hotfixes:
    [`promote-to-prod.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/promote-to-prod.yml) or manually via the same JFrog UI link. This is
    the gate that makes a release public.
 9. Once the bundle is on `PROD`:
-   - Docker Hub mirroring happens automatically and externally (JFrog's existing promotion webhook feeds
-     `artifact-publisher`) — nothing to trigger here.
+   - Docker Hub and every other public registry are published automatically and externally by the central
+     `artifact-publisher` repository, off JFrog's `release_bundle_v2_promotion_completed` webhook — nothing
+     to trigger here, and nothing in this repository ever pushes to an external registry
+     ([strategy](https://aerospike.atlassian.net/wiki/spaces/DevOps/pages/4648566799)).
    - A dev or PM/EM manually runs [`release.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/release.yml)
      (`workflow_dispatch`, with the release version as input). It verifies the bundle was actually promoted to
      `PROD`, then downloads the already-signed artifacts straight from JFrog's `PROD`-public repos and publishes
-     them as a new, immutable GitHub **pre-release**. If this version is the highest final release overall,
-     the workflow also points Docker Hub `latest` at it (hotfixes on older lines leave `latest` unchanged) —
-     nothing is rebuilt, re-signed, or re-checksummed at this point.
+     them as a new, immutable GitHub **pre-release** — nothing is rebuilt, re-signed, or re-checksummed at
+     this point.
 10. When ready to announce GA, a PM/EM edits that GitHub Release and clears **Set as a pre-release** only.
-    Docker `latest` is already managed by `release.yml`; the GitHub **Set as the latest release** checkbox is
-    unrelated and can be left unchecked. Until the pre-release flag is cleared, the release does not appear as
-    GA on GitHub.
+    The GitHub **Set as the latest release** checkbox is unrelated to any registry tag and can be left
+    unchecked. Until the pre-release flag is cleared, the release does not appear as GA on GitHub.
 11. Post-release actions (after step 10):
    1. **Snyk**:
       - Add the new version to the `aerospike-applications` Snyk org (monitor the Docker image).
