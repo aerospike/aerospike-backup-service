@@ -39,20 +39,24 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
       under that home, or supply credentials through `/etc/default/aerospike-backup-service` (deb) or
       `/etc/sysconfig/aerospike-backup-service` (rpm), which the unit reads if present.
     - **Operator-supplied TLS material must be readable by the account.** Cluster and HTTPS `cert-file`, `key-file`,
-      `cafile` and `password-path` files that are `0600 root:root` can no longer be read. Prefer
-      `0640 root:aerospike-backup-service`. These files are re-read on every handshake, so the failure appears at
-      connection time, not at startup.
+      `cafile` and `password-path` files that are `0600 root:root` can no longer be read. Make them `0600` and
+      owned by `aerospike-backup-service`; a group-readable key is exposed to every backup reader in the group.
+      These files are re-read on every handshake, so the failure appears at connection time, not at startup.
     - **A listener below port 1024 no longer binds.** The unit drops every capability. Grant just the one back with a
       drop-in: `AmbientCapabilities=CAP_NET_BIND_SERVICE` and `CapabilityBoundingSet=CAP_NET_BIND_SERVICE`.
 - **Backup artifacts are no longer world-readable** — `UMask=0027` means files are created `0640` and directories
   `0750`, owned by `aerospike-backup-service`. Anything that read them as another unprivileged user — a separate
   `asrestore` account, a log shipper, rsync, an NFS consumer — needs to join the group:
   `sudo usermod -aG aerospike-backup-service <user>`.
+- **The configuration file is owner-only** — every install and upgrade sets it to `0600`, owned by
+  `aerospike-backup-service`, because it holds cluster passwords and cloud keys. Group members, including the backup
+  readers above, cannot read it.
 - **The log file directory moves** — from `/var/log/` to
   `/var/log/aerospike-backup-service/`, a directory systemd creates and owns. The
   postinstall script moves an existing log and its rotated siblings into it. If you kept a customised configuration
-  file, update `service.logger.file-writer.filename` to match: the old path is no longer writable, and file logging
-  fails silently when it is not (the journal still has everything).
+  file, update `service.logger.file-writer.filename` to match: the old path is no longer writable, and the service
+  refuses to start when its log file is not writable, so systemd restarts it in a loop. The journal shows
+  `log file "/var/log/aerospike-backup-service.log" is not writable`.
 - **The unit file moves to `/usr/lib/systemd/system`** — it is vendor-owned there and is replaced on every upgrade.
   Local changes belong in a drop-in (`systemctl edit aerospike-backup-service`). A pre-hardening copy left in
   `/etc/systemd/system` would silently override the new unit and keep the service running as root, so postinstall

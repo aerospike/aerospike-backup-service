@@ -28,7 +28,7 @@ fi
 # never reaches an install that predates the service account: enforce it here.
 if [ -f "${CONFIG_FILE}" ]; then
 	chown "${SERVICE_USER}:${SERVICE_GROUP}" "${CONFIG_FILE}"
-	chmod 0640 "${CONFIG_FILE}"
+	chmod 0600 "${CONFIG_FILE}"
 fi
 
 # Earlier releases shipped the unit as a conffile in /etc/systemd/system. A copy left

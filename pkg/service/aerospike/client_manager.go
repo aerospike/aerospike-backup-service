@@ -93,21 +93,44 @@ func newClientInfo(key uint64, cluster *model.AerospikeCluster) *clientInfo {
 }
 
 // acquire connects through factory on first use, checks that the connection is healthy and
-// takes a reference. A failed check leaves the connection in place for the callers that already
-// hold it; the caller decides whether to drop it with closeIfUnused.
+// takes a reference. On failure it closes the entry unless a caller still holds it, and reports
+// whether it did, under the same lock as the check: a caller waiting on mu then finds the entry
+// closed and fetches a fresh one, instead of reusing the connection that just failed.
 func (info *clientInfo) acquire(
 	ctx context.Context,
 	factory ClientFactory,
 	localLimiter syncutil.Limiter,
 	logger *slog.Logger,
-) (Client, error) {
+) (client Client, closed bool, err error) {
 	info.mu.Lock()
 	defer info.mu.Unlock()
 
 	if info.closed {
-		return nil, errClientInfoClosed
+		return nil, false, errClientInfoClosed
 	}
 
+	client, err = info.connect(ctx, factory, localLimiter, logger)
+	if err != nil {
+		return nil, info.closeIfUnusedLocked(), err
+	}
+
+	if info.closeTimer != nil {
+		info.closeTimer.Stop()
+		info.closeTimer = nil
+	}
+	info.count++
+
+	return client, false, nil
+}
+
+// connect returns a healthy backup client, dialing the cluster on first use. The caller must
+// hold mu.
+func (info *clientInfo) connect(
+	ctx context.Context,
+	factory ClientFactory,
+	localLimiter syncutil.Limiter,
+	logger *slog.Logger,
+) (Client, error) {
 	if info.aeroClient == nil {
 		aeroClient, err := factory.NewClientWithPolicyAndHost(ctx, info.cluster)
 		if err != nil {
@@ -128,12 +151,6 @@ func (info *clientInfo) acquire(
 	if status != "ok" {
 		return nil, fmt.Errorf("aerospike cluster connection lost: %s", status)
 	}
-
-	if info.closeTimer != nil {
-		info.closeTimer.Stop()
-		info.closeTimer = nil
-	}
-	info.count++
 
 	return client, nil
 }
@@ -179,6 +196,11 @@ func (info *clientInfo) closeIfUnused() bool {
 	info.mu.Lock()
 	defer info.mu.Unlock()
 
+	return info.closeIfUnusedLocked()
+}
+
+// closeIfUnusedLocked is closeIfUnused for a caller that holds mu.
+func (info *clientInfo) closeIfUnusedLocked() bool {
 	if info.closed || info.count > 0 {
 		return false
 	}
@@ -228,12 +250,13 @@ func (cm *clientManager) GetClient(
 	for {
 		info := cm.clients.LoadOrStore(clusterKey, newClientInfo(clusterKey, cluster))
 
-		client, err := info.acquire(ctx, cm.clientFactory, localLimiter, logger)
+		client, closed, err := info.acquire(ctx, cm.clientFactory, localLimiter, logger)
 		if errors.Is(err, errClientInfoClosed) {
 			continue
 		}
 		if err != nil {
-			if cm.forget(info) {
+			if closed {
+				cm.clients.Remove(clusterKey)
 				slog.Warn("Aerospike client dropped", slog.Any("id", clusterKey), slog.Any("error", err))
 			}
 

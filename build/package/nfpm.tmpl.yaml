@@ -26,7 +26,7 @@ contents:
     dst: /etc/${NAME}/${NAME}.yml
     type: config
     file_info:
-      mode: 0640
+      mode: 0600
       owner: ${NAME}
       group: ${NAME}
   - dst: /var/lib/${NAME}
