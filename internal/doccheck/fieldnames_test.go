@@ -57,7 +57,7 @@ func TestDocumentedFieldNamesExist(t *testing.T) {
 			at := fmt.Sprintf("%s:%d", file, 1+strings.Count(text[:match[0]], "\n"))
 
 			t.Run(at+"/"+name, func(t *testing.T) {
-				t.Errorf("%s names the field %q, which is in neither docs/config.schema.json nor docs/openapi.json", at, name)
+				t.Errorf("%s names the field %q, which %s does not declare", at, name, openapi)
 			})
 		}
 	}
