@@ -463,7 +463,7 @@ func Test_ClientInfo_ClosedEntryIsNotReused(t *testing.T) {
 	require.True(t, info.closeIfUnused())
 	assert.False(t, info.closeIfUnused(), "an entry closes once")
 
-	_, err := info.acquire(t.Context(), NewMockClientFactory(gomock.NewController(t)), nil, nil)
+	_, _, err := info.acquire(t.Context(), NewMockClientFactory(gomock.NewController(t)), nil, nil)
 	require.ErrorIs(t, err, errClientInfoClosed)
 }
 
