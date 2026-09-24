@@ -4,7 +4,7 @@ import "sync"
 
 // SafeMap is a thread-safe map with generic key and value types.
 // It is backed by sync.Map, so no method holds a lock while running a caller's callback: an
-// Iterate or Find callback may lock the values it visits and may call any method of the map.
+// Iterate callback may lock the values it visits and may call any method of the map.
 type SafeMap[K comparable, V any] struct {
 	m sync.Map
 }
@@ -60,28 +60,6 @@ func (s *SafeMap[K, V]) Iterate(callback func(key K, value V)) {
 		callback(cast[K](key), cast[V](value))
 		return true
 	})
-}
-
-// Find returns the first key-value pair whose value satisfies match.
-func (s *SafeMap[K, V]) Find(match func(value V) bool) (K, V, bool) {
-	var (
-		foundKey   K
-		foundValue V
-		found      bool
-	)
-
-	s.m.Range(func(key, value any) bool {
-		v := cast[V](value)
-		if !match(v) {
-			return true
-		}
-
-		foundKey, foundValue, found = cast[K](key), v, true
-
-		return false
-	})
-
-	return foundKey, foundValue, found
 }
 
 // Size returns the number of key-value pairs in the map. Pairs stored or removed while it counts

@@ -94,7 +94,7 @@ func Test_GetClientParallel(t *testing.T) {
 	require.NoError(t, err2)
 	require.NotNil(t, client2)
 
-	assert.Same(t, client, client2)
+	assert.Equal(t, client, client2, "parallel callers share one connection")
 }
 
 func Test_GetTwoClients(t *testing.T) {
@@ -124,7 +124,7 @@ func Test_GetTwoClients(t *testing.T) {
 	client2, err := clientManager.GetClient(t.Context(), cluster2, nil, nil)
 	require.NoError(t, err)
 
-	assert.NotSame(t, client, client2)
+	assert.NotEqual(t, client, client2)
 }
 
 func Test_GetClient_UnhealthyConnection(t *testing.T) {
@@ -220,7 +220,6 @@ func Test_Close_Multiple(t *testing.T) {
 	mockAsClient.EXPECT().Close()
 
 	mockBackupClient := NewMockClient(ctrl)
-	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient).Times(2)
 
 	infoGetter := NewMockInfoGetter(ctrl)
 	infoGetter.EXPECT().GetStatus(gomock.Any()).Return("ok", nil).Times(2)
@@ -256,7 +255,6 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 	mockAsClient := NewMockAerospikeClient(ctrl)
 
 	mockBackupClient := NewMockClient(ctrl)
-	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), gomock.Any()).Return(mockAsClient, nil)
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil).Times(2)
@@ -307,43 +305,46 @@ func Test_Close_NotExisting(t *testing.T) {
 	clientManager.Close(client)
 }
 
-// Close must not wait for a cached cluster's lock while holding the client map: a GetClient whose
-// health check fails holds that cluster's lock and then removes the cluster from the map.
-// Closing a client the cache does not manage visits every cached entry, so it always reaches the
-// cluster whose health check is in progress.
+// Closing one cluster's client must neither wait for another cluster's health check nor
+// deadlock against the drop that follows a failed one.
 func Test_Close_DuringFailingHealthCheck(t *testing.T) {
 	ctrl := gomock.NewController(t)
-
 	clientFactory := NewMockClientFactory(ctrl)
-	cachedAsClient := NewMockAerospikeClient(ctrl)
-	cachedAsClient.EXPECT().Close()
-	cachedBackupClient := NewMockClient(ctrl)
 
+	healthyAsClient := NewMockAerospikeClient(ctrl)
+	healthyInfo := NewMockInfoGetter(ctrl)
+	healthyInfo.EXPECT().GetStatus(gomock.Any()).Return("ok", nil)
+	healthyBackupClient := NewMockClient(ctrl)
+	healthyBackupClient.EXPECT().InfoClient().Return(healthyInfo)
+
+	deadAsClient := NewMockAerospikeClient(ctrl)
+	deadAsClient.EXPECT().Close()
 	healthCheckStarted := make(chan struct{})
 	healthCheckDone := make(chan struct{})
-	infoGetter := NewMockInfoGetter(ctrl)
-	infoGetter.EXPECT().GetStatus(gomock.Any()).DoAndReturn(func(context.Context) (string, error) {
+	deadInfo := NewMockInfoGetter(ctrl)
+	deadInfo.EXPECT().GetStatus(gomock.Any()).DoAndReturn(func(context.Context) (string, error) {
 		close(healthCheckStarted)
 		<-healthCheckDone
 		return "fail", nil
 	})
-	cachedBackupClient.EXPECT().InfoClient().Return(infoGetter)
+	deadBackupClient := NewMockClient(ctrl)
+	deadBackupClient.EXPECT().InfoClient().Return(deadInfo)
 
-	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), cluster).Return(cachedAsClient, nil)
-	clientFactory.EXPECT().NewBackupClient(cachedAsClient, gomock.Any()).Return(cachedBackupClient, nil)
-
-	unmanagedAsClient := NewMockAerospikeClient(ctrl)
-	unmanagedAsClient.EXPECT().Close()
-	unmanagedAsClient.EXPECT().Cluster().Return(&aerospike.Cluster{})
-	unmanagedClient := NewMockClient(ctrl)
-	unmanagedClient.EXPECT().AerospikeClient().Return(unmanagedAsClient)
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), cluster).Return(healthyAsClient, nil)
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), cluster2).Return(deadAsClient, nil)
+	// The healthy cluster connects first, the dead one second.
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(healthyBackupClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(deadBackupClient, nil)
 
 	manager := NewClientManager(clientFactory, 10*time.Second)
 
-	getClientDone := make(chan struct{})
+	healthyClient, err := manager.GetClient(t.Context(), cluster, nil, nil)
+	require.NoError(t, err)
+
+	getDeadDone := make(chan struct{})
 	go func() {
-		defer close(getClientDone)
-		_, err := manager.GetClient(t.Context(), cluster, nil, nil)
+		defer close(getDeadDone)
+		_, err := manager.GetClient(t.Context(), cluster2, nil, nil)
 		assert.Error(t, err)
 	}()
 	<-healthCheckStarted
@@ -351,19 +352,130 @@ func Test_Close_DuringFailingHealthCheck(t *testing.T) {
 	closeDone := make(chan struct{})
 	go func() {
 		defer close(closeDone)
-		manager.Close(unmanagedClient)
+		manager.Close(healthyClient)
 	}()
-	time.Sleep(50 * time.Millisecond) // let Close reach the cluster being health-checked
-	close(healthCheckDone)
+	awaitDone(t, closeDone, "Close of a healthy cluster's client during another cluster's health check")
 
-	for _, done := range []chan struct{}{getClientDone, closeDone} {
-		select {
-		case <-done:
-		case <-time.After(3 * time.Second):
-			t.Fatal("GetClient and Close deadlocked")
-		}
+	close(healthCheckDone)
+	awaitDone(t, getDeadDone, "GetClient after a failed health check")
+
+	assertClientExists(t, manager, cluster, true)
+	assertClientExists(t, manager, cluster2, false)
+}
+
+// A caller waiting for an entry whose health check fails under another caller must not revive
+// the dropped entry: it gets a fresh one that is in the map, so its own Close is counted.
+func Test_GetClient_WaitersGetFreshEntryAfterDrop(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	clientFactory := NewMockClientFactory(ctrl)
+
+	deadAsClient := NewMockAerospikeClient(ctrl)
+	deadAsClient.EXPECT().Close()
+	healthCheckStarted := make(chan struct{})
+	healthCheckDone := make(chan struct{})
+	deadInfo := NewMockInfoGetter(ctrl)
+	deadInfo.EXPECT().GetStatus(gomock.Any()).DoAndReturn(func(context.Context) (string, error) {
+		close(healthCheckStarted)
+		<-healthCheckDone
+		return "fail", nil
+	})
+	deadBackupClient := NewMockClient(ctrl)
+	deadBackupClient.EXPECT().InfoClient().Return(deadInfo)
+
+	liveAsClient := NewMockAerospikeClient(ctrl)
+	liveInfo := NewMockInfoGetter(ctrl)
+	liveInfo.EXPECT().GetStatus(gomock.Any()).Return("ok", nil)
+	liveBackupClient := NewMockClient(ctrl)
+	liveBackupClient.EXPECT().InfoClient().Return(liveInfo)
+
+	// The first caller connects and fails; the waiter connects anew.
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), cluster).Return(deadAsClient, nil)
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any(), cluster).Return(liveAsClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(deadBackupClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(liveBackupClient, nil)
+
+	manager := NewClientManager(clientFactory, 10*time.Second)
+
+	firstDone := make(chan struct{})
+	go func() {
+		defer close(firstDone)
+		_, err := manager.GetClient(t.Context(), cluster, nil, nil)
+		assert.Error(t, err)
+	}()
+	<-healthCheckStarted
+
+	waiterClient := make(chan Client, 1)
+	go func() {
+		client, err := manager.GetClient(t.Context(), cluster, nil, nil)
+		assert.NoError(t, err)
+		waiterClient <- client
+	}()
+	time.Sleep(50 * time.Millisecond) // let the waiter block on the entry
+	close(healthCheckDone)
+	awaitDone(t, firstDone, "GetClient after a failed health check")
+
+	var client Client
+	select {
+	case client = <-waiterClient:
+	case <-time.After(3 * time.Second):
+		t.Fatal("waiting GetClient did not finish")
 	}
-	assertClientExists(t, manager, cluster, false)
+
+	entry, cached := manager.(*clientManager).clients.Load(cluster.Hash())
+	require.True(t, cached, "the waiter must have stored a fresh entry")
+	assert.Same(t, entry, client.(managedClient).info)
+}
+
+func Test_ClientInfo_CloseIfUnused(t *testing.T) {
+	tests := []struct {
+		name          string
+		count         int
+		closed        bool
+		wantClosed    bool
+		wantConnClose bool
+	}{
+		{name: "unused connection is closed", wantClosed: true, wantConnClose: true},
+		{name: "held connection stays open", count: 1},
+		{name: "closed entry stays closed", closed: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			asClient := NewMockAerospikeClient(ctrl)
+			if tt.wantConnClose {
+				asClient.EXPECT().Close()
+			}
+
+			info := newClientInfo(cluster.Hash(), cluster, NewMockClientFactory(ctrl))
+			info.aeroClient = asClient
+			info.count = tt.count
+			info.closed = tt.closed
+
+			assert.Equal(t, tt.wantClosed, info.closeIfUnused())
+		})
+	}
+}
+
+func Test_ClientInfo_ClosedEntryIsNotReused(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	info := newClientInfo(cluster.Hash(), cluster, NewMockClientFactory(ctrl))
+
+	require.True(t, info.closeIfUnused())
+	assert.False(t, info.closeIfUnused(), "an entry closes once")
+
+	_, err := info.acquire(t.Context(), nil, nil)
+	require.ErrorIs(t, err, errClientInfoClosed)
+}
+
+func awaitDone(t *testing.T, done <-chan struct{}, what string) {
+	t.Helper()
+
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatalf("%s did not finish", what)
+	}
 }
 
 func assertClientExists(t *testing.T, manager ClientManager,

@@ -73,22 +73,6 @@ func TestSafeMap_IterateCallbackRemoves(t *testing.T) {
 	assert.Zero(t, m.Size())
 }
 
-func TestSafeMap_Find(t *testing.T) {
-	m := NewSafeMap[string, int]()
-	m.Store("a", 1)
-	m.Store("b", 2)
-
-	key, val, found := m.Find(func(value int) bool { return value == 2 })
-	require.True(t, found)
-	assert.Equal(t, "b", key)
-	assert.Equal(t, 2, val)
-
-	key, val, found = m.Find(func(int) bool { return false })
-	assert.False(t, found)
-	assert.Empty(t, key)
-	assert.Zero(t, val)
-}
-
 func TestSafeMap_ConcurrentLoadOrStore(t *testing.T) {
 	m := NewSafeMap[int, int]()
 	const goroutines = 32
