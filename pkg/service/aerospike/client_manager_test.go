@@ -447,7 +447,7 @@ func Test_ClientInfo_CloseIfUnused(t *testing.T) {
 				asClient.EXPECT().Close()
 			}
 
-			info := newClientInfo(cluster.Hash(), cluster, NewMockClientFactory(ctrl))
+			info := newClientInfo(cluster.Hash(), cluster)
 			info.aeroClient = asClient
 			info.count = tt.count
 			info.closed = tt.closed
@@ -458,13 +458,12 @@ func Test_ClientInfo_CloseIfUnused(t *testing.T) {
 }
 
 func Test_ClientInfo_ClosedEntryIsNotReused(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	info := newClientInfo(cluster.Hash(), cluster, NewMockClientFactory(ctrl))
+	info := newClientInfo(cluster.Hash(), cluster)
 
 	require.True(t, info.closeIfUnused())
 	assert.False(t, info.closeIfUnused(), "an entry closes once")
 
-	_, err := info.acquire(t.Context(), nil, nil)
+	_, err := info.acquire(t.Context(), NewMockClientFactory(gomock.NewController(t)), nil, nil)
 	require.ErrorIs(t, err, errClientInfoClosed)
 }
 

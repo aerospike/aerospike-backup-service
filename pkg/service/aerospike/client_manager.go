@@ -71,7 +71,6 @@ type managedClient struct {
 type clientInfo struct {
 	key         uint64
 	cluster     *model.AerospikeCluster
-	factory     ClientFactory
 	scanLimiter syncutil.Limiter
 
 	// mu protects the fields below.
@@ -84,8 +83,8 @@ type clientInfo struct {
 	closed bool
 }
 
-func newClientInfo(key uint64, cluster *model.AerospikeCluster, factory ClientFactory) *clientInfo {
-	info := &clientInfo{key: key, cluster: cluster, factory: factory}
+func newClientInfo(key uint64, cluster *model.AerospikeCluster) *clientInfo {
+	info := &clientInfo{key: key, cluster: cluster}
 	if cluster.MaxParallelScans != nil {
 		info.scanLimiter = semaphore.NewWeighted(int64(*cluster.MaxParallelScans))
 	}
@@ -93,11 +92,12 @@ func newClientInfo(key uint64, cluster *model.AerospikeCluster, factory ClientFa
 	return info
 }
 
-// acquire connects on first use, checks that the connection is healthy and takes a reference.
-// A failed check leaves the connection in place for the callers that already hold it; the
-// caller decides whether to drop it with closeIfUnused.
+// acquire connects through factory on first use, checks that the connection is healthy and
+// takes a reference. A failed check leaves the connection in place for the callers that already
+// hold it; the caller decides whether to drop it with closeIfUnused.
 func (info *clientInfo) acquire(
 	ctx context.Context,
+	factory ClientFactory,
 	localLimiter syncutil.Limiter,
 	logger *slog.Logger,
 ) (Client, error) {
@@ -109,14 +109,14 @@ func (info *clientInfo) acquire(
 	}
 
 	if info.aeroClient == nil {
-		aeroClient, err := info.factory.NewClientWithPolicyAndHost(ctx, info.cluster)
+		aeroClient, err := factory.NewClientWithPolicyAndHost(ctx, info.cluster)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to aerospike cluster: %w", err)
 		}
 		info.aeroClient = aeroClient
 	}
 
-	client, err := info.newBackupClient(localLimiter, logger)
+	client, err := info.newBackupClient(factory, localLimiter, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,11 @@ func (info *clientInfo) acquire(
 }
 
 // newBackupClient wraps the connection for one caller. The caller must hold mu.
-func (info *clientInfo) newBackupClient(localLimiter syncutil.Limiter, logger *slog.Logger) (Client, error) {
+func (info *clientInfo) newBackupClient(
+	factory ClientFactory,
+	localLimiter syncutil.Limiter,
+	logger *slog.Logger,
+) (Client, error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -149,7 +153,7 @@ func (info *clientInfo) newBackupClient(localLimiter syncutil.Limiter, logger *s
 		backup.WithScanLimiter(syncutil.NewDualLimiter(info.scanLimiter, localLimiter)),
 	}
 
-	return info.factory.NewBackupClient(info.aeroClient, options...)
+	return factory.NewBackupClient(info.aeroClient, options...)
 }
 
 // release drops one reference. When the last one goes, onIdle runs after closeDelay unless a
@@ -222,9 +226,9 @@ func (cm *clientManager) GetClient(
 	// An entry closed between LoadOrStore and acquire is on its way out of the map: its closer
 	// removes it right after closing it, so the next round gets a fresh one.
 	for {
-		info := cm.clients.LoadOrStore(clusterKey, newClientInfo(clusterKey, cluster, cm.clientFactory))
+		info := cm.clients.LoadOrStore(clusterKey, newClientInfo(clusterKey, cluster))
 
-		client, err := info.acquire(ctx, localLimiter, logger)
+		client, err := info.acquire(ctx, cm.clientFactory, localLimiter, logger)
 		if errors.Is(err, errClientInfoClosed) {
 			continue
 		}
