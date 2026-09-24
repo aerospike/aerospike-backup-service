@@ -105,28 +105,6 @@ generated mocks, entrypoints, and packages that are thin wrappers or hard to uni
 configured in [`.github/workflows/build.yml`](../.github/workflows/build.yml) — currently **80%**. That threshold
 ratchets up as test coverage improves across follow-up PRs.
 
-## Keeping the object graph honest
-
-[`internal/archcheck`](../internal/archcheck) enforces the newable/injectable rule. Components are built once by
-the composition root, `internal/app.InitComponents`, and may hold each other. Newables (configuration, routine and
-job state, per-cluster entries) are created at run time. A newable never keeps a component in a field: it takes
-the component as a method argument.
-
-There is no annotation for "component", so the check reads the set off the root: whatever `InitComponents` and the
-constructors it calls wire, what implements those interfaces, and the fields of `app.Components`. Every other
-struct in `pkg/` and `internal/` is a newable. The rules are in the package documentation.
-
-A violation names the field and the component it holds:
-
-```text
-pkg/service/aerospike/client_manager.go:75: pkg/service/aerospike.clientInfo.factory holds component aerospike.ClientFactory; pass it to the method that needs it instead
-```
-
-The exceptions are the `allowed` table in
-[`archcheck_test.go`](../internal/archcheck/archcheck_test.go), each with its reason. The only reason that holds up
-is a caller you don't control fixing the method signature: Quartz calls `Job.Execute(ctx)`, and nothing else. An
-entry that stops matching fails the test, so the table only shrinks. It runs under `make test`.
-
 ## Generated artifacts
 
 Two sets of files are generated from source and checked into the repository. Each has a `make <x>` target to
