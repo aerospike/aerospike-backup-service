@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -199,5 +200,38 @@ func TestFinishScan_Idempotency(t *testing.T) {
 	case <-tracker.scanDone:
 	default:
 		t.Fatal("scanDone should be closed")
+	}
+}
+
+func TestAuditTrackerScanChannelDoubleClose(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("PANIC escaped routineTracker: %v\n"+
+				"In production this is inside a goroutine with no recover, so it kills the process.", r)
+		}
+	}()
+
+	for range 2000 {
+		tracker := newRoutineTracker()
+
+		// Scan 1 has begun; its endScan is still pending.
+		ch1 := tracker.beginScan()
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		// Scan 1 finishing
+		go func() {
+			defer wg.Done()
+			tracker.endScan(ch1)
+		}()
+
+		// Scan 2 starting: beginScan closes tracker.scanDone, which is still ch1.
+		go func() {
+			defer wg.Done()
+			tracker.endScan(tracker.beginScan())
+		}()
+
+		wg.Wait()
 	}
 }
