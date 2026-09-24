@@ -38,41 +38,17 @@ func TestSafeMap_LoadOrStore(t *testing.T) {
 	assert.Equal(t, 10, m.LoadOrStore("k", 99))
 }
 
-func TestSafeMap_Apply(t *testing.T) {
-	m := NewSafeMap[string, int]()
-	m.Store("count", 1)
+func TestSafeMap_NilInterfaceValue(t *testing.T) {
+	m := NewSafeMap[string, error]()
+	m.Store("none", nil)
 
-	called := false
-	m.Apply("count", func(v int) {
-		called = true
-		assert.Equal(t, 1, v)
-	})
-	assert.True(t, called)
-
-	m.Apply("missing", func(int) {
-		t.Fatal("callback should not run for missing key")
-	})
-}
-
-func TestSafeMap_ApplyOrCreate(t *testing.T) {
-	m := NewSafeMap[string, int]()
-	m.Store("existing", 5)
-
-	seen := 0
-	m.ApplyOrCreate("existing", func(v int) {
-		seen = v
-	}, 99)
-	assert.Equal(t, 5, seen)
-
-	m.ApplyOrCreate("new", func(int) {
-		t.Fatal("callback should not run when key is created")
-	}, 7)
-	val, ok := m.Load("new")
+	val, ok := m.Load("none")
 	require.True(t, ok)
-	assert.Equal(t, 7, val)
+	assert.NoError(t, val)
+	assert.NoError(t, m.LoadOrStore("none", assert.AnError))
 }
 
-func TestSafeMap_IterateReplaceContentSize(t *testing.T) {
+func TestSafeMap_IterateSize(t *testing.T) {
 	m := NewSafeMap[string, int]()
 	m.Store("a", 1)
 	m.Store("b", 2)
@@ -83,12 +59,34 @@ func TestSafeMap_IterateReplaceContentSize(t *testing.T) {
 	})
 	assert.Equal(t, map[string]int{"a": 1, "b": 2}, seen)
 	assert.Equal(t, 2, m.Size())
+}
 
-	m.ReplaceContent(map[string]int{"c": 3})
-	assert.Equal(t, 1, m.Size())
-	val, ok := m.Load("c")
-	require.True(t, ok)
-	assert.Equal(t, 3, val)
+// The callback may modify the map it is iterating over.
+func TestSafeMap_IterateCallbackRemoves(t *testing.T) {
+	m := NewSafeMap[string, int]()
+	m.Store("a", 1)
+	m.Store("b", 2)
+
+	m.Iterate(func(key string, _ int) {
+		m.Remove(key)
+	})
+	assert.Zero(t, m.Size())
+}
+
+func TestSafeMap_Find(t *testing.T) {
+	m := NewSafeMap[string, int]()
+	m.Store("a", 1)
+	m.Store("b", 2)
+
+	key, val, found := m.Find(func(value int) bool { return value == 2 })
+	require.True(t, found)
+	assert.Equal(t, "b", key)
+	assert.Equal(t, 2, val)
+
+	key, val, found = m.Find(func(int) bool { return false })
+	assert.False(t, found)
+	assert.Empty(t, key)
+	assert.Zero(t, val)
 }
 
 func TestSafeMap_ConcurrentLoadOrStore(t *testing.T) {

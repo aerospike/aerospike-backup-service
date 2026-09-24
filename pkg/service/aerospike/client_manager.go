@@ -63,6 +63,14 @@ type clientInfo struct {
 	closeTimer *time.Timer
 }
 
+// owns reports whether aeroClient is the connection this entry manages.
+func (info *clientInfo) owns(aeroClient backup.AerospikeClient) bool {
+	info.mu.RLock()
+	defer info.mu.RUnlock()
+
+	return info.aeroClient == aeroClient
+}
+
 // NewClientManager creates a ClientManager.
 // closeDelay specifies how long to wait before actually closing the client after the last user releases it.
 func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Duration) ClientManager {
@@ -185,7 +193,10 @@ func (cm *clientManager) createBackupClient(
 // Close ensures that the specified backup client is released.
 func (cm *clientManager) Close(client Client) {
 	aeroClient := client.AerospikeClient()
-	key, info, found := cm.findInfo(aeroClient)
+	key, info, found := cm.clients.Find(func(info *clientInfo) bool {
+		return info.owns(aeroClient)
+	})
+
 	if !found {
 		// If it's not in our cache, we must close it immediately because we aren't managing its lifecycle.
 		aeroClient.Close()
@@ -195,28 +206,6 @@ func (cm *clientManager) Close(client Client) {
 	}
 
 	cm.decrementRef(info, key)
-}
-
-// findInfo returns the cached state that owns aeroClient.
-// Entries are copied out of the map before their locks are taken: GetClient and the idle-close
-// timer hold info.mu while removing from the map, so locking info.mu under the map lock deadlocks.
-func (cm *clientManager) findInfo(aeroClient backup.AerospikeClient) (uint64, *clientInfo, bool) {
-	infos := make(map[uint64]*clientInfo)
-	cm.clients.Iterate(func(key uint64, info *clientInfo) {
-		infos[key] = info
-	})
-
-	for key, info := range infos {
-		info.mu.RLock()
-		owns := info.aeroClient == aeroClient
-		info.mu.RUnlock()
-
-		if owns {
-			return key, info, true
-		}
-	}
-
-	return 0, nil, false
 }
 
 // decrementRef decreases the reference count and schedules closing if count reaches zero.
