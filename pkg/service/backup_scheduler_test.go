@@ -1,11 +1,13 @@
 package service
 
 import (
+	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/reugn/go-quartz/quartz"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -181,13 +183,54 @@ func TestBackupScheduler_TriggerAdHocBackup_EnforcesMinimumDelay(t *testing.T) {
 	require.NoError(t, bs.TriggerAdHocFullBackup(routine, 0))
 }
 
+// Triggers issued back to back, within the same millisecond, each get their own job.
+func TestBackupScheduler_TriggerAdHocBackup_BackToBackTriggersDoNotCollide(t *testing.T) {
+	scheduler, err := NewScheduler(slog.Default())
+	require.NoError(t, err)
+	bs := NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil))
+	routine := &model.BackupRoutine{Name: "routine-1"}
+
+	require.NoError(t, bs.TriggerAdHocFullBackup(routine, time.Hour))
+	require.NoError(t, bs.TriggerAdHocFullBackup(routine, time.Hour))
+	require.NoError(t, bs.TriggerAdHocIncrementalBackup(routine, time.Hour))
+
+	keys, err := scheduler.GetJobKeys()
+	require.NoError(t, err)
+	assert.Len(t, keys, 3)
+}
+
+// DeleteAdHocJobs removes the routine's pending on-demand jobs only, even when another
+// routine's name starts with it, and leaves its periodic jobs alone.
+func TestBackupScheduler_DeleteAdHocJobs(t *testing.T) {
+	scheduler, err := NewScheduler(slog.Default())
+	require.NoError(t, err)
+	bs := NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil))
+
+	daily := &model.BackupRoutine{Name: "daily", IntervalCron: "@daily", Timezone: model.NewServiceLocation("", nil)}
+	other := &model.BackupRoutine{Name: "daily-adhoc-full"}
+	require.NoError(t, bs.ScheduleRoutines([]*model.BackupRoutine{daily}))
+	require.NoError(t, bs.TriggerAdHocFullBackup(daily, time.Hour))
+	require.NoError(t, bs.TriggerAdHocIncrementalBackup(daily, time.Hour))
+	require.NoError(t, bs.TriggerAdHocFullBackup(other, time.Hour))
+
+	require.NoError(t, bs.DeleteAdHocJobs("daily"))
+
+	keys, err := scheduler.GetJobKeys()
+	require.NoError(t, err)
+	names := make([]string, 0, len(keys))
+	for _, key := range keys {
+		names = append(names, key.Name())
+	}
+	assert.ElementsMatch(t, []string{"daily-full", "daily-adhoc-full-adhoc-full-3"}, names)
+}
+
 func adHocJobMatcher(routineName string, backupType model.BackupType) func(*quartz.JobDetail) bool {
 	return func(detail *quartz.JobDetail) bool {
 		job, ok := detail.Job().(*backupJob)
 		if !ok {
 			return false
 		}
-		return detail.JobKey().Group() == string(quartzGroupAdHoc) &&
+		return detail.JobKey().Group() == adHocGroup(routineName) &&
 			job.routine.Name == routineName &&
 			job.backupType == backupType
 	}

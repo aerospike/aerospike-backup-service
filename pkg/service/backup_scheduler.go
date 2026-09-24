@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/reugn/go-quartz/matcher"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -27,6 +29,8 @@ type JobScheduler interface {
 	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error
 	// DeleteJob removes the job identified by key.
 	DeleteJob(key *quartz.JobKey) error
+	// GetJobKeys returns the keys of the scheduled jobs that satisfy all matchers.
+	GetJobKeys(matchers ...quartz.Matcher[quartz.ScheduledJob]) ([]*quartz.JobKey, error)
 }
 
 // AdHocScheduler triggers a single backup outside the routine's cron schedule.
@@ -42,6 +46,8 @@ type BackupScheduler struct {
 	scheduler JobScheduler
 	// orchestrator runs each fired job (cron or ad-hoc) via [BackupOrchestrator.Backup].
 	orchestrator BackupOrchestrator
+	// adHocSeq numbers ad-hoc jobs, so every trigger gets its own job key.
+	adHocSeq atomic.Uint64
 }
 
 var _ AdHocScheduler = (*BackupScheduler)(nil)
@@ -60,6 +66,24 @@ func NewBackupScheduler(
 // DeleteJob removes a scheduled job (e.g. when clearing periodic jobs on config change).
 func (s *BackupScheduler) DeleteJob(key *quartz.JobKey) error {
 	return s.scheduler.DeleteJob(key)
+}
+
+// DeleteAdHocJobs removes the routine's pending ad-hoc jobs (e.g. when the routine was deleted).
+func (s *BackupScheduler) DeleteAdHocJobs(routineName string) error {
+	keys, err := s.scheduler.GetJobKeys(matcher.JobGroupEquals(adHocGroup(routineName)))
+	if err != nil {
+		return fmt.Errorf("failed to list ad-hoc jobs of routine %q: %w", routineName, err)
+	}
+
+	var errs error
+	for _, key := range keys {
+		// A job that fired meanwhile is gone already, and there is nothing left to delete.
+		if err := s.scheduler.DeleteJob(key); err != nil && !errors.Is(err, quartz.ErrJobNotFound) {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
 }
 
 // ScheduleRoutines registers cron triggers for the given routines (full and optional incremental).
@@ -141,7 +165,10 @@ func (s *BackupScheduler) triggerAdHocBackup(
 	delay time.Duration,
 	jt model.BackupType,
 ) error {
-	jobDetail := quartz.NewJobDetail(newBackupJob(s.orchestrator, routine.Copy(), jt), adhocKey(routine.Name))
+	jobDetail := quartz.NewJobDetail(
+		newBackupJob(s.orchestrator, routine.Copy(), jt),
+		adhocKey(routine.Name, jt, s.adHocSeq.Add(1)),
+	)
 
 	return s.scheduler.ScheduleJob(jobDetail, quartz.NewRunOnceTrigger(max(delay, minAdHocBackupDelay)))
 }
@@ -173,8 +200,15 @@ func jobKey(routineName string, jt model.BackupType) *quartz.JobKey {
 	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupScheduled))
 }
 
-// adhocKey builds a unique job key for a one-off backup in the ad-hoc Quartz group.
-func adhocKey(name string) *quartz.JobKey {
-	jobName := fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli())
-	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupAdHoc))
+// adhocKey builds the job key for a one-off backup in the routine's ad-hoc group. seq makes it
+// unique among the jobs of one scheduler, however close together they are triggered.
+func adhocKey(routineName string, jt model.BackupType, seq uint64) *quartz.JobKey {
+	jobName := fmt.Sprintf("%s-adhoc-%s-%d", routineName, jt, seq)
+	return quartz.NewJobKeyWithGroup(jobName, adHocGroup(routineName))
+}
+
+// adHocGroup is the Quartz group holding one routine's ad-hoc jobs, so they can be found by an
+// exact match on the routine name rather than by parsing job names.
+func adHocGroup(routineName string) string {
+	return fmt.Sprintf("%s/%s", quartzGroupAdHoc, routineName)
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/reugn/go-quartz/quartz"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -52,15 +53,18 @@ func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T
 	require.NoError(t, applier.ApplyNewConfig())
 }
 
-func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
+func TestConfigApplier_ApplyNewConfig_UnschedulesDeletedRoutine(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	cfg := model.NewConfig()
 	cfg.InvalidateRoutines([]string{"removed-routine"})
 
+	adHocJob := adhocKey("removed-routine", model.BackupTypeFull, 1)
 	scheduler := NewMockJobScheduler(ctrl)
 	scheduler.EXPECT().DeleteJob(jobKey("removed-routine", model.BackupTypeFull)).Return(nil)
 	scheduler.EXPECT().DeleteJob(jobKey("removed-routine", model.BackupTypeIncremental)).Return(nil)
+	scheduler.EXPECT().GetJobKeys(gomock.Any()).Return([]*quartz.JobKey{adHocJob}, nil)
+	scheduler.EXPECT().DeleteJob(adHocJob).Return(nil)
 
 	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().RequestHistorySync(gomock.Len(0))
