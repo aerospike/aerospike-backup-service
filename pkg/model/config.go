@@ -225,6 +225,25 @@ func (c *Config) SetBackupConfig(other *BackupConfig) {
 	c.backupConfig = *other
 }
 
+// ReplaceBackupConfig swaps in a whole new backup configuration and invalidates every routine of
+// both the old and the new one, so a routine the new configuration drops is unscheduled too.
+func (c *Config) ReplaceBackupConfig(other *BackupConfig) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	invalidated := c.backupConfig.invalidatedRoutines
+	maps.Copy(invalidated, other.invalidatedRoutines)
+	for name := range c.backupConfig.BackupRoutines {
+		invalidated[name] = struct{}{}
+	}
+	for name := range other.BackupRoutines {
+		invalidated[name] = struct{}{}
+	}
+
+	c.backupConfig = *other
+	c.backupConfig.invalidatedRoutines = invalidated
+}
+
 // InvalidateRoutines marks the given routines as needing reschedule and history rescan.
 func (c *Config) InvalidateRoutines(names []string) {
 	if len(names) == 0 {
@@ -236,16 +255,6 @@ func (c *Config) InvalidateRoutines(names []string) {
 
 	for _, name := range names {
 		c.invalidateRoutine(name)
-	}
-}
-
-// InvalidateAllRoutines marks every configured routine as invalidated.
-func (c *Config) InvalidateAllRoutines() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	for _, r := range c.backupConfig.BackupRoutines {
-		c.invalidateRoutine(r.Name)
 	}
 }
 

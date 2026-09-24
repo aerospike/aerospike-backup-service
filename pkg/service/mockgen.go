@@ -972,6 +972,25 @@ func (mr *MockJobSchedulerMockRecorder) DeleteJob(key any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteJob", reflect.TypeOf((*MockJobScheduler)(nil).DeleteJob), key)
 }
 
+// GetJobKeys mocks base method.
+func (m *MockJobScheduler) GetJobKeys(matchers ...quartz.Matcher[quartz.ScheduledJob]) ([]*quartz.JobKey, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{}
+	for _, a := range matchers {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetJobKeys", varargs...)
+	ret0, _ := ret[0].([]*quartz.JobKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetJobKeys indicates an expected call of GetJobKeys.
+func (mr *MockJobSchedulerMockRecorder) GetJobKeys(matchers ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJobKeys", reflect.TypeOf((*MockJobScheduler)(nil).GetJobKeys), matchers...)
+}
+
 // ScheduleJob mocks base method.
 func (m *MockJobScheduler) ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error {
 	m.ctrl.T.Helper()

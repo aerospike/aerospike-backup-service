@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -12,8 +13,9 @@ import (
 // ConfigApplier reschedules jobs and refreshes backup history for the routines that
 // a configuration change invalidated.
 type ConfigApplier interface {
-	// ApplyNewConfig reschedules the jobs of every invalidated routine and queues a
-	// history sync for those that still exist. The sync runs once the registry is started.
+	// ApplyNewConfig reschedules the jobs of every invalidated routine, removes every job of
+	// the deleted ones, and queues a history sync for those that still exist. The sync runs
+	// once the registry is started.
 	ApplyNewConfig() error
 }
 
@@ -56,12 +58,14 @@ func (a *configApplier) ApplyNewConfig() error {
 	// Quartz has no "replace these jobs atomically" API; we must do two phases:
 	// 1) delete old periodic jobs for invalidated routines,
 	// 2) schedule current ones.
-	// Ad-hoc triggers are intentionally not touched here.
 	a.clearPeriodicSchedulerJobs(invalidatedRoutineNames)
 
-	// Missing name means the routine was deleted after invalidation:
-	// it should be unscheduled only and skipped for reschedule/rescan.
-	routinesToApply := a.existingRoutines(invalidatedRoutineNames)
+	// Missing name means the routine was deleted after invalidation: it is unscheduled,
+	// including pending ad-hoc triggers, and skipped for reschedule/rescan. Ad-hoc triggers of
+	// a routine that still exists are left alone: they run even when the routine is disabled.
+	routinesToApply, deletedRoutineNames := a.splitByExistence(invalidatedRoutineNames)
+
+	a.clearAdHocSchedulerJobs(deletedRoutineNames)
 
 	err := a.backupScheduler.ScheduleRoutines(routinesToApply)
 	if err != nil {
@@ -90,13 +94,30 @@ func (a *configApplier) clearPeriodicSchedulerJobs(routineNames []string) {
 	}
 }
 
-func (a *configApplier) existingRoutines(routineNames []string) []*model.BackupRoutine {
-	existing := make([]*model.BackupRoutine, 0, len(routineNames))
+// clearAdHocSchedulerJobs deletes the pending ad-hoc jobs of the given routines. A failure is
+// logged and does not stop the other routines from being rescheduled.
+func (a *configApplier) clearAdHocSchedulerJobs(routineNames []string) {
 	for _, routineName := range routineNames {
-		if actualRoutine, err := a.config.Routine(routineName); err == nil {
-			existing = append(existing, actualRoutine)
+		if err := a.backupScheduler.DeleteAdHocJobs(routineName); err != nil {
+			slog.Warn("Failed to delete ad-hoc jobs", attr.Routine(routineName), attr.Error(err))
 		}
 	}
+}
 
-	return existing
+// splitByExistence returns the configured routines among routineNames, and the names that
+// no longer have a routine.
+func (a *configApplier) splitByExistence(routineNames []string) ([]*model.BackupRoutine, []string) {
+	existing := make([]*model.BackupRoutine, 0, len(routineNames))
+	var deleted []string
+	for _, routineName := range routineNames {
+		actualRoutine, err := a.config.Routine(routineName)
+		if err != nil {
+			deleted = append(deleted, routineName)
+			continue
+		}
+
+		existing = append(existing, actualRoutine)
+	}
+
+	return existing, deleted
 }
