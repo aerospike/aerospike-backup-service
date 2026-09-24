@@ -10,7 +10,7 @@ below are the ones that change behaviour for an existing installation.
 
 | Path | Created by | Mode |
 | --- | --- | --- |
-| `/etc/aerospike-backup-service` | package | config file `0640` |
+| `/etc/aerospike-backup-service` | package | config file `0600` |
 | `/var/lib/aerospike-backup-service` | `StateDirectory=` | `0750` |
 | `/var/log/aerospike-backup-service` | `LogsDirectory=` | `0750` |
 
@@ -78,7 +78,8 @@ AWS_SECRET_ACCESS_KEY=...
 ```
 
 TLS keys, CA files and `password-path` files must be readable by the service account —
-a `0600 root:root` key is not. Prefer `0640 root:aerospike-backup-service`.
+a `0600 root:root` key is not. Make them `0600` and owned by `aerospike-backup-service`:
+a group-readable key is also readable by every account added to the group to read backups.
 
 ## File modes
 
@@ -89,6 +90,9 @@ account read them, add it to the group:
 ```shell
 sudo usermod -aG aerospike-backup-service alice
 ```
+
+Group membership grants the backups only. The configuration file is `0600`, because it
+holds cluster passwords and cloud keys; the package resets it to that mode on every upgrade.
 
 ## Ports below 1024
 
