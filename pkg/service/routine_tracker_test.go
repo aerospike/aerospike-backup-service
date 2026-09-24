@@ -203,14 +203,8 @@ func TestFinishScan_Idempotency(t *testing.T) {
 	}
 }
 
-func TestAuditTrackerScanChannelDoubleClose(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Fatalf("PANIC escaped routineTracker: %v\n"+
-				"In production this is inside a goroutine with no recover, so it kills the process.", r)
-		}
-	}()
-
+// A double close panics inside the goroutine, which crashes the test binary.
+func TestBeginEndScan_ConcurrentNoDoubleClose(t *testing.T) {
 	for range 2000 {
 		tracker := newRoutineTracker()
 
