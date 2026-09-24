@@ -218,19 +218,16 @@ func TestAuditTrackerScanChannelDoubleClose(t *testing.T) {
 		ch1 := tracker.beginScan()
 
 		var wg sync.WaitGroup
-		wg.Add(2)
 
 		// Scan 1 finishing
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			tracker.endScan(ch1)
-		}()
+		})
 
 		// Scan 2 starting: beginScan closes tracker.scanDone, which is still ch1.
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			tracker.endScan(tracker.beginScan())
-		}()
+		})
 
 		wg.Wait()
 	}
