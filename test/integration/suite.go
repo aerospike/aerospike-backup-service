@@ -36,17 +36,15 @@ type Suite struct {
 	client   *as.Client
 }
 
-// BackupSuite runs backup/restore scenarios against a stock EE node with no security.
-type BackupSuite struct {
-	Suite
-}
-
-// SetupSuite starts the Aerospike container and connects the shared client.
+// startAerospike starts a stock EE node with no security and connects the shared client.
+// It is the common SetupSuite body for any Suite embedder that just needs a working
+// cluster to back up from (BackupSuite, StorageSuite): only the storage or auth side
+// under test varies.
 //
 // Cleanup is registered with T().Cleanup instead of TearDownSuite because testify only registers
 // its TearDownSuite defer after SetupSuite returns; a failure part way through here would
 // otherwise leave the container running.
-func (s *BackupSuite) SetupSuite() {
+func (s *Suite) startAerospike() {
 	t := s.T()
 	ctx := context.Background()
 
@@ -75,6 +73,16 @@ func (s *BackupSuite) SetupSuite() {
 	t.Cleanup(client.Close)
 
 	s.client = client
+}
+
+// BackupSuite runs backup/restore scenarios against a stock EE node with no security.
+type BackupSuite struct {
+	Suite
+}
+
+// SetupSuite starts the Aerospike container and connects the shared client.
+func (s *BackupSuite) SetupSuite() {
+	s.startAerospike()
 }
 
 // SetupTest hands every test an empty namespace. All tests share this one namespace, so they must
