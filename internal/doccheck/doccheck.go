@@ -2,11 +2,14 @@
 // honest.
 //
 // The generated documentation is reproduced byte-for-byte from the code, so it
-// cannot drift. Everything else can: prose that names an endpoint, a YAML
-// snippet a reader will paste, a default written down in a struct tag and again
-// in the code that applies it. The tests here read those artifacts and put them
-// through the same parsers the service uses, so a doc that no longer matches the
-// code fails the build rather than a support ticket.
+// cannot drift. Three things outside it can, and the tests here check each one
+// against the code, so a doc that no longer matches fails the build rather than
+// a support ticket:
+//   - a default written down in a `default:` struct tag and again in the code
+//     that applies it;
+//   - the routes docs/openapi.json describes and the ones the router registers;
+//   - a field name written in prose, against the properties docs/openapi.json
+//     declares.
 package doccheck
 
 import (
@@ -36,20 +39,6 @@ func Root(t *testing.T) string {
 	}
 
 	return root
-}
-
-// Snippet is one fenced code block from a Markdown file.
-type Snippet struct {
-	// File is the path relative to the repository root.
-	File string
-	// Line is the 1-based line of the block's opening fence.
-	Line int
-	// Language is the fence's info string, e.g. "yaml".
-	Language string
-	// Body is the block's content, without the fences.
-	Body string
-	// Generated reports whether build/docs rendered this block from source.
-	Generated bool
 }
 
 // DefaultTag is a documented default: the `default:` struct tag on a DTO field.
