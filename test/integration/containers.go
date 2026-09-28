@@ -20,8 +20,11 @@ func (s *Suite) cleanupContext() context.Context {
 	return context.WithoutCancel(s.T().Context())
 }
 
-// terminateOnCleanup stops the container when the current test ends, first dumping
+// terminateOnCleanup kills the container when the current test ends, first dumping
 // its logs if the test failed.
+//
+// Nothing in a test container is worth a graceful shutdown, and some images
+// (Azurite) ignore SIGTERM, so every stop would wait out Docker's 10s default.
 //
 // It is registered with T().Cleanup rather than done in a TearDown method because
 // testify only registers TearDownSuite after SetupSuite returns: a failure part way
@@ -35,7 +38,7 @@ func (s *Suite) terminateOnCleanup(c testcontainers.Container, name string) {
 			s.logContainer(ctx, c, name)
 		}
 
-		if err := c.Terminate(ctx); err != nil {
+		if err := c.Terminate(ctx, testcontainers.StopTimeout(0)); err != nil {
 			t.Logf("failed to terminate %s container: %v", name, err)
 		}
 	})

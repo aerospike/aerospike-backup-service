@@ -9,10 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	as "github.com/aerospike/aerospike-client-go/v8"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 	"github.com/testcontainers/testcontainers-go"
 	tcAerospike "github.com/testcontainers/testcontainers-go/modules/aerospike"
 )
@@ -53,6 +55,10 @@ const (
 	// nodeStartTimeout bounds how long a restarted node takes to accept logins.
 	nodeStartTimeout = 45 * time.Second
 	nodePollInterval = 500 * time.Millisecond
+
+	// grantTimeout bounds how long new users and roles take to come into force.
+	grantTimeout      = 10 * time.Second
+	grantPollInterval = 100 * time.Millisecond
 )
 
 // authProfile is the transport and client-authentication setup of a secured node.
@@ -124,16 +130,98 @@ func (s *SecuredClusterSuite) startSecuredNode(profile authProfile) securedNode 
 	if profile.requiresClientCert() {
 		s.Require().NoError(admin.CreatePKIUser(nil, pkiUser, []string{readWriteRole}))
 	}
-
-	// Roles are baked into the session token at login, so the admin client that granted
-	// them still holds a token without truncate. Reconnect to pick the new roles up.
 	admin.Close()
-	admin, err := newAdminClient(node.adminSeed)
-	s.Require().NoError(err)
-	s.T().Cleanup(admin.Close)
-	node.adminClient = admin
+
+	node.adminClient = s.waitForGrants(node.adminSeed, profile)
+	s.T().Cleanup(node.adminClient.Close)
 
 	return node
+}
+
+// waitForGrants polls until the users and roles startSecuredNode created are in
+// force, and returns an admin client that holds them.
+//
+// The server applies user and role changes asynchronously: the calls that make
+// them return first, and a login right after GrantRoles can still be refused
+// truncate. So each attempt logs in afresh and exercises the permissions the
+// tests rely on, rather than trusting the calls that granted them.
+func (s *SecuredClusterSuite) waitForGrants(adminSeed dto.SeedNode, profile authProfile) *as.Client {
+	var (
+		admin *as.Client
+		last  error
+	)
+
+	ok := s.eventually(grantTimeout, grantPollInterval, func() bool {
+		admin, last = grantsInForce(adminSeed, profile)
+
+		return last == nil
+	})
+	s.Require().True(ok, "users and roles not in force after %s: %v", grantTimeout, last)
+
+	return admin
+}
+
+// grantsInForce returns an admin client when the superuser can truncate, intUser
+// can read, and (for profileMutualTLS) pkiUser holds its role.
+func grantsInForce(adminSeed dto.SeedNode, profile authProfile) (*as.Client, error) {
+	admin, err := newAdminClient(adminSeed)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := checkGrants(admin, adminSeed, profile); err != nil {
+		admin.Close()
+		return nil, err
+	}
+
+	return admin, nil
+}
+
+func checkGrants(admin *as.Client, adminSeed dto.SeedNode, profile authProfile) error {
+	// The namespace is still empty, so the check deletes nothing.
+	if err := admin.Truncate(nil, namespace, "", nil); err != nil {
+		return fmt.Errorf("%s truncate: %w", adminUser, err)
+	}
+
+	if err := checkCanRead(adminSeed, intUser, intPassword); err != nil {
+		return err
+	}
+
+	if !profile.requiresClientCert() {
+		return nil
+	}
+
+	roles, err := admin.QueryUser(nil, pkiUser)
+	if err != nil {
+		return fmt.Errorf("query %s: %w", pkiUser, err)
+	}
+
+	if !slices.Contains(roles.Roles, readWriteRole) {
+		return fmt.Errorf("%s has roles %v, want %s", pkiUser, roles.Roles, readWriteRole)
+	}
+
+	return nil
+}
+
+// checkCanRead logs in as user and reads a key that does not exist: not found
+// means the read was allowed.
+func checkCanRead(seed dto.SeedNode, user, password string) error {
+	client, err := newClient(seed, user, password)
+	if err != nil {
+		return fmt.Errorf("%s login: %w", user, err)
+	}
+	defer client.Close()
+
+	key, err := as.NewKey(namespace, setName, "grant-check")
+	if err != nil {
+		return err
+	}
+
+	if _, err := client.Get(nil, key); err != nil && !err.Matches(types.KEY_NOT_FOUND_ERROR) {
+		return fmt.Errorf("%s read: %w", user, err)
+	}
+
+	return nil
 }
 
 // assertBackupFromCluster points ABS at node through cluster, runs a full backup of
@@ -349,9 +437,14 @@ func (s *SecuredClusterSuite) waitForTLS(host string, port int, profile authProf
 // profile keeps that port open so bootstrapping is identical regardless of the
 // transport under test.
 func newAdminClient(seed dto.SeedNode) (*as.Client, error) {
+	return newClient(seed, adminUser, adminPassword)
+}
+
+// newClient logs in as user over the plaintext port.
+func newClient(seed dto.SeedNode, user, password string) (*as.Client, error) {
 	policy := as.NewClientPolicy()
-	policy.User = adminUser
-	policy.Password = adminPassword
+	policy.User = user
+	policy.Password = password
 	policy.Timeout = 2 * time.Second
 	policy.UseServicesAlternate = true
 
