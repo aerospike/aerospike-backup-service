@@ -63,7 +63,7 @@ func (s *BackupSuite) TestRestoreByTimestampWorkflow() {
 	s.Run("restore_by_timestamp", func() {
 		successCount := s.metricRestoreSuccessEventCount(e)
 
-		s.Require().NoError(s.client.Truncate(nil, namespace, "", nil))
+		s.truncateNamespace()
 
 		status := s.restoreByTimestamp(e, time.Now())
 
