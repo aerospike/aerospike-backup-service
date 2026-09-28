@@ -40,17 +40,17 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
       `/etc/sysconfig/aerospike-backup-service` (rpm), which the unit reads if present.
     - **Operator-supplied TLS material must be readable by the account.** Cluster and HTTPS `cert-file`, `key-file`,
       `cafile` and `password-path` files that are `0600 root:root` can no longer be read. Make them `0600` and
-      owned by `aerospike-backup-service`; a group-readable key is exposed to every backup reader in the group.
-      These files are re-read on every handshake, so the failure appears at connection time, not at startup.
+      owned by `aerospike-backup-service`. These files are re-read on every handshake, so the failure appears at connection time, not at startup.
     - **A listener below port 1024 no longer binds.** The unit drops every capability. Grant just the one back with a
       drop-in: `AmbientCapabilities=CAP_NET_BIND_SERVICE` and `CapabilityBoundingSet=CAP_NET_BIND_SERVICE`.
-- **Backup artifacts are no longer world-readable** — `UMask=0027` means files are created `0640` and directories
-  `0750`, owned by `aerospike-backup-service`. Anything that read them as another unprivileged user — a separate
-  `asrestore` account, a log shipper, rsync, an NFS consumer — needs to join the group:
-  `sudo usermod -aG aerospike-backup-service <user>`.
+- **Local backup files are owner-only** — in every deployment, not only the packages, `local-storage` backups are
+  created with files `0600` and directories `0700`, owned by the account the service runs as. The modes are fixed and
+  do not follow the umask, so adding another account to the service's group does not give it access. Anything that
+  read backups as another user, such as a separate `asrestore` account, a log shipper, rsync or an NFS consumer, must
+  now run as the service account, for example `sudo -u aerospike-backup-service asrestore ...`, or restore through
+  the service's REST API. Cloud storage is not affected.
 - **The configuration file is owner-only** — every install and upgrade sets it to `0600`, owned by
-  `aerospike-backup-service`, because it holds cluster passwords and cloud keys. Group members, including the backup
-  readers above, cannot read it.
+  `aerospike-backup-service`, because it holds cluster passwords and cloud keys.
 - **The log file directory moves** — from `/var/log/` to
   `/var/log/aerospike-backup-service/`, a directory systemd creates and owns. The
   postinstall script moves an existing log and its rotated siblings into it. If you kept a customised configuration

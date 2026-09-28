@@ -331,6 +331,37 @@ requires a restart) or on a routine (overrides the default). Backup paths and th
       [backup policy](readme/dto/dto.backuppolicy.md), which allows incremental backups to run concurrently.
     - Incremental backups will not run until at least one full backup has been successfully completed.
 
+### What happens when a namespace backup fails?
+
+Each namespace of a routine is backed up on its own. A namespace that fails, for example on a network error, is retried
+under the [retry policy](readme/dto/dto.retrypolicy.md) of the backup policy, and the other namespaces carry on
+unaffected. Every attempt writes to a folder of its own under the run's timestamp:
+
+```
+<routine>/backup/<timestamp>/data/<namespace>      # first attempt
+<routine>/backup/<timestamp>/data/<namespace>.2    # second attempt
+<routine>/backup/<timestamp>/data/<namespace>.3    # and so on
+```
+
+A failed attempt deletes nothing. A folder becomes a backup only when its attempt completes and writes its
+`metadata.yaml`, so a failed attempt's folder is never listed or restored. Once a later attempt completes, the folders of
+the earlier attempts are removed; if the storage does not allow deletes, they stay and a warning is logged. A namespace
+that needed a retry is therefore stored under `<namespace>.<attempt>`: to check which namespaces a run holds, list it
+with <!-- tag getFullBackupsForRoutine -->`GET /v1/backups/full/{name}`<!-- /tag --> or read its `metadata.yaml` files
+rather than matching folder names.
+
+If a namespace fails all its attempts, the run is reported as failed.
+
+:warning: Each namespace is backed up and retried on its own. The service tries to keep the namespaces of a run in
+sync, but does not guarantee it. A run in which any namespace failed is a partial backup and is not reliable, including
+as the starting point of later incremental backups.
+
+**The next incremental backup.** Every attempt keeps the run's start time, and each namespace records it as `created` in
+its `metadata.yaml`, however long its retries took. When the next incremental backup starts from this run (from the
+latest backup in differential mode, from the latest full backup in cumulative mode; see
+[below](#how-does-the-backup-service-identify-what-data-to-back-up-during-incremental-backups)), it starts from that
+time, so records changed while a namespace was being retried are in the next incremental backup.
+
 ### Can multiple backup routines be performed simultaneously?
 
 Yes, multiple backup routines can run in parallel. Furthermore, it is possible to back up different namespaces from the

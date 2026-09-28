@@ -78,21 +78,23 @@ AWS_SECRET_ACCESS_KEY=...
 ```
 
 TLS keys, CA files and `password-path` files must be readable by the service account —
-a `0600 root:root` key is not. Make them `0600` and owned by `aerospike-backup-service`:
-a group-readable key is also readable by every account added to the group to read backups.
+a `0600 root:root` key is not. Make them `0600` and owned by `aerospike-backup-service`.
 
 ## File modes
 
-`UMask=0027` means backup artifacts are created `0640`, directories `0750`, owned by
-`aerospike-backup-service`. They are no longer world-readable. To let an operator
-account read them, add it to the group:
+Local backups are created with files `0600` and directories `0700`, owned by
+`aerospike-backup-service`. The modes are fixed and do not follow `UMask=`, so adding an
+account to the `aerospike-backup-service` group does not let it read them. To read them
+from an operator account, run the tool as the service account:
 
 ```shell
-sudo usermod -aG aerospike-backup-service alice
+sudo -u aerospike-backup-service asrestore --directory <backup-directory> ...
 ```
 
-Group membership grants the backups only. The configuration file is `0600`, because it
-holds cluster passwords and cloud keys; the package resets it to that mode on every upgrade.
+or restore through the service's REST API.
+
+The configuration file is `0600`, because it holds cluster passwords and cloud keys; the
+package resets it to that mode on every upgrade.
 
 ## Ports below 1024
 

@@ -17,10 +17,12 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
 - The `.deb` and `.rpm` packages run the service as the unprivileged system account
   `aerospike-backup-service` instead of root, under a systemd sandbox (`ProtectSystem=strict`,
   `ProtectHome=true`, empty capability set, `SystemCallFilter=@system-service` with
-  `SystemCallArchitectures=native`, `UMask=0027`). The configuration file ships `0640` and backup
-  artifacts are no longer world-readable. See [docs/migration.md](docs/migration.md) for the
-  upgrade steps — local-storage paths, cloud credentials, TLS file modes and privileged ports all
-  need attention on an existing installation.
+  `SystemCallArchitectures=native`, `UMask=0027`). The configuration file ships `0600`. See
+  [docs/migration.md](docs/migration.md) for the upgrade steps — local-storage paths, cloud
+  credentials, TLS file modes and privileged ports all need attention on an existing installation.
+- Local-storage backups are created owner-only in every deployment: files `0600`, directories
+  `0700`, regardless of the umask. They were `0644`/`0755` under a default umask. See
+  [docs/migration.md](docs/migration.md).
 
 ### Changed
 
