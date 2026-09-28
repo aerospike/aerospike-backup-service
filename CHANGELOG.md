@@ -10,7 +10,7 @@ Entries below `v3.0.0` predate this file; see the
 Detailed upgrade instructions (breaking changes and how to adapt existing configuration) live in
 [docs/migration.md](docs/migration.md); this file is the changelog, that one is the upgrade guide.
 
-## 3.7.0
+## [3.7.0] - TBD
 
 ### Added
 
@@ -34,7 +34,6 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
   data; permanent failures are not retried, and a namespace that cannot start fails the run.
 - Retention deletes only completed incrementals; partial backups left by a crashed run are removed
   at startup.
-
 
 ### Security
 
@@ -164,7 +163,7 @@ Patch release; see the GitHub release notes.
 - **Breaking:** restore requests now require a `backup-data-path` field; the `Storage.path` field is the storage
   root only and can no longer be reused as the backup data location.
 
-[Unreleased]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.1...HEAD
+[3.7.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.1...v3.7.0
 [3.6.1]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.4.0...v3.5.0
