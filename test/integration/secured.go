@@ -224,18 +224,13 @@ func checkCanRead(seed dto.SeedNode, user, password string) error {
 	return nil
 }
 
-// assertBackupFromCluster points ABS at node through cluster, runs a full backup of
-// three freshly seeded records, and asserts all three are in it.
-func (s *SecuredClusterSuite) assertBackupFromCluster(node securedNode, cluster *dto.AerospikeCluster) {
-	s.Require().NoError(node.adminClient.Truncate(nil, namespace, "", nil))
-	s.seedRecordsWith(node.adminClient, []int{10, 20, 30})
-
-	e := s.setupEnv(func(c *dto.Config) {
+// assertBackupRestoreViaCluster round-trips data through the secured node, with ABS
+// connecting as cluster describes: the backup proves the user can read, the restore
+// that it can write.
+func (s *SecuredClusterSuite) assertBackupRestoreViaCluster(node securedNode, cluster *dto.AerospikeCluster) {
+	s.assertBackupRestore(node.adminClient, func(c *dto.Config) {
 		c.AerospikeClusters[clusterName] = cluster
 	})
-	s.triggerFullBackup(e)
-
-	s.assertBackupDetails(s.waitForFullBackup(e), 3)
 }
 
 // dto.TLS is ABS's client-side TLS config for Aerospike. It does not configure the

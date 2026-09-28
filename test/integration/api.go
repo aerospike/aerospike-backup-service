@@ -31,17 +31,18 @@ func (s *Suite) triggerIncrementalBackup(e *env) {
 	s.triggerBackup(e, model.BackupTypeIncremental)
 }
 
-// waitForFullBackup polls until the routine reports exactly one full backup, and
-// returns it. It fails as soon as a full backup failure is counted in the metrics.
+// waitForFullBackup polls until the full backup triggerFullBackup started is
+// listed, and returns it. It fails as soon as a full backup failure is counted in
+// the metrics.
 func (s *Suite) waitForFullBackup(e *env) dto.BackupDetails {
-	return s.waitForBackups(e, model.BackupTypeFull, 1)
+	return s.waitForNewBackup(e, model.BackupTypeFull)
 }
 
-// waitForIncrementalBackup polls until the routine reports want incremental backups,
-// and returns the last one. It fails as soon as an incremental backup failure is
-// counted in the metrics.
-func (s *Suite) waitForIncrementalBackup(e *env, want int) dto.BackupDetails {
-	return s.waitForBackups(e, model.BackupTypeIncremental, want)
+// waitForIncrementalBackup polls until the incremental backup
+// triggerIncrementalBackup started is listed, and returns it. It fails as soon as an
+// incremental backup failure is counted in the metrics.
+func (s *Suite) waitForIncrementalBackup(e *env) dto.BackupDetails {
+	return s.waitForNewBackup(e, model.BackupTypeIncremental)
 }
 
 // defaultRestoreRequest restores the backup at key from the baseConfig storage into
@@ -79,7 +80,17 @@ func (s *Suite) restoreByTimestamp(e *env, timestamp time.Time) dto.RestoreJobSt
 	})
 }
 
+// triggerBackup records when the newest listed backup of backupType was created,
+// then starts one.
+//
+// That time is what waitForNewBackup waits to be passed. Storage may already hold
+// backups of the same routine (a bucket shared by several subtests), and retention
+// may delete some as new ones land, so neither a fixed count nor "one more than
+// before" identifies the backup just started; being created after the newest one
+// listed does.
 func (s *Suite) triggerBackup(e *env, backupType model.BackupType) {
+	e.newestBeforeTrigger[backupType] = s.newestBackupCreated(e, backupType)
+
 	status, body := s.do(e, http.MethodPost, e.backupsURL(backupType), nil)
 	s.Require().Equal(http.StatusAccepted, status, "trigger %s backup: %s", backupType, body)
 }
@@ -94,20 +105,40 @@ func (s *Suite) getBackups(e *env, backupType model.BackupType) []dto.BackupDeta
 	return backups
 }
 
-func (s *Suite) waitForBackups(e *env, backupType model.BackupType, want int) dto.BackupDetails {
-	var backups []dto.BackupDetails
+// waitForNewBackup polls until a backup of backupType created after the newest one
+// listed at the last trigger appears, and returns it.
+func (s *Suite) waitForNewBackup(e *env, backupType model.BackupType) dto.BackupDetails {
+	after := e.newestBeforeTrigger[backupType]
+
+	var newest dto.BackupDetails
 
 	ok := s.eventually(backupTimeout, pollInterval, func() bool {
 		s.Require().Zero(s.metricBackupEventCount(e, backupType, outcomeFailure), "%s backup failed", backupType)
 
-		backups = s.getBackups(e, backupType)
+		backups := s.getBackups(e, backupType)
+		if len(backups) == 0 {
+			return false
+		}
 
-		return len(backups) == want
+		newest = backups[len(backups)-1] // listings are sorted by creation time
+
+		return newest.Created.After(after)
 	})
-	s.Require().True(ok, "routine %q reported %d %s backups after %s, want %d",
-		routineName, len(backups), backupType, backupTimeout, want)
+	s.Require().True(ok, "routine %q listed no %s backup created after %s within %s",
+		routineName, backupType, after, backupTimeout)
 
-	return backups[want-1]
+	return newest
+}
+
+// newestBackupCreated is when the newest listed backup of backupType was created,
+// or the zero time when there is none.
+func (s *Suite) newestBackupCreated(e *env, backupType model.BackupType) time.Time {
+	backups := s.getBackups(e, backupType)
+	if len(backups) == 0 {
+		return time.Time{}
+	}
+
+	return backups[len(backups)-1].Created
 }
 
 // restore posts request to url and waits for the job it starts to succeed.

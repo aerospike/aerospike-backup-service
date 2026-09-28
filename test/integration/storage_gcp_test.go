@@ -22,7 +22,7 @@ func (s *StorageSuite) TestGCP() {
 	endpoint := s.startFakeGCS()
 
 	s.Run("endpoint, no authentication", func() {
-		s.assertBackupToStorage(&dto.Storage{GcpStorage: &dto.GcpStorage{
+		s.assertBackupRestoreViaStorage(&dto.Storage{GcpStorage: &dto.GcpStorage{
 			BucketName: gcpBucket,
 			Endpoint:   endpoint,
 		}})
@@ -33,7 +33,7 @@ func (s *StorageSuite) TestGCP() {
 		keyFile := filepath.Join(s.T().TempDir(), "key.json")
 		s.Require().NoError(os.WriteFile(keyFile, []byte(key), 0o600))
 
-		s.assertBackupToStorage(&dto.Storage{GcpStorage: &dto.GcpStorage{
+		s.assertBackupRestoreViaStorage(&dto.Storage{GcpStorage: &dto.GcpStorage{
 			BucketName: gcpBucket,
 			Endpoint:   endpoint,
 			KeyFile:    dto.Path(keyFile),
@@ -43,7 +43,7 @@ func (s *StorageSuite) TestGCP() {
 	s.Run("key json, literal", func() {
 		key := s.fakeServiceAccountKey(s.startFakeGCPTokenServer())
 
-		s.assertBackupToStorage(&dto.Storage{GcpStorage: &dto.GcpStorage{
+		s.assertBackupRestoreViaStorage(&dto.Storage{GcpStorage: &dto.GcpStorage{
 			BucketName: gcpBucket,
 			Endpoint:   endpoint,
 			Key:        redact.Secret(key),
@@ -53,7 +53,7 @@ func (s *StorageSuite) TestGCP() {
 	s.Run("key json from secret agent", func() {
 		agent := s.startSecretAgent(s.fakeServiceAccountKey(s.startFakeGCPTokenServer()))
 
-		s.assertBackupToStorage(&dto.Storage{GcpStorage: &dto.GcpStorage{
+		s.assertBackupRestoreViaStorage(&dto.Storage{GcpStorage: &dto.GcpStorage{
 			SecretAgentConfig: dto.SecretAgentConfig{SecretAgent: agent},
 			BucketName:        gcpBucket,
 			Endpoint:          endpoint,

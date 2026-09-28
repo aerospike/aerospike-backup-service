@@ -20,7 +20,7 @@ func (s *StorageSuite) TestS3() {
 	endpoint := s.startMinIO()
 
 	s.Run("static credentials, literal values", func() {
-		s.assertBackupToStorage(&dto.Storage{S3Storage: &dto.S3Storage{
+		s.assertBackupRestoreViaStorage(&dto.Storage{S3Storage: &dto.S3Storage{
 			Bucket:             s3Bucket,
 			S3Region:           s3Region,
 			S3EndpointOverride: endpoint,
@@ -35,7 +35,7 @@ func (s *StorageSuite) TestS3() {
 			"s3-secret-key": minioRootPassword,
 		})
 
-		s.assertBackupToStorage(&dto.Storage{S3Storage: &dto.S3Storage{
+		s.assertBackupRestoreViaStorage(&dto.Storage{S3Storage: &dto.S3Storage{
 			SecretAgentConfig:  dto.SecretAgentConfig{SecretAgent: agent},
 			Bucket:             s3Bucket,
 			S3Region:           s3Region,
@@ -51,7 +51,7 @@ func (s *StorageSuite) TestS3() {
 		s.T().Setenv("AWS_ACCESS_KEY_ID", minioRootUser)
 		s.T().Setenv("AWS_SECRET_ACCESS_KEY", minioRootPassword)
 
-		s.assertBackupToStorage(&dto.Storage{S3Storage: &dto.S3Storage{
+		s.assertBackupRestoreViaStorage(&dto.Storage{S3Storage: &dto.S3Storage{
 			Bucket:             s3Bucket,
 			S3Region:           s3Region,
 			S3EndpointOverride: endpoint,
@@ -65,7 +65,7 @@ func (s *StorageSuite) TestS3() {
 		s.Require().NoError(os.WriteFile(credentialsFile, []byte(contents), 0o600))
 		s.T().Setenv("AWS_SHARED_CREDENTIALS_FILE", credentialsFile)
 
-		s.assertBackupToStorage(&dto.Storage{S3Storage: &dto.S3Storage{
+		s.assertBackupRestoreViaStorage(&dto.Storage{S3Storage: &dto.S3Storage{
 			Bucket:             s3Bucket,
 			S3Region:           s3Region,
 			S3EndpointOverride: endpoint,

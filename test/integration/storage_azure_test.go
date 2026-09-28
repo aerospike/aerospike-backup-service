@@ -25,7 +25,7 @@ func (s *StorageSuite) TestAzure() {
 	azurite := s.startAzurite()
 
 	s.Run("shared key, literal values", func() {
-		s.assertBackupToStorage(&dto.Storage{AzureStorage: &dto.AzureStorage{
+		s.assertBackupRestoreViaStorage(&dto.Storage{AzureStorage: &dto.AzureStorage{
 			Endpoint:      azurite.Endpoint,
 			ContainerName: azureContainerName,
 			AccountName:   azuriteAccountName,
@@ -36,7 +36,7 @@ func (s *StorageSuite) TestAzure() {
 	s.Run("shared key, account-key from secret agent", func() {
 		agent := s.startSecretAgent(azuriteAccountKey)
 
-		s.assertBackupToStorage(&dto.Storage{AzureStorage: &dto.AzureStorage{
+		s.assertBackupRestoreViaStorage(&dto.Storage{AzureStorage: &dto.AzureStorage{
 			SecretAgentConfig: dto.SecretAgentConfig{SecretAgent: agent},
 			Endpoint:          azurite.Endpoint,
 			ContainerName:     azureContainerName,
@@ -46,7 +46,7 @@ func (s *StorageSuite) TestAzure() {
 	})
 
 	s.Run("SAS token embedded in endpoint", func() {
-		s.assertBackupToStorage(&dto.Storage{AzureStorage: &dto.AzureStorage{
+		s.assertBackupRestoreViaStorage(&dto.Storage{AzureStorage: &dto.AzureStorage{
 			Endpoint:      s.accountSASEndpoint(azurite),
 			ContainerName: azureContainerName,
 		}})

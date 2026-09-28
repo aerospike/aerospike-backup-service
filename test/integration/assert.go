@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"math/rand/v2"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -10,17 +11,46 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
-// assertBackupToStorage points ABS at storage, runs a full backup of three freshly
-// seeded records, and asserts all three are in it.
-func (s *Suite) assertBackupToStorage(storage *dto.Storage) {
-	s.seedRecords([]int{10, 20, 30})
-
-	e := s.setupEnv(func(c *dto.Config) {
+// assertBackupRestoreViaStorage round-trips data through storage: the backup
+// proves ABS can write with its credentials, the restore that it can read with them.
+func (s *Suite) assertBackupRestoreViaStorage(storage *dto.Storage) {
+	s.assertBackupRestore(s.client, func(c *dto.Config) {
 		c.Storage[storageName] = storage
 	})
-	s.triggerFullBackup(e)
+}
 
-	s.assertBackupDetails(s.waitForFullBackup(e), 3)
+// assertBackupRestore seeds a random number of records with random values through
+// client, backs them up with the customized baseConfig, wipes the namespace,
+// restores that backup through the same config, and checks every record is back.
+//
+// Random data is what makes the check specific to this run: a backup left over
+// from an earlier test in the same storage would restore different values.
+func (s *Suite) assertBackupRestore(client *as.Client, customize ...func(*dto.Config)) {
+	ages := randomAges()
+
+	s.Require().NoError(client.Truncate(nil, namespace, "", nil))
+	s.seedRecordsWith(client, ages)
+
+	e := s.setupEnv(customize...)
+	s.triggerFullBackup(e)
+	backup := s.waitForFullBackup(e)
+	s.assertBackupDetails(backup, uint64(len(ages)))
+
+	s.Require().NoError(client.Truncate(nil, namespace, "", nil))
+	status := s.restoreByPath(e, defaultRestoreRequest(backup.Key))
+	s.Equal(uint64(len(ages)), status.InsertedRecords)
+
+	s.assertRecordsRestoredWith(client, ages)
+}
+
+// randomAges returns between 3 and 20 random values, for seedRecords.
+func randomAges() []int {
+	ages := make([]int, 3+rand.IntN(18)) //nolint:gosec // test data, not security
+	for i := range ages {
+		ages[i] = rand.IntN(1_000_000) //nolint:gosec // test data, not security
+	}
+
+	return ages
 }
 
 // assertBackupDetails checks that backup is a finished backup of the test namespace
@@ -55,13 +85,17 @@ func (s *Suite) assertIncrementalBackupCount(e *env, want int) {
 
 // assertRecordsRestored checks that the records seedRecords(ages) wrote are back.
 func (s *Suite) assertRecordsRestored(ages []int) {
+	s.assertRecordsRestoredWith(s.client, ages)
+}
+
+func (s *Suite) assertRecordsRestoredWith(client *as.Client, ages []int) {
 	s.T().Helper()
 
 	for i, age := range ages {
 		key, err := as.NewKey(namespace, setName, i)
 		s.Require().NoError(err)
 
-		record, err := s.client.Get(nil, key)
+		record, err := client.Get(nil, key)
 		s.Require().NoError(err)
 		s.Require().NotNil(record)
 		s.Equal(age, record.Bins["age"])

@@ -17,7 +17,7 @@ func (s *AuthSuite) TestInternalPlain() {
 	node := s.startSecuredNode(profilePlain)
 
 	s.Run("literal password", func() {
-		s.assertBackupFromCluster(node, &dto.AerospikeCluster{
+		s.assertBackupRestoreViaCluster(node, &dto.AerospikeCluster{
 			SeedNodes:            []dto.SeedNode{node.Seed},
 			UseServicesAlternate: ptr.Of(true),
 			Credentials: &dto.Credentials{
@@ -32,7 +32,7 @@ func (s *AuthSuite) TestInternalPlain() {
 		passwordPath := filepath.Join(s.T().TempDir(), "password.txt")
 		s.Require().NoError(os.WriteFile(passwordPath, []byte(intPassword+"\n"), 0o600))
 
-		s.assertBackupFromCluster(node, &dto.AerospikeCluster{
+		s.assertBackupRestoreViaCluster(node, &dto.AerospikeCluster{
 			SeedNodes:            []dto.SeedNode{node.Seed},
 			UseServicesAlternate: ptr.Of(true),
 			Credentials: &dto.Credentials{
@@ -48,7 +48,7 @@ func (s *AuthSuite) TestInternalPlain() {
 		// literal Aerospike password. ABS fetches the real value at connect time.
 		agent := s.startSecretAgent(intPassword)
 
-		s.assertBackupFromCluster(node, &dto.AerospikeCluster{
+		s.assertBackupRestoreViaCluster(node, &dto.AerospikeCluster{
 			SeedNodes:            []dto.SeedNode{node.Seed},
 			UseServicesAlternate: ptr.Of(true),
 			Credentials: &dto.Credentials{
@@ -68,7 +68,7 @@ func (s *AuthSuite) TestInternalPlain() {
 func (s *AuthSuite) TestInternalServerTLS() {
 	node := s.startSecuredNode(profileServerTLS)
 
-	s.assertBackupFromCluster(node, &dto.AerospikeCluster{
+	s.assertBackupRestoreViaCluster(node, &dto.AerospikeCluster{
 		SeedNodes:            []dto.SeedNode{node.Seed},
 		UseServicesAlternate: ptr.Of(true),
 		Credentials: &dto.Credentials{
@@ -89,7 +89,7 @@ func (s *AuthSuite) TestMutualTLS() {
 	node := s.startSecuredNode(profileMutualTLS)
 
 	s.Run("internal", func() {
-		s.assertBackupFromCluster(node, &dto.AerospikeCluster{
+		s.assertBackupRestoreViaCluster(node, &dto.AerospikeCluster{
 			SeedNodes:            []dto.SeedNode{node.Seed},
 			UseServicesAlternate: ptr.Of(true),
 			Credentials: &dto.Credentials{
@@ -102,7 +102,7 @@ func (s *AuthSuite) TestMutualTLS() {
 	})
 
 	s.Run("pki", func() {
-		s.assertBackupFromCluster(node, &dto.AerospikeCluster{
+		s.assertBackupRestoreViaCluster(node, &dto.AerospikeCluster{
 			SeedNodes:            []dto.SeedNode{node.Seed},
 			UseServicesAlternate: ptr.Of(true),
 			Credentials: &dto.Credentials{
@@ -123,7 +123,7 @@ func (s *AuthSuite) TestMutualTLS() {
 		tlsConfig := s.mutualTLS(s.certs.Internal)
 		tlsConfig.KeyfilePassword = redact.Secret(secretRef())
 
-		s.assertBackupFromCluster(node, &dto.AerospikeCluster{
+		s.assertBackupRestoreViaCluster(node, &dto.AerospikeCluster{
 			SeedNodes:            []dto.SeedNode{node.Seed},
 			UseServicesAlternate: ptr.Of(true),
 			Credentials: &dto.Credentials{

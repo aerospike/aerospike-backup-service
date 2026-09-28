@@ -17,6 +17,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
@@ -25,6 +26,13 @@ import (
 type env struct {
 	baseURL string
 	client  *http.Client
+	// newestBeforeTrigger is when the newest backup of each type listed just before
+	// the last trigger of that type was created.
+	newestBeforeTrigger map[model.BackupType]time.Time
+}
+
+func newEnv(baseURL string, client *http.Client) *env {
+	return &env{baseURL: baseURL, client: client, newestBeforeTrigger: map[model.BackupType]time.Time{}}
 }
 
 // setupEnv starts ABS on plain HTTP with baseConfig, after passing the config through
@@ -36,7 +44,7 @@ func (s *Suite) setupEnv(customize ...func(*dto.Config)) *env {
 	srv := httptest.NewServer(components.Servers[0]) // baseConfig has only the HTTP listener.
 	s.T().Cleanup(srv.Close)
 
-	return &env{baseURL: srv.URL, client: srv.Client()}
+	return newEnv(srv.URL, srv.Client())
 }
 
 // setupHTTPSEnv starts ABS with its HTTP listener disabled and an HTTPS listener
@@ -62,10 +70,7 @@ func (s *Suite) setupHTTPSEnv(certs httpsCertificates, agent *dto.SecretAgent) *
 	s.Require().Len(components.Servers, 1)
 	s.startServers(components.Servers)
 
-	e := &env{
-		baseURL: fmt.Sprintf("https://127.0.0.1:%d", port),
-		client:  s.newHTTPSClient(certs.CAFile),
-	}
+	e := newEnv(fmt.Sprintf("https://127.0.0.1:%d", port), s.newHTTPSClient(certs.CAFile))
 	s.waitForHealthy(e)
 
 	return e

@@ -32,7 +32,7 @@ func (s *BackupSuite) TestRestoreByTimestampCumulativeWorkflow() {
 
 		s.triggerIncrementalBackup(e)
 
-		incrBackup1 = s.waitForIncrementalBackup(e, 1)
+		incrBackup1 = s.waitForIncrementalBackup(e)
 
 		s.assertBackupDetails(incrBackup1, 1)
 		s.assertIncrementalBackupListed(e, incrBackup1)
@@ -45,7 +45,7 @@ func (s *BackupSuite) TestRestoreByTimestampCumulativeWorkflow() {
 		s.triggerIncrementalBackup(e)
 
 		// The second incremental should have 2 records (1 and 2) because it's cumulative.
-		incrBackup2 = s.waitForIncrementalBackup(e, 2)
+		incrBackup2 = s.waitForIncrementalBackup(e)
 
 		s.assertBackupDetails(incrBackup2, 2)
 		s.assertIncrementalBackupListed(e, incrBackup2)

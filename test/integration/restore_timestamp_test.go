@@ -38,7 +38,7 @@ func (s *BackupSuite) TestRestoreByTimestampWorkflow() {
 
 		s.triggerIncrementalBackup(e)
 
-		incrBackup = s.waitForIncrementalBackup(e, 1)
+		incrBackup = s.waitForIncrementalBackup(e)
 
 		s.assertBackupDetails(incrBackup, 1)
 		s.assertIncrementalBackupListed(e, incrBackup)

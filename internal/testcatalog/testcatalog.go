@@ -28,6 +28,9 @@ type Catalog struct {
 	Orphans []Test
 	// Strays are declarations outside SuitesFile that are not Test* methods.
 	Strays []Decl
+	// Misplaced are Test* functions and methods declared in a non-test file, where
+	// they escape the README and the checks here.
+	Misplaced []Decl
 }
 
 // Suite is one testify suite and the Test* methods declared on it.
@@ -75,10 +78,11 @@ type Decl struct {
 	Name string
 }
 
-// Read parses every *_test.go file in dir. Build constraints are ignored, so the
-// integration-tagged files are read like any other.
+// Read parses every .go file in dir: the tests from *_test.go files, and from the
+// others only any Test* declaration that should not be there. Build constraints are
+// ignored, so the integration-tagged files are read like any other.
 func Read(dir string) (Catalog, error) {
-	files, err := filepath.Glob(filepath.Join(dir, "*_test.go"))
+	files, err := filepath.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		return Catalog{}, err
 	}
@@ -94,7 +98,13 @@ func Read(dir string) (Catalog, error) {
 			return Catalog{}, fmt.Errorf("parse %s: %w", path, parseErr)
 		}
 
-		r.file(filepath.Base(path), file)
+		name := filepath.Base(path)
+		if !strings.HasSuffix(name, "_test.go") {
+			r.nonTestFile(file)
+			continue
+		}
+
+		r.file(name, file)
 	}
 
 	return r.catalog(), nil
@@ -109,6 +119,25 @@ type reader struct {
 	suiteDocs map[string]string
 	tests     []Test
 	strays    []Decl
+	misplaced []Decl
+}
+
+// nonTestFile records the Test* declarations in a file go test does not treat as
+// a test file.
+func (r *reader) nonTestFile(file *ast.File) {
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+
+		name := fn.Name.Name
+		if fn.Recv != nil {
+			name = receiverType(fn.Recv) + "." + name
+		}
+
+		r.misplaced = append(r.misplaced, r.decl(fn.Pos(), name))
+	}
 }
 
 func (r *reader) file(name string, file *ast.File) {
@@ -192,11 +221,16 @@ func (r *reader) runner(name string, decl *ast.FuncDecl) {
 }
 
 func (r *reader) stray(pos token.Pos, name string) {
+	r.strays = append(r.strays, r.decl(pos, name))
+}
+
+func (r *reader) decl(pos token.Pos, name string) Decl {
 	position := r.fset.Position(pos)
-	r.strays = append(r.strays, Decl{
+
+	return Decl{
 		Pos:  fmt.Sprintf("%s:%d", filepath.Base(position.Filename), position.Line),
 		Name: name,
-	})
+	}
 }
 
 func (r *reader) catalog() Catalog {
@@ -223,7 +257,7 @@ func (r *reader) catalog() Catalog {
 		})
 	}
 
-	return Catalog{Suites: suites, Orphans: orphans, Strays: r.strays}
+	return Catalog{Suites: suites, Orphans: orphans, Strays: r.strays, Misplaced: r.misplaced}
 }
 
 // subtestNames returns the literal first argument of every s.Run(…) call in body.

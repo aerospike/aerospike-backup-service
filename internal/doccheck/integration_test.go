@@ -14,7 +14,8 @@ import (
 //
 // A reader opens a *_test.go file there to find out what is tested. A helper or a
 // container setup in that file is infrastructure they have to read past, so it
-// belongs in a non-test file next to it. A Test* method with no doc comment is a
+// belongs in a non-test file next to it; a test declared in such a file runs but
+// is invisible to the README. A Test* method with no doc comment is a
 // blank row in the README table the generator builds from those comments. And a
 // Test* method on a suite no runner starts compiles, looks tested, and never runs.
 func TestIntegrationTestsAreCatalogued(t *testing.T) {
@@ -25,6 +26,11 @@ func TestIntegrationTestsAreCatalogued(t *testing.T) {
 	for _, decl := range catalog.Strays {
 		t.Errorf("%s: %s is not a Test* method; move it to a non-_test.go file "+
 			"(suites and runners belong in %s)", decl.Pos, decl.Name, testcatalog.SuitesFile)
+	}
+
+	for _, decl := range catalog.Misplaced {
+		t.Errorf("%s: %s is a test declared in a non-test file, where the README and these "+
+			"checks do not see it; move it to a *_test.go file", decl.Pos, decl.Name)
 	}
 
 	for _, test := range catalog.Orphans {
