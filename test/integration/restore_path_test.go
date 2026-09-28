@@ -20,7 +20,7 @@ func (s *BackupSuite) TestRestoreByPath() {
 	fullBackup := s.waitForFullBackup(e)
 	s.assertBackupDetails(fullBackup, 3)
 
-	s.Require().NoError(s.client.Truncate(nil, namespace, "", nil))
+	s.truncateNamespace()
 
 	status := s.restoreByPath(e, defaultRestoreRequest(fullBackup.Key))
 
@@ -33,36 +33,30 @@ func (s *BackupSuite) TestRestoreByPath() {
 	s.assertMetricRestoreSuccessEventCount(e, successCount+1)
 }
 
-// TestBackupRestoreWithIndexes runs a backup-and-restore flow with secondary and set indexes.
+// TestBackupRestoreWithIndexes backs up a secondary index and a set index, drops
+// both, and checks that restoring the backup recreates them.
 func (s *BackupSuite) TestBackupRestoreWithIndexes() {
+	const wantIndexes = 2 // age_sidx + set_sidx
+
 	e := s.setupEnv()
 
-	var expectedIndexCount = uint64(1)
-
-	// Create a secondary index on the "age" bin
 	task, err := s.client.CreateIndex(nil, namespace, setName, "age_sidx", "age", as.NUMERIC)
 	s.Require().NoError(err)
 	s.Require().NoError(<-task.OnComplete())
 
-	// Create a set index on namespace & set
 	setTask, err := s.client.CreateSetIndex(nil, namespace, setName, "set_sidx")
 	s.Require().NoError(err)
 	s.Require().NoError(<-setTask.OnComplete())
-	expectedIndexCount++
 
+	// No records: the indexes are backed up and restored on their own.
 	s.triggerFullBackup(e)
-
 	fullBackup := s.waitForFullBackup(e)
-	// We expect 1 secondary index and 1 set index.
+	s.Require().Equal(uint64(wantIndexes), fullBackup.SecondaryIndexCount)
 
-	s.Require().Equal(expectedIndexCount, fullBackup.SecondaryIndexCount)
-
-	// Drop both indexes
 	s.Require().NoError(s.client.DropIndex(nil, namespace, setName, "age_sidx"))
 	s.Require().NoError(s.client.DropIndex(nil, namespace, setName, "set_sidx"))
 
 	restoreStatus := s.restoreByPath(e, defaultRestoreRequest(fullBackup.Key))
 
-	// We expect 2 indexes to be successfully restored (1 secondary index + 1 set index)
-	s.Equal(expectedIndexCount, restoreStatus.IndexCount)
+	s.Equal(uint64(wantIndexes), restoreStatus.IndexCount)
 }
