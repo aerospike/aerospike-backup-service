@@ -4,10 +4,6 @@ service:
         level: INFO
         file-writer:
             filename: log/backup-service.log
-            maxsize: 0
-            maxage: 0
-            maxbackups: 0
-            compress: false
     backup:
         timestamp-format: EU
 aerospike-clusters:

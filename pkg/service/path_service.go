@@ -18,7 +18,10 @@ const (
 	fullBackupDirectory          = "backup"
 	configurationBackupDirectory = "configuration"
 	dataDirectory                = "data"
-	configPrefix                 = "aerospike"
+	// attemptSeparator joins a namespace and the attempt number in the folder of a retried
+	// attempt. Namespace names consist of letters, digits, "_", "-" and "$" only.
+	attemptSeparator = "."
+	configPrefix     = "aerospike"
 )
 
 // PathService defines the canonical storage layout for backup data, metadata, and cluster configuration.
@@ -30,6 +33,15 @@ type PathService interface {
 	// GetBackupPath returns the path for a specific namespace backup.
 	// The path is composed of {routineName}/{backupType}/{timestamp}/data/{namespace}.
 	GetBackupPath(routineName string, backupType model.BackupType, namespace string, timestamp time.Time) string
+
+	// GetBackupAttemptPath returns the path one attempt of a namespace backup writes to. The first
+	// attempt writes to GetBackupPath; attempt n > 1 writes to a sibling folder
+	// {routineName}/{backupType}/{timestamp}/data/{namespace}.{n}, so a retry never shares a folder
+	// with the attempt it replaces. The separator is not valid in a namespace name, so an attempt
+	// folder never coincides with the folder of another namespace.
+	GetBackupAttemptPath(
+		routineName string, backupType model.BackupType, namespace string, timestamp time.Time, attempt int,
+	) string
 
 	// GetConfigurationPath returns the path for a configuration backup.
 	// The path is composed of {routineName}/backup/{timestamp}/configuration.
@@ -79,6 +91,22 @@ func (s *pathService) GetBackupPath(
 	timestamp time.Time,
 ) string {
 	return path.Join(s.GetTimestampPath(routineName, timestamp, backupType), dataDirectory, namespace)
+}
+
+// GetBackupAttemptPath returns the path for one attempt of a namespace backup.
+func (s *pathService) GetBackupAttemptPath(
+	routineName string,
+	backupType model.BackupType,
+	namespace string,
+	timestamp time.Time,
+	attempt int,
+) string {
+	folder := s.GetBackupPath(routineName, backupType, namespace, timestamp)
+	if attempt <= 1 {
+		return folder
+	}
+
+	return folder + attemptSeparator + strconv.Itoa(attempt)
 }
 
 // GetConfigurationPath returns the path for the configuration backup.

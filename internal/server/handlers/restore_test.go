@@ -383,15 +383,6 @@ func TestService_RetrieveConfig(t *testing.T) {
 		expectedError  string
 	}{
 		{
-			name:           "missing routine name",
-			routineName:    "",
-			timestamp:      "1000",
-			setupSvc:       func(*Service) {},
-			setupMock:      func(*service.MockConfigRetriever) {},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingRoutineName.Error(),
-		},
-		{
 			name:           "missing timestamp",
 			routineName:    "routine1",
 			timestamp:      "",

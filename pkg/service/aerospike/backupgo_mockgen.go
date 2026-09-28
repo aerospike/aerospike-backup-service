@@ -43,6 +43,20 @@ func (m *MockInfoGetter) EXPECT() *MockInfoGetterMockRecorder {
 	return m.recorder
 }
 
+// AbortBackup mocks base method.
+func (m *MockInfoGetter) AbortBackup(ctx context.Context, backupID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AbortBackup", ctx, backupID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AbortBackup indicates an expected call of AbortBackup.
+func (mr *MockInfoGetterMockRecorder) AbortBackup(ctx, backupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AbortBackup", reflect.TypeOf((*MockInfoGetter)(nil).AbortBackup), ctx, backupID)
+}
+
 // GetBackupStatus mocks base method.
 func (m *MockInfoGetter) GetBackupStatus(ctx context.Context, jobID string) (*models0.ResponseBackupState, error) {
 	m.ctrl.T.Helper()
@@ -268,47 +282,47 @@ func (mr *MockInfoGetterMockRecorder) GetVersion(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersion", reflect.TypeOf((*MockInfoGetter)(nil).GetVersion), ctx)
 }
 
-// PrepareServerRestore mocks base method.
-func (m *MockInfoGetter) PrepareServerRestore(ctx context.Context, jobID, namespace string) error {
+// PrepareRestore mocks base method.
+func (m *MockInfoGetter) PrepareRestore(ctx context.Context, jobID, namespace string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareServerRestore", ctx, jobID, namespace)
+	ret := m.ctrl.Call(m, "PrepareRestore", ctx, jobID, namespace)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// PrepareServerRestore indicates an expected call of PrepareServerRestore.
-func (mr *MockInfoGetterMockRecorder) PrepareServerRestore(ctx, jobID, namespace any) *gomock.Call {
+// PrepareRestore indicates an expected call of PrepareRestore.
+func (mr *MockInfoGetterMockRecorder) PrepareRestore(ctx, jobID, namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareServerRestore", reflect.TypeOf((*MockInfoGetter)(nil).PrepareServerRestore), ctx, jobID, namespace)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareRestore", reflect.TypeOf((*MockInfoGetter)(nil).PrepareRestore), ctx, jobID, namespace)
 }
 
-// StartServerBackup mocks base method.
-func (m *MockInfoGetter) StartServerBackup(ctx context.Context, request *models0.RequestBackup) (string, error) {
+// StartBackup mocks base method.
+func (m *MockInfoGetter) StartBackup(ctx context.Context, request *models0.RequestBackup) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartServerBackup", ctx, request)
+	ret := m.ctrl.Call(m, "StartBackup", ctx, request)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// StartServerBackup indicates an expected call of StartServerBackup.
-func (mr *MockInfoGetterMockRecorder) StartServerBackup(ctx, request any) *gomock.Call {
+// StartBackup indicates an expected call of StartBackup.
+func (mr *MockInfoGetterMockRecorder) StartBackup(ctx, request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartServerBackup", reflect.TypeOf((*MockInfoGetter)(nil).StartServerBackup), ctx, request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartBackup", reflect.TypeOf((*MockInfoGetter)(nil).StartBackup), ctx, request)
 }
 
-// StartServerRestore mocks base method.
-func (m *MockInfoGetter) StartServerRestore(ctx context.Context, request *models0.RequestRestore) error {
+// StartRestore mocks base method.
+func (m *MockInfoGetter) StartRestore(ctx context.Context, request *models0.RequestRestore) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartServerRestore", ctx, request)
+	ret := m.ctrl.Call(m, "StartRestore", ctx, request)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// StartServerRestore indicates an expected call of StartServerRestore.
-func (mr *MockInfoGetterMockRecorder) StartServerRestore(ctx, request any) *gomock.Call {
+// StartRestore indicates an expected call of StartRestore.
+func (mr *MockInfoGetterMockRecorder) StartRestore(ctx, request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartServerRestore", reflect.TypeOf((*MockInfoGetter)(nil).StartServerRestore), ctx, request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartRestore", reflect.TypeOf((*MockInfoGetter)(nil).StartRestore), ctx, request)
 }
 
 // SupportsBatchWrite mocks base method.

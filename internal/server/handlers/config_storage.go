@@ -1,11 +1,9 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // AddStorage
@@ -18,12 +16,9 @@ import (
 // @Param       storage body dto.Storage true "Backup storage details"
 // @Success     201
 // @Failure     400 {string} string
+// @Failure     409 {string} string "A storage with that name already exists"
 func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 
 	newStorage, ok := decodeBodyValidated[dto.Storage](w, r)
 	if !ok {
@@ -31,13 +26,9 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
-		if _, exists := config.Storage[name]; exists {
-			return nil, fmt.Errorf("add storage %q: %w", name, model.ErrAlreadyExists)
-		}
-		config.Storage[name] = newStorage
-		return nil, nil
+		return config.AddStorage(name, newStorage)
 	}); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -68,14 +59,10 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Failure     404 {string} string "The specified storage was not found"
 func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 	backupConfig := s.config.BackupConfigCopy()
-	storage, ok := backupConfig.Storage[name]
-	if !ok {
-		httpError(w, errNotFound("storage", name))
+	storage, err := backupConfig.GetStorage(name)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -92,12 +79,9 @@ func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 // @Param       storage body dto.Storage true "Backup storage details"
 // @Success     200
 // @Failure     400 {string} string
+// @Failure     404 {string} string "The specified storage was not found"
 func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 
 	updatedStorage, ok := decodeBodyValidated[dto.Storage](w, r)
 	if !ok {
@@ -105,13 +89,9 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
-		if _, exists := config.Storage[name]; !exists {
-			return nil, fmt.Errorf("update storage %q: %w", name, model.ErrNotFound)
-		}
-		config.Storage[name] = updatedStorage
-		return routinesUsingStorage(config, name), nil
+		return config.UpdateStorage(name, updatedStorage)
 	}); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -126,25 +106,16 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup storage name"
 // @Success     204
 // @Failure     400 {string} string
+// @Failure     404 {string} string "The specified storage was not found"
+// @Failure     409 {string} string "The storage is still used by a backup routine"
 func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
-		if _, exists := config.Storage[name]; !exists {
-			return nil, fmt.Errorf("delete storage %q: %w", name, model.ErrNotFound)
-		}
-		if err := ensureStorageNotInUse(config, name); err != nil {
-			return nil, err
-		}
-		delete(config.Storage, name)
-		return nil, nil
+		return config.DeleteStorage(name)
 	})
 	if err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 

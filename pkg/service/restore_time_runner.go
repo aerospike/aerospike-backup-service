@@ -209,7 +209,7 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
-			request.DestinationCluster.ClusterLabel, err)
+			request.DestinationCluster.Label(), err)
 	}
 	defer r.clientManager.Close(client)
 
@@ -306,16 +306,6 @@ func (r *timeRestoreRunner) restoreNamespace(
 	return r.executeNamespaceRestore(ctx, client, request, jobID, backups, policy, logger)
 }
 
-// destinationNamespace returns the namespace the records are written to: the policy's destination
-// when the restore remaps namespaces, otherwise the source namespace itself.
-func destinationNamespace(policy model.RestorePolicy, source string) string {
-	if policy.Namespace != nil && policy.Namespace.Destination != "" {
-		return policy.Namespace.Destination
-	}
-
-	return source
-}
-
 // prepareNamespaceRestore determines the effective restore policy and may reorder
 // backups in place via slices.Reverse; the caller passes the same slice to execution.
 func prepareNamespaceRestore(
@@ -343,7 +333,7 @@ func prepareNamespaceRestore(
 
 	// The emptiness check decides how existing records are treated, so it must look at the
 	// namespace the records are written to, not the one they were backed up from.
-	target := destinationNamespace(effectivePolicy, namespace)
+	target := effectivePolicy.Namespace.DestinationOr(namespace)
 	counter, err := infoClient.GetRecordCount(ctx, target, effectivePolicy.SetList)
 	if err != nil {
 		return model.RestorePolicy{}, fmt.Errorf(

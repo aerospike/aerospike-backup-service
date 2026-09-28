@@ -61,14 +61,10 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 	}
 
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -129,14 +125,10 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 	}
 
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -234,14 +226,10 @@ func (s *Service) scheduleBackup(
 	triggerBackup func(routine *model.BackupRoutine, delay time.Duration) error,
 ) {
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		http.Error(w, "routine name required", http.StatusBadRequest)
-		return
-	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -292,14 +280,10 @@ func parseDelay(delayParameter string) (int, error) {
 // @Failure  400 {string} string
 func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -317,13 +301,9 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 // @Failure  404 {string} string "The specified routine was not found"
 func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
-	if _, found := s.config.Routine(routineName); !found {
-		httpError(w, errRoutineNotFound(routineName))
+	if _, err := s.config.Routine(routineName); err != nil {
+		httpError(w, err)
 		return
 	}
 

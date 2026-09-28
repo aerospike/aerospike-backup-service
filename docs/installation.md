@@ -37,15 +37,15 @@ With the `-r` flag, the file specified after `-c` contains the path or URL to th
 
 For example, you may store your configurations remotely, such as on AWS S3 storage.
 In this case, you could have a `remote_config.yaml` file containing S3 details:
-<!-- RemoteConfig -->
+<!-- tag RemoteConfig -->
 
 ```yaml
 s3-storage:
   bucket: as-backup-bucket
   path: config.yml
   s3-region: eu-central-1
-
 ```
+<!-- /tag -->
 
 Run the server
 
@@ -86,7 +86,7 @@ creates, under a systemd sandbox. Three consequences are worth knowing before yo
 | --- | --- |
 | Writable paths | `/etc/aerospike-backup-service`, `/var/lib/aerospike-backup-service` and `/var/log/aerospike-backup-service` only. A `local-storage` path anywhere else needs `ReadWritePaths` in a drop-in. |
 | Credentials | `/root` and `/home` are hidden. Put cloud credentials under `/var/lib/aerospike-backup-service`, or in `/etc/default/aerospike-backup-service` (deb) / `/etc/sysconfig/aerospike-backup-service` (rpm). |
-| File modes | Backups are created `0640`/`0750` owned by the service account. Add a reader to the group with `usermod -aG aerospike-backup-service <user>`. |
+| File modes | Backups are created `0640`/`0750` owned by the service account. Add a reader to the group with `usermod -aG aerospike-backup-service <user>`. The configuration file is `0600`, so group members cannot read its credentials. |
 
 Customise the unit with `sudo systemctl edit aerospike-backup-service` — the unit itself is vendor-owned in
 `/usr/lib/systemd/system` and is replaced on upgrade. A worked drop-in ships at
@@ -100,7 +100,7 @@ privileged ports each need a look, and each fails at runtime rather than at star
 
 ### Prerequisites
 
-- Go 1.25
+- Go <!-- tag GoVersion -->1.25.13<!-- /tag -->
 
 ### Build the service
 

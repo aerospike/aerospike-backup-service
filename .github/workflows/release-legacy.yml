@@ -6,7 +6,7 @@
 # Manual trigger only (workflow_dispatch) -- no longer auto-fires on GitHub release publication,
 # so it doesn't double-promote to DockerHub alongside the new pipeline's release.yml. Dispatch it
 # explicitly when you want a comparison run against the old "ecosystem"-project path.
-name: Promote Images to DockerHub (Legacy)
+name: Legacy Release - promote to JFrog PROD and DockerHub (ecosystem)
 on:
   workflow_dispatch:
 

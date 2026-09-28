@@ -661,6 +661,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified cluster was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -700,6 +706,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A cluster with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -724,6 +736,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified cluster was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The cluster is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -830,6 +854,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified policy was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -869,6 +899,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A policy with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -893,6 +929,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified policy was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The policy is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -1005,6 +1053,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified routine was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1044,6 +1098,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A routine with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1068,6 +1128,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1232,6 +1298,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified storage was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1271,6 +1343,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A storage with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1295,6 +1373,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified storage was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The storage is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -2043,9 +2133,9 @@ const docTemplate = `{
                     "default": false
                 },
                 "socket-timeout": {
-                    "description": "Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000
+                    "default": 600000
                 },
                 "total-timeout": {
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
@@ -2190,17 +2280,19 @@ const docTemplate = `{
         "dto.CompressionPolicy": {
             "description": "CompressionPolicy contains backup compression information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "level": {
-                    "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).\nThis field is ignored if the compression mode is NONE.",
+                    "description": "The compression level to use, from -1 to 22.\nA higher value gives better compression at the cost of speed,\nbut not every step changes the result: neighboring levels may compress the same way.\nRequired for ZSTD; must not be set if the compression mode is NONE.",
                     "type": "integer",
-                    "default": 0,
                     "maximum": 22,
-                    "minimum": -1
+                    "minimum": -1,
+                    "x-nullable": true
                 },
                 "mode": {
-                    "description": "The compression mode to be used (default is NONE).",
-                    "default": "NONE",
+                    "description": "The compression mode to be used. Required.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.CompressionMode"
@@ -2333,6 +2425,9 @@ const docTemplate = `{
         "dto.EncryptionPolicy": {
             "description": "EncryptionPolicy contains backup encryption information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "key-env": {
                     "description": "The name of the environment variable containing the encryption key.",
@@ -2351,8 +2446,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "mode": {
-                    "description": "The encryption mode to be used (NONE, AES128, AES256)",
-                    "default": "NONE",
+                    "description": "The encryption mode to be used (NONE, AES128, AES256). Required.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.EncryptionMode"
@@ -2381,13 +2475,11 @@ const docTemplate = `{
                 "maxage": {
                     "description": "Maximum number of days to retain old log files based on the\ntimestamp encoded in their filename. The default is not to remove old log files\nbased on age.",
                     "type": "integer",
-                    "default": 7,
                     "x-nullable": true
                 },
                 "maxbackups": {
                     "description": "Maximum number of old log files to retain. The default\nis to retain all old log files.",
                     "type": "integer",
-                    "default": 3,
                     "x-nullable": true
                 },
                 "maxsize": {
@@ -2643,10 +2735,12 @@ const docTemplate = `{
         "dto.RestoreCompressionPolicy": {
             "description": "RestoreCompressionPolicy contains restore compression information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "mode": {
-                    "description": "The compression mode to be used (default is NONE).",
-                    "default": "NONE",
+                    "description": "The compression mode to be used. Required.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.CompressionMode"
@@ -2888,9 +2982,9 @@ const docTemplate = `{
                     ]
                 },
                 "socket-timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000,
+                    "default": 600000,
                     "example": 1000
                 },
                 "total-timeout": {
@@ -3720,9 +3814,9 @@ const docTemplate = `{
                     "example": "example.com"
                 },
                 "protocols": {
-                    "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
+                    "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.\nEmpty by default, which leaves the choice to Go and negotiates TLS 1.2 or 1.3.\nSetting a single version pins both the minimum and the maximum to it.",
                     "type": "string",
-                    "default": "TLSv1.2"
+                    "x-nullable": true
                 }
             }
         },
@@ -3879,9 +3973,9 @@ const docTemplate = `{
                     ]
                 },
                 "socket-timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000,
+                    "default": 600000,
                     "example": 1000
                 },
                 "total-timeout": {

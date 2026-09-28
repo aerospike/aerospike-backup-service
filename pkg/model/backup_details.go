@@ -26,6 +26,11 @@ func NewBackupDetails(md BackupMetadata, key string, storage Storage) BackupDeta
 	}
 }
 
+// IsEmpty reports whether this backup has no data (zero file count).
+func (bd BackupDetails) IsEmpty() bool {
+	return bd.FileCount == 0
+}
+
 // BackupMetadata is an internal container for storing backup metadata.
 // It is stored as a separate metadata file within each backup.
 type BackupMetadata struct {

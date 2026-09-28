@@ -21,9 +21,9 @@ type BaseRestorePolicy struct {
 	// Do not restore any UDF modules.
 	NoUdfs *bool `json:"no-udfs,omitempty" default:"false"`
 	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
+	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000" default:"60000"`
+	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000" default:"600000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
 	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000" default:"0"`
 	// Disables the use of batch writes when restoring records to the Aerospike cluster.
@@ -130,7 +130,7 @@ func (p *BaseRestorePolicy) Validate(opts ValidationOptions) error {
 	}
 
 	if err := p.EncryptionPolicy.Validate(opts); err != nil {
-		return err
+		return fmt.Errorf("invalid encryption policy: %w", err)
 	}
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retry policy invalid: %w", err)
@@ -151,7 +151,7 @@ func (p *RestorePolicy) Validate(opts ValidationOptions) error {
 		return err
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {
-		return err
+		return fmt.Errorf("invalid compression policy: %w", err)
 	}
 	return nil
 }

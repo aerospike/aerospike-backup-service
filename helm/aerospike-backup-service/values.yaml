@@ -179,13 +179,13 @@ backupServiceConfig: {}
 #     records-per-second: <records-per-second> # Optional limit of total returned records per second. default: 0
 #     file-limit: <file-limit> # Optional .asb file size limit in MiB. default: 250
 #     encryption:
-#       mode: <mode> # Optional encryption mode to be used. Valid values: (NONE, AES128, AES256) default: None
-#       key-file: <key-file> # Optional path to the file containing the encryption key default: ""
+#       mode: <mode> # Required encryption mode to be used. Valid values: (NONE, AES128, AES256)
+#       key-file: <key-file> # Path to the file containing the encryption key; exactly one key source is required unless mode is NONE
 #       key-env: <key-env> # Optional environment variable containing the encryption key default: ""
 #       key-secret: <key-secret> # Optional secret keyword in Aerospike Secret Agent containing the encryption key default: ""
 #     compression:
-#       mode: <mode> # Optional compression mode to be used Valid values: (NONE,ZSTD) default NONE
-#       level: <level> # Optional compression level default: 0
+#       mode: <mode> # Required compression mode to be used. Valid values: (NONE, ZSTD)
+#       level: <level> # Compression level from -1 to 22; higher compresses better, but not every step changes the result. Required for ZSTD, must not be set for NONE
 #     sealed: <true/false> # Optional determines whether backup should include keys updated during the backup process default: false
 #     concurrent-incremental: <true/false> #Allows incremental backups to run concurrently.
 #     incr-mode: <incr-mode> # Optional mode for incremental backups (differential or cumulative)

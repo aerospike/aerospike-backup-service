@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -81,4 +82,38 @@ func TestCredentials_Hash(t *testing.T) {
 
 		require.NotEqual(t, withDefault, withInternal)
 	})
+}
+
+func TestAerospikeCluster_Label(t *testing.T) {
+	tests := map[string]struct {
+		cluster AerospikeCluster
+		want    string
+	}{
+		"configured label": {
+			cluster: AerospikeCluster{
+				ClusterLabel: "testCluster",
+				SeedNodes:    []SeedNode{{HostName: "host", Port: 3000}},
+			},
+			want: "testCluster",
+		},
+		"unlabeled cluster falls back to its first seed node": {
+			cluster: AerospikeCluster{
+				SeedNodes: []SeedNode{
+					{HostName: "host1", Port: 3000},
+					{HostName: "host2", Port: 3000},
+				},
+			},
+			want: "host1::3000",
+		},
+		"neither label nor seed nodes": {
+			cluster: AerospikeCluster{},
+			want:    "unknown",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.cluster.Label())
+		})
+	}
 }

@@ -139,3 +139,22 @@ func TestBackupRoutine_NextRun_InvalidCron(t *testing.T) {
 		})
 	}
 }
+
+func TestBackupRoutine_BacksUpWholeCluster(t *testing.T) {
+	tests := map[string]struct {
+		namespaces []string
+		want       bool
+	}{
+		"no namespaces configured backs up the whole cluster": {namespaces: nil, want: true},
+		"explicit empty list backs up the whole cluster":      {namespaces: []string{}, want: true},
+		"configured namespaces back up only those":            {namespaces: []string{"ns1"}, want: false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			routine := &BackupRoutine{Namespaces: tt.namespaces}
+
+			require.Equal(t, tt.want, routine.BacksUpWholeCluster())
+		})
+	}
+}

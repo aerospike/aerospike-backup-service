@@ -130,7 +130,7 @@ func (f *clientFactory) setTLSConfig(ctx context.Context, c *model.AerospikeClus
 	if !anySeedNodeHasTLSName(c) {
 		if c.TLS != nil {
 			slog.Warn("A TLS configuration is provided, but no seed nodes have TLS names. Ignoring TLS settings.",
-				slog.String("cluster", c.ClusterLabel))
+				slog.String("cluster", c.Label()))
 		}
 
 		return nil // no TLS configuration needed for this cluster
@@ -140,12 +140,12 @@ func (f *clientFactory) setTLSConfig(ctx context.Context, c *model.AerospikeClus
 	// TLS block resolves to the zero value, which builds a default configuration.
 	tlsToApply, err := f.tlsResolver.Resolve(ctx, c)
 	if err != nil {
-		return fmt.Errorf("cluster %q: %w", c.ClusterLabel, err)
+		return fmt.Errorf("cluster %q: %w", c.Label(), err)
 	}
 
 	tlsConfig, err := tlsconfig.NewTLSConfig(&tlsToApply)
 	if err != nil {
-		return fmt.Errorf("failed to initialize TLS config for cluster %q: %w", c.ClusterLabel, err)
+		return fmt.Errorf("failed to initialize TLS config for cluster %q: %w", c.Label(), err)
 	}
 	policy.TlsConfig = tlsConfig
 

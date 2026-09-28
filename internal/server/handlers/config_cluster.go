@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -18,12 +17,9 @@ import (
 // @Param       cluster body dto.AerospikeCluster true "Aerospike cluster details"
 // @Success     201
 // @Failure     400 {string} string
+// @Failure     409 {string} string "A cluster with that name already exists"
 func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingClusterName)
-		return
-	}
 
 	newCluster, ok := decodeBodyValidated[dto.AerospikeCluster](w, r)
 	if !ok {
@@ -31,13 +27,9 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
-		if _, exists := config.AerospikeClusters[name]; exists {
-			return nil, fmt.Errorf("add Aerospike cluster %q: %w", name, model.ErrAlreadyExists)
-		}
-		config.AerospikeClusters[name] = newCluster
-		return nil, nil
+		return config.AddCluster(name, newCluster)
 	}); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -74,14 +66,10 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 // @Failure     404 {string} string "The specified cluster was not found"
 func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingClusterName)
-		return
-	}
 	backupConfig := s.config.BackupConfigCopy()
-	cluster, ok := backupConfig.AerospikeClusters[name]
-	if !ok {
-		httpError(w, errNotFound("cluster", name))
+	cluster, err := backupConfig.Cluster(name)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -98,12 +86,9 @@ func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Param       cluster body dto.AerospikeCluster true "Aerospike cluster details"
 // @Success     200
 // @Failure     400 {string} string
+// @Failure     404 {string} string "The specified cluster was not found"
 func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingClusterName)
-		return
-	}
 
 	updatedCluster, ok := decodeBodyValidated[dto.AerospikeCluster](w, r)
 	if !ok {
@@ -111,13 +96,9 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
-		if _, exists := config.AerospikeClusters[name]; !exists {
-			return nil, fmt.Errorf("update Aerospike cluster %q: %w", name, model.ErrNotFound)
-		}
-		config.AerospikeClusters[name] = updatedCluster
-		return routinesUsingCluster(config, name), nil
+		return config.UpdateCluster(name, updatedCluster)
 	}, withNamespaceValidation); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 
@@ -132,25 +113,16 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 // @Param       name path string true "Aerospike cluster name"
 // @Success     204
 // @Failure     400 {string} string
+// @Failure     404 {string} string "The specified cluster was not found"
+// @Failure     409 {string} string "The cluster is still used by a backup routine"
 func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingClusterName)
-		return
-	}
 
 	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
-		if _, exists := config.AerospikeClusters[name]; !exists {
-			return nil, fmt.Errorf("delete Aerospike cluster %q: %w", name, model.ErrNotFound)
-		}
-		if err := ensureClusterNotInUse(config, name); err != nil {
-			return nil, err
-		}
-		delete(config.AerospikeClusters, name)
-		return nil, nil
+		return config.DeleteCluster(name)
 	})
 	if err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, err)
 		return
 	}
 

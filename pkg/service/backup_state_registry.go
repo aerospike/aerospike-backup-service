@@ -312,7 +312,7 @@ func (r *backupStateRegistry) GetRunningState() map[string]model.RoutineState {
 
 	for _, routine := range r.config.Routines() {
 		state := r.GetRoutineState(routine)
-		if state.Full != nil || state.Incremental != nil {
+		if state.IsRunning() {
 			stats[routine.Name] = state
 		}
 	}

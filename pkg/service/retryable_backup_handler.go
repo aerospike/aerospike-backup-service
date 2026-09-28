@@ -32,7 +32,6 @@ var _ backupexecutor.BackupHandler = (*retryableBackupHandler)(nil)
 // retryableBackupCallbacks configures the backup lifecycle hooks for startRetryableBackup.
 type retryableBackupCallbacks struct {
 	Start     func(ctx context.Context) (backupexecutor.BackupHandler, error)
-	OnFail    func(ctx context.Context)
 	OnSuccess func(ctx context.Context, stats *models.BackupStats) error
 	OnRetry   func()
 }
@@ -49,14 +48,11 @@ func startRetryableBackup(
 	callbacks retryableBackupCallbacks,
 	logger *slog.Logger,
 ) (*retryableBackupHandler, error) {
-	// A run uses three contexts: the caller's, which starts the pipeline and outlives every run; a
-	// cancelable child of it, which is this run's handle and what Cancel ends; and a cleanup context
-	// that survives cancellation. Ending the child stops the pipeline, because the inner handler
-	// cancels its own work when the context it waits under ends.
+	// A run uses two contexts: the caller's, which starts the pipeline and outlives every run, and a
+	// cancelable child of it, which is this run's handle and what Cancel ends. Ending the child
+	// stops the pipeline, because the inner handler cancels its own work when the context it waits
+	// under ends.
 	ctxWithCancel, cancel := context.WithCancel(ctx)
-	// Cleanup must still run when the run itself was canceled (shutdown, user cancel), otherwise
-	// the partial backup folder stays in storage.
-	cleanupCtx := context.WithoutCancel(ctx)
 	h := &retryableBackupHandler{
 		started: make(chan struct{}),
 		done:    make(chan struct{}),
@@ -66,15 +62,9 @@ func startRetryableBackup(
 	// Helper to retry onSuccess only. The loop observes the wait context, so Cancel stops further
 	// attempts; the write itself runs on the run context and is left to finish once started.
 	retryOnSuccess := func(handler backupexecutor.BackupHandler) error {
-		err := try.Retry(ctxWithCancel, policy, logger.With(slog.String("label", "write metadata")), func() error {
+		return try.Retry(ctxWithCancel, policy, logger.With(slog.String("label", "write metadata")), func() error {
 			return callbacks.OnSuccess(ctx, handler.GetStats())
 		}, func() {})
-		if err != nil {
-			// Trigger onFail if onSuccess ultimately fails
-			callbacks.OnFail(cleanupCtx)
-		}
-
-		return err
 	}
 
 	// Process backup function.
@@ -88,7 +78,6 @@ func startRetryableBackup(
 		h.setHandler(handler)
 
 		if err = handler.Wait(ctxWithCancel); err != nil {
-			callbacks.OnFail(cleanupCtx)
 			h.setHandler(nil)
 			return fmt.Errorf("backup failed: %w", err)
 		}

@@ -460,6 +460,21 @@ func TestBackupRoutine_Validate_InvalidFilterExpression(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to parse filter expression")
 }
 
+func TestBackupRoutine_Validate_RejectsStructurallyInvalidFilterExpression(t *testing.T) {
+	t.Skip("BKRS-438: filter-exp is only checked for valid base64, not for a real expression tree")
+
+	r := &BackupRoutine{
+		SourceCluster:    "cluster1",
+		Storage:          "storage1",
+		IntervalCron:     "0 0 * * * *",
+		Namespaces:       &[]NamespaceName{"ns1"},
+		FilterExpression: "/////////////////////w==",
+	}
+
+	err := r.Validate()
+	require.Error(t, err)
+}
+
 func TestBackupRoutine_Validate_FilterExpressionWithMultipleSets(t *testing.T) {
 	r := &BackupRoutine{
 		SourceCluster:    "cluster1",

@@ -93,7 +93,7 @@ func (a *configApplier) clearPeriodicSchedulerJobs(routineNames []string) {
 func (a *configApplier) existingRoutines(routineNames []string) []*model.BackupRoutine {
 	existing := make([]*model.BackupRoutine, 0, len(routineNames))
 	for _, routineName := range routineNames {
-		if actualRoutine, ok := a.config.Routine(routineName); ok {
+		if actualRoutine, err := a.config.Routine(routineName); err == nil {
 			existing = append(existing, actualRoutine)
 		}
 	}
