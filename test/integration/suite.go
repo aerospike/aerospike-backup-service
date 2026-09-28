@@ -1,84 +1,88 @@
 //go:build integration
 
-// Package integration holds the end-to-end tests for the backup service.
-//
-// Files without a _test.go suffix are the harness: the suite, the service fixture, the API
-// client, and shared data/metrics assertions. The _test.go files hold the tests themselves.
 package integration
 
 import (
-	"context"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/stretchr/testify/suite"
-	"github.com/testcontainers/testcontainers-go"
-	tcAerospike "github.com/testcontainers/testcontainers-go/modules/aerospike"
 )
 
 const (
-	aerospikeImage = "aerospike/aerospike-server-enterprise:8.1"
-
-	clusterName     = "testCluster"
-	storageName     = "local"
-	policyName      = "defaultPolicy"
-	routineName     = "integrationRoutine"
-	secretAgentName = "secretAgent"
-	namespace       = "test"
-	setName         = "filteredSet"
+	// backupTimeout bounds how long a test waits for a backup, a restore or a metric.
+	backupTimeout = 5 * time.Second
+	// pollInterval is how often the service is asked again while waiting.
+	pollInterval = 250 * time.Millisecond
 )
 
-// Suite is the shared ABS test fixture: seed address, Aerospike client, and HTTP helpers.
+// Suite is what every integration suite embeds: the Aerospike node ABS backs up
+// from, a client connected to it, and every helper in this package.
 type Suite struct {
 	suite.Suite
 
+	// seedNode is the node baseConfig points ABS at.
 	seedNode dto.SeedNode
-	client   *as.Client
+	// client is connected to seedNode, for seeding and checking data.
+	client *as.Client
 }
 
-// BackupSuite runs backup/restore scenarios against a stock EE node with no security.
-type BackupSuite struct {
+// PlainClusterSuite backs up from one Aerospike node with security off, started
+// once for the whole suite. Use it when the cluster is not what is under test.
+//
+// All tests share the one namespace, so they must not call T().Parallel().
+type PlainClusterSuite struct {
 	Suite
 }
 
-// SetupSuite starts the Aerospike container and connects the shared client.
-//
-// Cleanup is registered with T().Cleanup instead of TearDownSuite because testify only registers
-// its TearDownSuite defer after SetupSuite returns; a failure part way through here would
-// otherwise leave the container running.
-func (s *BackupSuite) SetupSuite() {
-	t := s.T()
-	ctx := context.Background()
-
-	container, err := tcAerospike.Run(ctx, aerospikeImage,
-		testcontainers.WithEnv(map[string]string{
-			"REPL_FACTOR": "1",
-		}),
-	)
-	s.Require().NoError(err)
-	t.Cleanup(func() {
-		if err := container.Terminate(ctx); err != nil {
-			t.Logf("failed to terminate Aerospike container: %v", err)
-		}
-	})
-
-	host, err := container.Host(ctx)
-	s.Require().NoError(err)
-
-	port, err := container.MappedPort(ctx, "3000/tcp")
-	s.Require().NoError(err)
-
-	s.seedNode = dto.SeedNode{HostName: host, Port: dto.Port(port.Num())}
-
-	client, asErr := as.NewClient(host, int(port.Num()))
-	s.Require().NoError(asErr)
-	t.Cleanup(client.Close)
-
-	s.client = client
+// SetupSuite starts the shared Aerospike node.
+func (s *PlainClusterSuite) SetupSuite() {
+	s.startAerospike()
 }
 
-// SetupTest hands every test an empty namespace. All tests share this one namespace, so they must
-// not call T().Parallel().
-func (s *Suite) SetupTest() {
+// SetupTest hands every test an empty namespace.
+func (s *PlainClusterSuite) SetupTest() {
+	s.truncateNamespace()
+}
+
+// truncateNamespace deletes every record in the test namespace.
+func (s *Suite) truncateNamespace() {
 	s.Require().NoError(s.client.Truncate(nil, namespace, "", nil))
+}
+
+// seedRecords writes one record per age into setName, keyed by its position in ages.
+func (s *Suite) seedRecords(ages []int) {
+	s.seedRecordsWith(s.client, ages)
+}
+
+func (s *Suite) seedRecordsWith(client *as.Client, ages []int) {
+	writePolicy := as.NewWritePolicy(0, 0)
+
+	for i, age := range ages {
+		key, err := as.NewKey(namespace, setName, i)
+		s.Require().NoError(err)
+		s.Require().NoError(client.Put(writePolicy, key, as.BinMap{"age": age}))
+	}
+}
+
+// eventually calls check every interval until it returns true, and reports whether
+// it did so within timeout. It stops early, returning false, when the test ends.
+func (s *Suite) eventually(timeout, interval time.Duration, check func() bool) bool {
+	ctx := s.T().Context()
+	deadline := time.After(timeout)
+
+	for {
+		if check() {
+			return true
+		}
+
+		select {
+		case <-ctx.Done():
+			return false
+		case <-deadline:
+			return false
+		case <-time.After(interval):
+		}
+	}
 }

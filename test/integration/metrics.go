@@ -3,13 +3,11 @@
 package integration
 
 import (
-	"context"
-	"fmt"
-	"io"
+	"bytes"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	dto "github.com/prometheus/client_model/go"
+	promdto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	prommodel "github.com/prometheus/common/model"
 )
@@ -18,43 +16,81 @@ const (
 	lastSuccessfulBackupTimestampMetric = "aerospike_backup_service_last_successful_backup_timestamp"
 	backupEventsTotalMetric             = "aerospike_backup_service_backup_events_total"
 	restoreEventsTotalMetric            = "aerospike_backup_service_restore_events_total"
+
+	labelRoutine = "routine"
+	labelType    = "type"
+	labelOutcome = "outcome"
+
+	outcomeSuccess = "success"
+	outcomeFailure = "failure"
 )
 
-func (e *env) metricsURL() string {
-	return e.baseURL + "/metrics"
+// metricBackupSuccessEventCount returns backup_events_total{outcome="success"} for
+// the baseConfig routine and backupType. Prometheus omits a counter until its first
+// event, so a missing series counts as zero.
+func (s *Suite) metricBackupSuccessEventCount(e *env, backupType model.BackupType) int {
+	return int(s.metricBackupEventCount(e, backupType, outcomeSuccess))
 }
 
-func (e *env) fetchMetricFamilies(ctx context.Context) (map[string]*dto.MetricFamily, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, e.metricsURL(), nil)
-	if err != nil {
-		return nil, err
-	}
+// metricRestoreSuccessEventCount returns restore_events_total{outcome="success"},
+// with a missing series counting as zero.
+func (s *Suite) metricRestoreSuccessEventCount(e *env) int {
+	value, _ := s.restoreSuccessEventCount(e)
 
-	resp, err := e.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("fetch metrics: status %d: %s", resp.StatusCode, body)
-	}
-
-	var parser = expfmt.NewTextParser(prommodel.UTF8Validation)
-
-	return parser.TextToMetricFamilies(resp.Body)
+	return int(value)
 }
 
-func gaugeValue(families map[string]*dto.MetricFamily, name string, labels prommodel.LabelSet) (float64, bool) {
-	mf := families[name]
-	if mf == nil {
+func (s *Suite) metricBackupEventCount(e *env, backupType model.BackupType, outcome string) float64 {
+	value, _ := s.backupEventCount(e, backupType, outcome)
+
+	return value
+}
+
+func (s *Suite) backupEventCount(e *env, backupType model.BackupType, outcome string) (float64, bool) {
+	return s.metricValue(e, backupEventsTotalMetric, prommodel.LabelSet{
+		labelRoutine: routineName,
+		labelType:    prommodel.LabelValue(backupType),
+		labelOutcome: prommodel.LabelValue(outcome),
+	})
+}
+
+// restoreSuccessEventCount reads restore_events_total{outcome="success"}. Unlike
+// backup events, restore events carry no routine or type labels.
+func (s *Suite) restoreSuccessEventCount(e *env) (float64, bool) {
+	return s.metricValue(e, restoreEventsTotalMetric, prommodel.LabelSet{
+		labelOutcome: outcomeSuccess,
+	})
+}
+
+func (s *Suite) lastSuccessfulBackupTimestamp(e *env, backupType model.BackupType) (float64, bool) {
+	return s.metricValue(e, lastSuccessfulBackupTimestampMetric, prommodel.LabelSet{
+		labelRoutine: routineName,
+		labelType:    prommodel.LabelValue(backupType),
+	})
+}
+
+// metricValue scrapes /metrics and returns the counter or gauge named name whose
+// labels are exactly labels, and whether that series exists.
+func (s *Suite) metricValue(e *env, name string, labels prommodel.LabelSet) (float64, bool) {
+	status, body := s.do(e, http.MethodGet, e.baseURL+"/metrics", nil)
+	s.Require().Equal(http.StatusOK, status, "fetch metrics: %s", body)
+
+	parser := expfmt.NewTextParser(prommodel.UTF8Validation)
+	families, err := parser.TextToMetricFamilies(bytes.NewReader(body))
+	s.Require().NoError(err)
+
+	family := families[name]
+	if family == nil {
 		return 0, false
 	}
 
-	for _, metric := range mf.GetMetric() {
+	for _, metric := range family.GetMetric() {
 		if !labelsMatch(metric.GetLabel(), labels) {
 			continue
+		}
+
+		if counter := metric.GetCounter(); counter != nil {
+			return counter.GetValue(), true
 		}
 
 		if gauge := metric.GetGauge(); gauge != nil {
@@ -65,26 +101,7 @@ func gaugeValue(families map[string]*dto.MetricFamily, name string, labels promm
 	return 0, false
 }
 
-func counterValue(families map[string]*dto.MetricFamily, name string, labels prommodel.LabelSet) (float64, bool) {
-	mf := families[name]
-	if mf == nil {
-		return 0, false
-	}
-
-	for _, metric := range mf.GetMetric() {
-		if !labelsMatch(metric.GetLabel(), labels) {
-			continue
-		}
-
-		if counter := metric.GetCounter(); counter != nil {
-			return counter.GetValue(), true
-		}
-	}
-
-	return 0, false
-}
-
-func labelsMatch(metricLabels []*dto.LabelPair, want prommodel.LabelSet) bool {
+func labelsMatch(metricLabels []*promdto.LabelPair, want prommodel.LabelSet) bool {
 	if len(metricLabels) != len(want) {
 		return false
 	}
@@ -96,63 +113,4 @@ func labelsMatch(metricLabels []*dto.LabelPair, want prommodel.LabelSet) bool {
 	}
 
 	return true
-}
-
-func (e *env) lastSuccessfulBackupTimestamp(ctx context.Context, backupType model.BackupType) (float64, bool, error) {
-	families, err := e.fetchMetricFamilies(ctx)
-	if err != nil {
-		return 0, false, err
-	}
-
-	value, ok := gaugeValue(families, lastSuccessfulBackupTimestampMetric, prommodel.LabelSet{
-		"routine": routineName,
-		"type":    prommodel.LabelValue(backupType),
-	})
-
-	return value, ok, nil
-}
-
-func (e *env) backupSuccessEventCount(ctx context.Context, backupType model.BackupType) (float64, bool, error) {
-	families, err := e.fetchMetricFamilies(ctx)
-	if err != nil {
-		return 0, false, err
-	}
-
-	value, ok := counterValue(families, backupEventsTotalMetric, prommodel.LabelSet{
-		"routine": routineName,
-		"type":    prommodel.LabelValue(backupType),
-		"outcome": "success",
-	})
-
-	return value, ok, nil
-}
-
-func (e *env) backupFailureEventCount(ctx context.Context, backupType model.BackupType) (float64, bool, error) {
-	families, err := e.fetchMetricFamilies(ctx)
-	if err != nil {
-		return 0, false, err
-	}
-
-	value, ok := counterValue(families, backupEventsTotalMetric, prommodel.LabelSet{
-		"routine": routineName,
-		"type":    prommodel.LabelValue(backupType),
-		"outcome": "failure",
-	})
-
-	return value, ok, nil
-}
-
-// restoreSuccessEventCount returns restore_events_total{outcome="success"}. Unlike backup events,
-// restore events carry no routine/type labels.
-func (e *env) restoreSuccessEventCount(ctx context.Context) (float64, bool, error) {
-	families, err := e.fetchMetricFamilies(ctx)
-	if err != nil {
-		return 0, false, err
-	}
-
-	value, ok := counterValue(families, restoreEventsTotalMetric, prommodel.LabelSet{
-		"outcome": "success",
-	})
-
-	return value, ok, nil
 }

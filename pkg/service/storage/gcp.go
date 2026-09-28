@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"runtime"
 	"slices"
 
@@ -16,6 +17,7 @@ import (
 	gcp "github.com/aerospike/backup-go/io/storage/gcp/storage"
 	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/googleapis/gax-go/v2"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
 
@@ -90,9 +92,11 @@ func (a *GcpStorageAccessor) createWriter(
 
 func (a *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStorage) (gcp.Client, error) {
 	opts := make([]option.ClientOption, 0)
+	hasExplicitAuth := false
 
 	if g.KeyFile != "" {
 		opts = append(opts, option.WithAuthCredentialsFile(option.ServiceAccount, g.KeyFile))
+		hasExplicitAuth = true
 	}
 
 	if g.KeyJSON != "" {
@@ -102,10 +106,19 @@ func (a *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStora
 		}
 
 		opts = append(opts, option.WithAuthCredentialsJSON(option.ServiceAccount, []byte(key)))
+		hasExplicitAuth = true
 	}
 
 	if g.Endpoint != "" {
-		opts = append(opts, option.WithEndpoint(g.Endpoint), option.WithoutAuthentication())
+		opts = append(opts, option.WithEndpoint(g.Endpoint))
+		// Without a key-file/key-json, Endpoint names an emulator or other unauthenticated
+		// alternative to GCS, so leave real credential resolution off. With one, the caller
+		// wants that credential to actually authenticate against the given endpoint (e.g. a
+		// storage emulator that does check auth) - forcing WithoutAuthentication here would
+		// silently ignore a configured key.
+		if !hasExplicitAuth {
+			opts = append(opts, option.WithoutAuthentication())
+		}
 	}
 
 	client, err := storage.NewClient(ctx, opts...)
@@ -155,6 +168,19 @@ func checkGcpConnectivity(ctx context.Context, client gcp.Client, bucket string)
 	})
 
 	if err != nil {
+		if isNotImplemented(err) {
+			// Some GCS-compatible servers (e.g. fake-gcs-server, used in local/CI testing)
+			// don't implement testIamPermissions at all. A real GCS bucket never 404s here -
+			// it either grants a permission subset or requires storage.buckets.get to reach
+			// this point at all - so this can only mean "this server doesn't support the
+			// check", not "access is denied".
+			slog.Warn("gcp storage permission check unavailable; server does not implement testIamPermissions, "+
+				"so read/write access could not be confirmed in advance",
+				slog.String("bucket", bucket),
+			)
+			return nil
+		}
+
 		return fmt.Errorf("gcp storage permission check failed: %w", err)
 	}
 
@@ -179,4 +205,12 @@ func checkGcpConnectivity(ctx context.Context, client gcp.Client, bucket string)
 	}
 
 	return nil
+}
+
+// isNotImplemented reports whether err is an HTTP 404 from the GCS API itself (as opposed
+// to, say, a network error): the server understood the request enough to route it, but has
+// no handler for it.
+func isNotImplemented(err error) bool {
+	var apiErr *googleapi.Error
+	return errors.As(err, &apiErr) && apiErr.Code == http.StatusNotFound
 }

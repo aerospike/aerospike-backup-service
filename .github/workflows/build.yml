@@ -83,7 +83,20 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: true
+          # setup-go's cache key is the same for every job, so whichever job saves
+          # first owns it, and this job's build (no -race, integration tag) is never
+          # in it. A key of its own keeps the compiled test binary's packages.
+          cache: false
+
+      - name: Cache Go build and modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-integration-${{ runner.os }}-${{ env.GO_VERSION }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-integration-${{ runner.os }}-${{ env.GO_VERSION }}-
 
       - name: Integration test
         run: make test-integration
