@@ -154,6 +154,11 @@ type RestoreJobsHolder struct {
 	lifetime context.Context //nolint:containedctx // the holder's purpose is job lifetimes; see above.
 }
 
+// maxJSONSafeJobID bounds restore job ids to 2^53-1, the largest integer an IEEE-754 double
+// holds exactly. Ids are written as bare JSON numbers, and clients that decode numbers as
+// doubles (JavaScript, Swagger UI) would round anything larger into an id that does not exist.
+const maxJSONSafeJobID = 1<<53 - 1
+
 // NewRestoreJobsHolder returns a new RestoreJobsHolder. It is usable once Start has given
 // it a lifetime, which Components.Start does before anything can reach it.
 func NewRestoreJobsHolder() *RestoreJobsHolder {
@@ -180,7 +185,7 @@ func (h *RestoreJobsHolder) newJob(label string) (model.RestoreJobID, context.Co
 
 	ctx, cancel := context.WithCancel(h.lifetime)
 	// #nosec G404
-	id := model.RestoreJobID(rand.Int64())
+	id := model.RestoreJobID(rand.Int64N(maxJSONSafeJobID) + 1)
 	h.Store(id, newRestoreJob(label, cancel))
 
 	return id, ctx

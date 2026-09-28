@@ -46,7 +46,7 @@ func (r *backupReporter) Report(
 
 	switch {
 	case err == nil:
-		logger.Debug(operation+" finished", slog.Duration("duration", duration))
+		logger.Info(operation+" finished", slog.Duration("duration", duration))
 		prometheus.ObserveBackupEvent(routineName, backupType, prometheus.OutcomeSuccess, duration)
 
 	case errors.Is(err, errBackupSkipped):

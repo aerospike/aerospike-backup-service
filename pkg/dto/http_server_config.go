@@ -88,6 +88,12 @@ func (r *RateLimiterConfig) Validate() error {
 	if r == nil {
 		return nil
 	}
+	if r.Tps != nil && *r.Tps <= 0 {
+		return errValidationNonPositive("tps", *r.Tps)
+	}
+	if r.Size != nil && *r.Size <= 0 {
+		return errValidationNonPositive("size", *r.Size)
+	}
 	if err := validateUniqueNonEmpty("white-list", r.WhiteList); err != nil {
 		return err
 	}
