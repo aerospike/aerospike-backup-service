@@ -36,9 +36,8 @@ type BackupRoutine struct {
 	BinList []string
 	// A list of Aerospike Server rack IDs to use when reading records for a backup.
 	RackList []int
-	// Back up list of partition filters. Partition filters can be ranges or individual partitions.
-	// Default number of partitions to back up: 0 to 4095: all partitions.
-	PartitionList string
+	// The partitions to back up (optional, an empty list implies backing up all partitions).
+	PartitionList PartitionList
 	// NodeList contains a list of nodes to back up.
 	NodeList []string
 	// Base64 encoded filter expression used in each scan call for partial backup.
@@ -120,7 +119,7 @@ type backupRoutineGob struct {
 	SetList            []string
 	BinList            []string
 	RackList           []int
-	PartitionList      string
+	PartitionList      PartitionList
 	NodeList           []string
 	FilterExpression   string
 	Disabled           bool

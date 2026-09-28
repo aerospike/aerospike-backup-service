@@ -3,8 +3,6 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
@@ -63,7 +61,7 @@ type BackupRoutine struct {
 	// By default, all partitions (0 to 4095) are backed up.
 	// Mutually exclusive with node-list and rack-list in this routine,
 	// and also mutually exclusive with the cluster's prefer-racks setting.
-	PartitionList string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" extensions:"x-nullable"`
+	PartitionList PartitionList `yaml:"partition-list,omitempty" json:"partition-list,omitempty" extensions:"x-nullable"`
 
 	// NodeList specifies which Aerospike nodes to include in the backup.
 	// Only the listed nodes will be backed up.
@@ -141,8 +139,8 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)
 		}
 	}
-	if err := validatePartitionList(r.PartitionList); err != nil {
-		return fmt.Errorf("invalid partition list: %q", r.PartitionList)
+	if err := r.PartitionList.Validate(); err != nil {
+		return errValidationPartitionList(r.PartitionList, err)
 	}
 	if err := validateRoutineSelectorExclusivity(r.PartitionList, r.RackList, r.NodeList); err != nil {
 		return err
@@ -172,7 +170,11 @@ func (r *BackupRoutine) Validate() error {
 	return nil
 }
 
-func validateRoutineSelectorExclusivity(partitionList string, rackList []int, nodeList []string) error {
+func errValidationPartitionList(partitionList PartitionList, err error) error {
+	return fmt.Errorf("%w: %s %q: %w", errInvalidValue, partitionListField, partitionList, err)
+}
+
+func validateRoutineSelectorExclusivity(partitionList PartitionList, rackList []int, nodeList []string) error {
 	if len(partitionList) > 0 && len(nodeList) > 0 {
 		return errValidationMutuallyExclusive(partitionListField, nodeListField)
 	}
@@ -200,61 +202,6 @@ func validateFilterExpression(filterExpression string, setList []string) error {
 	}
 
 	return nil
-}
-
-func validatePartitionList(partitionList string) error {
-	if partitionList == "" {
-		return nil // empty list is valid
-	}
-
-	for entry := range strings.SplitSeq(partitionList, ",") {
-		entry = strings.TrimSpace(entry)
-		if entry == "" {
-			return errors.New("empty entry in partition list")
-		}
-
-		if err := validatePartitionEntry(entry); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func validatePartitionEntry(entry string) error {
-	if strings.Contains(entry, "-") {
-		return validatePartitionRange(entry)
-	}
-
-	if isValidPartitionID(entry) {
-		return nil
-	}
-
-	return fmt.Errorf("invalid partition entry: %q", entry)
-}
-
-func validatePartitionRange(entry string) error {
-	parts := strings.SplitN(entry, "-", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid range format: %q", entry)
-	}
-
-	start, err := strconv.Atoi(parts[0])
-	if err != nil || start < 0 || start > 4095 {
-		return fmt.Errorf("invalid start in range %q: must be int between 0 and 4095", entry)
-	}
-
-	count, err := strconv.Atoi(parts[1])
-	if err != nil || count < 1 || start+count > 4096 {
-		return fmt.Errorf("invalid count in range %q: must be >=1 and start+count <= 4096", entry)
-	}
-
-	return nil
-}
-
-func isValidPartitionID(entry string) bool {
-	id, err := strconv.Atoi(entry)
-	return err == nil && id >= 0 && id <= 4095
 }
 
 func (r *BackupRoutine) ToModel(
@@ -296,6 +243,11 @@ func (r *BackupRoutine) ToModel(
 		return nil, err
 	}
 
+	partitionList, err := r.PartitionList.toModel()
+	if err != nil {
+		return nil, errValidationPartitionList(r.PartitionList, err)
+	}
+
 	return &model.BackupRoutine{
 		Name:             name,
 		BackupPolicy:     policy,
@@ -309,7 +261,7 @@ func (r *BackupRoutine) ToModel(
 		SetList:          r.SetList,
 		BinList:          r.BinList,
 		RackList:         r.RackList,
-		PartitionList:    r.PartitionList,
+		PartitionList:    partitionList,
 		NodeList:         r.NodeList,
 		FilterExpression: r.FilterExpression,
 		Disabled:         r.Disabled,
@@ -410,7 +362,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	r.SetList = m.SetList
 	r.BinList = m.BinList
 	r.RackList = m.RackList
-	r.PartitionList = m.PartitionList
+	r.PartitionList = newPartitionList(m.PartitionList)
 	r.NodeList = m.NodeList
 	r.FilterExpression = m.FilterExpression
 	r.Disabled = m.Disabled

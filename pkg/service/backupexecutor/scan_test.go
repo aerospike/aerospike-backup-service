@@ -150,7 +150,7 @@ func TestMakeBackupConfigWithPartitionList(t *testing.T) {
 	namespace := "testNamespace"
 	routine := &model.BackupRoutine{
 		BackupPolicy:  &model.BackupPolicy{},
-		PartitionList: "0-100",
+		PartitionList: model.PartitionList{{Begin: 0, Count: 100}, {Begin: 200, Count: 1}},
 		IntervalCron:  "@daily",
 		SourceCluster: &model.AerospikeCluster{},
 	}
@@ -158,11 +158,45 @@ func TestMakeBackupConfigWithPartitionList(t *testing.T) {
 	config, err := makeBackupConfig(namespace, routine, model.TimeBounds{})
 
 	require.NoError(t, err)
-	assert.NotNil(t, config.PartitionFilters)
-	assert.Len(t, config.PartitionFilters, 1)
+	assert.Equal(t, []*as.PartitionFilter{
+		as.NewPartitionFilterByRange(0, 100),
+		as.NewPartitionFilterById(200),
+	}, config.PartitionFilters)
 
 	assert.Nil(t, config.EncryptionPolicy)
 	assert.Nil(t, config.CompressionPolicy)
+}
+
+// The scan records its progress in the partition filters it is given, so a filter shared by two
+// backups would make the second one resume where the first stopped.
+func TestMakeBackupConfig_PartitionFiltersAreNotShared(t *testing.T) {
+	routine := &model.BackupRoutine{
+		BackupPolicy:  &model.BackupPolicy{},
+		PartitionList: model.PartitionList{{Begin: 0, Count: 100}},
+		SourceCluster: &model.AerospikeCluster{},
+	}
+
+	first, err := makeBackupConfig("ns1", routine, model.TimeBounds{})
+	require.NoError(t, err)
+	first.PartitionFilters[0].Done = true
+
+	second, err := makeBackupConfig("ns2", routine, model.TimeBounds{})
+	require.NoError(t, err)
+
+	assert.NotSame(t, first.PartitionFilters[0], second.PartitionFilters[0])
+	assert.False(t, second.PartitionFilters[0].Done)
+}
+
+func TestMakeBackupConfig_NoPartitionList(t *testing.T) {
+	routine := &model.BackupRoutine{
+		BackupPolicy:  &model.BackupPolicy{},
+		SourceCluster: &model.AerospikeCluster{},
+	}
+
+	config, err := makeBackupConfig("ns", routine, model.TimeBounds{})
+
+	require.NoError(t, err)
+	assert.Equal(t, []*as.PartitionFilter{as.NewPartitionFilterByRange(0, 4096)}, config.PartitionFilters)
 }
 
 func TestMakeBackupConfig_DefaultParallelWrite(t *testing.T) {

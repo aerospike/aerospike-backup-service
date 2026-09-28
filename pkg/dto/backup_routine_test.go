@@ -9,46 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidSinglePartitionID(t *testing.T) {
-	err := validatePartitionList("0,100,4095")
-	require.NoError(t, err)
-}
-
-func TestInvalidPartitionID_OutOfRange(t *testing.T) {
-	err := validatePartitionList("4096")
-	require.Error(t, err)
-}
-
-func TestValidPartitionRange(t *testing.T) {
-	err := validatePartitionList("0-1,100-50,4095-1")
-	require.NoError(t, err)
-}
-
-func TestInvalidPartitionRange_StartTooHigh(t *testing.T) {
-	err := validatePartitionList("4095-2")
-	require.Error(t, err)
-}
-
-func TestInvalidPartitionRange_CountZero(t *testing.T) {
-	err := validatePartitionList("100-0")
-	require.Error(t, err)
-}
-
-func TestInvalidPartitionRange_BadFormat(t *testing.T) {
-	err := validatePartitionList("100--200")
-	require.Error(t, err)
-}
-
-func TestEmptyString(t *testing.T) {
-	err := validatePartitionList("")
-	require.NoError(t, err)
-}
-
-func TestEmptyEntry(t *testing.T) {
-	err := validatePartitionList("100,,200")
-	require.Error(t, err)
-}
-
 func TestBackupRoutine_ToModel(t *testing.T) {
 	routineDTO := &BackupRoutine{
 		BackupPolicy:     "policy1",
@@ -96,7 +56,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 	assert.Equal(t, []string{"set1"}, m.SetList)
 	assert.Equal(t, []string{"bin1"}, m.BinList)
 	assert.Equal(t, []int{1}, m.RackList)
-	assert.Equal(t, "0-100", m.PartitionList)
+	assert.Equal(t, model.PartitionList{{Begin: 0, Count: 100}}, m.PartitionList)
 	assert.Equal(t, []string{"node1"}, m.NodeList)
 	assert.Equal(t, "k1EDpHRlc3Q=", m.FilterExpression)
 	assert.True(t, m.Disabled)

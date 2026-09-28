@@ -47,15 +47,7 @@ func makeBackupConfig(
 	config.NodeList = routine.NodeList
 	config.SetList = routine.SetList
 
-	if routine.PartitionList != "" {
-		// namespace parameter is only applicable for partition by digest; it's not supported by service.
-		partitionFilters, err := backup.ParsePartitionFilterListString("", routine.PartitionList)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse partition list: %w", err)
-		}
-
-		config.PartitionFilters = partitionFilters
-	}
+	config.PartitionFilters = routine.PartitionList.ToPartitionFilters()
 
 	backupPolicy := routine.BackupPolicy
 	config.NoRecords = ptr.ValueOrZero(backupPolicy.NoRecords)
