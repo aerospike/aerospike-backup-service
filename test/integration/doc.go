@@ -28,4 +28,5 @@
 //	fakegcs.go      GCS (fake-gcs-server) and a fake OAuth token endpoint
 //	azurite.go      Azure Blob (Azurite)
 //	containers.go   container lifecycle and host-port pinning shared by the above
+//	images.go       every image the suites use, pulled in parallel by TestMain
 package integration

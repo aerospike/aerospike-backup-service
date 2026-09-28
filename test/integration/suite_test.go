@@ -3,6 +3,9 @@
 package integration
 
 import (
+	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -24,6 +27,17 @@ type StorageSuite struct {
 // transport/authentication profile.
 type AuthSuite struct {
 	SecuredClusterSuite
+}
+
+// TestMain pulls every image up front, in parallel, before the suites run one
+// after another.
+func TestMain(m *testing.M) {
+	if err := pullImages(context.Background()); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
 }
 
 func TestBackup(t *testing.T) {
