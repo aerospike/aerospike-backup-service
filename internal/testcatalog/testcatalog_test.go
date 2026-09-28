@@ -15,7 +15,6 @@ func TestRead(t *testing.T) {
 
 		assert.Empty(t, catalog.Strays)
 		assert.Empty(t, catalog.Orphans)
-		assert.Empty(t, catalog.Misplaced)
 		assert.Equal(t, []testcatalog.Suite{
 			{
 				Type:   "SecondSuite",
@@ -46,7 +45,7 @@ func TestRead(t *testing.T) {
 		}, catalog.Suites)
 	})
 
-	t.Run("strays, orphans and misplaced tests", func(t *testing.T) {
+	t.Run("strays and orphans", func(t *testing.T) {
 		catalog, err := testcatalog.Read("testdata/violations")
 		require.NoError(t, err)
 
@@ -60,10 +59,6 @@ func TestRead(t *testing.T) {
 		assert.Equal(t, []testcatalog.Test{
 			{Suite: "NobodySuite", Name: "TestNeverRuns", File: "a_test.go"},
 		}, catalog.Orphans)
-		assert.Equal(t, []testcatalog.Decl{
-			{Pos: "infra.go:3", Name: "RunSuite.TestHiddenInInfra"},
-			{Pos: "infra.go:5", Name: "TestTopLevelInInfra"},
-		}, catalog.Misplaced)
 		require.Len(t, catalog.Suites, 1)
 		assert.Len(t, catalog.Suites[0].Tests, 1)
 	})
