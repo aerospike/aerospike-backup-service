@@ -1,0 +1,31 @@
+# Example drop-in for aerospike-backup-service.service.
+#
+# The unit runs the service unprivileged under ProtectSystem=strict, so the filesystem
+# is read-only apart from /etc/aerospike-backup-service, /var/lib/aerospike-backup-service
+# and the directories systemd creates (/var/log/aerospike-backup-service). A backup
+# routine whose local-storage path points anywhere else fails with:
+#
+#   failed to prepare backup directory: failed to create directory:
+#     mkdir /srv/backups/<routine>: read-only file system
+#
+# To allow another destination, install this file as
+#
+#   /etc/systemd/system/aerospike-backup-service.service.d/10-local-storage.conf
+#
+# or run `systemctl edit aerospike-backup-service`, then
+# `systemctl daemon-reload && systemctl restart aerospike-backup-service`.
+#
+# The destination must also be writable by the service account:
+#
+#   chown -R aerospike-backup-service:aerospike-backup-service /srv/backups
+#
+# A second use for a drop-in is binding a privileged port. The unit drops every
+# capability, so service.http.port below 1024 fails with "permission denied" unless
+# CAP_NET_BIND_SERVICE is granted back -- see the commented block at the end.
+
+[Service]
+ReadWritePaths=/srv/backups
+
+# Uncomment to serve on a port below 1024:
+# AmbientCapabilities=CAP_NET_BIND_SERVICE
+# CapabilityBoundingSet=CAP_NET_BIND_SERVICE

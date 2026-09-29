@@ -70,3 +70,15 @@ Create the name of the service account to use
 {{- end -}}
 {{- end -}}
 
+{{/*
+Resolve a volume mount's readOnly flag.
+Accepts a YAML boolean, or the strings "true"/"false" (Terraform and other templating
+layers serialise booleans as strings). Anything else, including an absent value,
+defaults to true so a mount is never made writable by accident.
+*/}}
+{{- define "aerospike-backup-service.readOnly" -}}
+{{- if kindIs "bool" . }}{{ . }}
+{{- else if eq (lower (toString .)) "false" }}false
+{{- else }}true
+{{- end }}
+{{- end -}}

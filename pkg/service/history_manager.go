@@ -9,28 +9,29 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
+// HistoryManager finds the last full and incremental backup times of a routine in storage.
 type HistoryManager interface {
 	// FindLastRun finds the last backup run for a given routine.
 	FindLastRun(ctx context.Context, routine *model.BackupRoutine) (*model.BackupTime, error)
 }
 
-// HistoryManagerImpl is a stateless service responsible for scanning
-// storage backends to find the most recent backup timestamps.
-type HistoryManagerImpl struct {
+type historyManager struct {
 	backupReader BackupReader
 }
 
-// NewHistoryManager creates a new HistoryManagerImpl.
+var _ HistoryManager = (*historyManager)(nil)
+
+// NewHistoryManager returns a HistoryManager.
 func NewHistoryManager(
 	backupReader BackupReader,
-) *HistoryManagerImpl {
-	return &HistoryManagerImpl{
+) HistoryManager {
+	return &historyManager{
 		backupReader: backupReader,
 	}
 }
 
 // FindLastRun performs the I/O to find the last backup for a single routine.
-func (hm *HistoryManagerImpl) FindLastRun(
+func (hm *historyManager) FindLastRun(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 ) (*model.BackupTime, error) {

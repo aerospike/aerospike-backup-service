@@ -11,9 +11,6 @@ image:
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
-xdr:
-  enabled: false
-  exposeExternally: false
 configmap:
   # Specifies whether a configmap should be created with the backupServiceConfig.
   # When false the backupServiceConfig will get created in the deployment init container.
@@ -61,6 +58,9 @@ backupServiceConfig: {}
 #       maxage: <max-days-retain-logs> # Optional default: 0
 #       maxbackups: <backup-logfiles> # Optional default: 0
 #       compress: <true/false> # Optional default: false
+#   backup:
+#     timestamp-format: <ISO|EU|US> # Optional. Human-readable UTC timestamp suffix in backup paths
+#     schedule-timezone: <UTC|Local|IANA> # Optional timezone for cron evaluation. Default: UTC. Changing this requires a restart.
 #
 # aerospike-clusters:
 #   <cluster-name>: # At least one service is required
@@ -179,15 +179,16 @@ backupServiceConfig: {}
 #     records-per-second: <records-per-second> # Optional limit of total returned records per second. default: 0
 #     file-limit: <file-limit> # Optional .asb file size limit in MiB. default: 250
 #     encryption:
-#       mode: <mode> # Optional encryption mode to be used. Valid values: (NONE, AES128, AES256) default: None
-#       key-file: <key-file> # Optional path to the file containing the encryption key default: ""
+#       mode: <mode> # Required encryption mode to be used. Valid values: (NONE, AES128, AES256)
+#       key-file: <key-file> # Path to the file containing the encryption key; exactly one key source is required unless mode is NONE
 #       key-env: <key-env> # Optional environment variable containing the encryption key default: ""
 #       key-secret: <key-secret> # Optional secret keyword in Aerospike Secret Agent containing the encryption key default: ""
 #     compression:
-#       mode: <mode> # Optional compression mode to be used Valid values: (NONE,ZSTD) default NONE
-#       level: <level> # Optional compression level default: 0
+#       mode: <mode> # Required compression mode to be used. Valid values: (NONE, ZSTD)
+#       level: <level> # Compression level from -1 to 22; higher compresses better, but not every step changes the result. Required for ZSTD, must not be set for NONE
 #     sealed: <true/false> # Optional determines whether backup should include keys updated during the backup process default: false
 #     concurrent-incremental: <true/false> #Allows incremental backups to run concurrently.
+#     incr-mode: <incr-mode> # Optional mode for incremental backups (differential or cumulative)
 #
 # backup-routines:
 #   <routine-name>:
@@ -197,6 +198,7 @@ backupServiceConfig: {}
 #     secret-agent: <secret-agent> # Optional Secret Agent configuration for the routine
 #     interval-cron: <interval-cron> # Mandatory interval for full backup as a cron expression string
 #     incr-interval-cron: <incr-interval-cron> # Optional interval for incremental backup as a cron expression string
+#     schedule-timezone: <UTC|Local|IANA> # Optional. Overrides service.backup.schedule-timezone for this routine. Default: inherit.
 #     namespaces: [ <namespace-name> ] # Mandatory list of the namespaces to back up default: empty list
 #     set-list: [ <set-names> ] # Optional list of backup set names default: empty list
 #     bin-list: [ <bin-names> ] # Optional list of backup bin names default: empty list
@@ -219,7 +221,9 @@ serviceAccount:
   # Specifies whether a service account should be created
   create: true
   # Automatically mount a ServiceAccount's API credentials?
-  automount: true
+  # False: ABS does not call the Kubernetes API. Pod spec also sets
+  # automountServiceAccountToken: false.
+  automount: false
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
@@ -227,16 +231,31 @@ serviceAccount:
   name: ""
 podAnnotations: {}
 podLabels: {}
-podSecurityContext: {}
+podSecurityContext:
+  runAsNonRoot: true
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
 # fsGroup: 2000
 
-securityContext: {}
-# capabilities:
-#   drop:
-#   - ALL
-# readOnlyRootFilesystem: true
-# runAsNonRoot: true
-# runAsUser: 1000
+# Container securityContext is hardened by default (BKRS-302).
+# Override via values if a writable local-storage or log path is required
+# (readOnlyRootFilesystem: true needs an extraVolumeMount with readOnly: false).
+# Full override guidance belongs in docs/security.md (BKRS-295 / p5-deploy-docs).
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  # Matches USER absuser (uid 65532) and group abgroup (gid 65532) in the official image.
+  # runAsGroup is declared explicitly rather than inherited from the image so the
+  # rendered manifest is self-describing (and so static scanners can see it).
+  runAsUser: 65532
+  runAsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
 
 service:
   type: ClusterIP
@@ -294,6 +313,16 @@ volumes: []
 #     optional: false
 
 # Additional volumeMounts on the output Deployment definition.
+# For local-storage or a file log under readOnlyRootFilesystem, mount a
+# writable volume and set readOnly: false (see BKRS-295 / docs/security.md).
+# Example:
+# volumes:
+#   - name: local-storage
+#     emptyDir: {}
+# extraVolumeMounts:
+#   - name: local-storage
+#     mountPath: /backup
+#     readOnly: false
 extraVolumeMounts: []
 # - name: foo
 #   mountPath: "/etc/foo"

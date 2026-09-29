@@ -28,6 +28,40 @@ Quartz uses either:
 * Shorthand expressions for common schedules:
   `@hourly`, `@daily`, `@weekly`, `@monthly`, `@yearly`
 
+Cron expressions are evaluated in **UTC** unless you set `schedule-timezone`.
+Accepted values:
+
+* omitted or `UTC` — Coordinated Universal Time (the default; existing configs are unchanged)
+* `Local` — the timezone of the host running the service (`TZ` or `/etc/localtime`)
+* an IANA name such as `America/New_York` — useful in containers, which typically run in UTC
+
+`UTC` and `Local` are case-insensitive; IANA names are case-sensitive. Any name Go's
+`time.LoadLocation` resolves is accepted, including legacy aliases such as `Japan` or
+`Turkey`. Prefer canonical `Area/Location` names: `EST` and similar abbreviations resolve
+as fixed offsets with no daylight saving, which is rarely what "Eastern Time" is meant
+to be. Use `America/New_York` if you want DST to apply.
+
+Set a service-wide default under `service.backup` (requires a restart) or override it on a
+routine (can be changed through the routine API):
+
+```yaml
+service:
+  backup:
+    schedule-timezone: America/New_York
+
+backup-routines:
+  nightly:
+    interval-cron: "0 0 2 * * ?"   # 02:00 in America/New_York
+    schedule-timezone: UTC         # optional per-routine override
+```
+
+Backup folder names and the optional `timestamp-format` suffix stay UTC regardless of
+`schedule-timezone`. Daylight saving applies to `Local` and IANA zones: on the spring-forward
+day a schedule whose local time does not exist (for example 02:30) still fires — the
+nonexistent wall-clock time is normalized, so the run lands an hour earlier in local terms and
+23 hours after the previous one. Daily schedules in the repeated fall-back hour fire once.
+Use UTC to avoid DST-driven variations in the elapsed time between runs.
+
 **📆 Quartz Cron Expression Examples for Backup Scheduling**
 
 | Schedule Description                | Cron Expression       | Use Case                                                             |
@@ -42,7 +76,7 @@ Quartz uses either:
 
 ## Configuration file example
 
-<!-- DefaultConfig -->
+<!-- tag DefaultConfig -->
 
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.6.1/docs/config.schema.json
@@ -61,7 +95,7 @@ secret-agents:
   secret-agent: # <--- Custom secret agent name
     address: localhost
     port: 5000
-    connection-type: tcp
+    connection-type: TCP
 
 storage:
   s3: # <--- Custom storage name
@@ -97,8 +131,9 @@ service:
   logger:
     level: INFO
     file-writer:
-      filename: /var/log/aerospike-backup-service.log
+      filename: /var/log/aerospike-backup-service/aerospike-backup-service.log
 ```
+<!-- /tag -->
 
 See the [`dto.Config`](readme/dto/dto.config.md) for details.
 Several configuration fields in the YAML file are marked with `May affect performance`.
@@ -109,6 +144,10 @@ We recommend experimenting with different values in your environment to find the
 The `service` section configures the operation settings of the Aerospike Backup Service,
 which include logging and HTTP endpoint. See the [`dto.ServiceConfig`](readme/dto/dto.serviceconfig.md)
 for details.
+HTTP rate limiter behavior:
+- Rate limiting applies to all clients by default.
+- Entries in `service.http.rate.white-list` are exempt from rate limiting.
+- If `white-list` contains `0.0.0.0/0`, all clients are exempt and rate limiting is effectively disabled.
 
 ## Configuration with API
 
@@ -129,11 +168,14 @@ However, backup processes already in progress will continue using the configurat
 Cluster configuration entities denote the configuration properties needed to establish connections to Aerospike
 clusters.
 These connections include the cluster IP address, port number, authentication information, and more.
-See [`POST: /config/clusters`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addCluster) for the
-full specification.
+See the full specification:
 
-:warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/tools/backup#secret-agent-options) to avoid
-including secrets in your configuration.
+<!-- tag addCluster link -->
+[`POST {{baseUrl}}/v1/config/clusters/{name}`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addCluster)
+<!-- /tag -->
+
+:warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/database/tools/secret-agent/) to avoid
+including secrets in your configuration. See [Security](security.md) for how secrets are resolved, cached, and rotated.
 
 #### Storage connection
 
@@ -141,8 +183,11 @@ This entity includes properties of connections to local or cloud storage, where 
 You can get information about a specific configured storage option, such as checking the cloud storage location for
 a backup.
 You can also add, update, or remove a storage configuration.
-See the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities
-under `/config/storage` for detailed information.
+See the Storage entities for detailed information:
+
+<!-- tag readAllStorage link -->
+[`GET {{baseUrl}}/v1/config/storage`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage)
+<!-- /tag -->
 
 :warning: ABS currently supports AWS S3, GCP, and Microsoft Azure cloud storage.
 
@@ -150,13 +195,18 @@ under `/config/storage` for detailed information.
 
 A backup policy is a set of rules that defines how backups should be performed.
 It includes settings for performance tuning, data selection, encryption, compression, and other operational details.
-See [`GET: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readPolicies) for
-full details about what parameters are available to customize a backup policy.
+See the following for full details about what parameters are available to customize a backup policy:
+
+<!-- tag readPolicies link -->
+[`GET {{baseUrl}}/v1/config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readPolicies)
+<!-- /tag -->
 
 You can save multiple policies with different configurations.
-When you run
-the [`POST: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addPolicy) command
-to create a policy, ensure that you give your policy a name that will let you quickly identify its characteristics.
+When you create a policy, ensure that you give it a name that will let you quickly identify its characteristics:
+
+<!-- tag addPolicy link -->
+[`POST {{baseUrl}}/v1/config/policies/{name}`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addPolicy)
+<!-- /tag -->
 
 #### Backup routine
 
@@ -164,14 +214,103 @@ A backup routine is a set of procedures that actually perform backups based on t
 It includes configurations for the source cluster, storage destination, scheduling (separately for full and incremental
 backups), and the scope of data to back up (such as namespaces, sets, or bins).
 
-See the [Routines](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readRoutines) section for
-command examples showing how to find all routines, get information about a specific named routine, and add, remove, or
-update an existing routine.
+See the Routines section for command examples showing how to find all routines, get information about a specific
+named routine, and add, remove, or update an existing routine:
+
+<!-- tag readRoutines link -->
+[`GET {{baseUrl}}/v1/config/routines`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readRoutines)
+<!-- /tag -->
 
 :warning: Incremental backups are deleted if they are empty and after each full backup. System metadata is backed up
 only on full backups.
 
+## Partial backup with filter expressions
+
+The `filter-exp` field on a backup routine applies an Aerospike [filter expression](https://aerospike.com/docs/develop/expressions/#record-filtering-with-expressions)
+during scan-based backups. Only records that match the expression are included in the backup.
+
+Filter expressions are **not** plain text (you cannot write `age > 25` directly in YAML). They are a binary format
+serialized as a **base64 string**. Build the expression with an Aerospike client library, then paste the encoded
+value into your routine configuration.
+
+### Generating a filter expression
+
+Use the [Aerospike Expressions guide](https://aerospike.com/docs/develop/expressions/#record-filtering-with-expressions)
+to understand the expression API, then encode the result with your client:
+
+**Go**
+
+```go
+import as "github.com/aerospike/aerospike-client-go/v8"
+
+exp, err := as.ExpGreater(as.ExpIntBin("age"), as.ExpIntVal(25)).Base64()
+// exp == "kwOTUQKjYWdlGQ=="
+```
+
+**Java**
+
+```java
+Expression filter = Exp.build(Exp.gt(Exp.intBin("age"), Exp.val(25)));
+System.out.println(filter.getBase64());
+```
+
+**Python**
+
+```python
+from aerospike_helpers import expressions as exp
+
+encoded = exp.GT(exp.IntBin("age"), 25).compile()
+# Use client.get_expression_base64(encoded) to get the base64 string
+```
+
+If you already have a filter on the cluster (for example an XDR shipping filter or expression secondary index), you can
+reuse its base64 value:
+
+```bash
+asinfo -v "xdr-get-filter:dc=DC1;namespace=test;b64=true"
+```
+
+### Configuration example
+
+`filter-exp` can only be used when backing up a **single set** (or all sets in a namespace with no `set-list`).
+It is mutually exclusive with multi-set backup.
+
+```yaml
+backup-routines:
+  adultsBackup:
+    interval-cron: "@daily"
+    source-cluster: abs-cluster
+    storage: s3
+    backup-policy: dailyBackupPolicy
+    namespaces:
+      - test
+    set-list:
+      - users
+    filter-exp: "kwOTUQKjYWdlGQ=="  # age > 25
+```
+
+### Common examples
+
+<!-- tag FilterExpressions -->
+
+| Filter | Base64 value |
+|--------|--------------|
+| `age > 25` | `kwOTUQKjYWdlGQ==` |
+| `country = "US"` | `kwGTUQOnY291bnRyeaMDVVM=` |
+| `age >= 18 AND (country = "US" OR country = "CA")` | `kxCTBJNRAqNhZ2USkxGTAZNRA6djb3VudHJ5owNVU5MBk1EDp2NvdW50cnmjA0NB` |
+<!-- /tag -->
+
+For more complex logic (metadata filters, list/map operations, geo filters, etc.), see the
+[Aerospike Expressions documentation](https://aerospike.com/docs/develop/expressions/).
+
 ## FAQ
+
+### What timezone do backup schedules use?
+
+Backup cron expressions are evaluated in UTC by default. Set `schedule-timezone` to `UTC`,
+`Local`, or an IANA name such as `America/New_York` on `service.backup` (service-wide default;
+requires a restart) or on a routine (overrides the default). Backup paths and the
+`timestamp-format` suffix remain UTC for every timezone setting.
 
 ### What happens when a backup doesn't finish before another starts (for the same routine)?
 
@@ -184,9 +323,44 @@ only on full backups.
 
 - **Incremental Backups:**
     - By default, incremental backups are skipped if any other backup (full or incremental) is still running.
-      This behavior can be overridden using the `concurrent-incremental` field in the
+    - An incremental backup is also skipped when a full backup is scheduled for the same instant: the full backup
+      takes the tick, whether or not anything is currently running. The pairing in the
+      [configuration file example](#configuration-file-example) — `interval-cron: "@daily"` with
+      `incr-interval-cron: "0 0 0/2 * * ? *"` — hits this every midnight.
+    - Both conditions can be lifted using the `concurrent-incremental` field in the
       [backup policy](readme/dto/dto.backuppolicy.md), which allows incremental backups to run concurrently.
     - Incremental backups will not run until at least one full backup has been successfully completed.
+
+### What happens when a namespace backup fails?
+
+Each namespace of a routine is backed up on its own. A namespace that fails, for example on a network error, is retried
+under the [retry policy](readme/dto/dto.retrypolicy.md) of the backup policy, and the other namespaces carry on
+unaffected. Every attempt writes to a folder of its own under the run's timestamp:
+
+```
+<routine>/backup/<timestamp>/data/<namespace>      # first attempt
+<routine>/backup/<timestamp>/data/<namespace>.2    # second attempt
+<routine>/backup/<timestamp>/data/<namespace>.3    # and so on
+```
+
+A failed attempt deletes nothing. A folder becomes a backup only when its attempt completes and writes its
+`metadata.yaml`, so a failed attempt's folder is never listed or restored. Once a later attempt completes, the folders of
+the earlier attempts are removed; if the storage does not allow deletes, they stay and a warning is logged. A namespace
+that needed a retry is therefore stored under `<namespace>.<attempt>`: to check which namespaces a run holds, list it
+with <!-- tag getFullBackupsForRoutine -->`GET /v1/backups/full/{name}`<!-- /tag --> or read its `metadata.yaml` files
+rather than matching folder names.
+
+If a namespace fails all its attempts, the run is reported as failed.
+
+:warning: Each namespace is backed up and retried on its own. The service tries to keep the namespaces of a run in
+sync, but does not guarantee it. A run in which any namespace failed is a partial backup and is not reliable, including
+as the starting point of later incremental backups.
+
+**The next incremental backup.** Every attempt keeps the run's start time, and each namespace records it as `created` in
+its `metadata.yaml`, however long its retries took. When the next incremental backup starts from this run (from the
+latest backup in differential mode, from the latest full backup in cumulative mode; see
+[below](#how-does-the-backup-service-identify-what-data-to-back-up-during-incremental-backups)), it starts from that
+time, so records changed while a namespace was being retried are in the next incremental backup.
 
 ### Can multiple backup routines be performed simultaneously?
 
@@ -206,8 +380,10 @@ with different behaviors for full and incremental backups:
       The service uses a scan operation with no lower time boundary (modAfter = 0).
 
 * **Incremental Backups:**:
-    * Only capture records that have been modified since the last successful backup (full or incremental). The service
-      tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp
+    * Only capture records that have been modified since the last successful backup. The behavior depends on the `incr-mode` setting in the backup policy:
+        - **Differential (default)**: Captures records modified since the last successful backup (full or incremental).
+        - **Cumulative**: Captures records modified since the last successful full backup.
+      The service tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp
       becomes the lower time boundary (modAfter parameter) for the next incremental backup.
       For the upper time boundary (modBefore), two approaches are available:
 

@@ -8,7 +8,9 @@ description: >
 
 inputs:
   mode:
-    description: "'seed' to insert records, 'count' to read back the object count"
+    description: >
+      'seed' to insert records, 'count' to read back the object count, or 'wait-empty' to poll
+      until the namespace reports zero objects (for use after an asynchronous truncate).
     required: true
   namespace:
     description: Aerospike namespace to seed/count (e.g. test)
@@ -33,10 +35,18 @@ inputs:
     description: "Aerospike host:port reachable from inside the cluster (kubectl mode only)"
     required: false
     default: ""
+  timeout-seconds:
+    description: How long to wait for the namespace to drain (mode=wait-empty only)
+    required: false
+    default: "60"
+  interval-seconds:
+    description: Seconds between polls (mode=wait-empty only)
+    required: false
+    default: "3"
 
 outputs:
   record_count:
-    description: Object count reported by asinfo for the namespace (mode=count only)
+    description: Object count reported by asinfo for the namespace (mode=count/wait-empty only)
     value: ${{ steps.run.outputs.record_count }}
 
 runs:
@@ -79,6 +89,17 @@ runs:
           cp_in() { :; } # no-op, docker mode mounts the file directly
         fi
 
+        read_objects() {
+          local response objects
+          response="$(run_asinfo -v "namespace/${NS_AS}")"
+          objects="$(echo "$response" | tr ';' '\n' | grep '^objects=' | cut -d= -f2)"
+          if [ -z "$objects" ]; then
+            echo "::error::Could not parse objects= from asinfo response: $response" >&2
+            return 1
+          fi
+          printf '%s' "$objects"
+        }
+
         if [ "$MODE" = "seed" ]; then
           SEED_FILE_HOST="$(mktemp)"
           for i in $(seq 1 "$COUNT"); do
@@ -94,15 +115,33 @@ runs:
 
           echo "Seeded ${COUNT} records into ${NS_AS}.${SET_NAME}."
         elif [ "$MODE" = "count" ]; then
-          RESPONSE="$(run_asinfo -v "namespace/${NS_AS}")"
-          OBJECTS="$(echo "$RESPONSE" | tr ';' '\n' | grep '^objects=' | cut -d= -f2)"
-          if [ -z "$OBJECTS" ]; then
-            echo "::error::Could not parse objects= from asinfo response: $RESPONSE"
-            exit 1
-          fi
+          OBJECTS="$(read_objects)"
           echo "Namespace ${NS_AS} object count: ${OBJECTS}"
           echo "record_count=${OBJECTS}" >> "$GITHUB_OUTPUT"
+        elif [ "$MODE" = "wait-empty" ]; then
+          # truncate-namespace is asynchronous -- the server reaps records in the background --
+          # so reading the count once immediately after it races the reaper. Poll instead of
+          # asserting on the first observation.
+          TIMEOUT="${{ inputs.timeout-seconds }}"
+          INTERVAL="${{ inputs.interval-seconds }}"
+          elapsed=0
+          while :; do
+            OBJECTS="$(read_objects)"
+            if [ "$OBJECTS" = "0" ]; then
+              echo "Namespace ${NS_AS} drained to 0 objects after ${elapsed}s."
+              break
+            fi
+            if [ "$elapsed" -ge "$TIMEOUT" ]; then
+              echo "record_count=${OBJECTS}" >> "$GITHUB_OUTPUT"
+              echo "::error::Namespace ${NS_AS} still has ${OBJECTS} records ${elapsed}s after truncate -- restore verification would be meaningless"
+              exit 1
+            fi
+            echo "Namespace ${NS_AS} still has ${OBJECTS} objects after ${elapsed}s; waiting..."
+            sleep "$INTERVAL"
+            elapsed=$(( elapsed + INTERVAL ))
+          done
+          echo "record_count=0" >> "$GITHUB_OUTPUT"
         else
-          echo "::error::Unknown mode '${MODE}' (expected 'seed' or 'count')"
+          echo "::error::Unknown mode '${MODE}' (expected 'seed', 'count' or 'wait-empty')"
           exit 1
         fi

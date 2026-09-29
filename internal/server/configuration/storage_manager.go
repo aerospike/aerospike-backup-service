@@ -7,28 +7,23 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
-type storageReaderWriter interface {
-	// ReadFile reads the content of a file in the specified storage.
-	ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error)
-	// WriteDataFile writes a data file to the specified storage.
-	WriteDataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
-}
-
-// storageManager implements Manager interface.
-// it stores service configuration in provided Storage (Local, s3 aws etc.)
+// storageManager keeps the service configuration in a storage backend (local, S3, GCP, Azure).
 type storageManager struct {
 	storage     model.Storage
 	nsValidator aerospike.NamespaceValidator
-	operations  storageReaderWriter
+	operations  storage.Operations
 }
+
+var _ Manager = (*storageManager)(nil)
 
 // newStorageManager returns new instance of storageManager.
 func newStorageManager(
 	configStorage model.Storage,
 	nsValidator aerospike.NamespaceValidator,
-	operations storageReaderWriter,
+	operations storage.Operations,
 ) Manager {
 	return &storageManager{
 		storage:     configStorage,

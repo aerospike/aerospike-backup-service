@@ -2,10 +2,8 @@ package dto
 
 import (
 	"fmt"
-	"io"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 )
@@ -20,9 +18,9 @@ type BackupPolicy struct {
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1" default:"8" minimum:"1"`
 	// Maximum number of threads to use for writing backup files. If not specified, same values as `parallel` is used.
 	ParallelWrite *int `yaml:"parallel-write,omitempty" json:"parallel-write,omitempty" example:"1" default:"8" minimum:"1"`
-	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
+	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" default:"60000"`
+	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" default:"600000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
 	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" default:"0"`
 	// RetryPolicy defines the configuration for database scan retry attempts in case of failures.
@@ -58,16 +56,14 @@ type BackupPolicy struct {
 	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
-	// This parameter does not affect XDR backups (which always includes all keys).
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty" default:"false"`
 	// If set to true, base-64 encoding is not applied to BLOBs (Bytes, HLL, RawMap, RawList), resulting in smaller backup files.
 	Compact *bool `yaml:"compact,omitempty" json:"compact,omitempty" default:"false"`
-	// XDR configuration for MRT backups.
-	// XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
-
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
 	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty" extensions:"x-nullable"`
+	// The mode for incremental backups (optional, default is differential).
+	IncrMode IncrMode `yaml:"incr-mode,omitempty" json:"incr-mode,omitempty" example:"differential" extensions:"x-nullable"`
 	// Enables built-in compression during scan operation.
 	// Valid for Aerospike Server Enterprise Edition only.
 	UseCompression *bool `yaml:"use-scan-compression,omitempty" json:"use-scan-compression,omitempty" extensions:"x-nullable"`
@@ -76,22 +72,13 @@ type BackupPolicy struct {
 	MaxConcurrentNodes *int `yaml:"max-concurrent-nodes,omitempty" json:"max-concurrent-nodes,omitempty" extensions:"x-nullable"`
 }
 
-// NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.
-func NewBackupPolicyFromReader(r io.Reader, format decoder.SerializationFormat) (*BackupPolicy, error) {
-	b := &BackupPolicy{}
-	if err := decoder.Deserialize(b, r, format); err != nil {
-		return nil, err
-	}
-
-	if err := b.Validate(); err != nil {
-		return nil, err
-	}
-
-	return b, nil
-}
-
 // Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
 func (p *BackupPolicy) Validate() error {
+	return p.ValidateWithOpts(ValidationWithSecretAgent) // if we don't know the secret agent, we assume it's available.
+}
+
+// ValidateWithOpts checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
+func (p *BackupPolicy) ValidateWithOpts(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
@@ -130,15 +117,15 @@ func (p *BackupPolicy) Validate() error {
 	if err := p.RetentionPolicy.Validate(); err != nil {
 		return fmt.Errorf("invalid retention policy: %w", err)
 	}
-	if err := p.EncryptionPolicy.Validate(); err != nil {
-		return err
+	if err := p.EncryptionPolicy.Validate(opts); err != nil {
+		return fmt.Errorf("invalid encryption policy: %w", err)
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {
+		return fmt.Errorf("invalid compression policy: %w", err)
+	}
+	if err := p.IncrMode.Validate(); err != nil {
 		return err
 	}
-	// if err := p.XDRConfig.Validate(); err != nil {
-	//	return fmt.Errorf("invalid xdr config: %w", err)
-	// }
 
 	if p.MaxConcurrentNodes != nil && *p.MaxConcurrentNodes < 0 {
 		return errValidationNegative("max-concurrent-nodes", *p.MaxConcurrentNodes)
@@ -182,25 +169,25 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 	}
 
 	return &model.BackupPolicy{
-		Parallel:          p.Parallel,
-		ParallelWrite:     p.ParallelWrite,
-		SocketTimeout:     millisToDuration(p.SocketTimeout),
-		TotalTimeout:      millisToDuration(p.TotalTimeout),
-		RetryPolicy:       p.RetryPolicy.ToModel(),
-		RetentionPolicy:   p.RetentionPolicy.toModel(),
-		NoRecords:         p.NoRecords,
-		NoIndexes:         p.NoIndexes,
-		NoUdfs:            p.NoUdfs,
-		WithClusterConfig: p.WithClusterConfig,
-		Bandwidth:         p.Bandwidth,
-		RecordsPerSecond:  p.RecordsPerSecond,
-		FileLimit:         p.FileLimit,
-		EncryptionPolicy:  p.EncryptionPolicy.ToModel(),
-		CompressionPolicy: p.CompressionPolicy.ToModel(),
-		Sealed:            p.Sealed,
-		Compact:           p.Compact,
-		// XDRConfig:             p.XDRConfig.ToModel(),
+		Parallel:              p.Parallel,
+		ParallelWrite:         p.ParallelWrite,
+		SocketTimeout:         millisToDuration(p.SocketTimeout),
+		TotalTimeout:          millisToDuration(p.TotalTimeout),
+		RetryPolicy:           p.RetryPolicy.ToModel(),
+		RetentionPolicy:       p.RetentionPolicy.toModel(),
+		NoRecords:             p.NoRecords,
+		NoIndexes:             p.NoIndexes,
+		NoUdfs:                p.NoUdfs,
+		WithClusterConfig:     p.WithClusterConfig,
+		Bandwidth:             p.Bandwidth,
+		RecordsPerSecond:      p.RecordsPerSecond,
+		FileLimit:             p.FileLimit,
+		EncryptionPolicy:      p.EncryptionPolicy.ToModel(),
+		CompressionPolicy:     p.CompressionPolicy.ToModel(),
+		Sealed:                p.Sealed,
+		Compact:               p.Compact,
 		ConcurrentIncremental: p.ConcurrentIncremental,
+		IncrMode:              p.IncrMode.ToModel(),
 		UseCompression:        p.UseCompression,
 		MaxConcurrentNodes:    p.MaxConcurrentNodes,
 	}
@@ -250,8 +237,8 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.CompressionPolicy = newCompressionPolicyFromModel(m.CompressionPolicy)
 	p.Sealed = m.Sealed
 	p.Compact = m.Compact
-	// p.XDRConfig = newXDRConfigFromModel(m.XDRConfig)
 	p.ConcurrentIncremental = m.ConcurrentIncremental
+	p.IncrMode = NewIncrModeFromModel(m.IncrMode)
 	p.UseCompression = m.UseCompression
 	p.MaxConcurrentNodes = m.MaxConcurrentNodes
 }
@@ -266,7 +253,7 @@ type RetentionPolicy struct {
 	FullBackups *int `json:"full,omitempty" yaml:"full,omitempty"  minimum:"1" extensions:"x-nullable"`
 
 	// Number of full backups to store incremental backups for:
-	// - If nil, retain all incremental backups.
+	// - If nil, retain all incremental backups for existing full backups.
 	// - If N is specified, retain incremental backups for the last N full backups.
 	// - If set to 0, do not retain any incremental backups.
 	// - Must not exceed the value of FullBackups.

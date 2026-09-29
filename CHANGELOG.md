@@ -10,7 +10,40 @@ Entries below `v3.0.0` predate this file; see the
 Detailed upgrade instructions (breaking changes and how to adapt existing configuration) live in
 [docs/migration.md](docs/migration.md); this file is the changelog, that one is the upgrade guide.
 
-## [Unreleased]
+## [3.7.0] - TBD
+
+### Added
+
+- HTTPS listener (`service.https`) with optional mTLS, CRL-based client certificate revocation, TLS
+  material reload without restart, and PKCS#8 encrypted keys.
+- Cumulative incremental backups: `incr-mode` on backup policy (`differential` or `cumulative`).
+- `schedule-timezone` on `service.backup` and on backup routines: cron schedules can run in UTC
+  (default), the host timezone, or a named IANA zone. Backup paths remain UTC.
+- `filter-exp` on backup routines for partial backups.
+- Set index support.
+
+### Changed
+
+- **Breaking:** secrets are returned as `"[secret]"` by the configuration API and redacted in logs;
+  sending `"[secret]"` back on `PUT` keeps the stored value.
+- **Breaking:** stricter configuration validation: entity names must be a single path segment,
+  paths must be clean, secret references are checked at load, and `compression`/`encryption`
+  policies must set `mode`.
+- **Breaking:** an empty rate-limiter `white-list` limits every client; use `0.0.0.0/0` to exempt all.
+- A failed namespace is retried in its own attempt folder and no longer deletes other namespaces'
+  data; permanent failures are not retried, and a namespace that cannot start fails the run.
+- Retention deletes only completed incrementals; partial backups left by a crashed run are removed
+  at startup.
+
+### Security
+
+- **Breaking:** the `.deb` and `.rpm` packages run the service as the unprivileged
+  `aerospike-backup-service` account under a systemd sandbox. The config file is owner-only, backup
+  artifacts are no longer world-readable, the unit file moves to `/usr/lib/systemd/system`, and
+  logs move to `/var/log/aerospike-backup-service/`. See [docs/migration.md](docs/migration.md).
+- Local-storage backups are created owner-only (files `0600`, directories `0700`) in every
+  deployment.
+- Hardened Helm and Kubernetes deployment defaults.
 
 ## [3.6.1] - 2026-07-23
 
@@ -130,7 +163,7 @@ Patch release; see the GitHub release notes.
 - **Breaking:** restore requests now require a `backup-data-path` field; the `Storage.path` field is the storage
   root only and can no longer be reused as the backup data location.
 
-[Unreleased]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.1...HEAD
+[3.7.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.1...HEAD
 [3.6.1]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.4.0...v3.5.0

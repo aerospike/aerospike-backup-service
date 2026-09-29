@@ -1,6 +1,8 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // AzureStorage represents the configuration for Azure Blob storage.
 type AzureStorage struct {
@@ -40,7 +42,7 @@ type AzureSharedKeyAuth struct {
 	// AccountName is the name of the Azure Storage account.
 	AccountName string
 	// AccountKey is the access key for the Azure Storage account.
-	AccountKey string
+	AccountKey Secret
 }
 
 func (*AzureSharedKeyAuth) azureAuth() {}
@@ -48,11 +50,11 @@ func (*AzureSharedKeyAuth) azureAuth() {}
 // AzureADAuth represents Azure Active Directory authentication for Azure Blob storage.
 type AzureADAuth struct {
 	// TenantID is the Azure AD tenant (directory) ID.
-	TenantID string
+	TenantID Secret
 	// ClientID is the application (client) ID registered in Azure AD.
-	ClientID string
+	ClientID Secret
 	// ClientSecret is the secret key for the application registered in Azure AD.
-	ClientSecret string
+	ClientSecret Secret
 }
 
 func (*AzureADAuth) azureAuth() {}

@@ -18,7 +18,6 @@ import (
 
 func TestRestoreOK(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
@@ -50,8 +49,7 @@ func TestRestoreOK(t *testing.T) {
 		AnyTimes()
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(t.Context(), request)
-	require.NoError(t, err)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -64,7 +62,6 @@ func TestRestoreOK(t *testing.T) {
 
 func TestCancelRestoreOK(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
@@ -99,8 +96,7 @@ func TestCancelRestoreOK(t *testing.T) {
 		Return(nil).
 		AnyTimes()
 
-	jobID, err := env.restoreManager.Restore(t.Context(), request)
-	require.NoError(t, err)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	// Give the restore goroutine a moment to start and register the handler
@@ -109,7 +105,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 
 	// Cancel the job
-	err = env.restoreManager.CancelRestore(jobID)
+	err := env.restoreManager.CancelRestore(jobID)
 	require.NoError(t, err, "Failed to cancel job")
 
 	// Wait for the handler's Wait method to actually return due to cancellation
@@ -130,7 +126,6 @@ func TestCancelRestoreOK(t *testing.T) {
 
 func TestRestoreFailsWithClientError(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	storage := &model.LocalStorage{Path: "/backup/path"}
@@ -142,8 +137,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 		Return(nil, clientErr)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(t.Context(), request)
-	require.NoError(t, err)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -155,13 +149,12 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 
 func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	destinationNS := "test-ns"
 	policy := model.RestorePolicy{
 		Namespace: &model.RestoreNamespace{
-			Destination: &destinationNS,
+			Destination: destinationNS,
 		},
 	}
 	storage := &model.LocalStorage{Path: "/backup/path"}
@@ -178,8 +171,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 		Return(errors.New("destination cluster does not have required namespace: test-ns"))
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(t.Context(), request)
-	require.NoError(t, err)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -192,7 +184,6 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 
 func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
@@ -216,8 +207,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 		Return(errors.New("backups from different times were found"))
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(t.Context(), request)
-	require.NoError(t, err)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -229,7 +219,6 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 
 func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	policy := model.RestorePolicy{}
@@ -255,8 +244,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(t.Context(), request)
-	require.NoError(t, err)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -268,7 +256,6 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 
 func TestCancelRestore_RaceCondition(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	defer env.ctrl.Finish()
 
 	cluster := &model.AerospikeCluster{}
 	storage := &model.LocalStorage{}
@@ -313,8 +300,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 		})
 
 	// 1. Start the restore. This will run in a goroutine.
-	jobID, err := env.restoreManager.Restore(t.Context(), request)
-	require.NoError(t, err)
+	jobID := env.restoreManager.Restore(request)
 
 	// 2. Wait for the signal that the restore goroutine has called Run().
 	// Use a channel with a timeout to avoid hanging the test.
@@ -331,11 +317,12 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 		// If we timed out, it means Run was never called.
 		// Check the job status to see if it failed early.
 		status, _ := env.restoreManager.JobStatus(jobID)
-		t.Fatalf("Timed out waiting for Run() to start. Job status: %v, Error: %v", status.Status, status.Error)
+		t.Fatalf("Timed out waiting for Run() to start. Job status: %v, Error: %v",
+			status.Status, status.Error)
 	}
 
 	// 3. Cancel the job while the Run() method is still "executing".
-	err = env.restoreManager.CancelRestore(jobID)
+	err := env.restoreManager.CancelRestore(jobID)
 	require.NoError(t, err)
 
 	// 4. Wait for the job to complete.
