@@ -115,15 +115,70 @@ func checkQuery(t *testing.T, query string, metricLabels, labelValues map[string
 	require.NoErrorf(t, err, "%q is not a valid query", query)
 
 	metricsql.VisitAll(expr, func(node metricsql.Expr) {
-		metric, ok := node.(*metricsql.MetricExpr)
-		if !ok {
-			return
-		}
-
-		for _, filters := range metric.LabelFilterss {
-			checkSelector(t, filters, metricLabels, labelValues)
+		switch node := node.(type) {
+		case *metricsql.MetricExpr:
+			for _, filters := range node.LabelFilterss {
+				checkSelector(t, filters, metricLabels, labelValues)
+			}
+		case *metricsql.AggrFuncExpr:
+			checkGrouping(t, node.Modifier, metricLabels, node.Args...)
+		case *metricsql.BinaryOpExpr:
+			checkGrouping(t, node.GroupModifier, metricLabels, node.Left, node.Right)
+			checkGrouping(t, node.JoinModifier, metricLabels, node.Left, node.Right)
 		}
 	})
+}
+
+// checkGrouping checks the labels of a by, without, on, ignoring, group_left or
+// group_right clause. A clause naming a label that none of the service metrics
+// it applies to carries groups everything into one series, silently, so each
+// label must belong to at least one of them. A clause over no service metric is
+// about another exporter and is left alone.
+func checkGrouping(t *testing.T, modifier metricsql.ModifierExpr, metricLabels map[string][]string,
+	operands ...metricsql.Expr) {
+	t.Helper()
+
+	if len(modifier.Args) == 0 {
+		return
+	}
+
+	names := exportedMetricsIn(operands, metricLabels)
+	if len(names) == 0 {
+		return
+	}
+
+	for _, label := range modifier.Args {
+		carried := slices.ContainsFunc(names, func(name string) bool {
+			return slices.Contains(metricLabels[name], label)
+		})
+		if !carried {
+			t.Errorf("%s (%s): none of %v has a label %q", modifier.Op, label, names, label)
+		}
+	}
+}
+
+// exportedMetricsIn returns the exported service metrics the expressions select.
+// An unknown one is reported by checkSelector, so it is skipped here.
+func exportedMetricsIn(exprs []metricsql.Expr, metricLabels map[string][]string) []string {
+	var names []string
+
+	for _, expr := range exprs {
+		metricsql.VisitAll(expr, func(node metricsql.Expr) {
+			metric, ok := node.(*metricsql.MetricExpr)
+			if !ok {
+				return
+			}
+
+			for _, filters := range metric.LabelFilterss {
+				name := metricName(filters)
+				if _, exported := metricLabels[name]; exported {
+					names = append(names, name)
+				}
+			}
+		})
+	}
+
+	return names
 }
 
 func checkSelector(t *testing.T, filters []metricsql.LabelFilter, metricLabels, labelValues map[string][]string) {
