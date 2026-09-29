@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/cli"
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
@@ -143,4 +146,29 @@ func renderFilterExpressions() string {
 	}
 
 	return "\n\n" + table.String()
+}
+
+// binaryName is how the documents invoke the service binary.
+const binaryName = "./aerospike-backup-service"
+
+// renderCLIHelp runs the service command with -h and renders the session the way
+// a reader would see it in a terminal.
+//
+// The help text is cobra's rendering of the flags the binary declares, so a flag
+// added, renamed or reworded reaches the docs without anyone copying it over.
+func renderCLIHelp() string {
+	var output bytes.Buffer
+
+	command := cli.NewRootCommand(func(string, bool) error {
+		return errors.New("-h must print the help, not start the service")
+	})
+	command.SetOut(&output)
+	command.SetErr(&output)
+	command.SetArgs([]string{"-h"})
+
+	if err := command.Execute(); err != nil {
+		panic(fmt.Errorf("render CLI help: %w", err))
+	}
+
+	return fence("console", fmt.Appendf(nil, "%s -h\n%s", binaryName, output.Bytes()))
 }

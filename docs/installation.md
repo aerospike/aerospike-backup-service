@@ -16,6 +16,8 @@ Run as a binary using a configuration file:
 
 Help:
 
+<!-- tag CLIHelp -->
+
 ```console
 ./aerospike-backup-service -h
 Aerospike Backup Service
@@ -29,6 +31,7 @@ Flags:
   -r, --remote          use remote config file
   -v, --version         version for aerospike-backup-service
 ```
+<!-- /tag -->
 
 Set the configuration file path with `-c`.
 

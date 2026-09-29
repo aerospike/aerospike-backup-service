@@ -116,6 +116,7 @@ func newRenderers(endpoints map[string]endpoint, metricsTable string) map[string
 		return renderDuration(backup.RecordsRecountInterval)
 	}))
 	add("generator", "GoVersion", noArgs("GoVersion", renderGoVersion))
+	add("generator", "CLIHelp", noArgs("CLIHelp", renderCLIHelp))
 	add("generator", "FilterExpressions", noArgs("FilterExpressions", renderFilterExpressions))
 	add("generator", "IntegrationTests", noArgs("IntegrationTests", renderIntegrationTests))
 	// Reserved for the security plan: a document may carry the tag before there
