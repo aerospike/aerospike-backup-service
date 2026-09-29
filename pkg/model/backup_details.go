@@ -84,7 +84,7 @@ func withLegacyDefaults(m BackupMetadata) BackupMetadata {
 	if m.Finished.IsZero() { // finished was introduced in ABS v3.4.0
 		m.Finished = m.Created.Add(1 * time.Millisecond) // set dummy value
 	}
-	if m.Compression == "" { // compression was introduced in ABS v3.1.0; earlier backups are uncompressed
+	if m.Compression == "" { // compression metadata was introduced in ABS v3.1.0
 		m.Compression = CompressionModeNone
 	}
 	return m
