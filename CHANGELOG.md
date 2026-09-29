@@ -45,6 +45,16 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
   deployment.
 - Hardened Helm and Kubernetes deployment defaults.
 
+## [3.6.2] - 2026-08-26
+
+Hotfix release built on [backup-go v0.11.1](https://github.com/aerospike/backup-go/releases/tag/v0.11.1).
+
+### Fixed
+
+- A namespace backup could fail entirely when `sindex-list` returned an index type that ABS did not recognize,
+  including set indexes (Aerospike Database 8.1.2 and later). Unrecognized index types are now logged as a
+  warning and skipped instead of failing the backup; set indexes themselves remain unsupported for backup.
+
 ## [3.6.1] - 2026-07-23
 
 No functional changes; see 3.6.0 below.
@@ -163,7 +173,8 @@ Patch release; see the GitHub release notes.
 - **Breaking:** restore requests now require a `backup-data-path` field; the `Storage.path` field is the storage
   root only and can no longer be reused as the backup data location.
 
-[3.7.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.1...HEAD
+[3.7.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.2...HEAD
+[3.6.2]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.1...v3.6.2
 [3.6.1]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.4.0...v3.5.0
