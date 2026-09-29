@@ -30,9 +30,9 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 			},
 			EncryptionPolicy: &model.EncryptionPolicy{
 				Mode:      "aes-256",
-				KeyFile:   ptr.Of("path/to/key"),
-				KeySecret: ptr.Of("secret-name"),
-				KeyEnv:    ptr.Of("ENV_VAR"),
+				KeyFile:   "path/to/key",
+				KeySecret: "secret-name",
+				KeyEnv:    "ENV_VAR",
 			},
 			Compact: ptr.Of(true),
 		},
@@ -46,7 +46,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 			Address:        "localhost",
 			Port:           ptr.Of(model.Port(9000)),
 			Timeout:        ptr.Of(1000),
-			ClientTLS:      model.ClientTLS{CAFile: ptr.Of("ca-string")},
+			ClientTLS:      model.ClientTLS{CAFile: "ca-string"},
 			IsBase64:       ptr.Of(true),
 		},
 		SourceCluster: &model.AerospikeCluster{},
@@ -235,4 +235,35 @@ func TestMakeBackupConfigWithNodeList(t *testing.T) {
 	assert.Equal(t, as.MASTER, config.ScanPolicy.ReplicaPolicy)
 	assert.Nil(t, config.EncryptionPolicy)
 	assert.Nil(t, config.CompressionPolicy)
+}
+
+func TestMakeBackupConfigWithFilterExpression(t *testing.T) {
+	namespace := "testNamespace"
+	routine := &model.BackupRoutine{
+		BackupPolicy:     &model.BackupPolicy{},
+		IntervalCron:     "@daily",
+		SourceCluster:    &model.AerospikeCluster{},
+		FilterExpression: "k1EDpHRlc3Q=",
+	}
+
+	config, err := makeBackupConfig(namespace, routine, model.TimeBounds{})
+
+	require.NoError(t, err)
+	require.NotNil(t, config.ScanPolicy)
+	require.NotNil(t, config.ScanPolicy.FilterExpression)
+}
+
+func TestMakeBackupConfigWithInvalidFilterExpression(t *testing.T) {
+	namespace := "testNamespace"
+	routine := &model.BackupRoutine{
+		BackupPolicy:     &model.BackupPolicy{},
+		IntervalCron:     "@daily",
+		SourceCluster:    &model.AerospikeCluster{},
+		FilterExpression: "invalid-exp",
+	}
+
+	_, err := makeBackupConfig(namespace, routine, model.TimeBounds{})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse filter expression")
 }

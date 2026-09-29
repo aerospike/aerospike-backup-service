@@ -661,6 +661,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified cluster was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -700,6 +706,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A cluster with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -724,6 +736,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified cluster was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The cluster is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -830,6 +854,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified policy was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -869,6 +899,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A policy with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -893,6 +929,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified policy was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The policy is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -1005,6 +1053,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified routine was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1044,6 +1098,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A routine with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1068,6 +1128,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1232,6 +1298,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified storage was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1271,6 +1343,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A storage with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1295,6 +1373,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified storage was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The storage is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -1695,6 +1785,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.AuthMode": {
+            "description": "AuthMode is the Aerospike cluster authentication mode.",
+            "type": "string",
+            "enum": [
+                "INTERNAL",
+                "EXTERNAL",
+                "PKI"
+            ],
+            "x-enum-varnames": [
+                "AuthModeInternal",
+                "AuthModeExternal",
+                "AuthModePKI"
+            ]
+        },
         "dto.AzureStorage": {
             "description": "AzureStorage represents the configuration for Azure Blob storage.",
             "type": "object",
@@ -1704,8 +1808,9 @@ const docTemplate = `{
             ],
             "properties": {
                 "account-key": {
-                    "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                    "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "account-name": {
@@ -1714,13 +1819,15 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "client-id": {
-                    "description": "ClientID is the Azure Active Directory client ID for AAD authentication.",
+                    "description": "ClientID is the Azure Active Directory client ID for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "client-secret": {
-                    "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                    "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "container-name": {
@@ -1765,8 +1872,9 @@ const docTemplate = `{
                     ]
                 },
                 "tenant-id": {
-                    "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.",
+                    "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 }
             }
@@ -1802,13 +1910,18 @@ const docTemplate = `{
             "description": "BackupCommonConfig represents service-level backup settings.",
             "type": "object",
             "properties": {
+                "schedule-timezone": {
+                    "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or any IANA timezone name resolvable\nby Go's time.LoadLocation (for example, America/New_York or Japan).\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nPrefer canonical Area/Location names: legacy aliases such as EST resolve as\nfixed UTC-5 with no DST, which is rarely what \"Eastern Time\" is meant to be.\nChanging this service-level default requires a restart.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "America/New_York"
+                },
                 "timestamp-format": {
                     "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
-                    "type": "string",
-                    "enum": [
-                        "ISO",
-                        "US",
-                        "EU"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.TimestampFormat"
+                        }
                     ],
                     "x-nullable": true
                 }
@@ -1948,6 +2061,16 @@ const docTemplate = `{
                     "type": "integer",
                     "default": 250
                 },
+                "incr-mode": {
+                    "description": "The mode for incremental backups (optional, default is differential).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.IncrMode"
+                        }
+                    ],
+                    "x-nullable": true,
+                    "example": "differential"
+                },
                 "max-concurrent-nodes": {
                     "description": "Maximum number of concurrent requests to server nodes.\nDefault is to issue requests to all server nodes in parallel.",
                     "type": "integer",
@@ -2005,14 +2128,14 @@ const docTemplate = `{
                     ]
                 },
                 "sealed": {
-                    "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.\nThis parameter does not affect XDR backups (which always includes all keys).",
+                    "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.",
                     "type": "boolean",
                     "default": false
                 },
                 "socket-timeout": {
-                    "description": "Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000
+                    "default": 600000
                 },
                 "total-timeout": {
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
@@ -2058,9 +2181,14 @@ const docTemplate = `{
                     ]
                 },
                 "disabled": {
-                    "description": "Whether this routine is disabled and should not run. Default: false.",
+                    "description": "Whether scheduled backups of this routine are disabled. On-demand backups can still be triggered. Default: false.",
                     "type": "boolean",
                     "default": false
+                },
+                "filter-exp": {
+                    "description": "Base64 encoded filter expression. Use the encoded filter expression in each scan call,\nwhich can be used to do a partial backup. The expression to be used can be Base64\nencoded through any client. This argument is mutually exclusive with multi-set backup.",
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "incr-interval-cron": {
                     "description": "The interval for incremental backup as a cron expression string (optional).",
@@ -2074,7 +2202,7 @@ const docTemplate = `{
                     "example": "0 0 * * * *"
                 },
                 "namespaces": {
-                    "description": "The list of namespaces to back up.\nIf empty, the entire cluster is backed up.\nThe order of namespaces does not determine the backup execution or completion order.",
+                    "description": "The list of namespaces to back up.\nIf empty, the entire cluster is backed up.\nThe order of namespaces does not determine the backup execution or completion order.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -2104,6 +2232,12 @@ const docTemplate = `{
                     },
                     "x-nullable": true
                 },
+                "schedule-timezone": {
+                    "description": "Timezone for evaluating this routine's cron expressions (optional).\nAccepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.\nWhen omitted, the routine inherits service.backup.schedule-timezone.\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "America/New_York"
+                },
                 "secret-agent": {
                     "description": "The name of a Secret Agent to read secrets from (optional).",
                     "type": "string",
@@ -2131,24 +2265,38 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.CompressionMode": {
+            "description": "CompressionMode identifies the compression algorithm used for backup files.",
+            "type": "string",
+            "enum": [
+                "NONE",
+                "ZSTD"
+            ],
+            "x-enum-varnames": [
+                "CompressionModeNone",
+                "CompressionModeZSTD"
+            ]
+        },
         "dto.CompressionPolicy": {
             "description": "CompressionPolicy contains backup compression information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "level": {
-                    "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).\nThis field is ignored if the compression mode is NONE.",
+                    "description": "The compression level to use, from -1 to 22.\nA higher value gives better compression at the cost of speed,\nbut not every step changes the result: neighboring levels may compress the same way.\nRequired for ZSTD; must not be set if the compression mode is NONE.",
                     "type": "integer",
-                    "default": 0,
                     "maximum": 22,
-                    "minimum": -1
+                    "minimum": -1,
+                    "x-nullable": true
                 },
                 "mode": {
-                    "description": "The compression mode to be used (default is NONE).",
-                    "type": "string",
-                    "default": "NONE",
-                    "enum": [
-                        "NONE",
-                        "ZSTD"
+                    "description": "The compression mode to be used. Required.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.CompressionMode"
+                        }
                     ]
                 }
             }
@@ -2202,25 +2350,36 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ConnectionType": {
+            "description": "ConnectionType is the Secret Agent connection type.",
+            "type": "string",
+            "enum": [
+                "TCP",
+                "UNIX"
+            ],
+            "x-enum-varnames": [
+                "ConnectionTypeTCP",
+                "ConnectionTypeUnix"
+            ]
+        },
         "dto.Credentials": {
             "description": "Credentials represents authentication details to the Aerospike cluster.",
             "type": "object",
             "properties": {
                 "auth-mode": {
-                    "description": "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
-                    "type": "string",
+                    "description": "The authentication mode (INTERNAL, EXTERNAL, PKI).",
                     "default": "INTERNAL",
-                    "enum": [
-                        "INTERNAL",
-                        "EXTERNAL",
-                        "PKI"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.AuthMode"
+                        }
                     ]
                 },
                 "password": {
-                    "description": "The password for the cluster authentication.\nIt can be either plain text or path into the secret agent.",
+                    "description": "The password for the cluster authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
-                    "x-nullable": true,
-                    "example": "testPswd"
+                    "format": "password",
+                    "x-nullable": true
                 },
                 "password-path": {
                     "description": "The file path with the password string.",
@@ -2249,9 +2408,26 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.EncryptionMode": {
+            "description": "EncryptionMode identifies the encryption algorithm used for backup files.",
+            "type": "string",
+            "enum": [
+                "NONE",
+                "AES128",
+                "AES256"
+            ],
+            "x-enum-varnames": [
+                "EncryptionModeNone",
+                "EncryptionModeAES128",
+                "EncryptionModeAES256"
+            ]
+        },
         "dto.EncryptionPolicy": {
             "description": "EncryptionPolicy contains backup encryption information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "key-env": {
                     "description": "The name of the environment variable containing the encryption key.",
@@ -2264,18 +2440,17 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "key-secret": {
-                    "description": "The secret keyword in Aerospike Secret Agent containing the encryption key.",
+                    "description": "The secret keyword in Aerospike Secret Agent containing the encryption key.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "mode": {
-                    "description": "The encryption mode to be used (NONE, AES128, AES256)",
-                    "type": "string",
-                    "default": "NONE",
-                    "enum": [
-                        "NONE",
-                        "AES128",
-                        "AES256"
+                    "description": "The encryption mode to be used (NONE, AES128, AES256). Required.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.EncryptionMode"
+                        }
                     ]
                 }
             }
@@ -2300,13 +2475,11 @@ const docTemplate = `{
                 "maxage": {
                     "description": "Maximum number of days to retain old log files based on the\ntimestamp encoded in their filename. The default is not to remove old log files\nbased on age.",
                     "type": "integer",
-                    "default": 7,
                     "x-nullable": true
                 },
                 "maxbackups": {
                     "description": "Maximum number of old log files to retain. The default\nis to retain all old log files.",
                     "type": "integer",
-                    "default": 3,
                     "x-nullable": true
                 },
                 "maxsize": {
@@ -2335,8 +2508,9 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "key": {
-                    "description": "Key is the service account key in JSON format.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                    "description": "Key is the service account key in JSON format.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "key-file-path": {
@@ -2397,41 +2571,17 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.HTTPServerConfig": {
-            "description": "HTTPServerConfig represents the service's HTTP server configuration.",
-            "type": "object",
-            "properties": {
-                "address": {
-                    "description": "The address to listen on.",
-                    "type": "string",
-                    "default": "0.0.0.0",
-                    "example": "0.0.0.0"
-                },
-                "context-path": {
-                    "description": "ContextPath customizes path for the API endpoints.",
-                    "type": "string",
-                    "default": "/"
-                },
-                "port": {
-                    "description": "The port to listen on.",
-                    "type": "integer",
-                    "default": 8080,
-                    "example": 8080
-                },
-                "rate": {
-                    "description": "HTTP rate limiter configuration.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.RateLimiterConfig"
-                        }
-                    ]
-                },
-                "timeout": {
-                    "description": "Timeout for http server operations in milliseconds.",
-                    "type": "integer",
-                    "default": 5000
-                }
-            }
+        "dto.IncrMode": {
+            "description": "IncrMode represents the mode for incremental backups.",
+            "type": "string",
+            "enum": [
+                "differential",
+                "cumulative"
+            ],
+            "x-enum-varnames": [
+                "IncrModeDifferential",
+                "IncrModeCumulative"
+            ]
         },
         "dto.JobStatus": {
             "description": "Possible states of restore jobs.",
@@ -2469,6 +2619,38 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.LogFormat": {
+            "description": "LogFormat is the logger format.",
+            "type": "string",
+            "enum": [
+                "PLAIN",
+                "JSON"
+            ],
+            "x-enum-varnames": [
+                "LogFormatPlain",
+                "LogFormatJSON"
+            ]
+        },
+        "dto.LogLevel": {
+            "description": "LogLevel is the logger level.",
+            "type": "string",
+            "enum": [
+                "TRACE",
+                "DEBUG",
+                "INFO",
+                "WARN",
+                "WARNING",
+                "ERROR"
+            ],
+            "x-enum-varnames": [
+                "LogLevelTrace",
+                "LogLevelDebug",
+                "LogLevelInfo",
+                "LogLevelWarn",
+                "LogLevelWarning",
+                "LogLevelError"
+            ]
+        },
         "dto.LoggerConfig": {
             "description": "LoggerConfig represents the backup service logger configuration.",
             "type": "object",
@@ -2483,24 +2665,20 @@ const docTemplate = `{
                 },
                 "format": {
                     "description": "Format is the logger format (PLAIN, JSON).",
-                    "type": "string",
                     "default": "PLAIN",
-                    "enum": [
-                        "PLAIN",
-                        "JSON"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LogFormat"
+                        }
                     ]
                 },
                 "level": {
                     "description": "Level is the logger level.",
-                    "type": "string",
                     "default": "INFO",
-                    "enum": [
-                        "TRACE",
-                        "DEBUG",
-                        "INFO",
-                        "WARN",
-                        "WARNING",
-                        "ERROR"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LogLevel"
+                        }
                     ]
                 },
                 "stdout-writer": {
@@ -2539,13 +2717,13 @@ const docTemplate = `{
                     "example": 1024
                 },
                 "tps": {
-                    "description": "Rate limiter tokens per second threshold.",
+                    "description": "Rate limiter tokens per second threshold.\nThe budget is per client: an IPv4 address gets its own, an IPv6 address shares one\nwith the rest of its /64.",
                     "type": "integer",
                     "default": 1024,
                     "example": 1024
                 },
                 "white-list": {
-                    "description": "The list of ips to whitelist in rate limiting (optional).\nDefault: allow all.",
+                    "description": "The list of ips to exempt from rate limiting (optional).\nDefault: empty list, so rate limiting applies to all clients.\nUse \"0.0.0.0/0\" to exempt all clients and effectively disable rate limiting.",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -2557,14 +2735,16 @@ const docTemplate = `{
         "dto.RestoreCompressionPolicy": {
             "description": "RestoreCompressionPolicy contains restore compression information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "mode": {
-                    "description": "The compression mode to be used (default is NONE).",
-                    "type": "string",
-                    "default": "NONE",
-                    "enum": [
-                        "NONE",
-                        "ZSTD"
+                    "description": "The compression mode to be used. Required.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.CompressionMode"
+                        }
                     ]
                 }
             }
@@ -2670,12 +2850,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "destination": {
-                    "description": "Name of the destination namespace to restore data into.",
+                    "description": "Name of the destination namespace to restore data into.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "string",
                     "example": "destination-ns"
                 },
                 "source": {
-                    "description": "Original namespace name.\nThis field is required as a safeguard to ensure intentional namespace remapping.",
+                    "description": "Original namespace name.\nThis field is required as a safeguard to ensure intentional namespace remapping.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "string",
                     "example": "source-ns"
                 }
@@ -2782,7 +2962,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -2802,9 +2982,9 @@ const docTemplate = `{
                     ]
                 },
                 "socket-timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000,
+                    "default": 600000,
                     "example": 1000
                 },
                 "total-timeout": {
@@ -2834,7 +3014,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "backup-data-path": {
-                    "description": "Path to the data from storage root.\nYou can obtain this value by:\n- Browsing the storage UI, or\n- Reading the ` + "`" + `key` + "`" + ` field in the response from GET ` + "`" + `v1/backups/full/{routine}` + "`" + `",
+                    "description": "Path to the data from storage root.\nThis path is relative to the storage ` + "`" + `path` + "`" + `.\nYou can obtain this value by:\n- Browsing the storage UI, or\n- Reading the ` + "`" + `key` + "`" + ` field in the response from GET ` + "`" + `v1/backups/full/{routine}` + "`" + `",
                     "type": "string"
                 },
                 "destination": {
@@ -2971,7 +3151,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "incremental": {
-                    "description": "Number of full backups to store incremental backups for:\n- If nil, retain all incremental backups.\n- If N is specified, retain incremental backups for the last N full backups.\n- If set to 0, do not retain any incremental backups.\n- Must not exceed the value of FullBackups.",
+                    "description": "Number of full backups to store incremental backups for:\n- If nil, retain all incremental backups for existing full backups.\n- If N is specified, retain incremental backups for the last N full backups.\n- If set to 0, do not retain any incremental backups.\n- Must not exceed the value of FullBackups.",
                     "type": "integer",
                     "x-nullable": true
                 }
@@ -3084,6 +3264,28 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.S3LogLevel": {
+            "description": "S3LogLevel controls the verbosity of the AWS SDK logging.",
+            "type": "string",
+            "enum": [
+                "OFF",
+                "FATAL",
+                "ERROR",
+                "WARN",
+                "INFO",
+                "DEBUG",
+                "TRACE"
+            ],
+            "x-enum-varnames": [
+                "S3LogLevelOff",
+                "S3LogLevelFatal",
+                "S3LogLevelError",
+                "S3LogLevelWarn",
+                "S3LogLevelInfo",
+                "S3LogLevelDebug",
+                "S3LogLevelTrace"
+            ]
+        },
         "dto.S3Storage": {
             "description": "S3Storage represents the configuration for S3 storage.",
             "type": "object",
@@ -3093,8 +3295,9 @@ const docTemplate = `{
             ],
             "properties": {
                 "access-key-id": {
-                    "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                    "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "bucket": {
@@ -3128,16 +3331,11 @@ const docTemplate = `{
                 },
                 "s3-log-level": {
                     "description": "The log level of the AWS S3 SDK (AWS S3 optional).",
-                    "type": "string",
                     "default": "FATAL",
-                    "enum": [
-                        "OFF",
-                        "FATAL",
-                        "ERROR",
-                        "WARN",
-                        "INFO",
-                        "DEBUG",
-                        "TRACE"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.S3LogLevel"
+                        }
                     ]
                 },
                 "s3-profile": {
@@ -3152,8 +3350,9 @@ const docTemplate = `{
                     "example": "eu-central-1"
                 },
                 "secret-access-key": {
-                    "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                    "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
+                    "format": "password",
                     "x-nullable": true
                 },
                 "secret-agent": {
@@ -3242,10 +3441,10 @@ const docTemplate = `{
                 },
                 "connection-type": {
                     "description": "Connection type.",
-                    "type": "string",
-                    "enum": [
-                        "tcp",
-                        "unix"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.ConnectionType"
+                        }
                     ],
                     "example": "tcp"
                 },
@@ -3261,7 +3460,7 @@ const docTemplate = `{
                     "example": "/path/to/key.pem"
                 },
                 "name": {
-                    "description": "TLSName used for server certificate verification (ServerName for SNI).",
+                    "description": "TLS ServerName (SNI) for verifying the peer certificate.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "example.com"
@@ -3300,10 +3499,195 @@ const docTemplate = `{
                     "example": 3000
                 },
                 "tls-name": {
-                    "description": "TLS certificate name used for secure connections (if enabled).",
+                    "description": "TLS name sent as SNI and checked against the server certificate.\nRequired when the cluster has a tls block.\nThis is the name that takes effect for cluster connections.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "certName"
+                }
+            }
+        },
+        "dto.ServerConfigHTTP": {
+            "description": "ServerConfigHTTP represents the service's HTTP server configuration.",
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "The address to listen on.",
+                    "type": "string",
+                    "default": "0.0.0.0",
+                    "example": "0.0.0.0"
+                },
+                "context-path": {
+                    "description": "ContextPath customizes path for the API endpoints.",
+                    "type": "string",
+                    "default": "/"
+                },
+                "disabled": {
+                    "description": "Disabled controls whether the listener is disabled.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "idle-timeout": {
+                    "description": "IdleTimeout is the maximum amount of time in milliseconds to wait for the next request\nwhen keep-alives are enabled (http.Server.IdleTimeout).",
+                    "type": "integer",
+                    "default": 120000
+                },
+                "port": {
+                    "description": "The port to listen on.",
+                    "type": "integer",
+                    "default": 8080,
+                    "example": 8080
+                },
+                "rate": {
+                    "description": "HTTP rate limiter configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RateLimiterConfig"
+                        }
+                    ]
+                },
+                "read-timeout": {
+                    "description": "ReadTimeout is the maximum duration in milliseconds for reading the entire request,\nincluding the body (http.Server.ReadTimeout).",
+                    "type": "integer",
+                    "default": 30000
+                },
+                "timeout": {
+                    "description": "Timeout for reading HTTP request headers in milliseconds (http.Server.ReadHeaderTimeout).",
+                    "type": "integer",
+                    "default": 5000
+                },
+                "write-timeout": {
+                    "description": "WriteTimeout is the maximum duration in milliseconds before timing out writes of the response\n(http.Server.WriteTimeout).",
+                    "type": "integer",
+                    "default": 60000
+                }
+            }
+        },
+        "dto.ServerConfigHTTPS": {
+            "description": "ServerConfigHTTPS represents the service's HTTPS server configuration.",
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "The address to listen on.",
+                    "type": "string",
+                    "default": "0.0.0.0",
+                    "example": "0.0.0.0"
+                },
+                "cert-file": {
+                    "description": "Path to the HTTPS server certificate in PEM format.\nRewriting this file at the same path reloads the served key pair without a restart; changing the path requires a restart.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/server.pem"
+                },
+                "cipher-suites": {
+                    "description": "Allowed TLS cipher suite names. An empty list uses Go's secure defaults.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "x-nullable": true
+                },
+                "client-auth": {
+                    "description": "Client certificate authentication mode.",
+                    "default": "none",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.TLSClientAuth"
+                        }
+                    ]
+                },
+                "client-ca-file": {
+                    "description": "Path to trusted client CA certificates in PEM format.\nRewriting this file at the same path reloads the mTLS trust pool without a restart; changing the path requires a restart.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/client-ca.pem"
+                },
+                "context-path": {
+                    "description": "ContextPath customizes path for the API endpoints.",
+                    "type": "string",
+                    "default": "/"
+                },
+                "crl-file": {
+                    "description": "Path to one DER-encoded CRL or one or more PEM-encoded CRLs for client certificates.\nRewriting this file at the same path reloads revocation state without a restart; changing the path requires a restart.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/client.crl"
+                },
+                "disabled": {
+                    "description": "Disabled controls whether the listener is disabled.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "idle-timeout": {
+                    "description": "IdleTimeout is the maximum amount of time in milliseconds to wait for the next request\nwhen keep-alives are enabled (http.Server.IdleTimeout).",
+                    "type": "integer",
+                    "default": 120000
+                },
+                "key-file": {
+                    "description": "Path to the HTTPS server private key in PEM format.\nRewriting this file at the same path reloads the served key pair without a restart; changing the path requires a restart.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/server-key.pem"
+                },
+                "key-file-password": {
+                    "description": "Passphrase for an encrypted HTTPS server private key, in PKCS#8 (the OpenSSL 3 default) or legacy PEM encryption.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
+                    "type": "string",
+                    "format": "password",
+                    "x-nullable": true
+                },
+                "min-version": {
+                    "description": "Minimum accepted TLS protocol version.",
+                    "default": "1.2",
+                    "enum": [
+                        "1.2",
+                        "1.3"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.TLSMinVersion"
+                        }
+                    ]
+                },
+                "port": {
+                    "description": "The port to listen on.",
+                    "type": "integer",
+                    "default": 8443,
+                    "example": 8443
+                },
+                "rate": {
+                    "description": "HTTP rate limiter configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RateLimiterConfig"
+                        }
+                    ]
+                },
+                "read-timeout": {
+                    "description": "ReadTimeout is the maximum duration in milliseconds for reading the entire request,\nincluding the body (http.Server.ReadTimeout).",
+                    "type": "integer",
+                    "default": 30000
+                },
+                "secret-agent": {
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    ]
+                },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "timeout": {
+                    "description": "Timeout for reading HTTP request headers in milliseconds (http.Server.ReadHeaderTimeout).",
+                    "type": "integer",
+                    "default": 5000
+                },
+                "write-timeout": {
+                    "description": "WriteTimeout is the maximum duration in milliseconds before timing out writes of the response\n(http.Server.WriteTimeout).",
+                    "type": "integer",
+                    "default": 60000
                 }
             }
         },
@@ -3320,10 +3704,18 @@ const docTemplate = `{
                     ]
                 },
                 "http": {
-                    "description": "HTTPServer is the backup service HTTP server configuration.",
+                    "description": "ServerHTTP is the backup service HTTP server configuration.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/dto.HTTPServerConfig"
+                            "$ref": "#/definitions/dto.ServerConfigHTTP"
+                        }
+                    ]
+                },
+                "https": {
+                    "description": "ServerHTTPS is the backup service HTTPS server configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.ServerConfigHTTPS"
                         }
                     ]
                 },
@@ -3398,10 +3790,10 @@ const docTemplate = `{
                     "example": "/path/to/cert.pem"
                 },
                 "cipher-suite": {
-                    "description": "TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.",
+                    "description": "Colon-separated IANA TLS 1.2 cipher suite names (not OpenSSL nicknames).\nThe suite must match the certificate key type (RSA vs ECDSA).\nIf omitted, the client offers Go crypto/tls TLS 1.2 defaults:\nTLS_ECDHE_{ECDSA,RSA}_WITH_AES_128_GCM_SHA256,\nTLS_ECDHE_{ECDSA,RSA}_WITH_AES_256_GCM_SHA384,\nTLS_ECDHE_{ECDSA,RSA}_WITH_CHACHA20_POLY1305_SHA256,\nand ECDHE AES-CBC SHA for compatibility.\nRSA key-exchange, 3DES, RC4, and CBC-SHA256 are not offered.\nThis field does not select TLS 1.3 suites.",
                     "type": "string",
                     "x-nullable": true,
-                    "example": "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA"
+                    "example": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
                 },
                 "key-file": {
                     "description": "Path to a client private key file for mutual TLS authentication.",
@@ -3410,23 +3802,63 @@ const docTemplate = `{
                     "example": "/path/to/key.pem"
                 },
                 "key-file-password": {
-                    "description": "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
+                    "description": "Passphrase for an encrypted TLS key file, in PKCS#8 (the OpenSSL 3 default) or legacy PEM encryption.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
-                    "x-nullable": true,
-                    "example": "file:/path/to/password"
+                    "format": "password",
+                    "x-nullable": true
                 },
                 "name": {
-                    "description": "TLSName used for server certificate verification (ServerName for SNI).",
+                    "description": "TLS ServerName (SNI) for verifying the peer certificate.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "example.com"
                 },
                 "protocols": {
-                    "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
+                    "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.\nEmpty by default, which leaves the choice to Go and negotiates TLS 1.2 or 1.3.\nSetting a single version pins both the minimum and the maximum to it.",
                     "type": "string",
-                    "default": "TLSv1.2"
+                    "x-nullable": true
                 }
             }
+        },
+        "dto.TLSClientAuth": {
+            "description": "TLSClientAuth is HTTPS client-certificate authentication.",
+            "type": "string",
+            "enum": [
+                "none",
+                "request",
+                "require-and-verify"
+            ],
+            "x-enum-varnames": [
+                "TLSClientAuthNone",
+                "TLSClientAuthRequest",
+                "TLSClientAuthRequireAndVerify"
+            ]
+        },
+        "dto.TLSMinVersion": {
+            "description": "TLSMinVersion is the minimum accepted TLS protocol version.",
+            "type": "string",
+            "enum": [
+                "1.2",
+                "1.3"
+            ],
+            "x-enum-varnames": [
+                "TLSMinVersion12",
+                "TLSMinVersion13"
+            ]
+        },
+        "dto.TimestampFormat": {
+            "description": "TimestampFormat is the encoding for backup dates in file paths.",
+            "type": "string",
+            "enum": [
+                "ISO",
+                "US",
+                "EU"
+            ],
+            "x-enum-varnames": [
+                "TimestampFormatISO",
+                "TimestampFormatUS",
+                "TimestampFormatEU"
+            ]
         },
         "dto.TimestampRestorePolicy": {
             "description": "TimestampRestorePolicy represents a policy for the point-in-time restore operation.",
@@ -3521,7 +3953,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -3541,9 +3973,9 @@ const docTemplate = `{
                     ]
                 },
                 "socket-timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000,
+                    "default": 600000,
                     "example": 1000
                 },
                 "total-timeout": {
@@ -3592,7 +4024,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "v3.6.1",
+	Version:          "v3.7.0",
 	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},

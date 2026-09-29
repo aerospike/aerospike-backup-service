@@ -3,6 +3,7 @@ package model
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 	"github.com/stretchr/testify/require"
@@ -49,7 +50,10 @@ func TestBackupRoutineCopy_GobRegistrations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &BackupRoutine{Storage: tt.storage}
+			r := &BackupRoutine{
+				Storage:  tt.storage,
+				Timezone: Location{resolved: time.FixedZone("test-zone", 3*60*60), Configured: "test-zone"},
+			}
 			r.BackupPolicy = &BackupPolicy{}
 			r.BackupPolicy.RetentionPolicy = &RetentionPolicy{}
 			r.BackupPolicy.RetentionPolicy.FullBackups = optional.Of(1)
@@ -69,13 +73,88 @@ func TestBackupRoutineCopy_GobRegistrations(t *testing.T) {
 	}
 }
 
-// Verify that calling Copy() on a nil receiver returns nil and does not panic.
-func TestBackupRoutineCopy_NilReceiver(t *testing.T) {
-	var r, out *BackupRoutine
+func TestBackupRoutine_Schedules(t *testing.T) {
+	zone := time.FixedZone("UTC+3", 3*60*60)
+	routine := &BackupRoutine{
+		IntervalCron:     "@daily",
+		IncrIntervalCron: "@hourly",
+		Timezone:         Location{resolved: zone},
+	}
 
-	require.NotPanics(t, func() {
-		out = r.Copy()
-	}, "Copy() panicked on nil receiver")
+	require.Equal(t, Schedule{Cron: "@daily", Location: zone}, routine.FullSchedule())
+	require.Equal(t, Schedule{Cron: "@hourly", Location: zone}, routine.IncrementalSchedule())
+	require.True(t, routine.HasIncrementalSchedule())
+}
 
-	require.Nil(t, out, "Copy() on nil receiver must return nil; got non-nil")
+func TestBackupRoutine_Schedules_DefaultTimezone(t *testing.T) {
+	routine := &BackupRoutine{IntervalCron: "@daily"}
+
+	require.Equal(t, DefaultScheduleTimezone, routine.FullSchedule().Location)
+	require.False(t, routine.HasIncrementalSchedule())
+}
+
+func TestBackupRoutine_NextRun(t *testing.T) {
+	routine := &BackupRoutine{
+		IntervalCron:     "@daily",
+		IncrIntervalCron: "@hourly",
+	}
+
+	next, err := routine.NextRun()
+
+	require.NoError(t, err)
+	require.NotNil(t, next.FullBackupTime())
+	require.NotNil(t, next.IncrementalBackupTime())
+}
+
+func TestBackupRoutine_NextRun_WithoutIncremental(t *testing.T) {
+	routine := &BackupRoutine{IntervalCron: "@daily"}
+
+	next, err := routine.NextRun()
+
+	require.NoError(t, err)
+	require.NotNil(t, next.FullBackupTime())
+	require.Nil(t, next.IncrementalBackupTime())
+}
+
+func TestBackupRoutine_NextRun_InvalidCron(t *testing.T) {
+	tests := map[string]struct {
+		routine *BackupRoutine
+		wantErr string
+	}{
+		"invalid full cron": {
+			routine: &BackupRoutine{IntervalCron: "not a cron"},
+			wantErr: "failed to parse full backup cron",
+		},
+		"invalid incremental cron": {
+			routine: &BackupRoutine{IntervalCron: "@daily", IncrIntervalCron: "not a cron"},
+			wantErr: "failed to parse incremental backup cron",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := tt.routine.NextRun()
+
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestBackupRoutine_BacksUpWholeCluster(t *testing.T) {
+	tests := map[string]struct {
+		namespaces []string
+		want       bool
+	}{
+		"no namespaces configured backs up the whole cluster": {namespaces: nil, want: true},
+		"explicit empty list backs up the whole cluster":      {namespaces: []string{}, want: true},
+		"configured namespaces back up only those":            {namespaces: []string{"ns1"}, want: false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			routine := &BackupRoutine{Namespaces: tt.namespaces}
+
+			require.Equal(t, tt.want, routine.BacksUpWholeCluster())
+		})
+	}
 }

@@ -30,10 +30,10 @@ type StartDecider interface {
 	) error
 }
 
-// startDeciderImpl is the single entry point that determines whether a backup can be executed right now.
-type startDeciderImpl struct{}
+// startDecider is the single entry point that determines whether a backup can be executed right now.
+type startDecider struct{}
 
-var _ StartDecider = (*startDeciderImpl)(nil)
+var _ StartDecider = (*startDecider)(nil)
 
 // StartFacts is the admission-time snapshot consumed by StartDecider.CanStart.
 //
@@ -50,13 +50,13 @@ type StartFacts struct {
 	FullScheduledNow bool
 }
 
-// NewStartDecider returns the default StartDecider implementation used by the service.
+// NewStartDecider returns a StartDecider.
 func NewStartDecider() StartDecider {
-	return &startDeciderImpl{}
+	return &startDecider{}
 }
 
 // CanStart dispatches admission checks by backup type.
-func (g *startDeciderImpl) CanStart(
+func (g *startDecider) CanStart(
 	backupType model.BackupType,
 	policy *model.BackupPolicy,
 	facts StartFacts,
@@ -68,7 +68,7 @@ func (g *startDeciderImpl) CanStart(
 	return g.canStartIncremental(policy, facts)
 }
 
-func (g *startDeciderImpl) canStartFull(
+func (g *startDecider) canStartFull(
 	policy *model.BackupPolicy,
 	facts StartFacts,
 ) error {
@@ -79,7 +79,7 @@ func (g *startDeciderImpl) canStartFull(
 	return nil
 }
 
-func (g *startDeciderImpl) canStartIncremental(
+func (g *startDecider) canStartIncremental(
 	policy *model.BackupPolicy, // pass policy
 	facts StartFacts,
 ) error {

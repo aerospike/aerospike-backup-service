@@ -28,24 +28,17 @@ func TestAddStorage(t *testing.T) {
 			expectedStatus: http.StatusCreated,
 		},
 		{
-			name:           "missing storage name",
-			storageName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingStorageName.Error(),
-		},
-		{
 			name:           "invalid json",
 			storageName:    "test-storage",
 			requestBody:    "{noField : 1}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 
 			req := httptest.NewRequestWithContext(
 				t.Context(),
@@ -67,7 +60,7 @@ func TestAddStorage(t *testing.T) {
 }
 
 func TestReadAllStorage(t *testing.T) {
-	svc := setupTestService()
+	svc := setupTestService(t)
 	svc.config = model.NewConfig()
 
 	_ = svc.config.AddStorage("storage1", &model.LocalStorage{})
@@ -103,22 +96,16 @@ func TestReadStorage(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "missing storage name",
-			storageName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingStorageName.Error(),
-		},
-		{
 			name:           "non-existent storage",
 			storageName:    "non-existent",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errNotFound("storage", "non-existent").Error(),
+			expectedError:  model.NotFound("storage", "non-existent").Error(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			if tt.storage != nil {
 				_ = svc.config.AddStorage(tt.storageName, tt.storage)
 			}
@@ -152,24 +139,17 @@ func TestUpdateStorage(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "missing storage name",
-			storageName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingStorageName.Error(),
-		},
-		{
 			name:           "invalid json",
 			storageName:    "test-storage",
 			requestBody:    "{nil}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			initialStorage := &model.LocalStorage{Path: "/"}
 			_ = svc.config.AddStorage("test-storage", initialStorage)
 
@@ -206,22 +186,16 @@ func TestDeleteStorage(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:           "missing storage name",
-			storageName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingStorageName.Error(),
-		},
-		{
 			name:           "unknown storage name",
 			storageName:    "unknown-storage",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid request",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  model.NotFound("storage", "unknown-storage").Error(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := setupTestService()
+			svc := setupTestService(t)
 			_ = svc.config.AddStorage("test-storage", &model.LocalStorage{})
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/storage/"+tt.storageName, nil)
@@ -239,7 +213,7 @@ func TestDeleteStorage(t *testing.T) {
 }
 
 func TestDeleteStorage_InUseErrorMessage(t *testing.T) {
-	svc := setupTestService()
+	svc := setupTestService(t)
 	entities := addValidBackupConfig(svc)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/config/storage/"+entities.storageName, nil)
@@ -248,8 +222,8 @@ func TestDeleteStorage_InUseErrorMessage(t *testing.T) {
 
 	svc.DeleteStorage(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "delete storage \"storage1\": item is in use: it is used in routine \"routine1\"")
+	assert.Equal(t, http.StatusConflict, w.Code)
+	assert.Contains(t, w.Body.String(), "storage \"storage1\" is in use: it is used in routine \"routine1\"")
 }
 
 func marshalToString(obj any) string {

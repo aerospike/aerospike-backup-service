@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -27,14 +30,11 @@ func TestOpenAPIDescriptions(t *testing.T) {
 
 	for schemaName, rawSchema := range schemas {
 		schema, ok := rawSchema.(map[string]any)
-		if !ok {
-			t.Errorf("Invalid schema format for: %s", schemaName)
+		if !assert.True(t, ok, "Invalid schema format for: %s", schemaName) {
 			continue
 		}
 
-		if _, ok := schema[descriptionTag]; !ok {
-			t.Errorf("Object '%s' is missing a description", schemaName)
-		}
+		assert.Contains(t, schema, descriptionTag, "Object '%s' is missing a description", schemaName)
 
 		assertAllPropertiesValid(t, schema, schemaName)
 	}
@@ -44,24 +44,16 @@ func readSchemas(t *testing.T, filePath string) map[string]any {
 	t.Helper()
 
 	data, err := os.ReadFile(filePath)
-	if err != nil {
-		t.Fatalf("Failed to read OpenAPI file: %v", err)
-	}
+	require.NoErrorf(t, err, "Failed to read OpenAPI file")
 
 	var openapi map[string]any
-	if err := json.Unmarshal(data, &openapi); err != nil {
-		t.Fatalf("Failed to parse OpenAPI JSON: %v", err)
-	}
+	require.NoErrorf(t, json.Unmarshal(data, &openapi), "Failed to parse OpenAPI JSON")
 
 	components, ok := openapi[componentsTag].(map[string]any)
-	if !ok {
-		t.Fatalf("Missing 'components' in OpenAPI file")
-	}
+	require.True(t, ok, "Missing 'components' in OpenAPI file")
 
 	schemas, ok := components[schemasTag].(map[string]any)
-	if !ok {
-		t.Fatalf("Missing 'schemas' in OpenAPI components")
-	}
+	require.True(t, ok, "Missing 'schemas' in OpenAPI components")
 	return schemas
 }
 
@@ -95,15 +87,12 @@ func assertAllPropertiesValid(t *testing.T, schema map[string]any, schemaName st
 
 	for propName, rawProp := range properties {
 		prop, ok := rawProp.(map[string]any)
-		if !ok {
-			t.Errorf("Invalid property format: %s.%s", schemaName, propName)
+		if !assert.True(t, ok, "Invalid property format: %s.%s", schemaName, propName) {
 			continue
 		}
 
 		// Check for description
-		if _, ok := prop[descriptionTag]; !ok {
-			t.Errorf("Property '%s.%s' is missing a description", schemaName, propName)
-		}
+		assert.Contains(t, prop, descriptionTag, "Property '%s.%s' is missing a description", schemaName, propName)
 
 		if _, ok := prop[allOfTag]; ok {
 			continue // this is an object
@@ -122,8 +111,7 @@ func assertAllPropertiesValid(t *testing.T, schema map[string]any, schemaName st
 		_, hasDefault := prop[defaultTag]
 		_, isNullable := prop[nullableTag] // nullable fields means that default value is nil
 
-		if !(isRequired || hasDefault || isNullable) {
-			t.Errorf("Property '%s.%s' is neither required nor has a default value", schemaName, propName)
-		}
+		assert.True(t, isRequired || hasDefault || isNullable,
+			"Property '%s.%s' is neither required nor has a default value", schemaName, propName)
 	}
 }

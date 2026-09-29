@@ -47,6 +47,9 @@ func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 		if err := dec.Decode(v); err != nil {
 			return enhanceJSONError(err)
 		}
+		if err := ensureNoTrailingData(dec); err != nil {
+			return err
+		}
 	case YAML:
 		dec := yaml.NewDecoder(r)
 		dec.KnownFields(true) // Strict mode for YAML
@@ -166,4 +169,18 @@ func parseYamlErrorMessage(errMsg string) (line int, field string, dtoName strin
 	dtoName = match[3]
 
 	return
+}
+
+// ensureNoTrailingData rejects input that continues after the first JSON document; the decoder
+// would otherwise silently ignore everything that follows it.
+func ensureNoTrailingData(dec *json.Decoder) error {
+	_, err := dec.Token()
+	if errors.Is(err, io.EOF) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("invalid data after the JSON document: %w", err)
+	}
+
+	return errors.New("unexpected data after the JSON document")
 }

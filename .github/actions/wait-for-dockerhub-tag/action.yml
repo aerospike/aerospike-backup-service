@@ -1,0 +1,56 @@
+name: Wait for DockerHub tag
+description: >
+  Polls DockerHub for a tag's arrival. DockerHub mirroring of a PROD-promoted image happens
+  externally and asynchronously via artifact-publisher (triggered by JFrog's own promotion
+  webhook), so this never hard-fails -- it reports found=true/false and lets the caller decide
+  whether that's a warning or a hard failure.
+
+inputs:
+  image:
+    description: DockerHub image, e.g. aerospike/aerospike-backup-service
+    required: true
+  tag:
+    description: Tag to wait for, e.g. 3.7.0 (without a leading "v")
+    required: true
+  max-attempts:
+    description: Maximum number of polling attempts
+    required: false
+    default: "15"
+  interval-seconds:
+    description: Seconds to wait between attempts
+    required: false
+    default: "60"
+
+outputs:
+  found:
+    description: "'true' if the tag was found within max-attempts, 'false' otherwise"
+    value: ${{ steps.poll.outputs.found }}
+
+runs:
+  using: composite
+  steps:
+    - name: Poll DockerHub for tag
+      id: poll
+      shell: bash
+      run: |
+        set -uo pipefail
+        IMAGE="${{ inputs.image }}"
+        TAG="${{ inputs.tag }}"
+        MAX_ATTEMPTS="${{ inputs.max-attempts }}"
+        INTERVAL="${{ inputs.interval-seconds }}"
+
+        found=false
+        for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+          status="$(curl -s -o /dev/null -w '%{http_code}' "https://hub.docker.com/v2/repositories/${IMAGE}/tags/${TAG}/")"
+          if [ "$status" = "200" ]; then
+            echo "DockerHub tag ${IMAGE}:${TAG} found on attempt ${attempt}/${MAX_ATTEMPTS}."
+            found=true
+            break
+          fi
+          echo "Attempt ${attempt}/${MAX_ATTEMPTS}: ${IMAGE}:${TAG} not found yet (HTTP ${status})."
+          if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+            sleep "$INTERVAL"
+          fi
+        done
+
+        echo "found=${found}" >> "$GITHUB_OUTPUT"
