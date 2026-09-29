@@ -56,7 +56,7 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
 
 - This alert fires if any backup job failure has been recorded in the last 15 minutes:
 
-```yaml
+```yaml prometheus-rules
 - alert: BackupJobFailureDetected
   expr: increase(aerospike_backup_service_backup_events_total{outcome="failure"}[15m]) > 0
   labels:
@@ -68,7 +68,7 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
 
 - Alert if no successful backup in the last 24h for a specific routine (e.g., daily-ns1):
 
-```yaml
+```yaml prometheus-rules
 - alert: BackupTooOld
   expr: (time() - aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1"}) > 86400
   labels:

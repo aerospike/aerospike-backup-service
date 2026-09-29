@@ -2,14 +2,16 @@
 // honest.
 //
 // The generated documentation is reproduced byte-for-byte from the code, so it
-// cannot drift. Three things outside it can, and the tests here check each one
+// cannot drift. Everything outside it can, and the tests here check each part
 // against the code, so a doc that no longer matches fails the build rather than
 // a support ticket:
 //   - a default written down in a `default:` struct tag and again in the code
 //     that applies it;
 //   - the routes docs/openapi.json describes and the ones the router registers;
 //   - a field name written in prose, against the properties docs/openapi.json
-//     declares.
+//     declares;
+//   - a hand-written YAML or JSON block, through the service's strict decoder;
+//   - a PromQL query, against the metrics and label values the service exports.
 package doccheck
 
 import (

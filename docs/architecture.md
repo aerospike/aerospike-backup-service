@@ -72,7 +72,7 @@ longer than an HTTP client should be expected to hold a connection open.
    service layer (`BackupScheduler.TriggerAdHocFullBackup`, `RestoreManager.Restore`, ...), which starts the job on a
    goroutine and registers it in the running-backups registry or the restore jobs holder.
 3. The handler immediately returns **`202 Accepted`** (see
-   [`TriggerFullBackup`](../internal/server/handlers/backup.go#L195) and the restore handlers) — it does not wait for
+   [`TriggerFullBackup`](../internal/server/handlers/backup.go) and the restore handlers) — it does not wait for
    the job to finish.
 4. The client polls status separately: <!-- tag getCurrentBackup -->`GET /v1/backups/currentBackup/{name}`<!-- /tag --> for backups, or
    <!-- tag restoreStatus -->`GET /v1/restore/status/{jobId}`<!-- /tag --> for restores (see [API examples](api-examples.md)). Progress is also exported as
