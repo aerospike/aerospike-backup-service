@@ -173,7 +173,7 @@ chart version that breaks the ordering, reuses a version already published, or w
 match the app patch.
 
 #### Regular release
-1. Create a release branch from `dev` (e.g. `release/3.7.0`).
+1. Create a release branch from `dev` (e.g. `release/v3.7.0`).
 2. Prepare the release by updating the version files. Pass both versions in one invocation --
    `make release` writes `VERSION` and then stamps the chart from it, so splitting the two leaves
    `Chart.yaml` describing a release that does not exist yet:
@@ -182,8 +182,10 @@ match the app patch.
    git add --all
    git commit -m "Release: "$(cat VERSION)""
    ```
-3. Open a pull request from your release branch into `main` and merge it.
-4. After the PR is merged, tag the release on `main`:
+3. Open a pull request from your release branch into `dev` and merge it.
+4. Open a second pull request from `dev` into `main` and merge it. `main` only ever moves forward through
+   this release PR, so the release branch is never merged into it directly.
+5. After the release PR is merged, tag the release on `main`:
    ```bash
    git checkout main && git pull origin main
    git tag "$(cat VERSION)"
