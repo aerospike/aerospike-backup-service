@@ -43,7 +43,7 @@ type BackupRoutine struct {
 	NodeList []string
 	// Base64 encoded filter expression used in each scan call for partial backup.
 	FilterExpression string
-	// Whether this routine is disabled and should not run.
+	// Whether scheduled backups of this routine are disabled. On-demand backups can still be triggered.
 	Disabled bool
 }
 

@@ -253,7 +253,7 @@ type RetentionPolicy struct {
 	FullBackups *int `json:"full,omitempty" yaml:"full,omitempty"  minimum:"1" extensions:"x-nullable"`
 
 	// Number of full backups to store incremental backups for:
-	// - If nil, retain all incremental backups.
+	// - If nil, retain all incremental backups for existing full backups.
 	// - If N is specified, retain incremental backups for the last N full backups.
 	// - If set to 0, do not retain any incremental backups.
 	// - Must not exceed the value of FullBackups.

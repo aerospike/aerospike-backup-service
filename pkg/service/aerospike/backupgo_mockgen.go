@@ -57,6 +57,20 @@ func (mr *MockInfoGetterMockRecorder) AbortBackup(ctx, backupID any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AbortBackup", reflect.TypeOf((*MockInfoGetter)(nil).AbortBackup), ctx, backupID)
 }
 
+// AbortRestore mocks base method.
+func (m *MockInfoGetter) AbortRestore(ctx context.Context, namespace, backupID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AbortRestore", ctx, namespace, backupID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AbortRestore indicates an expected call of AbortRestore.
+func (mr *MockInfoGetterMockRecorder) AbortRestore(ctx, namespace, backupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AbortRestore", reflect.TypeOf((*MockInfoGetter)(nil).AbortRestore), ctx, namespace, backupID)
+}
+
 // GetBackupStatus mocks base method.
 func (m *MockInfoGetter) GetBackupStatus(ctx context.Context, jobID string) (*models0.ResponseBackupState, error) {
 	m.ctrl.T.Helper()

@@ -10,47 +10,40 @@ Entries below `v3.0.0` predate this file; see the
 Detailed upgrade instructions (breaking changes and how to adapt existing configuration) live in
 [docs/migration.md](docs/migration.md); this file is the changelog, that one is the upgrade guide.
 
-## [Unreleased]
-
-### Security
-
-- The `.deb` and `.rpm` packages run the service as the unprivileged system account
-  `aerospike-backup-service` instead of root, under a systemd sandbox (`ProtectSystem=strict`,
-  `ProtectHome=true`, empty capability set, `SystemCallFilter=@system-service` with
-  `SystemCallArchitectures=native`, `UMask=0027`). The configuration file ships `0640` and backup
-  artifacts are no longer world-readable. See [docs/migration.md](docs/migration.md) for the
-  upgrade steps — local-storage paths, cloud credentials, TLS file modes and privileged ports all
-  need attention on an existing installation.
-
-### Changed
-
-- Entity names may no longer be entirely whitespace, nor start or end with it; whitespace inside
-  a name is still allowed. A config carrying such a name fails validation on load.
-- Configuration-mutation endpoints answer with the status code that describes the outcome instead
-  of collapsing everything onto `400`: a routine, storage, cluster or policy that does not exist is
-  `404`, a name that is already taken or an entity a backup routine still references is `409`. A
-  malformed or invalid payload is still `400`. `GET` already answered `404`; the mutating verbs now
-  match it, body text included. See [docs/migration.md](docs/migration.md).
-- The unit file moves to `/usr/lib/systemd/system` as a vendor file; customise it with a drop-in
-  (`systemctl edit aerospike-backup-service`).
-- Logs move to `/var/log/aerospike-backup-service/aerospike-backup-service.log`, a directory
-  systemd creates and owns. An existing log and its rotated siblings are migrated on upgrade.
-- A `compression` or `encryption` policy block must set `mode` explicitly. `ZSTD` compression
-  requires `level`, and `NONE` must not set it. See [docs/migration.md](docs/migration.md).
-
-### Fixed
-
-- A compression policy without `mode` is rejected at startup instead of failing every backup
-  and restore that used it.
-- An `.rpm` upgrade no longer leaves the service stopped and disabled: the pre-removal scriptlet
-  now runs only on a real removal, not on the upgrade half of a transaction.
-- The packaged log file no longer replaces an operator's log on upgrade, and is no longer deleted
-  by a plain `remove`.
+## [3.7.0] - TBD
 
 ### Added
 
-- `schedule-timezone` on `service.backup` and on backup routines so cron schedules can be
-  evaluated in UTC (default), the host timezone, or a named IANA zone. Backup paths remain UTC.
+- HTTPS listener (`service.https`) with optional mTLS, CRL-based client certificate revocation, TLS
+  material reload without restart, and PKCS#8 encrypted keys.
+- Cumulative incremental backups: `incr-mode` on backup policy (`differential` or `cumulative`).
+- `schedule-timezone` on `service.backup` and on backup routines: cron schedules can run in UTC
+  (default), the host timezone, or a named IANA zone. Backup paths remain UTC.
+- `filter-exp` on backup routines for partial backups.
+- Set index support.
+
+### Changed
+
+- **Breaking:** secrets are returned as `"[secret]"` by the configuration API and redacted in logs;
+  sending `"[secret]"` back on `PUT` keeps the stored value.
+- **Breaking:** stricter configuration validation: entity names must be a single path segment,
+  paths must be clean, secret references are checked at load, and `compression`/`encryption`
+  policies must set `mode`.
+- **Breaking:** an empty rate-limiter `white-list` limits every client; use `0.0.0.0/0` to exempt all.
+- A failed namespace is retried in its own attempt folder and no longer deletes other namespaces'
+  data; permanent failures are not retried, and a namespace that cannot start fails the run.
+- Retention deletes only completed incrementals; partial backups left by a crashed run are removed
+  at startup.
+
+### Security
+
+- **Breaking:** the `.deb` and `.rpm` packages run the service as the unprivileged
+  `aerospike-backup-service` account under a systemd sandbox. The config file is owner-only, backup
+  artifacts are no longer world-readable, the unit file moves to `/usr/lib/systemd/system`, and
+  logs move to `/var/log/aerospike-backup-service/`. See [docs/migration.md](docs/migration.md).
+- Local-storage backups are created owner-only (files `0600`, directories `0700`) in every
+  deployment.
+- Hardened Helm and Kubernetes deployment defaults.
 
 ## [3.6.1] - 2026-07-23
 
@@ -170,7 +163,7 @@ Patch release; see the GitHub release notes.
 - **Breaking:** restore requests now require a `backup-data-path` field; the `Storage.path` field is the storage
   root only and can no longer be reused as the backup data location.
 
-[Unreleased]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.1...HEAD
+[3.7.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.1...HEAD
 [3.6.1]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.4.0...v3.5.0

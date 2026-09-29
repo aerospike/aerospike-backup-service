@@ -83,7 +83,7 @@ type BackupRoutine struct {
 	// encoded through any client. This argument is mutually exclusive with multi-set backup.
 	FilterExpression string `yaml:"filter-exp,omitempty" json:"filter-exp,omitempty" extensions:"x-nullable"`
 
-	// Whether this routine is disabled and should not run. Default: false.
+	// Whether scheduled backups of this routine are disabled. On-demand backups can still be triggered. Default: false.
 	Disabled bool `json:"disabled,omitempty" yaml:"disabled,omitempty" default:"false"`
 }
 

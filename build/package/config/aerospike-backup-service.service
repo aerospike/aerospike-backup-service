@@ -54,9 +54,8 @@ RestrictNamespaces=true
 LockPersonality=true
 MemoryDenyWriteExecute=true
 RemoveIPC=true
-# 0027, not 0077: backup artifacts stay unreadable to the world but remain readable to
-# the aerospike-backup-service group, so an operator account added to that group can
-# still run asrestore or ship the files. See build/package/README.md.
+# A fallback for files created without an explicit mode: backups (0600/0700) and the
+# configuration file (0600) set their own. See build/package/README.md.
 UMask=0027
 
 [Install]

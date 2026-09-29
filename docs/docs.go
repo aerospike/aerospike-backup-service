@@ -2181,7 +2181,7 @@ const docTemplate = `{
                     ]
                 },
                 "disabled": {
-                    "description": "Whether this routine is disabled and should not run. Default: false.",
+                    "description": "Whether scheduled backups of this routine are disabled. On-demand backups can still be triggered. Default: false.",
                     "type": "boolean",
                     "default": false
                 },
@@ -3151,7 +3151,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "incremental": {
-                    "description": "Number of full backups to store incremental backups for:\n- If nil, retain all incremental backups.\n- If N is specified, retain incremental backups for the last N full backups.\n- If set to 0, do not retain any incremental backups.\n- Must not exceed the value of FullBackups.",
+                    "description": "Number of full backups to store incremental backups for:\n- If nil, retain all incremental backups for existing full backups.\n- If N is specified, retain incremental backups for the last N full backups.\n- If set to 0, do not retain any incremental backups.\n- Must not exceed the value of FullBackups.",
                     "type": "integer",
                     "x-nullable": true
                 }

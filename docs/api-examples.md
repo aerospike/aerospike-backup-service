@@ -162,7 +162,7 @@ Here, `name` is the routine name.
 
 Set the disabled flag for the given routine to `true` or `false` (default is `false`).
 
-- Disabled routines will not schedule new jobs.
+- Disabled routines run no scheduled backups. On-demand backups can still be triggered.
 - Running jobs will be canceled, similar to the `Cancel Backup Job` endpoint.
 
 ## Restore
