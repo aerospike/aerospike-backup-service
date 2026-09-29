@@ -83,6 +83,9 @@ func (m *BackupMetadata) Validate() error {
 	if m.Finished.IsZero() { // finished was introduced in ABS v3.4.0
 		m.Finished = m.Created.Add(1 * time.Millisecond) // set dummy value
 	}
+	if m.Compression == "" { // compression was introduced in ABS v3.1.0; earlier backups are uncompressed
+		m.Compression = CompressionModeNone
+	}
 	if m.Namespace == "" {
 		return errors.New("`namespace` is required")
 	}
