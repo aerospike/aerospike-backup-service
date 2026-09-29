@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
@@ -10,16 +11,14 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
-	servertls "github.com/aerospike/aerospike-backup-service/v3/internal/server/tlsconfig"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
 type stubServer struct {
 	start    func() error
-	shutdown func() error
+	shutdown func(ctx context.Context) error
 }
 
 func (s stubServer) ServeHTTP(http.ResponseWriter, *http.Request) {}
@@ -28,21 +27,19 @@ func (s stubServer) Start() error {
 	return s.start()
 }
 
-func (s stubServer) Shutdown() error {
-	return s.shutdown()
+func (s stubServer) Shutdown(ctx context.Context) error {
+	return s.shutdown(ctx)
 }
 
 func newTestServerHTTP(t *testing.T, httpCfg *model.ServerConfigHTTP) *serverHTTP {
 	t.Helper()
 
 	svc := handlers.NewService(
-		t.Context(),
 		model.NewConfig(),
-		nil, nil, nil, nil, nil, nil, nil, nil,
-		servertls.NewProber(secrets.NewResolver()),
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
-	return NewServerHTTP(t.Context(), httpCfg, svc).(*serverHTTP)
+	return NewServerHTTP(httpCfg, svc).(*serverHTTP)
 }
 
 func waitForServerHTTPReady(t *testing.T, healthURL string) {
@@ -87,7 +84,7 @@ func TestNewServerHTTP_StartAndShutdown(t *testing.T) {
 
 	waitForServerHTTPReady(t, "http://"+ln.Addr().String()+"/health")
 
-	require.NoError(t, srv.Shutdown())
+	require.NoError(t, srv.Shutdown(t.Context()))
 
 	select {
 	case err := <-errCh:
@@ -117,7 +114,7 @@ func TestNewServerHTTP_ReadTimeoutClosesSilentClient(t *testing.T) {
 		errCh <- srv.Serve(ln)
 	}()
 	t.Cleanup(func() {
-		_ = srv.Shutdown()
+		_ = srv.Shutdown(t.Context())
 		<-errCh
 	})
 
@@ -147,7 +144,7 @@ func TestRunDoesNotDeadlockWhenServerExitsCleanly(t *testing.T) {
 	servers := []HTTP{
 		stubServer{
 			start:    func() error { return nil },
-			shutdown: func() error { return nil },
+			shutdown: func(context.Context) error { return nil },
 		},
 		stubServer{
 			start: func() error {
@@ -155,7 +152,7 @@ func TestRunDoesNotDeadlockWhenServerExitsCleanly(t *testing.T) {
 				<-stop
 				return nil
 			},
-			shutdown: func() error {
+			shutdown: func(context.Context) error {
 				close(stop)
 				return nil
 			},
@@ -188,14 +185,14 @@ func TestRunStopsEveryListenerWhenOneFails(t *testing.T) {
 	servers := []HTTP{
 		stubServer{
 			start:    func() error { return errors.New("bind: address already in use") },
-			shutdown: func() error { shutdowns.Add(1); return nil },
+			shutdown: func(context.Context) error { shutdowns.Add(1); return nil },
 		},
 		stubServer{
 			start: func() error {
 				<-stop
 				return nil
 			},
-			shutdown: func() error {
+			shutdown: func(context.Context) error {
 				shutdowns.Add(1)
 				close(stop)
 				return nil
@@ -212,10 +209,38 @@ func TestRunReportsShutdownFailure(t *testing.T) {
 	servers := []HTTP{
 		stubServer{
 			start:    func() error { return nil },
-			shutdown: func() error { return errors.New("shutdown timed out") },
+			shutdown: func(context.Context) error { return errors.New("shutdown timed out") },
 		},
 	}
 
 	err := Run(t.Context(), servers)
 	require.ErrorContains(t, err, "shutdown timed out")
+}
+
+func TestRunDetachesShutdownFromTheCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	handedOver := make(chan error, 1)
+
+	servers := []HTTP{
+		stubServer{
+			start: func() error {
+				<-ctx.Done()
+				return nil
+			},
+			shutdown: func(shutdownCtx context.Context) error {
+				handedOver <- shutdownCtx.Err()
+				return nil
+			},
+		},
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, servers)
+	}()
+	cancel()
+
+	require.NoError(t, <-done)
+	// A canceled context here would cut every in-flight request off instead of draining it.
+	require.NoError(t, <-handedOver)
 }

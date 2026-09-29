@@ -43,6 +43,6 @@ func (c ServiceConfig) GetBackupCommonOrDefault() *BackupCommonConfig {
 	}
 
 	return &BackupCommonConfig{
-		Timezone: NewServiceLocation(""),
+		Timezone: NewServiceLocation("", nil),
 	}
 }

@@ -189,12 +189,6 @@ func testScheduleBackupValidation(
 			delayParam:     "-1000",
 			expectedStatus: http.StatusBadRequest,
 		},
-		{
-			name:           "empty routine name",
-			routineName:    "",
-			delayParam:     "1000",
-			expectedStatus: http.StatusBadRequest,
-		},
 	}
 
 	for _, tt := range tests {
@@ -221,16 +215,6 @@ func testScheduleBackupValidation(
 			assert.Equal(t, tt.expectedStatus, w.Code)
 		})
 	}
-}
-
-func TestService_CancelCurrentBackup(t *testing.T) {
-	svc := &Service{}
-
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/backups/cancel/", nil)
-	w := httptest.NewRecorder()
-	svc.CancelCurrentBackup(w, req)
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestService_CancelCurrentBackup_RoutineNotFound(t *testing.T) {
@@ -271,12 +255,6 @@ func TestService_GetCurrentBackupInfo(t *testing.T) {
 		setupSvc       func(*Service, *gomock.Controller)
 		expectedStatus int
 	}{
-		{
-			name:           "missing routine name",
-			routineName:    "",
-			setupSvc:       func(*Service, *gomock.Controller) {},
-			expectedStatus: http.StatusBadRequest,
-		},
 		{
 			name:           "routine not found",
 			routineName:    "unknown",
@@ -335,12 +313,6 @@ func TestService_GetFullBackupsForRoutine(t *testing.T) {
 			name:           "invalid time bounds",
 			routineName:    "routine1",
 			queryParams:    map[string]string{"from": "invalid"},
-			setupMock:      func(*service.MockBackupReader) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "missing routine name",
-			routineName:    "",
 			setupMock:      func(*service.MockBackupReader) {},
 			expectedStatus: http.StatusBadRequest,
 		},
@@ -466,12 +438,6 @@ func TestService_GetIncrementalBackupsForRoutine(t *testing.T) {
 		expectedStatus int
 	}{
 		{
-			name:           "missing routine name",
-			routineName:    "",
-			setupMock:      func(*service.MockBackupReader) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
 			name:           "routine not found",
 			routineName:    "unknown",
 			setupMock:      func(*service.MockBackupReader) {},
@@ -515,4 +481,18 @@ func TestService_GetIncrementalBackupsForRoutine(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseDelay_Valid(t *testing.T) {
+	delay, err := parseDelay("1500")
+	require.NoError(t, err)
+	assert.Equal(t, 1500, delay)
+}
+
+// A delay that does not fit in a time.Duration is rejected with 400 instead of wrapping
+// negative and running the backup immediately.
+func TestParseDelay_RejectsOverflow(t *testing.T) {
+	_, err := parseDelay("9223372036854775807")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "should not exceed")
 }

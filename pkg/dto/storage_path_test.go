@@ -23,7 +23,7 @@ func TestValidateObjectStoragePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateObjectStoragePath(tt.path)
+			err := Path(tt.path).Validate(ValidationAllowEmpty)
 			if tt.valid {
 				require.NoError(t, err)
 			} else {

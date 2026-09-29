@@ -33,18 +33,11 @@ func TestAddPolicy(t *testing.T) {
 			expectedStatus: http.StatusCreated,
 		},
 		{
-			name:           "missing policy name",
-			policyName:     "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingPolicyName.Error(),
-		},
-		{
 			name:           "invalid json",
 			policyName:     "test-policy",
 			requestBody:    "{noField : 1}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 
@@ -108,16 +101,10 @@ func TestReadPolicy(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "missing policy name",
-			policyName:     "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingPolicyName.Error(),
-		},
-		{
 			name:           "non-existent policy",
 			policyName:     "non-existent",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errNotFound("policy", "non-existent").Error(),
+			expectedError:  model.NotFound("policy", "non-existent").Error(),
 		},
 	}
 
@@ -166,25 +153,18 @@ func TestUpdatePolicy(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "missing policy name",
-			policyName:     "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingPolicyName.Error(),
-		},
-		{
 			name:           "invalid json",
 			policyName:     "test-policy",
 			requestBody:    "{nil}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 		{
 			name:           "unknown policy name",
 			policyName:     "unknown-policy",
 			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid request",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  model.NotFound("policy", "unknown-policy").Error(),
 		},
 	}
 
@@ -229,16 +209,10 @@ func TestDeletePolicy(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:           "missing policy name",
-			policyName:     "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingPolicyName.Error(),
-		},
-		{
 			name:           "unknown policy name",
 			policyName:     "unknown-policy",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid request",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  model.NotFound("policy", "unknown-policy").Error(),
 		},
 	}
 
@@ -272,9 +246,9 @@ func TestDeletePolicy_InUseErrorMessage(t *testing.T) {
 
 	svc.DeletePolicy(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(),
-		"delete backup policy \"test-policy\": item is in use: it is used in routine \"routine1\"")
+		"policy \"test-policy\" is in use: it is used in routine \"routine1\"")
 }
 
 func TestUpdatePolicy_Case2_ClusterMaxSetBeforeParallelIncrease(t *testing.T) {
@@ -327,10 +301,9 @@ func setupTestService(t *testing.T) *Service {
 	mockManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	mockConfigApplier := service.NewMockConfigApplier(ctrl)
-	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil).AnyTimes()
+	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil).AnyTimes()
 
 	return NewService(
-		t.Context(),
 		model.NewConfig(),
 		mockConfigApplier,
 		nil,

@@ -15,29 +15,30 @@ func TestClientTLS_ValidatePaths(t *testing.T) {
 		{
 			name: "clean paths",
 			tls: ClientTLS{
-				CAFile:   "/etc/ssl/certs/ca.pem",
-				Certfile: "/etc/ssl/certs/client.pem",
-				Keyfile:  "/etc/ssl/private/client-key.pem",
+				CAFile:   Path("/etc/ssl/certs/ca.pem"),
+				Name:     "tls-name",
+				Certfile: Path("/etc/ssl/certs/client.pem"),
+				Keyfile:  Path("/etc/ssl/private/client-key.pem"),
 			},
 		},
 		{
 			name: "leading parent traversal in ca-file",
 			tls: ClientTLS{
-				CAFile: "../etc/passwd",
+				CAFile: Path("../etc/passwd"),
 			},
 			wantErr: true,
 		},
 		{
 			name: "embedded traversal in ca-file",
 			tls: ClientTLS{
-				CAFile: "certs/../../outside.pem",
+				CAFile: Path("certs/../../outside.pem"),
 			},
 			wantErr: true,
 		},
 		{
 			name: "dot prefix in key-file",
 			tls: ClientTLS{
-				Keyfile: "./keys/client-key.pem",
+				Keyfile: Path("./keys/client-key.pem"),
 			},
 			wantErr: true,
 		},
@@ -45,10 +46,9 @@ func TestClientTLS_ValidatePaths(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.tls.validatePaths()
+			err := tt.tls.Validate()
 			if tt.wantErr {
 				require.Error(t, err)
-				require.ErrorIs(t, err, errInvalidPath)
 			} else {
 				require.NoError(t, err)
 			}
@@ -57,7 +57,6 @@ func TestClientTLS_ValidatePaths(t *testing.T) {
 }
 
 func TestCredentials_ValidatePasswordPath(t *testing.T) {
-	//nolint:gosec // test fixtures use fake credential fields
 	tests := []struct {
 		name    string
 		creds   Credentials
@@ -67,14 +66,14 @@ func TestCredentials_ValidatePasswordPath(t *testing.T) {
 			name: "clean password path",
 			creds: Credentials{
 				User:         "admin",
-				PasswordPath: "secrets/password.txt",
+				PasswordPath: Path("secrets/password.txt"),
 			},
 		},
 		{
 			name: "traversal password path",
 			creds: Credentials{
 				User:         "admin",
-				PasswordPath: "secrets/../../outside/secret.txt",
+				PasswordPath: Path("secrets/../../outside/secret.txt"),
 			},
 			wantErr: true,
 		},
@@ -85,7 +84,6 @@ func TestCredentials_ValidatePasswordPath(t *testing.T) {
 			err := tt.creds.Validate()
 			if tt.wantErr {
 				require.Error(t, err)
-				require.ErrorIs(t, err, errInvalidPath)
 			} else {
 				require.NoError(t, err)
 			}

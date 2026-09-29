@@ -23,8 +23,14 @@ var (
 
 	// clientCacheTTL is how long cloud storage clients are cached after creation.
 	// Entries are not extended on access; a new client is created after expiry.
-	clientCacheTTL = ptr.Of(10 * time.Minute)
+	clientCacheTTL = ptr.Of(ClientCacheTTL)
 )
+
+// ClientCacheTTL is how long a cloud storage client — and therefore the storage
+// credentials it was built with — stays in use after creation. It bounds how long
+// a credential rotation takes to reach the service, which is why the documentation
+// renders it from here rather than restating the number.
+const ClientCacheTTL = 10 * time.Minute
 
 // connectivityProbeKey is used for optional write probes at client init.
 const connectivityProbeKey = ".abs-connectivity-check"
@@ -41,7 +47,7 @@ type Operations interface {
 		ctx context.Context, storage model.Storage, path string, opts ...options.Opt,
 	) (backup.Writer, error)
 	// ReadFile reads the content of a file in the specified storage.
-	ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error)
+	ReadFile(ctx context.Context, storage model.Storage, filePath string) ([]byte, error)
 	// ReadFiles reads the content of files in the specified storage matching the filter.
 	ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error)
 	// ReadFileNames lists the names of files in the specified storage matching the filter.
@@ -129,8 +135,8 @@ func (s *operations) CreateDirWriter(
 	return s.accessorCreateWriter(ctx, storage, opts...)
 }
 
-func (s *operations) ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
-	reader, err := s.createFileReader(ctx, storage, filepath)
+func (s *operations) ReadFile(ctx context.Context, storage model.Storage, filePath string) ([]byte, error) {
+	reader, err := s.createFileReader(ctx, storage, filePath)
 
 	if err != nil {
 		return nil, err
@@ -143,8 +149,20 @@ func (s *operations) ReadFile(ctx context.Context, storage model.Storage, filepa
 	select {
 	case err := <-errorsCh:
 		return nil, err
-	case r := <-readersCh:
+	case r, ok := <-readersCh:
+		if !ok {
+			// The reader closes readersCh on every exit path, including failures, so a closed
+			// channel here means either the error already sits in errorsCh or there is no file.
+			select {
+			case err := <-errorsCh:
+				return nil, err
+			default:
+				return nil, fmt.Errorf("file %s not found in storage", filePath)
+			}
+		}
+
 		defer r.Reader.Close()
+
 		return io.ReadAll(r.Reader)
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -191,8 +209,20 @@ func (s *operations) ReadFiles(
 			return nil, err
 		case r, ok := <-readersCh:
 			if !ok {
-				return files, nil
+				// The reader closes readersCh on every exit path, including failures,
+				// so a failure reported just before the close is still waiting in errorsCh.
+				select {
+				case err := <-errorsCh:
+					if errors.Is(err, io.EOF) {
+						return files, nil
+					}
+
+					return nil, err
+				default:
+					return files, nil
+				}
 			}
+
 			buf := new(bytes.Buffer)
 			_, err := func() (int64, error) {
 				defer r.Reader.Close()

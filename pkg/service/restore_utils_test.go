@@ -57,6 +57,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupReader := NewMockBackupReader(ctrl)
 	restoreJobsHolder := NewRestoreJobsHolder()
+	restoreJobsHolder.Start(t.Context())
 	validator := NewMockRestoreValidator(ctrl)
 
 	restoreManager := NewRestoreManager(

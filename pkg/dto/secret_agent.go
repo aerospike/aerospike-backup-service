@@ -125,10 +125,10 @@ func (s *SecretAgent) fromModel(m *model.SecretAgent) {
 	s.Address = m.Address
 	s.Port = NewPortFromModel(m.Port)
 	s.Timeout = m.Timeout
-	s.CAFile = m.CAFile
+	s.CAFile = Path(m.CAFile)
 	s.Name = m.Name
-	s.Certfile = m.Certfile
-	s.Keyfile = m.Keyfile
+	s.Certfile = Path(m.Certfile)
+	s.Keyfile = Path(m.Keyfile)
 	s.IsBase64 = m.IsBase64
 }
 

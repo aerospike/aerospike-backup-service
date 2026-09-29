@@ -9,6 +9,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,25 +33,18 @@ func TestAddAerospikeCluster(t *testing.T) {
 			expectedStatus: http.StatusCreated,
 		},
 		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
-		},
-		{
 			name:           "invalid json",
 			clusterName:    "test-cluster",
 			requestBody:    "{noField : 1}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 		{
 			name:           "invalid cluster config",
 			clusterName:    "test-cluster",
 			requestBody:    marshalToString(dto.AerospikeCluster{}),
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 
@@ -115,16 +109,10 @@ func TestReadAerospikeCluster(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
-		},
-		{
 			name:           "non-existent cluster",
 			clusterName:    "non-existent",
 			expectedStatus: http.StatusNotFound,
-			expectedError:  errNotFound("cluster", "non-existent").Error(),
+			expectedError:  model.NotFound("cluster", "non-existent").Error(),
 		},
 	}
 
@@ -166,18 +154,11 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			runValidation:  true,
 		},
 		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			requestBody:    "{}",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
-		},
-		{
 			name:           "invalid json",
 			clusterName:    "test-cluster",
 			requestBody:    "{nil}",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid JSON payload",
+			expectedError:  "invalid request",
 		},
 	}
 
@@ -262,7 +243,7 @@ func TestUpdateAerospikeCluster_PreservesSecretOnRoundTrip(t *testing.T) {
 	updated, ok := svc.config.BackupConfigCopy().AerospikeClusters["test-cluster"]
 	require.True(t, ok)
 	require.NotNil(t, updated.Credentials)
-	assert.Equal(t, realPassword, updated.Credentials.Password)
+	assert.Equal(t, redact.Secret(realPassword), updated.Credentials.Password)
 	assert.Equal(t, "updated-host", updated.SeedNodes[0].HostName)
 }
 
@@ -280,16 +261,10 @@ func TestDeleteAerospikeCluster(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:           "missing cluster name",
-			clusterName:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  errMissingClusterName.Error(),
-		},
-		{
 			name:           "unknown cluster name",
 			clusterName:    "unknown-cluster",
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid request",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  model.NotFound("cluster", "unknown-cluster").Error(),
 		},
 	}
 
@@ -322,7 +297,7 @@ func TestDeleteAerospikeCluster_InUseErrorMessage(t *testing.T) {
 
 	svc.DeleteAerospikeCluster(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(),
-		"delete Aerospike cluster \"cluster1\": item is in use: it is used in routine \"routine1\"")
+		"cluster \"cluster1\" is in use: it is used in routine \"routine1\"")
 }

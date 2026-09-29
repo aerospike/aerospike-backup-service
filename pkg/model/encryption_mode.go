@@ -13,3 +13,9 @@ const (
 func (m EncryptionMode) String() string {
 	return string(m)
 }
+
+// IsEncrypted reports whether the mode denotes actual encryption. Both an unset mode and
+// EncryptionModeNone mean the data is stored in the clear.
+func (m EncryptionMode) IsEncrypted() bool {
+	return m != "" && m != EncryptionModeNone
+}

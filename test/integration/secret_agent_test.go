@@ -4,17 +4,14 @@ package integration
 
 import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
 // TestBackupRestoreWithSecretAgentEncryption starts Aerospike Secret Agent with the
 // local file backend, fetches the backup encryption key from it, then restores
 // with the same key.
 func (s *BackupSuite) TestBackupRestoreWithSecretAgentEncryption() {
-	pemKey, err := generateEncryptionPEM()
-	s.Require().NoError(err)
-
-	agent := s.startSecretAgent(pemKey)
+	agent := s.startSecretAgent(s.encryptionKeyPEM())
 
 	e := s.setupEnv(func(c *dto.Config) {
 		c.SecretAgents = map[string]*dto.SecretAgent{
@@ -22,7 +19,7 @@ func (s *BackupSuite) TestBackupRestoreWithSecretAgentEncryption() {
 		}
 		c.BackupPolicies[policyName].EncryptionPolicy = &dto.EncryptionPolicy{
 			Mode:      dto.EncryptionModeAES128,
-			KeySecret: decoder.Secret(secretRef()),
+			KeySecret: redact.Secret(secretRef()),
 		}
 		c.BackupRoutines[routineName].SecretAgent = secretAgentName
 	})
@@ -33,7 +30,7 @@ func (s *BackupSuite) TestBackupRestoreWithSecretAgentEncryption() {
 	fullBackup := s.waitForFullBackup(e)
 	s.assertBackupDetails(fullBackup, 3)
 
-	s.Require().NoError(s.client.Truncate(nil, namespace, "", nil))
+	s.truncateNamespace()
 
 	req := defaultRestoreRequest(fullBackup.Key)
 	req.SecretAgentConfig = &dto.SecretAgentConfig{
@@ -43,7 +40,7 @@ func (s *BackupSuite) TestBackupRestoreWithSecretAgentEncryption() {
 		BaseRestorePolicy: dto.BaseRestorePolicy{
 			EncryptionPolicy: &dto.EncryptionPolicy{
 				Mode:      dto.EncryptionModeAES128,
-				KeySecret: decoder.Secret(secretRef()),
+				KeySecret: redact.Secret(secretRef()),
 			},
 		},
 	}

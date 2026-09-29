@@ -19,7 +19,7 @@ func TestBackupPolicyConversionIsLossless(t *testing.T) {
 	bandwidth := int64(50)
 	recordsPerSecond := 100
 	fileLimit := 1024
-	compressionPolicy := &CompressionPolicy{Level: 5}
+	compressionPolicy := &CompressionPolicy{Mode: CompressionModeZSTD, Level: ptr.Of[int32](5)}
 	sealed := true
 	compact := true
 
@@ -151,6 +151,30 @@ func TestBackupPolicy_Validate(t *testing.T) {
 			expectedErr: "negative value validation error: \"max-concurrent-nodes\" -1 invalid, should not be negative number",
 		},
 		{
+			name:        "compression without mode",
+			policy:      &BackupPolicy{CompressionPolicy: &CompressionPolicy{Level: ptr.Of[int32](5)}},
+			expectedErr: "invalid compression policy: empty field validation error: \"mode\" required",
+		},
+		{
+			name:   "compression ZSTD without level",
+			policy: &BackupPolicy{CompressionPolicy: &CompressionPolicy{Mode: CompressionModeZSTD}},
+			expectedErr: "invalid compression policy: missing dependent field validation error: " +
+				"\"mode = ZSTD\" requires \"level\" to be set",
+		},
+		{
+			name: "compression NONE with level",
+			policy: &BackupPolicy{
+				CompressionPolicy: &CompressionPolicy{Mode: CompressionModeNone, Level: ptr.Of[int32](5)},
+			},
+			expectedErr: "invalid compression policy: mutually exclusive fields validation error: " +
+				"cannot specify both \"level\" and \"mode = NONE\"",
+		},
+		{
+			name:        "encryption without mode",
+			policy:      &BackupPolicy{EncryptionPolicy: &EncryptionPolicy{KeyFile: "key"}},
+			expectedErr: "invalid encryption policy: empty field validation error: \"mode\" required",
+		},
+		{
 			name:        "nil policy",
 			policy:      nil,
 			expectedErr: "",
@@ -159,7 +183,7 @@ func TestBackupPolicy_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.policy.Validate(ValidationDefault)
+			err := tt.policy.Validate()
 			if tt.expectedErr == "" {
 				require.NoError(t, err)
 			} else {

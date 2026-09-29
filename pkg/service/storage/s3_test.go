@@ -82,12 +82,13 @@ func TestS3Storage_ConnectivityFailure(t *testing.T) {
 
 func s3ConnectivityHandler(denyList, denyWrite bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		isProbe := strings.HasSuffix(r.URL.Path, connectivityProbeKey)
+		path := strings.TrimSuffix(r.URL.Path, "/")
+		isProbe := strings.HasSuffix(path, connectivityProbeKey)
 
 		switch {
-		case r.Method == http.MethodHead && r.URL.Path == "/test-bucket":
+		case r.Method == http.MethodHead && path == "/test-bucket":
 			w.WriteHeader(http.StatusOK)
-		case r.Method == http.MethodGet && r.URL.Path == "/test-bucket" && r.URL.Query().Get("list-type") == "2":
+		case r.Method == http.MethodGet && path == "/test-bucket" && r.URL.Query().Get("list-type") == "2":
 			if denyList {
 				w.WriteHeader(http.StatusForbidden)
 				return

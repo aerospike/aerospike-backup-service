@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -110,4 +112,40 @@ func TestHTTPConfigurationManager_Write(t *testing.T) {
 	err := manager.Write(t.Context(), model.NewConfig())
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "writing configuration is not supported for HTTP")
+}
+
+func TestHTTPConfigurationManager_Read_StalledServer(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
+
+	// A server that accepts the connection and then never answers.
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+
+	manager := &httpConfigurationManager{
+		configURL:   server.URL + "/config.yaml",
+		nsValidator: mockNsValidator,
+		client:      &http.Client{Timeout: 50 * time.Millisecond},
+	}
+
+	_, err := manager.Read(t.Context()) // the caller's context has no deadline
+	require.Error(t, err)
+
+	var urlErr *url.Error
+	require.ErrorAs(t, err, &urlErr)
+	require.True(t, urlErr.Timeout(), "the client timeout, not the caller, must end the stalled fetch")
+}
+
+func TestHTTPConfigurationManager_DefaultClientHasTimeout(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
+
+	manager, ok := newHTTPConfigurationManager(
+		"http://example.com/config.yaml", mockNsValidator,
+	).(*httpConfigurationManager)
+	require.True(t, ok)
+	require.Positive(t, manager.client.Timeout)
+	require.Positive(t, remoteConfigHTTPClient.Timeout)
 }

@@ -94,7 +94,7 @@ func TestValidateRestoreTimestampRequest(t *testing.T) {
 			Storage:       "storage1",
 			SourceCluster: "cluster1",
 			IntervalCron:  "@daily",
-			Namespaces:    ptr.Of([]string{}),
+			Namespaces:    ptr.Of([]dto.NamespaceName{}),
 		},
 	}
 

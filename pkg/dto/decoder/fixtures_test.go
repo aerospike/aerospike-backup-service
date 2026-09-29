@@ -1,6 +1,10 @@
 package decoder
 
-import "time"
+import (
+	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
+)
 
 const (
 	literalPassword    = "superSecretPassword"
@@ -12,28 +16,28 @@ const (
 )
 
 type testCredentials struct {
-	User     string `json:"user" yaml:"user"`
-	Password Secret `json:"password" yaml:"password"`
+	User     string        `json:"user" yaml:"user"`
+	Password redact.Secret `json:"password" yaml:"password"`
 }
 
 type testTLS struct {
-	KeyfilePassword Secret `json:"keyfile-password" yaml:"keyfile-password"`
+	KeyfilePassword redact.Secret `json:"keyfile-password" yaml:"keyfile-password"`
 }
 
 type testEncryption struct {
-	KeySecret Secret `json:"key-secret" yaml:"key-secret"`
+	KeySecret redact.Secret `json:"key-secret" yaml:"key-secret"`
 }
 
 type testStorage struct {
-	Name            string `json:"name" yaml:"name"`
-	AccessKeyID     Secret `json:"access-key-id" yaml:"access-key-id"`
-	SecretAccessKey Secret `json:"secret-access-key" yaml:"secret-access-key"`
+	Name            string        `json:"name" yaml:"name"`
+	AccessKeyID     redact.Secret `json:"access-key-id" yaml:"access-key-id"`
+	SecretAccessKey redact.Secret `json:"secret-access-key" yaml:"secret-access-key"`
 }
 
 type testBackupRoutine struct {
-	Name     string        `json:"name" yaml:"name"`
-	Storages []testStorage `json:"storages" yaml:"storages"`
-	Keys     [2]Secret     `json:"keys" yaml:"keys"`
+	Name     string           `json:"name" yaml:"name"`
+	Storages []testStorage    `json:"storages" yaml:"storages"`
+	Keys     [2]redact.Secret `json:"keys" yaml:"keys"`
 }
 
 type testCluster struct {
@@ -123,7 +127,7 @@ func testComplexConfig() testConfig {
 						SecretAccessKey: literalSecretKey,
 					},
 				},
-				Keys: [2]Secret{literalPassword, validSecretRef},
+				Keys: [2]redact.Secret{literalPassword, validSecretRef},
 			},
 		},
 		BackupHistory: map[string][]testBackupDetails{

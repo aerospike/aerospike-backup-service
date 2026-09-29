@@ -32,6 +32,8 @@ VERSION ?= $(shell cat VERSION)
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
 # go.uber.org/nilaway has no tagged releases; pin the module pseudo-version.
 NILAWAY_VERSION = v0.0.0-20260808063849-8649a03c818a
+# Keep in sync with golang.org/x/tools in go.mod.
+DEADCODE_VERSION = v0.49.0
 NFPM ?= $(shell which nfpm)
 OS ?= $(shell $(GO) env GOOS)
 ARCH ?= $(shell $(GO) env GOARCH)
@@ -199,6 +201,22 @@ nilaway: submodules
 		-include-pkgs=$$($(GO) list -m) \
 		$$packages
 
+# Whole-program reachability from the service binary. See https://go.dev/blog/deadcode
+# pkg/validation is a standalone API (config/restore checks) not wired from cmd/backup.
+DEADCODE_IGNORE = pkg/validation/
+.PHONY: deadcode
+deadcode: submodules
+	set -euo pipefail; \
+	out="$$($(GO) run golang.org/x/tools/cmd/deadcode@$(DEADCODE_VERSION) \
+		-filter=github.com/aerospike/aerospike-backup-service \
+		./cmd/backup)"; \
+	out="$$(printf '%s' "$$out" | grep -vF '$(DEADCODE_IGNORE)' || true)"; \
+	if [ -n "$$out" ]; then \
+		echo "$$out"; \
+		echo "Unreachable functions found. Run the command above without the Makefile wrapper for details."; \
+		exit 1; \
+	fi
+
 .PHONY: lint-fix
 lint-fix:
 	golangci-lint run --fix ./...
@@ -211,7 +229,9 @@ docs:
 
 DOCS_GENERATED := docs/docs.go docs/openapi.json docs/config.schema.json \
 	README.md docs/installation.md docs/configuration.md docs/api-examples.md \
-	docs/monitoring.md docs/migration.md docs/security.md docs/examples/ docs/readme/dto/ docs/metrics.json
+	docs/architecture.md docs/monitoring.md docs/migration.md docs/security.md \
+	docs/development.md docs/examples/ docs/readme/dto/ docs/metrics.json \
+	test/integration/README.md
 
 # Ensure committed generated docs match the output of docs (no hand-edits, no stale docs).
 .PHONY: docs-check
@@ -237,6 +257,10 @@ generated-check: mocks-check docs-check
 .PHONY: pr
 pr: tidy mocks-check format lint-fix test docs
 
+# Both variables are required in one invocation: helm-chart-release reads the VERSION that
+# service-release just wrote, so running them separately leaves Chart.yaml describing a
+# release that does not exist yet.
+#   NEXT_VERSION=v3.7.0 NEXT_HELM_CHART_VERSION=2.1.0 make release
 .PHONY: release
 release: service-release helm-chart-release
 

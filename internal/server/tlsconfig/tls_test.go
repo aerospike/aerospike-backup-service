@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -124,8 +125,8 @@ func newTestResolver(t *testing.T) secrets.Resolver {
 	resolver := secrets.NewMockResolver(gomock.NewController(t))
 	resolver.EXPECT().
 		Resolve(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ *model.SecretAgent, value string) (string, error) {
-			return value, nil
+		DoAndReturn(func(_ context.Context, _ *model.SecretAgent, value redact.Secret) (string, error) {
+			return string(value), nil
 		}).
 		AnyTimes()
 
@@ -164,6 +165,20 @@ func servedCertificate(t *testing.T, config *tls.Config) *tls.Certificate {
 	require.NotNil(t, cert)
 
 	return cert
+}
+
+// requireClientCAs asserts that the mTLS trust pool served to a handshake holds exactly the
+// certificates of the given PEM files.
+func requireClientCAs(t *testing.T, config *tls.Config, caFiles ...string) {
+	t.Helper()
+
+	want := x509.NewCertPool()
+	for _, caFile := range caFiles {
+		require.True(t, want.AppendCertsFromPEM(readFile(t, caFile)))
+	}
+	clientConfig, err := config.GetConfigForClient(&tls.ClientHelloInfo{})
+	require.NoError(t, err)
+	assert.True(t, clientConfig.ClientCAs.Equal(want))
 }
 
 func TestNew(t *testing.T) {
@@ -237,7 +252,7 @@ func TestNew(t *testing.T) {
 			CertFile: filepath.Join(t.TempDir(), "missing.pem"),
 			KeyFile:  files.keyFile,
 		}, newTestResolver(t))
-		require.ErrorContains(t, err, "failed to load HTTPS certificate and key")
+		require.ErrorContains(t, err, "failed to read HTTPS certificate")
 	})
 
 	t.Run("unsupported minimum version", func(t *testing.T) {
@@ -312,7 +327,7 @@ func TestNew(t *testing.T) {
 			KeyFile:         keyFile,
 			KeyFilePassword: "password",
 		}, newTestResolver(t))
-		require.ErrorContains(t, err, "failed to decode PEM block")
+		require.ErrorContains(t, err, "failed to find any PEM data in key input")
 	})
 
 	t.Run("password with mismatched key pair", func(t *testing.T) {
@@ -347,6 +362,54 @@ func TestNew(t *testing.T) {
 		require.ErrorContains(t, err, "contains no certificates")
 	})
 
+	t.Run("client CA file with an openssl -text dump before the certificate", func(t *testing.T) {
+		caFile := filepath.Join(t.TempDir(), "ca-text.pem")
+		require.NoError(t, os.WriteFile(
+			caFile, concat([]byte(opensslCertificateText), readFile(t, files.caFile)), 0o600,
+		))
+
+		config := requireTLSConfig(t, &model.ServerConfigHTTPS{
+			CertFile:     files.certFile,
+			KeyFile:      files.keyFile,
+			ClientCAFile: caFile,
+			ClientAuth:   model.TLSClientAuthRequireAndVerify,
+		}, newTestResolver(t))
+		requireClientCAs(t, config, files.caFile)
+	})
+
+	t.Run("client CA bundle with an openssl -text dump before every certificate", func(t *testing.T) {
+		other := createTestCertificateFiles(t)
+		caFile := filepath.Join(t.TempDir(), "ca-bundle-text.pem")
+		bundle := concat(
+			[]byte(opensslCertificateText), readFile(t, files.caFile),
+			[]byte(opensslCertificateText), readFile(t, other.caFile),
+		)
+		require.NoError(t, os.WriteFile(caFile, bundle, 0o600))
+
+		config := requireTLSConfig(t, &model.ServerConfigHTTPS{
+			CertFile:     files.certFile,
+			KeyFile:      files.keyFile,
+			ClientCAFile: caFile,
+			ClientAuth:   model.TLSClientAuthRequireAndVerify,
+		}, newTestResolver(t))
+		requireClientCAs(t, config, files.caFile, other.caFile)
+	})
+
+	t.Run("client CA file with a private key block", func(t *testing.T) {
+		caFile := filepath.Join(t.TempDir(), "ca-and-key.pem")
+		require.NoError(t, os.WriteFile(
+			caFile, concat(readFile(t, files.caFile), readFile(t, files.keyFile)), 0o600,
+		))
+
+		_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{
+			CertFile:     files.certFile,
+			KeyFile:      files.keyFile,
+			ClientCAFile: caFile,
+			ClientAuth:   model.TLSClientAuthRequest,
+		}, newTestResolver(t))
+		require.ErrorContains(t, err, `unexpected "RSA PRIVATE KEY" PEM block, want "CERTIFICATE"`)
+	})
+
 	t.Run("client CA file with a valid certificate and malformed trailing certificate", func(t *testing.T) {
 		caFile := filepath.Join(t.TempDir(), "partially-invalid-ca.pem")
 		caPEM, err := os.ReadFile(files.caFile)
@@ -360,7 +423,7 @@ func TestNew(t *testing.T) {
 			ClientCAFile: caFile,
 			ClientAuth:   model.TLSClientAuthRequest,
 		}, newTestResolver(t))
-		require.ErrorContains(t, err, "contains an invalid certificate PEM block")
+		require.ErrorContains(t, err, "malformed PEM block")
 	})
 }
 
@@ -372,7 +435,7 @@ func TestNewResolvesKeyFilePasswordThroughSecretAgent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resolver := secrets.NewMockResolver(ctrl)
 	resolver.EXPECT().
-		Resolve(gomock.Any(), agent, "secrets:agent1:tls-key").
+		Resolve(gomock.Any(), agent, redact.Secret("secrets:agent1:tls-key")).
 		Return("resolved-password", nil)
 
 	config := requireTLSConfig(t, &model.ServerConfigHTTPS{
@@ -390,7 +453,7 @@ func TestNewReturnsSecretAgentResolutionError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	resolver := secrets.NewMockResolver(ctrl)
 	resolver.EXPECT().
-		Resolve(gomock.Any(), gomock.Any(), "secrets:agent1:tls-key").
+		Resolve(gomock.Any(), gomock.Any(), redact.Secret("secrets:agent1:tls-key")).
 		Return("", assert.AnError)
 
 	_, err := loadTLSConfig(t, &model.ServerConfigHTTPS{

@@ -661,6 +661,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified cluster was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -700,6 +706,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A cluster with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -724,6 +736,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified cluster was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The cluster is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -830,6 +854,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified policy was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -869,6 +899,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A policy with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -893,6 +929,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified policy was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The policy is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -1005,6 +1053,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified routine was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1044,6 +1098,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A routine with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1068,6 +1128,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified routine was not found",
                         "schema": {
                             "type": "string"
                         }
@@ -1232,6 +1298,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "The specified storage was not found",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1271,6 +1343,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "409": {
+                        "description": "A storage with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1295,6 +1373,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified storage was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "The storage is still used by a backup routine",
                         "schema": {
                             "type": "string"
                         }
@@ -1821,7 +1911,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "schedule-timezone": {
-                    "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nAbbreviations such as EST and POSIX TZ strings are not accepted.\nChanging this service-level default requires a restart.",
+                    "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or any IANA timezone name resolvable\nby Go's time.LoadLocation (for example, America/New_York or Japan).\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nPrefer canonical Area/Location names: legacy aliases such as EST resolve as\nfixed UTC-5 with no DST, which is rarely what \"Eastern Time\" is meant to be.\nChanging this service-level default requires a restart.",
                     "type": "string",
                     "x-nullable": true,
                     "example": "America/New_York"
@@ -2043,9 +2133,9 @@ const docTemplate = `{
                     "default": false
                 },
                 "socket-timeout": {
-                    "description": "Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000
+                    "default": 600000
                 },
                 "total-timeout": {
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
@@ -2091,7 +2181,7 @@ const docTemplate = `{
                     ]
                 },
                 "disabled": {
-                    "description": "Whether this routine is disabled and should not run. Default: false.",
+                    "description": "Whether scheduled backups of this routine are disabled. On-demand backups can still be triggered. Default: false.",
                     "type": "boolean",
                     "default": false
                 },
@@ -2112,7 +2202,7 @@ const docTemplate = `{
                     "example": "0 0 * * * *"
                 },
                 "namespaces": {
-                    "description": "The list of namespaces to back up.\nIf empty, the entire cluster is backed up.\nThe order of namespaces does not determine the backup execution or completion order.",
+                    "description": "The list of namespaces to back up.\nIf empty, the entire cluster is backed up.\nThe order of namespaces does not determine the backup execution or completion order.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -2190,17 +2280,19 @@ const docTemplate = `{
         "dto.CompressionPolicy": {
             "description": "CompressionPolicy contains backup compression information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "level": {
-                    "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).\nThis field is ignored if the compression mode is NONE.",
+                    "description": "The compression level to use, from -1 to 22.\nA higher value gives better compression at the cost of speed,\nbut not every step changes the result: neighboring levels may compress the same way.\nRequired for ZSTD; must not be set if the compression mode is NONE.",
                     "type": "integer",
-                    "default": 0,
                     "maximum": 22,
-                    "minimum": -1
+                    "minimum": -1,
+                    "x-nullable": true
                 },
                 "mode": {
-                    "description": "The compression mode to be used (default is NONE).",
-                    "default": "NONE",
+                    "description": "The compression mode to be used. Required.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.CompressionMode"
@@ -2333,6 +2425,9 @@ const docTemplate = `{
         "dto.EncryptionPolicy": {
             "description": "EncryptionPolicy contains backup encryption information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "key-env": {
                     "description": "The name of the environment variable containing the encryption key.",
@@ -2351,8 +2446,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "mode": {
-                    "description": "The encryption mode to be used (NONE, AES128, AES256)",
-                    "default": "NONE",
+                    "description": "The encryption mode to be used (NONE, AES128, AES256). Required.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.EncryptionMode"
@@ -2381,13 +2475,11 @@ const docTemplate = `{
                 "maxage": {
                     "description": "Maximum number of days to retain old log files based on the\ntimestamp encoded in their filename. The default is not to remove old log files\nbased on age.",
                     "type": "integer",
-                    "default": 7,
                     "x-nullable": true
                 },
                 "maxbackups": {
                     "description": "Maximum number of old log files to retain. The default\nis to retain all old log files.",
                     "type": "integer",
-                    "default": 3,
                     "x-nullable": true
                 },
                 "maxsize": {
@@ -2625,7 +2717,7 @@ const docTemplate = `{
                     "example": 1024
                 },
                 "tps": {
-                    "description": "Rate limiter tokens per second threshold.",
+                    "description": "Rate limiter tokens per second threshold.\nThe budget is per client: an IPv4 address gets its own, an IPv6 address shares one\nwith the rest of its /64.",
                     "type": "integer",
                     "default": 1024,
                     "example": 1024
@@ -2643,10 +2735,12 @@ const docTemplate = `{
         "dto.RestoreCompressionPolicy": {
             "description": "RestoreCompressionPolicy contains restore compression information.",
             "type": "object",
+            "required": [
+                "mode"
+            ],
             "properties": {
                 "mode": {
-                    "description": "The compression mode to be used (default is NONE).",
-                    "default": "NONE",
+                    "description": "The compression mode to be used. Required.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.CompressionMode"
@@ -2756,12 +2850,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "destination": {
-                    "description": "Name of the destination namespace to restore data into.",
+                    "description": "Name of the destination namespace to restore data into.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "string",
                     "example": "destination-ns"
                 },
                 "source": {
-                    "description": "Original namespace name.\nThis field is required as a safeguard to ensure intentional namespace remapping.",
+                    "description": "Original namespace name.\nThis field is required as a safeguard to ensure intentional namespace remapping.\nA name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "string",
                     "example": "source-ns"
                 }
@@ -2868,7 +2962,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -2888,9 +2982,9 @@ const docTemplate = `{
                     ]
                 },
                 "socket-timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000,
+                    "default": 600000,
                     "example": 1000
                 },
                 "total-timeout": {
@@ -3057,7 +3151,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "incremental": {
-                    "description": "Number of full backups to store incremental backups for:\n- If nil, retain all incremental backups.\n- If N is specified, retain incremental backups for the last N full backups.\n- If set to 0, do not retain any incremental backups.\n- Must not exceed the value of FullBackups.",
+                    "description": "Number of full backups to store incremental backups for:\n- If nil, retain all incremental backups for existing full backups.\n- If N is specified, retain incremental backups for the last N full backups.\n- If set to 0, do not retain any incremental backups.\n- Must not exceed the value of FullBackups.",
                     "type": "integer",
                     "x-nullable": true
                 }
@@ -3535,7 +3629,7 @@ const docTemplate = `{
                     "example": "/path/to/server-key.pem"
                 },
                 "key-file-password": {
-                    "description": "Passphrase for an encrypted HTTPS server private key.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
+                    "description": "Passphrase for an encrypted HTTPS server private key, in PKCS#8 (the OpenSSL 3 default) or legacy PEM encryption.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
                     "format": "password",
                     "x-nullable": true
@@ -3708,7 +3802,7 @@ const docTemplate = `{
                     "example": "/path/to/key.pem"
                 },
                 "key-file-password": {
-                    "description": "Passphrase for an encrypted TLS key file.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
+                    "description": "Passphrase for an encrypted TLS key file, in PKCS#8 (the OpenSSL 3 default) or legacy PEM encryption.\nThis is sensitive information. Can be a path in secret agent or an actual value.\nLiteral values are redacted as \"[secret]\" in API responses; secret agent references are returned as-is.",
                     "type": "string",
                     "format": "password",
                     "x-nullable": true
@@ -3720,9 +3814,9 @@ const docTemplate = `{
                     "example": "example.com"
                 },
                 "protocols": {
-                    "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
+                    "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.\nEmpty by default, which leaves the choice to Go and negotiates TLS 1.2 or 1.3.\nSetting a single version pins both the minimum and the maximum to it.",
                     "type": "string",
-                    "default": "TLSv1.2"
+                    "x-nullable": true
                 }
             }
         },
@@ -3859,7 +3953,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -3879,9 +3973,9 @@ const docTemplate = `{
                     ]
                 },
                 "socket-timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 60000,
+                    "default": 600000,
                     "example": 1000
                 },
                 "total-timeout": {

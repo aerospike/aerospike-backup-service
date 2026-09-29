@@ -17,19 +17,20 @@ seed-nodes:
   - host-name: localhost
     port: 3000
 `
-	cluster, err := NewClusterFromReader(strings.NewReader(yamlCluster), decoder.YAML)
+	cluster, err := NewValidatedFromReader[AerospikeCluster](strings.NewReader(yamlCluster), decoder.YAML)
 	require.NoError(t, err)
 	require.Len(t, cluster.SeedNodes, 1)
 	assert.Equal(t, "localhost", cluster.SeedNodes[0].HostName)
 	assert.Equal(t, Port(3000), cluster.SeedNodes[0].Port)
 }
 
-func TestNewBackupPolicyFromReader(t *testing.T) {
+func TestBackupPolicyFromReader(t *testing.T) {
 	yamlPolicy := `
 parallel: 4
 `
-	policy, err := NewBackupPolicyFromReader(strings.NewReader(yamlPolicy), decoder.YAML)
+	policy, err := NewFromReader[BackupPolicy](strings.NewReader(yamlPolicy), decoder.YAML)
 	require.NoError(t, err)
+	require.NoError(t, policy.Validate())
 	require.NotNil(t, policy.Parallel)
 	assert.Equal(t, 4, *policy.Parallel)
 }
@@ -41,7 +42,7 @@ storage: storage1
 interval-cron: "@daily"
 namespaces: []
 `
-	routine, err := NewRoutineFromReader(strings.NewReader(yamlRoutine), decoder.YAML)
+	routine, err := NewValidatedFromReader[BackupRoutine](strings.NewReader(yamlRoutine), decoder.YAML)
 	require.NoError(t, err)
 	assert.Equal(t, "cluster1", routine.SourceCluster)
 	assert.Equal(t, "storage1", routine.Storage)
@@ -101,11 +102,11 @@ func TestBackupCommonConfig_fromModel(t *testing.T) {
 	var dtoConfig BackupCommonConfig
 	dtoConfig.fromModel(&model.BackupCommonConfig{
 		TimestampFormat: &format,
-		Timezone:        model.NewServiceLocation("America/New_York"),
+		Timezone:        serviceLocation(t, "America/New_York"),
 	})
 
 	assert.Equal(t, TimestampFormatISO, dtoConfig.TimestampFormat)
-	assert.Equal(t, "America/New_York", dtoConfig.ScheduleTimezone)
+	assert.Equal(t, ScheduleTimezone("America/New_York"), dtoConfig.ScheduleTimezone)
 
 	roundTrip := dtoConfig.ToModel()
 	require.NotNil(t, roundTrip.TimestampFormat)
@@ -140,7 +141,7 @@ func TestNewRoutineFromModel(t *testing.T) {
 	assert.Equal(t, "storage1", routine.Storage)
 	assert.Equal(t, "@hourly", routine.IntervalCron)
 	require.NotNil(t, routine.Namespaces)
-	assert.Equal(t, []string{"ns1"}, *routine.Namespaces)
+	assert.Equal(t, []NamespaceName{"ns1"}, *routine.Namespaces)
 	assert.True(t, routine.Disabled)
 }
 
@@ -151,7 +152,7 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 
 	config := model.NewConfig()
 	config.ServiceConfig.Backup = &model.BackupCommonConfig{
-		Timezone: model.NewServiceLocation("America/New_York"),
+		Timezone: serviceLocation(t, "America/New_York"),
 	}
 	require.NoError(t, config.AddPolicy("policy1", policy))
 	require.NoError(t, config.AddCluster("cluster1", cluster))
@@ -164,7 +165,7 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 			Storage:       storage,
 			IntervalCron:  "@hourly",
 			Namespaces:    []string{"ns1"},
-			Timezone:      model.NewRoutineLocation(configured, config.ServiceConfig.Backup.Timezone),
+			Timezone:      routineLocation(t, configured, config.ServiceConfig.Backup.Timezone),
 		}
 	}
 
@@ -177,27 +178,43 @@ func TestNewRoutineFromModel_ScheduleTimezone(t *testing.T) {
 	t.Run("explicit value differing from default is kept", func(t *testing.T) {
 		routine := NewRoutineFromModel(newRoutine("UTC"), config)
 		require.NotNil(t, routine)
-		assert.Equal(t, "UTC", routine.ScheduleTimezone)
+		assert.Equal(t, ScheduleTimezone("UTC"), routine.ScheduleTimezone)
 	})
 
 	t.Run("explicit value matching default is kept", func(t *testing.T) {
 		routine := NewRoutineFromModel(newRoutine("America/New_York"), config)
 		require.NotNil(t, routine)
-		assert.Equal(t, "America/New_York", routine.ScheduleTimezone)
+		assert.Equal(t, ScheduleTimezone("America/New_York"), routine.ScheduleTimezone)
 	})
 
 	t.Run("configured keyword is preserved", func(t *testing.T) {
 		routine := NewRoutineFromModel(newRoutine("utc"), config)
 		require.NotNil(t, routine)
-		assert.Equal(t, "utc", routine.ScheduleTimezone)
+		assert.Equal(t, ScheduleTimezone("utc"), routine.ScheduleTimezone)
 	})
 }
 
 func TestNewClusterFromReader_InvalidYAML(t *testing.T) {
-	_, err := NewClusterFromReader(strings.NewReader("seed-nodes: []"), decoder.YAML)
+	_, err := NewValidatedFromReader[AerospikeCluster](strings.NewReader("seed-nodes: []"), decoder.YAML)
 	require.Error(t, err)
 }
 
 func TestNewBackupDetailsFromModel_Nil(t *testing.T) {
 	assert.Nil(t, NewBackupDetailsFromModel(nil, &model.BackupConfig{}))
+}
+
+func serviceLocation(t *testing.T, configured string) model.Location {
+	t.Helper()
+	loc, err := model.ResolveTimezone(configured)
+	require.NoError(t, err)
+
+	return model.NewServiceLocation(configured, loc)
+}
+
+func routineLocation(t *testing.T, configured string, service model.Location) model.Location {
+	t.Helper()
+	loc, err := model.ResolveTimezone(configured)
+	require.NoError(t, err)
+
+	return model.NewRoutineLocation(configured, loc, service)
 }

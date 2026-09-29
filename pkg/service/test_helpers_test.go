@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 const asyncWaitTimeout = time.Second
@@ -48,3 +50,9 @@ func newTestLogger(t *testing.T) (*slog.Logger, *logBuffer) {
 
 	return logger, buf
 }
+
+var testLocation = func() model.Location {
+	var configured = "America/New_York"
+	location, _ := time.LoadLocation(configured)
+	return model.NewServiceLocation(configured, location)
+}()

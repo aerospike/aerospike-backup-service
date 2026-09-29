@@ -2,10 +2,8 @@ package dto
 
 import (
 	"fmt"
-	"io"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 )
@@ -20,9 +18,9 @@ type BackupPolicy struct {
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1" default:"8" minimum:"1"`
 	// Maximum number of threads to use for writing backup files. If not specified, same values as `parallel` is used.
 	ParallelWrite *int `yaml:"parallel-write,omitempty" json:"parallel-write,omitempty" example:"1" default:"8" minimum:"1"`
-	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
+	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" default:"60000"`
+	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" default:"600000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
 	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" default:"0"`
 	// RetryPolicy defines the configuration for database scan retry attempts in case of failures.
@@ -74,22 +72,13 @@ type BackupPolicy struct {
 	MaxConcurrentNodes *int `yaml:"max-concurrent-nodes,omitempty" json:"max-concurrent-nodes,omitempty" extensions:"x-nullable"`
 }
 
-// NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.
-func NewBackupPolicyFromReader(r io.Reader, format decoder.SerializationFormat) (*BackupPolicy, error) {
-	b := &BackupPolicy{}
-	if err := decoder.Deserialize(b, r, format); err != nil {
-		return nil, err
-	}
-
-	if err := b.Validate(ValidationDefault); err != nil {
-		return nil, err
-	}
-
-	return b, nil
+// Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
+func (p *BackupPolicy) Validate() error {
+	return p.ValidateWithOpts(ValidationWithSecretAgent) // if we don't know the secret agent, we assume it's available.
 }
 
-// Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
-func (p *BackupPolicy) Validate(opts ValidationOptions) error {
+// ValidateWithOpts checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
+func (p *BackupPolicy) ValidateWithOpts(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
@@ -129,10 +118,10 @@ func (p *BackupPolicy) Validate(opts ValidationOptions) error {
 		return fmt.Errorf("invalid retention policy: %w", err)
 	}
 	if err := p.EncryptionPolicy.Validate(opts); err != nil {
-		return err
+		return fmt.Errorf("invalid encryption policy: %w", err)
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {
-		return err
+		return fmt.Errorf("invalid compression policy: %w", err)
 	}
 	if err := p.IncrMode.Validate(); err != nil {
 		return err
@@ -264,7 +253,7 @@ type RetentionPolicy struct {
 	FullBackups *int `json:"full,omitempty" yaml:"full,omitempty"  minimum:"1" extensions:"x-nullable"`
 
 	// Number of full backups to store incremental backups for:
-	// - If nil, retain all incremental backups.
+	// - If nil, retain all incremental backups for existing full backups.
 	// - If N is specified, retain incremental backups for the last N full backups.
 	// - If set to 0, do not retain any incremental backups.
 	// - Must not exceed the value of FullBackups.

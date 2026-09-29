@@ -57,6 +57,32 @@ func TestPathService_GetConfigurationFilePath(t *testing.T) {
 	assert.Contains(t, path, "/configuration/aerospike_1.conf")
 }
 
+func TestPathService_GetBackupAttemptPath(t *testing.T) {
+	pathService := NewPathService(nil)
+	ts := time.UnixMilli(1700000000000)
+
+	tests := []struct {
+		name    string
+		attempt int
+		want    string
+	}{
+		{name: "first attempt uses the namespace folder", attempt: 1, want: "r/backup/1700000000000/data/ns_1"},
+		{name: "retry uses a sibling folder", attempt: 2, want: "r/backup/1700000000000/data/ns_1.2"},
+		{name: "later retry", attempt: 5, want: "r/backup/1700000000000/data/ns_1.5"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, pathService.GetBackupAttemptPath("r", model.BackupTypeFull, "ns_1", ts, tt.attempt))
+		})
+	}
+
+	// Retention removes a backup by the timestamp folder above its key, which holds for an
+	// attempt folder too, so leftovers of failed attempts go with the run.
+	attemptKey := pathService.GetBackupAttemptPath("r", model.BackupTypeFull, "ns_1", ts, 2)
+	assert.Equal(t, pathService.GetTimestampPath("r", ts, model.BackupTypeFull), extractBackupDirFromKey(attemptKey))
+	assert.Equal(t, "1700000000000", pathService.ExtractTimestampFromPath(attemptKey+"/"+metadataFile))
+}
+
 func TestExtractBackupDirFromKey(t *testing.T) {
 	routineName := "test-routine"
 	namespace := "test-ns"

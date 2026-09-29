@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -11,19 +10,12 @@ import (
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/app"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/cli"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
-	"github.com/spf13/cobra"
 )
 
 // run parses the CLI parameters and executes backup.
 func run() int {
-	var (
-		configFile string
-		remote     bool
-	)
-
 	// Log commit information as the first log entry, ensuring it appears at the top
 	// regardless of subsequent errors or execution flow.
 	slog.Info("Aerospike Backup Service",
@@ -31,28 +23,7 @@ func run() int {
 		slog.String("commit", backup.CommitHash),
 		slog.String("buildTime", backup.BuildTime))
 
-	validateFlags := func(_ *cobra.Command, _ []string) error {
-		if len(configFile) == 0 {
-			return errors.New("--config is required")
-		}
-		return nil
-	}
-
-	rootCmd := &cobra.Command{
-		Use:     "aerospike-backup-service",
-		Short:   "Aerospike Backup Service",
-		Version: backup.Version,
-		PreRunE: validateFlags,
-	}
-
-	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path/URL")
-	rootCmd.Flags().BoolVarP(&remote, "remote", "r", false, "use remote config file")
-
-	rootCmd.RunE = func(_ *cobra.Command, _ []string) error {
-		return startService(configFile, remote)
-	}
-
-	err := rootCmd.Execute()
+	err := cli.NewRootCommand(startService).Execute()
 	if err != nil {
 		slog.Error("Command execution failed", attr.Error(err))
 	}
@@ -63,22 +34,19 @@ func run() int {
 func startService(configFile string, remote bool) error {
 	ctx, stop := systemCtx()
 	defer stop()
+	// Shutdown is a one-shot sequence: the first signal cancels ctx and every component winds
+	// down from that cancellation. Once it has fired the process has no further use for the
+	// subscription, so it is dropped right there, which restores the default disposition of the
+	// signals: a second SIGINT or SIGTERM terminates the process at once instead of being
+	// swallowed while the graceful shutdown drains.
+	context.AfterFunc(ctx, stop)
 
 	components, err := app.InitComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
 	}
 
-	components.Scheduler.Start(ctx)
-	components.MetricsCollector.Start(ctx, prometheus.CollectInterval)
-	components.TLSProvider.Start(ctx)
-
-	err = server.Run(ctx, components.Servers)
-
-	// stop the scheduler
-	components.Scheduler.Stop()
-
-	return err
+	return components.Run(ctx)
 }
 
 func systemCtx() (context.Context, context.CancelFunc) {

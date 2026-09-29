@@ -100,18 +100,18 @@ func (mr *MockOperationsMockRecorder) DeleteFolder(ctx, storage, path any) *gomo
 }
 
 // ReadFile mocks base method.
-func (m *MockOperations) ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
+func (m *MockOperations) ReadFile(ctx context.Context, storage model.Storage, filePath string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadFile", ctx, storage, filepath)
+	ret := m.ctrl.Call(m, "ReadFile", ctx, storage, filePath)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ReadFile indicates an expected call of ReadFile.
-func (mr *MockOperationsMockRecorder) ReadFile(ctx, storage, filepath any) *gomock.Call {
+func (mr *MockOperationsMockRecorder) ReadFile(ctx, storage, filePath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockOperations)(nil).ReadFile), ctx, storage, filepath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockOperations)(nil).ReadFile), ctx, storage, filePath)
 }
 
 // ReadFileNames mocks base method.

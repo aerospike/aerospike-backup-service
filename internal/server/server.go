@@ -28,8 +28,8 @@ type HTTP interface {
 
 	// Start starts the HTTP server. Returns an error if the server fails to start.
 	Start() error
-	// Shutdown shuts down the HTTP server gracefully with a timeout.
-	Shutdown() error
+	// Shutdown shuts down the HTTP server gracefully, bounded by ctx and by an internal timeout.
+	Shutdown(ctx context.Context) error
 }
 
 // serverHTTP wraps *http.Server with Start/Shutdown lifecycle helpers.
@@ -40,8 +40,8 @@ type serverHTTP struct {
 var _ HTTP = (*serverHTTP)(nil)
 
 // NewServerHTTP returns a new instance of HTTP.
-func NewServerHTTP(ctx context.Context, serverConfig *model.ServerConfigHTTP, service *handlers.Service) HTTP {
-	return newServerHTTP(ctx,
+func NewServerHTTP(serverConfig *model.ServerConfigHTTP, service *handlers.Service) HTTP {
+	return newServerHTTP(
 		&serverConfig.ListenerConfig,
 		fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault()),
 		service,
@@ -52,12 +52,11 @@ func NewServerHTTP(ctx context.Context, serverConfig *model.ServerConfigHTTP, se
 // NewServerHTTPS returns a new instance of an HTTPS server.
 // The TLS configuration is built by the caller.
 func NewServerHTTPS(
-	ctx context.Context,
 	serverConfig *model.ServerConfigHTTPS,
 	service *handlers.Service,
 	tlsConfig *tls.Config,
 ) HTTP {
-	return newServerHTTP(ctx,
+	return newServerHTTP(
 		&serverConfig.ListenerConfig,
 		fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault()),
 		service,
@@ -66,7 +65,6 @@ func NewServerHTTPS(
 }
 
 func newServerHTTP(
-	ctx context.Context,
 	listener *model.ListenerConfig,
 	addr string,
 	service *handlers.Service,
@@ -81,7 +79,7 @@ func newServerHTTP(
 
 	handler := middleware.Wrap(mux,
 		middleware.RequestLogger(slog.Default(), []string{"health", "ready", "metrics"}),
-		middleware.RateLimiter(ctx, listener.GetRateOrDefault()),
+		middleware.RateLimiter(listener.GetRateOrDefault()),
 	)
 
 	return &serverHTTP{
@@ -150,9 +148,10 @@ func (s *serverHTTP) wrapStartError(scheme string, err error) error {
 }
 
 // Shutdown shuts down the HTTP server gracefully with a timeout.
-func (s *serverHTTP) Shutdown() error {
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+func (s *serverHTTP) Shutdown(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, shutdownTimeout)
 	defer cancel()
+
 	return s.Server.Shutdown(ctx)
 }
 
@@ -173,9 +172,11 @@ func Run(ctx context.Context, servers []HTTP) error {
 
 	<-ctx.Done()
 
+	shutdownCtx := context.WithoutCancel(ctx)
+
 	var shutdownErr error
 	for _, srv := range servers {
-		if err := srv.Shutdown(); err != nil {
+		if err := srv.Shutdown(shutdownCtx); err != nil {
 			slog.Error("HTTP server shutdown failed", attr.Error(err))
 			shutdownErr = errors.Join(shutdownErr, err)
 		}

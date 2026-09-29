@@ -33,11 +33,44 @@ type Components struct {
 	Servers          []server.HTTP
 	MetricsCollector *prometheus.MetricsCollector
 	TLSProvider      servertls.TLSProvider
+
+	registry    service.BackupStateRegistry
+	restoreJobs component
+}
+
+// component is anything whose work outlives a single request: it takes the run context
+// from Components.Start and ends when that context is canceled.
+// Start should be called exactly once, by Components.Start.
+type component interface {
+	Start(ctx context.Context)
+}
+
+// Run starts every component and serves until ctx is canceled or a listener stops. It
+// blocks for as long as the service runs: a caller that wants the service up without
+// giving up its goroutine - a test serving the handler itself - uses Start instead.
+func (c *Components) Run(ctx context.Context) error {
+	c.Start(ctx)
+
+	return server.Run(ctx, c.Servers)
+}
+
+// Start brings up every background component and returns. It is the one place the run
+// context is handed out: a component that outlives a single request takes its lifetime
+// from here, never from the context that built the graph. It is called exactly once.
+func (c *Components) Start(ctx context.Context) {
+	c.registry.Start(ctx)
+	c.restoreJobs.Start(ctx)
+	c.Scheduler.Start(ctx)
+	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
+	c.TLSProvider.Start(ctx)
 }
 
 // InitComponents builds the full object graph.
 // Components are created and wired but not started: no goroutines, listeners, or
-// watchers run here. The caller decides when to Start/Stop them.
+// watchers run here. The caller decides when to Start them, normally through Run.
+//
+// ctx is the build context: it is for loading only. Nothing may capture it or launch
+// work on it - a component that outlives a single request takes its lifetime from Start.
 //
 // Collaborators (other components) are non-nil interfaces. If a collaborator is unused
 // or a feature is disabled, pass a no-op implementation, never nil, and do not add
@@ -52,7 +85,7 @@ func InitComponents(
 	remote bool,
 ) (*Components, error) {
 	resolver := secrets.NewResolver()
-	tlsProber := servertls.NewProber(resolver)
+	tlsProber := servertls.NewProber(secrets.NewClusterTLSResolver(resolver))
 	operations := newStorageOperations(resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 
@@ -61,9 +94,12 @@ func InitComponents(
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	appLogger := initLogger(config)
+	appLogger, err := initLogger(config)
+	if err != nil {
+		return nil, err
+	}
 
-	scheduler, err := service.NewScheduler(ctx, appLogger)
+	scheduler, err := service.NewScheduler(appLogger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
@@ -99,7 +135,7 @@ func InitComponents(
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
 	configApplier := service.NewConfigApplier(backupScheduler, registry, config)
 
-	err = configApplier.ApplyNewConfig(ctx)
+	err = configApplier.ApplyNewConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
@@ -120,7 +156,6 @@ func InitComponents(
 
 	configRetriever := service.NewConfigRetriever(catalog, pathService, operations)
 	srv := handlers.NewService(
-		ctx,
 		config,
 		configApplier,
 		backupScheduler,
@@ -136,7 +171,7 @@ func InitComponents(
 	var servers []server.HTTP
 	configHTTP := config.ServiceConfig.GetServerHTTPOrDefault()
 	if !configHTTP.Disabled {
-		servers = append(servers, server.NewServerHTTP(ctx, configHTTP, srv))
+		servers = append(servers, server.NewServerHTTP(configHTTP, srv))
 	}
 
 	tlsProvider := servertls.NoReload()
@@ -155,6 +190,8 @@ func InitComponents(
 		Servers:          servers,
 		MetricsCollector: metricsCollector,
 		TLSProvider:      tlsProvider,
+		registry:         registry,
+		restoreJobs:      restoreJobs,
 	}, nil
 }
 
@@ -174,7 +211,7 @@ func newServerHTTPS(
 		return nil, nil, fmt.Errorf("failed to create HTTPS server: %w", err)
 	}
 
-	return server.NewServerHTTPS(ctx, configHTTPS, srv, tlsConfig), tlsProvider, nil
+	return server.NewServerHTTPS(configHTTPS, srv, tlsConfig), tlsProvider, nil
 }
 
 func newStorageOperations(resolver secrets.Resolver) storage.Operations {
@@ -189,14 +226,18 @@ func newStorageOperations(resolver secrets.Resolver) storage.Operations {
 func newAerospikeLayer(resolver secrets.Resolver) (aerospike.ClientManager, aerospike.NamespaceValidator) {
 	passwordResolver := secrets.NewPasswordResolver(resolver)
 	clientManager := aerospike.NewClientManager(
-		aerospike.NewClientFactory(passwordResolver),
+		aerospike.NewClientFactory(passwordResolver, secrets.NewClusterTLSResolver(resolver)),
 		aerospike.DefaultCloseDelay,
 	)
 	return clientManager, aerospike.NewNamespaceValidator(clientManager)
 }
 
-func initLogger(config *model.Config) *slog.Logger {
-	logger := slog.New(log.NewHandler(config.ServiceConfig.GetLoggerOrDefault()))
+func initLogger(config *model.Config) (*slog.Logger, error) {
+	logHandler, err := log.NewHandler(config.ServiceConfig.GetLoggerOrDefault())
+	if err != nil {
+		return nil, fmt.Errorf("failed to configure logging: %w", err)
+	}
+	logger := slog.New(logHandler)
 	slog.SetDefault(logger)
 	configStr, _ := decoder.Marshal(dto.NewConfigFromModel(config), decoder.JSON, true)
 	slog.Info("Aerospike Backup Service",
@@ -205,5 +246,5 @@ func initLogger(config *model.Config) *slog.Logger {
 		slog.String("buildTime", backup.BuildTime),
 		slog.String("config", string(configStr)))
 
-	return logger
+	return logger, nil
 }

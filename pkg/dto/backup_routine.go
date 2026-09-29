@@ -3,12 +3,11 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -37,11 +36,13 @@ type BackupRoutine struct {
 	// Accepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.
 	// When omitted, the routine inherits service.backup.schedule-timezone.
 	// Keywords UTC and Local are case-insensitive; IANA names are case-sensitive.
-	ScheduleTimezone string `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"`
+	ScheduleTimezone ScheduleTimezone `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"` //nolint:lll
 	// The list of namespaces to back up.
 	// If empty, the entire cluster is backed up.
 	// The order of namespaces does not determine the backup execution or completion order.
-	Namespaces *[]string `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"[\"source-ns1\"]" validate:"required"`
+	// A name follows the Aerospike naming rules: at most 31 bytes of Latin letters, digits,
+	// "_", "-" and "$", and not the reserved name "null".
+	Namespaces *[]NamespaceName `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"[\"source-ns1\"]" validate:"required"`
 	// The list of backup set names (optional, an empty list implies backing up all sets).
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1" extensions:"x-nullable"`
 	// The list of backup bin names (optional, an empty list implies backing up all bins) extensions:"x-nullable".
@@ -82,7 +83,7 @@ type BackupRoutine struct {
 	// encoded through any client. This argument is mutually exclusive with multi-set backup.
 	FilterExpression string `yaml:"filter-exp,omitempty" json:"filter-exp,omitempty" extensions:"x-nullable"`
 
-	// Whether this routine is disabled and should not run. Default: false.
+	// Whether scheduled backups of this routine are disabled. On-demand backups can still be triggered. Default: false.
 	Disabled bool `json:"disabled,omitempty" yaml:"disabled,omitempty" default:"false"`
 }
 
@@ -94,7 +95,27 @@ const (
 )
 
 // Validate validates the backup routine configuration.
+// validateNamespaces checks the routine's namespace list for duplicates and each name against
+// the Aerospike naming rules.
+func validateNamespaces(namespaces []NamespaceName) error {
+	if err := validateUnique("namespaces", namespaces); err != nil {
+		return err
+	}
+
+	for i, namespace := range namespaces {
+		field := fmt.Sprintf("namespaces[%d]", i)
+		if err := errValidationInvalidName(field, string(namespace), namespace.Validate()); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *BackupRoutine) Validate() error {
+	if r == nil {
+		return errors.New("backup routine is not specified")
+	}
 	if r.SourceCluster == "" {
 		return errValidationEmptyField("source-cluster")
 	}
@@ -106,10 +127,10 @@ func (r *BackupRoutine) Validate() error {
 	}
 	if r.IncrIntervalCron != "" { // incremental interval is optional
 		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
-			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
+			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IncrIntervalCron, err)
 		}
 	}
-	if err := validateScheduleTimezone(r.ScheduleTimezone); err != nil {
+	if err := r.ScheduleTimezone.Validate(); err != nil {
 		return err
 	}
 	for i, rack := range r.RackList {
@@ -129,7 +150,7 @@ func (r *BackupRoutine) Validate() error {
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
 	}
-	if err := validateUniqueNonEmpty("namespaces", *r.Namespaces); err != nil {
+	if err := validateNamespaces(*r.Namespaces); err != nil {
 		return err
 	}
 	if err := validateUniqueNonEmpty("set-list", r.SetList); err != nil {
@@ -165,6 +186,8 @@ func validateRoutineSelectorExclusivity(partitionList string, rackList []int, no
 	return nil
 }
 
+// validateFilterExpression checks that filter-exp carries the encoding the Aerospike client
+// expects, leaving that encoding the client's business rather than this package's.
 func validateFilterExpression(filterExpression string, setList []string) error {
 	if filterExpression == "" {
 		return nil
@@ -281,8 +304,8 @@ func (r *BackupRoutine) ToModel(
 		SecretAgent:      secretAgent,
 		IntervalCron:     r.IntervalCron,
 		IncrIntervalCron: r.IncrIntervalCron,
-		Timezone:         model.NewRoutineLocation(r.ScheduleTimezone, serviceTimezone),
-		Namespaces:       *r.Namespaces,
+		Timezone:         r.ScheduleTimezone.ToRoutineLocation(serviceTimezone),
+		Namespaces:       namespaceStrings(*r.Namespaces),
 		SetList:          r.SetList,
 		BinList:          r.BinList,
 		RackList:         r.RackList,
@@ -366,20 +389,6 @@ func resolveBackupPolicy(name string, policies map[string]*model.BackupPolicy) (
 	return policy, nil
 }
 
-// NewRoutineFromReader creates a new BackupRoutine object from a given reader.
-func NewRoutineFromReader(r io.Reader, format decoder.SerializationFormat) (*BackupRoutine, error) {
-	b := &BackupRoutine{}
-	if err := decoder.Deserialize(b, r, format); err != nil {
-		return nil, err
-	}
-
-	if err := b.Validate(); err != nil {
-		return nil, err
-	}
-
-	return b, nil
-}
-
 func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRoutine {
 	b := &BackupRoutine{}
 	b.fromModel(m, config.BackupConfigCopy())
@@ -396,8 +405,8 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	}
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
-	r.ScheduleTimezone = m.Timezone.Configured
-	r.Namespaces = &m.Namespaces
+	r.ScheduleTimezone = ScheduleTimezone(m.Timezone.Configured)
+	r.Namespaces = ptr.Of(newNamespaceNames(m.Namespaces))
 	r.SetList = m.SetList
 	r.BinList = m.BinList
 	r.RackList = m.RackList

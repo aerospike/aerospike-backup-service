@@ -2,13 +2,12 @@
 package tlsconfig
 
 import (
-	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/pemkey"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
@@ -120,14 +119,6 @@ func attachCRLVerification(
 }
 
 func loadKeyPair(certFile, keyFile, password string) (tls.Certificate, error) {
-	if password == "" {
-		certificate, err := tls.LoadX509KeyPair(certFile, keyFile)
-		if err != nil {
-			return tls.Certificate{}, fmt.Errorf("failed to load HTTPS certificate and key: %w", err)
-		}
-		return certificate, nil
-	}
-
 	certPEM, err := safepath.ReadFile(certFile)
 	if err != nil {
 		return tls.Certificate{}, fmt.Errorf("failed to read HTTPS certificate: %w", err)
@@ -136,24 +127,9 @@ func loadKeyPair(certFile, keyFile, password string) (tls.Certificate, error) {
 	if err != nil {
 		return tls.Certificate{}, fmt.Errorf("failed to read HTTPS private key: %w", err)
 	}
-
-	keyBlock, rest := pem.Decode(keyPEM)
-	if keyBlock == nil {
-		return tls.Certificate{}, errors.New("failed to decode PEM block in HTTPS private key")
-	}
-
-	//nolint:staticcheck // Legacy PEM encryption is supported for compatibility with existing TLS configuration.
-	//noinspection GoDeprecation
-	if x509.IsEncryptedPEMBlock(keyBlock) {
-		//nolint:staticcheck // Legacy PEM encryption is supported for compatibility with existing TLS configuration.
-		//noinspection GoDeprecation
-		decrypted, decryptErr := x509.DecryptPEMBlock(keyBlock, []byte(password))
-		if decryptErr != nil {
-			return tls.Certificate{}, fmt.Errorf("failed to decrypt HTTPS private key: %w", decryptErr)
-		}
-		keyBlock.Bytes = decrypted
-		keyBlock.Headers = nil
-		keyPEM = append(pem.EncodeToMemory(keyBlock), rest...)
+	keyPEM, err = pemkey.Decrypt(keyPEM, password)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to decrypt HTTPS private key: %w", err)
 	}
 
 	certificate, err := tls.X509KeyPair(certPEM, keyPEM)
@@ -170,36 +146,21 @@ func loadClientCAs(path string) (*x509.CertPool, error) {
 		return nil, fmt.Errorf("failed to read client CA file: %w", err)
 	}
 
-	pool := x509.NewCertPool()
-	certificateCount := 0
-	remaining := caPEM
-	for {
-		remaining = bytes.TrimSpace(remaining)
-		if len(remaining) == 0 {
-			break
-		}
-		if !bytes.HasPrefix(remaining, []byte("-----BEGIN CERTIFICATE-----")) {
-			if certificateCount == 0 {
-				return nil, fmt.Errorf("client CA file %q contains no certificates", path)
-			}
-			return nil, fmt.Errorf("client CA file %q contains invalid data after a certificate", path)
-		}
+	blocks, err := decodePEMBlocks(caPEM, pemCertificateType)
+	if err != nil {
+		return nil, fmt.Errorf("client CA file %q: %w", path, err)
+	}
+	if len(blocks) == 0 {
+		return nil, fmt.Errorf("client CA file %q contains no certificates", path)
+	}
 
-		block, rest := pem.Decode(remaining)
-		if block == nil {
-			return nil, fmt.Errorf("client CA file %q contains an invalid certificate PEM block", path)
-		}
-		certificate, parseErr := x509.ParseCertificate(block.Bytes)
+	pool := x509.NewCertPool()
+	for _, der := range blocks {
+		certificate, parseErr := x509.ParseCertificate(der)
 		if parseErr != nil {
 			return nil, fmt.Errorf("client CA file %q contains an invalid certificate: %w", path, parseErr)
 		}
-
 		pool.AddCert(certificate)
-		certificateCount++
-		remaining = rest
-	}
-	if certificateCount == 0 {
-		return nil, fmt.Errorf("client CA file %q contains no certificates", path)
 	}
 
 	return pool, nil

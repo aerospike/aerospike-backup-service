@@ -136,7 +136,7 @@ func (c *backupCatalog) getRoutineBackups(ctx context.Context, filter *RoutineFi
 
 func (c *backupCatalog) readLatestBackupDetails(
 	ctx context.Context,
-	storage model.Storage,
+	st model.Storage,
 	filter *RoutineFilter,
 	files []string,
 ) ([]model.BackupDetails, error) {
@@ -150,7 +150,7 @@ func (c *backupCatalog) readLatestBackupDetails(
 		paths := pathsByTimestamp[timestamp]
 		slices.Sort(paths)
 
-		backups, err := c.readBackupDetails(ctx, storage, paths)
+		backups, err := c.readBackupDetails(ctx, st, paths)
 		if err != nil {
 			return nil, err
 		}
@@ -230,12 +230,12 @@ func maxTimestamp(pathsByTimestamp map[string][]string) string {
 // Callers must pass only paths for completed backups (metadata exists and Finished is set).
 func (c *backupCatalog) readBackupDetails(
 	ctx context.Context,
-	storage model.Storage,
+	st model.Storage,
 	files []string,
 ) ([]model.BackupDetails, error) {
 	backups := make([]model.BackupDetails, 0, len(files))
 	for _, path := range files {
-		file, err := c.operations.ReadFile(ctx, storage, path)
+		file, err := c.operations.ReadFile(ctx, st, path)
 		if err != nil {
 			return nil, fmt.Errorf("read metadata file %q: %w", path, err)
 		}
@@ -244,7 +244,7 @@ func (c *backupCatalog) readBackupDetails(
 			return nil, fmt.Errorf("failed to decode backup metadata: %w", err)
 		}
 		key := keyFromStoragePath(path)
-		details := model.NewBackupDetails(*metadata, key, storage)
+		details := model.NewBackupDetails(*metadata, key, st)
 		backups = append(backups, details)
 	}
 

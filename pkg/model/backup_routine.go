@@ -3,6 +3,9 @@ package model
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/cron"
 )
 
 // BackupRoutine represents a scheduled backup operation routine.
@@ -40,8 +43,53 @@ type BackupRoutine struct {
 	NodeList []string
 	// Base64 encoded filter expression used in each scan call for partial backup.
 	FilterExpression string
-	// Whether this routine is disabled and should not run.
+	// Whether scheduled backups of this routine are disabled. On-demand backups can still be triggered.
 	Disabled bool
+}
+
+type Schedule = cron.Schedule
+
+// FullSchedule returns the schedule the routine's full backups run on.
+func (r *BackupRoutine) FullSchedule() Schedule {
+	return cron.NewSchedule(r.IntervalCron, r.Timezone.ResolvedLocation())
+}
+
+// IncrementalSchedule returns the schedule the routine's incremental backups run on.
+// Incremental backups are optional: the returned schedule is unset when none is configured.
+func (r *BackupRoutine) IncrementalSchedule() Schedule {
+	return cron.NewSchedule(r.IncrIntervalCron, r.Timezone.ResolvedLocation())
+}
+
+// HasIncrementalSchedule reports whether the routine runs incremental backups.
+func (r *BackupRoutine) HasIncrementalSchedule() bool {
+	return r.IncrIntervalCron != ""
+}
+
+// BacksUpWholeCluster reports whether the routine backs up every namespace of its source
+// cluster rather than a configured list. Such a routine discovers the namespaces from the
+// cluster when a backup runs, so its Namespaces field says nothing about what it touches.
+func (r *BackupRoutine) BacksUpWholeCluster() bool {
+	return len(r.Namespaces) == 0
+}
+
+// NextRun returns the next full backup time and, when the routine has an incremental
+// schedule, the next incremental backup time alongside it.
+func (r *BackupRoutine) NextRun() (*BackupTime, error) {
+	nextFullBackup, err := r.FullSchedule().NextTrigger()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse full backup cron: %w", err)
+	}
+
+	if !r.HasIncrementalSchedule() {
+		return NewFullBackupTime(nextFullBackup), nil
+	}
+
+	nextIncrementalBackup, err := r.IncrementalSchedule().NextTrigger()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse incremental backup cron: %w", err)
+	}
+
+	return NewBackupTime(nextFullBackup, nextIncrementalBackup), nil
 }
 
 func init() {
@@ -68,7 +116,6 @@ type backupRoutineGob struct {
 	IntervalCron       string
 	IncrIntervalCron   string
 	TimezoneConfigured string
-	TimezoneSource     LocationSource
 	Namespaces         []string
 	SetList            []string
 	BinList            []string
@@ -89,7 +136,6 @@ func toBackupRoutineGob(r *BackupRoutine) backupRoutineGob {
 		IntervalCron:       r.IntervalCron,
 		IncrIntervalCron:   r.IncrIntervalCron,
 		TimezoneConfigured: r.Timezone.Configured,
-		TimezoneSource:     r.Timezone.Source,
 		Namespaces:         r.Namespaces,
 		SetList:            r.SetList,
 		BinList:            r.BinList,
@@ -126,7 +172,6 @@ func (r *BackupRoutine) Copy() *BackupRoutine {
 		Timezone: Location{
 			resolved:   r.Timezone.resolved, // immutable; shared pointer is safe
 			Configured: copied.TimezoneConfigured,
-			Source:     copied.TimezoneSource,
 		},
 		Namespaces:       copied.Namespaces,
 		SetList:          copied.SetList,

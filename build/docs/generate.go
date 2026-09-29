@@ -42,7 +42,7 @@ func generateOpenAPI() error {
 
 func generateSwagger(outputDir string) error {
 	return gen.New().Build(&gen.Config{
-		SearchDir:          "internal/server/handlers,pkg/dto",
+		SearchDir:          "internal/server/handlers,pkg/dto,pkg/redact",
 		MainAPIFile:        "info.go",
 		OutputDir:          outputDir,
 		OutputTypes:        []string{"go", "json"},
