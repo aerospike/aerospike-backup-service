@@ -65,7 +65,7 @@ func (e *backupRetentionManager) ApplyRetention(ctx context.Context, routine *mo
 	}
 
 	// Incremental backups cannot exist without their corresponding full backup.
-	// If retention policy is not set for incremental (meaning keep all incrementals),
+	// If retention policy is not set for incremental (meaning keep all incrementals for existing fulls),
 	// delete them based on full backups.
 	effectiveIncrementalRetention := policy.IncrBackups.Or(policy.FullBackups)
 	if effectiveIncrementalRetention.Present {
