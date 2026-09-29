@@ -69,6 +69,8 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
+	metadata = withLegacyDefaults(metadata)
+
 	if err := metadata.Validate(); err != nil {
 		return nil, fmt.Errorf("corrupted metadata: %w", err)
 	}
@@ -76,15 +78,21 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 	return &metadata, nil
 }
 
-func (m *BackupMetadata) Validate() error {
-	if m.Created.IsZero() {
-		return errors.New("`created` is required")
-	}
+// withLegacyDefaults returns metadata with the fields that older ABS versions did not write set to
+// the value those versions implied, so the rest of the service can rely on them being present.
+func withLegacyDefaults(m BackupMetadata) BackupMetadata {
 	if m.Finished.IsZero() { // finished was introduced in ABS v3.4.0
 		m.Finished = m.Created.Add(1 * time.Millisecond) // set dummy value
 	}
 	if m.Compression == "" { // compression was introduced in ABS v3.1.0; earlier backups are uncompressed
 		m.Compression = CompressionModeNone
+	}
+	return m
+}
+
+func (m *BackupMetadata) Validate() error {
+	if m.Created.IsZero() {
+		return errors.New("`created` is required")
 	}
 	if m.Namespace == "" {
 		return errors.New("`namespace` is required")
