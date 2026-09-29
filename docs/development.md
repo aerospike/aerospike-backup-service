@@ -141,7 +141,7 @@ The repository follows Git Flow:
 | `main`      | Latest release. Updated only by a release PR from `dev`, then tagged `v3.x.y`.    |
 | `v2`        | Maintenance for the 2.x line.                                                     |
 | `feature/*`, `bugfix/*` | Short-lived branches off `dev`, merged back via pull request.         |
-| `hotfix/*`  | Branched off `main` for urgent fixes; merged into both `main` and `dev`.          |
+| `hotfix/*`  | Branched off `main` for urgent fixes; tagged from the branch, never merged back.  |
 
 Target your pull requests at **`dev`**. Do not open feature pull requests against `main` — it only moves forward
 through releases and hotfixes.
@@ -193,10 +193,11 @@ match the app patch.
    ```
 
 #### Hotfix
-1. Create a hotfix branch from `main` (e.g. `hotfix/3.6.2`).
+1. Create a hotfix branch from `main` (e.g. `hotfix/v3.6.2`).
 2. Prepare the hotfix by updating the version files. Bump the **third digit** of both the version
-   (e.g. `3.7.0` -> `3.7.1`) and the Helm chart version (e.g. `2.1.0` -> `2.1.1`), keeping the chart
-   on the minor already assigned to that app minor line -- see [Chart versioning](#chart-versioning):
+   (e.g. `v3.7.0` -> `v3.7.1`; `make release` rejects a version without the `v` prefix) and the Helm
+   chart version (e.g. `2.1.0` -> `2.1.1`), keeping the chart on the minor already assigned to that
+   app minor line -- see [Chart versioning](#chart-versioning):
    ```bash
    NEXT_VERSION="<version>" NEXT_HELM_CHART_VERSION="<helm-chart-version>" make release
    git add --all
@@ -205,7 +206,7 @@ match the app patch.
 3. **Do not merge** the hotfix branch into `main`. Tag and push the hotfix directly from the branch:
    ```bash
    git tag "$(cat VERSION)"
-   git push origin hotfix/3.6.2 --tags
+   git push origin hotfix/v3.6.2 --tags
    ```
 
 #### Promotion and publication
