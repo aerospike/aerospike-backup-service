@@ -2181,7 +2181,7 @@ const docTemplate = `{
                     ]
                 },
                 "disabled": {
-                    "description": "Whether this routine is disabled and should not run. Default: false.",
+                    "description": "Whether scheduled backups of this routine are disabled. On-demand backups can still be triggered. Default: false.",
                     "type": "boolean",
                     "default": false
                 },
