@@ -56,10 +56,6 @@ github.com/Masterminds/semver/v3 v3.5.0 h1:kQceYJfbupGfZOKZQg0kou0DgAKhzDg2NZPAw
 github.com/Masterminds/semver/v3 v3.5.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
-github.com/VictoriaMetrics/metrics v1.35.3 h1:DrQBBAjTb24WFlGAV9dAQsPDmDRyqL63kZ1Yfc+SRkM=
-github.com/VictoriaMetrics/metrics v1.35.3/go.mod h1:r7hveu6xMdUACXvB8TYdAj8WEsKzWB0EkpJN+RDtOf8=
-github.com/VictoriaMetrics/metricsql v0.87.4 h1:IgJuD6cEhhaC0kyDJcVtyjcIuiWX9yIMnbzH2F6MSpw=
-github.com/VictoriaMetrics/metricsql v0.87.4/go.mod h1:d4EisFO6ONP/HIGDYTAtwrejJBBeKGQYiRl095bS4QQ=
 github.com/aerospike/aerospike-client-go/v8 v8.9.0 h1:SKcGzskEaq1ewOB8dX233hDVp/n7UXnfGG1353iez70=
 github.com/aerospike/aerospike-client-go/v8 v8.9.0/go.mod h1:c/IWx9hALIo6sD4aXP/9C5zMp937vJdskNytuVWdqvc=
 github.com/aerospike/aerospike-management-lib v1.11.1 h1:nspj6mDXIwXzFiyt2EF239s6JV+hqmj/HCWO76o0bjY=
@@ -341,10 +337,6 @@ github.com/tklauser/go-sysconf v0.3.16 h1:frioLaCQSsF5Cy1jgRBrzr6t502KIIwQ0MArYI
 github.com/tklauser/go-sysconf v0.3.16/go.mod h1:/qNL9xxDhc7tx3HSRsLWNnuzbVfh3e7gh/BmM179nYI=
 github.com/tklauser/numcpus v0.11.0 h1:nSTwhKH5e1dMNsCdVBukSZrURJRoHbSEQjdEbY+9RXw=
 github.com/tklauser/numcpus v0.11.0/go.mod h1:z+LwcLq54uWZTX0u/bGobaV34u6V7KNlTZejzM6/3MQ=
-github.com/valyala/fastrand v1.1.0 h1:f+5HkLW4rsgzdNoleUOB69hyT9IlD2ZQh9GyDMfb5G8=
-github.com/valyala/fastrand v1.1.0/go.mod h1:HWqCzkrkg6QXT8V2EXWvXCoow7vLwOFN002oeRzjapQ=
-github.com/valyala/histogram v1.2.0 h1:wyYGAZZt3CpwUiIb9AU/Zbllg1llXyrtApRS815OLoQ=
-github.com/valyala/histogram v1.2.0/go.mod h1:Hb4kBwb4UxsaNbbbh+RRz8ZR6pdodR57tzWUS3BUzXY=
 github.com/vektra/mockery/v3 v3.8.0 h1:Tklqcx844iV8GtYziqJXam1a8RdcKip4UErMa66Nxps=
 github.com/vektra/mockery/v3 v3.8.0/go.mod h1:K+L72OoFVizA9eWtO4L+kU65oylgreiJEJ57Gu8g9Ew=
 github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad h1:W0LEBv82YCGEtcmPA3uNZBI33/qF//HAAs3MawDjRa0=
