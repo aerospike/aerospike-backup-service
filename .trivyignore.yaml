@@ -49,3 +49,11 @@ misconfigurations:
       `helm template` renders without a namespace, so the scanner sees
       "default". Real installs set one via `helm install --namespace`; the chart
       never hardcodes a namespace.
+
+  # --- Secret-agent reference, not a secret ---------------------------------
+  - id: KSV-0109
+    paths:
+      - examples/k8s/abs-secret-agent.yaml
+    statement: >-
+      The `password` value is a secret-agent reference (`secrets:<resource>:<key>`)
+      resolved at runtime by the secret agent; the ConfigMap holds no credential.
