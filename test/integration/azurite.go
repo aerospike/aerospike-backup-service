@@ -12,9 +12,9 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// The azuriteServer account and the container startAzurite creates.
+// The Azurite account and the container startAzurite creates.
 //
-// The account is azuriteServer's well-known development account, the same for every user:
+// The account is Azurite's well-known development account, the same for every user:
 // https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite#well-known-storage-account-and-key
 const (
 	azuriteAccountName = "devstoreaccount1"
@@ -36,12 +36,19 @@ type azuriteServer struct {
 	admin *azblob.Client
 }
 
-// startAzurite starts an azuriteServer container and creates azureContainerName in it.
+// startAzurite starts an Azurite container and creates azureContainerName in it.
 func (s *Suite) startAzurite() azuriteServer {
 	ctx := s.T().Context()
 
 	azurite, err := testcontainers.Run(ctx, azuriteImage,
 		testcontainers.WithExposedPorts(azuriteBlobPort),
+		// Only the blob service is used. --skipApiVersionCheck lets the Azure SDK send a
+		// newer storage API version than this Azurite knows (azblob v1.8.1 sends
+		// 2026-12-06; Azurite 3.37.0 stops at 2026-06-06) instead of failing every
+		// request with 400 InvalidHeaderValue.
+		// TODO: remove --skipApiVersionCheck once an Azurite release supports the API
+		// version the SDK sends, and bump azuriteImage to it.
+		testcontainers.WithCmd("azurite-blob", "--blobHost", "0.0.0.0", "--skipApiVersionCheck"),
 		testcontainers.WithWaitStrategy(wait.ForListeningPort(azuriteBlobPort)),
 	)
 	s.Require().NoError(err)

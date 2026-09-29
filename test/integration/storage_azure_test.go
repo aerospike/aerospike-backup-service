@@ -8,7 +8,7 @@ import (
 )
 
 // TestAzure exercises every way ABS can authenticate to an Azure Blob endpoint that is
-// reachable against a self-hosted emulator, against one shared azuriteServer container: Shared
+// reachable against a self-hosted emulator, against one shared Azurite container: Shared
 // Key (literal and Secret Agent) and a SAS token embedded in the endpoint URL. AAD and
 // Managed Identity are not covered: they cannot be pointed at an emulator.
 //
@@ -16,7 +16,7 @@ import (
 // in pkg/service/storage/azure.go) are not covered here. Both call the real Azure AD token
 // endpoint (login.microsoftonline.com) with no way to point them at a local stand-in: ABS
 // passes `nil` options to azidentity.NewClientSecretCredential/NewDefaultAzureCredential, so
-// there is no authority-host override to redirect at azuriteServer even though azuriteServer's own
+// there is no authority-host override to redirect at Azurite even though Azurite's own
 // `--oauth basic` mode would accept whatever bearer token showed up. Making AAD
 // emulator-testable would mean adding a customizable authority host to ABS's Azure storage
 // config - a real product change, not just test infrastructure - so it is left as a
