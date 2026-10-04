@@ -1,5 +1,5 @@
 ## dto.RestoreNamespace
-RestoreNamespace specifies an alternative namespace name for the restore operation.
+RestoreNamespace specifies an alternative namespace name for the restore operation. Only a single namespace can be remapped per restore.
 
 | Field              | Description                                                                                                                                                                                                                                                  |
 |--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
