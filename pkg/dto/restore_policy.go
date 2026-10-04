@@ -36,6 +36,10 @@ type BaseRestorePolicy struct {
 	BatchSize *int `json:"batch-size,omitempty" example:"32" default:"128"`
 	// Namespace optionally specifies an alternative namespace name for the restore operation.
 	// By default, the data is restored to the namespace from which it was taken.
+	// Only a single namespace can be remapped: the restore must contain exactly one namespace,
+	// equal to `source`, otherwise it is rejected. For a restore by path, point
+	// `backup-data-path` at a single namespace's backup. For a point-in-time restore, the
+	// routine must back up a single namespace.
 	Namespace *RestoreNamespace `json:"namespace,omitempty"`
 	// The sets to restore (optional, an empty list implies restoring all sets).
 	SetList []string `json:"set-list,omitempty" example:"set1,set2" extensions:"x-nullable"`

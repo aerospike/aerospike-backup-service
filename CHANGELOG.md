@@ -45,6 +45,18 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
   deployment.
 - Hardened Helm and Kubernetes deployment defaults.
 
+### Known limitations
+
+- Restore namespace remapping (`policy.namespace`) supports a single namespace only: the restore must
+  contain exactly one namespace, equal to `policy.namespace.source`. Otherwise the restore is rejected
+  upfront with `namespace remap from "<source>" requires the restore to be scoped to exactly that namespace`.
+  - Restore by path (`/v1/restore/full`, `/v1/restore/incremental`): point `backup-data-path` at a single
+    namespace's backup (the `key` returned by `GET /v1/backups/full`) and run one restore per namespace.
+  - Restore by timestamp (`/v1/restore/timestamp`): remapping works only for routines that back up a
+    single namespace.
+  - To restore several namespaces without remapping, omit `policy.namespace`; the destination cluster
+    must have namespaces with the same names.
+
 ## [3.6.2] - 2026-08-26
 
 Hotfix release built on [backup-go v0.11.1](https://github.com/aerospike/backup-go/releases/tag/v0.11.1).

@@ -2842,7 +2842,7 @@ const docTemplate = `{
             }
         },
         "dto.RestoreNamespace": {
-            "description": "RestoreNamespace specifies an alternative namespace name for the restore operation.",
+            "description": "RestoreNamespace specifies an alternative namespace name for the restore operation. Only a single namespace can be remapped per restore.",
             "type": "object",
             "required": [
                 "destination",
@@ -2923,7 +2923,7 @@ const docTemplate = `{
                     "example": 32
                 },
                 "namespace": {
-                    "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
+                    "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to ` + "`" + `source` + "`" + `, otherwise it is rejected. For a restore by path, point\n` + "`" + `backup-data-path` + "`" + ` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RestoreNamespace"
@@ -3914,7 +3914,7 @@ const docTemplate = `{
                     "example": 32
                 },
                 "namespace": {
-                    "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
+                    "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to ` + "`" + `source` + "`" + `, otherwise it is rejected. For a restore by path, point\n` + "`" + `backup-data-path` + "`" + ` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RestoreNamespace"
