@@ -156,7 +156,10 @@ jobs:
           fi
           echo "HELM_VERSION=$HELM_VERSION" >> "$GITHUB_OUTPUT"
 
+      # Only needed by the fallback paths in the download step below; the primary path is
+      # anonymous. Non-fatal so a login failure doesn't block the anonymous path.
       - name: Login to JFrog
+        continue-on-error: true
         uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
         env:
           JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
@@ -165,9 +168,16 @@ jobs:
           oidc-provider-name: ${{ vars.JF_OIDC_PROVIDER }}
           oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
+      # The database-*-prod-public-local repos are world-readable, while the OIDC identity
+      # mapped for this repo has not been able to read them (authenticated `jf rt search`
+      # came back empty in CI). So search and download anonymously with plain curl first --
+      # the REST property-search and file-info APIs allow anonymous access, unlike the AQL
+      # behind `jf rt search` -- and fall back to the authenticated jf CLI per repo/artifact
+      # only if the anonymous call fails or finds nothing.
       - name: Download signed artifacts from JFrog PROD
         env:
           HELM_VERSION: ${{ steps.helm-version.outputs.HELM_VERSION }}
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
           DEB_REPO: ${{ vars.JF_ARTIFACTORY_DEB_PROD }}
           RPM_REPO: ${{ vars.JF_ARTIFACTORY_RPM_PROD }}
           HELM_REPO: ${{ vars.JF_ARTIFACTORY_HELM_PROD }}
@@ -181,12 +191,36 @@ jobs:
           # live to return exact, reliable matches with full metadata (including sha256).
           mkdir -p release-assets
 
-          echo "Searching ${DEB_REPO} for version=${BUNDLE_VERSION}..."
-          jf rt search "${DEB_REPO}/**" --props "version=${BUNDLE_VERSION}" > deb-artifacts.json
-          echo "Searching ${RPM_REPO} for version=${BUNDLE_VERSION}..."
-          jf rt search "${RPM_REPO}/**" --props "version=${BUNDLE_VERSION}" > rpm-artifacts.json
-          echo "Searching ${HELM_REPO} for version=${HELM_VERSION}..."
-          jf rt search "${HELM_REPO}/**" --props "version=${HELM_VERSION}" > helm-artifacts.json
+          # Accept either the platform root or the Artifactory service URL.
+          RT_URL="${JF_URL%/}"
+          RT_URL="${RT_URL%/artifactory}/artifactory"
+
+          # Property search returns only storage-API URIs; resolve each to its file info for
+          # the sha256 and emit [{path: "<repo>/<path>", sha256}], the same fields the later
+          # steps read from `jf rt search` output.
+          anonymous_search() {
+            local repo="$1" version="$2" uris
+            uris=$(curl -fsS --retry 3 -G "${RT_URL}/api/search/prop" \
+              --data-urlencode "version=${version}" --data-urlencode "repos=${repo}" |
+              jq -r '.results[]?.uri') || return 1
+            for uri in ${uris}; do
+              curl -fsS --retry 3 "${uri}" | jq '{path: (.repo + .path), sha256: .checksums.sha256}' || return 1
+            done | jq -s '.'
+          }
+
+          search_repo() {
+            local repo="$1" version="$2" out="$3"
+            echo "Searching ${repo} for version=${version}..."
+            if anonymous_search "${repo}" "${version}" > "${out}" && [ "$(jq 'length' "${out}")" -gt 0 ]; then
+              return 0
+            fi
+            echo "::warning::Anonymous search of ${repo} failed or found nothing; falling back to jf rt search."
+            jf rt search "${repo}/**" --props "version=${version}" > "${out}"
+          }
+
+          search_repo "${DEB_REPO}" "${BUNDLE_VERSION}" deb-artifacts.json
+          search_repo "${RPM_REPO}" "${BUNDLE_VERSION}" rpm-artifacts.json
+          search_repo "${HELM_REPO}" "${HELM_VERSION}" helm-artifacts.json
 
           jq -s 'add' deb-artifacts.json rpm-artifacts.json helm-artifacts.json > all-artifacts.json
 
@@ -213,13 +247,25 @@ jobs:
           echo "Artifacts to download:"
           cat artifact-paths.txt
 
+          # -L: Artifactory answers deb/rpm downloads with a 302 to its binary store.
+          anonymous_download() {
+            local dest
+            dest="release-assets/$(basename "$1")"
+            curl -fsSL --retry 3 -o "${dest}" "${RT_URL}/$1" || { rm -f "${dest}"; return 1; }
+          }
+
           while IFS= read -r artifact_path; do
-            jf rt download "${artifact_path}" release-assets/ --flat=true
+            if ! anonymous_download "${artifact_path}"; then
+              echo "::warning::Anonymous download of ${artifact_path} failed; falling back to jf rt download."
+              jf rt download "${artifact_path}" release-assets/ --flat=true
+            fi
             # GPG/prov signature files are deterministic siblings of the primary artifact and
             # don't carry their own "version" property, so fetch them by direct sibling path
-            # instead of a second search.
-            jf rt download "${artifact_path}.asc" release-assets/ --flat=true --fail-no-op=false || true
-            jf rt download "${artifact_path}.prov" release-assets/ --flat=true --fail-no-op=false || true
+            # instead of a second search. Packages carry a GPG .asc, the Helm chart a .prov.
+            sig=asc
+            [[ "${artifact_path}" == *.tgz ]] && sig=prov
+            anonymous_download "${artifact_path}.${sig}" ||
+              jf rt download "${artifact_path}.${sig}" release-assets/ --flat=true --fail-no-op=false || true
           done < artifact-paths.txt
 
       - name: Write checksums from JFrog metadata
