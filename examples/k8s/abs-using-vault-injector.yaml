@@ -25,6 +25,8 @@ spec:
         vault.hashicorp.com/role: vault-role
         vault.hashicorp.com/secret-volume-path-psw.txt: /etc/aerospike-backup-service
         vault.hashicorp.com/secret-volume-path-cert.pem: /etc/aerospike-backup-service/ssl
+        # For testing with a self-signed Vault certificate only. In production, remove this
+        # and trust Vault's CA instead, e.g. vault.hashicorp.com/ca-cert: /vault/tls/ca.crt
         vault.hashicorp.com/tls-skip-verify: "true"
       labels:
         app: aerospike-backup-service
@@ -40,8 +42,21 @@ spec:
                       - aerospike-backup-service
               topologyKey: kubernetes.io/hostname
       automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: aerospike-backup-service
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
           image: aerospike.jfrog.io/ecosystem-container-prod-local/aerospike-backup-service:latest
           imagePullPolicy: Always
           ports:
@@ -68,6 +83,8 @@ spec:
             successThreshold: 1
             timeoutSeconds: 1
           volumeMounts:
+            - mountPath: /tmp
+              name: tmp
             - mountPath: /etc/aerospike-backup-service/aerospike-backup-service.yml
               mountPropagation: None
               name: backup-config
@@ -75,6 +92,8 @@ spec:
       restartPolicy: Always
       serviceAccountName: backup-service
       volumes:
+        - emptyDir: {}
+          name: tmp
         - configMap:
             name: aerospike-backup-service-cm
             optional: true
@@ -103,30 +122,34 @@ metadata:
   namespace: aerospike
 data:
   aerospike-backup-service.yml: |
-    "aerospike-clusters":
-      "absCluster1":
-        "credentials":
-          "password": "psw"
-          "user": "tester"
-        "seed-nodes":
-          - "host-name": "abs-cluster.internal"
-            "port": 3000
-    "backup-policies":
-      "keepFilesPolicy":
-        "parallel": 1
-        "remove-files": false
-        "type": 1
-    "backup-routines":
-      "keepFilesRoutine":
-        "backup-policy": "keepFilesPolicy"
-        "interval-cron": "@daily"
-        "namespace": "test"
-        "source-cluster": "absCluster1"
-        "storage": "s3Storage"
-    "storage":
-      "s3Storage":
-        "path": "s3://abs-backup-bucket/s3Storage"
-        "s3-endpoint-override": ""
-        "s3-profile": ""
-        "s3-region": "eu-central-1"
-        "type": 1
+    aerospike-clusters:
+      absCluster1:
+        credentials:
+          user: tester
+          # Written by the Vault injector sidecar, see the agent-inject-template-psw.txt annotation.
+          password-path: /etc/aerospike-backup-service/psw.txt
+        seed-nodes:
+          - host-name: abs-cluster.internal
+            port: 3000
+
+    storage:
+      s3Storage:
+        s3-storage:
+          bucket: abs-backup-bucket
+          path: s3Storage
+          s3-region: eu-central-1
+
+    backup-policies:
+      keepFilesPolicy:
+        parallel: 1
+        retention:
+          full: 10
+          incremental: 5
+
+    backup-routines:
+      keepFilesRoutine:
+        backup-policy: keepFilesPolicy
+        interval-cron: "@daily"
+        namespaces: []  # an empty list backs up the whole cluster
+        source-cluster: absCluster1
+        storage: s3Storage

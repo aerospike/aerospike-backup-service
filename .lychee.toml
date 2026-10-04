@@ -16,15 +16,28 @@ exclude = [
   # Pre-existing broken link in the Helm chart README, owned by the
   # security plan's docs-supporting item.
   "helm/aerospike-backup-service/examples$",
+  # The published API browser is a single-page app: "#/Backup/getCurrentBackup"
+  # is a client-side route, not an element id, so no checker can resolve it.
+  # These links are rendered by build/docs from docs/openapi.json, which is what
+  # keeps the operation ids honest; the bare site URL is linked elsewhere and is
+  # still checked.
+  "^https://aerospike\\.github\\.io/aerospike-backup-service/#/",
+  # kubernetes.io is often unreachable from GitHub Actions runners
+  # (connection failed / WAF), so CI cannot reliably verify these links.
+  "^https://kubernetes\\.io/",
   # Stable reference docs that time out or redirect heavily from GitHub
   # Actions runners; not worth failing CI over.
-  "^https://kubernetes\\.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes",
   "^https://docs\\.aerospike\\.com/cloud/kubernetes/operator",
 ]
 
+# Resolve the #fragment of a local link against the target file's headings, not
+# just the file. Without this, ../README.md#run passes as long as README.md exists;
+# three such anchors sat in docs/ undetected while this check was green.
+include_fragments = "anchor-only"
+
 max_concurrency = 8
-timeout = 20
-retry_wait_time = 2
-max_retries = 3
+timeout = 45
+retry_wait_time = 5
+max_retries = 5
 
 accept = [200, 201, 202, 203, 204, 206, 301, 302, 303, 307, 308]

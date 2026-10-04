@@ -13,9 +13,9 @@
 ## Checklist
 
 - [ ] Target branch is `dev`. Only release PRs and hotfixes target `main`; v2 maintenance targets `v2`.
-- [ ] `make pr` passes locally (tidy, mocks, format, lint, tests, OpenAPI, README generation).
+- [ ] `make pr` passes locally (tidy, mocks, format, lint, tests, docs).
 - [ ] Tests were added or updated for the change.
-- [ ] Generated artifacts are committed and up to date (`make generated-check` passes): mocks, OpenAPI spec, README/docs.
+- [ ] Generated artifacts are committed and up to date (`make generated-check` passes): mocks and docs.
 - [ ] If this changes the configuration file or REST API in a breaking way, the
       [migration guide](../README.md#migration-guide) is updated.
 

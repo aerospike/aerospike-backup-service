@@ -3,7 +3,6 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -87,7 +86,7 @@ func TestInvalidConnectionType(t *testing.T) {
 	err := agent.validate()
 	require.Error(t, err)
 	assert.EqualError(t, err,
-		"invalid value validation error: 'invalid' is not a valid connection-type. Allowed values: [tcp unix]")
+		"invalid value validation error: 'invalid' is not a valid connection-type. Allowed values: [TCP UNIX]")
 }
 
 func TestMissingAddress(t *testing.T) {
@@ -113,18 +112,17 @@ func TestInvalidTimeout(t *testing.T) {
 	assert.EqualError(t, err, errValidationNegative("timeout", -100).Error())
 }
 
-func TestInvalidCertFile(t *testing.T) {
+func TestSecretAgentTLSFilesAreNotReadDuringValidation(t *testing.T) {
 	agent := &SecretAgent{
 		Address:        "localhost",
 		ConnectionType: "tcp",
 		ClientTLS: ClientTLS{
-			CAFile: ptr.Of("invalid-cert-file"),
+			CAFile: "invalid-cert-file",
 		},
 	}
 
 	err := agent.validate()
-	require.Error(t, err)
-	require.ErrorContains(t, err, "not found validation error: ca-file \"invalid-cert-file\"")
+	require.NoError(t, err)
 }
 
 func TestSecretAgent_Nil(t *testing.T) {

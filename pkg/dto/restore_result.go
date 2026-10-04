@@ -68,7 +68,7 @@ func (r *RestoreJobStatus) fromModel(m *model.RestoreJobStatus) {
 	r.FresherRecords = m.Counters.GetRecordsFresher()
 	r.IndexCount = uint64(m.Counters.GetSIndexes())
 	r.UDFCount = uint64(m.Counters.GetUDFs())
-	r.Status = JobStatusFromModel(m.Status)
+	r.Status = NewJobStatusFromModel(m.Status)
 	r.ErrorsInDoubt = m.Counters.GetErrorsInDoubt()
 
 	if m.Error != nil {

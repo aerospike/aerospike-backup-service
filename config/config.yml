@@ -1,13 +1,9 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.6.1/docs/config.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.7.0/docs/config.schema.json
 service:
     logger:
         level: INFO
         file-writer:
             filename: log/backup-service.log
-            maxsize: 0
-            maxage: 0
-            maxbackups: 0
-            compress: false
     backup:
         timestamp-format: EU
 aerospike-clusters:
@@ -23,7 +19,7 @@ aerospike-clusters:
 storage:
     local:
         local-storage:
-            path: ./localStorage
+            path: localStorage
     minio:
         s3-storage:
             bucket: as-backup-bucket

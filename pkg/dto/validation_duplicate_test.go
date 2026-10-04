@@ -16,7 +16,7 @@ func TestBackupRoutine_Validate_Duplicates(t *testing.T) {
 			name: "duplicate namespaces",
 			routine: &BackupRoutine{
 				SourceCluster: "c", Storage: "s", IntervalCron: "* * * * * *",
-				Namespaces: &[]string{"ns1", "ns1"},
+				Namespaces: &[]NamespaceName{"ns1", "ns1"},
 			},
 			wantErr: "namespaces contains duplicate value",
 		},
@@ -24,7 +24,7 @@ func TestBackupRoutine_Validate_Duplicates(t *testing.T) {
 			name: "duplicate set-list",
 			routine: &BackupRoutine{
 				SourceCluster: "c", Storage: "s", IntervalCron: "* * * * * *",
-				Namespaces: &[]string{"ns1"},
+				Namespaces: &[]NamespaceName{"ns1"},
 				SetList:    []string{"set1", "set1"},
 			},
 			wantErr: "set-list contains duplicate value",
@@ -33,7 +33,7 @@ func TestBackupRoutine_Validate_Duplicates(t *testing.T) {
 			name: "duplicate bin-list",
 			routine: &BackupRoutine{
 				SourceCluster: "c", Storage: "s", IntervalCron: "* * * * * *",
-				Namespaces: &[]string{"ns1"},
+				Namespaces: &[]NamespaceName{"ns1"},
 				BinList:    []string{"bin1", "bin1"},
 			},
 			wantErr: "bin-list contains duplicate value",
@@ -42,7 +42,7 @@ func TestBackupRoutine_Validate_Duplicates(t *testing.T) {
 			name: "duplicate rack-list",
 			routine: &BackupRoutine{
 				SourceCluster: "c", Storage: "s", IntervalCron: "* * * * * *",
-				Namespaces: &[]string{"ns1"},
+				Namespaces: &[]NamespaceName{"ns1"},
 				RackList:   []int{1, 1},
 			},
 			wantErr: "rack-list contains duplicate value",
@@ -51,10 +51,27 @@ func TestBackupRoutine_Validate_Duplicates(t *testing.T) {
 			name: "duplicate node-list",
 			routine: &BackupRoutine{
 				SourceCluster: "c", Storage: "s", IntervalCron: "* * * * * *",
-				Namespaces: &[]string{"ns1"},
+				Namespaces: &[]NamespaceName{"ns1"},
 				NodeList:   []string{"node1", "node1"},
 			},
 			wantErr: "node-list contains duplicate value",
+		},
+		{
+			name: "empty namespace",
+			routine: &BackupRoutine{
+				SourceCluster: "c", Storage: "s", IntervalCron: "* * * * * *",
+				Namespaces: &[]NamespaceName{"ns1", ""},
+			},
+			wantErr: `"namespaces[1]" required`,
+		},
+		{
+			name: "empty node-list value",
+			routine: &BackupRoutine{
+				SourceCluster: "c", Storage: "s", IntervalCron: "* * * * * *",
+				Namespaces: &[]NamespaceName{"ns1"},
+				NodeList:   []string{"node1", ""},
+			},
+			wantErr: `"node-list[1]" required`,
 		},
 	}
 
@@ -95,7 +112,7 @@ func TestRestorePolicy_Validate_Duplicates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.policy.Validate()
+			err := tt.policy.Validate(ValidationDefault)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.wantErr)
 		})

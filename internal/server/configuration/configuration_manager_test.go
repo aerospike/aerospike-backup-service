@@ -17,7 +17,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 	tempDir := t.TempDir()
 
 	// Create an HTTP test server
-	storageDto := "local-storage:\n    path: ./config.yaml"
+	storageDto := "local-storage:\n    path: config.yaml"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/storage.yaml":
