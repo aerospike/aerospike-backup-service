@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"errors"
 	"os"
 	"testing"
 
@@ -8,15 +9,16 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 const (
-	testdataFolder = "./testdata"
+	testdataFolder = "testdata"
 	passwordPath   = testdataFolder + "/password.txt"
 )
 
 func TestResolve(t *testing.T) {
-	resolver := NewPasswordResolver(NewResolver(t.Context()))
+	resolver := NewPasswordResolver(NewResolver())
 
 	tests := []struct {
 		name             string
@@ -29,8 +31,7 @@ func TestResolve(t *testing.T) {
 			name:      "ValidPasswordPath",
 			setupMock: func() { createFile("password") },
 			credentials: &model.Credentials{
-				User:         nil,
-				PasswordPath: ptr.Of(passwordPath),
+				PasswordPath: passwordPath,
 			},
 			expectedPassword: ptr.Of("password"),
 			expectedErr:      false,
@@ -39,8 +40,7 @@ func TestResolve(t *testing.T) {
 			name:      "ValidPasswordPathWithLF",
 			setupMock: func() { createFile("password\n") },
 			credentials: &model.Credentials{
-				User:         nil,
-				PasswordPath: ptr.Of(passwordPath),
+				PasswordPath: passwordPath,
 			},
 			expectedPassword: ptr.Of("password"),
 			expectedErr:      false,
@@ -49,8 +49,7 @@ func TestResolve(t *testing.T) {
 			name:      "ValidPasswordPathWithCRLF",
 			setupMock: func() { createFile("password\r\n") },
 			credentials: &model.Credentials{
-				User:         nil,
-				PasswordPath: ptr.Of(passwordPath),
+				PasswordPath: passwordPath,
 			},
 			expectedPassword: ptr.Of("password"),
 			expectedErr:      false,
@@ -59,8 +58,7 @@ func TestResolve(t *testing.T) {
 			name:      "InvalidPasswordPath",
 			setupMock: func() {},
 			credentials: &model.Credentials{
-				User:         nil,
-				PasswordPath: ptr.Of("not-existing.txt"),
+				PasswordPath: "not-existing.txt",
 			},
 			expectedPassword: nil,
 			expectedErr:      true,
@@ -82,7 +80,7 @@ func TestResolve(t *testing.T) {
 			name:      "PlainPassword",
 			setupMock: func() {},
 			credentials: &model.Credentials{
-				Password: ptr.Of("plain"),
+				Password: "plain",
 			},
 			expectedPassword: ptr.Of("plain"),
 			expectedErr:      false,
@@ -106,8 +104,26 @@ func TestResolve(t *testing.T) {
 	}
 }
 
-// Note: Logic for checking file caching was removed because Resolver is stateless regarding files.
-// Logic for Secret Agent caching is tested in secret_agent_test.go (if we create it).
+// TestResolve_SecretAgentResolutionErrorPropagates guards the Secret Agent path
+// through resolveClusterPassword: an unreachable or erroring agent must fail
+// password resolution, not silently fall back to an empty or literal password.
+func TestResolve_SecretAgentResolutionErrorPropagates(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockResolver := NewMockResolver(ctrl)
+	mockResolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return("", errors.New("secret agent unreachable"))
+
+	resolver := NewPasswordResolver(mockResolver)
+	creds := &model.Credentials{
+		User:     "user",
+		Password: "secrets:agent:password",
+	}
+
+	password, err := resolver.Resolve(t.Context(), creds)
+	require.ErrorContains(t, err, "failed to read password from secret agent")
+	assert.Nil(t, password)
+}
 
 func createFile(content string) {
 	text := []byte(content)

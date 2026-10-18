@@ -18,6 +18,11 @@ type RoutineState struct {
 	NextRunTime *BackupTime
 }
 
+// IsRunning reports whether a full or incremental backup is active for this routine.
+func (rs RoutineState) IsRunning() bool {
+	return rs.Full != nil || rs.Incremental != nil
+}
+
 // RunningJob tracks progress of currently running job.
 type RunningJob struct {
 	// TotalRecords: the total number of records to be processed.

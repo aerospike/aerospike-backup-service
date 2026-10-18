@@ -10,20 +10,14 @@ import (
 func TestPtr(t *testing.T) {
 	var n int32
 	np := ptr.Of(n)
-	if n != *np {
-		t.Error("Expected to be equal")
-	}
+	assert.Equal(t, n, *np)
 }
 
 func TestValueOrZero(t *testing.T) {
 	i1 := 1
-	if ptr.ValueOrZero(&i1) != 1 {
-		t.Error("Expected 1")
-	}
+	assert.Equal(t, 1, ptr.ValueOrZero(&i1))
 	var i2 *int
-	if ptr.ValueOrZero(i2) != 0 {
-		t.Error("Expected 0")
-	}
+	assert.Equal(t, 0, ptr.ValueOrZero(i2))
 }
 
 func TestMissingElements(t *testing.T) {
@@ -84,6 +78,70 @@ func TestMissingElements(t *testing.T) {
 			if len(tt.expected) > 0 {
 				assert.Equal(t, tt.expected, result)
 			}
+		})
+	}
+}
+
+func TestFirstCommon(t *testing.T) {
+	tests := map[string]struct {
+		a, b   []string
+		want   string
+		wantOK bool
+	}{
+		"common element is found": {
+			a:      []string{"ns1", "ns2"},
+			b:      []string{"ns2", "ns3"},
+			want:   "ns2",
+			wantOK: true,
+		},
+		"disjoint slices have none": {
+			a: []string{"ns1"},
+			b: []string{"ns2"},
+		},
+		"empty b has none": {
+			a: []string{"ns1"},
+			b: nil,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, ok := FirstMatch(tt.a, tt.b)
+
+			assert.Equal(t, tt.wantOK, ok)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestUnique(t *testing.T) {
+	tests := map[string]struct {
+		input []string
+		want  []string
+	}{
+		"empty slice": {
+			input: nil,
+			want:  nil,
+		},
+		"no duplicates": {
+			input: []string{"ns1", "ns2", "ns3"},
+			want:  []string{"ns1", "ns2", "ns3"},
+		},
+		"with duplicates": {
+			input: []string{"ns1", "ns2", "ns1", "ns3", "ns2"},
+			want:  []string{"ns1", "ns2", "ns3"},
+		},
+		"all duplicates": {
+			input: []string{"ns1", "ns1", "ns1"},
+			want:  []string{"ns1"},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := Unique(tt.input)
+
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

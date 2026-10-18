@@ -42,13 +42,8 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 
 // RestoreIncremental and RestoreFull share same business logic.
 func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
-	request, err := dto.NewRestoreRequestFromReader(r.Body)
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
-		return
-	}
-	if err = request.Validate(); err != nil {
-		httpError(w, errBadRequest(err))
+	request, ok := decodeBodyValidated[dto.RestoreRequest](w, r)
+	if !ok {
 		return
 	}
 
@@ -58,13 +53,7 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, err := s.restoreManager.Restore(s.sysCtx, restoreRequest)
-	if err != nil {
-		httpError(w, err)
-		return
-	}
-
-	httpAcceptedWithJobID(w, jobID)
+	httpAcceptedWithJobID(w, s.restoreManager.Restore(restoreRequest))
 }
 
 // RestoreByTimeHandler
@@ -79,14 +68,8 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
-	request, err := dto.NewRestoreTimestampRequestFromReader(r.Body)
-
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
-		return
-	}
-	if err = request.Validate(); err != nil {
-		httpError(w, errBadRequest(err))
+	request, ok := decodeBodyValidated[dto.RestoreTimestampRequest](w, r)
+	if !ok {
 		return
 	}
 
@@ -96,13 +79,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, err := s.restoreManager.RestoreByTime(s.sysCtx, restoreRequest)
-	if err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-
-	httpAcceptedWithJobID(w, jobID)
+	httpAcceptedWithJobID(w, s.restoreManager.RestoreByTime(restoreRequest))
 }
 
 // RestoreStatusHandler
@@ -126,7 +103,7 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var jobErr *service.JobNotFoundError
 		if errors.As(err, &jobErr) {
-			httpError(w, errNotFound("job", jobID))
+			httpError(w, model.NotFound("job", jobID))
 		} else {
 			httpError(w, err)
 		}
@@ -196,15 +173,7 @@ func (s *Service) RetrieveRestoreJobs(w http.ResponseWriter, r *http.Request) {
 // @Failure     405 {string} string
 func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 	timestampStr := r.PathValue("timestamp")
-	if timestampStr == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 
 	timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
 	if err != nil {
@@ -212,9 +181,9 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -247,7 +216,7 @@ func (s *Service) CancelRestoreHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var jobErr *service.JobNotFoundError
 		if errors.As(err, &jobErr) {
-			httpError(w, errNotFound("job", jobID))
+			httpError(w, model.NotFound("job", jobID))
 		} else {
 			httpError(w, fmt.Errorf("failed to cancel restore: %w", err))
 		}

@@ -4,422 +4,217 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"golang.org/x/sync/semaphore"
 )
 
-type testMocks struct {
-	ctrl           *gomock.Controller
-	backupExecutor *backupexecutor.MockBackup
-	backupHandler  *backupexecutor.MockBackupHandler
-	backendService *MockBackupReaderWriter
+func TestRoutineBackupRunner_Run_Success(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	nsRunner := NewMockNamespaceBackupRunner(ctrl)
+	resolver := aerospike.NewMockNamespaceResolver(ctrl)
+	resolver.EXPECT().
+		ResolveNamespaces(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]string{"ns1", "ns2"}, nil)
+
+	handler1 := NewMockCancelableBackupHandler(ctrl)
+	handler1.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+	handler2 := NewMockCancelableBackupHandler(ctrl)
+	handler2.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+
+	nsRunner.EXPECT().
+		Run(gomock.Any(), forNamespace("ns1"), gomock.Any(), gomock.Any()).
+		Return(handler1, nil)
+	nsRunner.EXPECT().
+		Run(gomock.Any(), forNamespace("ns2"), gomock.Any(), gomock.Any()).
+		Return(handler2, nil)
+
+	runner := NewRoutineBackupRunner(nsRunner, resolver)
+	routine := &model.BackupRoutine{
+		Name:         "daily",
+		BackupPolicy: &model.BackupPolicy{},
+	}
+
+	op, err := runner.Run(t.Context(), routine, model.BackupRunSpec{Type: model.BackupTypeFull}, slog.Default())
+	require.NoError(t, err)
+	require.NotNil(t, op)
+	assert.Len(t, op.handlers, 2)
 }
 
-func initMocks(t *testing.T) (testMocks, NamespaceBackupRunner) {
-	t.Helper()
+func TestRoutineBackupRunner_Run_ResolverError(t *testing.T) {
+	t.Parallel()
+
 	ctrl := gomock.NewController(t)
 
-	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
-	mockBackupHandler := backupexecutor.NewMockBackupHandler(ctrl)
-	mockBackendService := NewMockBackupReaderWriter(ctrl)
+	nsRunner := NewMockNamespaceBackupRunner(ctrl)
+	resolver := aerospike.NewMockNamespaceResolver(ctrl)
+	resolver.EXPECT().
+		ResolveNamespaces(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("resolve failed"))
 
-	executor := NewNamespaceBackupRunner(
-		mockBackupExecutor,
-		mockBackendService,
-		NewPathService(nil),
-	)
+	runner := NewRoutineBackupRunner(nsRunner, resolver)
+	routine := &model.BackupRoutine{Name: "daily", BackupPolicy: &model.BackupPolicy{}}
 
-	return testMocks{
-		ctrl:           ctrl,
-		backupExecutor: mockBackupExecutor,
-		backupHandler:  mockBackupHandler,
-		backendService: mockBackendService,
-	}, executor
+	op, err := runner.Run(t.Context(), routine, model.BackupRunSpec{Type: model.BackupTypeFull}, slog.Default())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "resolve failed")
+	assert.Nil(t, op)
 }
 
-func TestRun_SuccessfulFullBackup(t *testing.T) {
-	now := time.UnixMilli(123456789000)
-	backupFolder := "test-routine/backup/123456789000/data/test-ns"
+// A namespace backup that cannot be started fails the routine run instead of waiting for its
+// context, which for a scheduled backup is the scheduler's and lives until the service shuts down.
+func TestRoutineBackupRunner_Run_ReturnsStartError(t *testing.T) {
+	t.Parallel()
 
-	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
+	ctrl := gomock.NewController(t)
+	nsRunner := NewMockNamespaceBackupRunner(ctrl)
+	resolver := aerospike.NewMockNamespaceResolver(ctrl)
+	resolver.EXPECT().
+		ResolveNamespaces(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]string{"ns1"}, nil)
 
-	routine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
-	timeBounds := model.TimeBounds{}
-	backupStats := models.NewBackupStats()
-	backupStats.TotalRecords.Store(100)
-	backupStats.ReadRecords.Add(50)
+	startErr := errors.New("cluster unreachable")
+	nsRunner.EXPECT().
+		Run(gomock.Any(), forNamespace("ns1"), gomock.Any(), gomock.Any()).
+		Return(nil, startErr)
 
-	mocks.backupExecutor.EXPECT().
-		Run(gomock.Any(), routine, timeBounds, testNamespace, backupFolder, gomock.Any(), gomock.Any()).
-		Return(mocks.backupHandler, nil)
+	runner := NewRoutineBackupRunner(nsRunner, resolver)
+	routine := &model.BackupRoutine{Name: "daily", BackupPolicy: &model.BackupPolicy{}}
 
-	mocks.backupHandler.EXPECT().
-		Wait(gomock.Any()).
-		Return(nil)
+	const deadline = 700 * time.Millisecond // safety bound only; Run must return well before it
+	ctx, cancel := context.WithTimeout(t.Context(), deadline)
+	defer cancel()
 
-	mocks.backupHandler.EXPECT().
-		GetStats().
-		Return(backupStats)
+	started := time.Now()
+	op, err := runner.Run(ctx, routine, model.BackupRunSpec{Type: model.BackupTypeFull}, slog.Default())
 
-	mocks.backendService.EXPECT().
-		WriteBackupMetadata(gomock.Any(), routine, backupFolder, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ *model.BackupRoutine, _ string, metadata model.BackupMetadata) error {
-			// Check that metadata contains expected data
-			assert.Equal(t, testNamespace, metadata.Namespace)
-			assert.Equal(t, now, metadata.Created)
-			assert.Equal(t, time.Time{}, metadata.From) // full backup
-			assert.Equal(t, uint64(50), metadata.RecordCount)
-			return nil
-		})
-
-	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
-
-	require.NotNil(t, handler)
-	err := handler.Wait(t.Context())
-	require.NoError(t, err)
+	require.ErrorIs(t, err, startErr)
+	assert.Nil(t, op)
+	assert.Less(t, time.Since(started), deadline/2, "Run must fail fast instead of waiting for the context")
 }
 
-func TestSuccessfulIncrementalBackup(t *testing.T) {
-	now := time.UnixMilli(123456789000)
-	fromTime := time.UnixMilli(100000000000)
-	backupFolder := "test-routine/incremental/123456789000/data/test-ns"
+// The namespaces that did start have nobody left to wait for them once Run gives up, so they
+// are canceled rather than left writing into the abandoned run's folder.
+func TestRoutineBackupRunner_Run_CancelsStartedNamespacesOnFailure(t *testing.T) {
+	t.Parallel()
 
-	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
+	ctrl := gomock.NewController(t)
+	nsRunner := NewMockNamespaceBackupRunner(ctrl)
+	resolver := aerospike.NewMockNamespaceResolver(ctrl)
+	resolver.EXPECT().
+		ResolveNamespaces(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]string{"ns1", "ns2"}, nil)
 
-	routine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
-	timeBounds := model.TimeBounds{
-		FromTime: &fromTime,
-	}
-	backupStats := models.NewBackupStats()
-	backupStats.TotalRecords.Store(50)
-	backupStats.ReadRecords.Add(25)
+	running := NewMockCancelableBackupHandler(ctrl)
+	running.EXPECT().Cancel().Times(1)
 
-	mocks.backupExecutor.EXPECT().
-		Run(gomock.Any(), routine, timeBounds, testNamespace, backupFolder, gomock.Any(), gomock.Any()).
-		Return(mocks.backupHandler, nil)
+	nsRunner.EXPECT().
+		Run(gomock.Any(), forNamespace("ns1"), gomock.Any(), gomock.Any()).
+		Return(running, nil)
+	nsRunner.EXPECT().
+		Run(gomock.Any(), forNamespace("ns2"), gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("cluster unreachable"))
 
-	mocks.backupHandler.EXPECT().
-		Wait(gomock.Any()).
-		Return(nil)
+	runner := NewRoutineBackupRunner(nsRunner, resolver)
+	routine := &model.BackupRoutine{Name: "daily", BackupPolicy: &model.BackupPolicy{}}
 
-	mocks.backupHandler.EXPECT().
-		GetStats().
-		Return(backupStats)
-
-	mocks.backendService.EXPECT().
-		WriteBackupMetadata(gomock.Any(), routine, backupFolder, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ *model.BackupRoutine, _ string, metadata model.BackupMetadata) error {
-			// Check that metadata contains expected data
-			assert.Equal(t, testNamespace, metadata.Namespace)
-			assert.Equal(t, now, metadata.Created)
-			assert.Equal(t, fromTime, metadata.From)
-			assert.Equal(t, uint64(25), metadata.RecordCount)
-			return nil
-		})
-
-	spec := model.BackupRunSpec{Type: model.BackupTypeIncremental, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
-
-	require.NotNil(t, handler)
-	err := handler.Wait(t.Context())
-	require.NoError(t, err)
+	op, err := runner.Run(t.Context(), routine, model.BackupRunSpec{Type: model.BackupTypeFull}, slog.Default())
+	require.Error(t, err)
+	assert.Nil(t, op)
 }
 
-func TestEmptyIncrementalBackup(t *testing.T) {
-	now := time.UnixMilli(123456789000)
-	fromTime := time.UnixMilli(100000000000)
-	backupFolder := "test-routine/incremental/123456789000/data/test-ns"
+// The same through the real handler: a backup executor that always fails to start leaves the
+// statistics nil for good, and Run reports the executor's error rather than blocking.
+func TestRoutineBackupRunner_Run_ReturnsStartErrorFromExecutor(t *testing.T) {
+	t.Parallel()
 
-	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
+	ctrl := gomock.NewController(t)
+	executor := backupexecutor.NewMockBackup(ctrl)
+	writer := NewMockBackupWriter(ctrl)
+	resolver := aerospike.NewMockNamespaceResolver(ctrl)
+	resolver.EXPECT().ResolveNamespaces(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]string{"ns1"}, nil)
 
-	routine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
-	timeBounds := model.TimeBounds{
-		FromTime: &fromTime,
-	}
+	startErr := errors.New("cluster unreachable")
+	executor.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any(), "ns1", gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, startErr)
+	writer.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-	backupStats := models.NewBackupStats() // empty backup stats
-
-	mocks.backupExecutor.EXPECT().
-		Run(gomock.Any(), routine, timeBounds, testNamespace, backupFolder, gomock.Any(), gomock.Any()).
-		Return(mocks.backupHandler, nil)
-
-	mocks.backupHandler.EXPECT().
-		Wait(gomock.Any()).
-		Return(nil)
-
-	mocks.backupHandler.EXPECT().
-		GetStats().
-		Return(backupStats)
-
-	// No WriteBackupMetadata call expected for empty incremental backup.
-
-	spec := model.BackupRunSpec{Type: model.BackupTypeIncremental, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
-
-	require.NotNil(t, handler)
-	err := handler.Wait(t.Context())
-	require.NoError(t, err)
-}
-
-func TestBackupExecutorError(t *testing.T) {
-	now := time.UnixMilli(123456789000)
-	backupFolder := "test-routine/backup/123456789000/data/test-ns"
-
-	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
+	nsRunner := NewNamespaceBackupRunner(executor, writer, NewPathService(nil))
+	runner := NewRoutineBackupRunner(nsRunner, resolver)
 	routine := &model.BackupRoutine{
-		Name:          routineName,
+		Name:          "daily",
 		SourceCluster: &model.AerospikeCluster{},
 		BackupPolicy: &model.BackupPolicy{
-			RetryPolicy: &model.RetryPolicy{
-				MaxRetries: optional.Of(0),
-			},
+			RetryPolicy: &model.RetryPolicy{MaxRetries: optional.Of(0)},
 		},
 	}
-	timeBounds := model.TimeBounds{}
 
-	mocks.backupExecutor.EXPECT().
-		Run(gomock.Any(), routine, timeBounds, testNamespace, backupFolder, gomock.Any(), gomock.Any()).
-		Return(nil, errors.New("nsRunner error"))
+	const deadline = 700 * time.Millisecond // safety bound only; Run must return well before it
+	ctx, cancel := context.WithTimeout(t.Context(), deadline)
+	defer cancel()
 
-	// backup fails to start => nothing is written via backendService
-	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	started := time.Now()
+	op, err := runner.Run(ctx, routine, model.BackupRunSpec{Type: model.BackupTypeFull}, slog.Default())
 
-	require.NotNil(t, handler)
-	err := handler.Wait(t.Context())
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to start backup")
+	require.ErrorIs(t, err, startErr)
+	assert.Nil(t, op)
+	assert.Less(t, time.Since(started), deadline/2, "Run must fail fast instead of waiting for the context")
 }
 
-func TestBackupHandlerError(t *testing.T) {
-	now := time.UnixMilli(123456789000)
-	backupFolder := "test-routine/backup/123456789000/data/test-ns"
-	timestampPath := "test-routine/backup/123456789000"
+// A run that has not started yet and never will is bounded by the caller's context.
+func TestRoutineBackupRunner_Run_StartWaitHonorsContext(t *testing.T) {
+	t.Parallel()
 
-	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
+	ctrl := gomock.NewController(t)
+	executor := backupexecutor.NewMockBackup(ctrl)
+	writer := NewMockBackupWriter(ctrl)
+	resolver := aerospike.NewMockNamespaceResolver(ctrl)
+	resolver.EXPECT().ResolveNamespaces(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]string{"ns1"}, nil)
 
-	routine := &model.BackupRoutine{
-		Name:          routineName,
-		SourceCluster: &model.AerospikeCluster{},
-		BackupPolicy: &model.BackupPolicy{
-			RetryPolicy: &model.RetryPolicy{
-				MaxRetries: optional.Of(0),
-			},
-		},
-	}
-	timeBounds := model.TimeBounds{}
-
-	mocks.backupExecutor.EXPECT().
-		Run(gomock.Any(), routine, timeBounds, testNamespace, backupFolder, gomock.Any(), gomock.Any()).
-		Return(mocks.backupHandler, nil)
-
-	mocks.backupHandler.EXPECT().
-		Wait(gomock.Any()).
-		Return(errors.New("handler error"))
-
-	mocks.backendService.EXPECT(). // Important: delete all backup files, including configuration
-					Delete(gomock.Any(), routine, timestampPath).
-					Return(nil)
-
-	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
-
-	require.NotNil(t, handler)
-	err := handler.Wait(t.Context())
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "backup failed")
-}
-
-func TestMetadataWriteError(t *testing.T) {
-	now := time.UnixMilli(123456789000)
-	backupFolder := "test-routine/backup/123456789000/data/test-ns"
-	timestampPath := "test-routine/backup/123456789000"
-
-	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
-	routine := &model.BackupRoutine{
-		Name:          routineName,
-		SourceCluster: &model.AerospikeCluster{},
-		BackupPolicy: &model.BackupPolicy{
-			RetryPolicy: &model.RetryPolicy{
-				MaxRetries: optional.Of(0),
-			},
-		},
-	}
-	timeBounds := model.TimeBounds{}
-	backupStats := models.NewBackupStats()
-	backupStats.TotalRecords.Store(100)
-
-	metadataError := errors.New("metadata write error")
-	mocks.backupExecutor.EXPECT().
-		Run(gomock.Any(), routine, timeBounds, testNamespace, backupFolder, gomock.Any(), gomock.Any()).
-		Return(mocks.backupHandler, nil)
-
-	mocks.backupHandler.EXPECT().
-		Wait(gomock.Any()).
-		Return(nil)
-
-	mocks.backupHandler.EXPECT().
-		GetStats().
-		Return(backupStats)
-
-	mocks.backendService.EXPECT(). // backup succeeded, but failed to write metadata => delete all
-					WriteBackupMetadata(gomock.Any(), routine, backupFolder, gomock.Any()).
-					Return(metadataError)
-
-	mocks.backendService.EXPECT().
-		Delete(gomock.Any(), routine, timestampPath).
-		Return(nil)
-
-	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
-
-	require.NotNil(t, handler)
-	err := handler.Wait(t.Context())
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to write backup metadata")
-}
-
-func TestRetryableBackupHandler_Cancel(t *testing.T) {
-	now := time.UnixMilli(123456789000)
-	backupFolder := "test-routine/backup/123456789000/data/test-ns"
-	timestampPath := "test-routine/backup/123456789000"
-
-	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
-	routine := &model.BackupRoutine{Name: routineName, SourceCluster: &model.AerospikeCluster{}}
-	timeBounds := model.TimeBounds{}
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	// Set up minimal expectations to create a handler
-	mocks.backupExecutor.EXPECT().
-		Run(gomock.Any(), routine, timeBounds, testNamespace, backupFolder, gomock.Any(), gomock.Any()).
-		Return(mocks.backupHandler, nil)
-
-	mocks.backupHandler.EXPECT().
-		Wait(gomock.Any()).
-		DoAndReturn(func(ctx context.Context) error {
-			// Signal that Wait was called
-			wg.Done()
-			// This will hang until context is canceled
-			<-ctx.Done()
-			return ctx.Err()
-		})
-
-	mocks.backendService.EXPECT(). // backup canceled => delete all
-					Delete(gomock.Any(), routine, timestampPath).
-					Return(nil)
-
-	handler := runner.Run(
-		t.Context(),
-		routine,
-		testNamespace,
-		model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: now, TimeBounds: timeBounds},
-		nil,
-		slog.Default(),
-	)
-
-	// Wait for the handler.Wait to be called
-	wg.Wait()
-
-	// Cancel the handler
-	handler.Cancel()
-
-	// Assert - the Wait method should eventually return with context.Canceled
-	err := handler.Wait(t.Context())
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "context canceled")
-}
-
-func TestRun_RetryRecalculatesPath(t *testing.T) {
-	startTime1 := time.UnixMilli(123456789000)
-	backupFolder1 := "test-routine/backup/123456789000/data/test-ns"
-	timestampPath1 := "test-routine/backup/123456789000"
-
-	mocks, runner := initMocks(t)
-	defer mocks.ctrl.Finish()
-
-	routine := &model.BackupRoutine{
-		Name:          routineName,
-		SourceCluster: &model.AerospikeCluster{},
-		BackupPolicy: &model.BackupPolicy{
-			RetryPolicy: &model.RetryPolicy{
-				MaxRetries:  optional.Of(1),
-				BaseTimeout: optional.Of(time.Millisecond),
-			},
-		},
-	}
-	timeBounds := model.TimeBounds{}
-
-	// First attempt fails
-	mocks.backupExecutor.EXPECT().
-		Run(gomock.Any(), routine, timeBounds, testNamespace, backupFolder1, gomock.Any(), gomock.Any()).
-		Return(mocks.backupHandler, nil)
-
-	mocks.backupHandler.EXPECT().
-		Wait(gomock.Any()).
-		Return(errors.New("handler error"))
-
-	mocks.backendService.EXPECT().
-		Delete(gomock.Any(), routine, timestampPath1).
-		Return(nil)
-
-	// Second attempt succeeds with new folder
-	// We use DoAndReturn to capture the startTime updated in OnRetry
-	mocks.backupExecutor.EXPECT().
-		Run(gomock.Any(), routine, timeBounds, testNamespace, gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(
-			_ context.Context,
-			_ *model.BackupRoutine,
-			_ model.TimeBounds,
-			_ string,
-			backupFolder string,
-			_ *semaphore.Weighted,
-			_ *slog.Logger,
+	executor.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any(), "ns1", gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, _ *model.BackupRoutine, _ model.TimeBounds,
+			_, _ string, _ syncutil.Limiter, _ *slog.Logger,
 		) (backupexecutor.BackupHandler, error) {
-			assert.NotEqual(t, backupFolder1, backupFolder)
-			assert.Contains(t, backupFolder, "test-routine/backup/")
-			return mocks.backupHandler, nil
-		})
+			<-ctx.Done()
 
-	mocks.backupHandler.EXPECT().
-		Wait(gomock.Any()).
-		Return(nil)
+			return nil, ctx.Err()
+		}).AnyTimes()
+	writer.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
-	backupStats := models.NewBackupStats()
-	mocks.backupHandler.EXPECT().
-		GetStats().
-		Return(backupStats)
+	nsRunner := NewNamespaceBackupRunner(executor, writer, NewPathService(nil))
+	runner := NewRoutineBackupRunner(nsRunner, resolver)
+	routine := &model.BackupRoutine{
+		Name:          "daily",
+		SourceCluster: &model.AerospikeCluster{},
+		BackupPolicy: &model.BackupPolicy{
+			RetryPolicy: &model.RetryPolicy{MaxRetries: optional.Of(0)},
+		},
+	}
 
-	mocks.backendService.EXPECT().
-		WriteBackupMetadata(gomock.Any(), routine, gomock.Any(), gomock.Any()).
-		Return(nil)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Millisecond)
+	defer cancel()
 
-	spec := model.BackupRunSpec{Type: model.BackupTypeFull, StartTime: startTime1, TimeBounds: timeBounds}
-	handler := runner.Run(t.Context(), routine, testNamespace, spec, nil, slog.Default())
+	op, err := runner.Run(ctx, routine, model.BackupRunSpec{Type: model.BackupTypeFull}, slog.Default())
+	require.Error(t, err)
+	assert.Nil(t, op)
+}
 
-	require.NotNil(t, handler)
-	err := handler.Wait(t.Context())
-	require.NoError(t, err)
+// forNamespace matches the namespace run of the given namespace.
+func forNamespace(namespace string) gomock.Matcher {
+	return gomock.Cond(func(run model.NamespaceRun) bool { return run.Namespace == namespace })
 }

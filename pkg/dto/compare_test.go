@@ -19,23 +19,23 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 		{
 			name: "identical configs",
 			current: ServiceConfig{
-				HTTPServer: &HTTPServerConfig{
-					Address: ptr.Of("localhost"),
-					Port:    ptr.Of(Port(8080)),
+				ServerHTTP: &ServerConfigHTTP{
+					ListenerConfig: ListenerConfig{Address: "localhost"},
+					Port:           ptr.Of(Port(8080)),
 				},
 				Logger: &LoggerConfig{
-					Level:  ptr.Of("INFO"),
-					Format: ptr.Of("JSON"),
+					Level:  "INFO",
+					Format: "JSON",
 				},
 			},
 			other: ServiceConfig{
-				HTTPServer: &HTTPServerConfig{
-					Address: ptr.Of("localhost"),
-					Port:    ptr.Of(Port(8080)),
+				ServerHTTP: &ServerConfigHTTP{
+					ListenerConfig: ListenerConfig{Address: "localhost"},
+					Port:           ptr.Of(Port(8080)),
 				},
 				Logger: &LoggerConfig{
-					Level:  ptr.Of("INFO"),
-					Format: ptr.Of("JSON"),
+					Level:  "INFO",
+					Format: "JSON",
 				},
 			},
 			errors: nil,
@@ -43,15 +43,15 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 		{
 			name: "changed http server config",
 			current: ServiceConfig{
-				HTTPServer: &HTTPServerConfig{
-					Address: ptr.Of("localhost"),
-					Port:    ptr.Of(Port(8080)),
+				ServerHTTP: &ServerConfigHTTP{
+					ListenerConfig: ListenerConfig{Address: "localhost"},
+					Port:           ptr.Of(Port(8080)),
 				},
 			},
 			other: ServiceConfig{
-				HTTPServer: &HTTPServerConfig{
-					Address: ptr.Of("0.0.0.0"),
-					Port:    ptr.Of(Port(9090)),
+				ServerHTTP: &ServerConfigHTTP{
+					ListenerConfig: ListenerConfig{Address: "0.0.0.0"},
+					Port:           ptr.Of(Port(9090)),
 				},
 			},
 			errors: []string{
@@ -60,18 +60,36 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			},
 		},
 		{
+			name: "changed HTTPS server config",
+			current: ServiceConfig{
+				ServerHTTPS: &ServerConfigHTTPS{
+					ListenerConfig: ListenerConfig{Disabled: true},
+					CertFile:       "server.pem",
+				},
+			},
+			other: ServiceConfig{
+				ServerHTTPS: &ServerConfigHTTPS{
+					ListenerConfig: ListenerConfig{Disabled: true},
+					CertFile:       "new-server.pem",
+				},
+			},
+			errors: []string{
+				"CertFile changed: server.pem -> new-server.pem",
+			},
+		},
+		{
 			name: "changed logger config",
 			current: ServiceConfig{
 				Logger: &LoggerConfig{
-					Level:        ptr.Of("INFO"),
-					Format:       ptr.Of("JSON"),
+					Level:        "INFO",
+					Format:       "JSON",
 					StdoutWriter: ptr.Of(true),
 				},
 			},
 			other: ServiceConfig{
 				Logger: &LoggerConfig{
-					Level:        ptr.Of("DEBUG"),
-					Format:       ptr.Of("PLAIN"),
+					Level:        "DEBUG",
+					Format:       "PLAIN",
 					StdoutWriter: ptr.Of(false),
 				},
 			},
@@ -96,9 +114,7 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			errStr := err.Error()
 			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
-				if !strings.Contains(errStr, substr) {
-					t.Errorf("error message %q should contain %q", errStr, substr)
-				}
+				assert.Contains(t, errStr, substr)
 			}
 		})
 	}
@@ -168,9 +184,7 @@ func TestFileLoggerConfig_Compare(t *testing.T) {
 			errStr := err.Error()
 			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
-				if !strings.Contains(errStr, substr) {
-					t.Errorf("error message %q should contain %q", errStr, substr)
-				}
+				assert.Contains(t, errStr, substr)
 			}
 		})
 	}
@@ -230,56 +244,63 @@ func TestRateLimiterConfig_Compare(t *testing.T) {
 			errStr := err.Error()
 			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
-				if !strings.Contains(errStr, substr) {
-					t.Errorf("error message %q should contain %q", errStr, substr)
-				}
+				assert.Contains(t, errStr, substr)
 			}
 		})
 	}
 }
 
-func TestHTTPServerConfig_Compare(t *testing.T) {
+func testServerHTTPConfig() *ServerConfigHTTP {
+	return &ServerConfigHTTP{
+		ListenerConfig: ListenerConfig{
+			Address:      "localhost",
+			ContextPath:  "/api",
+			Timeout:      ptr.Of(int64(5000)),
+			ReadTimeout:  ptr.Of(int64(30000)),
+			WriteTimeout: ptr.Of(int64(60000)),
+			IdleTimeout:  ptr.Of(int64(120000)),
+		},
+		Port: ptr.Of(Port(8080)),
+	}
+}
+
+func TestServerHTTPConfig_Compare(t *testing.T) {
 	tests := []struct {
 		name    string
-		current *HTTPServerConfig
-		other   *HTTPServerConfig
+		current *ServerConfigHTTP
+		other   *ServerConfigHTTP
 		errors  []string
 	}{
 		{
-			name: "identical configs",
-			current: &HTTPServerConfig{
-				Address:     ptr.Of("localhost"),
-				Port:        ptr.Of(Port(8080)),
-				ContextPath: ptr.Of("/api"),
-				Timeout:     ptr.Of(int64(5000)),
-			},
-			other: &HTTPServerConfig{
-				Address:     ptr.Of("localhost"),
-				Port:        ptr.Of(Port(8080)),
-				ContextPath: ptr.Of("/api"),
-				Timeout:     ptr.Of(int64(5000)),
-			},
-			errors: nil,
+			name:    "identical configs",
+			current: testServerHTTPConfig(),
+			other:   testServerHTTPConfig(),
+			errors:  nil,
 		},
 		{
-			name: "all fields changed",
-			current: &HTTPServerConfig{
-				Address:     ptr.Of("localhost"),
-				Port:        ptr.Of(Port(8080)),
-				ContextPath: ptr.Of("/api"),
-				Timeout:     ptr.Of(int64(5000)),
-			},
-			other: &HTTPServerConfig{
-				Address:     ptr.Of("0.0.0.0"),
-				Port:        ptr.Of(Port(9090)),
-				ContextPath: ptr.Of("/v1/api"),
-				Timeout:     ptr.Of(int64(10000)),
+			name:    "all fields changed",
+			current: testServerHTTPConfig(),
+			other: &ServerConfigHTTP{
+				ListenerConfig: ListenerConfig{
+					Disabled:     true,
+					Address:      "0.0.0.0",
+					ContextPath:  "/v1/api",
+					Timeout:      ptr.Of(int64(10000)),
+					ReadTimeout:  ptr.Of(int64(45000)),
+					WriteTimeout: ptr.Of(int64(90000)),
+					IdleTimeout:  ptr.Of(int64(180000)),
+				},
+				Port: ptr.Of(Port(9090)),
 			},
 			errors: []string{
+				"Disabled changed: false -> true",
 				"Address changed: localhost -> 0.0.0.0",
 				"Port changed: 8080 -> 9090",
 				"ContextPath changed: /api -> /v1/api",
 				"Timeout changed: 5000 -> 10000",
+				"ReadTimeout changed: 30000 -> 45000",
+				"WriteTimeout changed: 60000 -> 90000",
+				"IdleTimeout changed: 120000 -> 180000",
 			},
 		},
 	}
@@ -297,9 +318,7 @@ func TestHTTPServerConfig_Compare(t *testing.T) {
 			errStr := err.Error()
 			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
-				if !strings.Contains(errStr, substr) {
-					t.Errorf("error message %q should contain %q", errStr, substr)
-				}
+				assert.Contains(t, errStr, substr)
 			}
 		})
 	}
@@ -315,8 +334,8 @@ func TestLoggerConfig_Compare(t *testing.T) {
 		{
 			name: "identical configs",
 			current: &LoggerConfig{
-				Level:        ptr.Of("INFO"),
-				Format:       ptr.Of("JSON"),
+				Level:        "INFO",
+				Format:       "JSON",
 				StdoutWriter: ptr.Of(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
@@ -324,8 +343,8 @@ func TestLoggerConfig_Compare(t *testing.T) {
 				},
 			},
 			other: &LoggerConfig{
-				Level:        ptr.Of("INFO"),
-				Format:       ptr.Of("JSON"),
+				Level:        "INFO",
+				Format:       "JSON",
 				StdoutWriter: ptr.Of(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
@@ -337,16 +356,16 @@ func TestLoggerConfig_Compare(t *testing.T) {
 		{
 			name: "all fields changed",
 			current: &LoggerConfig{
-				Level:        ptr.Of("INFO"),
-				Format:       ptr.Of("JSON"),
+				Level:        "INFO",
+				Format:       "JSON",
 				StdoutWriter: ptr.Of(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
 				},
 			},
 			other: &LoggerConfig{
-				Level:        ptr.Of("DEBUG"),
-				Format:       ptr.Of("PLAIN"),
+				Level:        "DEBUG",
+				Format:       "PLAIN",
 				StdoutWriter: ptr.Of(false),
 				FileWriter: &FileLoggerConfig{
 					Filename: "new.log",
@@ -383,9 +402,7 @@ func TestLoggerConfig_Compare(t *testing.T) {
 			errStr := err.Error()
 			assert.Len(t, strings.Split(errStr, "\n"), len(tt.errors))
 			for _, substr := range tt.errors {
-				if !strings.Contains(errStr, substr) {
-					t.Errorf("error message %q should contain %q", errStr, substr)
-				}
+				assert.Contains(t, errStr, substr)
 			}
 		})
 	}

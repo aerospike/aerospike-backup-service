@@ -2,6 +2,8 @@ package decoder
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestLevenshteinDistance(t *testing.T) {
@@ -22,8 +24,6 @@ func TestLevenshteinDistance(t *testing.T) {
 
 	for _, test := range tests {
 		got := levenshteinDistance(test.s1, test.s2)
-		if got != test.expected {
-			t.Errorf("distance(%q, %q) = %d; want %d", test.s1, test.s2, got, test.expected)
-		}
+		require.Equal(t, test.expected, got, "distance(%q, %q)", test.s1, test.s2)
 	}
 }

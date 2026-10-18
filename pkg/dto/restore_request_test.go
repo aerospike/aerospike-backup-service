@@ -1,11 +1,13 @@
 package dto
 
 import (
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,7 +48,7 @@ func TestDestinationClusterConfig_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.config.Validate()
+			err := tt.config.Validate(ValidationDefault)
 			if tt.err != nil {
 				require.Error(t, err)
 				require.ErrorIs(t, err, tt.err)
@@ -102,7 +104,7 @@ func TestStorageConfig_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.storageConfig.Validate()
+			err := tt.storageConfig.Validate(ValidationDefault)
 			if tt.err != nil {
 				require.Error(t, err)
 				require.ErrorIs(t, err, tt.err)
@@ -135,11 +137,11 @@ func TestDestinationClusterConfig_ToModel(t *testing.T) {
 			name: "convert from cluster config",
 			dstCluster: DestinationClusterConfig{
 				Cluster: &AerospikeCluster{
-					ClusterLabel: ptr.Of("new cluster"),
+					ClusterLabel: "new cluster",
 				},
 			},
 			want: &model.AerospikeCluster{
-				ClusterLabel: ptr.Of("new cluster"),
+				ClusterLabel: "new cluster",
 			},
 		},
 		{
@@ -240,6 +242,34 @@ func TestRestoreRequest_Validate(t *testing.T) {
 				},
 				Policy: validPolicy,
 			},
+		},
+		{
+			name: "non-local backup path",
+			request: RestoreRequest{
+				BackupDataPath: "../../outside",
+				DestinationClusterConfig: DestinationClusterConfig{
+					Cluster: validCluster,
+				},
+				StorageConfig: StorageConfig{
+					Storage: validStorage,
+				},
+				Policy: validPolicy,
+			},
+			err: errValidation,
+		},
+		{
+			name: "absolute backup path",
+			request: RestoreRequest{
+				BackupDataPath: "/outside",
+				DestinationClusterConfig: DestinationClusterConfig{
+					Cluster: validCluster,
+				},
+				StorageConfig: StorageConfig{
+					Storage: validStorage,
+				},
+				Policy: validPolicy,
+			},
+			err: errValidation,
 		},
 		{
 			name: "invalid secret agent override",
@@ -414,7 +444,7 @@ func TestRestoreTimestampRequest_Validate(t *testing.T) {
 func TestRestoreRequest_ToModel(t *testing.T) {
 	config := model.NewConfig()
 	cluster := &model.AerospikeCluster{
-		ClusterLabel: ptr.Of("new cluster"),
+		ClusterLabel: "new cluster",
 	}
 	storage := &model.LocalStorage{Path: "test-path"}
 	secretAgent := &model.SecretAgent{
@@ -516,11 +546,44 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 	}
 }
 
+func TestNewRestoreRequestFromReader(t *testing.T) {
+	t.Parallel()
+
+	jsonReq := `{"backup-data-path": "daily/backup/data"}`
+	req, err := NewFromReader[RestoreRequest](strings.NewReader(jsonReq), decoder.JSON)
+	require.NoError(t, err)
+	assert.Equal(t, "daily/backup/data", string(req.BackupDataPath))
+}
+
+func TestNewRestoreRequestFromReader_InvalidJSON(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewFromReader[RestoreRequest](strings.NewReader(`{"unknown-field": 1}`), decoder.JSON)
+	require.Error(t, err)
+}
+
+func TestNewRestoreTimestampRequestFromReader(t *testing.T) {
+	t.Parallel()
+
+	jsonReq := `{"time": 1739538000000, "routine": "daily"}`
+	req, err := NewFromReader[RestoreTimestampRequest](strings.NewReader(jsonReq), decoder.JSON)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1739538000000), req.Time)
+	assert.Equal(t, "daily", req.Routine)
+}
+
+func TestNewRestoreTimestampRequestFromReader_InvalidJSON(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewFromReader[RestoreTimestampRequest](strings.NewReader(`{"unknown-field": 1}`), decoder.JSON)
+	require.Error(t, err)
+}
+
 func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 	config := model.NewConfig()
 	cluster := &model.AerospikeCluster{}
 	_ = config.AddCluster("test-cluster", cluster)
-	routineCluster := &model.AerospikeCluster{ClusterLabel: ptr.Of("routine-cluster")}
+	routineCluster := &model.AerospikeCluster{ClusterLabel: "routine-cluster"}
 	routineStorage := &model.LocalStorage{Path: "routine-path"}
 	routine := &model.BackupRoutine{
 		Name:          "daily",

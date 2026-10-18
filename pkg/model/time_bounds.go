@@ -20,6 +20,11 @@ func NewTimeBounds(fromTime, toTime *time.Time) (TimeBounds, error) {
 	return TimeBounds{FromTime: fromTime, ToTime: toTime}, nil
 }
 
+// IsFullBackup reports whether the bounds represent a full backup (no incremental from-time).
+func (tb TimeBounds) IsFullBackup() bool {
+	return tb.FromTime == nil
+}
+
 // Contains verifies if the given value lies within FromTime (inclusive) and ToTime (inclusive).
 func (tb TimeBounds) Contains(value time.Time) bool {
 	if tb.FromTime != nil && value.Before(*tb.FromTime) {

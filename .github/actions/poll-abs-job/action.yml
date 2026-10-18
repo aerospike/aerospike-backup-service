@@ -1,0 +1,100 @@
+name: Poll aerospike-backup-service backup/restore job
+description: >
+  Polls the aerospike-backup-service REST API until a backup appears for a routine, or a
+  restore job reaches a terminal status. Callers are responsible for making base-url reachable
+  first (e.g. via `kubectl port-forward` when targeting an in-cluster Helm deployment).
+
+inputs:
+  base-url:
+    description: "Base URL of the running aerospike-backup-service, e.g. http://127.0.0.1:8080"
+    required: true
+  kind:
+    description: "'backup' or 'restore'"
+    required: true
+  routine:
+    description: Backup routine name (required when kind=backup)
+    required: false
+    default: ""
+  job-id:
+    description: Restore job id (required when kind=restore)
+    required: false
+    default: ""
+  max-attempts:
+    description: Maximum number of polling attempts
+    required: false
+    default: "40"
+  interval-seconds:
+    description: Seconds to wait between attempts
+    required: false
+    default: "5"
+
+outputs:
+  backup-data-path:
+    description: "The 'key' field of the first completed backup (kind=backup only)"
+    value: ${{ steps.poll.outputs.backup-data-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Poll for job completion
+      id: poll
+      shell: bash
+      run: |
+        set -uo pipefail
+        BASE_URL="${{ inputs.base-url }}"
+        KIND="${{ inputs.kind }}"
+        ROUTINE="${{ inputs.routine }}"
+        JOB_ID="${{ inputs.job-id }}"
+        MAX_ATTEMPTS="${{ inputs.max-attempts }}"
+        INTERVAL="${{ inputs.interval-seconds }}"
+
+        if [ "$KIND" = "backup" ]; then
+          if [ -z "$ROUTINE" ]; then
+            echo "::error::'routine' input is required when kind=backup"
+            exit 1
+          fi
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            RESPONSE="$(curl -s "${BASE_URL}/v1/backups/full/${ROUTINE}")"
+            COUNT="$(echo "$RESPONSE" | jq 'length' 2>/dev/null || echo 0)"
+            if [ "$COUNT" -gt 0 ] 2>/dev/null; then
+              KEY="$(echo "$RESPONSE" | jq -r '.[0].key')"
+              echo "Backup completed for routine ${ROUTINE} after attempt ${attempt}/${MAX_ATTEMPTS}: ${KEY}"
+              echo "backup-data-path=${KEY}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Attempt ${attempt}/${MAX_ATTEMPTS}: no completed backup for routine ${ROUTINE} yet."
+            sleep "$INTERVAL"
+          done
+          echo "::error::Backup for routine ${ROUTINE} did not complete within $((MAX_ATTEMPTS * INTERVAL))s"
+          exit 1
+
+        elif [ "$KIND" = "restore" ]; then
+          if [ -z "$JOB_ID" ]; then
+            echo "::error::'job-id' input is required when kind=restore"
+            exit 1
+          fi
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            RESPONSE="$(curl -s "${BASE_URL}/v1/restore/status/${JOB_ID}")"
+            STATUS="$(echo "$RESPONSE" | jq -r '.status // empty')"
+            case "$STATUS" in
+              success)
+                echo "Restore job ${JOB_ID} succeeded after attempt ${attempt}/${MAX_ATTEMPTS}."
+                exit 0
+                ;;
+              failure|canceled)
+                echo "::error::Restore job ${JOB_ID} ended with status '${STATUS}': $RESPONSE"
+                exit 1
+                ;;
+              *)
+                echo "Attempt ${attempt}/${MAX_ATTEMPTS}: restore job ${JOB_ID} status='${STATUS:-unknown}'."
+                sleep "$INTERVAL"
+                ;;
+            esac
+          done
+          echo "::error::Restore job ${JOB_ID} did not reach a terminal status within $((MAX_ATTEMPTS * INTERVAL))s"
+          exit 1
+
+        else
+          echo "::error::Unknown kind '${KIND}' (expected 'backup' or 'restore')"
+          exit 1
+        fi

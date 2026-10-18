@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -59,14 +61,10 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 	}
 
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -127,14 +125,10 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 	}
 
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -232,14 +226,10 @@ func (s *Service) scheduleBackup(
 	triggerBackup func(routine *model.BackupRoutine, delay time.Duration) error,
 ) {
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		http.Error(w, "routine name required", http.StatusBadRequest)
-		return
-	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -258,6 +248,10 @@ func (s *Service) scheduleBackup(
 	w.WriteHeader(http.StatusAccepted)
 }
 
+// maxDelayMillis is the largest delay that still fits in a time.Duration; anything above it
+// would overflow when converted and run the backup immediately.
+const maxDelayMillis = int(math.MaxInt64 / int64(time.Millisecond))
+
 func parseDelay(delayParameter string) (int, error) {
 	if delayParameter == "" {
 		return 0, nil
@@ -266,6 +260,9 @@ func parseDelay(delayParameter string) (int, error) {
 	delayMillis, err := strconv.Atoi(delayParameter)
 	if err != nil || delayMillis < 0 {
 		return 0, errInvalidQueryParam(errors.New("should be a positive integer"), "delay")
+	}
+	if delayMillis > maxDelayMillis {
+		return 0, errInvalidQueryParam(fmt.Errorf("should not exceed %d milliseconds", maxDelayMillis), "delay")
 	}
 
 	return delayMillis, nil
@@ -283,14 +280,10 @@ func parseDelay(delayParameter string) (int, error) {
 // @Failure  400 {string} string
 func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
-	routine, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
+	routine, err := s.config.Routine(routineName)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 
@@ -308,13 +301,9 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 // @Failure  404 {string} string "The specified routine was not found"
 func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
-	if routineName == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
-	if _, found := s.config.Routine(routineName); !found {
-		httpError(w, errRoutineNotFound(routineName))
+	if _, err := s.config.Routine(routineName); err != nil {
+		httpError(w, err)
 		return
 	}
 

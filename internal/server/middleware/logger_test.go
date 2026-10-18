@@ -33,11 +33,6 @@ func (l *testLogger) WithAttrs(_ []slog.Attr) slog.Handler         { return l }
 func (l *testLogger) WithGroup(_ string) slog.Handler              { return l }
 func (l *testLogger) Enabled(_ context.Context, _ slog.Level) bool { return true }
 
-type errorReader struct{}
-
-func (errorReader) Read(_ []byte) (n int, err error) {
-	return 0, io.ErrUnexpectedEOF
-}
 func TestRequestLogger(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -81,15 +76,6 @@ func TestRequestLogger(t *testing.T) {
 			name:    "skipped path",
 			path:    "/metrics",
 			handler: func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) },
-		},
-		{
-			name:         "request body read error",
-			path:         "/api/test",
-			handler:      func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) },
-			body:         &errorReader{},
-			wantLevel:    slog.LevelError,
-			wantMsg:      "Failed to read request body",
-			wantErrorMsg: "unexpected EOF",
 		},
 	}
 

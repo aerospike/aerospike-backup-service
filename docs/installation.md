@@ -16,6 +16,8 @@ Run as a binary using a configuration file:
 
 Help:
 
+<!-- tag CLIHelp -->
+
 ```console
 ./aerospike-backup-service -h
 Aerospike Backup Service
@@ -29,6 +31,7 @@ Flags:
   -r, --remote          use remote config file
   -v, --version         version for aerospike-backup-service
 ```
+<!-- /tag -->
 
 Set the configuration file path with `-c`.
 
@@ -37,15 +40,15 @@ With the `-r` flag, the file specified after `-c` contains the path or URL to th
 
 For example, you may store your configurations remotely, such as on AWS S3 storage.
 In this case, you could have a `remote_config.yaml` file containing S3 details:
-<!-- RemoteConfig -->
+<!-- tag RemoteConfig -->
 
 ```yaml
 s3-storage:
   bucket: as-backup-bucket
   path: config.yml
   s3-region: eu-central-1
-
 ```
+<!-- /tag -->
 
 Run the server
 
@@ -79,11 +82,28 @@ View service logs:
 sudo journalctl -u aerospike-backup-service -n 100 --no-page -f
 ```
 
+The packaged service runs as the unprivileged system account `aerospike-backup-service`, which the package
+creates, under a systemd sandbox. Three consequences are worth knowing before you configure it:
+
+| | |
+| --- | --- |
+| Writable paths | `/etc/aerospike-backup-service`, `/var/lib/aerospike-backup-service` and `/var/log/aerospike-backup-service` only. A `local-storage` path anywhere else needs `ReadWritePaths` in a drop-in. |
+| Credentials | `/root` and `/home` are hidden. Put cloud credentials under `/var/lib/aerospike-backup-service`, or in `/etc/default/aerospike-backup-service` (deb) / `/etc/sysconfig/aerospike-backup-service` (rpm). |
+| File modes | Local backups are created `0600`/`0700` owned by the service account, whatever the umask. The configuration file is `0600`. |
+
+Customise the unit with `sudo systemctl edit aerospike-backup-service` — the unit itself is vendor-owned in
+`/usr/lib/systemd/system` and is replaced on upgrade. A worked drop-in ships at
+`/usr/share/doc/aerospike-backup-service/local-storage-path.conf.example`.
+
+Upgrading an installation that predates the service account? See the
+[Migration Guide](migration.md#v36---v37) — local-storage paths, credential locations, TLS file modes and
+privileged ports each need a look, and each fails at runtime rather than at startup.
+
 ## Build from source
 
 ### Prerequisites
 
-- Go 1.25
+- Go <!-- tag GoVersion -->1.25.13<!-- /tag -->
 
 ### Build the service
 
@@ -117,16 +137,3 @@ Run `make packages`.
 This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`linux/arm64`) with respective `sha256`
 checksum file in the `build/target` directory.
 See the quick [guide](../build/package/README.md) on how to get started with the Linux packages.
-
-### Release
-
-Use the following commands before a release to update the version.
-
-```bash
-NEXT_VERSION="<version>"  make release
-NEXT_HELM_CHART_VERSION="<helm-chart-version>" make helm-chart-release
-git add --all
-git commit -m "Release: "$(cat VERSION)""
-git tag "$(cat VERSION)"
-git push 
-```

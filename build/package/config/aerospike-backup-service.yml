@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.6.1/docs/config.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.7.0/docs/config.schema.json
 ---
 aerospike-clusters:
   abs-cluster: # <--- Custom cluster name
@@ -14,7 +14,7 @@ secret-agents:
   secret-agent: # <--- Custom secret agent name
     address: localhost
     port: 5000
-    connection-type: tcp
+    connection-type: TCP
 
 storage:
   s3: # <--- Custom storage name
@@ -50,4 +50,4 @@ service:
   logger:
     level: INFO
     file-writer:
-      filename: /var/log/aerospike-backup-service.log
+      filename: /var/log/aerospike-backup-service/aerospike-backup-service.log

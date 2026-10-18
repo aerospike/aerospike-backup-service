@@ -10,41 +10,38 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike/cluster"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
-type storageDataWriter interface {
-	// WriteDataFile writes a data file to the specified storage.
-	WriteDataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
-}
-
-// ClusterConfigWriter handles writing cluster configuration to storage.
+// ClusterConfigWriter saves the configuration of a routine's source cluster: one file per node,
+// at the path [PathService] returns for that routine and timestamp.
 type ClusterConfigWriter interface {
 	// Write writes the cluster configuration for the given routine and timestamp.
 	Write(ctx context.Context, routine *model.BackupRoutine, timestamp time.Time) error
 }
 
-// DefaultClusterConfigWriter is the default implementation of ClusterConfigWriter.
-type DefaultClusterConfigWriter struct {
-	clientManager aerospike.ClientManager
-	pathService   PathService
-	operations    storageDataWriter
+type clusterConfigWriter struct {
+	pathService  PathService
+	operations   storage.Operations
+	configSource aerospike.ClusterConfigSource
 }
 
-// NewClusterConfigWriter returns a new DefaultClusterConfigWriter instance.
+var _ ClusterConfigWriter = (*clusterConfigWriter)(nil)
+
+// NewClusterConfigWriter returns a ClusterConfigWriter.
 func NewClusterConfigWriter(
-	clientManager aerospike.ClientManager,
 	pathService PathService,
-	operations storageDataWriter,
-) *DefaultClusterConfigWriter {
-	return &DefaultClusterConfigWriter{
-		clientManager: clientManager,
-		pathService:   pathService,
-		operations:    operations,
+	operations storage.Operations,
+	configSource aerospike.ClusterConfigSource,
+) ClusterConfigWriter {
+	return &clusterConfigWriter{
+		pathService:  pathService,
+		operations:   operations,
+		configSource: configSource,
 	}
 }
 
-func (w *DefaultClusterConfigWriter) Write(
+func (w *clusterConfigWriter) Write(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	timestamp time.Time,
@@ -52,16 +49,9 @@ func (w *DefaultClusterConfigWriter) Write(
 	logger := slog.Default().With(attr.Routine(routine.Name))
 	logger.Info("writing cluster config", slog.Time("timestamp", timestamp))
 
-	client, err := w.clientManager.GetClient(ctx, routine.SourceCluster, nil, logger)
+	infos, err := w.configSource.NodeConfigs(ctx, routine.SourceCluster, logger)
 	if err != nil {
-		return fmt.Errorf("failed to get backup client: %w", err)
-	}
-
-	defer w.clientManager.Close(client)
-
-	infos := cluster.ReadConfiguration(client.AerospikeClient(), logger)
-	if len(infos) == 0 {
-		return errors.New("failed to read Aerospike configuration")
+		return err
 	}
 
 	var errs error

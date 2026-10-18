@@ -20,7 +20,7 @@ func TestGcpStorage_ConnectivitySuccess(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ctx := t.Context()
-	accessor := NewGcpStorageAccessor(ctx, secrets.NewResolver(ctx))
+	accessor := NewGcpStorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getGcpClient(ctx, &model.GcpStorage{
 		BucketName: "test-bucket",
@@ -36,7 +36,38 @@ func TestGcpStorage_ConnectivityReadOnly(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ctx := t.Context()
-	accessor := NewGcpStorageAccessor(ctx, secrets.NewResolver(ctx))
+	accessor := NewGcpStorageAccessor(secrets.NewResolver())
+
+	_, err := accessor.getGcpClient(ctx, &model.GcpStorage{
+		BucketName: "test-bucket",
+		Endpoint:   ts.URL,
+	})
+	require.NoError(t, err)
+}
+
+// TestGcpStorage_ConnectivitySucceedsWhenIAMUnimplemented guards checkGcpConnectivity's
+// isNotImplemented path: a GCS-compatible server that has no testIamPermissions handler at
+// all (like fake-gcs-server) 404s that specific call, but that must not fail connectivity -
+// only a warning, since a 404 here means "unsupported", not "access denied".
+func TestGcpStorage_ConnectivitySucceedsWhenIAMUnimplemented(t *testing.T) {
+	t.Parallel()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/b/test-bucket":
+			handleGetBucket(w)
+		case isTestPermissions(r):
+			w.WriteHeader(http.StatusNotFound)
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/b/test-bucket/o"):
+			handleListObjects(w, false)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	t.Cleanup(ts.Close)
+
+	ctx := t.Context()
+	accessor := NewGcpStorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getGcpClient(ctx, &model.GcpStorage{
 		BucketName: "test-bucket",
@@ -53,8 +84,8 @@ func TestGcpStorage_ConnectivityFailure(t *testing.T) {
 	}))
 	t.Cleanup(ts.Close)
 
-	ctx := t.Context()
-	accessor := NewGcpStorageAccessor(ctx, secrets.NewResolver(ctx))
+	ctx := connectivityFailureContext(t)
+	accessor := NewGcpStorageAccessor(secrets.NewResolver())
 
 	_, err := accessor.getGcpClient(ctx, &model.GcpStorage{
 		BucketName: "test-bucket",

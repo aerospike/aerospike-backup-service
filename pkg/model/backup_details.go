@@ -1,17 +1,13 @@
 package model
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/backup-go/models"
-	"gopkg.in/yaml.v3"
-)
-
-const (
-	CompressNone = "NONE"
-	EncryptNone  = "NONE"
 )
 
 // BackupDetails contains information about a backup.
@@ -28,6 +24,11 @@ func NewBackupDetails(md BackupMetadata, key string, storage Storage) BackupDeta
 		Key:            key,
 		Storage:        storage,
 	}
+}
+
+// IsEmpty reports whether this backup has no data (zero file count).
+func (bd BackupDetails) IsEmpty() bool {
+	return bd.FileCount == 0
 }
 
 // BackupMetadata is an internal container for storing backup metadata.
@@ -53,9 +54,9 @@ type BackupMetadata struct {
 	// The number of UDF files backed up.
 	UDFCount uint64 `yaml:"udf-count" json:"udf-count"`
 	// Compression specifies the compression mode used for the backup (ZSTD or NONE).
-	Compression string
+	Compression CompressionMode
 	// Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256).
-	Encryption string
+	Encryption EncryptionMode
 }
 
 // NewMetadataFromBytes creates a new Metadata object from a byte slice.
@@ -64,25 +65,34 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 		return nil, errors.New("empty metadata file")
 	}
 	var metadata BackupMetadata
-	err := yaml.Unmarshal(data, &metadata)
-	if err != nil {
+	if err := decoder.Deserialize(&metadata, bytes.NewReader(data), decoder.YAML); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
-	err = metadata.Validate()
-	if err != nil {
+	metadata = withLegacyDefaults(metadata)
+
+	if err := metadata.Validate(); err != nil {
 		return nil, fmt.Errorf("corrupted metadata: %w", err)
 	}
 
 	return &metadata, nil
 }
 
+// withLegacyDefaults returns metadata with the fields that older ABS versions did not write set to
+// the value those versions implied, so the rest of the service can rely on them being present.
+func withLegacyDefaults(m BackupMetadata) BackupMetadata {
+	if m.Finished.IsZero() { // finished was introduced in ABS v3.4.0
+		m.Finished = m.Created.Add(1 * time.Millisecond) // set dummy value
+	}
+	if m.Compression == "" { // compression metadata was introduced in ABS v3.1.0
+		m.Compression = CompressionModeNone
+	}
+	return m
+}
+
 func (m *BackupMetadata) Validate() error {
 	if m.Created.IsZero() {
 		return errors.New("`created` is required")
-	}
-	if m.Finished.IsZero() { // finished was introduced in ABS v3.4.0
-		m.Finished = m.Created.Add(1 * time.Millisecond) // set dummy value
 	}
 	if m.Namespace == "" {
 		return errors.New("`namespace` is required")
@@ -97,11 +107,11 @@ func NewBackupMetadata(
 	from, startTime time.Time,
 	backupPolicy *BackupPolicy,
 ) BackupMetadata {
-	compression := CompressNone
+	compression := CompressionModeNone
 	if backupPolicy != nil && backupPolicy.CompressionPolicy != nil {
 		compression = backupPolicy.CompressionPolicy.Mode
 	}
-	encryption := EncryptNone
+	encryption := EncryptionModeNone
 	if backupPolicy != nil && backupPolicy.EncryptionPolicy != nil {
 		encryption = backupPolicy.EncryptionPolicy.Mode
 	}

@@ -1,7 +1,5 @@
 package model
 
-import "strings"
-
 // TimestampFormat represents the encoding for backup date timestamp in human-readable format.
 type TimestampFormat string
 
@@ -11,8 +9,9 @@ const (
 	TimestampFormatEU  TimestampFormat = "EU"
 )
 
-func TimestampFormatFromString(s string) TimestampFormat {
-	return TimestampFormat(strings.ToUpper(s))
+// String returns the wire value of the timestamp format.
+func (f TimestampFormat) String() string {
+	return string(f)
 }
 
 var TimestampFormatPresets = map[TimestampFormat]string{

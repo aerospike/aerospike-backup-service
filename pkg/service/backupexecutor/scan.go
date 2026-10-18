@@ -14,7 +14,7 @@ import (
 // runScanBackup performs a regular scan-based backup.
 func runScanBackup(
 	ctx context.Context,
-	client aerospike.Backuper,
+	client aerospike.Client,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,
@@ -59,7 +59,7 @@ func makeBackupConfig(
 
 	backupPolicy := routine.BackupPolicy
 	config.NoRecords = ptr.ValueOrZero(backupPolicy.NoRecords)
-	if isFullBackup(timeBounds) {
+	if timeBounds.IsFullBackup() {
 		config.NoIndexes = ptr.ValueOrZero(backupPolicy.NoIndexes)
 		config.NoUDFs = ptr.ValueOrZero(backupPolicy.NoUdfs)
 	} else { // incremental backup don't include indexes or UDFs
@@ -72,14 +72,19 @@ func makeBackupConfig(
 	config.FileLimit = uint64(backupPolicy.GetFileLimitOrDefault() * megabyte) // lib expects limit in bytes.
 	config.RecordsPerSecond = ptr.ValueOrZero(backupPolicy.RecordsPerSecond)
 	config.Bandwidth = ptr.ValueOrZero(backupPolicy.Bandwidth) * megabyte // lib expects file size in bytes.
-	config.ScanPolicy = scanPolicy(backupPolicy, routine)
+	scanPolicy, err := buildScanPolicy(backupPolicy, routine)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build scan policy: %w", err)
+	}
+
+	config.ScanPolicy = scanPolicy
 	config.RackList = routine.RackList // backup only these racks
 
 	config.ModBefore = timeBounds.ToTime
 	config.ModAfter = timeBounds.FromTime
 
-	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
-	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)
+	config.CompressionPolicy = backupPolicy.CompressionPolicy.ToLibraryPolicy()
+	config.EncryptionPolicy = backupPolicy.EncryptionPolicy.ToLibraryPolicy()
 	config.Compact = backupPolicy.CompactOrDefault()
 	config.SecretAgentConfig = routine.SecretAgent.ToSecretAgentConfig()
 
@@ -88,10 +93,10 @@ func makeBackupConfig(
 	return config, nil
 }
 
-func scanPolicy(
+func buildScanPolicy(
 	backupPolicy *model.BackupPolicy,
 	routine *model.BackupRoutine,
-) *as.ScanPolicy {
+) (*as.ScanPolicy, error) {
 	scanPolicy := as.NewScanPolicy()
 	if backupPolicy.TotalTimeout != nil {
 		scanPolicy.TotalTimeout = *backupPolicy.TotalTimeout
@@ -113,29 +118,14 @@ func scanPolicy(
 		scanPolicy.ReplicaPolicy = as.MASTER
 	}
 
-	return scanPolicy
-}
+	if routine.FilterExpression != "" {
+		exp, err := as.ExpFromBase64(routine.FilterExpression)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse filter expression: %w", err)
+		}
 
-func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy {
-	if policy == nil || policy.CompressionPolicy == nil {
-		return nil
+		scanPolicy.FilterExpression = exp
 	}
 
-	return &backup.CompressionPolicy{
-		Mode:  policy.CompressionPolicy.Mode,
-		Level: int(policy.CompressionPolicy.Level),
-	}
-}
-
-func makeEncryptionPolicy(policy *model.BackupPolicy) *backup.EncryptionPolicy {
-	if policy == nil || policy.EncryptionPolicy == nil {
-		return nil
-	}
-
-	return &backup.EncryptionPolicy{
-		Mode:      policy.EncryptionPolicy.Mode,
-		KeyFile:   policy.EncryptionPolicy.KeyFile,
-		KeySecret: policy.EncryptionPolicy.KeySecret,
-		KeyEnv:    policy.EncryptionPolicy.KeyEnv,
-	}
+	return scanPolicy, nil
 }

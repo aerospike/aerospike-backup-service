@@ -26,18 +26,17 @@ import (
 )
 
 type S3StorageAccessor struct {
-	clientMap *collections.LoadingCacheContext[*model.S3Storage, *awsS3.Client]
+	clientMap collections.Cache[*model.S3Storage, *awsS3.Client]
 	resolver  secrets.Resolver
 }
 
-func NewS3StorageAccessor(ctx context.Context, resolver secrets.Resolver) *S3StorageAccessor {
+func NewS3StorageAccessor(resolver secrets.Resolver) *S3StorageAccessor {
 	accessor := &S3StorageAccessor{
 		resolver: resolver,
 	}
-	accessor.clientMap = collections.NewLoadingCacheContext[*model.S3Storage, *awsS3.Client](
-		ctx,
+	accessor.clientMap = collections.NewLoadingCache[*model.S3Storage, *awsS3.Client](
 		accessor.getS3Client,
-		nil,
+		clientCacheTTL,
 	)
 	return accessor
 }
@@ -79,7 +78,7 @@ func (a *S3StorageAccessor) createWriter(
 }
 
 func (a *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error) {
-	credentialsProvider, err := a.withCredentialsProvider(ctx, s.Auth)
+	credentialsProvider, err := a.withCredentialsProvider(ctx, s.Auth, s.SecretAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -107,8 +106,8 @@ func (a *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage)
 	}
 
 	client := awsS3.NewFromConfig(cfg, func(o *awsS3.Options) {
-		if s.S3EndpointOverride != nil && *s.S3EndpointOverride != "" {
-			o.BaseEndpoint = s.S3EndpointOverride
+		if s.S3EndpointOverride != "" {
+			o.BaseEndpoint = aws.String(s.S3EndpointOverride)
 		}
 
 		o.UsePathStyle = true
@@ -145,9 +144,13 @@ func (a *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage)
 	return client, nil
 }
 
+// withCredentialsProvider builds the static credentials provider from auth, resolving both
+// secrets through agent. Without static credentials the AWS SDK default chain is left in place,
+// so a storage that only names a secret agent still authenticates through the environment.
 func (a *S3StorageAccessor) withCredentialsProvider(
 	ctx context.Context,
 	auth *model.S3Authentication,
+	agent *model.SecretAgent,
 ) (config.LoadOptionsFunc, error) {
 	if auth == nil {
 		return func(*config.LoadOptions) error {
@@ -155,12 +158,12 @@ func (a *S3StorageAccessor) withCredentialsProvider(
 		}, nil
 	}
 
-	keyID, err := a.resolver.Resolve(ctx, auth.SecretAgent, auth.KeyIDSecret)
+	keyID, err := a.resolver.Resolve(ctx, agent, auth.KeyIDSecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve key ID: %w", err)
 	}
 
-	accessKey, err := a.resolver.Resolve(ctx, auth.SecretAgent, auth.AccessKeySecret)
+	accessKey, err := a.resolver.Resolve(ctx, agent, auth.AccessKeySecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve access key: %w", err)
 	}

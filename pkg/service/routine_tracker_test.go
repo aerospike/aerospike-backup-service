@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,6 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
+
+// markScanDone completes a history scan with the production beginScan/endScan
+// handshake so getState does not block. Tests that do not exercise storage
+// scans call this instead of SynchroniseBackupHistory.
+func (t *routineTracker) markScanDone() {
+	t.endScan(t.beginScan())
+}
 
 func TestNewRoutineTracker(t *testing.T) {
 	tracker := newRoutineTracker()
@@ -53,10 +61,9 @@ func TestGetState_BlockingAndTimeout(t *testing.T) {
 func TestRegisterAndGetState(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
-	tracker.markScanDone() // unblock getState
+	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	// mock full handler
 	fullBackupStats := models.NewBackupStats()
@@ -89,7 +96,6 @@ func TestClearBackup(t *testing.T) {
 	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	handler := NewMockCancelableBackupHandler(ctrl)
 	tracker.register(model.BackupTypeFull, handler)
 
@@ -113,7 +119,6 @@ func TestClearFailedBackup(t *testing.T) {
 	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 	handler := NewMockCancelableBackupHandler(ctrl)
 	tracker.register(model.BackupTypeFull, handler)
 
@@ -171,19 +176,53 @@ func TestScanCancellation(t *testing.T) {
 	assert.False(t, cancel2Called)
 }
 
-func TestMarkScanDone_Idempotency(t *testing.T) {
+func TestSetLastRun_KeepsScanCancel(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
 
-	// calling markScanDone multiple times should not panic
+	cancelCalled := false
+	tracker.setScanCancel(func() { cancelCalled = true })
+
+	// An older scan storing its result must not take the newer scan's handle with it.
+	tracker.setLastRun(model.NewNoBackupTime())
+	tracker.cancelScan()
+	assert.True(t, cancelCalled)
+}
+
+func TestFinishScan_Idempotency(t *testing.T) {
+	t.Parallel()
+	tracker := newRoutineTracker()
+
 	tracker.markScanDone()
 	tracker.markScanDone()
 
-	// scanDone should be closed
 	select {
 	case <-tracker.scanDone:
-		// success
 	default:
 		t.Fatal("scanDone should be closed")
+	}
+}
+
+// A double close panics inside the goroutine, which crashes the test binary.
+func TestBeginEndScan_ConcurrentNoDoubleClose(t *testing.T) {
+	for range 2000 {
+		tracker := newRoutineTracker()
+
+		// Scan 1 has begun; its endScan is still pending.
+		ch1 := tracker.beginScan()
+
+		var wg sync.WaitGroup
+
+		// Scan 1 finishing
+		wg.Go(func() {
+			tracker.endScan(ch1)
+		})
+
+		// Scan 2 starting: beginScan closes tracker.scanDone, which is still ch1.
+		wg.Go(func() {
+			tracker.endScan(tracker.beginScan())
+		})
+
+		wg.Wait()
 	}
 }

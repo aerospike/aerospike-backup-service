@@ -3,6 +3,126 @@
 Upgrade notes and breaking changes between releases. For a terser, dated list of what shipped in each release, see
 [CHANGELOG.md](../CHANGELOG.md).
 
+## v3.6 -> v3.7
+
+This release redacts secret fields in configuration API responses, changes how secrets are updated via the REST API,
+and runs the `.deb`/`.rpm` installation as an unprivileged service account under a systemd sandbox.
+
+#### Breaking changes
+
+- **Configuration API secret redaction** — GET endpoints (`/v1/config`, `/v1/config/clusters`, `/v1/config/storage`,
+  and related read paths) no longer return literal secret values. Literal passwords, keys, and similar fields are
+  replaced with the fixed sentinel `"[secret]"`. Secret Agent references (`secrets:...`) are still returned as-is.
+- **PUT requests must preserve the sentinel** — If you use a GET → edit other fields → PUT workflow, leave every
+  unchanged secret field as `"[secret]"`. The service treats that sentinel as “keep the stored value” and will not
+  overwrite the real secret. To change a secret, send the new literal value or a new Secret Agent reference explicitly.
+  Sending `"[secret]"` for a newly added entity (with no stored secret yet) is invalid.
+
+- **The packaged service no longer runs as root** — the `.deb` and `.rpm` packages create the system account
+  `aerospike-backup-service` and the unit runs as it, under a systemd sandbox (`ProtectSystem=strict`,
+  `ProtectHome=true`, no capabilities, `UMask=0027`). Four things change for an existing installation, and each one
+  fails at runtime rather than at startup, so check them **before** upgrading:
+    - **Local storage outside the service's own directories stops working.** Only
+      `/etc/aerospike-backup-service`, `/var/lib/aerospike-backup-service` and `/var/log/aerospike-backup-service`
+      are writable. A routine whose `local-storage` path points anywhere else fails with
+      `read-only file system` on its next run. Grant the path and hand it to the account:
+
+      ```shell
+      sudo systemctl edit aerospike-backup-service     # [Service] / ReadWritePaths=/srv/backups
+      sudo chown -R aerospike-backup-service:aerospike-backup-service /srv/backups
+      sudo systemctl daemon-reload && sudo systemctl restart aerospike-backup-service
+      ```
+
+      A worked example ships at `/usr/share/doc/aerospike-backup-service/local-storage-path.conf.example`.
+    - **Cloud credentials under `/root` or `/home` become unreachable.** `ProtectHome=true` hides both, and the
+      account's home is `/var/lib/aerospike-backup-service`. Move `~/.aws/credentials` (or the GCP/Azure equivalent)
+      under that home, or supply credentials through `/etc/default/aerospike-backup-service` (deb) or
+      `/etc/sysconfig/aerospike-backup-service` (rpm), which the unit reads if present.
+    - **Operator-supplied TLS material must be readable by the account.** Cluster and HTTPS `cert-file`, `key-file`,
+      `cafile` and `password-path` files that are `0600 root:root` can no longer be read. Make them `0600` and
+      owned by `aerospike-backup-service`. These files are re-read on every handshake, so the failure appears at connection time, not at startup.
+    - **A listener below port 1024 no longer binds.** The unit drops every capability. Grant just the one back with a
+      drop-in: `AmbientCapabilities=CAP_NET_BIND_SERVICE` and `CapabilityBoundingSet=CAP_NET_BIND_SERVICE`.
+- **Local backup files are owner-only** — in every deployment, not only the packages, `local-storage` backups are
+  created with files `0600` and directories `0700`, owned by the account the service runs as. The modes are fixed and
+  do not follow the umask, so adding another account to the service's group does not give it access. Anything that
+  read backups as another user, such as a separate `asrestore` account, a log shipper, rsync or an NFS consumer, must
+  now run as the service account, for example `sudo -u aerospike-backup-service asrestore ...`, or restore through
+  the service's REST API. Cloud storage is not affected.
+- **The configuration file is owner-only** — every install and upgrade sets it to `0600`, owned by
+  `aerospike-backup-service`, because it holds cluster passwords and cloud keys.
+- **The log file directory moves** — from `/var/log/` to
+  `/var/log/aerospike-backup-service/`, a directory systemd creates and owns. The
+  postinstall script moves an existing log and its rotated siblings into it. If you kept a customised configuration
+  file, update `service.logger.file-writer.filename` to match: the old path is no longer writable, and the service
+  refuses to start when its log file is not writable, so systemd restarts it in a loop. The journal shows
+  `log file "/var/log/aerospike-backup-service.log" is not writable`.
+- **The unit file moves to `/usr/lib/systemd/system`** — it is vendor-owned there and is replaced on every upgrade.
+  Local changes belong in a drop-in (`systemctl edit aerospike-backup-service`). A pre-hardening copy left in
+  `/etc/systemd/system` would silently override the new unit and keep the service running as root, so postinstall
+  moves it to `aerospike-backup-service.service.pre-hardening.bak` and says so; re-apply those changes as a drop-in.
+  Because of this, **downgrading** to a pre-hardening package needs a purge first — `dpkg` does not restore a
+  conffile that is no longer present, so the old package's `postinst` fails on `systemctl enable`:
+
+  ```shell
+  sudo apt-get purge -y aerospike-backup-service
+  sudo apt-get install -y ./aerospike-backup-service_<old-version>_amd64.deb
+  ```
+- **RPM only: re-enable the service after this one upgrade** — the guard that stops an upgrade from disabling the
+  service ships *in* this release, so it cannot protect the upgrade that installs it. The previous package's
+  `%preun` still runs and leaves the service stopped and disabled:
+
+  ```shell
+  sudo systemctl enable --now aerospike-backup-service
+  ```
+
+  Upgrades from this release onward are unaffected. The `.deb` path does not have this problem.
+
+- **Configuration API error status codes** — the endpoints that change configuration
+  (`POST`/`PUT`/`DELETE` under `/v1/config/routines`, `/v1/config/storage`, `/v1/config/clusters` and
+  `/v1/config/policies`, plus the routine `enable`/`disable` toggles) now answer with the status that describes
+  the outcome, instead of collapsing everything onto `400 Bad Request`:
+
+  | Condition | Before | Now |
+  | --- | --- | --- |
+  | The named routine, storage, cluster or policy does not exist | `400` | `404 Not Found` |
+  | The name is already taken (`POST`) | `400` | `409 Conflict` |
+  | A backup routine still references the entity being deleted | `400` | `409 Conflict` |
+  | Malformed body, failed validation, unreachable TLS endpoint | `400` | `400` (unchanged) |
+
+  `GET` already answered `404` for a name it could not resolve; the mutating verbs now match it, and a `404` body
+  reads the same as the `GET` one (`routine "daily" not found`) rather than the nested
+  `invalid request: failed to update configuration: ...` string.
+
+  A client that treats any non-2xx as a failure needs no change. A client that branches on `400`, or that
+  string-matches the response body to tell "does not exist" from "bad payload", must branch on the status code
+  instead — a delete-if-present flow, for example, becomes "treat `404` as already deleted".
+- **Config element names** — Routine, policy, storage, secret agent have stricter validation: they cannot start or end with whitespace or contain path traversal sequences.
+
+- **Compression and encryption policies must state their mode** — a `compression` or `encryption` block that is
+  present must set `mode` explicitly; A `compression` block without `mode` is now rejected at startup.
+  For compression, `ZSTD` requires `level` (-1 to 22) and `NONE` must not set it. To disable compression or
+  encryption, either set `mode: NONE` or omit the block.
+
+#### Improvements
+
+- **HTTPS listener configuration** — Optional [`service.https`](readme/dto/dto.serverconfighttps.md) defines a sibling
+  HTTPS listener (default port 8443) with TLS fields (`cert-file`, `key-file`, `min-version`, `cipher-suites`,
+  `client-ca-file`, `client-auth`). Omitting `https` keeps today's plaintext HTTP-only behavior. Both
+  [`service.http`](readme/dto/dto.serverconfighttp.md) and `service.https` use `disabled` (default `false`). At least
+  one listener must remain enabled; if both are enabled, their ports must differ. Rewriting `cert-file`,
+  `key-file`, `client-ca-file`, and `crl-file` at the same paths reloads HTTPS TLS material without a restart; see
+  [Credential Rotation](security.md#credential-rotation). `crl-file` requires `client-ca-file` and
+  `client-auth: require-and-verify`. A missing matching CRL, or an expired or future-dated CRL, rejects
+  the client handshake. OCSP is not supported.
+- **HTTP server timeouts** — The HTTP server now bounds `ReadTimeout`, `WriteTimeout`, and `IdleTimeout` in addition
+  to the existing `timeout` (`ReadHeaderTimeout`). Defaults are 30s / 60s / 120s respectively. Configure them under
+  [`service.http`](readme/dto/dto.serverconfighttp.md) as `read-timeout`, `write-timeout`, and `idle-timeout`
+  (milliseconds). Existing configs that omit these fields pick up the new defaults automatically.
+- **Backup schedule timezone** — Optional `schedule-timezone` on [`service.backup`](readme/dto/dto.backupcommonconfig.md)
+  (restart required) and on each [backup routine](readme/dto/dto.backuproutine.md). Cron expressions default to UTC.
+  Backup folder names and `timestamp-format` suffixes are always UTC, including on hosts that are not UTC.
+
 ## v3.5 -> v3.6
 
 This release adds compact backups, more flexible restore-by-timestamp, performance optimizations in the record
@@ -99,7 +219,7 @@ reliability of backup and restore routines. Notable fixes address:
 
 - Independent tuning of read and write parallelism.
   New field `parallel-write` can now be configured separately in [backup policy](readme/dto/dto.backuppolicy.md)
-  giving operators finer control over performance. By default it is equal to `parallel-read`.
+  giving operators finer control over performance. By default it is equal to `parallel`.
 
 ## v3.1 -> v3.2
 
@@ -120,7 +240,7 @@ It is focused on stability and bug fixes, and includes an updated, faster versio
 
 #### New Features
 
-- **Restore Jobs Endpoint**: A new endpoint [`GET /v1/restore/jobs`](api-examples.md#retrieve-restore-jobs)
+- **Restore Jobs Endpoint**: A new endpoint [<!-- tag retrieveRestoreJobs -->`GET /v1/restore/jobs`<!-- /tag -->](api-examples.md#retrieve-restore-jobs)
   has been added to retrieve a list of all restore jobs, with options to filter by time range and status.
 - **Add min-part-size to Azure and GCP**:
   The `min-part-size` property, previously available only for S3 storage,
@@ -218,7 +338,7 @@ storage types.
 
 Example:
 
-<!-- Storage -->
+<!-- tag Storage -->
 
 ```yaml
 aws-s3:
@@ -242,8 +362,8 @@ gcp-gcs:
 local:
   local-storage:
     path: backups
-
 ```
+<!-- /tag -->
 
 #### Configuration Management Update
 
@@ -290,8 +410,8 @@ Retention policy is an optional part of a backup policy. It consists of two inte
 * `full`: The total number of full backups to retain. If not specified, all full backups are kept. The minimum is 1,
   meaning each new full backup deletes the previous one.
 * `incremental`: The number of most recent full backups that also retain incremental backups made between them. Cannot
-  exceed the value of `full`. If omitted, all incremental backups are kept. A value of `0` means that all previous
-  existing incremental backups will be deleted after each full backup is made.
+  exceed the value of `full`. If omitted, all incremental backups for existing full backups are kept.
+  A value of `0` means that all previous existing incremental backups will be deleted after each full backup is made.
 
 If no retention policy is specified, the system defaults to retaining all full and incremental backups, the same as the
 `KeepAll` value in older versions.

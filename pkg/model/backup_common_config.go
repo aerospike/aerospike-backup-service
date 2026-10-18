@@ -4,4 +4,6 @@ package model
 type BackupCommonConfig struct {
 	// TimestampFormat for human-readable dates in path.
 	TimestampFormat *TimestampFormat
+	// Timezone is the service-level schedule timezone.
+	Timezone Location
 }

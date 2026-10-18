@@ -8,6 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
+// NamespaceResolver selects configured namespaces or discovers them from a routine's source cluster.
 type NamespaceResolver interface {
 	// ResolveNamespaces returns the list of namespaces to back up for the routine.
 	ResolveNamespaces(
@@ -32,7 +33,7 @@ func (r *clusterNamespaceResolver) ResolveNamespaces(
 	routine *model.BackupRoutine,
 	logger *slog.Logger,
 ) ([]string, error) {
-	if len(routine.Namespaces) > 0 {
+	if !routine.BacksUpWholeCluster() {
 		return routine.Namespaces, nil
 	}
 

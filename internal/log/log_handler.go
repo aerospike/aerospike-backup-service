@@ -1,11 +1,13 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"strings"
+	"path/filepath"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
@@ -17,40 +19,62 @@ func init() {
 }
 
 // NewHandler returns the application log handler with the configured level.
-func NewHandler(config *model.LoggerConfig) slog.Handler {
+func NewHandler(config *model.LoggerConfig) (slog.Handler, error) {
 	const addSource = true
-	writer := newRedactingWriter(logWriter(config))
-	switch strings.ToUpper(config.GetFormatOrDefault()) {
-	case "PLAIN":
+	writer, err := logWriter(config)
+	if err != nil {
+		return nil, err
+	}
+
+	switch config.GetFormatOrDefault() {
+	case model.LogFormatPlain:
 		return slog.NewTextHandler(writer, &slog.HandlerOptions{
-			Level:       logLevel(config.GetLevelOrDefault()),
+			Level:       config.GetLevelOrDefault().SlogLevel(),
 			AddSource:   addSource,
 			ReplaceAttr: handlerReplaceAttr,
-		})
-	case "JSON":
+		}), nil
+	case model.LogFormatJSON:
 		return slog.NewJSONHandler(writer, &slog.HandlerOptions{
-			Level:       logLevel(config.GetLevelOrDefault()),
+			Level:       config.GetLevelOrDefault().SlogLevel(),
 			AddSource:   addSource,
 			ReplaceAttr: handlerReplaceAttr,
-		})
+		}), nil
 	default:
-		panic("unsupported log format: " + *config.Format)
+		panic("unsupported log format: " + config.GetFormatOrDefault())
 	}
 }
 
-// handlerReplaceAttr customizes the TRACE level string representation in logs.
-var handlerReplaceAttr = func(_ []string, a slog.Attr) slog.Attr {
-	if a.Key == slog.LevelKey {
-		level := a.Value.Any().(slog.Level)
-		if level == slog.Level(logger.LevelTrace) {
-			a.Value = slog.StringValue("TRACE")
-		}
+// handlerReplaceAttr applies all log attribute customizations in order.
+var handlerReplaceAttr = func(groups []string, a slog.Attr) slog.Attr {
+	redacted := decoder.RedactSecretsReplaceAttr()(groups, a)
+	trace := traceLevelReplaceAttr(groups, redacted)
+
+	return trace
+}
+
+func traceLevelReplaceAttr(_ []string, a slog.Attr) slog.Attr {
+	if a.Key != slog.LevelKey {
+		return a
 	}
+
+	level := a.Value.Any().(slog.Level)
+	if level != slog.Level(logger.LevelTrace) {
+		return a
+	}
+
+	a.Value = slog.StringValue("TRACE")
+
 	return a
 }
 
-func logWriter(config *model.LoggerConfig) io.Writer {
+func logWriter(config *model.LoggerConfig) (io.Writer, error) {
 	if config.FileWriter != nil {
+		// lumberjack opens the file lazily on the first write and slog drops write errors, so a
+		// misconfigured path would leave the service running with no log output at all.
+		if err := probeLogFile(config.FileWriter.Filename); err != nil {
+			return nil, fmt.Errorf("log file %q is not writable: %w", config.FileWriter.Filename, err)
+		}
+
 		fileWriter := &lumberjack.Logger{
 			Filename:   config.FileWriter.Filename,
 			MaxSize:    config.FileWriter.GetMaxSizeOrDefault(),
@@ -59,15 +83,34 @@ func logWriter(config *model.LoggerConfig) io.Writer {
 			Compress:   config.FileWriter.Compress,
 		}
 		if config.GetStdoutWriterOrDefault() {
-			return io.MultiWriter(fileWriter, os.Stdout)
+			return io.MultiWriter(fileWriter, os.Stdout), nil
 		}
 
-		return fileWriter
+		return fileWriter, nil
 	} else if config.GetStdoutWriterOrDefault() {
-		return os.Stdout
+		return os.Stdout, nil
 	}
 
-	return &ignoreWriter{}
+	return &ignoreWriter{}, nil
+}
+
+// probeLogFile creates the log file's directory and opens the file for appending the way
+// lumberjack will, so an unwritable destination fails at startup instead of silently.
+func probeLogFile(filename string) error {
+	if filename == "" {
+		return nil // lumberjack falls back to a file in os.TempDir().
+	}
+
+	if err := os.MkdirAll(filepath.Dir(filename), 0o750); err != nil {
+		return err
+	}
+
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+
+	return f.Close()
 }
 
 type ignoreWriter struct{}
@@ -76,25 +119,6 @@ var _ io.Writer = (*ignoreWriter)(nil)
 
 func (*ignoreWriter) Write(_ []byte) (n int, err error) {
 	return 0, nil
-}
-
-// logLevel returns a level for the given string name.
-// Panics on an invalid argument.
-func logLevel(level string) slog.Level {
-	switch strings.ToUpper(level) {
-	case "TRACE":
-		return slog.Level(logger.LevelTrace)
-	case "DEBUG":
-		return slog.LevelDebug
-	case "INFO":
-		return slog.LevelInfo
-	case "WARN", "WARNING":
-		return slog.LevelWarn
-	case "ERROR":
-		return slog.LevelError
-	default:
-		panic("invalid log level: " + level)
-	}
 }
 
 // ToExitVal returns an exit value for the error.
