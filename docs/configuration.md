@@ -44,7 +44,7 @@ to be. Use `America/New_York` if you want DST to apply.
 Set a service-wide default under `service.backup` (requires a restart) or override it on a
 routine (can be changed through the routine API):
 
-```yaml
+```yaml dto=Config
 service:
   backup:
     schedule-timezone: America/New_York
@@ -275,7 +275,7 @@ asinfo -v "xdr-get-filter:dc=DC1;namespace=test;b64=true"
 `filter-exp` can only be used when backing up a **single set** (or all sets in a namespace with no `set-list`).
 It is mutually exclusive with multi-set backup.
 
-```yaml
+```yaml dto=Config
 backup-routines:
   adultsBackup:
     interval-cron: "@daily"
@@ -337,7 +337,7 @@ Each namespace of a routine is backed up on its own. A namespace that fails, for
 under the [retry policy](readme/dto/dto.retrypolicy.md) of the backup policy, and the other namespaces carry on
 unaffected. Every attempt writes to a folder of its own under the run's timestamp:
 
-```
+```text
 <routine>/backup/<timestamp>/data/<namespace>      # first attempt
 <routine>/backup/<timestamp>/data/<namespace>.2    # second attempt
 <routine>/backup/<timestamp>/data/<namespace>.3    # and so on

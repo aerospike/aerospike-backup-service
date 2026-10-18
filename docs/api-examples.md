@@ -286,6 +286,8 @@ Restore order (to non-empty namespace or with `disable-reordering`): `Full B`, `
 <details>
     <summary>Request body</summary>
 
+<!-- tag RestoreTimestampRequest -->
+
 ```json
 {
   "destination-name": "abs-cluster",
@@ -293,6 +295,7 @@ Restore order (to non-empty namespace or with `disable-reordering`): `Full B`, `
   "routine": "routine1"
 }
 ```
+<!-- /tag -->
 
 Request is almost identical to [restore by path](#direct-restore-using-a-specific-backup), but instead of
 `backup-data-path`

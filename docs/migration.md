@@ -450,7 +450,7 @@ password in the Aerospike Secret Agent (starts with `secrets:`).
 
 The fields `password` and `password-path` are mutually exclusive.
 
-```yaml
+```yaml unchecked
 dto.Credentials:
   description: Credentials represents authentication details to the Aerospike cluster.
   properties:
