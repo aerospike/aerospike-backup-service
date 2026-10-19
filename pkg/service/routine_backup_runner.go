@@ -20,7 +20,7 @@ type RoutineBackupRunner interface {
 		routine *model.BackupRoutine,
 		runSpec model.BackupRunSpec,
 		logger *slog.Logger,
-	) (*BackupNamespacesOperation, error)
+	) (CancelableBackupHandler, error)
 }
 
 // routineBackupRunner resolves the namespaces and delegates each one to a [NamespaceBackupRunner].
@@ -49,7 +49,7 @@ func (r *routineBackupRunner) Run(
 	routine *model.BackupRoutine,
 	runSpec model.BackupRunSpec,
 	logger *slog.Logger,
-) (*BackupNamespacesOperation, error) {
+) (CancelableBackupHandler, error) {
 	namespaces, err := r.resolver.ResolveNamespaces(ctx, routine, logger)
 	if err != nil {
 		return nil, err

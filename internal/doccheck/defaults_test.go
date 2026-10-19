@@ -65,6 +65,7 @@ var applied = map[string]appliedDefault{
 	"RateLimiterConfig.Tps":             {applied: value((&model.RateLimiterConfig{}).GetTpsOrDefault())},
 	"RateLimiterConfig.Size":            {applied: value((&model.RateLimiterConfig{}).GetSizeOrDefault())},
 	"LoggerConfig.Level":                {applied: value((&model.LoggerConfig{}).GetLevelOrDefault())},
+	"BackupCommonConfig.BackupMode":     {applied: value((&model.BackupCommonConfig{}).GetBackupModeOrDefault())},
 	"LoggerConfig.Format":               {applied: value((&model.LoggerConfig{}).GetFormatOrDefault())},
 	"LoggerConfig.StdoutWriter":         {applied: value((&model.LoggerConfig{}).GetStdoutWriterOrDefault())},
 	"FileLoggerConfig.MaxSize":          {applied: value((&model.FileLoggerConfig{}).GetMaxSizeOrDefault())},

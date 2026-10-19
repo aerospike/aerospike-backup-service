@@ -20,6 +20,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/serverbackup"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	u "github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/reugn/go-quartz/quartz"
@@ -86,7 +87,8 @@ func InitComponents(
 ) (*Components, error) {
 	resolver := secrets.NewResolver()
 	tlsProber := servertls.NewProber(secrets.NewClusterTLSResolver(resolver))
-	operations := newStorageOperations(resolver)
+	s3Accessor := storage.NewS3StorageAccessor(resolver)
+	operations := newStorageOperations(resolver, s3Accessor)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations, tlsProber)
@@ -105,35 +107,23 @@ func InitComponents(
 	}
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
-	catalog := service.NewBackupCatalog(pathService, operations)
-	history := service.NewHistoryManager(catalog)
-	registry := service.NewBackupStateRegistry(history, config)
 	var routineStorage u.LockMap
-	retentionManager := service.NewBackupRetentionManager(catalog, &routineStorage)
-	clusterConfigWriter := service.NewClusterConfigWriter(
-		pathService,
-		operations,
-		aerospike.NewClusterConfigSource(clientManager),
-	)
-	completionHandler := service.NewBackupCompletionHandler(registry, retentionManager, clusterConfigWriter)
-	backupExecutor := backupexecutor.NewBackupExecutor(clientManager, operations)
-	startController := service.NewStartController(registry, service.NewStartDecider())
-	namespaceRunner := service.NewNamespaceBackupRunner(backupExecutor, catalog, pathService)
-	namespaceResolver := aerospike.NewNamespaceResolver(clientManager)
-	routineBackupRunner := service.NewRoutineBackupRunner(
-		namespaceRunner,
-		namespaceResolver,
-	)
+	mode := newBackupMode(config, pathService, operations, s3Accessor, clientManager, resolver, &routineStorage)
 
+	completionHandler := service.NewBackupCompletionHandler(
+		mode.registry,
+		mode.retentionManager,
+		mode.clusterConfigWriter,
+	)
 	backupOrchestrator := service.NewBackupOrchestrator(
-		registry,
+		mode.registry,
 		completionHandler,
 		service.NewBackupReporter(),
-		startController,
-		routineBackupRunner,
+		mode.startController,
+		mode.routineRunner,
 	)
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
-	configApplier := service.NewConfigApplier(backupScheduler, registry, config)
+	configApplier := service.NewConfigApplier(backupScheduler, mode.registry, config)
 
 	err = configApplier.ApplyNewConfig()
 	if err != nil {
@@ -141,28 +131,28 @@ func InitComponents(
 	}
 
 	restoreJobs := service.NewRestoreJobsHolder()
-	restoreValidator := service.NewRestoreValidator(startController, config)
+	restoreValidator := service.NewRestoreValidator(mode.startController, config)
 
 	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestoreExecutor(operations),
+		mode.restoreExecutor,
 		clientManager,
 		restoreJobs,
-		catalog,
+		mode.backupReader,
 		&routineStorage,
 		restoreValidator,
 	)
 
-	metricsCollector := prometheus.NewMetricsCollector(registry.GetRunningState, restoreJobs.StatusCounts)
+	metricsCollector := prometheus.NewMetricsCollector(mode.registry.GetRunningState, restoreJobs.StatusCounts)
 
-	configRetriever := service.NewConfigRetriever(catalog, pathService, operations)
+	configRetriever := service.NewConfigRetriever(mode.backupReader, pathService, operations)
 	srv := handlers.NewService(
 		config,
 		configApplier,
 		backupScheduler,
 		restoreMgr,
 		configRetriever,
-		catalog,
-		registry,
+		mode.backupReader,
+		mode.registry,
 		configurationManager,
 		nsValidator,
 		tlsProber,
@@ -190,7 +180,7 @@ func InitComponents(
 		Servers:          servers,
 		MetricsCollector: metricsCollector,
 		TLSProvider:      tlsProvider,
-		registry:         registry,
+		registry:         mode.registry,
 		restoreJobs:      restoreJobs,
 	}, nil
 }
@@ -214,13 +204,99 @@ func newServerHTTPS(
 	return server.NewServerHTTPS(configHTTPS, srv, tlsConfig), tlsProvider, nil
 }
 
-func newStorageOperations(resolver secrets.Resolver) storage.Operations {
+func newStorageOperations(resolver secrets.Resolver, s3Accessor storage.Accessor) storage.Operations {
 	return storage.NewOperations(
-		storage.NewS3StorageAccessor(resolver),
+		s3Accessor,
 		storage.NewGcpStorageAccessor(resolver),
 		storage.NewAzureStorageAccessor(resolver),
 		storage.NewLocalStorageAccessor(),
 	)
+}
+
+// backupMode is the part of the object graph that depends on the configured backup mode.
+// Each mode wires its own implementations behind the same interfaces, so no component
+// checks the mode itself.
+type backupMode struct {
+	backupReader        service.BackupReader
+	registry            service.BackupStateRegistry
+	startController     service.StartController
+	retentionManager    service.BackupRetentionManager
+	clusterConfigWriter service.ClusterConfigWriter
+	routineRunner       service.RoutineBackupRunner
+	restoreExecutor     restoreexecutor.Restore
+}
+
+func newBackupMode(
+	config *model.Config,
+	pathService service.PathService,
+	operations storage.Operations,
+	s3Clients serverbackup.S3ClientProvider,
+	clientManager aerospike.ClientManager,
+	resolver secrets.Resolver,
+	routineStorage *u.LockMap,
+) backupMode {
+	if config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == model.BackupModeServer {
+		return newServerBackupMode(config, s3Clients, clientManager, resolver)
+	}
+
+	return newScanBackupMode(config, pathService, operations, clientManager, routineStorage)
+}
+
+// newScanBackupMode wires backups that the service scans from the cluster and writes itself.
+func newScanBackupMode(
+	config *model.Config,
+	pathService service.PathService,
+	operations storage.Operations,
+	clientManager aerospike.ClientManager,
+	routineStorage *u.LockMap,
+) backupMode {
+	catalog := service.NewBackupCatalog(pathService, operations)
+	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config)
+	namespaceRunner := service.NewNamespaceBackupRunner(
+		backupexecutor.NewBackupExecutor(clientManager, operations),
+		catalog,
+		pathService,
+	)
+
+	return backupMode{
+		backupReader:     catalog,
+		registry:         registry,
+		startController:  service.NewStartController(registry, service.NewStartDecider()),
+		retentionManager: service.NewBackupRetentionManager(catalog, routineStorage),
+		clusterConfigWriter: service.NewClusterConfigWriter(
+			pathService,
+			operations,
+			aerospike.NewClusterConfigSource(clientManager),
+		),
+		routineRunner:   service.NewRoutineBackupRunner(namespaceRunner, aerospike.NewNamespaceResolver(clientManager)),
+		restoreExecutor: restoreexecutor.NewRestoreExecutor(operations),
+	}
+}
+
+// newServerBackupMode wires backups that the Aerospike server writes to S3 itself.
+// The server owns the backup layout, so the service neither applies retention nor
+// stores the cluster configuration next to a backup.
+func newServerBackupMode(
+	config *model.Config,
+	s3Clients serverbackup.S3ClientProvider,
+	clientManager aerospike.ClientManager,
+	resolver secrets.Resolver,
+) backupMode {
+	catalog := serverbackup.NewCatalog(s3Clients)
+
+	return backupMode{
+		backupReader:        catalog,
+		registry:            service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config),
+		startController:     serverbackup.NewStartController(),
+		retentionManager:    service.NopRetentionManager(),
+		clusterConfigWriter: service.NopClusterConfigWriter(),
+		routineRunner: serverbackup.NewRoutineRunner(
+			clientManager,
+			aerospike.NewNamespaceResolver(clientManager),
+			resolver,
+		),
+		restoreExecutor: serverbackup.NewRestoreExecutor(resolver),
+	}
 }
 
 func newAerospikeLayer(resolver secrets.Resolver) (aerospike.ClientManager, aerospike.NamespaceValidator) {

@@ -1910,6 +1910,20 @@ const docTemplate = `{
             "description": "BackupCommonConfig represents service-level backup settings.",
             "type": "object",
             "properties": {
+                "backup-mode": {
+                    "description": "Backup mode for the whole service instance (optional).\nAllowed values:\n* scan (default): the service scans the cluster and writes the backup data itself.\n* server: the Aerospike server writes the backup to S3 storage itself.\nChanging the mode requires a restart.",
+                    "default": "scan",
+                    "enum": [
+                        "scan",
+                        "server"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.BackupMode"
+                        }
+                    ],
+                    "x-nullable": true
+                },
                 "schedule-timezone": {
                     "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or any IANA timezone name resolvable\nby Go's time.LoadLocation (for example, America/New_York or Japan).\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nPrefer canonical Area/Location names: legacy aliases such as EST resolve as\nfixed UTC-5 with no DST, which is rarely what \"Eastern Time\" is meant to be.\nChanging this service-level default requires a restart.",
                     "type": "string",
@@ -2019,6 +2033,18 @@ const docTemplate = `{
                     "example": 2
                 }
             }
+        },
+        "dto.BackupMode": {
+            "description": "BackupMode selects how the whole service instance backs up and restores data.",
+            "type": "string",
+            "enum": [
+                "scan",
+                "server"
+            ],
+            "x-enum-varnames": [
+                "BackupModeScan",
+                "BackupModeServer"
+            ]
         },
         "dto.BackupPolicy": {
             "description": "BackupPolicy represents a scheduled backup policy.",
