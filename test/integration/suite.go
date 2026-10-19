@@ -57,10 +57,15 @@ func (s *Suite) seedRecords(ages []int) {
 }
 
 func (s *Suite) seedRecordsWith(client *as.Client, ages []int) {
+	s.seedRecordsIn(client, namespace, ages)
+}
+
+// seedRecordsIn writes one record per age into setName of ns, keyed by its position in ages.
+func (s *Suite) seedRecordsIn(client *as.Client, ns string, ages []int) {
 	writePolicy := as.NewWritePolicy(0, 0)
 
 	for i, age := range ages {
-		key, err := as.NewKey(namespace, setName, i)
+		key, err := as.NewKey(ns, setName, i)
 		s.Require().NoError(err)
 		s.Require().NoError(client.Put(writePolicy, key, as.BinMap{"age": age}))
 	}

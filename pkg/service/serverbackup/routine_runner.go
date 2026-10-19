@@ -13,7 +13,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
@@ -33,7 +32,6 @@ const (
 type routineRunner struct {
 	clientManager     aerospike.ClientManager
 	namespaceResolver aerospike.NamespaceResolver
-	resolver          secrets.Resolver
 }
 
 var _ service.RoutineBackupRunner = (*routineRunner)(nil)
@@ -42,12 +40,10 @@ var _ service.RoutineBackupRunner = (*routineRunner)(nil)
 func NewRoutineRunner(
 	clientManager aerospike.ClientManager,
 	namespaceResolver aerospike.NamespaceResolver,
-	resolver secrets.Resolver,
 ) service.RoutineBackupRunner {
 	return &routineRunner{
 		clientManager:     clientManager,
 		namespaceResolver: namespaceResolver,
-		resolver:          resolver,
 	}
 }
 
@@ -110,16 +106,16 @@ func (r *routineRunner) backupNamespace(
 	operation *backupOperation,
 	logger *slog.Logger,
 ) error {
-	common, err := newRequestCommon(ctx, r.resolver, routine.Storage, namespace)
+	common, err := newRequestCommon(routine.Storage, namespace)
 	if err != nil {
 		return err
 	}
+	common.SetList = strings.Join(routine.SetList, ",")
 
 	jobID, err := infoClient.StartBackup(ctx, &infomodels.RequestBackup{
 		RequestCommon:  common,
 		ModifiedAfter:  unixSeconds(runSpec.TimeBounds.FromTime),
 		ModifiedBefore: unixSeconds(runSpec.TimeBounds.ToTime),
-		SetList:        strings.Join(routine.SetList, ","),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to start server backup: %w", err)

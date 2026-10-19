@@ -84,4 +84,13 @@ AuthSuite backs up from Aerospike nodes with security enabled, one per transport
 | [`TestInternalServerTLS`](auth_test.go) | Backs up with auth-mode INTERNAL over TLS where only the server presents a certificate, trusted through ca-path. |  |
 | [`TestMutualTLS`](auth_test.go) | Backs up over mutual TLS with an encrypted client key, both as an INTERNAL user and as a PKI user identified by the certificate alone. | `internal`<br>`pki`<br>`internal with key-file-password from secret agent` |
 
+### TestServerBackup
+
+ServerBackupSuite backs up with server-side backup from one cluster running a locally built server and restores into another. It skips unless the server build is configured.
+
+| Test | What it checks | Cases |
+|---|---|---|
+| [`TestServerBackupRestoreByPath`](server_backup_test.go) | Runs a full server-side backup of the source cluster and restores it by job id into the destination cluster via POST /v1/restore/full. |  |
+| [`TestServerBackupRestoreByTimestamp`](server_backup_test.go) | Runs two full server-side backups with different data and restores into the destination cluster at a time between them via POST /v1/restore/timestamp, which must pick the first. Incremental server backups are not covered: the server backup metadata does not tell them apart from full ones. |  |
+
 <!-- /tag -->

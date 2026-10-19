@@ -108,7 +108,7 @@ func InitComponents(
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
 	var routineStorage u.LockMap
-	mode := newBackupMode(config, pathService, operations, s3Accessor, clientManager, resolver, &routineStorage)
+	mode := newBackupMode(config, pathService, operations, s3Accessor, clientManager, &routineStorage)
 
 	completionHandler := service.NewBackupCompletionHandler(
 		mode.registry,
@@ -232,11 +232,10 @@ func newBackupMode(
 	operations storage.Operations,
 	s3Clients serverbackup.S3ClientProvider,
 	clientManager aerospike.ClientManager,
-	resolver secrets.Resolver,
 	routineStorage *u.LockMap,
 ) backupMode {
 	if config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == model.BackupModeServer {
-		return newServerBackupMode(config, s3Clients, clientManager, resolver)
+		return newServerBackupMode(config, s3Clients, clientManager)
 	}
 
 	return newScanBackupMode(config, pathService, operations, clientManager, routineStorage)
@@ -280,7 +279,6 @@ func newServerBackupMode(
 	config *model.Config,
 	s3Clients serverbackup.S3ClientProvider,
 	clientManager aerospike.ClientManager,
-	resolver secrets.Resolver,
 ) backupMode {
 	catalog := serverbackup.NewCatalog(s3Clients)
 
@@ -290,12 +288,8 @@ func newServerBackupMode(
 		startController:     serverbackup.NewStartController(),
 		retentionManager:    service.NopRetentionManager(),
 		clusterConfigWriter: service.NopClusterConfigWriter(),
-		routineRunner: serverbackup.NewRoutineRunner(
-			clientManager,
-			aerospike.NewNamespaceResolver(clientManager),
-			resolver,
-		),
-		restoreExecutor: serverbackup.NewRestoreExecutor(resolver),
+		routineRunner:       serverbackup.NewRoutineRunner(clientManager, aerospike.NewNamespaceResolver(clientManager)),
+		restoreExecutor:     serverbackup.NewRestoreExecutor(catalog),
 	}
 }
 

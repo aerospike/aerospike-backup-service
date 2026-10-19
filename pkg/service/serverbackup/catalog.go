@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
+	"strconv"
 	"strings"
 	"time"
 
@@ -125,7 +127,8 @@ func (c *catalog) newLister(ctx context.Context, storage model.Storage) (*lister
 }
 
 // toBackupDetails converts server metadata to the details of a backup keyed by its job id.
-// Only the creation time, taken from the job id, is known.
+// Only the creation time, taken from the job id, and the namespace are known. The metadata
+// has no file or record counts, so a completed backup counts as one file: it holds data.
 func toBackupDetails(metadata listermodels.Metadata, storage model.Storage) model.BackupDetails {
 	created := jobIDTime(metadata.BackupID)
 
@@ -134,12 +137,22 @@ func toBackupDetails(metadata listermodels.Metadata, storage model.Storage) mode
 			Created:     created,
 			Finished:    created,
 			Namespace:   metadata.Namespace,
+			FileCount:   1,
 			Compression: model.CompressionModeNone,
 			Encryption:  model.EncryptionModeNone,
 		},
 		metadata.BackupID,
 		storage,
 	)
+}
+
+// newJobID returns a job id for a job the service starts, in the shape the server's own
+// backup job ids have: the UTC time and a random base36 salt.
+func newJobID(now time.Time) string {
+	const saltSpace = 36 * 36 * 36 * 36
+
+	salt := strconv.FormatInt(rand.Int64N(saltSpace), 36) //nolint:gosec // uniqueness, not security
+	return fmt.Sprintf("%s-%04s", now.UTC().Format(jobIDTimeLayout), salt)
 }
 
 // jobIDTime returns the UTC time a server job id was generated at, or zero for a malformed id.

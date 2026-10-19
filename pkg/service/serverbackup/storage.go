@@ -1,11 +1,9 @@
 package serverbackup
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
@@ -22,40 +20,21 @@ func toS3Storage(storage model.Storage) (*model.S3Storage, error) {
 	return s3Storage, nil
 }
 
-// newRequestCommon describes the S3 location of a server job, with its credentials resolved.
-func newRequestCommon(
-	ctx context.Context,
-	resolver secrets.Resolver,
-	storage model.Storage,
-	namespace string,
-) (infomodels.RequestCommon, error) {
+// newRequestCommon describes the S3 location of a server job. It carries no credentials: each
+// node resolves its own through the AWS default credential chain, with the storage's profile.
+func newRequestCommon(storage model.Storage, namespace string) (infomodels.RequestCommon, error) {
 	s3Storage, err := toS3Storage(storage)
 	if err != nil {
 		return infomodels.RequestCommon{}, err
 	}
 
-	request := infomodels.RequestCommon{
+	return infomodels.RequestCommon{
 		Namespace: namespace,
 		Storage:   storageTypeS3,
+		Path:      s3Storage.Path,
 		Bucket:    s3Storage.Bucket,
 		Region:    s3Storage.S3Region,
 		Profile:   s3Storage.S3Profile,
 		Endpoint:  s3Storage.S3EndpointOverride,
-	}
-
-	if s3Storage.Auth == nil {
-		return request, nil
-	}
-
-	request.AccessKey, err = resolver.Resolve(ctx, s3Storage.SecretAgent, s3Storage.Auth.KeyIDSecret)
-	if err != nil {
-		return infomodels.RequestCommon{}, fmt.Errorf("failed to resolve S3 access key ID: %w", err)
-	}
-
-	request.SecretKey, err = resolver.Resolve(ctx, s3Storage.SecretAgent, s3Storage.Auth.AccessKeySecret)
-	if err != nil {
-		return infomodels.RequestCommon{}, fmt.Errorf("failed to resolve S3 secret access key: %w", err)
-	}
-
-	return request, nil
+	}, nil
 }

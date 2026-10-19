@@ -7,24 +7,27 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
-	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
+	"github.com/aerospike/backup-go/pkg/asinfo"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
-// restoreExecutor asks the server to run a fuzzy restore of a server backup, identified by its job id.
+// restoreExecutor asks the server to run a fuzzy restore of a server backup, identified by the
+// job id of the backup.
 type restoreExecutor struct {
-	resolver secrets.Resolver
+	backupReader service.BackupReader
 }
 
 var _ restoreexecutor.Restore = (*restoreExecutor)(nil)
 
-// NewRestoreExecutor returns a Restore that runs server-side restores.
-func NewRestoreExecutor(resolver secrets.Resolver) restoreexecutor.Restore {
-	return &restoreExecutor{resolver: resolver}
+// NewRestoreExecutor returns a Restore that runs server-side restores. backupReader tells
+// which namespace a backup holds, to restore into when the request maps none.
+func NewRestoreExecutor(backupReader service.BackupReader) restoreexecutor.Restore {
+	return &restoreExecutor{backupReader: backupReader}
 }
 
 // Run starts the server restore of the job id in request.BackupDataPath.
@@ -33,68 +36,72 @@ func (r *restoreExecutor) Run(
 	client aerospike.Client,
 	request *model.RestoreRequest,
 ) (restoreexecutor.RestoreHandler, error) {
-	namespace, err := destinationNamespace(request)
+	namespace, err := r.destinationNamespace(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 
-	common, err := newRequestCommon(ctx, r.resolver, request.SourceStorage, namespace)
+	common, err := newRequestCommon(request.SourceStorage, namespace)
 	if err != nil {
 		return nil, err
 	}
 
+	jobID := newJobID(time.Now())
 	infoClient := client.InfoClient()
 	err = infoClient.StartRestore(ctx, &infomodels.RequestRestore{
 		RequestCommon: common,
-		JobID:         request.BackupDataPath,
-		FuzzyRestore:  true,
+		JobID:         jobID,
+		BackupIDs:     request.BackupDataPath,
+		Fuzzy:         &infomodels.RequestFuzzyRestore{},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to start server restore: %w", err)
 	}
 
-	return newRestoreHandler(infoClient, namespace), nil
+	return newRestoreHandler(infoClient, namespace, jobID), nil
 }
 
-// destinationNamespace returns the namespace to restore into: the mapped destination, or the
-// source namespace when it is not renamed.
-func destinationNamespace(request *model.RestoreRequest) (string, error) {
-	if request.Policy.Namespace == nil {
-		return "", errors.New("server restore requires the namespace in the restore policy")
+// destinationNamespace returns the namespace to restore into: the mapped destination, or
+// else the namespace the backup was taken from.
+func (r *restoreExecutor) destinationNamespace(ctx context.Context, request *model.RestoreRequest) (string, error) {
+	if request.Policy.Namespace != nil && request.Policy.Namespace.Destination != "" {
+		return request.Policy.Namespace.Destination, nil
 	}
 
-	if destination := request.Policy.Namespace.Destination; destination != "" {
-		return destination, nil
+	backups, err := r.backupReader.GetBackups(ctx, service.NewPathFilter(request.BackupDataPath, request.SourceStorage))
+	if err != nil {
+		return "", fmt.Errorf("failed to read server backup %s: %w", request.BackupDataPath, err)
+	}
+	if len(backups) == 0 {
+		return "", fmt.Errorf("server backup %s not found", request.BackupDataPath)
 	}
 
-	if source := request.Policy.Namespace.Source; source != "" {
-		return source, nil
-	}
-
-	return "", errors.New("server restore requires the namespace in the restore policy")
+	return backups[0].Namespace, nil
 }
 
-// restoreHandler follows a server restore of one namespace.
+// restoreHandler follows a server restore job.
 type restoreHandler struct {
 	infoClient backup.ServerBackupInfo
 	namespace  string
+	jobID      string
 	stats      *models.RestoreStats
 }
 
 var _ restoreexecutor.RestoreHandler = (*restoreHandler)(nil)
 
-func newRestoreHandler(infoClient backup.ServerBackupInfo, namespace string) *restoreHandler {
+func newRestoreHandler(infoClient backup.ServerBackupInfo, namespace, jobID string) *restoreHandler {
 	stats := models.NewRestoreStats()
 	stats.Start()
 
 	return &restoreHandler{
 		infoClient: infoClient,
 		namespace:  namespace,
+		jobID:      jobID,
 		stats:      stats,
 	}
 }
 
-// Wait polls the namespace restore state until the restore ends or ctx is canceled.
+// Wait polls the restore job until it ends or ctx is canceled.
 func (h *restoreHandler) Wait(ctx context.Context) error {
 	defer h.stats.Stop()
 
@@ -108,16 +115,21 @@ func (h *restoreHandler) Wait(ctx context.Context) error {
 		case <-ticker.C:
 		}
 
-		state, err := h.infoClient.GetRestoreStatus(ctx, h.namespace)
+		status, err := h.infoClient.GetRestoreStatus(ctx, h.namespace, h.jobID)
+		if errors.Is(err, asinfo.ErrNotFound) {
+			continue // the job is not visible on the cluster yet.
+		}
 		if err != nil {
 			return fmt.Errorf("failed to get server restore status: %w", err)
 		}
 
-		switch state {
-		case infomodels.RestoreStateNone:
+		switch status.State {
+		case infomodels.RestoreStateComplete:
 			return nil
 		case infomodels.RestoreStateFailed:
-			return fmt.Errorf("server restore of namespace %s failed", h.namespace)
+			return fmt.Errorf("server restore %s failed: %s", h.jobID, status.ErrorReason)
+		case infomodels.RestoreStateAborted:
+			return fmt.Errorf("server restore %s was aborted", h.jobID)
 		default:
 		}
 	}
