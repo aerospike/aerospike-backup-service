@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
@@ -45,14 +47,19 @@ func (r *restoreExecutor) Run(
 	if err != nil {
 		return nil, err
 	}
+	common.SetList = strings.Join(request.Policy.SetList, ",")
 
+	// A limit the policy leaves unset is zero, which the request omits: the server's default applies.
 	jobID := newJobID(time.Now())
 	infoClient := client.InfoClient()
 	err = infoClient.StartRestore(ctx, &infomodels.RequestRestore{
-		RequestCommon: common,
-		JobID:         jobID,
-		BackupIDs:     request.BackupDataPath,
-		Fuzzy:         &infomodels.RequestFuzzyRestore{},
+		RequestCommon:        common,
+		JobID:                jobID,
+		BackupIDs:            request.BackupDataPath,
+		RestoreWorkerThreads: ptr.ValueOrZero(request.Policy.Parallel),
+		RestoreRPS:           ptr.ValueOrZero(request.Policy.Tps),
+		ExtraTTL:             int(ptr.ValueOrZero(request.Policy.ExtraTTL)),
+		Fuzzy:                &infomodels.RequestFuzzyRestore{},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to start server restore: %w", err)

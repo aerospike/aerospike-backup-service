@@ -79,15 +79,12 @@ const (
 		"the server takes its zero partition manifests for a failed fetch"
 	gapNamespaceMapping = "server bug: a fuzzy restore into another namespace reads the backup under the " +
 		"destination namespace, finds nothing there and never ends"
-	gapBinList        = "server-side backup gap: ABS does not send the routine's bin-list to the server"
-	gapFilterExp      = "server-side backup gap: ABS does not send the routine's filter-exp to the server"
-	gapNoIndexes      = "server-side backup gap: ABS does not send the policy's no-indexes to the server"
-	gapRestoreSetList = "server-side backup gap: ABS does not send the restore policy's set-list to the server"
-	gapCompression    = "server-side backup gap: compression and encryption policies are accepted and ignored"
-	gapRetention      = "server-side backup gap: no retention is applied to server backups"
-	gapStorage        = "server-side backup gap: storage other than S3 is accepted when the configuration loads"
-	gapClusterConfig  = "server-side backup gap: no cluster configuration is saved with a server backup"
-	gapProgress       = "server-side backup gap: a running server backup reports its progress in percent, " +
+	gapNoIndexes     = "server-side backup gap: ABS does not send the policy's no-indexes to the server"
+	gapCompression   = "server-side backup gap: compression and encryption policies are accepted and ignored"
+	gapRetention     = "server-side backup gap: no retention is applied to server backups"
+	gapStorage       = "server-side backup gap: storage other than S3 is accepted when the configuration loads"
+	gapClusterConfig = "server-side backup gap: no cluster configuration is saved with a server backup"
+	gapProgress      = "server-side backup gap: a running server backup reports its progress in percent, " +
 		"not in records"
 	gapRoutineGate = "server-side backup gap: a second routine on the same cluster is skipped while a backup " +
 		"of another routine runs"
@@ -316,6 +313,16 @@ func (s *ServerBuildSuite) restoreIntoDestination(e *env, key string) dto.Restor
 	return s.restoreWithin(e, e.baseURL+"/v1/restore/full", request, serverJobTimeout)
 }
 
+// restoreIntoDestinationWithPolicy restores the backup at key into the destination cluster with
+// policy via POST /v1/restore/full, and waits for the job to succeed.
+func (s *ServerBuildSuite) restoreIntoDestinationWithPolicy(e *env, key string, policy *dto.RestorePolicy) {
+	request := defaultRestoreRequest(key)
+	request.DestinationClusterConfig.Name = destinationClusterName
+	request.Policy = policy
+
+	s.restoreWithin(e, e.baseURL+"/v1/restore/full", request, serverJobTimeout)
+}
+
 // restoreIntoDestinationByTimestamp restores the routine's backups up to timestamp into the
 // destination cluster via POST /v1/restore/timestamp, and waits for the job to succeed.
 func (s *ServerBuildSuite) restoreIntoDestinationByTimestamp(e *env, timestamp time.Time) dto.RestoreJobStatus {
@@ -360,6 +367,61 @@ func (s *ServerBuildSuite) info(client *as.Client, command string) string {
 	s.Require().NoError(err)
 
 	return response[command]
+}
+
+// backupJobFields returns the fields of the backup-status row of the server backup jobID on
+// the source cluster, which keeps finished jobs.
+func (s *ServerBuildSuite) backupJobFields(jobID string) map[string]string {
+	rows := statusRows(s.info(s.client, "backup-status:job-id="+jobID))
+	s.Require().Len(rows, 1, "backup-status of job %s", jobID)
+
+	return rows[jobID]
+}
+
+// restoreJobIDs returns the ids of the restore jobs the destination cluster knows, finished
+// ones included.
+func (s *ServerBuildSuite) restoreJobIDs() map[string]bool {
+	ids := make(map[string]bool)
+	for id := range statusRows(s.info(s.destinationClient, "restore-status")) {
+		ids[id] = true
+	}
+
+	return ids
+}
+
+// newRestoreJobFields returns the fields of the one restore-status row of the destination
+// cluster whose job is not in before: the job of the restore run since before was read.
+func (s *ServerBuildSuite) newRestoreJobFields(before map[string]bool) map[string]string {
+	var found []map[string]string
+	for id, fields := range statusRows(s.info(s.destinationClient, "restore-status")) {
+		if !before[id] {
+			found = append(found, fields)
+		}
+	}
+	s.Require().Len(found, 1, "new restore jobs on the destination cluster")
+
+	return found[0]
+}
+
+// statusRows parses a backup-status or restore-status response, one ';'-separated row per job of
+// ':'-separated key=value fields, into the fields of each row by job id. Time fields hold ':' of
+// their own, so they come out cut; no caller reads them.
+func statusRows(response string) map[string]map[string]string {
+	rows := make(map[string]map[string]string)
+	for row := range strings.SplitSeq(response, ";") {
+		fields := make(map[string]string)
+		for field := range strings.SplitSeq(row, ":") {
+			if key, value, ok := strings.Cut(field, "="); ok {
+				fields[key] = value
+			}
+		}
+
+		if id, ok := fields["job-id"]; ok {
+			rows[id] = fields
+		}
+	}
+
+	return rows
 }
 
 // destinationIndexes returns the info response describing the secondary indexes of

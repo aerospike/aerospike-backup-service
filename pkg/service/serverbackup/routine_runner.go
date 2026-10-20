@@ -13,6 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
@@ -111,11 +112,18 @@ func (r *routineRunner) backupNamespace(
 		return err
 	}
 	common.SetList = strings.Join(routine.SetList, ",")
+	common.FilterExp = routine.FilterExpression
 
+	// A limit the policy leaves unset is zero, which the request omits: the server's default applies.
+	policy := routine.BackupPolicy
 	jobID, err := infoClient.StartBackup(ctx, &infomodels.RequestBackup{
-		RequestCommon:  common,
-		ModifiedAfter:  unixSeconds(runSpec.TimeBounds.FromTime),
-		ModifiedBefore: unixSeconds(runSpec.TimeBounds.ToTime),
+		RequestCommon:       common,
+		BinList:             strings.Join(routine.BinList, ","),
+		ModifiedAfter:       unixSeconds(runSpec.TimeBounds.FromTime),
+		ModifiedBefore:      unixSeconds(runSpec.TimeBounds.ToTime),
+		BackupRPS:           ptr.ValueOrZero(policy.RecordsPerSecond),
+		BackupWorkerThreads: ptr.ValueOrZero(policy.Parallel),
+		BackupUploadThreads: ptr.ValueOrZero(policy.ParallelWrite),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to start server backup: %w", err)
