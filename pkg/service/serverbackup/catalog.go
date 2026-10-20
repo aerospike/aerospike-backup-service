@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -26,8 +27,6 @@ type S3ClientProvider interface {
 }
 
 // catalog lists server backups from the metadata the server writes next to each of them.
-//
-// The metadata carries no time bounds, so every server backup is listed as a full backup.
 type catalog struct {
 	s3Clients S3ClientProvider
 }
@@ -52,10 +51,6 @@ func (c *catalog) GetBackups(ctx context.Context, filter service.BackupFilter) (
 }
 
 func (c *catalog) getRoutineBackups(ctx context.Context, filter *service.RoutineFilter) ([]model.BackupDetails, error) {
-	if filter.BackupType() == model.BackupTypeIncremental {
-		return nil, nil
-	}
-
 	backups, err := c.listBackups(ctx, filter.Storage())
 	if err != nil {
 		return nil, err
@@ -64,7 +59,7 @@ func (c *catalog) getRoutineBackups(ctx context.Context, filter *service.Routine
 	bounds := filter.TimeBounds()
 	matching := make([]model.BackupDetails, 0, len(backups))
 	for _, backup := range backups {
-		if bounds.Contains(backup.Created) {
+		if backup.BackupType() == filter.BackupType() && bounds.Contains(backup.Created) {
 			matching = append(matching, backup)
 		}
 	}
@@ -76,13 +71,21 @@ func (c *catalog) getRoutineBackups(ctx context.Context, filter *service.Routine
 	return matching, nil
 }
 
+// getPathBackup reads the backup whose job id is the filter's path. The lister applies its
+// prefix to listing only (BKRS-474), so the backup is addressed by its key under the storage
+// path.
 func (c *catalog) getPathBackup(ctx context.Context, filter *service.PathFilter) ([]model.BackupDetails, error) {
-	backupLister, err := c.newLister(ctx, filter.Storage())
+	s3Storage, err := toS3Storage(filter.Storage())
 	if err != nil {
 		return nil, err
 	}
 
-	metadata, err := backupLister.GetMetadata(ctx, filter.Path())
+	backupLister, err := c.newLister(ctx, s3Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata, err := backupLister.GetMetadata(ctx, path.Join(s3Storage.Path, filter.Path()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read server backup metadata: %w", err)
 	}
@@ -126,16 +129,21 @@ func (c *catalog) newLister(ctx context.Context, storage model.Storage) (*lister
 	return lister.NewLister(client, s3Storage.Bucket, s3Storage.Path, lister.WithLogger(slog.Default())), nil
 }
 
-// toBackupDetails converts server metadata to the details of a backup keyed by its job id.
-// Only the creation time, taken from the job id, and the namespace are known. The metadata
-// has no file or record counts, so a completed backup counts as one file: it holds data.
+// toBackupDetails converts server metadata to the details of a backup keyed by its job id. It
+// was created when its job started, at the time in the job id. Its lower time bound, From, is
+// what makes it incremental. The metadata records no finish time and no record, byte, file,
+// secondary index or UDF counts, so they are left at zero, except the file count: it is one,
+// so that restore does not take the backup for an empty one.
 func toBackupDetails(metadata listermodels.Metadata, storage model.Storage) model.BackupDetails {
-	created := jobIDTime(metadata.BackupID)
+	var from time.Time
+	if metadata.ModifiedAfter != 0 {
+		from = time.Unix(metadata.ModifiedAfter, 0).UTC()
+	}
 
 	return model.NewBackupDetails(
 		model.BackupMetadata{
-			Created:     created,
-			Finished:    created,
+			Created:     jobIDTime(metadata.BackupID),
+			From:        from,
 			Namespace:   metadata.Namespace,
 			FileCount:   1,
 			Compression: model.CompressionModeNone,

@@ -104,7 +104,7 @@ func (s *Suite) assertRecordsIn(client *as.Client, ns string, ages []int) {
 		record, err := client.Get(nil, key)
 		s.Require().NoError(err)
 		s.Require().NotNil(record)
-		s.Equal(age, record.Bins["age"])
+		s.Equal(age, record.Bins[ageBin])
 	}
 }
 

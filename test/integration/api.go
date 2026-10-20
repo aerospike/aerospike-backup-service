@@ -90,6 +90,7 @@ func (s *Suite) restoreByTimestamp(e *env, timestamp time.Time) dto.RestoreJobSt
 // listed does.
 func (s *Suite) triggerBackup(e *env, backupType model.BackupType) {
 	e.newestBeforeTrigger[backupType] = s.newestBackupCreated(e, backupType)
+	e.successesBeforeTrigger[backupType] = s.metricBackupSuccessEventCount(e, backupType)
 
 	status, body := s.do(e, http.MethodPost, e.backupsURL(backupType), nil)
 	s.Require().Equal(http.StatusAccepted, status, "trigger %s backup: %s", backupType, body)
