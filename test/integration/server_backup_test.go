@@ -76,13 +76,21 @@ func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 // TestServerRestoreByTimestampWorkflow mirrors TestRestoreByTimestampWorkflow with server-side
 // backup: runs full backup, incremental backup, empty incremental backup, then restores the
 // namespace into the destination cluster to a point in time via POST /v1/restore/timestamp.
-// Subtests share env, backup storage, and Aerospike state.
+// Unlike the scan test, the full backup holds a record, which the incremental backup holds
+// updated: the server cannot restore an empty backup, and the restore must end with the newest
+// value. Subtests share env, backup storage, and Aerospike state.
 func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
+	const (
+		fullAge        = 10
+		incrementalAge = 11
+	)
+
 	e := s.setupEnv(s.serverBackupConfig)
 
 	var fullBackup, incrBackup dto.BackupDetails
 
 	s.Run("full", func() {
+		s.seedRecordsIn(s.client, serverNamespace, []int{fullAge})
 		successCount := s.metricBackupSuccessEventCount(e, model.BackupTypeFull)
 		s.triggerFullBackup(e)
 		fullBackup = s.waitForFinishedBackup(e, model.BackupTypeFull)
@@ -93,7 +101,7 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 	})
 
 	s.Run("incremental", func() {
-		s.seedRecordsIn(s.client, serverNamespace, []int{1})
+		s.seedRecordsIn(s.client, serverNamespace, []int{incrementalAge})
 		s.triggerIncrementalBackup(e)
 		incrBackup = s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 		s.gap("record_count", gapRecordCount, func() { s.Equal(uint64(1), incrBackup.RecordCount) })
@@ -114,14 +122,13 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 		})
 	})
 
-	// The chain starts with the full backup, which holds no records.
-	s.gap("restore_by_timestamp", gapEmptyRestore, func() {
+	s.Run("restore_by_timestamp", func() {
 		successCount := s.metricRestoreSuccessEventCount(e)
 		status := s.restoreIntoDestinationByTimestamp(e, time.Now())
 		s.Equal(dto.RestoreSuccess, status.Status)
-		s.Equal(uint64(1), status.InsertedRecords)
+		s.gap("inserted_records", gapRestoreStats, func() { s.Equal(uint64(1), status.InsertedRecords) })
 		s.Empty(status.Error)
-		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
+		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{incrementalAge})
 		s.assertMetricRestoreSuccessEventCount(e, successCount+1)
 	})
 }

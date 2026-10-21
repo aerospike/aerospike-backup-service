@@ -108,22 +108,24 @@ func InitComponents(
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
 	var routineStorage u.LockMap
-	mode := newBackupMode(config, pathService, operations, s3Accessor, clientManager, &routineStorage)
+
+	// components that are specific to mode - server/scan backup
+	components := newComponentsForMode(config, pathService, operations, s3Accessor, clientManager, &routineStorage)
 
 	completionHandler := service.NewBackupCompletionHandler(
-		mode.registry,
-		mode.retentionManager,
-		mode.clusterConfigWriter,
+		components.registry,
+		components.retentionManager,
+		components.clusterConfigWriter,
 	)
 	backupOrchestrator := service.NewBackupOrchestrator(
-		mode.registry,
+		components.registry,
 		completionHandler,
 		service.NewBackupReporter(),
-		mode.startController,
-		mode.routineRunner,
+		components.startController,
+		components.routineRunner,
 	)
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
-	configApplier := service.NewConfigApplier(backupScheduler, mode.registry, config)
+	configApplier := service.NewConfigApplier(backupScheduler, components.registry, config)
 
 	err = configApplier.ApplyNewConfig()
 	if err != nil {
@@ -131,28 +133,28 @@ func InitComponents(
 	}
 
 	restoreJobs := service.NewRestoreJobsHolder()
-	restoreValidator := service.NewRestoreValidator(mode.startController, config)
+	restoreValidator := service.NewRestoreValidator(components.startController, config)
 
 	restoreMgr := service.NewRestoreManager(
-		mode.restoreExecutor,
+		components.restoreExecutor,
 		clientManager,
 		restoreJobs,
-		mode.backupReader,
+		components.backupReader,
 		&routineStorage,
 		restoreValidator,
 	)
 
-	metricsCollector := prometheus.NewMetricsCollector(mode.registry.GetRunningState, restoreJobs.StatusCounts)
+	metricsCollector := prometheus.NewMetricsCollector(components.registry.GetRunningState, restoreJobs.StatusCounts)
 
-	configRetriever := service.NewConfigRetriever(mode.backupReader, pathService, operations)
+	configRetriever := service.NewConfigRetriever(components.backupReader, pathService, operations)
 	srv := handlers.NewService(
 		config,
 		configApplier,
 		backupScheduler,
 		restoreMgr,
 		configRetriever,
-		mode.backupReader,
-		mode.registry,
+		components.backupReader,
+		components.registry,
 		configurationManager,
 		nsValidator,
 		tlsProber,
@@ -180,7 +182,7 @@ func InitComponents(
 		Servers:          servers,
 		MetricsCollector: metricsCollector,
 		TLSProvider:      tlsProvider,
-		registry:         mode.registry,
+		registry:         components.registry,
 		restoreJobs:      restoreJobs,
 	}, nil
 }
@@ -226,7 +228,7 @@ type backupMode struct {
 	restoreExecutor     restoreexecutor.Restore
 }
 
-func newBackupMode(
+func newComponentsForMode(
 	config *model.Config,
 	pathService service.PathService,
 	operations storage.Operations,
