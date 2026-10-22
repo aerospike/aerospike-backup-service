@@ -18,6 +18,8 @@ func TestRestoreExecutor_Run_Success(t *testing.T) {
 
 	reader := NewMockStreamingReader(ctrl)
 	restoreHandler := NewMockRestoreHandler(ctrl)
+	restoreHandler.EXPECT().Wait(gomock.Any()).Return(nil)
+	restoreHandler.EXPECT().GetStats().Return(restoreStatsInserted(2)).AnyTimes()
 
 	client := aerospike.NewMockClient(ctrl)
 	client.EXPECT().
@@ -33,8 +35,8 @@ func TestRestoreExecutor_Run_Success(t *testing.T) {
 
 	handler, err := executor.Run(t.Context(), client, testRestoreRequest())
 	require.NoError(t, err)
-	require.NotNil(t, handler)
-	assert.Same(t, restoreHandler, handler)
+	require.NoError(t, handler.Wait(t.Context()))
+	assert.Equal(t, uint64(2), handler.GetStats().GetRecordsInserted())
 }
 
 func TestRestoreExecutor_Run_RestoreStartError(t *testing.T) {
@@ -53,9 +55,9 @@ func TestRestoreExecutor_Run_RestoreStartError(t *testing.T) {
 
 	executor := NewRestoreExecutor(operations)
 
-	_, err := executor.Run(t.Context(), client, testRestoreRequest())
-	require.Error(t, err)
-	assert.ErrorContains(t, err, "restore failed")
+	handler, err := executor.Run(t.Context(), client, testRestoreRequest())
+	require.NoError(t, err)
+	assert.ErrorContains(t, handler.Wait(t.Context()), "restore failed")
 }
 
 func TestRestoreExecutor_Run_EmptyStorage(t *testing.T) {
@@ -70,9 +72,9 @@ func TestRestoreExecutor_Run_EmptyStorage(t *testing.T) {
 
 	client := aerospike.NewMockClient(ctrl)
 
-	_, err := executor.Run(t.Context(), client, testRestoreRequest())
-	require.Error(t, err)
-	require.ErrorIs(t, err, common.ErrEmptyStorage)
+	handler, err := executor.Run(t.Context(), client, testRestoreRequest())
+	require.NoError(t, err)
+	require.ErrorIs(t, handler.Wait(t.Context()), common.ErrEmptyStorage)
 }
 
 func TestRunRestore_CreateReaderError(t *testing.T) {

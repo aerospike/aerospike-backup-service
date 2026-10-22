@@ -19,6 +19,9 @@ type RestoreRequest struct {
 	SecretAgent *SecretAgent
 	// Path to backup data in source storage.
 	BackupDataPath string
+	// DisableReordering keeps a chain of backups oldest first under the unique (CREATE_ONLY)
+	// policy too, which otherwise applies it newest first.
+	DisableReordering bool
 }
 
 // RestoreTimestampRequest represents a restore by timestamp operation request.

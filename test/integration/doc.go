@@ -16,6 +16,8 @@
 //	                which shares one plain Aerospike node
 //	secured.go      SecuredClusterSuite: per-test Aerospike nodes with security
 //	                and TLS enabled
+//	serverbuild.go  ServerBuildSuite: two single-node clusters running a locally
+//	                built server, for server-side backup, and MinIO shared with them
 //	names.go        the fixed names baseConfig registers (cluster, routine, …)
 //	service.go      env: a running ABS instance, over HTTP or HTTPS
 //	api.go          calls to the ABS REST API: trigger, list, wait, restore

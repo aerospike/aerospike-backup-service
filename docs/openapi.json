@@ -2239,6 +2239,20 @@
                 "description": "BackupCommonConfig represents service-level backup settings.",
                 "type": "object",
                 "properties": {
+                    "backup-mode": {
+                        "description": "Backup mode for the whole service instance (optional).\nAllowed values:\n* scan (default): the service scans the cluster and writes the backup data itself.\n* server: the Aerospike server writes the backup to S3 storage itself.\nChanging the mode requires a restart.",
+                        "default": "scan",
+                        "enum": [
+                            "scan",
+                            "server"
+                        ],
+                        "type": "string",
+                        "enum": [
+                            "scan",
+                            "server"
+                        ],
+                        "nullable": true
+                    },
                     "schedule-timezone": {
                         "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or any IANA timezone name resolvable\nby Go's time.LoadLocation (for example, America/New_York or Japan).\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nPrefer canonical Area/Location names: legacy aliases such as EST resolve as\nfixed UTC-5 with no DST, which is rarely what \"Eastern Time\" is meant to be.\nChanging this service-level default requires a restart.",
                         "type": "string",
@@ -2262,7 +2276,7 @@
                 "type": "object",
                 "properties": {
                     "byte-count": {
-                        "description": "The size of the backup in bytes.",
+                        "description": "The size of the backup in bytes.\nUnknown for server-side backups.",
                         "type": "integer",
                         "format": "int64",
                         "example": 2000
@@ -2277,7 +2291,7 @@
                         "example": "2023-03-20T14:50:00Z"
                     },
                     "duration": {
-                        "description": "Duration represents the elapsed time taken by the backup process in seconds.",
+                        "description": "Duration represents the elapsed time taken by the backup process in seconds.\nUnknown for server-side backups.",
                         "type": "integer"
                     },
                     "encryption": {
@@ -2285,18 +2299,18 @@
                         "type": "string"
                     },
                     "file-count": {
-                        "description": "The number of backup files created.",
+                        "description": "The number of backup files created.\nUnknown for server-side backups.",
                         "type": "integer",
                         "format": "int64",
                         "example": 1
                     },
                     "finished": {
-                        "description": "The time the backup operation completed.",
+                        "description": "The time the backup operation completed.\nUnknown for server-side backups.",
                         "type": "string",
                         "example": "2023-03-20T14:50:00Z"
                     },
                     "finished-timestamp": {
-                        "description": "The backup finish time in epoch millis.",
+                        "description": "The backup finish time in epoch millis.\nUnknown for server-side backups.",
                         "type": "integer",
                         "format": "int64",
                         "example": 1685458200000
@@ -2317,7 +2331,7 @@
                         "example": "testNamespace"
                     },
                     "record-count": {
-                        "description": "The total number of records backed up.",
+                        "description": "The total number of records backed up.\nUnknown for server-side backups.",
                         "type": "integer",
                         "format": "int64",
                         "example": 100

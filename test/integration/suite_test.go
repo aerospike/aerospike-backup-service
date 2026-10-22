@@ -29,6 +29,12 @@ type AuthSuite struct {
 	SecuredClusterSuite
 }
 
+// ServerBackupSuite backs up with server-side backup from one cluster running a locally built
+// server and restores into another. It skips unless the server build is configured.
+type ServerBackupSuite struct {
+	ServerBuildSuite
+}
+
 // TestMain pulls every image up front, in parallel, before the suites run one
 // after another.
 func TestMain(m *testing.M) {
@@ -50,4 +56,8 @@ func TestStorage(t *testing.T) {
 
 func TestClusterAuth(t *testing.T) {
 	suite.Run(t, new(AuthSuite))
+}
+
+func TestServerBackup(t *testing.T) {
+	suite.Run(t, new(ServerBackupSuite))
 }
