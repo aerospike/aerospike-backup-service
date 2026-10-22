@@ -18,8 +18,11 @@ import (
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
-// restoreExecutor asks the server to run a fuzzy restore of a server backup, identified by the
-// job id of the backup.
+// maxChainLength is the most backups the server restores in one job (AS_RESTORE_CHAIN_MAX_LINKS).
+const maxChainLength = 32
+
+// restoreExecutor asks the server to run a fuzzy restore of server backups, identified by their
+// job ids: a single backup, or a full backup and the incremental backups that follow it.
 type restoreExecutor struct {
 	backupReader service.BackupReader
 }
@@ -32,13 +35,37 @@ func NewRestoreExecutor(backupReader service.BackupReader) restoreexecutor.Resto
 	return &restoreExecutor{backupReader: backupReader}
 }
 
-// Run starts the server restore of the job id in request.BackupDataPath.
+// Run starts one server restore job that applies the full backup and then each incremental,
+// in that order; each request names one backup by its job id in BackupDataPath. The requests
+// share their policy and storage, so the full one stands for all.
 func (r *restoreExecutor) Run(
 	ctx context.Context,
 	client aerospike.Client,
-	request *model.RestoreRequest,
+	full *model.RestoreRequest,
+	incrementals ...*model.RestoreRequest,
 ) (restoreexecutor.RestoreHandler, error) {
-	namespace, err := r.destinationNamespace(ctx, request)
+	if len(incrementals)+1 > maxChainLength {
+		return nil, fmt.Errorf("the server restores at most %d backups at once, the chain has %d",
+			maxChainLength, len(incrementals)+1)
+	}
+
+	backupIDs := []string{full.BackupDataPath}
+	for _, incremental := range incrementals {
+		backupIDs = append(backupIDs, incremental.BackupDataPath)
+	}
+
+	return r.start(ctx, client, full, backupIDs)
+}
+
+// start starts a server restore job of backupIDs, oldest first, with the policy and storage of
+// request.
+func (r *restoreExecutor) start(
+	ctx context.Context,
+	client aerospike.Client,
+	request *model.RestoreRequest,
+	backupIDs []string,
+) (restoreexecutor.RestoreHandler, error) {
+	namespace, err := r.destinationNamespace(ctx, request, backupIDs[0])
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +82,7 @@ func (r *restoreExecutor) Run(
 	err = infoClient.StartRestore(ctx, &infomodels.RequestRestore{
 		RequestCommon:        common,
 		JobID:                jobID,
-		BackupIDs:            request.BackupDataPath,
+		BackupIDs:            strings.Join(backupIDs, ","),
 		RestoreWorkerThreads: ptr.ValueOrZero(request.Policy.Parallel),
 		RestoreRPS:           ptr.ValueOrZero(request.Policy.Tps),
 		ExtraTTL:             int(ptr.ValueOrZero(request.Policy.ExtraTTL)),
@@ -69,18 +96,22 @@ func (r *restoreExecutor) Run(
 }
 
 // destinationNamespace returns the namespace to restore into: the mapped destination, or
-// else the namespace the backup was taken from.
-func (r *restoreExecutor) destinationNamespace(ctx context.Context, request *model.RestoreRequest) (string, error) {
+// else the namespace backupID was taken from.
+func (r *restoreExecutor) destinationNamespace(
+	ctx context.Context,
+	request *model.RestoreRequest,
+	backupID string,
+) (string, error) {
 	if request.Policy.Namespace != nil && request.Policy.Namespace.Destination != "" {
 		return request.Policy.Namespace.Destination, nil
 	}
 
-	backups, err := r.backupReader.GetBackups(ctx, service.NewPathFilter(request.BackupDataPath, request.SourceStorage))
+	backups, err := r.backupReader.GetBackups(ctx, service.NewPathFilter(backupID, request.SourceStorage))
 	if err != nil {
-		return "", fmt.Errorf("failed to read server backup %s: %w", request.BackupDataPath, err)
+		return "", fmt.Errorf("failed to read server backup %s: %w", backupID, err)
 	}
 	if len(backups) == 0 {
-		return "", fmt.Errorf("server backup %s not found", request.BackupDataPath)
+		return "", fmt.Errorf("server backup %s not found", backupID)
 	}
 
 	return backups[0].Namespace, nil

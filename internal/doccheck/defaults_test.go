@@ -95,7 +95,7 @@ var applied = map[string]appliedDefault{
 	"BaseRestorePolicy.NoUdfs":              {applied: value(false)},
 	"BaseRestorePolicy.DisableBatchWrites":  {applied: value(false)},
 	"BaseRestorePolicy.Replace":             {applied: value(false)},
-	"BaseRestorePolicy.Unique":              {applied: value(false)},
+	"BaseRestorePolicy.Unique":              {applied: value((&model.RestorePolicy{}).IsUniqueOrDefault())},
 	"BaseRestorePolicy.NoGeneration":        {applied: value(false)},
 	"BaseRestorePolicy.ExtraTTL":            {applied: value(0)},
 	"BackupRoutine.Disabled":                {applied: value(false)},

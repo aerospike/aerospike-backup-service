@@ -44,18 +44,23 @@ func (m *MockRestore) EXPECT() *MockRestoreMockRecorder {
 }
 
 // Run mocks base method.
-func (m *MockRestore) Run(ctx context.Context, client aerospike.Client, restoreRequest *model.RestoreRequest) (RestoreHandler, error) {
+func (m *MockRestore) Run(ctx context.Context, client aerospike.Client, full *model.RestoreRequest, incrementals ...*model.RestoreRequest) (RestoreHandler, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx, client, restoreRequest)
+	varargs := []any{ctx, client, full}
+	for _, a := range incrementals {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Run", varargs...)
 	ret0, _ := ret[0].(RestoreHandler)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockRestoreMockRecorder) Run(ctx, client, restoreRequest any) *gomock.Call {
+func (mr *MockRestoreMockRecorder) Run(ctx, client, full any, incrementals ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockRestore)(nil).Run), ctx, client, restoreRequest)
+	varargs := append([]any{ctx, client, full}, incrementals...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockRestore)(nil).Run), varargs...)
 }
 
 // MockRestoreHandler is a mock of RestoreHandler interface.

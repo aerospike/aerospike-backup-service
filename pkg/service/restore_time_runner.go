@@ -61,10 +61,22 @@ func (r *timeRestoreRunner) RestoreByTime(request *model.RestoreTimestampRequest
 	return jobID
 }
 
-// findBackupsToRestore returns list of backups for each namespace, sorted by creation date. First is full backup.
+// restoreChain is the backups that restore a namespace to a point in time: its latest full
+// backup up to that time and the incremental backups after it, oldest first.
+type restoreChain struct {
+	full         model.BackupDetails
+	incrementals []model.BackupDetails
+}
+
+// backups returns the backups of the chain, the full backup first.
+func (c restoreChain) backups() []model.BackupDetails {
+	return append([]model.BackupDetails{c.full}, c.incrementals...)
+}
+
+// findBackupsToRestore returns the restore chain of each namespace.
 func (r *timeRestoreRunner) findBackupsToRestore(
 	ctx context.Context, request *model.RestoreTimestampRequest,
-) (map[string][]model.BackupDetails, error) {
+) (map[string]restoreChain, error) {
 	fullBackups, err := r.backupReader.GetBackups(ctx, // find all full backups completed by given restore request time.
 		newRoutineBackupFilter(request.RoutineName, request.Storage, model.BackupTypeFull).
 			WithToTime(request.Time),
@@ -121,19 +133,31 @@ func earliestSelectedFullBackup(selectedFullByNamespace map[string]model.BackupD
 	})
 }
 
-// buildRestoreChainsByNamespace constructs restore chains for each namespace:
-// selected full backup first, followed by eligible incrementals in chronological order.
+// buildRestoreChainsByNamespace constructs the restore chain of each namespace: its selected
+// full backup and the eligible incrementals after it, in chronological order.
 func buildRestoreChainsByNamespace(
 	latestFullByNamespace map[string]model.BackupDetails,
 	incrementalsByNamespace map[string][]model.BackupDetails,
-) map[string][]model.BackupDetails {
-	chains := make(map[string][]model.BackupDetails, len(latestFullByNamespace))
+) map[string]restoreChain {
+	chains := make(map[string]restoreChain, len(latestFullByNamespace))
 	for ns, full := range latestFullByNamespace {
-		chains[ns] = append(chains[ns], full)
-		chains[ns] = append(chains[ns], filterIncrementals(full, incrementalsByNamespace[ns])...)
+		chains[ns] = restoreChain{
+			full:         full,
+			incrementals: filterIncrementals(full, incrementalsByNamespace[ns]),
+		}
 	}
 
 	return chains
+}
+
+// backupsByNamespace returns the backups of each namespace's chain, the full backup first.
+func backupsByNamespace(chains map[string]restoreChain) map[string][]model.BackupDetails {
+	backups := make(map[string][]model.BackupDetails, len(chains))
+	for ns, chain := range chains {
+		backups[ns] = chain.backups()
+	}
+
+	return backups
 }
 
 func filterIncrementals(
@@ -199,12 +223,12 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 	routineStorageLock.RLock()
 	defer routineStorageLock.RUnlock()
 
-	backupsByNamespace, err := r.findBackupsToRestore(ctx, request)
+	chains, err := r.findBackupsToRestore(ctx, request)
 	if err != nil {
 		return err
 	}
 
-	checkGaps(backupsByNamespace, logger)
+	checkGaps(chains, logger)
 
 	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
 	if err != nil {
@@ -217,20 +241,18 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 		ctx,
 		request,
 		client.InfoClient(),
-		backupsByNamespace,
+		backupsByNamespace(chains),
 	); err != nil {
 		return err
 	}
 
-	return r.restoreAllNamespaces(ctx, client, request, jobID, backupsByNamespace, logger)
+	return r.restoreAllNamespaces(ctx, client, request, jobID, chains, logger)
 }
 
 // checkGaps checks that there are no gaps between full backups and incremental backups.
-func checkGaps(chains map[string][]model.BackupDetails, logger *slog.Logger) {
-	for ns, chain := range chains {
-		if len(chain) < 2 {
-			continue
-		}
+func checkGaps(chains map[string]restoreChain, logger *slog.Logger) {
+	for ns, restoreChain := range chains {
+		chain := restoreChain.backups()
 
 		for i := 0; i < len(chain)-1; i++ {
 			prev := chain[i]
@@ -256,7 +278,7 @@ func (r *timeRestoreRunner) restoreAllNamespaces(
 	client aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
-	backupsByNamespace map[string][]model.BackupDetails,
+	chains map[string]restoreChain,
 	logger *slog.Logger,
 ) error {
 	var (
@@ -268,10 +290,10 @@ func (r *timeRestoreRunner) restoreAllNamespaces(
 	// Best-effort restore: process all namespaces even if some fail, then return combined error.
 	// This allows users to retry only failed namespaces later.
 	// Run namespace restores concurrently and collect errors safely.
-	for namespace, nsBackup := range backupsByNamespace {
+	for namespace, chain := range chains {
 		wg.Go(func() {
 			nsLogger := logger.With(slog.String("namespace", namespace))
-			err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup, nsLogger)
+			err := r.restoreNamespace(ctx, client, request, jobID, namespace, chain, nsLogger)
 			if err != nil {
 				errMu.Lock()
 				multiError = errors.Join(multiError,
@@ -293,27 +315,27 @@ func (r *timeRestoreRunner) restoreNamespace(
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
 	namespace string,
-	backups []model.BackupDetails,
+	chain restoreChain,
 	logger *slog.Logger,
 ) error {
-	policy, err := prepareNamespaceRestore(
-		ctx, client.InfoClient(), namespace, request, backups, logger,
-	)
+	policy, err := prepareNamespaceRestore(ctx, client.InfoClient(), namespace, request, logger)
 	if err != nil {
 		return err
 	}
 
-	return r.executeNamespaceRestore(ctx, client, request, jobID, backups, policy, logger)
+	return r.executeNamespaceRestore(ctx, client, request, jobID, chain, policy, logger)
 }
 
-// prepareNamespaceRestore determines the effective restore policy and may reorder
-// backups in place via slices.Reverse; the caller passes the same slice to execution.
+// prepareNamespaceRestore determines the effective restore policy. Restoring into an empty
+// namespace switches to the unique (CREATE_ONLY) policy, under which a chain is applied newest
+// first: missing records get their latest version, existing ones are skipped, and generations
+// are not bumped for nothing. disable-reordering turns off both the switch and the newest-first
+// order.
 func prepareNamespaceRestore(
 	ctx context.Context,
 	infoClient backup.InfoGetter,
 	namespace string,
 	request *model.RestoreTimestampRequest,
-	backups []model.BackupDetails,
 	logger *slog.Logger,
 ) (model.RestorePolicy, error) {
 	// Policy is guaranteed non-nil by request validation in the API layer.
@@ -323,11 +345,7 @@ func prepareNamespaceRestore(
 		return effectivePolicy, nil
 	}
 
-	if ptr.ValueOrZero(effectivePolicy.Unique) {
-		logger.Info("Use reverse restore order because unique policy is enabled")
-		// Restore newest backups first so missing records get the latest version as of the target
-		// timestamp; existing records are skipped by the unique (CREATE_ONLY) policy.
-		slices.Reverse(backups)
+	if effectivePolicy.IsUniqueOrDefault() {
 		return effectivePolicy, nil
 	}
 
@@ -343,9 +361,6 @@ func prepareNamespaceRestore(
 
 	if counter == 0 {
 		logger.Info("Use optimized restore because database is empty")
-		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
-		// This way we reduce generation noise and unnecessary load.
-		slices.Reverse(backups)
 
 		// old values are not important, because they qualify how to handle existing data in db.
 		effectivePolicy.Unique = ptr.Of(true)
@@ -355,67 +370,61 @@ func prepareNamespaceRestore(
 	return effectivePolicy, nil
 }
 
+// executeNamespaceRestore restores the namespace's chain of backups as one restore. Empty
+// backups are left out, so an empty full backup leaves the chain to its first incremental that
+// holds data; a chain of only empty backups restores nothing.
 func (r *timeRestoreRunner) executeNamespaceRestore(
 	ctx context.Context,
 	client aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
-	backups []model.BackupDetails,
+	chain restoreChain,
 	policy model.RestorePolicy,
 	logger *slog.Logger,
 ) error {
+	backups := chain.backups()
+	requests := make([]*model.RestoreRequest, 0, len(backups))
 	for _, b := range backups {
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
-	}
 
-	for i, b := range backups {
-		logger.Info("Start restoring",
-			slog.String("step", fmt.Sprintf("%d/%d", i+1, len(backups))),
-			slog.Any("backup", b))
 		if b.FileCount == 0 { // skip empty namespaces
 			continue
 		}
 
 		// For restore-by-time we can extract compression from metadata.
-		policy.CompressionPolicy = &model.CompressionPolicy{
+		backupPolicy := policy
+		backupPolicy.CompressionPolicy = &model.CompressionPolicy{
 			Mode: b.Compression,
 		}
 
-		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage, policy)
-		if err != nil {
-			return err
-		}
-
-		r.restoreJobs.addHandler(jobID, handler)
-
-		if err = handler.Wait(ctx); err != nil {
-			return err
-		}
-		logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
+		restoreRequest := model.NewRestoreRequest(
+			request.DestinationCluster,
+			backupPolicy,
+			b.Storage,
+			request.SecretAgent,
+			b.Key,
+		)
+		restoreRequest.DisableReordering = request.DisableReordering
+		requests = append(requests, restoreRequest)
 	}
+
+	if len(requests) == 0 {
+		return nil
+	}
+
+	logger.Info("Start restoring", slog.Int("backups", len(requests)), slog.Any("chain", backups))
+
+	handler, err := r.restoreService.Run(ctx, client, requests[0], requests[1:]...)
+	if err != nil {
+		return fmt.Errorf("failed to start restore of %d backups: %w", len(requests), err)
+	}
+
+	r.restoreJobs.addHandler(jobID, handler)
+
+	if err = handler.Wait(ctx); err != nil {
+		return err
+	}
+	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
 
 	return nil
-}
-
-func (r *timeRestoreRunner) restoreFromPath(
-	ctx context.Context,
-	client aerospike.Client,
-	request *model.RestoreTimestampRequest,
-	backupPath string,
-	storage model.Storage,
-	policy model.RestorePolicy,
-) (restoreexecutor.RestoreHandler, error) {
-	restoreRequest := model.NewRestoreRequest(
-		request.DestinationCluster,
-		policy,
-		storage,
-		request.SecretAgent,
-		backupPath,
-	)
-	handler, err := r.restoreService.Run(ctx, client, restoreRequest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start restore from backup at %s: %w", backupPath, err)
-	}
-
-	return handler, nil
 }
