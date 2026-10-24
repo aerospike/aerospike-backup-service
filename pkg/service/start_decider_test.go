@@ -6,7 +6,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,7 +70,7 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 				FullRunningNow:        tt.routineState.Full != nil,
 				IncrementalRunningNow: tt.routineState.Incremental != nil,
 				HasCompletedFull:      !tt.routineState.LastRunTime.NoFullBackup(),
-				FullScheduledNow:      timeutil.IsCronFireTime("@daily", tt.now, time.UTC),
+				FullScheduledNow:      model.Schedule{Cron: "@daily", Location: time.UTC}.IsFireTime(tt.now),
 			}
 
 			decider := NewStartDecider()

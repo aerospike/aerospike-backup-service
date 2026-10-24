@@ -57,7 +57,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 		SecretAgent:      "agent1",
 		IntervalCron:     "cron",
 		IncrIntervalCron: "inc_cron",
-		Namespaces:       &[]string{"ns1"},
+		Namespaces:       &[]NamespaceName{"ns1"},
 		SetList:          []string{"set1"},
 		BinList:          []string{"bin1"},
 		RackList:         []int{1},
@@ -111,7 +111,7 @@ func TestBackupRoutine_ToModel_BlankTimezoneUsesDefault(t *testing.T) {
 			SourceCluster:    "cluster1",
 			Storage:          "storage1",
 			IntervalCron:     "cron",
-			Namespaces:       &[]string{"ns1"},
+			Namespaces:       &[]NamespaceName{"ns1"},
 			ScheduleTimezone: timezone,
 		}
 
@@ -134,7 +134,7 @@ func TestBackupRoutine_ToModel_PreservesConfiguredTimezone(t *testing.T) {
 		SourceCluster:    "cluster1",
 		Storage:          "storage1",
 		IntervalCron:     "cron",
-		Namespaces:       &[]string{"ns1"},
+		Namespaces:       &[]NamespaceName{"ns1"},
 		ScheduleTimezone: "utc",
 	}
 
@@ -153,7 +153,7 @@ func TestBackupRoutine_ToModel_PolicyNotFound(t *testing.T) {
 	routineDTO := &BackupRoutine{
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 	}
 
 	config := &model.BackupConfig{
@@ -175,7 +175,7 @@ func TestBackupRoutine_ToModel_ClusterNotFound(t *testing.T) {
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 	}
 
 	config := &model.BackupConfig{
@@ -197,7 +197,7 @@ func TestBackupRoutine_ToModel_StorageNotFound(t *testing.T) {
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 	}
 
 	config := &model.BackupConfig{
@@ -220,7 +220,7 @@ func TestBackupRoutine_ToModel_SecretAgentNotFound(t *testing.T) {
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
 		SecretAgent:   "agent1",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 	}
 
 	config := &model.BackupConfig{
@@ -245,7 +245,7 @@ func TestBackupRoutine_Validate_MutualExclusive_RackAndPartition(t *testing.T) {
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
 		IntervalCron:  "0 0 * * * *",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 		RackList:      []int{1},
 		PartitionList: "0-1",
 	}
@@ -257,7 +257,7 @@ func TestBackupRoutine_Validate_MutualExclusive_RackAndNode(t *testing.T) {
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
 		IntervalCron:  "0 0 * * * *",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 		RackList:      []int{1},
 		NodeList:      []string{"node1"},
 	}
@@ -269,7 +269,7 @@ func TestBackupRoutine_Validate_MutualExclusive_PartitionAndNode(t *testing.T) {
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
 		IntervalCron:  "0 0 * * * *",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 		PartitionList: "0-1",
 		NodeList:      []string{"node1"},
 	}
@@ -281,7 +281,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithPartitionList(t *testing
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 		PartitionList: "0-1",
 	}
 
@@ -306,7 +306,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithNodeList(t *testing.T) {
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 		NodeList:      []string{"node1"},
 	}
 
@@ -331,7 +331,7 @@ func TestBackupRoutine_ToModel_ParallelExceedsClusterMax(t *testing.T) {
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 	}
 
 	config := &model.BackupConfig{
@@ -355,7 +355,7 @@ func TestBackupRoutine_ToModel_ParallelWithinClusterMax(t *testing.T) {
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 	}
 
 	config := &model.BackupConfig{
@@ -379,7 +379,7 @@ func TestBackupRoutine_ToModel_ParallelEqualsClusterMax(t *testing.T) {
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 	}
 
 	config := &model.BackupConfig{
@@ -403,7 +403,7 @@ func TestBackupRoutine_ToModel_ParallelUncheckedWhenClusterMaxUnset(t *testing.T
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 	}
 
 	config := &model.BackupConfig{
@@ -427,7 +427,7 @@ func TestBackupRoutine_ToModel_ParallelUncheckedWhenPolicyParallelUnset(t *testi
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 	}
 
 	config := &model.BackupConfig{
@@ -451,7 +451,7 @@ func TestBackupRoutine_Validate_InvalidFilterExpression(t *testing.T) {
 		SourceCluster:    "cluster1",
 		Storage:          "storage1",
 		IntervalCron:     "0 0 * * * *",
-		Namespaces:       &[]string{"ns1"},
+		Namespaces:       &[]NamespaceName{"ns1"},
 		FilterExpression: "invalid-exp",
 	}
 
@@ -460,12 +460,27 @@ func TestBackupRoutine_Validate_InvalidFilterExpression(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to parse filter expression")
 }
 
+func TestBackupRoutine_Validate_RejectsStructurallyInvalidFilterExpression(t *testing.T) {
+	t.Skip("BKRS-438: filter-exp is only checked for valid base64, not for a real expression tree")
+
+	r := &BackupRoutine{
+		SourceCluster:    "cluster1",
+		Storage:          "storage1",
+		IntervalCron:     "0 0 * * * *",
+		Namespaces:       &[]NamespaceName{"ns1"},
+		FilterExpression: "/////////////////////w==",
+	}
+
+	err := r.Validate()
+	require.Error(t, err)
+}
+
 func TestBackupRoutine_Validate_FilterExpressionWithMultipleSets(t *testing.T) {
 	r := &BackupRoutine{
 		SourceCluster:    "cluster1",
 		Storage:          "storage1",
 		IntervalCron:     "0 0 * * * *",
-		Namespaces:       &[]string{"ns1"},
+		Namespaces:       &[]NamespaceName{"ns1"},
 		SetList:          []string{"set1", "set2"},
 		FilterExpression: "k1EDpHRlc3Q=",
 	}
@@ -481,7 +496,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
 		SourceCluster: "cluster1",
 		Storage:       "storage1",
 		RackList:      []int{1},
-		Namespaces:    &[]string{"ns1"},
+		Namespaces:    &[]NamespaceName{"ns1"},
 	}
 
 	config := &model.BackupConfig{
@@ -617,7 +632,7 @@ func TestBackupRoutine_Validate_ScheduleTimezone(t *testing.T) {
 		SourceCluster:    "cluster1",
 		Storage:          "storage1",
 		IntervalCron:     "@daily",
-		Namespaces:       &[]string{"ns1"},
+		Namespaces:       &[]NamespaceName{"ns1"},
 		ScheduleTimezone: "America/New_York",
 	}
 	require.NoError(t, valid.Validate())
@@ -626,7 +641,7 @@ func TestBackupRoutine_Validate_ScheduleTimezone(t *testing.T) {
 		SourceCluster:    "cluster1",
 		Storage:          "storage1",
 		IntervalCron:     "@daily",
-		Namespaces:       &[]string{"ns1"},
+		Namespaces:       &[]NamespaceName{"ns1"},
 		ScheduleTimezone: "Not/AZone",
 	}
 	require.ErrorContains(t, invalid.Validate(), "Not/AZone")

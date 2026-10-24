@@ -161,6 +161,9 @@ func (t *routineTracker) beginScan() chan struct{} {
 // endScan signals that a specific scan has completed.
 // Safe to call if the channel was already closed (e.g. by a subsequent beginScan).
 func (t *routineTracker) endScan(ch chan struct{}) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	closeChan(ch)
 }
 

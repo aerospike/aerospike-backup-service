@@ -168,15 +168,17 @@ func TestChangeBackupConfig_RejectedChangeIsBadRequest(t *testing.T) {
 	nsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
 
 	svc := NewService(model.NewConfig(), applier, nil, nil, nil, nil, nil, manager, nsValidator, newMockTLSProber(ctrl))
-	require.NoError(t, svc.config.AddCluster("c1", &model.AerospikeCluster{
-		SeedNodes: []model.SeedNode{{HostName: "localhost", Port: 3000}},
-	}))
 
-	body := marshalToString(dto.AerospikeCluster{SeedNodes: []dto.SeedNode{{HostName: "localhost", Port: 3000}}})
+	// A redacted password has no stored value to stand for on a new cluster.
+	body := marshalToString(dto.AerospikeCluster{
+		SeedNodes:   []dto.SeedNode{{HostName: "localhost", Port: 3000}},
+		Credentials: &dto.Credentials{User: "admin", Password: "[secret]"},
+	})
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/config/clusters/c1", strings.NewReader(body))
 	req.SetPathValue("name", "c1")
 	w := httptest.NewRecorder()
 	svc.AddAerospikeCluster(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+	assert.NotContains(t, svc.config.BackupConfigCopy().AerospikeClusters, "c1")
 }

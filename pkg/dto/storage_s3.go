@@ -90,18 +90,17 @@ func (s *S3Storage) Validate() error {
 }
 
 func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
+	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
+	agent, err := s.SecretAgentConfig.ToModel(config)
+	if err != nil {
+		return nil, err
+	}
+
 	var auth *model.S3Authentication
 	if s.AccessKeyID != "" {
-		//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-		agent, err := s.SecretAgentConfig.ToModel(config)
-		if err != nil {
-			return nil, err
-		}
-
 		auth = &model.S3Authentication{
 			KeyIDSecret:     s.AccessKeyID,
 			AccessKeySecret: s.SecretAccessKey,
-			SecretAgent:     agent,
 		}
 	}
 
@@ -115,6 +114,7 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 		MinPartSize:        s.MinPartSize,
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 		Auth:               auth,
+		SecretAgent:        agent,
 		StorageClass:       s.StorageClass.ToModel(),
 	}, nil
 }
@@ -130,9 +130,9 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 		MinPartSize:        s.MinPartSize,
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 		StorageClass:       newS3StorageClassFromModel(s.StorageClass),
+		SecretAgentConfig:  ResolveSecretAgentFromModel(s.SecretAgent, config),
 	}
 	if s.Auth != nil {
-		result.SecretAgentConfig = ResolveSecretAgentFromModel(s.Auth.SecretAgent, config)
 		result.AccessKeyID = s.Auth.KeyIDSecret
 		result.SecretAccessKey = s.Auth.AccessKeySecret
 	}

@@ -10,10 +10,66 @@ import (
 	"testing"
 	"time"
 
+	as "github.com/aerospike/aerospike-client-go/v8"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	"github.com/stretchr/testify/require"
 )
+
+// asFailure builds a failure shaped the way backup-go reports one from the Aerospike client:
+// the class marks where it came from, and the client's own error stays in the chain.
+func asFailure(code types.ResultCode) error {
+	return fmt.Errorf("%w: failed to read record: %w",
+		backup.ErrAerospike, &as.AerospikeError{ResultCode: code})
+}
+
+func Test_retry_classification(t *testing.T) {
+	tests := map[string]struct {
+		err          error
+		wantAttempts int
+	}{
+		"an unclassified failure is retried": {
+			err:          errors.New("connection reset by peer"),
+			wantAttempts: 3,
+		},
+		"a timeout from the cluster is retried": {
+			err:          asFailure(types.TIMEOUT),
+			wantAttempts: 3,
+		},
+		"a malformed request is not retried": {
+			err:          asFailure(types.PARAMETER_ERROR),
+			wantAttempts: 1,
+		},
+		"an unknown namespace is not retried": {
+			err:          asFailure(types.INVALID_NAMESPACE),
+			wantAttempts: 1,
+		},
+		"invalid config is not retried": {
+			err:          fmt.Errorf("wrapped: %w", backup.ErrInvalidConfig),
+			wantAttempts: 1,
+		},
+		"corrupt data is not retried": {
+			err:          fmt.Errorf("wrapped: %w", backup.ErrCorruptData),
+			wantAttempts: 1,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			attempts := 0
+
+			err := Retry(t.Context(), testRetryPolicy, slog.Default(), func() error {
+				attempts++
+				return tt.err
+			}, func() {})
+
+			require.Error(t, err)
+			require.Equal(t, tt.wantAttempts, attempts)
+		})
+	}
+}
 
 var testRetryPolicy = models.RetryPolicy{
 	MaxRetries:  2,

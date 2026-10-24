@@ -61,9 +61,10 @@ func (nv *namespaceValidator) collectClusters(
 ) map[*model.AerospikeCluster]struct{} {
 	clusters := make(map[*model.AerospikeCluster]struct{})
 	for _, r := range routines {
-		if len(r.Namespaces) > 0 {
-			clusters[r.SourceCluster] = struct{}{}
+		if r.BacksUpWholeCluster() {
+			continue // no configured list to check against the cluster's namespaces
 		}
+		clusters[r.SourceCluster] = struct{}{}
 	}
 
 	return clusters
@@ -113,7 +114,7 @@ func (nv *namespaceValidator) diffRoutineNamespaces(
 ) NamespacesByRoutine {
 	result := make(NamespacesByRoutine)
 	for name, r := range routines {
-		if len(r.Namespaces) == 0 {
+		if r.BacksUpWholeCluster() {
 			continue
 		}
 		clusterNamespaces, ok := namespacesByCluster[r.SourceCluster]

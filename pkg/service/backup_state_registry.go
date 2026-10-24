@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"maps"
 	"slices"
@@ -292,7 +291,7 @@ func (r *backupStateRegistry) GetRoutineState(routine *model.BackupRoutine) mode
 		}
 	}
 
-	nextRunTime, err := nextBackup(routine)
+	nextRunTime, err := routine.NextRun()
 	if err != nil {
 		slog.Default().With(attr.Routine(routine.Name)).
 			Warn("Failed to calculate next fire time", attr.Error(err))
@@ -313,7 +312,7 @@ func (r *backupStateRegistry) GetRunningState() map[string]model.RoutineState {
 
 	for _, routine := range r.config.Routines() {
 		state := r.GetRoutineState(routine)
-		if state.Full != nil || state.Incremental != nil {
+		if state.IsRunning() {
 			stats[routine.Name] = state
 		}
 	}
@@ -326,22 +325,4 @@ func (r *backupStateRegistry) Cancel(routineName string) {
 	if tracker, ok := r.trackers.Load(routineName); ok {
 		tracker.cancel()
 	}
-}
-
-func nextBackup(routine *model.BackupRoutine) (*model.BackupTime, error) {
-	nextFullBackup, err := timeutil.NextTrigger(routine.IntervalCron, routine.Timezone.ResolvedLocation())
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse full backup cron: %w", err)
-	}
-
-	if routine.IncrIntervalCron == "" {
-		return model.NewFullBackupTime(nextFullBackup), nil
-	}
-
-	nextIncrementalBackup, err := timeutil.NextTrigger(routine.IncrIntervalCron, routine.Timezone.ResolvedLocation())
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse incremental backup cron: %w", err)
-	}
-
-	return model.NewBackupTime(nextFullBackup, nextIncrementalBackup), nil
 }

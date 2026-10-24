@@ -11,10 +11,7 @@ import (
 // local file backend, fetches the backup encryption key from it, then restores
 // with the same key.
 func (s *BackupSuite) TestBackupRestoreWithSecretAgentEncryption() {
-	pemKey, err := generateEncryptionPEM()
-	s.Require().NoError(err)
-
-	agent := s.startSecretAgent(pemKey)
+	agent := s.startSecretAgent(s.encryptionKeyPEM())
 
 	e := s.setupEnv(func(c *dto.Config) {
 		c.SecretAgents = map[string]*dto.SecretAgent{
@@ -33,7 +30,7 @@ func (s *BackupSuite) TestBackupRestoreWithSecretAgentEncryption() {
 	fullBackup := s.waitForFullBackup(e)
 	s.assertBackupDetails(fullBackup, 3)
 
-	s.Require().NoError(s.client.Truncate(nil, namespace, "", nil))
+	s.truncateNamespace()
 
 	req := defaultRestoreRequest(fullBackup.Key)
 	req.SecretAgentConfig = &dto.SecretAgentConfig{

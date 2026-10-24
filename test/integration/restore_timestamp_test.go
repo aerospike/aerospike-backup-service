@@ -38,7 +38,7 @@ func (s *BackupSuite) TestRestoreByTimestampWorkflow() {
 
 		s.triggerIncrementalBackup(e)
 
-		incrBackup = s.waitForIncrementalBackup(e, 1)
+		incrBackup = s.waitForIncrementalBackup(e)
 
 		s.assertBackupDetails(incrBackup, 1)
 		s.assertIncrementalBackupListed(e, incrBackup)
@@ -63,7 +63,7 @@ func (s *BackupSuite) TestRestoreByTimestampWorkflow() {
 	s.Run("restore_by_timestamp", func() {
 		successCount := s.metricRestoreSuccessEventCount(e)
 
-		s.Require().NoError(s.client.Truncate(nil, namespace, "", nil))
+		s.truncateNamespace()
 
 		status := s.restoreByTimestamp(e, time.Now())
 

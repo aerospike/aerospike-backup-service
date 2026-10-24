@@ -79,3 +79,28 @@ func TestSecret_IsRef(t *testing.T) {
 func TestSecret_DisplayString_MalformedRef(t *testing.T) {
 	assert.Equal(t, Placeholder, Secret("secrets:foo").DisplayString())
 }
+
+func TestSecret_Redacted(t *testing.T) {
+	tests := []struct {
+		name string
+		in   Secret
+		want Secret
+	}{
+		{name: "literal becomes the placeholder", in: "hunter2", want: Placeholder},
+		{name: "well-formed ref is kept", in: "secrets:agent:key", want: "secrets:agent:key"},
+		{name: "malformed ref becomes the placeholder", in: "secrets:oops", want: Placeholder},
+		{name: "empty stays empty", in: "", want: ""},
+		{name: "placeholder stays the placeholder", in: Placeholder, want: Placeholder},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.in.Redacted()
+
+			// The reflective walk stores the result where the receiver was found, so it must be
+			// a Secret, not some other Redactable.
+			require.IsType(t, Secret(""), got)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

@@ -193,7 +193,8 @@ func TestRetentionManager_NoneToDelete(t *testing.T) {
 }
 
 // TestRetentionManager_RetainZeroIncrementals
-// tests the case where the retention count for incremental backups is 0.
+// tests the case where the retention count for incremental backups is 0: every completed
+// incremental backup is deleted, one folder at a time.
 func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -209,9 +210,38 @@ func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
 		Return([]model.BackupDetails{}, nil)
 
-	// Expect a single delete call for the incremental root path
-	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/incremental").Return(nil)
+	catalog.EXPECT().GetBackups(t.Context(), NewIncrementalBackupFilter(routine)).
+		Return([]model.BackupDetails{
+			{Key: "test-routine/incremental/1000/data/ns1"},
+			{Key: "test-routine/incremental/2000/data/ns1"},
+		}, nil)
 
+	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/1000").Return(nil)
+	catalog.EXPECT().Delete(t.Context(), routine, "test-routine/incremental/2000").Return(nil)
+
+	err := retentionManager.ApplyRetention(t.Context(), routine)
+	require.NoError(t, err)
+}
+
+// An incremental backup still being written has no metadata yet, so the catalog does not list it
+// and retention must leave it alone: with concurrent-incremental one can be writing while
+// retention runs right after a successful full backup.
+func TestRetentionManager_RetainZeroIncrementalsKeepsTheIncrementalRoot(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
+		IncrBackups: optional.Of(0),
+	})
+
+	catalog := NewMockBackupCatalog(ctrl)
+	retentionManager := NewBackupRetentionManager(catalog, &collections.LockMap{})
+
+	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+		Return([]model.BackupDetails{}, nil)
+	catalog.EXPECT().GetBackups(t.Context(), NewIncrementalBackupFilter(routine)).
+		Return([]model.BackupDetails{}, nil)
+
+	// No Delete call at all: nothing has finished, and the root is never deleted as a whole.
 	err := retentionManager.ApplyRetention(t.Context(), routine)
 	require.NoError(t, err)
 }

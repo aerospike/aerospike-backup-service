@@ -35,7 +35,7 @@ type ServerConfigHTTPS struct {
 	// Path to the HTTPS server private key in PEM format.
 	// Rewriting this file at the same path reloads the served key pair without a restart; changing the path requires a restart.
 	KeyFile Path `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/server-key.pem" extensions:"x-nullable"`
-	// Passphrase for an encrypted HTTPS server private key.
+	// Passphrase for an encrypted HTTPS server private key, in PKCS#8 (the OpenSSL 3 default) or legacy PEM encryption.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
 	KeyFilePassword Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`

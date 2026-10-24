@@ -23,8 +23,10 @@ type S3Storage struct {
 	MinPartSize *int
 	// MaxConnsPerHost limits the number of concurrent connections to S3.
 	MaxConnsPerHost *int
-	// Optional authentication.
+	// Optional static credentials.
 	Auth *S3Authentication
+	// SecretAgent configuration to fetch the credentials from a secret store (optional).
+	SecretAgent *SecretAgent
 	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *StorageClass
 }
@@ -32,7 +34,6 @@ type S3Storage struct {
 type S3Authentication struct {
 	KeyIDSecret     Secret
 	AccessKeySecret Secret
-	SecretAgent     *SecretAgent
 }
 
 func (s *S3Storage) GetPath() string {

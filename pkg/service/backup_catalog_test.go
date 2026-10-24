@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"os"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -101,6 +103,43 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, lastRangeBackups, 1) // Should return only Jan 4
 	assert.Equal(t, times[3], lastRangeBackups[0].Created)
+}
+
+// A namespace that was retried is written to an attempt folder under the run's timestamp. The
+// catalog takes the namespace from the metadata, so the run still lists every namespace from one
+// timestamp; the failed attempt has no metadata and is not listed. Removing the failed attempt
+// leaves the attempt that replaced it in place.
+func TestLastBackupIncludesRetriedNamespaceAttempt(t *testing.T) {
+	catalog, pathService, routine := setupLocalBackupCatalog(t)
+	created := time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC)
+
+	write := func(namespace string, attempt int) string {
+		folder := pathService.GetBackupAttemptPath(routineName, model.BackupTypeFull, namespace, created, attempt)
+		require.NoError(t, catalog.WriteBackupMetadata(t.Context(), routine, folder, model.BackupMetadata{
+			Created: created, Finished: created, Namespace: namespace,
+		}))
+
+		return folder
+	}
+	write("ns1", 1)
+	failedAttempt := pathService.GetBackupAttemptPath(routineName, model.BackupTypeFull, "ns2", created, 1)
+	partialFile := filepath.Join(routine.Storage.GetPath(), failedAttempt, "ns2_0.asb")
+	require.NoError(t, os.MkdirAll(filepath.Dir(partialFile), 0o755))
+	require.NoError(t, os.WriteFile(partialFile, []byte("partial"), 0o600))
+	retried := write("ns2", 2)
+
+	backups, err := catalog.GetBackups(t.Context(), NewFullBackupFilter(routine).Last())
+	require.NoError(t, err)
+	require.Len(t, backups, 2)
+	byNamespace := map[string]string{backups[0].Namespace: backups[0].Key, backups[1].Namespace: backups[1].Key}
+	assert.Equal(t, retried, byNamespace["ns2"], "the retried namespace is listed from its attempt folder")
+	assert.Contains(t, byNamespace, "ns1")
+
+	require.NoError(t, catalog.Delete(t.Context(), routine, failedAttempt))
+	assert.NoFileExists(t, partialFile)
+	backups, err = catalog.GetBackups(t.Context(), NewFullBackupFilter(routine).Last())
+	require.NoError(t, err)
+	assert.Len(t, backups, 2, "removing the failed attempt keeps the attempt that replaced it")
 }
 
 func TestWithToTime(t *testing.T) {

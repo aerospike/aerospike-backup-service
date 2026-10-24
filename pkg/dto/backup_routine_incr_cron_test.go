@@ -14,7 +14,7 @@ func TestBackupRoutineValidate_IncrCronErrorQuotesIncrementalCron(t *testing.T) 
 		Storage:          "s",
 		IntervalCron:     "0 0 * * * *",
 		IncrIntervalCron: "not-a-cron",
-		Namespaces:       &[]string{},
+		Namespaces:       &[]NamespaceName{},
 	}
 
 	err := r.Validate()

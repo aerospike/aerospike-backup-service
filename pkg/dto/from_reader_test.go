@@ -141,7 +141,7 @@ func TestNewRoutineFromModel(t *testing.T) {
 	assert.Equal(t, "storage1", routine.Storage)
 	assert.Equal(t, "@hourly", routine.IntervalCron)
 	require.NotNil(t, routine.Namespaces)
-	assert.Equal(t, []string{"ns1"}, *routine.Namespaces)
+	assert.Equal(t, []NamespaceName{"ns1"}, *routine.Namespaces)
 	assert.True(t, routine.Disabled)
 }
 

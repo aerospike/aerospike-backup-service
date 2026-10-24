@@ -72,6 +72,8 @@ func (s *ServerConfigHTTP) Compare(other *ServerConfigHTTP) error {
 // @Description RateLimiterConfig is the HTTP server rate limiter configuration.
 type RateLimiterConfig struct {
 	// Rate limiter tokens per second threshold.
+	// The budget is per client: an IPv4 address gets its own, an IPv6 address shares one
+	// with the rest of its /64.
 	Tps *int `yaml:"tps,omitempty" json:"tps,omitempty" default:"1024" example:"1024"`
 	// Rate limiter token bucket size (bursts threshold).
 	Size *int `yaml:"size,omitempty" json:"size,omitempty" default:"1024" example:"1024"`
@@ -85,6 +87,12 @@ type RateLimiterConfig struct {
 func (r *RateLimiterConfig) Validate() error {
 	if r == nil {
 		return nil
+	}
+	if r.Tps != nil && *r.Tps <= 0 {
+		return errValidationNonPositive("tps", *r.Tps)
+	}
+	if r.Size != nil && *r.Size <= 0 {
+		return errValidationNonPositive("size", *r.Size)
 	}
 	if err := validateUniqueNonEmpty("white-list", r.WhiteList); err != nil {
 		return err

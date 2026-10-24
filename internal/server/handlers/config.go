@@ -134,10 +134,7 @@ func (s *Service) replaceConfig(ctx context.Context, newConfig *model.Config) er
 
 	s.nsValidator.Validate(ctx, newConfig) // validate under the lock
 
-	return s.commitConfig(ctx, newConfig, routineNames(newConfig))
-}
+	next := newConfig.BackupConfigCopy()
 
-// routineNames lists every routine the configuration describes.
-func routineNames(config *model.Config) []string {
-	return slices.Collect(maps.Keys(config.BackupConfigCopy().BackupRoutines))
+	return s.commitConfig(ctx, next, slices.Collect(maps.Keys(next.BackupRoutines)))
 }

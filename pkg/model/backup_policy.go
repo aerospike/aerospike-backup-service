@@ -94,6 +94,16 @@ func (p *BackupPolicy) UseCompressionOrDefault() bool {
 	return *defaultConfig.backupPolicy.UseCompression
 }
 
+// WithClusterConfigOrDefault reports whether a full backup also stores the cluster
+// configuration. If the property is not set, it returns the default value.
+func (p *BackupPolicy) WithClusterConfigOrDefault() bool {
+	if p != nil && p.WithClusterConfig != nil {
+		return *p.WithClusterConfig
+	}
+
+	return *defaultConfig.backupPolicy.WithClusterConfig
+}
+
 func (p *BackupPolicy) CompactOrDefault() bool {
 	if p != nil && p.Compact != nil {
 		return *p.Compact
@@ -152,7 +162,7 @@ type RetentionPolicy struct {
 	// IncrBackups specifies the number of the latest full backups for which to retain
 	// their associated incremental backup chains.
 	// This field uses Optional[int] to distinguish three states:
-	// 1. Not set: All incremental backups are retained.
+	// 1. Not set: All incremental backups for existing full backups are retained.
 	// 2. Set to 0: Explicitly keep NO incremental backups.
 	// 3. Set to M > 0: Keep the incremental chain only for the last M full backups.
 	//

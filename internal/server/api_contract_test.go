@@ -95,8 +95,8 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 			"invalid request: seed nodes are not specified\n",
 		},
 		{
-			http.MethodDelete, "/v1/config/clusters/cluster1", "", http.StatusBadRequest,
-			"invalid request: failed to update configuration: delete Aerospike cluster \"cluster1\": item not found\n",
+			http.MethodDelete, "/v1/config/clusters/cluster1", "", http.StatusNotFound,
+			"cluster \"cluster1\" not found\n",
 		},
 
 		{http.MethodGet, "/v1/config/storage", "", http.StatusOK, "{}"},
@@ -113,8 +113,8 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 			"invalid request: no storage type specified\n",
 		},
 		{
-			http.MethodDelete, "/v1/config/storage/storage1", "", http.StatusBadRequest,
-			"invalid request: failed to update configuration: delete storage \"storage1\": item not found\n",
+			http.MethodDelete, "/v1/config/storage/storage1", "", http.StatusNotFound,
+			"storage \"storage1\" not found\n",
 		},
 
 		{http.MethodGet, "/v1/config/policies", "", http.StatusOK, "{}"},
@@ -124,12 +124,12 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 			"policy \"policy1\" not found\n",
 		},
 		{
-			http.MethodPut, "/v1/config/policies/policy1", "{}", http.StatusBadRequest,
-			"invalid request: failed to update configuration: update backup policy \"policy1\": item not found\n",
+			http.MethodPut, "/v1/config/policies/policy1", "{}", http.StatusNotFound,
+			"policy \"policy1\" not found\n",
 		},
 		{
-			http.MethodDelete, "/v1/config/policies/policy1", "", http.StatusBadRequest,
-			"invalid request: failed to update configuration: delete backup policy \"policy1\": item not found\n",
+			http.MethodDelete, "/v1/config/policies/policy1", "", http.StatusNotFound,
+			"policy \"policy1\" not found\n",
 		},
 
 		{http.MethodGet, "/v1/config/routines", "", http.StatusOK, "{}"},
@@ -146,8 +146,8 @@ func TestUnconfiguredService_APIContract(t *testing.T) {
 			"invalid request: empty field validation error: \"source-cluster\" required\n",
 		},
 		{
-			http.MethodDelete, "/v1/config/routines/routine1", "", http.StatusBadRequest,
-			"invalid request: failed to update configuration: delete backup routine \"routine1\": item not found\n",
+			http.MethodDelete, "/v1/config/routines/routine1", "", http.StatusNotFound,
+			"routine \"routine1\" not found\n",
 		},
 		{
 			http.MethodPut, "/v1/config/routines/routine1/disable", "", http.StatusNotFound,

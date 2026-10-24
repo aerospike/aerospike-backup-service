@@ -1,6 +1,7 @@
 package aerospike
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -16,6 +17,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -191,6 +194,51 @@ func TestClientPolicyTLSConfigErrorPropagates(t *testing.T) {
 	policy, err := factory.clientPolicy(t.Context(), cluster)
 	require.Error(t, err)
 	assert.Nil(t, policy)
+}
+
+// TestClientPolicyWiresCredentialsAndConnectionSettings guards that
+// clientPolicy actually forwards User/Password/AuthMode and the connection-level
+// settings (conn-timeout, use-services-alternate, prefer-racks) onto the
+// as.ClientPolicy it builds, rather than leaving them at their zero values.
+func TestClientPolicyWiresCredentialsAndConnectionSettings(t *testing.T) {
+	connTimeout := 1234 * time.Millisecond
+	cluster := &model.AerospikeCluster{
+		ClusterLabel: "test-cluster",
+		SeedNodes:    []model.SeedNode{{HostName: "127.0.0.1", Port: 3000}},
+		Credentials: &model.Credentials{
+			User:     "test-user",
+			Password: "test-password",
+			AuthMode: model.AuthModeExternal,
+		},
+		ConnTimeout:          &connTimeout,
+		UseServicesAlternate: ptr.Of(true),
+		PreferRacks:          []int{2, 1},
+	}
+
+	factory := newTestClientFactory(t, secrets.NewMockClusterTLSResolver(gomock.NewController(t)))
+	factory.passwordResolver = staticPasswordResolver{password: ptr.Of("test-password")}
+
+	policy, err := factory.clientPolicy(t.Context(), cluster)
+	require.NoError(t, err)
+
+	assert.Equal(t, "test-user", policy.User)
+	assert.Equal(t, "test-password", policy.Password)
+	assert.Equal(t, as.AuthModeExternal, policy.AuthMode)
+	assert.Equal(t, connTimeout, policy.Timeout)
+	assert.True(t, policy.UseServicesAlternate)
+	assert.True(t, policy.RackAware)
+	assert.Equal(t, []int{2, 1}, policy.RackIds)
+}
+
+// staticPasswordResolver is a trivial secrets.PasswordResolver stand-in for tests
+// that need clientPolicy to resolve a non-PKI password without exercising Secret
+// Agent resolution itself.
+type staticPasswordResolver struct {
+	password *string
+}
+
+func (r staticPasswordResolver) Resolve(context.Context, *model.Credentials) (*string, error) {
+	return r.password, nil
 }
 
 // TestClientPolicyNoTLSWhenNoSeedNodeRequiresIt locks in the unrelated early-exit

@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/tlsfixtures"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/stretchr/testify/assert"
@@ -295,4 +296,39 @@ func TestParseCipherSuites(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestNewTLSConfigOpenSSLEncodings reads key files written by OpenSSL 3; see internal/tlsfixtures.
+func TestNewTLSConfigOpenSSLEncodings(t *testing.T) {
+	dir := tlsfixtures.Dir(t)
+
+	for _, pair := range tlsfixtures.KeyPairs() {
+		t.Run(pair.Name, func(t *testing.T) {
+			cfg, err := NewTLSConfig(&model.TLS{
+				ClientTLS: model.ClientTLS{
+					Certfile: filepath.Join(dir, pair.CertFile),
+					Keyfile:  filepath.Join(dir, pair.KeyFile),
+				},
+				KeyfilePassword: redact.Secret(pair.Password),
+			})
+			require.NoError(t, err)
+			assert.Len(t, cfg.Certificates, 1)
+		})
+	}
+
+	t.Run("encrypted key without a password", func(t *testing.T) {
+		_, err := NewTLSConfig(&model.TLS{ClientTLS: model.ClientTLS{
+			Certfile: filepath.Join(dir, "rsa-cert.pem"),
+			Keyfile:  filepath.Join(dir, "rsa-key-pkcs8-aes256.pem"),
+		}})
+		require.ErrorContains(t, err, "no key-file-password is set")
+	})
+
+	t.Run("CA bundle of x509 -text outputs", func(t *testing.T) {
+		cfg, err := NewTLSConfig(&model.TLS{ClientTLS: model.ClientTLS{
+			CAFile: filepath.Join(dir, "ca-bundle-text.pem"),
+		}})
+		require.NoError(t, err)
+		require.NotNil(t, cfg.RootCAs)
+	})
 }

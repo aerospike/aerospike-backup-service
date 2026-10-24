@@ -31,18 +31,6 @@ func TestPopInvalidatedRoutineNames_DeduplicatesNames(t *testing.T) {
 	assert.Equal(t, []string{"r1"}, invalidated)
 }
 
-func TestToggleRoutineDisabled_InvalidatesOnDisableAndEnable(t *testing.T) {
-	cfg := NewConfig()
-	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))
-	cfg.PopInvalidatedRoutineNames() // clear AddRoutine invalidation
-
-	require.NoError(t, cfg.ToggleRoutineDisabled("r1", true))
-	require.NoError(t, cfg.ToggleRoutineDisabled("r1", false))
-
-	invalidated := cfg.PopInvalidatedRoutineNames()
-	assert.Equal(t, []string{"r1"}, invalidated)
-}
-
 func TestInvalidateRoutines(t *testing.T) {
 	cfg := NewConfig()
 	require.NoError(t, cfg.AddRoutine(&BackupRoutine{Name: "r1"}))

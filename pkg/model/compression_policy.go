@@ -1,5 +1,7 @@
 package model
 
+import "github.com/aerospike/backup-go"
+
 // CompressionMode identifies the compression algorithm used for backup files.
 type CompressionMode string
 
@@ -21,4 +23,17 @@ type CompressionPolicy struct {
 	// This field is ignored if the compression mode is NONE.
 	// This field is ignored during restoration.
 	Level int32
+}
+
+// ToLibraryPolicy converts the policy into its backup-go representation.
+// A nil policy yields nil, which backup-go reads as "no compression".
+func (p *CompressionPolicy) ToLibraryPolicy() *backup.CompressionPolicy {
+	if p == nil {
+		return nil
+	}
+
+	return &backup.CompressionPolicy{
+		Mode:  p.Mode.String(),
+		Level: int(p.Level),
+	}
 }

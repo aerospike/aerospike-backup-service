@@ -122,7 +122,7 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: setup GPG
-        uses: aerospike/shared-workflows/.github/actions/setup-gpg@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+        uses: aerospike/shared-workflows/.github/actions/setup-gpg@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
         with:
           gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
           gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
@@ -711,7 +711,7 @@ jobs:
           echo "Helm chart metadata extraction completed."
 
       - name: setup GPG
-        uses: aerospike/shared-workflows/.github/actions/setup-gpg@82b197fa01cafc1b1d5a82a77ad039e6e8e44545 # v4.0.0
+        uses: aerospike/shared-workflows/.github/actions/setup-gpg@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
         with:
           gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
           gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}

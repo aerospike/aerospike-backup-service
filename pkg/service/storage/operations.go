@@ -23,8 +23,14 @@ var (
 
 	// clientCacheTTL is how long cloud storage clients are cached after creation.
 	// Entries are not extended on access; a new client is created after expiry.
-	clientCacheTTL = ptr.Of(10 * time.Minute)
+	clientCacheTTL = ptr.Of(ClientCacheTTL)
 )
+
+// ClientCacheTTL is how long a cloud storage client — and therefore the storage
+// credentials it was built with — stays in use after creation. It bounds how long
+// a credential rotation takes to reach the service, which is why the documentation
+// renders it from here rather than restating the number.
+const ClientCacheTTL = 10 * time.Minute
 
 // connectivityProbeKey is used for optional write probes at client init.
 const connectivityProbeKey = ".abs-connectivity-check"

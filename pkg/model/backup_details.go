@@ -26,6 +26,11 @@ func NewBackupDetails(md BackupMetadata, key string, storage Storage) BackupDeta
 	}
 }
 
+// IsEmpty reports whether this backup has no data (zero file count).
+func (bd BackupDetails) IsEmpty() bool {
+	return bd.FileCount == 0
+}
+
 // BackupMetadata is an internal container for storing backup metadata.
 // It is stored as a separate metadata file within each backup.
 type BackupMetadata struct {
@@ -64,6 +69,8 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
+	metadata = withLegacyDefaults(metadata)
+
 	if err := metadata.Validate(); err != nil {
 		return nil, fmt.Errorf("corrupted metadata: %w", err)
 	}
@@ -71,12 +78,21 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 	return &metadata, nil
 }
 
+// withLegacyDefaults returns metadata with the fields that older ABS versions did not write set to
+// the value those versions implied, so the rest of the service can rely on them being present.
+func withLegacyDefaults(m BackupMetadata) BackupMetadata {
+	if m.Finished.IsZero() { // finished was introduced in ABS v3.4.0
+		m.Finished = m.Created.Add(1 * time.Millisecond) // set dummy value
+	}
+	if m.Compression == "" { // compression metadata was introduced in ABS v3.1.0
+		m.Compression = CompressionModeNone
+	}
+	return m
+}
+
 func (m *BackupMetadata) Validate() error {
 	if m.Created.IsZero() {
 		return errors.New("`created` is required")
-	}
-	if m.Finished.IsZero() { // finished was introduced in ABS v3.4.0
-		m.Finished = m.Created.Add(1 * time.Millisecond) // set dummy value
 	}
 	if m.Namespace == "" {
 		return errors.New("`namespace` is required")

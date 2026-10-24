@@ -16,6 +16,9 @@ import (
 // Returns an error if a redacted Secret is found in incoming but there is no
 // corresponding existing value to restore from.
 //
+// incoming is a DTO tree freshly decoded from a request or built from the stored model, so
+// the walk assumes it is acyclic;
+//
 // Example:
 //
 // Before:
@@ -64,12 +67,16 @@ func mergeValue(incoming, existing reflect.Value) error {
 		return nil
 	}
 
-	if isRedactable(incoming) {
-		return setSecretValue(incoming, existing)
+	// A value read through an unexported field is read-only: reflect will neither hand it out
+	// as an interface nor let anything be written to it, so there is no secret to merge into
+	// it. This is what keeps types that hold private state - time.Time, time.Location, a
+	// wrapped error - out of the walk's way without naming any of them.
+	if !incoming.CanInterface() {
+		return nil
 	}
 
-	if shouldSkipDeepCopy(incoming) {
-		return nil
+	if r, ok := asRedactable(incoming); ok {
+		return setSecretValue(incoming, r, existing)
 	}
 
 	switch incoming.Kind() {
@@ -187,13 +194,10 @@ func mergeValue(incoming, existing reflect.Value) error {
 	}
 }
 
-func setSecretValue(incoming reflect.Value, existing reflect.Value) error {
-	inSecret, ok := incoming.Interface().(redact.Redactable)
-	if !ok || !inSecret.IsRedacted() {
-		return nil
-	}
-
-	if !incoming.CanSet() {
+// setSecretValue restores the credential behind incoming, which asRedactable read as inSecret,
+// from existing, when incoming is the redaction placeholder.
+func setSecretValue(incoming reflect.Value, inSecret redact.Redactable, existing reflect.Value) error {
+	if !inSecret.IsRedacted() || !incoming.CanSet() {
 		return nil
 	}
 
@@ -201,7 +205,7 @@ func setSecretValue(incoming reflect.Value, existing reflect.Value) error {
 		return errors.New("cannot use redacted secret \"[secret]\" for a new entity with no existing value")
 	}
 
-	existingSecret, ok := existing.Interface().(redact.Redactable)
+	existingSecret, ok := asRedactable(existing)
 	if !ok || existingSecret.IsRedacted() {
 		return errors.New("cannot use redacted secret \"[secret]\" for a new entity with no existing value")
 	}

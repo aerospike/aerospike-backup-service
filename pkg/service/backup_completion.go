@@ -72,7 +72,7 @@ func (h *backupCompletionHandler) OnSuccess(
 	}()
 
 	go func() {
-		if routine.BackupPolicy.WithClusterConfig != nil && *routine.BackupPolicy.WithClusterConfig {
+		if routine.BackupPolicy.WithClusterConfigOrDefault() {
 			if err := h.clusterConfigWriter.Write(ctx, routine, timestamp); err != nil {
 				if errors.Is(err, context.Canceled) {
 					logger.Info("Cluster configuration backup context canceled")

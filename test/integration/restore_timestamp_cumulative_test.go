@@ -13,8 +13,7 @@ import (
 // Since the mode is cumulative, the second incremental should cover the first one.
 func (s *BackupSuite) TestRestoreByTimestampCumulativeWorkflow() {
 	e := s.setupEnv(func(c *dto.Config) {
-		p := c.BackupPolicies[policyName]
-		p.IncrMode = dto.IncrModeCumulative
+		c.BackupPolicies[policyName].IncrMode = dto.IncrModeCumulative
 	})
 
 	var fullBackup, incrBackup1, incrBackup2 dto.BackupDetails
@@ -33,7 +32,7 @@ func (s *BackupSuite) TestRestoreByTimestampCumulativeWorkflow() {
 
 		s.triggerIncrementalBackup(e)
 
-		incrBackup1 = s.waitForIncrementalBackup(e, 1)
+		incrBackup1 = s.waitForIncrementalBackup(e)
 
 		s.assertBackupDetails(incrBackup1, 1)
 		s.assertIncrementalBackupListed(e, incrBackup1)
@@ -46,7 +45,7 @@ func (s *BackupSuite) TestRestoreByTimestampCumulativeWorkflow() {
 		s.triggerIncrementalBackup(e)
 
 		// The second incremental should have 2 records (1 and 2) because it's cumulative.
-		incrBackup2 = s.waitForIncrementalBackup(e, 2)
+		incrBackup2 = s.waitForIncrementalBackup(e)
 
 		s.assertBackupDetails(incrBackup2, 2)
 		s.assertIncrementalBackupListed(e, incrBackup2)
@@ -54,7 +53,7 @@ func (s *BackupSuite) TestRestoreByTimestampCumulativeWorkflow() {
 	})
 
 	s.Run("restore_by_timestamp", func() {
-		s.Require().NoError(s.client.Truncate(nil, namespace, "", nil))
+		s.truncateNamespace()
 
 		status := s.restoreByTimestamp(e, time.Now())
 

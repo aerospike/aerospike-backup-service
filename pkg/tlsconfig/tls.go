@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -13,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/pemkey"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/safepath"
 )
@@ -173,25 +173,11 @@ func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 		return nil, fmt.Errorf("failed to read client key file %s: %w", keyFile, err)
 	}
 
-	// Try to decode and decrypt PEM if password is set
-	keyBlock, _ := pem.Decode(keyFileBytes)
-	if keyBlock == nil {
-		return nil, errors.New("failed to decode PEM block in client key file")
+	keyFileBytes, err = pemkey.Decrypt(keyFileBytes, t.KeyfilePassword.Reveal())
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt client key file %s: %w", keyFile, err)
 	}
 
-	// Check and Decrypt the Key Block using passphrase
-	//noinspection GoDeprecation
-	if t.KeyfilePassword != "" && x509.IsEncryptedPEMBlock(keyBlock) { //nolint:staticcheck
-		decryptedDERBytes, err := x509.DecryptPEMBlock(keyBlock, []byte(t.KeyfilePassword.Reveal())) //nolint:staticcheck
-		if err != nil {
-			return nil, fmt.Errorf("failed to decrypt client key file %s: %w", keyFile, err)
-		}
-		keyBlock.Bytes = decryptedDERBytes
-		keyBlock.Headers = nil
-		keyFileBytes = pem.EncodeToMemory(keyBlock)
-	}
-
-	// Use full cert PEM + decrypted (or raw) key PEM
 	cert, err := tls.X509KeyPair(certFileBytes, keyFileBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create X509 key pair from cert and key files: %w", err)

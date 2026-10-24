@@ -21,9 +21,6 @@ type backupConfigChangeOptions struct {
 // changeBackupConfig applies a mutation to the backup configuration DTO, validates and
 // converts the full configuration, and persists the result before it becomes visible.
 // The mutate function returns routine names that should be rescheduled and rescanned.
-//
-// The returned error carries the status code the client should see: a rejected change is a
-// bad request, a change that could not be persisted is not.
 func (s *Service) changeBackupConfig(
 	ctx context.Context,
 	mutate func(*dto.Config) ([]string, error),
@@ -40,7 +37,7 @@ func (s *Service) changeBackupConfig(
 	dtoConfig := dto.NewConfigFromModel(s.config)
 	routinesToInvalidate, err := mutate(dtoConfig)
 	if err != nil {
-		return errBadRequest(fmt.Errorf("failed to update configuration: %w", err))
+		return err
 	}
 
 	// GET responses redact secrets as "[secret]". Before persisting a PUT, copy real secret
@@ -67,26 +64,26 @@ func (s *Service) changeBackupConfig(
 		s.nsValidator.Validate(ctx, candidate)
 	}
 
-	return s.commitConfig(ctx, candidate, routinesToInvalidate)
+	return s.commitConfig(ctx, candidate.BackupConfigCopy(), routinesToInvalidate)
 }
 
-// commitConfig persists candidate and only then makes it the live configuration and
-// reschedules the named routines. A change that did not reach the configuration file never
+// commitConfig persists next and only then makes it the live backup configuration and
+// reschedules the named routines. A change that did not reach the configuration source never
 // becomes visible, so memory, file and scheduler cannot come to describe different
-// configurations.
+// configurations. The service configuration is static, so the live one is what gets persisted.
 //
 // The caller holds changeConfigLock.
-func (s *Service) commitConfig(ctx context.Context, candidate *model.Config, routinesToInvalidate []string) error {
+func (s *Service) commitConfig(ctx context.Context, next *model.BackupConfig, routinesToInvalidate []string) error {
 	// A write the client can cancel would leave memory, file and scheduler describing different
 	// configurations, so the persist outlives the request and its own timeout bounds it instead.
 	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), configWriteTimeout)
 	defer cancel()
 
-	if err := s.configurationManager.Write(writeCtx, candidate); err != nil {
-		return errStorageUnavailable(fmt.Errorf("failed to write configuration: %w", err))
+	if err := s.configurationManager.Write(writeCtx, s.config.WithBackupConfig(next)); err != nil {
+		return errNotPersisted(err)
 	}
 
-	s.config.SetBackupConfig(candidate.BackupConfigCopy())
+	s.config.SetBackupConfig(next)
 	s.config.InvalidateRoutines(routinesToInvalidate)
 
 	if err := s.configApplier.ApplyNewConfig(); err != nil {
@@ -98,62 +95,4 @@ func (s *Service) commitConfig(ctx context.Context, candidate *model.Config, rou
 
 func withNamespaceValidation(opts *backupConfigChangeOptions) {
 	opts.validateNamespaces = true
-}
-
-func routinesUsingStorage(config *dto.Config, storageName string) []string {
-	var names []string
-	for name, routine := range config.BackupRoutines {
-		if routine != nil && routine.Storage == storageName {
-			names = append(names, name)
-		}
-	}
-	return names
-}
-
-func routinesUsingCluster(config *dto.Config, clusterName string) []string {
-	var names []string
-	for name, routine := range config.BackupRoutines {
-		if routine != nil && routine.SourceCluster == clusterName {
-			names = append(names, name)
-		}
-	}
-	return names
-}
-
-func routinesUsingPolicy(config *dto.Config, policyName string) []string {
-	var names []string
-	for name, routine := range config.BackupRoutines {
-		if routine != nil && routine.BackupPolicy == policyName {
-			names = append(names, name)
-		}
-	}
-	return names
-}
-
-func ensurePolicyNotInUse(config *dto.Config, policyName string) error {
-	for routineName, routine := range config.BackupRoutines {
-		if routine != nil && routine.BackupPolicy == policyName {
-			return fmt.Errorf("delete backup policy %q: %w: it is used in routine %q", policyName, model.ErrInUse, routineName)
-		}
-	}
-	return nil
-}
-
-func ensureClusterNotInUse(config *dto.Config, clusterName string) error {
-	for routineName, routine := range config.BackupRoutines {
-		if routine != nil && routine.SourceCluster == clusterName {
-			return fmt.Errorf(
-				"delete Aerospike cluster %q: %w: it is used in routine %q", clusterName, model.ErrInUse, routineName)
-		}
-	}
-	return nil
-}
-
-func ensureStorageNotInUse(config *dto.Config, storageName string) error {
-	for routineName, routine := range config.BackupRoutines {
-		if routine != nil && routine.Storage == storageName {
-			return fmt.Errorf("delete storage %q: %w: it is used in routine %q", storageName, model.ErrInUse, routineName)
-		}
-	}
-	return nil
 }

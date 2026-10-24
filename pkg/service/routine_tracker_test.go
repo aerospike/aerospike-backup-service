@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -199,5 +200,29 @@ func TestFinishScan_Idempotency(t *testing.T) {
 	case <-tracker.scanDone:
 	default:
 		t.Fatal("scanDone should be closed")
+	}
+}
+
+// A double close panics inside the goroutine, which crashes the test binary.
+func TestBeginEndScan_ConcurrentNoDoubleClose(t *testing.T) {
+	for range 2000 {
+		tracker := newRoutineTracker()
+
+		// Scan 1 has begun; its endScan is still pending.
+		ch1 := tracker.beginScan()
+
+		var wg sync.WaitGroup
+
+		// Scan 1 finishing
+		wg.Go(func() {
+			tracker.endScan(ch1)
+		})
+
+		// Scan 2 starting: beginScan closes tracker.scanDone, which is still ch1.
+		wg.Go(func() {
+			tracker.endScan(tracker.beginScan())
+		})
+
+		wg.Wait()
 	}
 }
