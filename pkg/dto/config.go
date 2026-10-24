@@ -87,6 +87,9 @@ func (c *Config) Validate() error {
 		if err := routine.Validate(); err != nil {
 			return fmt.Errorf("backup routine '%s' validation error: %w", name, err)
 		}
+		if err := c.validateRoutineKeySecret(routine); err != nil {
+			return fmt.Errorf("backup routine '%s' validation error: %w", name, err)
+		}
 	}
 
 	for name, storage := range c.Storage {
@@ -111,12 +114,7 @@ func (c *Config) Validate() error {
 		if err := validateEntityName("policy name", name); err != nil {
 			return err
 		}
-		policyOpts := ValidationDefault
-		if c.backupPolicyHasSecretAgent(name) {
-			policyOpts = ValidationWithSecretAgent
-		}
-
-		if err := policy.ValidateWithOpts(policyOpts); err != nil {
+		if err := policy.Validate(); err != nil {
 			return fmt.Errorf("policy '%s' validation error: %w", name, err)
 		}
 	}
@@ -360,12 +358,21 @@ func (c *Config) routineNames(match func(*BackupRoutine) bool) []string {
 	return names
 }
 
-func (c *Config) backupPolicyHasSecretAgent(policyName string) bool {
-	for _, routine := range c.BackupRoutines {
-		if routine != nil && routine.BackupPolicy == policyName && routine.SecretAgent != "" {
-			return true
-		}
+// validateRoutineKeySecret checks that a routine whose policy reads the encryption key from a
+// Secret Agent names one. The key is resolved with the routine's agent when the routine runs, so
+// it is the routine, not the policy, that cannot work without it; a policy no routine uses yet
+// needs no agent. A policy the routine does not reference is reported by ToModel.
+func (c *Config) validateRoutineKeySecret(routine *BackupRoutine) error {
+	if routine.SecretAgent != "" {
+		return nil
 	}
 
-	return false
+	policy := c.BackupPolicies[routine.BackupPolicy]
+	if policy == nil || policy.EncryptionPolicy == nil || !policy.EncryptionPolicy.KeySecret.IsRef() {
+		return nil
+	}
+
+	return errValidationSecret("secret-agent", fmt.Errorf(
+		"policy '%s' reads the encryption key-secret %q from a Secret Agent, so the routine must set secret-agent",
+		routine.BackupPolicy, policy.EncryptionPolicy.KeySecret.DisplayString()))
 }
