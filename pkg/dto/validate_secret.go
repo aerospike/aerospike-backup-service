@@ -3,7 +3,9 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
@@ -29,4 +31,19 @@ func validateSecret(field string, secret redact.Secret, withAgent bool) error {
 	default:
 		return nil
 	}
+}
+
+// validateNoRedacted rejects a configuration or request that still carries the redaction
+// placeholder as a credential. Only a GET-edit-PUT round trip may send it, and MergeSecrets has
+// replaced it with the stored value before anything validates the result; a placeholder that
+// reaches here has no stored value to stand for and would otherwise be used as the secret.
+func validateNoRedacted(v any) error {
+	paths := decoder.RedactedPaths(v)
+	if len(paths) == 0 {
+		return nil
+	}
+
+	return errValidationSecret(strings.Join(paths, ", "), fmt.Errorf(
+		"%q is the redaction placeholder shown in API responses, not a value: "+
+			"set the real secret or a secrets:<resource>:<key> reference", redact.Placeholder))
 }

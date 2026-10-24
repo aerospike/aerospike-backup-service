@@ -160,3 +160,24 @@ func TestFileConfigurationManager_WriteThenRead_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 }
+
+// "[secret]" in the configuration file is not a password: it is what the API shows in place of
+// one, and nothing stored stands behind it. Loading the file, at startup or on a reload, rejects
+// it instead of authenticating with the placeholder.
+func TestFileConfigurationManager_Read_RejectsRedactedPlaceholder(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`
+aerospike-clusters:
+  c1:
+    seed-nodes: [{host-name: localhost, port: 3000}]
+    credentials: {user: admin, password: "[secret]"}
+`), 0600))
+
+	nsValidator := aerospike.NewMockNamespaceValidator(gomock.NewController(t))
+	manager := newFileConfigurationManager(path, nsValidator)
+
+	_, err := manager.Read(t.Context())
+
+	require.ErrorContains(t, err, "aerospike-clusters.c1.credentials.password")
+	require.ErrorContains(t, err, "redaction placeholder")
+}
