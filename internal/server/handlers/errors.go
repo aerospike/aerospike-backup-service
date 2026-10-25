@@ -41,7 +41,8 @@ func errBadRequest(err error) error {
 }
 
 // notPersistedError marks a valid configuration change that could not be written to the
-// configuration source. The change was not applied, so the client may retry it as it is.
+// configuration source, such as a read-only file or one served over HTTP(S). The change was not
+// applied either, so the running configuration is the one the source still holds.
 type notPersistedError struct {
 	Err error
 }

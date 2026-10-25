@@ -88,7 +88,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
-	// ApplyConfig and changeConfig must be synchronized to prevent race conditions
+	// ApplyConfig, replaceConfig and changeBackupConfig must be synchronized to prevent race conditions
 	// where one operation reads/writes config while another is in the middle of updating it
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
