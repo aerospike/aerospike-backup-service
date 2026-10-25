@@ -1,15 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
 	"maps"
 	"net/http"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/validation"
 )
 
@@ -40,38 +37,12 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oldConfig := dto.NewConfigFromModel(s.config)
-
-	// GET responses redact secrets as "[secret]". Before comparing or persisting a PUT, copy real secret
-	// values from the stored config into the incoming payload wherever the sentinel appears,
-	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
-	if err := decoder.MergeSecrets(newConfig, oldConfig); err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-
-	// validate static fields (after the merge, so a redacted secret does not count as a change).
-	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
-		httpError(w, errBadRequest(fmt.Errorf("static configuration has changed: %w", err)))
-		return
-	}
-
-	if err := newConfig.Validate(); err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-
-	newConfigModel, err := newConfig.ToModel()
+	// The whole backup configuration is replaced, so every routine is rescheduled.
+	err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
+		*config = *newConfig
+		return slices.Collect(maps.Keys(newConfig.BackupRoutines)), nil
+	})
 	if err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-	if err := s.tlsProber.Probe(r.Context(), newConfigModel); err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-
-	if err := s.replaceConfig(r.Context(), newConfigModel); err != nil {
 		httpError(w, err)
 		return
 	}
@@ -88,7 +59,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
-	// ApplyConfig, replaceConfig and changeBackupConfig must be synchronized to prevent race conditions
+	// ApplyConfig and changeBackupConfig must be synchronized to prevent race conditions
 	// where one operation reads/writes config while another is in the middle of updating it
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
@@ -121,18 +92,4 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-}
-
-// replaceConfig persists newConfig and makes it the live configuration, rescheduling every
-// routine it describes. The caller has already validated the change, so everything here is
-// the commit.
-func (s *Service) replaceConfig(ctx context.Context, newConfig *model.Config) error {
-	// ApplyConfig and replaceConfig must be synchronized to prevent race conditions
-	// where one operation reads/writes config while another is in the middle of updating it
-	s.changeConfigLock.Lock()
-	defer s.changeConfigLock.Unlock()
-
-	next := newConfig.BackupConfigCopy()
-
-	return s.commitConfig(ctx, next, slices.Collect(maps.Keys(next.BackupRoutines)))
 }

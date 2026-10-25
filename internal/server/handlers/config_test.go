@@ -185,7 +185,9 @@ func TestService_ApplyConfig(t *testing.T) {
 	}
 }
 
-func TestService_replaceConfig(t *testing.T) {
+const putConfigWithCluster = `{"aerospike-clusters":{"c1":{"seed-nodes":[{"host-name":"localhost","port":3000}]}}}`
+
+func TestService_UpdateConfig_ReplacesConfig(t *testing.T) {
 	svc, ctrl := newConfigTestService(t)
 
 	mockConfigurationManager := configuration.NewMockManager(ctrl)
@@ -196,12 +198,12 @@ func TestService_replaceConfig(t *testing.T) {
 	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil)
 	svc.configApplier = mockConfigApplier
 
-	newConfig := model.NewConfig()
-	require.NoError(t, newConfig.AddCluster("c1", &model.AerospikeCluster{
-		SeedNodes: []model.SeedNode{{HostName: "localhost", Port: 3000}},
-	}))
+	req := httptest.NewRequestWithContext(
+		t.Context(), http.MethodPut, "/v1/config", strings.NewReader(putConfigWithCluster))
+	w := httptest.NewRecorder()
+	svc.UpdateConfig(w, req)
 
-	require.NoError(t, svc.replaceConfig(t.Context(), newConfig))
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.Contains(t, svc.config.BackupConfigCopy().AerospikeClusters, "c1")
 }
 
@@ -255,7 +257,7 @@ func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
 	assert.Equal(t, "updated-label", updated.ClusterLabel)
 }
 
-func TestService_replaceConfig_WriteFailureKeepsConfig(t *testing.T) {
+func TestService_UpdateConfig_WriteFailureKeepsConfig(t *testing.T) {
 	svc, ctrl := newConfigTestService(t)
 
 	mockConfigurationManager := configuration.NewMockManager(ctrl)
@@ -266,14 +268,13 @@ func TestService_replaceConfig_WriteFailureKeepsConfig(t *testing.T) {
 	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Times(0)
 	svc.configApplier = mockConfigApplier
 
-	newConfig := model.NewConfig()
-	require.NoError(t, newConfig.AddCluster("c1", &model.AerospikeCluster{
-		SeedNodes: []model.SeedNode{{HostName: "localhost", Port: 3000}},
-	}))
+	req := httptest.NewRequestWithContext(
+		t.Context(), http.MethodPut, "/v1/config", strings.NewReader(putConfigWithCluster))
+	w := httptest.NewRecorder()
+	svc.UpdateConfig(w, req)
 
-	err := svc.replaceConfig(t.Context(), newConfig)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "disk full")
+	require.Equal(t, http.StatusServiceUnavailable, w.Code, w.Body.String())
+	assert.Contains(t, w.Body.String(), "disk full")
 	assert.NotContains(t, svc.config.BackupConfigCopy().AerospikeClusters, "c1")
 }
 
