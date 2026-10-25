@@ -61,10 +61,6 @@ func (c *Components) Run(ctx context.Context) error {
 // running scheduler, and returns. It is the one place the run context is handed out: a
 // component that outlives a single request takes its lifetime from here, never from the
 // context that built the graph. It is called exactly once.
-//
-// Applying the configuration is the first runtime action: it schedules every routine, queues
-// their history sync and checks their namespaces against the source clusters, so it happens
-// here, once the scheduler and the registry run, and not while the graph is being built.
 func (c *Components) Start(ctx context.Context) error {
 	c.registry.Start(ctx)
 	c.restoreJobs.Start(ctx)
