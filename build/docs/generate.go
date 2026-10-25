@@ -7,14 +7,12 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/swaggo/swag"
 	"github.com/swaggo/swag/gen"
 )
 
-const (
-	swagger2OpenAPIPackage = "swagger2openapi@7.0.8"
-	redoclyPackage         = "@redocly/cli@1.34.3"
-)
+const swagger2OpenAPIPackage = "swagger2openapi@7.0.8"
 
 func generateOpenAPI() error {
 	const docsDir = "docs"
@@ -71,11 +69,15 @@ func convertSwaggerToOpenAPI(swaggerPath, openAPIPath string) error {
 }
 
 // validateOpenAPI fails generation when the published spec is not a valid
-// OpenAPI 3 document: unparseable JSON, unresolved refs, or schema objects that
-// violate the specification's structure.
+// OpenAPI 3 document: unresolved refs, or schemas, parameters, examples and
+// defaults that violate the specification.
 func validateOpenAPI(openAPIPath string) error {
-	if err := runCommand("npx", "--yes", redoclyPackage, "lint", openAPIPath,
-		"--extends=minimal", "--format=summary"); err != nil {
+	loader := openapi3.NewLoader()
+	doc, err := loader.LoadFromFile(openAPIPath)
+	if err != nil {
+		return fmt.Errorf("load OpenAPI: %w", err)
+	}
+	if err := doc.Validate(loader.Context, openapi3.EnableSchemaDefaultsValidation()); err != nil {
 		return fmt.Errorf("validate OpenAPI: %w", err)
 	}
 

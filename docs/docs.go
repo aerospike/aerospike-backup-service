@@ -3445,7 +3445,7 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.ConnectionType"
                         }
                     ],
-                    "example": "tcp"
+                    "example": "TCP"
                 },
                 "is-base64": {
                     "description": "Flag that shows if secret agent responses are encrypted with base64.",
