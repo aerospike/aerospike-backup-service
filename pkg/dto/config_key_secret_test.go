@@ -40,8 +40,9 @@ func keySecretRoutine(name, policy, agent string) string {
 
 // An encryption key-secret is resolved with the agent of the routine that runs the policy, so
 // it is each routine using a Secret Agent reference that must name an agent - not the policy,
-// which may be defined before any routine uses it.
-func TestConfig_Validate_KeySecretAgent(t *testing.T) {
+// which may be defined before any routine uses it. Validate checks each object on its own;
+// the cross-reference is checked when the routine is converted to its model.
+func TestConfig_ToModel_KeySecretAgent(t *testing.T) {
 	tests := []struct {
 		name     string
 		routines string
@@ -62,13 +63,13 @@ func TestConfig_Validate_KeySecretAgent(t *testing.T) {
 		{
 			name:     "routine without an agent on a reference",
 			routines: keySecretRoutine("r1", "enc-policy", ""),
-			wantErr:  "backup routine 'r1' validation error: secret-agent",
+			wantErr:  `invalid backup routine "r1": policy 'enc-policy': key-secret`,
 		},
 		{
 			name: "policy shared by a routine with an agent and one without",
 			routines: keySecretRoutine("r1", "enc-policy", "sa") +
 				keySecretRoutine("r2", "enc-policy", ""),
-			wantErr: "backup routine 'r2' validation error: secret-agent",
+			wantErr: `invalid backup routine "r2": policy 'enc-policy': key-secret`,
 		},
 	}
 
@@ -81,7 +82,8 @@ func TestConfig_Validate_KeySecretAgent(t *testing.T) {
 			config, err := NewFromReader[Config](strings.NewReader(yaml), decoder.YAML)
 			require.NoError(t, err)
 
-			err = config.Validate()
+			require.NoError(t, config.Validate())
+			_, err = config.ToModel()
 
 			if tt.wantErr == "" {
 				require.NoError(t, err)
@@ -89,7 +91,7 @@ func TestConfig_Validate_KeySecretAgent(t *testing.T) {
 			}
 			require.ErrorIs(t, err, errValidation)
 			require.ErrorContains(t, err, tt.wantErr)
-			require.ErrorContains(t, err, `policy 'enc-policy' reads the encryption key-secret "secrets:abs:enckey"`)
+			require.ErrorContains(t, err, `"secrets:abs:enckey" requires a secret agent`)
 		})
 	}
 }

@@ -133,7 +133,10 @@ func (p *BaseRestorePolicy) Validate(opts ValidationOptions) error {
 		return err
 	}
 
-	if err := p.EncryptionPolicy.Validate(opts); err != nil {
+	if err := p.EncryptionPolicy.Validate(); err != nil {
+		return fmt.Errorf("invalid encryption policy: %w", err)
+	}
+	if err := p.EncryptionPolicy.validateSecretAgent(opts.Has(ValidationWithSecretAgent)); err != nil {
 		return fmt.Errorf("invalid encryption policy: %w", err)
 	}
 	if err := p.RetryPolicy.Validate(); err != nil {

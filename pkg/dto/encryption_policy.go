@@ -20,7 +20,7 @@ type EncryptionPolicy struct {
 }
 
 // Validate validates the encryption policy.
-func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
+func (p *EncryptionPolicy) Validate() error {
 	if p == nil {
 		return nil
 	}
@@ -62,7 +62,7 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 		return errValidationMutuallyExclusive("key-env", "key-secret")
 	}
 
-	if err := validateSecret("key-secret", p.KeySecret, opts.Has(ValidationWithSecretAgent)); err != nil {
+	if err := validateSecretForm("key-secret", p.KeySecret); err != nil {
 		return err
 	}
 
@@ -71,6 +71,16 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 	}
 
 	return nil
+}
+
+// validateSecretAgent checks that a key-secret reference has a Secret Agent to be resolved with.
+// The policy does not own an agent, so the DTO that runs it says whether there is one.
+func (p *EncryptionPolicy) validateSecretAgent(hasAgent bool) error {
+	if p == nil {
+		return nil
+	}
+
+	return validateSecretAgent("key-secret", p.KeySecret, hasAgent)
 }
 
 func (p *EncryptionPolicy) ToModel() *model.EncryptionPolicy {

@@ -295,6 +295,12 @@ func (r *BackupRoutine) ToModel(
 	if err != nil {
 		return nil, err
 	}
+	// The policy's key-secret is resolved with this routine's agent.
+	if policy.EncryptionPolicy != nil {
+		if err := validateSecretAgent("key-secret", policy.EncryptionPolicy.KeySecret, secretAgent != nil); err != nil {
+			return nil, fmt.Errorf("policy '%s': %w", r.BackupPolicy, err)
+		}
+	}
 
 	return &model.BackupRoutine{
 		Name:             name,
