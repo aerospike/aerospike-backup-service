@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,4 +38,24 @@ func TestInsertKeyAt(t *testing.T) {
 			assert.Equal(t, "new", obj.values[tt.key])
 		})
 	}
+}
+
+func TestParseJSONObjectRejectsDuplicateKeys(t *testing.T) {
+	t.Parallel()
+
+	_, err := parseJSONObject([]byte(`{"a":{"enum":["1"],"enum":["1","2"]}}`))
+
+	assert.ErrorContains(t, err, `duplicate key "enum"`)
+}
+
+func TestWriteJSONObjectRejectsDuplicateKeys(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "out.json")
+	doc := &jsonObject{keys: []string{"a", "a"}, values: map[string]any{"a": "x"}}
+
+	err := writeJSONObject(path, doc, "  ")
+
+	assert.ErrorContains(t, err, `duplicate key "a"`)
+	assert.NoFileExists(t, path)
 }

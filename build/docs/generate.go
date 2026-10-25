@@ -190,10 +190,16 @@ func newConfigSchema(openAPI *jsonObject) (*jsonObject, error) {
 	}, nil
 }
 
+// writeJSONObject writes doc to path. The output is parsed back first, so a
+// document that strict parsers would reject, such as one with a key repeated
+// within an object, fails generation instead of being published.
 func writeJSONObject(path string, doc *jsonObject, indent string) error {
 	data, err := marshalJSONObjectIndent(doc, indent)
 	if err != nil {
 		return err
+	}
+	if _, err := parseJSONObject(data); err != nil {
+		return fmt.Errorf("generated %s is not valid JSON: %w", path, err)
 	}
 
 	return os.WriteFile(path, data, 0600)

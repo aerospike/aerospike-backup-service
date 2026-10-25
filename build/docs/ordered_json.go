@@ -27,6 +27,10 @@ func decodeJSONObject(dec *json.Decoder) (*jsonObject, error) {
 			return nil, fmt.Errorf("expected object key, got %T", token)
 		}
 
+		if _, seen := obj.values[key]; seen {
+			return nil, fmt.Errorf("duplicate key %q at offset %d", key, dec.InputOffset())
+		}
+
 		value, err := decodeJSONValue(dec)
 		if err != nil {
 			return nil, err
