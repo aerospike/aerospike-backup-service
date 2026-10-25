@@ -117,11 +117,15 @@ before the service starts (see [Configuration](configuration.md) for the file fo
 Hot-reload — applying configuration changes without restarting the process — is handled by
 [`ConfigApplier`](../pkg/service/config_applier.go):
 
-1. The REST configuration API (`/v1/config/...`) validates a change, persists it back to the configuration source,
-   and marks the affected routine(s) as invalidated on the in-memory `model.Config`.
+1. The REST configuration API (`/v1/config/...`) validates a change and persists it back to the configuration source.
+   Only once the write succeeds does the change replace the in-memory `model.Config` and mark the affected routine(s)
+   as invalidated. A change that cannot be persisted (for example, a read-only configuration file, or a configuration
+   served over HTTP(S)) is rejected with `503` and leaves the running configuration untouched.
 2. `ConfigApplier.ApplyNewConfig` pops the invalidated-routine set, deletes the corresponding periodic Quartz jobs
    (full and incremental), and reschedules current ones from the updated config. This two-phase delete-then-reschedule
-   sequence is required because Quartz has no atomic "replace job" API.
+   sequence is required because Quartz has no atomic "replace job" API. The rescheduled routines are then checked
+   against their source clusters for namespaces that do not exist; a missing namespace is logged as a warning and does
+   not reject the configuration.
 3. Backup history for the affected routines is resynchronized from storage in the background so that subsequent
    `GET /v1/backups/...` calls reflect the new routine configuration immediately.
 4. Deleted routines are unscheduled but not rescheduled — the missing-routine case is handled explicitly rather than
