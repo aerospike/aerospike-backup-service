@@ -20,13 +20,30 @@ const configWriteTimeout = 60 * time.Second
 // The mutate function returns routine names that should be rescheduled and rescanned.
 // It is the one path for every configuration change, whether it edits an entity or, as
 // PUT /v1/config does, replaces the whole document.
-func (s *Service) changeBackupConfig(
-	ctx context.Context,
-	mutate func(*dto.Config) ([]string, error),
-) error {
+//
+// Everything up to the commit can reject the change and leaves nothing behind; the commit is
+// where a failure means the change was not persisted.
+func (s *Service) changeBackupConfig(ctx context.Context, mutate func(*dto.Config) ([]string, error)) error {
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
 
+	next, routinesToInvalidate, err := s.prepareConfig(ctx, mutate)
+	if err != nil {
+		return err
+	}
+
+	return s.commitConfig(ctx, next, routinesToInvalidate)
+}
+
+// prepareConfig builds the configuration a change asks for and returns it once it is known to
+// be acceptable: mutated, with stored secrets merged back in, validated, converted and probed.
+// An error is the reason the change is rejected; nothing has changed yet.
+//
+// The caller holds changeConfigLock.
+func (s *Service) prepareConfig(
+	ctx context.Context,
+	mutate func(*dto.Config) ([]string, error),
+) (*model.BackupConfig, []string, error) {
 	// Two conversions of the live configuration: mutate edits the candidate in place, and the
 	// secret merge and the static-field check need the untouched one to compare against.
 	existing := dto.NewConfigFromModel(s.config)
@@ -34,35 +51,35 @@ func (s *Service) changeBackupConfig(
 
 	routinesToInvalidate, err := mutate(candidate)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// GET responses redact secrets as "[secret]". Before comparing or persisting, copy real secret
 	// values from the stored config into the incoming payload wherever the sentinel appears,
 	// so a GET-edit-PUT round trip does not overwrite secrets with the literal "[secret]".
 	if err := decoder.MergeSecrets(candidate, existing); err != nil {
-		return errBadRequest(err)
+		return nil, nil, errBadRequest(err)
 	}
 
 	// The service section cannot change at runtime. Checked after the merge, so a redacted
 	// secret does not count as a change; a no-op for an entity change, which keeps the section.
 	if err := validation.ValidateStaticFieldChanges(existing, candidate); err != nil {
-		return errBadRequest(fmt.Errorf("static configuration has changed: %w", err))
+		return nil, nil, errBadRequest(fmt.Errorf("static configuration has changed: %w", err))
 	}
 
 	if err := candidate.Validate(); err != nil {
-		return errBadRequest(err)
+		return nil, nil, errBadRequest(err)
 	}
 
 	next, err := candidate.ToModel()
 	if err != nil {
-		return errBadRequest(err)
+		return nil, nil, errBadRequest(err)
 	}
 	if err := s.tlsProber.Probe(ctx, next); err != nil {
-		return errBadRequest(err)
+		return nil, nil, errBadRequest(err)
 	}
 
-	return s.commitConfig(ctx, next.BackupConfigCopy(), routinesToInvalidate)
+	return next.BackupConfigCopy(), routinesToInvalidate, nil
 }
 
 // commitConfig persists next and only then makes it the live backup configuration and
