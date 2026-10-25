@@ -14,8 +14,8 @@ import (
 // that exist in their respective Aerospike source clusters.
 // Validation is advisory: missing namespaces are reported without rejecting configuration.
 type NamespaceValidator interface {
-	// Validate validates all routines in config against their respective clusters.
-	Validate(ctx context.Context, cfg *model.Config)
+	// Validate checks the namespaces of the given routines against their source clusters.
+	Validate(ctx context.Context, routines []*model.BackupRoutine)
 }
 
 type namespaceValidator struct {
@@ -31,12 +31,13 @@ func NewNamespaceValidator(cm ClientManager) NamespaceValidator {
 // NamespacesByRoutine stores list of namespaces missing in each routine.
 type NamespacesByRoutine map[string][]string
 
-func (nv *namespaceValidator) Validate(ctx context.Context, cfg *model.Config) {
-	if cfg == nil {
-		return
+func (nv *namespaceValidator) Validate(ctx context.Context, routines []*model.BackupRoutine) {
+	byName := make(map[string]*model.BackupRoutine, len(routines))
+	for _, r := range routines {
+		byName[r.Name] = r
 	}
 
-	missing := nv.findMissingNamespaces(ctx, cfg.Routines())
+	missing := nv.findMissingNamespaces(ctx, byName)
 
 	for routine, namespaces := range missing {
 		slog.Warn("Namespaces referenced by routine are missing in the cluster",

@@ -8,24 +8,19 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
 // fileConfigurationManager keeps the service configuration in a local file.
 type fileConfigurationManager struct {
 	sync.Mutex
-	FilePath    string
-	nsValidator aerospike.NamespaceValidator
+	FilePath string
 }
 
 var _ Manager = (*fileConfigurationManager)(nil)
 
 // newFileConfigurationManager returns a new fileConfigurationManager.
-func newFileConfigurationManager(path string, nsValidator aerospike.NamespaceValidator) Manager {
-	return &fileConfigurationManager{
-		FilePath:    path,
-		nsValidator: nsValidator,
-	}
+func newFileConfigurationManager(path string) Manager {
+	return &fileConfigurationManager{FilePath: path}
 }
 
 // ReadConfiguration returns a reader for the configuration file.
@@ -44,7 +39,7 @@ func (cm *fileConfigurationManager) Read(ctx context.Context) (*model.Config, er
 	}
 	defer func() { _ = file.Close() }()
 
-	return readConfig(ctx, file, cm.nsValidator)
+	return readConfig(file)
 }
 
 // Write writes the configuration to the given file path.

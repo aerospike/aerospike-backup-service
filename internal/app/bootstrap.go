@@ -34,8 +34,9 @@ type Components struct {
 	MetricsCollector *prometheus.MetricsCollector
 	TLSProvider      servertls.TLSProvider
 
-	registry    service.BackupStateRegistry
-	restoreJobs component
+	registry      service.BackupStateRegistry
+	restoreJobs   component
+	configApplier service.ConfigApplier
 }
 
 // component is anything whose work outlives a single request: it takes the run context
@@ -49,20 +50,29 @@ type component interface {
 // blocks for as long as the service runs: a caller that wants the service up without
 // giving up its goroutine - a test serving the handler itself - uses Start instead.
 func (c *Components) Run(ctx context.Context) error {
-	c.Start(ctx)
+	if err := c.Start(ctx); err != nil {
+		return err
+	}
 
 	return server.Run(ctx, c.Servers)
 }
 
-// Start brings up every background component and returns. It is the one place the run
-// context is handed out: a component that outlives a single request takes its lifetime
-// from here, never from the context that built the graph. It is called exactly once.
-func (c *Components) Start(ctx context.Context) {
+// Start brings up every background component, applies the loaded configuration to the
+// running scheduler, and returns. It is the one place the run context is handed out: a
+// component that outlives a single request takes its lifetime from here, never from the
+// context that built the graph. It is called exactly once.
+func (c *Components) Start(ctx context.Context) error {
 	c.registry.Start(ctx)
 	c.restoreJobs.Start(ctx)
 	c.Scheduler.Start(ctx)
 	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	c.TLSProvider.Start(ctx)
+
+	if err := c.configApplier.ApplyNewConfig(ctx); err != nil {
+		return fmt.Errorf("failed to apply configuration: %w", err)
+	}
+
+	return nil
 }
 
 // InitComponents builds the full object graph.
@@ -89,7 +99,7 @@ func InitComponents(
 	operations := newStorageOperations(resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 
-	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations, tlsProber)
+	config, configurationManager, err := configuration.Load(ctx, configFile, remote, operations, tlsProber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -133,12 +143,7 @@ func InitComponents(
 		routineBackupRunner,
 	)
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
-	configApplier := service.NewConfigApplier(backupScheduler, registry, config)
-
-	err = configApplier.ApplyNewConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply new config: %w", err)
-	}
+	configApplier := service.NewConfigApplier(backupScheduler, registry, nsValidator, config)
 
 	restoreJobs := service.NewRestoreJobsHolder()
 	restoreValidator := service.NewRestoreValidator(startController, config)
@@ -164,7 +169,6 @@ func InitComponents(
 		catalog,
 		registry,
 		configurationManager,
-		nsValidator,
 		tlsProber,
 	)
 
@@ -192,6 +196,7 @@ func InitComponents(
 		TLSProvider:      tlsProvider,
 		registry:         registry,
 		restoreJobs:      restoreJobs,
+		configApplier:    configApplier,
 	}, nil
 }
 

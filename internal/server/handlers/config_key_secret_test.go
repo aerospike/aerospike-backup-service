@@ -15,7 +15,7 @@ import (
 // uses it, as when an operator defines policies first and routines later; it is the routine
 // that must name the agent the key is resolved with.
 func TestAddPolicyThenRoutine_KeySecretAgent(t *testing.T) {
-	svc := newServiceWithNamespaceValidator(t)
+	svc := setupTestService(t)
 	require.NoError(t, svc.config.AddSecretAgent("sa", &model.SecretAgent{
 		ConnectionType: "tcp", Address: "secret-agent.aerospike.svc", Port: ptr.Of(model.Port(3005)),
 	}))

@@ -759,7 +759,7 @@ func newListenerHandler(t *testing.T) *handlers.Service {
 
 	return handlers.NewService(
 		model.NewConfig(),
-		nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 }
 

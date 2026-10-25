@@ -18,6 +18,7 @@ import (
 // @Success     201
 // @Failure     400 {string} string
 // @Failure     409 {string} string "A cluster with that name already exists"
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
@@ -87,6 +88,7 @@ func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 // @Failure     404 {string} string "The specified cluster was not found"
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
@@ -97,7 +99,7 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.UpdateCluster(name, updatedCluster)
-	}, withNamespaceValidation); err != nil {
+	}); err != nil {
 		httpError(w, err)
 		return
 	}
@@ -115,6 +117,7 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 // @Failure     400 {string} string
 // @Failure     404 {string} string "The specified cluster was not found"
 // @Failure     409 {string} string "The cluster is still used by a backup routine"
+// @Failure     503 {string} string "The configuration could not be persisted"
 func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
