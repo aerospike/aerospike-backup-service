@@ -13,7 +13,7 @@ import (
 // The root endpoint answers 200 at the configured context path, while unknown paths
 // under it are still 404.
 func TestRootRoute_HonoursContextPath(t *testing.T) {
-	svc := handlers.NewService(model.NewConfig(), nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	svc := handlers.NewService(model.NewConfig(), nil, nil, nil, nil, nil, nil, nil, nil)
 	mux := NewServeMux("/abs/v1", "/abs/", svc)
 
 	for path, want := range map[string]int{

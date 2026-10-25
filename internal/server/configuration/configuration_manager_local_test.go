@@ -7,9 +7,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 func TestFileConfigurationManager_Read(t *testing.T) {
@@ -49,12 +47,7 @@ func TestFileConfigurationManager_Read(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-
-			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-			mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
-
-			manager := newFileConfigurationManager(tt.filePath, mockNsValidator)
+			manager := newFileConfigurationManager(tt.filePath)
 			cfg, err := manager.Read(t.Context())
 
 			if tt.expectError != "" {
@@ -69,11 +62,7 @@ func TestFileConfigurationManager_Read(t *testing.T) {
 }
 
 func TestFileConfigurationManager_Read_ContextCanceled(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-
-	manager := newFileConfigurationManager("/tmp/does-not-matter.yaml", mockNsValidator)
+	manager := newFileConfigurationManager("/tmp/does-not-matter.yaml")
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
@@ -109,11 +98,7 @@ func TestFileConfigurationManager_Write(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-
-			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-
-			manager := newFileConfigurationManager(tt.filePath, mockNsValidator)
+			manager := newFileConfigurationManager(tt.filePath)
 			err := manager.Write(t.Context(), model.NewConfig())
 
 			if tt.expectError != "" {
@@ -131,11 +116,7 @@ func TestFileConfigurationManager_Write(t *testing.T) {
 }
 
 func TestFileConfigurationManager_Write_ContextCanceled(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-
-	manager := newFileConfigurationManager(filepath.Join(t.TempDir(), "config.yaml"), mockNsValidator)
+	manager := newFileConfigurationManager(filepath.Join(t.TempDir(), "config.yaml"))
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
@@ -146,13 +127,8 @@ func TestFileConfigurationManager_Write_ContextCanceled(t *testing.T) {
 }
 
 func TestFileConfigurationManager_WriteThenRead_RoundTrip(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
-
 	filePath := filepath.Join(t.TempDir(), "round-trip.yaml")
-	manager := newFileConfigurationManager(filePath, mockNsValidator)
+	manager := newFileConfigurationManager(filePath)
 
 	require.NoError(t, manager.Write(t.Context(), model.NewConfig()))
 
@@ -173,10 +149,7 @@ aerospike-clusters:
     credentials: {user: admin, password: "[secret]"}
 `), 0600))
 
-	nsValidator := aerospike.NewMockNamespaceValidator(gomock.NewController(t))
-	manager := newFileConfigurationManager(path, nsValidator)
-
-	_, err := manager.Read(t.Context())
+	_, err := newFileConfigurationManager(path).Read(t.Context())
 
 	require.ErrorContains(t, err, "aerospike-clusters.c1.credentials.password")
 	require.ErrorContains(t, err, "redaction placeholder")

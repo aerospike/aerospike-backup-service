@@ -36,7 +36,7 @@ func newTestServerHTTP(t *testing.T, httpCfg *model.ServerConfigHTTP) *serverHTT
 
 	svc := handlers.NewService(
 		model.NewConfig(),
-		nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
 	return NewServerHTTP(httpCfg, svc).(*serverHTTP)

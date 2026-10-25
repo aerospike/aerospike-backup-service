@@ -1,10 +1,12 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -17,10 +19,11 @@ func TestConfigApplier_ApplyNewConfig_NoInvalidations(t *testing.T) {
 	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
 		NewMockBackupStateRegistry(ctrl),
+		noopNamespaceValidator(ctrl),
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig())
+	require.NoError(t, applier.ApplyNewConfig(t.Context()))
 }
 
 func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T) {
@@ -46,10 +49,11 @@ func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T
 	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
 		registry,
+		noopNamespaceValidator(ctrl),
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig())
+	require.NoError(t, applier.ApplyNewConfig(t.Context()))
 }
 
 func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
@@ -68,10 +72,11 @@ func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
 		registry,
+		noopNamespaceValidator(ctrl),
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig())
+	require.NoError(t, applier.ApplyNewConfig(t.Context()))
 }
 
 func TestConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
@@ -91,10 +96,11 @@ func TestConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
 	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
 		NewMockBackupStateRegistry(ctrl),
+		noopNamespaceValidator(ctrl),
 		cfg,
 	)
 
-	err := applier.ApplyNewConfig()
+	err := applier.ApplyNewConfig(t.Context())
 	require.Error(t, err)
 	require.ErrorContains(t, err, "failed to schedule periodic backups")
 }
@@ -118,10 +124,57 @@ func TestConfigApplier_ApplyNewConfig_ScheduleJobError(t *testing.T) {
 	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
 		NewMockBackupStateRegistry(ctrl),
+		noopNamespaceValidator(ctrl),
 		cfg,
 	)
 
-	err := applier.ApplyNewConfig()
+	err := applier.ApplyNewConfig(t.Context())
 	require.Error(t, err)
 	require.ErrorIs(t, err, scheduleErr)
+}
+
+// Namespace validation is advisory and scoped: only the routines that were invalidated and
+// still exist are checked, after they have been scheduled.
+func TestConfigApplier_ApplyNewConfig_ValidatesAppliedRoutinesOnly(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	cfg := model.NewConfig()
+	for _, name := range []string{"changed", "untouched"} {
+		require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
+			Name:         name,
+			IntervalCron: "0 0 * * * *",
+			Timezone:     model.NewServiceLocation("", nil),
+		}))
+	}
+	cfg.PopInvalidatedRoutineNames()
+	cfg.InvalidateRoutines([]string{"changed", "removed"})
+
+	scheduler := NewMockJobScheduler(ctrl)
+	scheduler.EXPECT().DeleteJob(gomock.Any()).Return(nil).Times(4)
+	scheduler.EXPECT().ScheduleJob(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	registry := NewMockBackupStateRegistry(ctrl)
+	registry.EXPECT().RequestHistorySync([]string{"changed"})
+
+	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
+	nsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).Do(
+		func(_ context.Context, routines []*model.BackupRoutine) {
+			require.Len(t, routines, 1)
+			require.Equal(t, "changed", routines[0].Name)
+		})
+
+	applier := NewConfigApplier(
+		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
+		registry,
+		nsValidator,
+		cfg,
+	)
+
+	require.NoError(t, applier.ApplyNewConfig(t.Context()))
+}
+
+func noopNamespaceValidator(ctrl *gomock.Controller) aerospike.NamespaceValidator {
+	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
+	nsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
+
+	return nsValidator
 }
