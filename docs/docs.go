@@ -2549,8 +2549,7 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.GcpStorageClass"
                         }
-                    ],
-                    "x-nullable": true
+                    ]
                 }
             }
         },

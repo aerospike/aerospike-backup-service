@@ -28,7 +28,7 @@ type GcpStorage struct {
 	// The minimum size in bytes of individual GCP storage chunks.
 	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" minimum:"262144"`
 	// StorageClass defines the storage class for data and metadata objects.
-	StorageClass *GcpStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty" extensions:"x-nullable"`
+	StorageClass *GcpStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
 
 // gcsMinUploadChunkSize minimum size of multipart upload.

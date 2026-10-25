@@ -11,7 +11,10 @@ import (
 	"github.com/swaggo/swag/gen"
 )
 
-const swagger2OpenAPIPackage = "swagger2openapi@7.0.8"
+const (
+	swagger2OpenAPIPackage = "swagger2openapi@7.0.8"
+	redoclyPackage         = "@redocly/cli@1.34.3"
+)
 
 func generateOpenAPI() error {
 	const docsDir = "docs"
@@ -29,6 +32,9 @@ func generateOpenAPI() error {
 		return err
 	}
 	if err := finalizeOpenAPI(openAPIPath, configSchemaPath); err != nil {
+		return err
+	}
+	if err := validateOpenAPI(openAPIPath); err != nil {
 		return err
 	}
 
@@ -59,6 +65,18 @@ func generateSwagger(outputDir string) error {
 func convertSwaggerToOpenAPI(swaggerPath, openAPIPath string) error {
 	if err := runCommand("npx", "--yes", swagger2OpenAPIPackage, swaggerPath, "-o", openAPIPath); err != nil {
 		return fmt.Errorf("convert swagger to OpenAPI: %w", err)
+	}
+
+	return nil
+}
+
+// validateOpenAPI fails generation when the published spec is not a valid
+// OpenAPI 3 document: unparseable JSON, unresolved refs, or schema objects that
+// violate the specification's structure.
+func validateOpenAPI(openAPIPath string) error {
+	if err := runCommand("npx", "--yes", redoclyPackage, "lint", openAPIPath,
+		"--extends=minimal", "--format=summary"); err != nil {
+		return fmt.Errorf("validate OpenAPI: %w", err)
 	}
 
 	return nil

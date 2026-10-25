@@ -777,8 +777,7 @@
               {
                 "$ref": "#/components/schemas/dto.GcpStorageClass"
               }
-            ],
-            "nullable": true
+            ]
           }
         }
       },
