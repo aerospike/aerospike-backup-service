@@ -236,3 +236,36 @@ func TestInitComponents_BuildContextIsNotALifetime(t *testing.T) {
 	cancelRun()
 	require.NoError(t, <-done)
 }
+
+// The loaded configuration is applied by Start, not while the graph is built: a routine is
+// scheduled only once the scheduler runs. The routine backs up the whole cluster, so applying
+// it checks no namespaces and needs no live Aerospike connection.
+func TestComponents_StartAppliesConfiguration(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte(`
+service:
+  http: {address: 127.0.0.1, port: `+strconv.Itoa(freePort(t))+`}
+aerospike-clusters:
+  c1: {seed-nodes: [{host-name: localhost, port: 3000}]}
+storage:
+  s1: {local-storage: {path: `+t.TempDir()+`}}
+backup-policies:
+  p1: {}
+backup-routines:
+  r1: {source-cluster: c1, storage: s1, backup-policy: p1, interval-cron: "@yearly", namespaces: []}
+`), 0o600))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	components, err := InitComponents(ctx, configPath, false)
+	require.NoError(t, err)
+	keys, err := components.Scheduler.GetJobKeys()
+	require.NoError(t, err)
+	require.Empty(t, keys, "a routine was scheduled before Start")
+
+	require.NoError(t, components.Start(ctx))
+	keys, err = components.Scheduler.GetJobKeys()
+	require.NoError(t, err)
+	require.Len(t, keys, 1)
+}
