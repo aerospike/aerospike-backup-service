@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 )
 
 type jsonObject struct {
@@ -211,7 +212,16 @@ func (o *jsonObject) removeKey(key string) {
 	delete(o.values, key)
 }
 
+// insertKeyAt places key at index, an index into the current keys. A key that is
+// already present is moved there, so an object never holds the same key twice.
 func (o *jsonObject) insertKeyAt(index int, key string, value any) {
-	o.keys = append(o.keys[:index], append([]string{key}, o.keys[index:]...)...)
+	if existing := o.keyIndex(key); existing >= 0 {
+		o.keys = slices.Delete(o.keys, existing, existing+1)
+		if existing < index {
+			index--
+		}
+	}
+
+	o.keys = slices.Insert(o.keys, index, key)
 	o.values[key] = value
 }

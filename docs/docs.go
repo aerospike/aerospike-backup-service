@@ -3637,10 +3637,6 @@ const docTemplate = `{
                 "min-version": {
                     "description": "Minimum accepted TLS protocol version.",
                     "default": "1.2",
-                    "enum": [
-                        "1.2",
-                        "1.3"
-                    ],
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.TLSMinVersion"
