@@ -10,10 +10,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 var cluster = dto.AerospikeCluster{SeedNodes: []dto.SeedNode{{HostName: "localhost", Port: 3000}}}
@@ -144,14 +142,12 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 		requestBody    string
 		expectedStatus int
 		expectedError  string
-		runValidation  bool
 	}{
 		{
 			name:           "successful update",
 			clusterName:    "test-cluster",
 			requestBody:    marshalToString(cluster),
 			expectedStatus: http.StatusOK,
-			runValidation:  true,
 		},
 		{
 			name:           "invalid json",
@@ -164,17 +160,7 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-
 			svc := setupTestService(t)
-			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-			svc.nsValidator = mockNsValidator
-
-			if tt.runValidation {
-				// The candidate configuration is validated, not the live one: the change is
-				// not committed until it has been persisted.
-				mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any())
-			}
 
 			initialCluster := &model.AerospikeCluster{}
 			_ = svc.config.AddCluster("test-cluster", initialCluster)
@@ -202,10 +188,6 @@ func TestUpdateAerospikeCluster_PreservesSecretOnRoundTrip(t *testing.T) {
 	const realPassword = "real-secret-password"
 
 	svc := setupTestService(t)
-	ctrl := gomock.NewController(t)
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	svc.nsValidator = mockNsValidator
-	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
 
 	clusterModel := &model.AerospikeCluster{
 		SeedNodes: []model.SeedNode{{HostName: "localhost", Port: 3000}},

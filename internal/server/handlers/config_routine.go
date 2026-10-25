@@ -28,7 +28,7 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.AddRoutine(name, newRoutine)
-	}, withNamespaceValidation); err != nil {
+	}); err != nil {
 		httpError(w, err)
 		return
 	}
@@ -95,7 +95,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.UpdateRoutine(name, updatedRoutine)
-	}, withNamespaceValidation); err != nil {
+	}); err != nil {
 		httpError(w, err)
 		return
 	}

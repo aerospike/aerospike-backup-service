@@ -13,7 +13,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +22,7 @@ import (
 // Secrets are merged before the static-field comparison, so a GET-edit-PUT round trip
 // carrying a redacted service.https.key-file-password is accepted.
 func TestUpdateConfig_AcceptsRedactedKeyFilePassword(t *testing.T) {
-	svc := newServiceWithNamespaceValidator(t)
+	svc := setupTestService(t)
 	svc.config.ServiceConfig.ServerHTTPS = &model.ServerConfigHTTPS{
 		ListenerConfig:  model.ListenerConfig{Disabled: true},
 		CertFile:        "/c.pem",
@@ -47,7 +46,7 @@ func TestUpdateConfig_AcceptsRedactedKeyFilePassword(t *testing.T) {
 // Updating a cluster or a policy invalidates every routine that uses it, so the
 // scheduled jobs (which hold a routine snapshot) are rebuilt with the new definition.
 func TestUpdateClusterAndPolicy_InvalidateDependentRoutines(t *testing.T) {
-	svc := newServiceWithNamespaceValidator(t)
+	svc := setupTestService(t)
 	entities := addValidBackupConfig(svc)
 	svc.config.PopInvalidatedRoutineNames() // drain the AddRoutine invalidation
 
@@ -80,11 +79,9 @@ func TestChangeBackupConfig_WriteFailureLeavesConfigUntouched(t *testing.T) {
 	manager := configuration.NewMockManager(ctrl)
 	manager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(errors.New("disk full"))
 	applier := service.NewMockConfigApplier(ctrl)
-	applier.EXPECT().ApplyNewConfig().Times(0)
-	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	nsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
+	applier.EXPECT().ApplyNewConfig(gomock.Any()).Times(0)
 
-	svc := NewService(model.NewConfig(), applier, nil, nil, nil, nil, nil, manager, nsValidator, newMockTLSProber(ctrl))
+	svc := NewService(model.NewConfig(), applier, nil, nil, nil, nil, nil, manager, newMockTLSProber(ctrl))
 
 	body := marshalToString(dto.AerospikeCluster{SeedNodes: []dto.SeedNode{{HostName: "localhost", Port: 3000}}})
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/config/clusters/c1", strings.NewReader(body))
@@ -104,9 +101,9 @@ func TestChangeBackupConfig_WriteFailureLeavesNoPendingInvalidation(t *testing.T
 	manager := configuration.NewMockManager(ctrl)
 	manager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(errors.New("disk full"))
 	applier := service.NewMockConfigApplier(ctrl)
-	applier.EXPECT().ApplyNewConfig().Times(0)
+	applier.EXPECT().ApplyNewConfig(gomock.Any()).Times(0)
 
-	svc := newServiceWithNamespaceValidator(t)
+	svc := setupTestService(t)
 	svc.configurationManager = manager
 	svc.configApplier = applier
 	entities := addValidBackupConfig(svc)
@@ -141,11 +138,9 @@ func TestChangeBackupConfig_WritesCandidateBeforePublishing(t *testing.T) {
 			return nil
 		})
 	applier := service.NewMockConfigApplier(ctrl)
-	applier.EXPECT().ApplyNewConfig().Return(nil)
-	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	nsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
+	applier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil)
 
-	svc := NewService(model.NewConfig(), applier, nil, nil, nil, nil, nil, manager, nsValidator, newMockTLSProber(ctrl))
+	svc := NewService(model.NewConfig(), applier, nil, nil, nil, nil, nil, manager, newMockTLSProber(ctrl))
 
 	body := marshalToString(dto.AerospikeCluster{SeedNodes: []dto.SeedNode{{HostName: "localhost", Port: 3000}}})
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/config/clusters/c1", strings.NewReader(body))
@@ -163,11 +158,9 @@ func TestChangeBackupConfig_RejectedChangeIsBadRequest(t *testing.T) {
 	manager := configuration.NewMockManager(ctrl)
 	manager.EXPECT().Write(gomock.Any(), gomock.Any()).Times(0)
 	applier := service.NewMockConfigApplier(ctrl)
-	applier.EXPECT().ApplyNewConfig().Times(0)
-	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	nsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
+	applier.EXPECT().ApplyNewConfig(gomock.Any()).Times(0)
 
-	svc := NewService(model.NewConfig(), applier, nil, nil, nil, nil, nil, manager, nsValidator, newMockTLSProber(ctrl))
+	svc := NewService(model.NewConfig(), applier, nil, nil, nil, nil, nil, manager, newMockTLSProber(ctrl))
 
 	// A redacted password has no stored value to stand for on a new cluster.
 	body := marshalToString(dto.AerospikeCluster{

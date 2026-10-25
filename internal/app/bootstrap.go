@@ -89,7 +89,7 @@ func InitComponents(
 	operations := newStorageOperations(resolver)
 	clientManager, nsValidator := newAerospikeLayer(resolver)
 
-	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations, tlsProber)
+	config, configurationManager, err := configuration.Load(ctx, configFile, remote, operations, tlsProber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -133,9 +133,9 @@ func InitComponents(
 		routineBackupRunner,
 	)
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
-	configApplier := service.NewConfigApplier(backupScheduler, registry, config)
+	configApplier := service.NewConfigApplier(backupScheduler, registry, nsValidator, config)
 
-	err = configApplier.ApplyNewConfig()
+	err = configApplier.ApplyNewConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
@@ -164,7 +164,6 @@ func InitComponents(
 		catalog,
 		registry,
 		configurationManager,
-		nsValidator,
 		tlsProber,
 	)
 

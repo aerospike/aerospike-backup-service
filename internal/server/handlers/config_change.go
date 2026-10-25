@@ -14,23 +14,13 @@ import (
 // cloud client, short enough that a stalled backend cannot hold the config lock indefinitely.
 const configWriteTimeout = 60 * time.Second
 
-type backupConfigChangeOptions struct {
-	validateNamespaces bool
-}
-
 // changeBackupConfig applies a mutation to the backup configuration DTO, validates and
 // converts the full configuration, and persists the result before it becomes visible.
 // The mutate function returns routine names that should be rescheduled and rescanned.
 func (s *Service) changeBackupConfig(
 	ctx context.Context,
 	mutate func(*dto.Config) ([]string, error),
-	opts ...func(*backupConfigChangeOptions),
 ) error {
-	options := backupConfigChangeOptions{}
-	for _, opt := range opts {
-		opt(&options)
-	}
-
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
 
@@ -60,10 +50,6 @@ func (s *Service) changeBackupConfig(
 		return errBadRequest(fmt.Errorf("failed to update configuration: %w", err))
 	}
 
-	if options.validateNamespaces {
-		s.nsValidator.Validate(ctx, candidate)
-	}
-
 	return s.commitConfig(ctx, candidate.BackupConfigCopy(), routinesToInvalidate)
 }
 
@@ -86,13 +72,9 @@ func (s *Service) commitConfig(ctx context.Context, next *model.BackupConfig, ro
 	s.config.SetBackupConfig(next)
 	s.config.InvalidateRoutines(routinesToInvalidate)
 
-	if err := s.configApplier.ApplyNewConfig(); err != nil {
+	if err := s.configApplier.ApplyNewConfig(ctx); err != nil {
 		return fmt.Errorf("failed to apply new configuration: %w", err)
 	}
 
 	return nil
-}
-
-func withNamespaceValidation(opts *backupConfigChangeOptions) {
-	opts.validateNamespaces = true
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,17 +37,15 @@ func newFileBackedService(t *testing.T, applyCalls int) (*Service, string) {
 	require.NoError(t, os.WriteFile(path, []byte(fileBackedConfig), 0o600))
 
 	ctrl := gomock.NewController(t)
-	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	nsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
 	prober := newMockTLSProber(ctrl)
 
-	config, manager, err := configuration.Load(t.Context(), path, false, nsValidator, nil, prober)
+	config, manager, err := configuration.Load(t.Context(), path, false, nil, prober)
 	require.NoError(t, err)
 
 	applier := service.NewMockConfigApplier(ctrl)
-	applier.EXPECT().ApplyNewConfig().Return(nil).Times(applyCalls)
+	applier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil).Times(applyCalls)
 
-	return NewService(config, applier, nil, nil, nil, nil, nil, manager, nsValidator, prober), path
+	return NewService(config, applier, nil, nil, nil, nil, nil, manager, prober), path
 }
 
 func addPolicyRequest(t *testing.T, name string) *http.Request {
@@ -70,9 +67,7 @@ func TestChangeBackupConfig_PersistsToConfigFile(t *testing.T) {
 	svc.AddPolicy(w, addPolicyRequest(t, "p1"))
 	require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
 
-	nsValidator := aerospike.NewMockNamespaceValidator(gomock.NewController(t))
-	nsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
-	reloaded, _, err := configuration.Load(t.Context(), path, false, nsValidator, nil,
+	reloaded, _, err := configuration.Load(t.Context(), path, false, nil,
 		newMockTLSProber(gomock.NewController(t)))
 	require.NoError(t, err)
 

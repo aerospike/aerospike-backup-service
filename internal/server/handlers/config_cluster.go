@@ -99,7 +99,7 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 
 	if err := s.changeBackupConfig(r.Context(), func(config *dto.Config) ([]string, error) {
 		return config.UpdateCluster(name, updatedCluster)
-	}, withNamespaceValidation); err != nil {
+	}); err != nil {
 		httpError(w, err)
 		return
 	}

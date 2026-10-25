@@ -113,7 +113,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 
 	s.config.SetBackupConfig(config.BackupConfigCopy())
 	s.config.InvalidateAllRoutines()
-	err = s.configApplier.ApplyNewConfig()
+	err = s.configApplier.ApplyNewConfig(r.Context())
 
 	if err != nil {
 		httpError(w, err)
@@ -131,8 +131,6 @@ func (s *Service) replaceConfig(ctx context.Context, newConfig *model.Config) er
 	// where one operation reads/writes config while another is in the middle of updating it
 	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
-
-	s.nsValidator.Validate(ctx, newConfig) // validate under the lock
 
 	next := newConfig.BackupConfigCopy()
 
