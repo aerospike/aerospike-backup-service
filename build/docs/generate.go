@@ -210,10 +210,15 @@ func newConfigSchema(openAPI *jsonObject) (*jsonObject, error) {
 	}, nil
 }
 
+// writeJSONObject writes doc to path.
 func writeJSONObject(path string, doc *jsonObject, indent string) error {
 	data, err := marshalJSONObjectIndent(doc, indent)
 	if err != nil {
 		return err
+	}
+	// parse the output to double-check it's valid.
+	if _, err := parseJSONObject(data); err != nil {
+		return fmt.Errorf("generated %s is not valid JSON: %w", path, err)
 	}
 
 	return os.WriteFile(path, data, 0600)
