@@ -40,7 +40,7 @@ type ServerConfigHTTPS struct {
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
 	KeyFilePassword Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
 	// Minimum accepted TLS protocol version.
-	MinVersion TLSMinVersion `yaml:"min-version,omitempty" json:"min-version,omitempty" default:"1.2" enums:"1.2,1.3"`
+	MinVersion TLSMinVersion `yaml:"min-version,omitempty" json:"min-version,omitempty" default:"1.2"`
 	// Allowed TLS cipher suite names. An empty list uses Go's secure defaults.
 	CipherSuites []string `yaml:"cipher-suites,omitempty" json:"cipher-suites,omitempty" extensions:"x-nullable"`
 	// Path to trusted client CA certificates in PEM format.

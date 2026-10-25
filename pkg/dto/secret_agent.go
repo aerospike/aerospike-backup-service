@@ -71,7 +71,7 @@ type SecretAgent struct {
 	ClientTLS `yaml:",inline"`
 	// Connection type.
 	//nolint:lll
-	ConnectionType ConnectionType `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp" validate:"required"`
+	ConnectionType ConnectionType `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"TCP" validate:"required"`
 	// Address of the Secret Agent.
 	Address string `yaml:"address" json:"address" example:"localhost" validate:"required"`
 	// Port the Secret Agent is running on.

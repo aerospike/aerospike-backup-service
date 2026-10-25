@@ -2993,8 +2993,7 @@
                             {
                                 "$ref": "#/components/schemas/dto.GcpStorageClass"
                             }
-                        ],
-                        "nullable": true
+                        ]
                     }
                 }
             },
@@ -3819,7 +3818,7 @@
                             "TCP",
                             "UNIX"
                         ],
-                        "example": "tcp"
+                        "example": "TCP"
                     },
                     "is-base64": {
                         "description": "Flag that shows if secret agent responses are encrypted with base64.",
@@ -4011,10 +4010,6 @@
                     "min-version": {
                         "description": "Minimum accepted TLS protocol version.",
                         "default": "1.2",
-                        "enum": [
-                            "1.2",
-                            "1.3"
-                        ],
                         "type": "string",
                         "enum": [
                             "1.2",
