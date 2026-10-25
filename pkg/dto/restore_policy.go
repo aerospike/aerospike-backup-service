@@ -90,7 +90,7 @@ type TimestampRestorePolicy struct {
 // Validate validates the base restore policy.
 //
 
-func (p *BaseRestorePolicy) Validate(opts ValidationOptions) error {
+func (p *BaseRestorePolicy) Validate() error {
 	if p == nil {
 		return nil
 	}
@@ -136,9 +136,6 @@ func (p *BaseRestorePolicy) Validate(opts ValidationOptions) error {
 	if err := p.EncryptionPolicy.Validate(); err != nil {
 		return fmt.Errorf("invalid encryption policy: %w", err)
 	}
-	if err := p.EncryptionPolicy.validateSecretAgent(opts.Has(ValidationWithSecretAgent)); err != nil {
-		return fmt.Errorf("invalid encryption policy: %w", err)
-	}
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retry policy invalid: %w", err)
 	}
@@ -150,11 +147,11 @@ func (p *BaseRestorePolicy) Validate(opts ValidationOptions) error {
 }
 
 // Validate validates the restore policy.
-func (p *RestorePolicy) Validate(opts ValidationOptions) error {
+func (p *RestorePolicy) Validate() error {
 	if p == nil {
 		return nil
 	}
-	if err := p.BaseRestorePolicy.Validate(opts); err != nil {
+	if err := p.BaseRestorePolicy.Validate(); err != nil {
 		return err
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {
@@ -164,11 +161,11 @@ func (p *RestorePolicy) Validate(opts ValidationOptions) error {
 }
 
 // Validate validates the timestamp restore policy.
-func (p *TimestampRestorePolicy) Validate(opts ValidationOptions) error {
+func (p *TimestampRestorePolicy) Validate() error {
 	if p == nil {
 		return nil
 	}
-	return p.BaseRestorePolicy.Validate(opts)
+	return p.BaseRestorePolicy.Validate()
 }
 
 func (p *BaseRestorePolicy) validateExistingRecordPolicy() error {

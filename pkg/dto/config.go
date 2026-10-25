@@ -145,13 +145,8 @@ func (c *Config) ToModel() (*model.Config, error) {
 			return nil, err
 		}
 	}
-	if c.ServiceConfig.ServerHTTPS != nil {
-		// Resolve the HTTPS Secret Agent after the top-level agents have been added.
-		agent, err := c.ServiceConfig.ServerHTTPS.SecretAgentConfig.ToModel(modelConfig)
-		if err != nil {
-			return nil, fmt.Errorf("invalid HTTPS server secret agent: %w", err)
-		}
-		modelConfig.ServiceConfig.ServerHTTPS.SecretAgent = agent
+	if err := c.ServiceConfig.ServerHTTPS.resolveSecretAgent(modelConfig); err != nil {
+		return nil, err
 	}
 
 	// storage must be added after secret agents.

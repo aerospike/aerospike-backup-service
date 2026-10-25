@@ -35,7 +35,7 @@ Existing backup or restore jobs continue using the credentials that were resolve
 
 Secret Agent endpoints are configured under `secret-agents`. Clusters, storage backends, and backup routines can reference a configured Secret Agent using `secret-agent-name` or define an inline `secret-agent` block.
 
-An encryption `key-secret` reference in a backup policy is resolved with the Secret Agent of the routine that runs it.
+A Secret Agent reference is resolved with the agent of the object that uses it: a backup policy's encryption `key-secret` with the routine's, a restore policy's with the restore request's (or, for a point-in-time restore, the routine's), and a cluster's TLS `key-file-password` with the credentials'. A reference without such an agent is rejected.
 
 For configuration examples and details, see the [Configuration guide](configuration.md) 
 and the [Aerospike Secret Agent documentation](https://aerospike.com/docs/tools/secret-agent).

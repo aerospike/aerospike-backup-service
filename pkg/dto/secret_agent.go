@@ -31,14 +31,6 @@ func (c *SecretAgentConfig) validate() error {
 	return nil
 }
 
-func (c *SecretAgentConfig) hasSecretAgent() bool {
-	if c == nil {
-		return false
-	}
-
-	return c.SecretAgent != nil || c.SecretAgentName != ""
-}
-
 func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, error) {
 	if c == nil { // secret agent is optional
 		return nil, nil

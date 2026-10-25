@@ -73,16 +73,6 @@ func (p *EncryptionPolicy) Validate() error {
 	return nil
 }
 
-// validateSecretAgent checks that a key-secret reference has a Secret Agent to be resolved with.
-// The policy does not own an agent, so the DTO that runs it says whether there is one.
-func (p *EncryptionPolicy) validateSecretAgent(hasAgent bool) error {
-	if p == nil {
-		return nil
-	}
-
-	return validateSecretAgent("key-secret", p.KeySecret, hasAgent)
-}
-
 func (p *EncryptionPolicy) ToModel() *model.EncryptionPolicy {
 	if p == nil {
 		return nil
