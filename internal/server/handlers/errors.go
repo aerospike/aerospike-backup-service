@@ -40,11 +40,32 @@ func errBadRequest(err error) error {
 	return newBadRequestError(fmt.Errorf("invalid request: %w", err))
 }
 
+// notPersistedError marks a valid configuration change that could not be written to the
+// configuration source, such as a read-only file or one served over HTTP(S). The change was not
+// applied either, so the running configuration is the one the source still holds.
+type notPersistedError struct {
+	Err error
+}
+
+func (e *notPersistedError) Error() string {
+	return e.Err.Error()
+}
+
+// Unwrap exposes the cause, so errors.Is/As can see through the wrapper.
+func (e *notPersistedError) Unwrap() error {
+	return e.Err
+}
+
+func errNotPersisted(err error) error {
+	return &notPersistedError{Err: fmt.Errorf("failed to write configuration: %w", err)}
+}
+
 // httpError is the one place an error becomes a status code.
 func httpError(w http.ResponseWriter, err error) {
 	var (
-		badRequest  *badRequestError
-		maxBytesErr *http.MaxBytesError
+		badRequest   *badRequestError
+		notPersisted *notPersistedError
+		maxBytesErr  *http.MaxBytesError
 	)
 
 	switch {
@@ -56,6 +77,8 @@ func httpError(w http.ResponseWriter, err error) {
 		http.Error(w, err.Error(), http.StatusConflict)
 	case errors.As(err, &badRequest):
 		http.Error(w, badRequest.Error(), http.StatusBadRequest)
+	case errors.As(err, &notPersisted):
+		http.Error(w, notPersisted.Error(), http.StatusServiceUnavailable)
 	default:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
