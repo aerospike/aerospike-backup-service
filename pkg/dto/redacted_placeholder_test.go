@@ -1,35 +1,11 @@
 package dto
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/stretchr/testify/require"
 )
-
-// A configuration that still holds the redaction placeholder was never merged with stored
-// secrets - it comes from a file, a URL or a reload - so the placeholder would be used as the
-// credential itself.
-func TestConfig_Validate_RejectsRedactedPlaceholder(t *testing.T) {
-	config, err := NewFromReader[Config](strings.NewReader(`
-aerospike-clusters:
-  c1:
-    seed-nodes: [{host-name: localhost, port: 3000}]
-    credentials: {user: admin, password: "[secret]"}
-backup-policies:
-  p1:
-    encryption: {mode: AES256, key-secret: "[secret]"}
-`), decoder.YAML)
-	require.NoError(t, err)
-
-	err = config.Validate()
-
-	require.ErrorIs(t, err, errValidation)
-	require.ErrorContains(t, err, "aerospike-clusters.c1.credentials.password: ")
-	require.ErrorContains(t, err, "redaction placeholder and has no stored value")
-}
 
 // Restore requests carry their own clusters and storage and are never merged with stored
 // secrets, so the placeholder is as meaningless there as in a configuration file.

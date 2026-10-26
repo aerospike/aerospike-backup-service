@@ -154,3 +154,21 @@ aerospike-clusters:
 	require.ErrorContains(t, err, "aerospike-clusters.c1.credentials.password: ")
 	require.ErrorContains(t, err, "redaction placeholder and has no stored value")
 }
+
+// The --remote storage file is read on its own, outside the configuration it points to, so it
+// gets the same check: a placeholder copied from GET /v1/config/storage is not a credential.
+func TestReadStorage_RejectsRedactedPlaceholder(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "storage.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`
+s3-storage:
+  bucket: config-bucket
+  s3-region: us-east-1
+  access-key-id: key
+  secret-access-key: "[secret]"
+`), 0600))
+
+	_, err := readStorage(t.Context(), path)
+
+	require.ErrorContains(t, err, "s3-storage.secret-access-key: ")
+	require.ErrorContains(t, err, "redaction placeholder and has no stored value")
+}

@@ -66,8 +66,7 @@ func MergeSecrets(incoming, existing any) error {
 	return mergeValue(reflect.ValueOf(incoming), reflect.ValueOf(existing), "")
 }
 
-// mergeValue merges existing into incoming, which sits at path: the field names a user writes,
-// e.g. "aerospike-clusters.c1.credentials.password", so an error can say where it is.
+// mergeValue merges existing into incoming
 //
 //nolint:gocognit,gocyclo,funlen // recursive reflect walk over nested DTO values
 func mergeValue(incoming, existing reflect.Value, path string) error {
@@ -179,7 +178,7 @@ func mergeValue(incoming, existing reflect.Value, path string) error {
 		n := min(existing.Len(), incoming.Len())
 
 		for i := range n {
-			if err := mergeValue(incoming.Index(i), existing.Index(i), fmt.Sprintf("%s[%d]", path, i)); err != nil {
+			if err := mergeValue(incoming.Index(i), existing.Index(i), path); err != nil {
 				return err
 			}
 		}
@@ -192,7 +191,7 @@ func mergeValue(incoming, existing reflect.Value, path string) error {
 		}
 
 		for i := 0; i < incoming.Len(); i++ {
-			if err := mergeValue(incoming.Index(i), existing.Index(i), fmt.Sprintf("%s[%d]", path, i)); err != nil {
+			if err := mergeValue(incoming.Index(i), existing.Index(i), path); err != nil {
 				return err
 			}
 		}
@@ -224,21 +223,17 @@ func setSecretValue(incoming reflect.Value, inSecret redact.Redactable, existing
 	return nil
 }
 
-// fieldPath returns the path of field f of the struct at path, named as a user writes it: the
-// YAML name, else the JSON one, else the Go one. An inlined or untagged embedded field shares
-// its parent's path.
+// fieldPath returns the path of field f of the struct at path, named by its YAML tag, else its
+// JSON one. A field without a name - inlined or untagged - shares its parent's path.
 func fieldPath(path string, f reflect.StructField) string {
 	tag := f.Tag.Get("yaml")
 	if tag == "" {
 		tag = f.Tag.Get("json")
 	}
 
-	name, options, _ := strings.Cut(tag, ",")
-	if strings.Contains(options, "inline") || (name == "" && f.Anonymous) {
-		return path
-	}
+	name, _, _ := strings.Cut(tag, ",")
 	if name == "" {
-		return joinPath(path, f.Name)
+		return path
 	}
 
 	return joinPath(path, name)

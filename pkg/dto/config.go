@@ -78,12 +78,8 @@ func (c *Config) fromModel(m *model.Config) {
 
 // Validate validates the configuration.
 //
-//nolint:gocognit,funlen // one pass per entity map, each with its own error context
+//nolint:gocognit
 func (c *Config) Validate() error {
-	if err := validateNoRedacted(c); err != nil {
-		return err
-	}
-
 	for name, routine := range c.BackupRoutines {
 		if err := validateEntityName("routine name", name); err != nil {
 			return err

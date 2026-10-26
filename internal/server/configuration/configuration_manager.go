@@ -82,6 +82,9 @@ func readConfig(reader io.Reader) (*model.Config, error) {
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("failed to validate configuration: %w", err)
 	}
+	if err := dto.ValidateNoRedacted(config); err != nil {
+		return nil, fmt.Errorf("failed to validate configuration: %w", err)
+	}
 
 	modelConfig, err := config.ToModel()
 	if err != nil {
@@ -135,6 +138,9 @@ func readStorage(ctx context.Context, configURI string) (model.Storage, error) {
 	}
 
 	if err = configStorage.Validate(); err != nil {
+		return nil, fmt.Errorf("validate storage configuration error: %w", err)
+	}
+	if err = dto.ValidateNoRedacted(configStorage); err != nil {
 		return nil, fmt.Errorf("validate storage configuration error: %w", err)
 	}
 

@@ -43,7 +43,7 @@ type RestoreTimestampRequest struct {
 
 // Validate validates the restore operation request.
 func (r *RestoreRequest) Validate() error {
-	if err := validateNoRedacted(r); err != nil {
+	if err := ValidateNoRedacted(r); err != nil {
 		return err
 	}
 	if err := r.BackupDataPath.Validate(ValidationDefault); err != nil {
@@ -72,7 +72,7 @@ func (r *RestoreRequest) Validate() error {
 
 // Validate validates the restore operation request.
 func (r *RestoreTimestampRequest) Validate() error {
-	if err := validateNoRedacted(r); err != nil {
+	if err := ValidateNoRedacted(r); err != nil {
 		return err
 	}
 	// Storage is an optional override; if omitted, it will be resolved from routine.

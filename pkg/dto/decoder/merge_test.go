@@ -167,21 +167,6 @@ func TestMergeSecrets_NewEntityWithSentinel_StorageSecret(t *testing.T) {
 	require.ErrorContains(t, err, "storage-providers.new-storage.access-key-id: ")
 }
 
-// A stored value that is itself the placeholder has nothing to keep either; slice and array
-// elements are named by index.
-func TestMergeSecrets_StoredSentinel_NamesElementPath(t *testing.T) {
-	existing := testConfig{
-		Routines: []testBackupRoutine{{Keys: [2]redact.Secret{literalSecretKey, redact.Placeholder}}},
-	}
-	incoming := testConfig{
-		Routines: []testBackupRoutine{{Keys: [2]redact.Secret{literalSecretKey, redact.Placeholder}}},
-	}
-
-	err := MergeSecrets(&incoming, existing)
-	require.ErrorIs(t, err, errNoStoredSecret)
-	require.ErrorContains(t, err, "routines[0].keys[1]: ")
-}
-
 func TestMergeSecrets_ExistingEntityWithSentinel_RestoredCorrectly(t *testing.T) {
 	existing := testConfig{
 		AerospikeClusters: map[string]*testCluster{

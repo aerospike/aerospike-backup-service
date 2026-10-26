@@ -32,11 +32,9 @@ func validateSecret(field string, secret redact.Secret, withAgent bool) error {
 	}
 }
 
-// validateNoRedacted rejects a configuration or request that still carries the redaction
-// placeholder as a credential. A GET-edit-PUT round trip has had every placeholder replaced by
-// MergeSecrets before anything validates it; one that remains has no stored value to stand for
-// and would otherwise be used as the secret. Merging against an empty value is that check.
-func validateNoRedacted[T any](v *T) error {
+// ValidateNoRedacted rejects a "[secret]" placeholder in a value that is never merged with a
+// stored one - a configuration file or a restore request - by merging it against nothing.
+func ValidateNoRedacted[T any](v *T) error {
 	if err := decoder.MergeSecrets(v, new(T)); err != nil {
 		return fmt.Errorf("%w: %w", errValidation, err)
 	}
