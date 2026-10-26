@@ -7,6 +7,9 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
+// errNoStoredSecret reports a redaction placeholder with no stored value behind it to keep.
+var errNoStoredSecret = errors.New(`"[secret]" is the API's redaction placeholder and has no stored value to keep`)
+
 // MergeSecrets mutates incoming in place, replacing redact.Placeholder sentinel values
 // with the corresponding Secret values from existing.
 //
@@ -202,12 +205,12 @@ func setSecretValue(incoming reflect.Value, inSecret redact.Redactable, existing
 	}
 
 	if !existing.IsValid() || existing.Type() != incoming.Type() {
-		return errors.New("cannot use redacted secret \"[secret]\" for a new entity with no existing value")
+		return errNoStoredSecret
 	}
 
 	existingSecret, ok := asRedactable(existing)
 	if !ok || existingSecret.IsRedacted() {
-		return errors.New("cannot use redacted secret \"[secret]\" for a new entity with no existing value")
+		return errNoStoredSecret
 	}
 
 	incoming.Set(existing)

@@ -72,8 +72,7 @@ func TestMergeSecrets_NewMapEntryWithSentinel_ReturnsError(t *testing.T) {
 	}
 
 	err := MergeSecrets(&incoming, existing)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "cannot use redacted secret")
+	require.ErrorIs(t, err, errNoStoredSecret)
 }
 
 func TestMergeSecrets_ExplicitSecretUpdate(t *testing.T) {
@@ -163,8 +162,7 @@ func TestMergeSecrets_NewEntityWithSentinel_StorageSecret(t *testing.T) {
 	}
 
 	err := MergeSecrets(&incoming, existing)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "cannot use redacted secret")
+	require.ErrorIs(t, err, errNoStoredSecret)
 }
 
 func TestMergeSecrets_ExistingEntityWithSentinel_RestoredCorrectly(t *testing.T) {

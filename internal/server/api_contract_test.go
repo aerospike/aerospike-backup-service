@@ -289,7 +289,7 @@ func TestUnconfiguredService_SentinelSecretValidation(t *testing.T) {
 			body: "{\"seed-nodes\":[{\"host-name\":\"localhost\",\"port\":3000}]," +
 				"\"credentials\":{\"user\":\"admin\",\"password\":\"[secret]\"}}",
 			wantStatus:  http.StatusBadRequest,
-			wantBodyReg: "cannot use redacted secret.*for a new entity",
+			wantBodyReg: "redaction placeholder and has no stored value",
 		},
 		{
 			name:   "new storage with redacted secret access key sentinel",
@@ -298,7 +298,7 @@ func TestUnconfiguredService_SentinelSecretValidation(t *testing.T) {
 			body: "{\"s3-storage\":{\"bucket\":\"test\",\"s3-region\":\"us-east-1\"," +
 				"\"access-key-id\":\"key\",\"secret-access-key\":\"[secret]\"}}",
 			wantStatus:  http.StatusBadRequest,
-			wantBodyReg: "cannot use redacted secret.*for a new entity",
+			wantBodyReg: "redaction placeholder and has no stored value",
 		},
 	}
 
