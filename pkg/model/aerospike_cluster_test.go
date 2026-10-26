@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,8 +17,8 @@ func TestAerospikeCluster_Hash(t *testing.T) {
 			{HostName: "host-b", Port: 3000},
 			{HostName: "host-a", Port: 3000},
 		},
-		ConnTimeout:          ptr.Of(5 * time.Second),
-		UseServicesAlternate: ptr.Of(true),
+		ConnTimeout:          new(5 * time.Second),
+		UseServicesAlternate: new(true),
 		Credentials: &Credentials{
 			User:     "user",
 			Password: "password",
@@ -28,7 +27,7 @@ func TestAerospikeCluster_Hash(t *testing.T) {
 			CAPath:          "/etc/certs",
 			KeyfilePassword: "tls-password",
 		},
-		MaxParallelScans: ptr.Of(10),
+		MaxParallelScans: new(10),
 		PreferRacks:      []int{1, 2},
 	}
 

@@ -11,7 +11,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -28,7 +27,7 @@ func TestAddPolicy(t *testing.T) {
 		{
 			name:           "successful add",
 			policyName:     "test-policy",
-			requestBody:    marshalToString(dto.BackupPolicy{Parallel: ptr.Of(8)}),
+			requestBody:    marshalToString(dto.BackupPolicy{Parallel: new(8)}),
 			expectedStatus: http.StatusCreated,
 		},
 		{
@@ -140,10 +139,10 @@ func TestUpdatePolicy(t *testing.T) {
 		{
 			name:             "parallel exceeds cluster max for routine using policy",
 			policyName:       "test-policy",
-			requestBody:      marshalToString(dto.BackupPolicy{Parallel: ptr.Of(20)}),
+			requestBody:      marshalToString(dto.BackupPolicy{Parallel: new(20)}),
 			expectedStatus:   http.StatusBadRequest,
 			expectedError:    "backup policy parallelism 20 exceeds cluster max parallelism 10",
-			maxParallelScans: ptr.Of(10),
+			maxParallelScans: new(10),
 		},
 		{
 			name:           "successful update",
@@ -254,7 +253,7 @@ func TestUpdatePolicy_Case2_ClusterMaxSetBeforeParallelIncrease(t *testing.T) {
 	svc := setupTestService(t)
 
 	entities := addValidBackupConfig(svc)
-	entities.policy.Parallel = ptr.Of(1)
+	entities.policy.Parallel = new(1)
 
 	// Step 1: introduce max-parallel-scans=10 on the cluster.
 	clusterReq := httptest.NewRequestWithContext(
@@ -263,7 +262,7 @@ func TestUpdatePolicy_Case2_ClusterMaxSetBeforeParallelIncrease(t *testing.T) {
 		"/v1/config/clusters/"+entities.clusterName,
 		strings.NewReader(marshalToString(dto.AerospikeCluster{
 			SeedNodes:        []dto.SeedNode{{HostName: "localhost", Port: 3000}},
-			MaxParallelScans: ptr.Of(10),
+			MaxParallelScans: new(10),
 		})),
 	)
 	clusterReq.SetPathValue("name", entities.clusterName)
@@ -276,7 +275,7 @@ func TestUpdatePolicy_Case2_ClusterMaxSetBeforeParallelIncrease(t *testing.T) {
 		t.Context(),
 		http.MethodPut,
 		"/v1/config/policies/"+entities.policyName,
-		strings.NewReader(marshalToString(dto.BackupPolicy{Parallel: ptr.Of(20)})),
+		strings.NewReader(marshalToString(dto.BackupPolicy{Parallel: new(20)})),
 	)
 	policyReq.SetPathValue("name", entities.policyName)
 	policyW := httptest.NewRecorder()

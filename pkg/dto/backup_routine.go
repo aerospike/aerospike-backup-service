@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -410,7 +409,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
 	r.ScheduleTimezone = ScheduleTimezone(m.Timezone.Configured)
-	r.Namespaces = ptr.Of(newNamespaceNames(m.Namespaces))
+	r.Namespaces = new(newNamespaceNames(m.Namespaces))
 	r.SetList = m.SetList
 	r.BinList = m.BinList
 	r.RackList = m.RackList

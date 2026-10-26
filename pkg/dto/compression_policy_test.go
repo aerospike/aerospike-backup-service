@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -66,19 +65,19 @@ func TestCompressionPolicy_Validate_Success(t *testing.T) {
 		},
 		"ZSTD with level": {
 			Mode:  CompressionModeZSTD,
-			Level: ptr.Of[int32](5),
+			Level: new(int32(5)),
 		},
 		"ZSTD with explicit zero level": {
 			Mode:  CompressionModeZSTD,
-			Level: ptr.Of[int32](0),
+			Level: new(int32(0)),
 		},
 		"ZSTD with fastest level": {
 			Mode:  CompressionModeZSTD,
-			Level: ptr.Of[int32](-1),
+			Level: new(int32(-1)),
 		},
 		"ZSTD with best level": {
 			Mode:  CompressionModeZSTD,
-			Level: ptr.Of[int32](22),
+			Level: new(int32(22)),
 		},
 	}
 
@@ -101,7 +100,7 @@ func TestCompressionPolicy_Validate_Invalid(t *testing.T) {
 			wantIsErr: errEmpty,
 		},
 		"empty mode with level": {
-			policy:    CompressionPolicy{Level: ptr.Of[int32](5)},
+			policy:    CompressionPolicy{Level: new(int32(5))},
 			wantIsErr: errEmpty,
 		},
 		"whitespace mode": {
@@ -113,11 +112,11 @@ func TestCompressionPolicy_Validate_Invalid(t *testing.T) {
 			wantIsErr: errInvalidValue,
 		},
 		"NONE with a level set": {
-			policy:    CompressionPolicy{Mode: CompressionModeNone, Level: ptr.Of[int32](5)},
+			policy:    CompressionPolicy{Mode: CompressionModeNone, Level: new(int32(5))},
 			wantIsErr: errMutuallyExclusive,
 		},
 		"NONE with an explicit zero level": {
-			policy:    CompressionPolicy{Mode: CompressionModeNone, Level: ptr.Of[int32](0)},
+			policy:    CompressionPolicy{Mode: CompressionModeNone, Level: new(int32(0))},
 			wantIsErr: errMutuallyExclusive,
 		},
 		"ZSTD without level": {
@@ -125,11 +124,11 @@ func TestCompressionPolicy_Validate_Invalid(t *testing.T) {
 			wantIsErr: errMissingDependency,
 		},
 		"ZSTD with level below range": {
-			policy:    CompressionPolicy{Mode: CompressionModeZSTD, Level: ptr.Of[int32](-2)},
+			policy:    CompressionPolicy{Mode: CompressionModeZSTD, Level: new(int32(-2))},
 			wantIsErr: errInvalidValue,
 		},
 		"ZSTD with level above range": {
-			policy:    CompressionPolicy{Mode: CompressionModeZSTD, Level: ptr.Of[int32](23)},
+			policy:    CompressionPolicy{Mode: CompressionModeZSTD, Level: new(int32(23))},
 			wantIsErr: errInvalidValue,
 		},
 	}
@@ -170,8 +169,8 @@ func TestRestoreCompressionPolicy_Validate(t *testing.T) {
 func TestCompressionPolicy_ModelRoundTrip(t *testing.T) {
 	tests := map[string]*CompressionPolicy{
 		"NONE":            {Mode: CompressionModeNone},
-		"ZSTD":            {Mode: CompressionModeZSTD, Level: ptr.Of[int32](5)},
-		"ZSTD zero level": {Mode: CompressionModeZSTD, Level: ptr.Of[int32](0)},
+		"ZSTD":            {Mode: CompressionModeZSTD, Level: new(int32(5))},
+		"ZSTD zero level": {Mode: CompressionModeZSTD, Level: new(int32(0))},
 	}
 
 	for name, policy := range tests {

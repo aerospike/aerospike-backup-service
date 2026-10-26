@@ -52,7 +52,7 @@ Repo-level protection now configured on both `dev` and `main`:
 - Require a pull request with 1 approving review; stale reviews dismissed on push
 - Require conversation resolution
 - Require branches to be up to date before merging
-- Required checks: `build (1.25.x)`, `lint`, `generated-check`, `markdown links`
+- Required checks: `build (1.26.x)`, `lint`, `generated-check`, `markdown links`
 - No force pushes, no deletions
 - `enforce_admins` is off, so repo admins can still push directly in an emergency
 

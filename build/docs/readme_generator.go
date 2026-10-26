@@ -192,7 +192,7 @@ func renderEndpoint(operationID, args string, endpoints map[string]endpoint) str
 
 // parseEndpointArgs reads the "[link] [?query]" that may follow an operation id.
 func parseEndpointArgs(operationID, args string) (asLink bool, query string) {
-	for _, field := range strings.Fields(args) {
+	for field := range strings.FieldsSeq(args) {
 		switch {
 		case field == linkFlag:
 			asLink = true

@@ -5,7 +5,7 @@ released build rather than building from source, see the [Run](installation.md#r
 
 ## Prerequisites
 
-- Go <!-- tag GoVersion -->1.25.13<!-- /tag --> (the `go` directive in [`go.mod`](../go.mod), which is where this number is rendered from)
+- Go <!-- tag GoVersion -->1.26.10<!-- /tag --> (the `go` directive in [`go.mod`](../go.mod), which is where this number is rendered from)
 - Docker, for building images and running the [Docker Compose](../build/docker-compose/README.md) dev stack
 - Node.js (`npx`), used by `make docs` to convert the generated Swagger spec to OpenAPI 3
 - [`golangci-lint`](https://golangci-lint.run/) and [`gci`](https://github.com/daixiang0/gci), used by `make lint`

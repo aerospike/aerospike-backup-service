@@ -57,15 +57,3 @@ misconfigurations:
     statement: >-
       The `password` value is a secret-agent reference (`secrets:<resource>:<key>`)
       resolved at runtime by the secret agent; the ConfigMap holds no credential.
-
-vulnerabilities:
-  # --- Fix requires a Go toolchain upgrade ----------------------------------
-  # golang.org/x/net v0.59.0+ requires Go 1.26, and the module is pinned to
-  # Go 1.25. The vulnerable HTTP/2 code is reachable (Azure blob client, HTTP
-  # config source), so this is a temporary exception: remove it together with
-  # the move to Go 1.26+. expired_at makes the scan fail again if it lingers.
-  - id: CVE-2026-78669
-    statement: >-
-      golang.org/x/net fix (v0.60.0) requires Go 1.26; the project is pinned
-      to Go 1.25. Remove when go.mod moves to Go 1.26+.
-    expired_at: 2026-11-30
