@@ -251,15 +251,6 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			},
 		},
 		{
-			name: "secret agent password reference without agent",
-			config: &ServerConfigHTTPS{
-				CertFile:        Path(certs.certFile),
-				KeyFile:         Path(certs.keyFile),
-				KeyFilePassword: "secrets:agent1:tls-key",
-			},
-			wantErr: "secret agent",
-		},
-		{
 			name: "mutually exclusive secret agent settings",
 			config: &ServerConfigHTTPS{
 				CertFile: Path(certs.certFile),
@@ -388,6 +379,21 @@ func TestServerHTTPSConfigSecureCipherCatalog(t *testing.T) {
 		_, exists := secureServerCipherSuites[suite.Name]
 		assert.False(t, exists)
 	}
+}
+
+// A key-file-password reference is checked against the server's agent once Config.ToModel
+// has resolved it.
+func TestConfigToModel_HTTPSPasswordReferenceWithoutAgent(t *testing.T) {
+	config := &Config{ServiceConfig: ServiceConfig{ServerHTTPS: &ServerConfigHTTPS{
+		CertFile:        "/cert.pem",
+		KeyFile:         "/key.pem",
+		KeyFilePassword: "secrets:agent1:tls-key",
+	}}}
+
+	_, err := config.ToModel()
+	require.ErrorIs(t, err, errValidation)
+	require.ErrorContains(t, err, "key-file-password")
+	require.ErrorContains(t, err, "secret agent")
 }
 
 func TestServerHTTPSConfigToModel_ResolvesSecretAgentName(t *testing.T) {

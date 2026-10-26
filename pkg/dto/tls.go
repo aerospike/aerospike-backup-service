@@ -45,7 +45,7 @@ type TLS struct {
 	KeyfilePassword Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
 }
 
-func (t *TLS) Validate(opts ValidationOptions) error {
+func (t *TLS) Validate() error {
 	if t == nil {
 		return nil // TLS is optional
 	}
@@ -62,7 +62,7 @@ func (t *TLS) Validate(opts ValidationOptions) error {
 		return err
 	}
 
-	if err := t.validateKeyfilePassword(opts); err != nil {
+	if err := t.validateKeyfilePassword(); err != nil {
 		return err
 	}
 
@@ -88,12 +88,12 @@ func (t *TLS) validateCACertificates() error {
 }
 
 // validateKeyfilePassword ensures keyfile password is only set when keyfile is present.
-func (t *TLS) validateKeyfilePassword(opts ValidationOptions) error {
+func (t *TLS) validateKeyfilePassword() error {
 	if t.KeyfilePassword != "" && t.Keyfile == "" {
 		return errValidationRequires("key-file-password", "key-file")
 	}
 
-	if err := validateSecret("key-file-password", t.KeyfilePassword, opts.Has(ValidationWithSecretAgent)); err != nil {
+	if err := validateSecretForm("key-file-password", t.KeyfilePassword); err != nil {
 		return err
 	}
 
