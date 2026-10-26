@@ -62,26 +62,28 @@ func errNotPersisted(err error) error {
 
 // httpError is the one place an error becomes a status code.
 func httpError(w http.ResponseWriter, err error) {
-	var (
-		badRequest   *badRequestError
-		notPersisted *notPersistedError
-		maxBytesErr  *http.MaxBytesError
-	)
-
-	switch {
-	case errors.As(err, &maxBytesErr):
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
-	case errors.Is(err, model.ErrNotFound):
-		http.Error(w, err.Error(), http.StatusNotFound)
-	case errors.Is(err, model.ErrAlreadyExists), errors.Is(err, model.ErrInUse):
-		http.Error(w, err.Error(), http.StatusConflict)
-	case errors.As(err, &badRequest):
-		http.Error(w, badRequest.Error(), http.StatusBadRequest)
-	case errors.As(err, &notPersisted):
-		http.Error(w, notPersisted.Error(), http.StatusServiceUnavailable)
-	default:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	if errors.Is(err, model.ErrNotFound) {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if errors.Is(err, model.ErrAlreadyExists) || errors.Is(err, model.ErrInUse) {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	}
+	if badRequest, ok := errors.AsType[*badRequestError](err); ok {
+		http.Error(w, badRequest.Error(), http.StatusBadRequest)
+		return
+	}
+	if notPersisted, ok := errors.AsType[*notPersistedError](err); ok {
+		http.Error(w, notPersisted.Error(), http.StatusServiceUnavailable)
+		return
+	}
+
+	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
 // writeRedactedJSON marshals v to JSON with secret fields redacted and writes it to w.

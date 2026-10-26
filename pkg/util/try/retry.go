@@ -48,8 +48,7 @@ func retryable(err error) bool {
 		}
 	}
 
-	var asErr *as.AerospikeError
-	if errors.As(err, &asErr) && asErr.Matches(permanentResultCodes...) {
+	if asErr, ok := errors.AsType[*as.AerospikeError](err); ok && asErr.Matches(permanentResultCodes...) {
 		return false
 	}
 
