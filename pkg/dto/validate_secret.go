@@ -32,8 +32,9 @@ func validateSecret(field string, secret redact.Secret, withAgent bool) error {
 	}
 }
 
-// ValidateNoRedacted rejects a "[secret]" placeholder in a value that is never merged with a
-// stored one - a configuration file or a restore request - by merging it against nothing.
+// ValidateNoRedacted rejects a "[secret]" placeholder that has no stored value behind it, by
+// merging the value against nothing. On the API paths MergeSecrets has already replaced every
+// placeholder it can, so only an unmerged one - from a file or a restore request - is left.
 func ValidateNoRedacted[T any](v *T) error {
 	if err := decoder.MergeSecrets(v, new(T)); err != nil {
 		return fmt.Errorf("%w: %w", errValidation, err)

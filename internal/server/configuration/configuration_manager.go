@@ -82,9 +82,6 @@ func readConfig(reader io.Reader) (*model.Config, error) {
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("failed to validate configuration: %w", err)
 	}
-	if err := dto.ValidateNoRedacted(config); err != nil {
-		return nil, fmt.Errorf("failed to validate configuration: %w", err)
-	}
 
 	modelConfig, err := config.ToModel()
 	if err != nil {
