@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
@@ -42,4 +43,15 @@ func validateEncryptionKeyAgent(policy *model.EncryptionPolicy, agent *model.Sec
 	}
 
 	return validateSecretAgent("key-secret", policy.KeySecret, agent != nil)
+}
+
+// ValidateNoRedacted rejects a "[secret]" placeholder that has no stored value behind it, by
+// merging the value against nothing. On the API paths MergeSecrets has already replaced every
+// placeholder it can, so only an unmerged one - from a file or a restore request - is left.
+func ValidateNoRedacted[T any](v *T) error {
+	if err := decoder.MergeSecrets(v, new(T)); err != nil {
+		return fmt.Errorf("%w: %w", errValidation, err)
+	}
+
+	return nil
 }

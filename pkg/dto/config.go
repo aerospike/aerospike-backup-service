@@ -80,6 +80,10 @@ func (c *Config) fromModel(m *model.Config) {
 //
 //nolint:gocognit
 func (c *Config) Validate() error {
+	if err := ValidateNoRedacted(c); err != nil {
+		return err
+	}
+
 	for name, routine := range c.BackupRoutines {
 		if err := validateEntityName("routine name", name); err != nil {
 			return err

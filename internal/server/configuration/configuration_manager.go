@@ -137,6 +137,9 @@ func readStorage(ctx context.Context, configURI string) (model.Storage, error) {
 	if err = configStorage.Validate(); err != nil {
 		return nil, fmt.Errorf("validate storage configuration error: %w", err)
 	}
+	if err = dto.ValidateNoRedacted(configStorage); err != nil {
+		return nil, fmt.Errorf("validate storage configuration error: %w", err)
+	}
 
 	return configStorage.ToModel(model.NewConfig())
 }

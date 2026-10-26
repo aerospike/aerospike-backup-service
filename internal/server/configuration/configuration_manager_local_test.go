@@ -136,3 +136,39 @@ func TestFileConfigurationManager_WriteThenRead_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 }
+
+// "[secret]" in the configuration file is not a password: it is what the API shows in place of
+// one, and nothing stored stands behind it. Loading the file, at startup or on a reload, rejects
+// it instead of authenticating with the placeholder.
+func TestFileConfigurationManager_Read_RejectsRedactedPlaceholder(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`
+aerospike-clusters:
+  c1:
+    seed-nodes: [{host-name: localhost, port: 3000}]
+    credentials: {user: admin, password: "[secret]"}
+`), 0600))
+
+	_, err := newFileConfigurationManager(path).Read(t.Context())
+
+	require.ErrorContains(t, err, "aerospike-clusters.c1.credentials.password: ")
+	require.ErrorContains(t, err, "redaction placeholder and has no stored value")
+}
+
+// The --remote storage file is read on its own, outside the configuration it points to, so it
+// gets the same check: a placeholder copied from GET /v1/config/storage is not a credential.
+func TestReadStorage_RejectsRedactedPlaceholder(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "storage.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`
+s3-storage:
+  bucket: config-bucket
+  s3-region: us-east-1
+  access-key-id: key
+  secret-access-key: "[secret]"
+`), 0600))
+
+	_, err := readStorage(t.Context(), path)
+
+	require.ErrorContains(t, err, "s3-storage.secret-access-key: ")
+	require.ErrorContains(t, err, "redaction placeholder and has no stored value")
+}
