@@ -16,10 +16,7 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
 - **PUT requests must preserve the sentinel** — If you use a GET → edit other fields → PUT workflow, leave every
   unchanged secret field as `"[secret]"`. The service treats that sentinel as “keep the stored value” and will not
   overwrite the real secret. To change a secret, send the new literal value or a new Secret Agent reference explicitly.
-  Sending `"[secret]"` for a newly added entity (with no stored secret yet) is invalid. Outside that round trip the
-  sentinel has no stored value to stand for: a configuration file (at startup or on `/v1/config/apply`), a
-  configuration served over HTTP(S), or a restore request that contains `"[secret]"` is rejected with a validation
-  error naming the field, instead of using the sentinel as the credential.
+  Sending `"[secret]"` for a newly added entity (with no stored secret yet) is invalid.
 
 - **The packaged service no longer runs as root** — the `.deb` and `.rpm` packages create the system account
   `aerospike-backup-service` and the unit runs as it, under a systemd sandbox (`ProtectSystem=strict`,
