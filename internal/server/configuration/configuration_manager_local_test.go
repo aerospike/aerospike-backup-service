@@ -151,5 +151,6 @@ aerospike-clusters:
 
 	_, err := newFileConfigurationManager(path).Read(t.Context())
 
+	require.ErrorContains(t, err, "aerospike-clusters.c1.credentials.password: ")
 	require.ErrorContains(t, err, "redaction placeholder and has no stored value")
 }

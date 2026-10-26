@@ -27,6 +27,7 @@ backup-policies:
 	err = config.Validate()
 
 	require.ErrorIs(t, err, errValidation)
+	require.ErrorContains(t, err, "aerospike-clusters.c1.credentials.password: ")
 	require.ErrorContains(t, err, "redaction placeholder and has no stored value")
 }
 
@@ -46,7 +47,7 @@ func TestRestoreRequests_Validate_RejectRedactedPlaceholder(t *testing.T) {
 	}
 	err := restore.Validate()
 	require.ErrorIs(t, err, errValidation)
-	require.ErrorContains(t, err, "redaction placeholder")
+	require.ErrorContains(t, err, "destination.credentials.password: ")
 
 	timestamp := RestoreTimestampRequest{
 		DestinationClusterConfig: DestinationClusterConfig{Cluster: cluster},
@@ -56,5 +57,5 @@ func TestRestoreRequests_Validate_RejectRedactedPlaceholder(t *testing.T) {
 	}
 	err = timestamp.Validate()
 	require.ErrorIs(t, err, errValidation)
-	require.ErrorContains(t, err, "redaction placeholder")
+	require.ErrorContains(t, err, "destination.credentials.password: ")
 }

@@ -2,7 +2,9 @@ package decoder
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
@@ -61,11 +63,14 @@ func MergeSecrets(incoming, existing any) error {
 		return nil
 	}
 
-	return mergeValue(reflect.ValueOf(incoming), reflect.ValueOf(existing))
+	return mergeValue(reflect.ValueOf(incoming), reflect.ValueOf(existing), "")
 }
 
+// mergeValue merges existing into incoming, which sits at path: the field names a user writes,
+// e.g. "aerospike-clusters.c1.credentials.password", so an error can say where it is.
+//
 //nolint:gocognit,gocyclo,funlen // recursive reflect walk over nested DTO values
-func mergeValue(incoming, existing reflect.Value) error {
+func mergeValue(incoming, existing reflect.Value, path string) error {
 	if !incoming.IsValid() {
 		return nil
 	}
@@ -79,7 +84,7 @@ func mergeValue(incoming, existing reflect.Value) error {
 	}
 
 	if r, ok := asRedactable(incoming); ok {
-		return setSecretValue(incoming, r, existing)
+		return setSecretValue(incoming, r, existing, path)
 	}
 
 	switch incoming.Kind() {
@@ -91,21 +96,21 @@ func mergeValue(incoming, existing reflect.Value) error {
 		incomingElem := incoming.Elem()
 		if existing.Kind() == reflect.Pointer {
 			if !existing.IsValid() {
-				return mergeValue(incomingElem, reflect.Value{})
+				return mergeValue(incomingElem, reflect.Value{}, path)
 			}
 
 			if existing.IsNil() {
-				return mergeValue(incomingElem, reflect.Value{})
+				return mergeValue(incomingElem, reflect.Value{}, path)
 			}
 
-			return mergeValue(incomingElem, existing.Elem())
+			return mergeValue(incomingElem, existing.Elem(), path)
 		}
 
 		if !existing.IsValid() {
-			return mergeValue(incomingElem, reflect.Value{})
+			return mergeValue(incomingElem, reflect.Value{}, path)
 		}
 
-		return mergeValue(incomingElem, existing)
+		return mergeValue(incomingElem, existing, path)
 
 	case reflect.Interface:
 		if incoming.IsNil() {
@@ -120,7 +125,7 @@ func mergeValue(incoming, existing reflect.Value) error {
 			return nil
 		}
 
-		return mergeValue(incoming.Elem(), existing.Elem())
+		return mergeValue(incoming.Elem(), existing.Elem(), path)
 
 	case reflect.Struct:
 		if existing.IsValid() && (existing.Kind() != reflect.Struct || incoming.Type() != existing.Type()) {
@@ -132,7 +137,7 @@ func mergeValue(incoming, existing reflect.Value) error {
 			if existing.IsValid() {
 				existingField = existing.Field(i)
 			}
-			if err := mergeValue(incoming.Field(i), existingField); err != nil {
+			if err := mergeValue(incoming.Field(i), existingField, fieldPath(path, incoming.Type().Field(i))); err != nil {
 				return err
 			}
 		}
@@ -147,18 +152,19 @@ func mergeValue(incoming, existing reflect.Value) error {
 		for _, key := range incoming.MapKeys() {
 			incomingVal := incoming.MapIndex(key)
 			existingVal := existing.MapIndex(key)
+			keyPath := joinPath(path, fmt.Sprint(key.Interface()))
 
 			if incomingVal.Kind() != reflect.Pointer && !incomingVal.CanSet() {
 				mutable := reflect.New(incomingVal.Type()).Elem()
 				mutable.Set(incomingVal)
-				if err := mergeValue(mutable, existingVal); err != nil {
+				if err := mergeValue(mutable, existingVal, keyPath); err != nil {
 					return err
 				}
 				incoming.SetMapIndex(key, mutable)
 				continue
 			}
 
-			if err := mergeValue(incomingVal, existingVal); err != nil {
+			if err := mergeValue(incomingVal, existingVal, keyPath); err != nil {
 				return err
 			}
 		}
@@ -173,7 +179,7 @@ func mergeValue(incoming, existing reflect.Value) error {
 		n := min(existing.Len(), incoming.Len())
 
 		for i := range n {
-			if err := mergeValue(incoming.Index(i), existing.Index(i)); err != nil {
+			if err := mergeValue(incoming.Index(i), existing.Index(i), fmt.Sprintf("%s[%d]", path, i)); err != nil {
 				return err
 			}
 		}
@@ -186,7 +192,7 @@ func mergeValue(incoming, existing reflect.Value) error {
 		}
 
 		for i := 0; i < incoming.Len(); i++ {
-			if err := mergeValue(incoming.Index(i), existing.Index(i)); err != nil {
+			if err := mergeValue(incoming.Index(i), existing.Index(i), fmt.Sprintf("%s[%d]", path, i)); err != nil {
 				return err
 			}
 		}
@@ -199,21 +205,49 @@ func mergeValue(incoming, existing reflect.Value) error {
 
 // setSecretValue restores the credential behind incoming, which asRedactable read as inSecret,
 // from existing, when incoming is the redaction placeholder.
-func setSecretValue(incoming reflect.Value, inSecret redact.Redactable, existing reflect.Value) error {
+func setSecretValue(incoming reflect.Value, inSecret redact.Redactable, existing reflect.Value, path string) error {
 	if !inSecret.IsRedacted() || !incoming.CanSet() {
 		return nil
 	}
 
 	if !existing.IsValid() || existing.Type() != incoming.Type() {
-		return errNoStoredSecret
+		return fmt.Errorf("%s: %w", path, errNoStoredSecret)
 	}
 
 	existingSecret, ok := asRedactable(existing)
 	if !ok || existingSecret.IsRedacted() {
-		return errNoStoredSecret
+		return fmt.Errorf("%s: %w", path, errNoStoredSecret)
 	}
 
 	incoming.Set(existing)
 
 	return nil
+}
+
+// fieldPath returns the path of field f of the struct at path, named as a user writes it: the
+// YAML name, else the JSON one, else the Go one. An inlined or untagged embedded field shares
+// its parent's path.
+func fieldPath(path string, f reflect.StructField) string {
+	tag := f.Tag.Get("yaml")
+	if tag == "" {
+		tag = f.Tag.Get("json")
+	}
+
+	name, options, _ := strings.Cut(tag, ",")
+	if strings.Contains(options, "inline") || (name == "" && f.Anonymous) {
+		return path
+	}
+	if name == "" {
+		return joinPath(path, f.Name)
+	}
+
+	return joinPath(path, name)
+}
+
+func joinPath(path, name string) string {
+	if path == "" {
+		return name
+	}
+
+	return path + "." + name
 }

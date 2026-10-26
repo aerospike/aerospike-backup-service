@@ -19,7 +19,7 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
   Sending `"[secret]"` for a newly added entity (with no stored secret yet) is invalid. Outside that round trip the
   sentinel has no stored value to stand for: a configuration file (at startup or on `/v1/config/apply`), a
   configuration served over HTTP(S), or a restore request that contains `"[secret]"` is rejected with a validation
-  error instead of using the sentinel as the credential.
+  error naming the field, instead of using the sentinel as the credential.
 
 - **The packaged service no longer runs as root** — the `.deb` and `.rpm` packages create the system account
   `aerospike-backup-service` and the unit runs as it, under a systemd sandbox (`ProtectSystem=strict`,
