@@ -220,8 +220,11 @@ func hasStoredSecret(existing, incoming reflect.Value) bool {
 	}
 
 	secret, ok := asRedactable(stored)
+	if !ok {
+		return false
+	}
 
-	return ok && !secret.IsRedacted()
+	return !secret.IsRedacted()
 }
 
 // fieldPath returns the path of field f of the struct at path, named by its YAML tag, else its
