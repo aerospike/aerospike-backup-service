@@ -68,7 +68,7 @@ func MergeSecrets(incoming, existing any) error {
 
 // mergeValue merges existing into incoming
 //
-//nolint:gocognit,gocyclo,funlen // recursive reflect walk over nested DTO values
+//nolint:gocognit,funlen // recursive reflect walk over nested DTO values
 func mergeValue(incoming, existing reflect.Value, path string) error {
 	if !incoming.IsValid() {
 		return nil
@@ -116,25 +116,19 @@ func mergeValue(incoming, existing reflect.Value, path string) error {
 			return nil
 		}
 
-		if !existing.IsValid() {
-			return nil
+		var storedElem reflect.Value
+		if stored := storedAs(existing, incoming); stored.IsValid() && !stored.IsNil() {
+			storedElem = stored.Elem()
 		}
 
-		if existing.IsNil() {
-			return nil
-		}
-
-		return mergeValue(incoming.Elem(), existing.Elem(), path)
+		return mergeValue(incoming.Elem(), storedElem, path)
 
 	case reflect.Struct:
-		if existing.IsValid() && (existing.Kind() != reflect.Struct || incoming.Type() != existing.Type()) {
-			return nil
-		}
-
+		stored := storedAs(existing, incoming)
 		for i := 0; i < incoming.NumField(); i++ {
 			var existingField reflect.Value
-			if existing.IsValid() {
-				existingField = existing.Field(i)
+			if stored.IsValid() {
+				existingField = stored.Field(i)
 			}
 			if err := mergeValue(incoming.Field(i), existingField, fieldPath(path, incoming.Type().Field(i))); err != nil {
 				return err
@@ -144,13 +138,13 @@ func mergeValue(incoming, existing reflect.Value, path string) error {
 		return nil
 
 	case reflect.Map:
-		if existing.Kind() != reflect.Map || incoming.Type() != existing.Type() {
-			return nil
-		}
-
+		stored := storedAs(existing, incoming)
 		for _, key := range incoming.MapKeys() {
 			incomingVal := incoming.MapIndex(key)
-			existingVal := existing.MapIndex(key)
+			var existingVal reflect.Value
+			if stored.IsValid() {
+				existingVal = stored.MapIndex(key)
+			}
 			keyPath := joinPath(path, fmt.Sprint(key.Interface()))
 
 			if incomingVal.Kind() != reflect.Pointer && !incomingVal.CanSet() {
@@ -170,36 +164,34 @@ func mergeValue(incoming, existing reflect.Value, path string) error {
 
 		return nil
 
-	case reflect.Slice:
-		if existing.Kind() != reflect.Slice {
-			return nil
-		}
-
-		n := min(existing.Len(), incoming.Len())
-
-		for i := range n {
-			if err := mergeValue(incoming.Index(i), existing.Index(i), path); err != nil {
+	case reflect.Slice, reflect.Array:
+		// Elements are matched by position; one past the end of what is stored has nothing to keep.
+		stored := storedAs(existing, incoming)
+		for i := range incoming.Len() {
+			var existingElem reflect.Value
+			if stored.IsValid() && i < stored.Len() {
+				existingElem = stored.Index(i)
+			}
+			if err := mergeValue(incoming.Index(i), existingElem, path); err != nil {
 				return err
 			}
 		}
 
-		return nil
-
-	case reflect.Array:
-		if existing.Kind() != reflect.Array || incoming.Type() != existing.Type() {
-			return nil
-		}
-
-		for i := 0; i < incoming.Len(); i++ {
-			if err := mergeValue(incoming.Index(i), existing.Index(i), path); err != nil {
-				return err
-			}
-		}
 		return nil
 
 	default:
 		return nil
 	}
+}
+
+// storedAs returns existing when it holds a value of incoming's type, else the zero Value: a
+// value of another type, or none at all, stores nothing incoming can keep.
+func storedAs(existing, incoming reflect.Value) reflect.Value {
+	if existing.IsValid() && existing.Type() == incoming.Type() {
+		return existing
+	}
+
+	return reflect.Value{}
 }
 
 // setSecretValue restores the credential behind incoming, which asRedactable read as inSecret,
@@ -209,18 +201,27 @@ func setSecretValue(incoming reflect.Value, inSecret redact.Redactable, existing
 		return nil
 	}
 
-	if !existing.IsValid() || existing.Type() != incoming.Type() {
-		return fmt.Errorf("%s: %w", path, errNoStoredSecret)
-	}
-
-	existingSecret, ok := asRedactable(existing)
-	if !ok || existingSecret.IsRedacted() {
+	if !hasStoredSecret(existing, incoming) {
 		return fmt.Errorf("%s: %w", path, errNoStoredSecret)
 	}
 
 	incoming.Set(existing)
 
 	return nil
+}
+
+// hasStoredSecret reports whether existing holds a credential for incoming to keep: one of the
+// same type that is neither empty nor itself the placeholder. A GET shows an empty secret as
+// empty, so a placeholder never stands for one.
+func hasStoredSecret(existing, incoming reflect.Value) bool {
+	stored := storedAs(existing, incoming)
+	if !stored.IsValid() || stored.IsZero() {
+		return false
+	}
+
+	secret, ok := asRedactable(stored)
+
+	return ok && !secret.IsRedacted()
 }
 
 // fieldPath returns the path of field f of the struct at path, named by its YAML tag, else its

@@ -201,3 +201,90 @@ func TestSecret_IsRedacted(t *testing.T) {
 	assert.False(t, redact.Secret("").IsRedacted())
 	assert.False(t, redact.Secret(validSecretRef).IsRedacted())
 }
+
+type testAnyHolder struct {
+	Value any `yaml:"value"`
+}
+
+// A placeholder stands only for a stored, non-empty credential of its own type. Whatever else
+// is stored - nothing, an empty value, a shorter list, another type behind an interface - leaves
+// it with nothing to keep, wherever it sits in the walk.
+func TestMergeSecrets_PlaceholderNeedsStoredValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		incoming any
+		existing any
+		wantPath string
+	}{
+		{
+			name:     "stored value is kept",
+			incoming: &testCredentials{Password: redact.Placeholder},
+			existing: &testCredentials{Password: literalPassword},
+		},
+		{
+			name: "empty stored secret",
+			incoming: &testConfig{AerospikeClusters: map[string]*testCluster{
+				"c1": {Credentials: &testCredentials{Password: redact.Placeholder}},
+			}},
+			existing: &testConfig{AerospikeClusters: map[string]*testCluster{
+				"c1": {Credentials: &testCredentials{}},
+			}},
+			wantPath: "aerospike-clusters.c1.credentials.password",
+		},
+		{
+			name:     "value struct at the root",
+			incoming: &testCredentials{Password: redact.Placeholder},
+			existing: &testCredentials{},
+			wantPath: "password",
+		},
+		{
+			name: "slice element with nothing stored",
+			incoming: &testConfig{Routines: []testBackupRoutine{
+				{Storages: []testStorage{{SecretAccessKey: redact.Placeholder}}},
+			}},
+			existing: &testConfig{},
+			wantPath: "routines.storages.secret-access-key",
+		},
+		{
+			name: "slice element past the stored length",
+			incoming: &testConfig{Routines: []testBackupRoutine{
+				{Storages: []testStorage{{SecretAccessKey: literalSecretKey}, {SecretAccessKey: redact.Placeholder}}},
+			}},
+			existing: &testConfig{Routines: []testBackupRoutine{
+				{Storages: []testStorage{{SecretAccessKey: literalSecretKey}}},
+			}},
+			wantPath: "routines.storages.secret-access-key",
+		},
+		{
+			name:     "array element with nothing stored",
+			incoming: &testConfig{Routines: []testBackupRoutine{{Keys: [2]redact.Secret{"", redact.Placeholder}}}},
+			existing: &testConfig{},
+			wantPath: "routines.keys",
+		},
+		{
+			name:     "interface with nothing stored",
+			incoming: &testAnyHolder{Value: &testCredentials{Password: redact.Placeholder}},
+			existing: &testAnyHolder{},
+			wantPath: "value.password",
+		},
+		{
+			name:     "interface storing another type",
+			incoming: &testAnyHolder{Value: &testCredentials{Password: redact.Placeholder}},
+			existing: &testAnyHolder{Value: &testTLS{KeyfilePassword: literalTLSPassword}},
+			wantPath: "value.password",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := MergeSecrets(tt.incoming, tt.existing)
+
+			if tt.wantPath == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, errNoStoredSecret)
+			require.ErrorContains(t, err, tt.wantPath+": ")
+		})
+	}
+}
