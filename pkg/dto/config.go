@@ -78,7 +78,7 @@ func (c *Config) fromModel(m *model.Config) {
 
 // Validate validates the configuration.
 //
-//nolint:gocognit,funlen // one pass per entity map, each with its own error context
+//nolint:gocognit
 func (c *Config) Validate() error {
 	if err := ValidateNoRedacted(c); err != nil {
 		return err
@@ -115,12 +115,7 @@ func (c *Config) Validate() error {
 		if err := validateEntityName("policy name", name); err != nil {
 			return err
 		}
-		policyOpts := ValidationDefault
-		if c.backupPolicyHasSecretAgent(name) {
-			policyOpts = ValidationWithSecretAgent
-		}
-
-		if err := policy.ValidateWithOpts(policyOpts); err != nil {
+		if err := policy.Validate(); err != nil {
 			return fmt.Errorf("policy '%s' validation error: %w", name, err)
 		}
 	}
@@ -154,13 +149,8 @@ func (c *Config) ToModel() (*model.Config, error) {
 			return nil, err
 		}
 	}
-	if c.ServiceConfig.ServerHTTPS != nil {
-		// Resolve the HTTPS Secret Agent after the top-level agents have been added.
-		agent, err := c.ServiceConfig.ServerHTTPS.SecretAgentConfig.ToModel(modelConfig)
-		if err != nil {
-			return nil, fmt.Errorf("invalid HTTPS server secret agent: %w", err)
-		}
-		modelConfig.ServiceConfig.ServerHTTPS.SecretAgent = agent
+	if err := c.ServiceConfig.ServerHTTPS.resolveSecretAgent(modelConfig); err != nil {
+		return nil, err
 	}
 
 	// storage must be added after secret agents.
@@ -362,14 +352,4 @@ func (c *Config) routineNames(match func(*BackupRoutine) bool) []string {
 	}
 
 	return names
-}
-
-func (c *Config) backupPolicyHasSecretAgent(policyName string) bool {
-	for _, routine := range c.BackupRoutines {
-		if routine != nil && routine.BackupPolicy == policyName && routine.SecretAgent != "" {
-			return true
-		}
-	}
-
-	return false
 }

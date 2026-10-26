@@ -20,7 +20,7 @@ type EncryptionPolicy struct {
 }
 
 // Validate validates the encryption policy.
-func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
+func (p *EncryptionPolicy) Validate() error {
 	if p == nil {
 		return nil
 	}
@@ -62,7 +62,7 @@ func (p *EncryptionPolicy) Validate(opts ValidationOptions) error {
 		return errValidationMutuallyExclusive("key-env", "key-secret")
 	}
 
-	if err := validateSecret("key-secret", p.KeySecret, opts.Has(ValidationWithSecretAgent)); err != nil {
+	if err := validateSecretForm("key-secret", p.KeySecret); err != nil {
 		return err
 	}
 

@@ -59,11 +59,7 @@ func (r *RestoreRequest) Validate() error {
 	if err := r.SecretAgentConfig.validate(); err != nil {
 		return err
 	}
-	policyOpts := ValidationDefault
-	if r.hasSecretAgent() {
-		policyOpts = ValidationWithSecretAgent
-	}
-	if err := r.Policy.Validate(policyOpts); err != nil {
+	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
 
@@ -88,8 +84,7 @@ func (r *RestoreTimestampRequest) Validate() error {
 	if err := r.SecretAgentConfig.validate(); err != nil {
 		return err
 	}
-	// Secret agent may also come from the referenced routine at ToModel time.
-	if err := r.Policy.Validate(ValidationWithSecretAgent); err != nil {
+	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
 	if r.Time == 0 {
@@ -150,9 +145,14 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 		secretAgent = routine.SecretAgent // use routine's secret agent if not specified.
 	}
 
+	policy := r.Policy.ToModel()
+	if err := validateEncryptionKeyAgent(policy.EncryptionPolicy, secretAgent); err != nil {
+		return nil, err
+	}
+
 	return &model.RestoreTimestampRequest{
 		DestinationCluster: *cluster,
-		Policy:             *r.Policy.ToModel(),
+		Policy:             *policy,
 		SecretAgent:        secretAgent,
 		Time:               time.UnixMilli(r.Time),
 		RoutineName:        r.Routine,
@@ -177,9 +177,14 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 		return nil, fmt.Errorf("invalid secret agent: %w", err)
 	}
 
+	policy := r.Policy.ToModel()
+	if err := validateEncryptionKeyAgent(policy.EncryptionPolicy, secretAgent); err != nil {
+		return nil, err
+	}
+
 	return &model.RestoreRequest{
 		DestinationCluster: *cluster,
-		Policy:             *r.Policy.ToModel(),
+		Policy:             *policy,
 		SourceStorage:      storage,
 		SecretAgent:        secretAgent,
 		BackupDataPath:     string(r.BackupDataPath),

@@ -74,11 +74,6 @@ type BackupPolicy struct {
 
 // Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
 func (p *BackupPolicy) Validate() error {
-	return p.ValidateWithOpts(ValidationWithSecretAgent) // if we don't know the secret agent, we assume it's available.
-}
-
-// ValidateWithOpts checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
-func (p *BackupPolicy) ValidateWithOpts(opts ValidationOptions) error {
 	if p == nil {
 		return nil
 	}
@@ -117,7 +112,7 @@ func (p *BackupPolicy) ValidateWithOpts(opts ValidationOptions) error {
 	if err := p.RetentionPolicy.Validate(); err != nil {
 		return fmt.Errorf("invalid retention policy: %w", err)
 	}
-	if err := p.EncryptionPolicy.Validate(opts); err != nil {
+	if err := p.EncryptionPolicy.Validate(); err != nil {
 		return fmt.Errorf("invalid encryption policy: %w", err)
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {
