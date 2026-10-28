@@ -33,18 +33,22 @@ const (
 type routineRunner struct {
 	clientManager     aerospike.ClientManager
 	namespaceResolver aerospike.NamespaceResolver
+	backupReader      service.BackupReader
 }
 
 var _ service.RoutineBackupRunner = (*routineRunner)(nil)
 
-// NewRoutineRunner returns a RoutineBackupRunner that runs server-side backups.
+// NewRoutineRunner returns a RoutineBackupRunner that runs server-side backups. backupReader
+// lists the server backups an incremental backup of a namespace builds on.
 func NewRoutineRunner(
 	clientManager aerospike.ClientManager,
 	namespaceResolver aerospike.NamespaceResolver,
+	backupReader service.BackupReader,
 ) service.RoutineBackupRunner {
 	return &routineRunner{
 		clientManager:     clientManager,
 		namespaceResolver: namespaceResolver,
+		backupReader:      backupReader,
 	}
 }
 
@@ -114,12 +118,17 @@ func (r *routineRunner) backupNamespace(
 	common.SetList = strings.Join(routine.SetList, ",")
 	common.FilterExp = routine.FilterExpression
 
+	modifiedAfter, err := r.modifiedAfter(ctx, routine, runSpec.Type, namespace)
+	if err != nil {
+		return err
+	}
+
 	// A limit the policy leaves unset is zero, which the request omits: the server's default applies.
 	policy := routine.BackupPolicy
 	jobID, err := infoClient.StartBackup(ctx, &infomodels.RequestBackup{
 		RequestCommon:       common,
 		BinList:             strings.Join(routine.BinList, ","),
-		ModifiedAfter:       unixSeconds(runSpec.TimeBounds.FromTime),
+		ModifiedAfter:       unixSeconds(modifiedAfter),
 		ModifiedBefore:      unixSeconds(runSpec.TimeBounds.ToTime),
 		BackupRPS:           ptr.ValueOrZero(policy.RecordsPerSecond),
 		BackupWorkerThreads: ptr.ValueOrZero(policy.Parallel),
@@ -175,6 +184,42 @@ func waitForBackup(
 		default:
 		}
 	}
+}
+
+// modifiedAfter returns the lower bound of a backup of namespace: none for a full backup. An
+// incremental backup starts where the namespace's own last backup it builds on started: its last
+// full backup in the cumulative mode, else its last backup of either type. The namespaces of a
+// routine are backed up one after another, so each has a bound of its own.
+func (r *routineRunner) modifiedAfter(
+	ctx context.Context,
+	routine *model.BackupRoutine,
+	backupType model.BackupType,
+	namespace string,
+) (*time.Time, error) {
+	if backupType == model.BackupTypeFull {
+		return nil, nil
+	}
+
+	filters := []service.BackupFilter{service.NewFullBackupFilter(routine)}
+	if routine.BackupPolicy.GetIncrModeOrDefault() != model.IncrModeCumulative {
+		filters = append(filters, service.NewIncrementalBackupFilter(routine))
+	}
+
+	var last *time.Time
+	for _, filter := range filters {
+		backups, err := r.backupReader.GetBackups(ctx, filter)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read the last backup of namespace %s: %w", namespace, err)
+		}
+
+		for _, b := range backups {
+			if b.Namespace == namespace && (last == nil || b.Created.After(*last)) {
+				last = &b.Created
+			}
+		}
+	}
+
+	return last, nil
 }
 
 func unixSeconds(t *time.Time) string {

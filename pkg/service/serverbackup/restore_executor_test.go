@@ -20,77 +20,74 @@ const (
 	incr2ID = "261020T092111-cccc"
 )
 
-func TestRestoreExecutor_Run_SingleBackupIsFuzzy(t *testing.T) {
+func TestRestoreExecutor_Run_Cold(t *testing.T) {
 	t.Parallel()
-	ctrl := gomock.NewController(t)
 
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *infomodels.RequestRestore) error {
-			assert.Equal(t, fullID, request.BackupIDs)
-			assert.Equal(t, "bar", request.Namespace)
-			assert.Equal(t, infomodels.RestorePolicyFuzzy, request.Policy)
+	tests := []struct {
+		name          string
+		backupIDs     []string
+		wantBackupIDs string
+	}{
+		{name: "chain", backupIDs: []string{fullID, incr1ID, incr2ID}, wantBackupIDs: fullID + "," + incr1ID + "," + incr2ID},
+		{name: "single backup", backupIDs: []string{fullID}, wantBackupIDs: fullID},
+	}
 
-			return nil
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+
+			var preparedJobID string
+			infoClient := aerospike.NewMockInfoGetter(ctrl)
+			gomock.InOrder(
+				infoClient.EXPECT().PrepareRestore(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, request *infomodels.RequestPrepareRestore) error {
+						assert.Equal(t, "bar", request.Namespace)
+						preparedJobID = request.JobID
+
+						return nil
+					}),
+				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
+					&infomodels.ResponseRestoreState{NsState: infomodels.NamespaceStateReady}, nil),
+				infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, request *infomodels.RequestRestore) error {
+						assert.Equal(t, tt.wantBackupIDs, request.BackupIDs)
+						assert.Equal(t, "bar", request.Namespace)
+						assert.Equal(t, infomodels.RestorePolicyStrict, request.Policy)
+						assert.Equal(t, preparedJobID, request.JobID, "the restore starts the prepared job")
+
+						return nil
+					}),
+			)
+
+			requests := make([]*model.RestoreRequest, 0, len(tt.backupIDs))
+			for _, id := range tt.backupIDs {
+				requests = append(requests, chainRequest(id))
+			}
+
+			handler, err := NewRestoreExecutor(namespaceReader(t, ctrl)).
+				Run(t.Context(), clientOf(ctrl, infoClient), requests[0], requests[1:]...)
+			require.NoError(t, err)
+			assert.NotNil(t, handler)
 		})
-
-	handler, err := NewRestoreExecutor(namespaceReader(t, ctrl)).
-		Run(t.Context(), clientOf(ctrl, infoClient), chainRequest(fullID))
-	require.NoError(t, err)
-	assert.NotNil(t, handler)
+	}
 }
 
-func TestRestoreExecutor_Run_ChainIsStrict(t *testing.T) {
-	t.Parallel()
-	ctrl := gomock.NewController(t)
-
-	var preparedJobID string
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	gomock.InOrder(
-		infoClient.EXPECT().PrepareRestore(gomock.Any(), gomock.Any()).DoAndReturn(
-			func(_ context.Context, request *infomodels.RequestPrepareRestore) error {
-				assert.Equal(t, "bar", request.Namespace)
-				preparedJobID = request.JobID
-
-				return nil
-			}),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
-			&infomodels.ResponseRestoreState{
-				NsState: infomodels.NamespaceStatePreparing,
-				Clear:   infomodels.ClearStateRequired,
-			}, nil),
-		infoClient.EXPECT().ClearRestoreStorage(gomock.Any(), "bar", gomock.Any()).Return(nil),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
-			&infomodels.ResponseRestoreState{NsState: infomodels.NamespaceStateReady}, nil),
-		infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
-			func(_ context.Context, request *infomodels.RequestRestore) error {
-				assert.Equal(t, fullID+","+incr1ID+","+incr2ID, request.BackupIDs)
-				assert.Equal(t, "bar", request.Namespace)
-				assert.Equal(t, infomodels.RestorePolicyStrict, request.Policy)
-				assert.Equal(t, preparedJobID, request.JobID, "the restore starts the prepared job")
-
-				return nil
-			}),
-	)
-
-	handler, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
-		chainRequest(fullID), chainRequest(incr1ID), chainRequest(incr2ID))
-	require.NoError(t, err)
-	assert.NotNil(t, handler)
-}
-
-func TestRestoreExecutor_Run_ChainPreparationFails(t *testing.T) {
+func TestRestoreExecutor_Run_NamespaceNotEmpty(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 
 	infoClient := aerospike.NewMockInfoGetter(ctrl)
 	infoClient.EXPECT().PrepareRestore(gomock.Any(), gomock.Any()).Return(nil)
 	infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
-		&infomodels.ResponseRestoreState{NsState: infomodels.NamespaceStateFailed, ErrorReason: "not SSD"}, nil)
+		&infomodels.ResponseRestoreState{
+			NsState: infomodels.NamespaceStatePreparing,
+			Clear:   infomodels.ClearStateRequired,
+		}, nil)
 
 	_, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
 		chainRequest(fullID), chainRequest(incr1ID))
-	require.ErrorContains(t, err, "not SSD")
+	require.ErrorContains(t, err, "namespace bar is not empty")
 }
 
 func TestRestoreExecutor_Run_ChainTooLong(t *testing.T) {
@@ -134,4 +131,23 @@ func chainRequest(backupID string) *model.RestoreRequest {
 		SourceStorage:  &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1"},
 		BackupDataPath: backupID,
 	}
+}
+
+func TestRestoreHandler_Wait_UntilNamespaceOpen(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+
+	infoClient := aerospike.NewMockInfoGetter(ctrl)
+	gomock.InOrder(
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(&infomodels.ResponseRestoreState{
+			State:   infomodels.RestoreStateComplete,
+			NsState: infomodels.NamespaceStateOpening,
+		}, nil),
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(&infomodels.ResponseRestoreState{
+			State:   infomodels.RestoreStateComplete,
+			NsState: infomodels.NamespaceStateNone,
+		}, nil),
+	)
+
+	require.NoError(t, newRestoreHandler(infoClient, "bar", "job").Wait(t.Context()))
 }

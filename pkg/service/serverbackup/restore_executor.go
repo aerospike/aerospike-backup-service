@@ -21,10 +21,10 @@ import (
 // maxChainLength is the most backups the server restores in one job (AS_RESTORE_CHAIN_MAX_LINKS).
 const maxChainLength = 32
 
-// restoreExecutor asks the server to restore server backups, identified by their job ids. A
-// single backup is restored fuzzy, into the live namespace. A full backup and the incremental
-// backups that follow it are restored strict (cold): the server takes the namespace from
-// clients, drops its data, and hydrates it from the chain.
+// restoreExecutor asks the server to run a cold restore of server backups, identified by their
+// job ids: a single backup, or a full backup and the incremental backups that follow it. A cold
+// restore takes the namespace from clients and hydrates it, so it restores into an empty
+// namespace only.
 type restoreExecutor struct {
 	backupReader service.BackupReader
 }
@@ -80,12 +80,8 @@ func (r *restoreExecutor) start(
 
 	jobID := newJobID(time.Now())
 	infoClient := client.InfoClient()
-	policy := infomodels.RestorePolicyFuzzy
-	if len(backupIDs) > 1 {
-		policy = infomodels.RestorePolicyStrict
-		if err := prepareColdRestore(ctx, infoClient, namespace, jobID); err != nil {
-			return nil, err
-		}
+	if err := prepareColdRestore(ctx, infoClient, namespace, jobID); err != nil {
+		return nil, err
 	}
 
 	// A limit the policy leaves unset is zero, which the request omits: the server's default applies.
@@ -96,7 +92,7 @@ func (r *restoreExecutor) start(
 		RestoreWorkerThreads: ptr.ValueOrZero(request.Policy.Parallel),
 		RestoreRPS:           ptr.ValueOrZero(request.Policy.Tps),
 		ExtraTTL:             int(ptr.ValueOrZero(request.Policy.ExtraTTL)),
-		Policy:               policy,
+		Policy:               infomodels.RestorePolicyStrict,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to start server restore: %w", err)
@@ -105,8 +101,8 @@ func (r *restoreExecutor) start(
 	return newRestoreHandler(infoClient, namespace, jobID), nil
 }
 
-// prepareColdRestore takes namespace from clients for the cold restore jobID and waits until
-// it is empty on every node, clearing the storage of the nodes that still hold data. A failed
+// prepareColdRestore takes namespace from clients for the cold restore jobID and waits until it
+// is ready on every node. It fails when a node still holds data in the namespace. A failed
 // preparation leaves the namespace gated until the job is released with restore-open.
 func prepareColdRestore(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
 	err := infoClient.PrepareRestore(ctx, &infomodels.RequestPrepareRestore{Namespace: namespace, JobID: jobID})
@@ -138,9 +134,7 @@ func prepareColdRestore(ctx context.Context, infoClient backup.ServerBackupInfo,
 		case status.NsState == infomodels.NamespaceStateFailed:
 			return fmt.Errorf("server restore %s failed to prepare namespace %s: %s", jobID, namespace, status.ErrorReason)
 		case status.Clear == infomodels.ClearStateRequired:
-			if err := infoClient.ClearRestoreStorage(ctx, namespace, jobID); err != nil {
-				return fmt.Errorf("failed to clear namespace %s for server restore %s: %w", namespace, jobID, err)
-			}
+			return fmt.Errorf("server restore %s: namespace %s is not empty", jobID, namespace)
 		default:
 		}
 	}
@@ -190,7 +184,8 @@ func newRestoreHandler(infoClient backup.ServerBackupInfo, namespace, jobID stri
 	}
 }
 
-// Wait polls the restore job until it ends or ctx is canceled.
+// Wait polls the restore job until it ends and the namespace is open to clients again, or ctx
+// is canceled.
 func (h *restoreHandler) Wait(ctx context.Context) error {
 	defer h.stats.Stop()
 
@@ -214,7 +209,10 @@ func (h *restoreHandler) Wait(ctx context.Context) error {
 
 		switch status.State {
 		case infomodels.RestoreStateComplete:
-			return nil
+			// The job completes before the server releases the namespace to clients.
+			if status.NsState == infomodels.NamespaceStateNone {
+				return nil
+			}
 		case infomodels.RestoreStateFailed:
 			return fmt.Errorf("server restore %s failed: %s", h.jobID, status.ErrorReason)
 		case infomodels.RestoreStateAborted:

@@ -295,8 +295,12 @@ func newServerBackupMode(
 		startController:     serverbackup.NewStartController(),
 		retentionManager:    service.NopRetentionManager(),
 		clusterConfigWriter: service.NopClusterConfigWriter(),
-		routineRunner:       serverbackup.NewRoutineRunner(clientManager, aerospike.NewNamespaceResolver(clientManager)),
-		restoreExecutor:     serverbackup.NewRestoreExecutor(catalog),
+		routineRunner: serverbackup.NewRoutineRunner(
+			clientManager,
+			aerospike.NewNamespaceResolver(clientManager),
+			catalog,
+		),
+		restoreExecutor: serverbackup.NewRestoreExecutor(catalog),
 	}
 }
 

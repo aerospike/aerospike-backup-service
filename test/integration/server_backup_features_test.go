@@ -248,8 +248,9 @@ func (s *ServerBackupSuite) TestServerRestoreParallel() {
 	s.Equal("3", s.newRestoreJobFields(before)["restore-worker-threads"])
 }
 
-// TestServerMultipleNamespaces backs up a routine of two namespaces, one server backup each, and
-// restores both into the destination cluster by timestamp.
+// TestServerMultipleNamespaces backs up a routine of two namespaces, a full and an incremental
+// server backup each, and restores both chains into the destination cluster by timestamp. Restore
+// by timestamp runs the namespaces at the same time, so the two cold restores overlap.
 func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 	s.seedRecordsIn(s.client, serverNamespace, []int{1})
 	s.seedRecordsIn(s.client, otherNamespace, []int{2})
@@ -266,10 +267,16 @@ func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 		namespaces = append(namespaces, backup.Namespace)
 	}
 	s.ElementsMatch([]string{serverNamespace, otherNamespace}, namespaces)
+	s.waitForLastBackup(e, model.BackupTypeFull, backups[len(backups)-1].Created)
+
+	s.seedRecordsIn(s.client, serverNamespace, []int{3})
+	s.seedRecordsIn(s.client, otherNamespace, []int{4})
+	s.triggerIncrementalBackup(e)
+	s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 
 	s.restoreIntoDestinationByTimestamp(e, time.Now())
-	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
-	s.assertRecordsIn(s.destinationClient, otherNamespace, []int{2})
+	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{3})
+	s.assertRecordsIn(s.destinationClient, otherNamespace, []int{4})
 }
 
 // TestServerCompression backs up with a ZSTD compression policy and checks that the backup is
