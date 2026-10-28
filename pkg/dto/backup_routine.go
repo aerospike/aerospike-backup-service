@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -295,6 +294,10 @@ func (r *BackupRoutine) ToModel(
 	if err != nil {
 		return nil, err
 	}
+	// The policy's key-secret is resolved with this routine's agent.
+	if err := validateEncryptionKeyAgent(policy.EncryptionPolicy, secretAgent); err != nil {
+		return nil, fmt.Errorf("policy '%s': %w", r.BackupPolicy, err)
+	}
 
 	return &model.BackupRoutine{
 		Name:             name,
@@ -406,7 +409,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
 	r.ScheduleTimezone = ScheduleTimezone(m.Timezone.Configured)
-	r.Namespaces = ptr.Of(newNamespaceNames(m.Namespaces))
+	r.Namespaces = new(newNamespaceNames(m.Namespaces))
 	r.SetList = m.SetList
 	r.BinList = m.BinList
 	r.RackList = m.RackList

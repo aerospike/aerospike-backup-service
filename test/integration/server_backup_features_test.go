@@ -14,7 +14,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
@@ -97,7 +96,7 @@ func (s *ServerBackupSuite) TestServerNoIndexes() {
 	s.seedRecordsIn(s.client, serverNamespace, []int{1})
 
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		c.BackupPolicies[policyName].NoIndexes = ptr.Of(true)
+		c.BackupPolicies[policyName].NoIndexes = new(true)
 	})
 	s.triggerFullBackup(e)
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
@@ -154,7 +153,7 @@ func (s *ServerBackupSuite) TestServerBackupRecordsPerSecond() {
 
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
 		// The server takes at least 5 records per second per scan thread, 4 by default.
-		c.BackupPolicies[policyName].RecordsPerSecond = ptr.Of(100)
+		c.BackupPolicies[policyName].RecordsPerSecond = new(100)
 	})
 	s.triggerFullBackup(e)
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
@@ -168,7 +167,7 @@ func (s *ServerBackupSuite) TestServerBackupParallel() {
 	s.seedRecordsIn(s.client, serverNamespace, []int{1})
 
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		c.BackupPolicies[policyName].Parallel = ptr.Of(2)
+		c.BackupPolicies[policyName].Parallel = new(2)
 	})
 	s.triggerFullBackup(e)
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
@@ -182,7 +181,7 @@ func (s *ServerBackupSuite) TestServerBackupParallelWrite() {
 	s.seedRecordsIn(s.client, serverNamespace, []int{1})
 
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		c.BackupPolicies[policyName].ParallelWrite = ptr.Of(3)
+		c.BackupPolicies[policyName].ParallelWrite = new(3)
 	})
 	s.triggerFullBackup(e)
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
@@ -207,7 +206,7 @@ func (s *ServerBackupSuite) TestServerRestoreExtraTTL() {
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
 
 	s.restoreIntoDestinationWithPolicy(e, backup.Key,
-		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{ExtraTTL: ptr.Of(int64(extraTTL.Seconds()))}})
+		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{ExtraTTL: new(int64(extraTTL.Seconds()))}})
 
 	record, err := s.destinationClient.GetHeader(nil, key)
 	s.Require().NoError(err)
@@ -226,7 +225,7 @@ func (s *ServerBackupSuite) TestServerRestoreTps() {
 
 	before := s.restoreJobIDs()
 	s.restoreIntoDestinationWithPolicy(e, backup.Key,
-		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Tps: ptr.Of(50)}})
+		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Tps: new(50)}})
 
 	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
 	s.Equal("50", s.newRestoreJobFields(before)["restore-rps"])
@@ -243,7 +242,7 @@ func (s *ServerBackupSuite) TestServerRestoreParallel() {
 
 	before := s.restoreJobIDs()
 	s.restoreIntoDestinationWithPolicy(e, backup.Key,
-		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Parallel: ptr.Of(3)}})
+		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Parallel: new(3)}})
 
 	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
 	s.Equal("3", s.newRestoreJobFields(before)["restore-worker-threads"])
@@ -256,7 +255,7 @@ func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 	s.seedRecordsIn(s.client, otherNamespace, []int{2})
 
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		c.BackupRoutines[routineName].Namespaces = ptr.Of([]dto.NamespaceName{serverNamespace, otherNamespace})
+		c.BackupRoutines[routineName].Namespaces = new([]dto.NamespaceName{serverNamespace, otherNamespace})
 	})
 	s.triggerFullBackup(e)
 	s.waitForFinishedBackup(e, model.BackupTypeFull)
@@ -281,7 +280,7 @@ func (s *ServerBackupSuite) TestServerCompression() {
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
 		c.BackupPolicies[policyName].CompressionPolicy = &dto.CompressionPolicy{
 			Mode:  dto.CompressionModeZSTD,
-			Level: ptr.Of(int32(1)),
+			Level: new(int32(1)),
 		}
 	})
 	s.triggerFullBackup(e)
@@ -296,7 +295,7 @@ func (s *ServerBackupSuite) TestServerRetention() {
 	s.seedRecordsIn(s.client, serverNamespace, []int{1})
 
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		c.BackupPolicies[policyName].RetentionPolicy = &dto.RetentionPolicy{FullBackups: ptr.Of(1)}
+		c.BackupPolicies[policyName].RetentionPolicy = &dto.RetentionPolicy{FullBackups: new(1)}
 	})
 	s.triggerFullBackup(e)
 	s.waitForFinishedBackup(e, model.BackupTypeFull)

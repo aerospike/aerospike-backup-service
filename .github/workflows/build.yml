@@ -15,22 +15,19 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: [ 1.25.x ]
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
           egress-policy: audit
 
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+          go-version-file: go.mod
 
       - name: Check go.mod
         run: |
@@ -75,14 +72,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Get go version from go.mod
-        run: |
-          echo "GO_VERSION=$(grep '^go ' go.mod | cut -d " " -f 2)" >> $GITHUB_ENV
-
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
           # setup-go's cache key is the same for every job, so whichever job saves
           # first owns it, and this job's build (no -race, integration tag) is never
           # in it. A key of its own keeps the compiled test binary's packages.
@@ -94,9 +87,9 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: go-integration-${{ runner.os }}-${{ env.GO_VERSION }}-${{ hashFiles('go.sum') }}
+          key: go-integration-${{ runner.os }}-${{ hashFiles('go.mod', 'go.sum') }}
           restore-keys: |
-            go-integration-${{ runner.os }}-${{ env.GO_VERSION }}-
+            go-integration-${{ runner.os }}-
 
       - name: Integration test
         run: make test-integration

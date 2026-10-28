@@ -105,7 +105,7 @@ func newCompressionPolicyFromModel(m *model.CompressionPolicy) *CompressionPolic
 func (p *CompressionPolicy) fromModel(m *model.CompressionPolicy) {
 	p.Mode = NewCompressionModeFromModel(m.Mode)
 	if m.Mode != model.CompressionModeNone {
-		p.Level = ptr.Of(m.Level)
+		p.Level = new(m.Level)
 	}
 }
 

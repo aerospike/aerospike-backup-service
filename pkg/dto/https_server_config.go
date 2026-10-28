@@ -3,6 +3,7 @@ package dto
 import (
 	"crypto/tls"
 	"errors"
+	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -40,7 +41,7 @@ type ServerConfigHTTPS struct {
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
 	KeyFilePassword Secret `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" format:"password" extensions:"x-nullable"`
 	// Minimum accepted TLS protocol version.
-	MinVersion TLSMinVersion `yaml:"min-version,omitempty" json:"min-version,omitempty" default:"1.2" enums:"1.2,1.3"`
+	MinVersion TLSMinVersion `yaml:"min-version,omitempty" json:"min-version,omitempty" default:"1.2"`
 	// Allowed TLS cipher suite names. An empty list uses Go's secure defaults.
 	CipherSuites []string `yaml:"cipher-suites,omitempty" json:"cipher-suites,omitempty" extensions:"x-nullable"`
 	// Path to trusted client CA certificates in PEM format.
@@ -95,7 +96,7 @@ func (s *ServerConfigHTTPS) validateTLSFields() error {
 	if s.KeyFilePassword != "" && s.KeyFile == "" {
 		return errValidationRequires("key-file-password", keyField)
 	}
-	if err := validateSecret("key-file-password", s.KeyFilePassword, s.hasSecretAgent()); err != nil {
+	if err := validateSecretForm("key-file-password", s.KeyFilePassword); err != nil {
 		return err
 	}
 
@@ -168,6 +169,24 @@ func (s *ServerConfigHTTPS) ToModel() *model.ServerConfigHTTPS {
 		CRLFile:         string(s.CRLFile),
 		ClientAuth:      clientAuth,
 	}
+}
+
+// resolveSecretAgent sets the server's Secret Agent on config, which may name one of the
+// top-level agents config already holds, and checks the key-file password against it.
+func (s *ServerConfigHTTPS) resolveSecretAgent(config *model.Config) error {
+	if s == nil {
+		return nil
+	}
+	agent, err := s.SecretAgentConfig.ToModel(config)
+	if err != nil {
+		return fmt.Errorf("invalid HTTPS server secret agent: %w", err)
+	}
+	if err := validateSecretAgent("key-file-password", s.KeyFilePassword, agent != nil); err != nil {
+		return fmt.Errorf("invalid HTTPS server: %w", err)
+	}
+	config.ServiceConfig.ServerHTTPS.SecretAgent = agent
+
+	return nil
 }
 
 func (s *ServerConfigHTTPS) fromModel(m *model.ServerConfigHTTPS) {

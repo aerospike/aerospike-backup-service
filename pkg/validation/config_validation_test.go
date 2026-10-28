@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -94,7 +93,7 @@ func TestValidateRestoreTimestampRequest(t *testing.T) {
 			Storage:       "storage1",
 			SourceCluster: "cluster1",
 			IntervalCron:  "@daily",
-			Namespaces:    ptr.Of([]dto.NamespaceName{}),
+			Namespaces:    new([]dto.NamespaceName{}),
 		},
 	}
 

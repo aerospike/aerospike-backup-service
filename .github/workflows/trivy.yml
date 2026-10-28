@@ -26,7 +26,7 @@ jobs:
       - name: Generate Trivy SARIF report
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          version: v0.74.0
+          version: v0.76.1
           scan-type: fs
           scan-ref: .
           scanners: vuln,misconfig,secret
@@ -57,7 +57,7 @@ jobs:
       - name: Generate Trivy SARIF report (Helm init-container path)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          version: v0.74.0
+          version: v0.76.1
           scan-type: config
           scan-ref: helm/aerospike-backup-service
           severity: HIGH,CRITICAL

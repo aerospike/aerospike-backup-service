@@ -1011,17 +1011,17 @@ func (m *MockConfigApplier) EXPECT() *MockConfigApplierMockRecorder {
 }
 
 // ApplyNewConfig mocks base method.
-func (m *MockConfigApplier) ApplyNewConfig() error {
+func (m *MockConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyNewConfig")
+	ret := m.ctrl.Call(m, "ApplyNewConfig", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ApplyNewConfig indicates an expected call of ApplyNewConfig.
-func (mr *MockConfigApplierMockRecorder) ApplyNewConfig() *gomock.Call {
+func (mr *MockConfigApplierMockRecorder) ApplyNewConfig(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyNewConfig", reflect.TypeOf((*MockConfigApplier)(nil).ApplyNewConfig))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyNewConfig", reflect.TypeOf((*MockConfigApplier)(nil).ApplyNewConfig), ctx)
 }
 
 // MockConfigRetriever is a mock of ConfigRetriever interface.

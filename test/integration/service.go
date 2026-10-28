@@ -19,7 +19,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // env is a running ABS instance under test, and a client to call its API with.
@@ -66,7 +65,7 @@ func (s *Suite) setupHTTPSEnv(certs httpsCertificates, agent *dto.SecretAgent) *
 		}
 		c.ServiceConfig.ServerHTTPS = &dto.ServerConfigHTTPS{
 			ListenerConfig:  dto.ListenerConfig{Address: "127.0.0.1"},
-			Port:            ptr.Of(dto.Port(port)),
+			Port:            new(dto.Port(port)),
 			CertFile:        dto.Path(certs.CertFile),
 			KeyFile:         dto.Path(certs.EncryptedKeyFile),
 			KeyFilePassword: redact.Secret(secretRef()),
@@ -104,7 +103,7 @@ func (s *Suite) initComponents(customize ...func(*dto.Config)) *app.Components {
 	components, err := app.InitComponents(ctx, configPath, false)
 	s.Require().NoError(err)
 
-	components.Start(ctx)
+	s.Require().NoError(components.Start(ctx))
 
 	return components
 }
@@ -119,7 +118,7 @@ func (s *Suite) baseConfig() *dto.Config {
 		AerospikeClusters: map[string]*dto.AerospikeCluster{
 			clusterName: {
 				SeedNodes:            []dto.SeedNode{s.seedNode},
-				UseServicesAlternate: ptr.Of(true),
+				UseServicesAlternate: new(true),
 			},
 		},
 		Storage: map[string]*dto.Storage{
@@ -129,10 +128,10 @@ func (s *Suite) baseConfig() *dto.Config {
 		},
 		BackupPolicies: map[string]*dto.BackupPolicy{
 			policyName: {
-				Parallel: ptr.Of(1),
+				Parallel: new(1),
 				RetentionPolicy: &dto.RetentionPolicy{
-					FullBackups: ptr.Of(10),
-					IncrBackups: ptr.Of(0),
+					FullBackups: new(10),
+					IncrBackups: new(0),
 				},
 			},
 		},
@@ -142,7 +141,7 @@ func (s *Suite) baseConfig() *dto.Config {
 				SourceCluster: clusterName,
 				Storage:       storageName,
 				IntervalCron:  "@yearly",
-				Namespaces:    ptr.Of([]dto.NamespaceName{namespace}),
+				Namespaces:    new([]dto.NamespaceName{namespace}),
 			},
 		},
 	}

@@ -115,8 +115,8 @@ func enhanceYamlErrors(err error) error {
 		return nil
 	}
 
-	var typeErr *yaml.TypeError
-	if !errors.As(err, &typeErr) { // Yaml parser is so nice that it return its own error type.
+	typeErr, ok := errors.AsType[*yaml.TypeError](err)
+	if !ok { // Yaml parser is so nice that it return its own error type.
 		return err
 	}
 

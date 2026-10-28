@@ -3,7 +3,6 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -139,9 +138,9 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 		{
 			name: "both listeners enabled on different ports",
 			config: &ServiceConfig{
-				ServerHTTP: &ServerConfigHTTP{Port: ptr.Of(Port(8080))},
+				ServerHTTP: &ServerConfigHTTP{Port: new(Port(8080))},
 				ServerHTTPS: &ServerConfigHTTPS{
-					Port:     ptr.Of(Port(8443)),
+					Port:     new(Port(8443)),
 					CertFile: Path(certs.certFile),
 					KeyFile:  Path(certs.keyFile),
 				},
@@ -165,9 +164,9 @@ func TestServiceConfigValidateListeners(t *testing.T) {
 		{
 			name: "both listeners use same explicit port",
 			config: &ServiceConfig{
-				ServerHTTP: &ServerConfigHTTP{Port: ptr.Of(Port(8443))},
+				ServerHTTP: &ServerConfigHTTP{Port: new(Port(8443))},
 				ServerHTTPS: &ServerConfigHTTPS{
-					Port:     ptr.Of(Port(8443)),
+					Port:     new(Port(8443)),
 					CertFile: Path(certs.certFile),
 					KeyFile:  Path(certs.keyFile),
 				},

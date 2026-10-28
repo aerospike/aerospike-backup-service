@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -56,7 +55,7 @@ func TestBackupCompletionHandler_OnSuccess_FullRunsRetentionAndClusterConfig(t *
 	routine := &model.BackupRoutine{
 		Name: "routine-1",
 		BackupPolicy: &model.BackupPolicy{
-			WithClusterConfig: ptr.Of(true),
+			WithClusterConfig: new(true),
 		},
 	}
 	timestamp := time.Now()
@@ -96,7 +95,7 @@ func TestBackupCompletionHandler_OnSuccess_FullSkipsClusterConfigWhenDisabled(t 
 
 	routine := &model.BackupRoutine{
 		Name:         "routine-1",
-		BackupPolicy: &model.BackupPolicy{WithClusterConfig: ptr.Of(false)},
+		BackupPolicy: &model.BackupPolicy{WithClusterConfig: new(false)},
 	}
 	ctx := t.Context()
 

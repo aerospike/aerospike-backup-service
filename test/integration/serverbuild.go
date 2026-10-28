@@ -20,7 +20,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	"github.com/moby/moby/api/types/container"
@@ -170,7 +169,7 @@ func (s *ServerBuildSuite) serverBackupConfig(c *dto.Config) {
 		// The tests share the bucket: each lists only the backups it made.
 		Path: dto.Path(strings.ReplaceAll(s.T().Name(), "/", "-")),
 	}}
-	c.BackupRoutines[routineName].Namespaces = ptr.Of([]dto.NamespaceName{serverNamespace})
+	c.BackupRoutines[routineName].Namespaces = new([]dto.NamespaceName{serverNamespace})
 }
 
 // startServerBuild starts a single-node cluster from the asd binary and feature key file on

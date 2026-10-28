@@ -535,6 +535,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -667,6 +673,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -712,6 +724,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -748,6 +766,12 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "The cluster is still used by a backup routine",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -860,6 +884,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -905,6 +935,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -941,6 +977,12 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "The policy is still used by a backup routine",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -1059,6 +1101,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1104,6 +1152,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1137,6 +1191,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1166,6 +1226,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1192,6 +1258,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "The specified routine was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -1304,6 +1376,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1349,6 +1427,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1385,6 +1469,12 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "The storage is still used by a backup routine",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -2575,8 +2665,7 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.GcpStorageClass"
                         }
-                    ],
-                    "x-nullable": true
+                    ]
                 }
             }
         },
@@ -3472,7 +3561,7 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.ConnectionType"
                         }
                     ],
-                    "example": "tcp"
+                    "example": "TCP"
                 },
                 "is-base64": {
                     "description": "Flag that shows if secret agent responses are encrypted with base64.",
@@ -3663,10 +3752,6 @@ const docTemplate = `{
                 "min-version": {
                     "description": "Minimum accepted TLS protocol version.",
                     "default": "1.2",
-                    "enum": [
-                        "1.2",
-                        "1.3"
-                    ],
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.TLSMinVersion"

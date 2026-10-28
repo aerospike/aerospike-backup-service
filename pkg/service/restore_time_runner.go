@@ -14,7 +14,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 )
 
@@ -363,7 +362,7 @@ func prepareNamespaceRestore(
 		logger.Info("Use optimized restore because database is empty")
 
 		// old values are not important, because they qualify how to handle existing data in db.
-		effectivePolicy.Unique = ptr.Of(true)
+		effectivePolicy.Unique = new(true)
 		effectivePolicy.Replace = nil
 	}
 
