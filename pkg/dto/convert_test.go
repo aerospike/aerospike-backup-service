@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -144,7 +143,7 @@ var originalConfig = &Config{
 		SourceCluster: "cluster1",
 		Storage:       "aws 1",
 		IntervalCron:  "@daily",
-		Namespaces:    ptr.Of([]NamespaceName{}),
+		Namespaces:    new([]NamespaceName{}),
 	}},
 	SecretAgents: map[string]*SecretAgent{"agent1": {
 		Address:        "host",

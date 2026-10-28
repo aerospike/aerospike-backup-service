@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -186,7 +185,7 @@ func TestRestoreRequest_ToModel_PolicySecretRef(t *testing.T) {
 		}
 	}
 	inline := &SecretAgentConfig{SecretAgent: &SecretAgent{
-		ConnectionType: "tcp", Address: "secret-agent.aerospike.svc", Port: ptr.Of(Port(3005)),
+		ConnectionType: "tcp", Address: "secret-agent.aerospike.svc", Port: new(Port(3005)),
 	}}
 
 	_, err := request(inline).ToModel(model.NewConfig())
@@ -212,7 +211,7 @@ func TestAerospikeCluster_ToModel_TLSPasswordSecretRef(t *testing.T) {
 		}
 	}
 	withAgent := &Credentials{User: "user", Password: "pw", SecretAgentConfig: SecretAgentConfig{
-		SecretAgent: &SecretAgent{ConnectionType: "tcp", Address: "secret-agent.aerospike.svc", Port: ptr.Of(Port(3005))},
+		SecretAgent: &SecretAgent{ConnectionType: "tcp", Address: "secret-agent.aerospike.svc", Port: new(Port(3005))},
 	}}
 
 	_, err := cluster(withAgent).ToModel(model.NewConfig())

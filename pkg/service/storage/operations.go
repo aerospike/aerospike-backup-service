@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/aerospike/backup-go/models"
@@ -23,7 +22,7 @@ var (
 
 	// clientCacheTTL is how long cloud storage clients are cached after creation.
 	// Entries are not extended on access; a new client is created after expiry.
-	clientCacheTTL = ptr.Of(ClientCacheTTL)
+	clientCacheTTL = new(ClientCacheTTL)
 )
 
 // ClientCacheTTL is how long a cloud storage client — and therefore the storage

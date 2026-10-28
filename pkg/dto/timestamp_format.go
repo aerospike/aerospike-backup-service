@@ -2,7 +2,6 @@ package dto
 
 import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // TimestampFormat is the encoding for backup dates in file paths.
@@ -36,7 +35,7 @@ func (f TimestampFormat) ToModel() *model.TimestampFormat {
 		return nil
 	}
 
-	return ptr.Of(model.TimestampFormat(c))
+	return new(model.TimestampFormat(c))
 }
 
 // NewTimestampFormatFromModel creates a DTO timestamp format from the model type.

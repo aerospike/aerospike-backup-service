@@ -26,7 +26,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -69,7 +68,7 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 							ListenerConfig: dto.ListenerConfig{
 								Address: "127.0.0.1",
 							},
-							Port: ptr.Of(dto.Port(httpPort)),
+							Port: new(dto.Port(httpPort)),
 						},
 					},
 				}
@@ -86,7 +85,7 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 								Address:  "127.0.0.1",
 								Disabled: false,
 							},
-							Port: ptr.Of(dto.Port(httpPort)),
+							Port: new(dto.Port(httpPort)),
 						},
 					},
 				}
@@ -103,13 +102,13 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 								Address:  "127.0.0.1",
 								Disabled: true,
 							},
-							Port: ptr.Of(dto.Port(httpPort)),
+							Port: new(dto.Port(httpPort)),
 						},
 						ServerHTTPS: &dto.ServerConfigHTTPS{
 							ListenerConfig: dto.ListenerConfig{
 								Address: "127.0.0.1",
 							},
-							Port:         ptr.Of(dto.Port(httpsPort)),
+							Port:         new(dto.Port(httpsPort)),
 							CertFile:     dto.Path(certs.serverCertFile),
 							KeyFile:      dto.Path(certs.serverKeyFile),
 							ClientCAFile: dto.Path(certs.caFile),
@@ -129,14 +128,14 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 							ListenerConfig: dto.ListenerConfig{
 								Address: "127.0.0.1",
 							},
-							Port: ptr.Of(dto.Port(httpPort)),
+							Port: new(dto.Port(httpPort)),
 						},
 						ServerHTTPS: &dto.ServerConfigHTTPS{
 							ListenerConfig: dto.ListenerConfig{
 								Address:  "127.0.0.1",
 								Disabled: true,
 							},
-							Port: ptr.Of(dto.Port(httpsPort)),
+							Port: new(dto.Port(httpsPort)),
 						},
 					},
 				}
@@ -153,13 +152,13 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 								Address:  "127.0.0.1",
 								Disabled: true,
 							},
-							Port: ptr.Of(dto.Port(httpPort)),
+							Port: new(dto.Port(httpPort)),
 						},
 						ServerHTTPS: &dto.ServerConfigHTTPS{
 							ListenerConfig: dto.ListenerConfig{
 								Address: "127.0.0.1",
 							},
-							Port:         ptr.Of(dto.Port(httpsPort)),
+							Port:         new(dto.Port(httpsPort)),
 							CertFile:     dto.Path(certs.serverCertFile),
 							KeyFile:      dto.Path(certs.serverKeyFile),
 							ClientCAFile: dto.Path(certs.caFile),
@@ -180,13 +179,13 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 								Address:  "127.0.0.1",
 								Disabled: true,
 							},
-							Port: ptr.Of(dto.Port(httpPort)),
+							Port: new(dto.Port(httpPort)),
 						},
 						ServerHTTPS: &dto.ServerConfigHTTPS{
 							ListenerConfig: dto.ListenerConfig{
 								Address: "127.0.0.1",
 							},
-							Port:         ptr.Of(dto.Port(httpsPort)),
+							Port:         new(dto.Port(httpsPort)),
 							CertFile:     dto.Path(certs.serverCertFile),
 							KeyFile:      dto.Path(certs.serverKeyFile),
 							ClientCAFile: dto.Path(certs.caFile),
@@ -207,13 +206,13 @@ func TestConfiguredListenersServeFullStackAPI(t *testing.T) {
 							ListenerConfig: dto.ListenerConfig{
 								Address: "127.0.0.1",
 							},
-							Port: ptr.Of(dto.Port(httpPort)),
+							Port: new(dto.Port(httpPort)),
 						},
 						ServerHTTPS: &dto.ServerConfigHTTPS{
 							ListenerConfig: dto.ListenerConfig{
 								Address: "127.0.0.1",
 							},
-							Port:         ptr.Of(dto.Port(httpsPort)),
+							Port:         new(dto.Port(httpsPort)),
 							CertFile:     dto.Path(certs.serverCertFile),
 							KeyFile:      dto.Path(certs.serverKeyFile),
 							ClientCAFile: dto.Path(certs.caFile),
@@ -296,7 +295,7 @@ func TestConfiguredContextPathPrefixesRoutes(t *testing.T) {
 					Address:     "127.0.0.1",
 					ContextPath: "/abs",
 				},
-				Port: ptr.Of(dto.Port(httpPort)),
+				Port: new(dto.Port(httpPort)),
 			},
 		},
 	}
@@ -331,13 +330,13 @@ func TestHTTPSListenerNegotiatesHTTP2(t *testing.T) {
 					Address:  "127.0.0.1",
 					Disabled: true,
 				},
-				Port: ptr.Of(dto.Port(httpPort)),
+				Port: new(dto.Port(httpPort)),
 			},
 			ServerHTTPS: &dto.ServerConfigHTTPS{
 				ListenerConfig: dto.ListenerConfig{
 					Address: "127.0.0.1",
 				},
-				Port:     ptr.Of(dto.Port(httpsPort)),
+				Port:     new(dto.Port(httpsPort)),
 				CertFile: dto.Path(certs.serverCertFile),
 				KeyFile:  dto.Path(certs.serverKeyFile),
 			},
@@ -612,11 +611,11 @@ func TestRunFailsFastWhenListenerCannotBind(t *testing.T) {
 		ServiceConfig: dto.ServiceConfig{
 			ServerHTTP: &dto.ServerConfigHTTP{
 				ListenerConfig: dto.ListenerConfig{Address: "127.0.0.1"},
-				Port:           ptr.Of(dto.Port(httpPort)),
+				Port:           new(dto.Port(httpPort)),
 			},
 			ServerHTTPS: &dto.ServerConfigHTTPS{
 				ListenerConfig: dto.ListenerConfig{Address: "127.0.0.1"},
-				Port:           ptr.Of(dto.Port(httpsPort)),
+				Port:           new(dto.Port(httpsPort)),
 				CertFile:       dto.Path(certs.serverCertFile),
 				KeyFile:        dto.Path(certs.serverKeyFile),
 			},
@@ -636,7 +635,7 @@ func TestHTTPSStartFailsWhenPortIsOccupied(t *testing.T) {
 
 	serverConfig := &model.ServerConfigHTTPS{
 		ListenerConfig: model.ListenerConfig{Address: "127.0.0.1"},
-		Port:           ptr.Of(model.Port(httpsPort)),
+		Port:           new(model.Port(httpsPort)),
 		CertFile:       certs.serverCertFile,
 		KeyFile:        certs.serverKeyFile,
 	}
@@ -694,13 +693,13 @@ func httpsOnlyConfig(httpPort, httpsPort int, certs listenerCertificates) dto.Co
 					Address:  "127.0.0.1",
 					Disabled: true,
 				},
-				Port: ptr.Of(dto.Port(httpPort)),
+				Port: new(dto.Port(httpPort)),
 			},
 			ServerHTTPS: &dto.ServerConfigHTTPS{
 				ListenerConfig: dto.ListenerConfig{
 					Address: "127.0.0.1",
 				},
-				Port:     ptr.Of(dto.Port(httpsPort)),
+				Port:     new(dto.Port(httpsPort)),
 				CertFile: dto.Path(certs.serverCertFile),
 				KeyFile:  dto.Path(certs.serverKeyFile),
 			},

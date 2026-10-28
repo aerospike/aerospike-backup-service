@@ -11,7 +11,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -52,7 +51,7 @@ func addPolicyRequest(t *testing.T, name string) *http.Request {
 	t.Helper()
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/config/policies/"+name,
-		strings.NewReader(marshalToString(dto.BackupPolicy{Parallel: ptr.Of(2)})))
+		strings.NewReader(marshalToString(dto.BackupPolicy{Parallel: new(2)})))
 	req.SetPathValue("name", name)
 
 	return req

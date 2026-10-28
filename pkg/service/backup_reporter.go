@@ -64,8 +64,7 @@ func (r *backupReporter) Report(
 }
 
 func (r *backupReporter) logFailure(operation string, err error, logger *slog.Logger) {
-	var aerr *as.AerospikeError
-	if errors.As(err, &aerr) {
+	if aerr, ok := errors.AsType[*as.AerospikeError](err); ok {
 		logger.Error(
 			operation+" failed due to Aerospike error",
 			slog.Int("resultCode", int(aerr.ResultCode)),

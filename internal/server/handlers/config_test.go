@@ -14,7 +14,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -138,7 +137,7 @@ func TestService_ApplyConfig(t *testing.T) {
 			name: "static field changed",
 			readConfig: func() *model.Config {
 				c := model.NewConfig()
-				c.ServiceConfig.ServerHTTP = &model.ServerConfigHTTP{Port: ptr.Of(model.Port(9999))}
+				c.ServiceConfig.ServerHTTP = &model.ServerConfigHTTP{Port: new(model.Port(9999))}
 				return c
 			}(),
 			expectedStatus: http.StatusBadRequest,
