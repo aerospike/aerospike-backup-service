@@ -9,7 +9,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -24,9 +23,9 @@ func testRoutine() *model.BackupRoutine {
 			RetryPolicy: &model.RetryPolicy{
 				BaseTimeout: optional.Of(100 * time.Millisecond),
 				MaxRetries:  optional.Of(1),
-				Multiplier:  ptr.Of(1.0),
+				Multiplier:  new(1.0),
 			},
-			WithClusterConfig: ptr.Of(true),
+			WithClusterConfig: new(true),
 		},
 		IntervalCron: "@daily",
 		Timezone:     model.NewServiceLocation("", nil),
@@ -235,7 +234,7 @@ func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
 	}
 
 	routine := testRoutine()
-	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
+	routine.BackupPolicy.ConcurrentIncremental = new(true)
 	runIncrementalBackupSuccess(t, routineState, routine)
 }
 
@@ -247,7 +246,7 @@ func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
 	}
 
 	routine := testRoutine()
-	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
+	routine.BackupPolicy.ConcurrentIncremental = new(true)
 	runIncrementalBackupSuccess(t, routineState, routine)
 }
 

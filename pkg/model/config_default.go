@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -19,15 +18,15 @@ var DefaultScheduleTimezone = time.UTC
 var defaultListener = ListenerConfig{
 	Address: "0.0.0.0",
 	Rate: &RateLimiterConfig{
-		Tps:       ptr.Of(1024),
-		Size:      ptr.Of(1024),
+		Tps:       new(1024),
+		Size:      new(1024),
 		WhiteList: []string{},
 	},
 	ContextPath:  "/",
-	Timeout:      ptr.Of(5 * time.Second),
-	ReadTimeout:  ptr.Of(30 * time.Second),
-	WriteTimeout: ptr.Of(60 * time.Second),
-	IdleTimeout:  ptr.Of(120 * time.Second),
+	Timeout:      new(5 * time.Second),
+	ReadTimeout:  new(30 * time.Second),
+	WriteTimeout: new(60 * time.Second),
+	IdleTimeout:  new(120 * time.Second),
 }
 
 // defaultConfig represents default configuration values.
@@ -61,7 +60,7 @@ var defaultConfig = struct {
 	logger: LoggerConfig{
 		Level:        LogLevelInfo,
 		Format:       LogFormatPlain,
-		StdoutWriter: ptr.Of(true),
+		StdoutWriter: new(true),
 		FileWriter: &FileLoggerConfig{
 			MaxSize: 100,
 		},
@@ -70,26 +69,26 @@ var defaultConfig = struct {
 		RetryPolicy: &RetryPolicy{
 			BaseTimeout: optional.Of(1 * time.Minute),
 			MaxRetries:  optional.Of(5),
-			Multiplier:  ptr.Of(1.5),
+			Multiplier:  new(1.5),
 		},
-		Parallel:              ptr.Of(8),
-		FileLimit:             ptr.Of(250),
-		Sealed:                ptr.Of(false),
-		Compact:               ptr.Of(false),
-		WithClusterConfig:     ptr.Of(false),
-		UseCompression:        ptr.Of(false),
-		ConcurrentIncremental: ptr.Of(false),
+		Parallel:              new(8),
+		FileLimit:             new(250),
+		Sealed:                new(false),
+		Compact:               new(false),
+		WithClusterConfig:     new(false),
+		UseCompression:        new(false),
+		ConcurrentIncremental: new(false),
 		IncrMode:              IncrModeDifferential,
 	},
 	restorePolicy: RestorePolicy{
-		Parallel: ptr.Of(8),
+		Parallel: new(8),
 		RetryPolicy: &RetryPolicy{
 			BaseTimeout: optional.Of(2 * time.Second),
 			MaxRetries:  optional.Of(5),
-			Multiplier:  ptr.Of(2.0),
+			Multiplier:  new(2.0),
 		},
-		MaxAsyncBatches: ptr.Of(128),
-		BatchSize:       ptr.Of(128),
+		MaxAsyncBatches: new(128),
+		BatchSize:       new(128),
 	},
 	credentials: Credentials{
 		AuthMode: AuthModeInternal,

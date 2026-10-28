@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // The worked examples the documentation shows, built from the DTO structs so
@@ -68,7 +67,7 @@ var jsonExamples = map[string]any{
 			SourceCluster: "absDefaultCluster",
 			Storage:       valLocal,
 			IntervalCron:  "@yearly",
-			Namespaces:    ptr.Of([]dto.NamespaceName{"test-namespace"}),
+			Namespaces:    new([]dto.NamespaceName{"test-namespace"}),
 		},
 		"routine2": {
 			BackupPolicy:     "removeFilesPolicy",
@@ -76,7 +75,7 @@ var jsonExamples = map[string]any{
 			Storage:          valLocal,
 			IntervalCron:     "@monthly",
 			IncrIntervalCron: "@daily",
-			Namespaces:       ptr.Of([]dto.NamespaceName{"test-namespace"}),
+			Namespaces:       new([]dto.NamespaceName{"test-namespace"}),
 			SetList:          []string{"backupSet"},
 			BinList:          []string{"backupBin"},
 		},
@@ -114,7 +113,7 @@ var jsonExamples = map[string]any{
 		},
 		Policy: &dto.RestorePolicy{
 			BaseRestorePolicy: dto.BaseRestorePolicy{
-				NoGeneration: ptr.Of(true),
+				NoGeneration: new(true),
 			},
 		},
 		StorageConfig: dto.StorageConfig{
@@ -142,7 +141,7 @@ var jsonExamples = map[string]any{
 			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 			FinishTime:       nil,
 			PercentageDone:   50,
-			EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			EstimatedEndTime: new(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
 			Duration:         1800,
 			Metrics: &dto.Metrics{
 				RecordsPerSecond:   1000,
@@ -169,7 +168,7 @@ var jsonExamples = map[string]any{
 			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 			FinishTime:       nil,
 			PercentageDone:   50,
-			EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			EstimatedEndTime: new(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
 			Duration:         1800,
 			Metrics: &dto.Metrics{
 				RecordsPerSecond:   1000,
@@ -200,7 +199,7 @@ var jsonExamples = map[string]any{
 				FinishTime:       nil,
 				PercentageDone:   50,
 				Duration:         1800,
-				EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+				EstimatedEndTime: new(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
 				Metrics: &dto.Metrics{
 					RecordsPerSecond:   1000,
 					KilobytesPerSecond: 30000,

@@ -16,7 +16,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
@@ -46,7 +45,6 @@ func Load(
 	ctx context.Context,
 	configFile string,
 	remote bool,
-	nsValidator aerospike.NamespaceValidator,
 	operations storage.Operations,
 	tlsProber servertls.Prober,
 ) (*model.Config, Manager, error) {
@@ -54,7 +52,7 @@ func Load(
 		slog.String("file", configFile),
 		slog.Bool("remote", remote))
 
-	manager, err := newConfigManager(ctx, configFile, remote, nsValidator, operations)
+	manager, err := newConfigManager(ctx, configFile, remote, operations)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
 	}
@@ -70,11 +68,7 @@ func Load(
 	return config, manager, nil
 }
 
-func readConfig(
-	ctx context.Context,
-	reader io.Reader,
-	nsValidator aerospike.NamespaceValidator,
-) (*model.Config, error) {
+func readConfig(reader io.Reader) (*model.Config, error) {
 	configBytes, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration content: %w", err)
@@ -94,8 +88,6 @@ func readConfig(
 		return nil, fmt.Errorf("failed to convert configuration to model: %w", err)
 	}
 
-	nsValidator.Validate(ctx, modelConfig)
-
 	return modelConfig, nil
 }
 
@@ -114,7 +106,6 @@ func newConfigManager(
 	ctx context.Context,
 	configFile string,
 	remote bool,
-	nsValidator aerospike.NamespaceValidator,
 	operations storage.Operations,
 ) (Manager, error) {
 	if remote {
@@ -122,14 +113,14 @@ func newConfigManager(
 		if err != nil {
 			return nil, fmt.Errorf("failed to read remote storage configuration: %w", err)
 		}
-		return newStorageManager(s, nsValidator, operations), nil
+		return newStorageManager(s, operations), nil
 	}
 
 	if isHTTPPath(configFile) {
-		return newHTTPConfigurationManager(configFile, nsValidator), nil
+		return newHTTPConfigurationManager(configFile), nil
 	}
 
-	return newFileConfigurationManager(configFile, nsValidator), nil
+	return newFileConfigurationManager(configFile), nil
 }
 
 func readStorage(ctx context.Context, configURI string) (model.Storage, error) {
@@ -144,6 +135,9 @@ func readStorage(ctx context.Context, configURI string) (model.Storage, error) {
 	}
 
 	if err = configStorage.Validate(); err != nil {
+		return nil, fmt.Errorf("validate storage configuration error: %w", err)
+	}
+	if err = dto.ValidateNoRedacted(configStorage); err != nil {
 		return nil, fmt.Errorf("validate storage configuration error: %w", err)
 	}
 

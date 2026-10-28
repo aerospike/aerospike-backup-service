@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -108,7 +107,7 @@ func TestStartControllerRelease_TracksReservationCountByToken(t *testing.T) {
 
 	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
 	routine := testRoutine()
-	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
+	routine.BackupPolicy.ConcurrentIncremental = new(true)
 	registry := NewMockBackupStateRegistry(ctrl)
 	registry.EXPECT().GetRoutineState(gomock.Any()).Return(
 		model.RoutineState{LastRunTime: model.NewFullBackupTime(now.Add(-24 * time.Hour))},

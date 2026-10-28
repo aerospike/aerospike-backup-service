@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -358,13 +357,13 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 		{
 			name:          "Scenario 2: Non-empty namespace, unique=false -> Chronological order",
 			recordCount:   100,
-			unique:        ptr.Of(false),
+			unique:        new(false),
 			expectedOrder: []string{"full", "incr1", "incr2"},
 		},
 		{
 			name:          "Scenario 3: Non-empty namespace, unique=true -> Reverse order",
 			recordCount:   100,
-			unique:        ptr.Of(true),
+			unique:        new(true),
 			expectedOrder: []string{"incr2", "incr1", "full"},
 		},
 	}

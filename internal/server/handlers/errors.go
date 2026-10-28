@@ -40,25 +40,50 @@ func errBadRequest(err error) error {
 	return newBadRequestError(fmt.Errorf("invalid request: %w", err))
 }
 
+// notPersistedError marks a valid configuration change that could not be written to the
+// configuration source, such as a read-only file or one served over HTTP(S). The change was not
+// applied either, so the running configuration is the one the source still holds.
+type notPersistedError struct {
+	Err error
+}
+
+func (e *notPersistedError) Error() string {
+	return e.Err.Error()
+}
+
+// Unwrap exposes the cause, so errors.Is/As can see through the wrapper.
+func (e *notPersistedError) Unwrap() error {
+	return e.Err
+}
+
+func errNotPersisted(err error) error {
+	return &notPersistedError{Err: fmt.Errorf("failed to write configuration: %w", err)}
+}
+
 // httpError is the one place an error becomes a status code.
 func httpError(w http.ResponseWriter, err error) {
-	var (
-		badRequest  *badRequestError
-		maxBytesErr *http.MaxBytesError
-	)
-
-	switch {
-	case errors.As(err, &maxBytesErr):
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
-	case errors.Is(err, model.ErrNotFound):
-		http.Error(w, err.Error(), http.StatusNotFound)
-	case errors.Is(err, model.ErrAlreadyExists), errors.Is(err, model.ErrInUse):
-		http.Error(w, err.Error(), http.StatusConflict)
-	case errors.As(err, &badRequest):
-		http.Error(w, badRequest.Error(), http.StatusBadRequest)
-	default:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	if errors.Is(err, model.ErrNotFound) {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if errors.Is(err, model.ErrAlreadyExists) || errors.Is(err, model.ErrInUse) {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	}
+	if badRequest, ok := errors.AsType[*badRequestError](err); ok {
+		http.Error(w, badRequest.Error(), http.StatusBadRequest)
+		return
+	}
+	if notPersisted, ok := errors.AsType[*notPersistedError](err); ok {
+		http.Error(w, notPersisted.Error(), http.StatusServiceUnavailable)
+		return
+	}
+
+	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
 // writeRedactedJSON marshals v to JSON with secret fields redacted and writes it to w.

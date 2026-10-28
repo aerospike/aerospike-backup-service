@@ -79,7 +79,7 @@ Use UTC to avoid DST-driven variations in the elapsed time between runs.
 <!-- tag DefaultConfig -->
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.6.1/docs/config.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.7.0/docs/config.schema.json
 ---
 aerospike-clusters:
   abs-cluster: # <--- Custom cluster name
