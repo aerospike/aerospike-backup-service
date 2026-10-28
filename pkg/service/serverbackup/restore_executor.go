@@ -21,8 +21,10 @@ import (
 // maxChainLength is the most backups the server restores in one job (AS_RESTORE_CHAIN_MAX_LINKS).
 const maxChainLength = 32
 
-// restoreExecutor asks the server to run a fuzzy restore of server backups, identified by their
-// job ids: a single backup, or a full backup and the incremental backups that follow it.
+// restoreExecutor asks the server to restore server backups, identified by their job ids. A
+// single backup is restored fuzzy, into the live namespace. A full backup and the incremental
+// backups that follow it are restored strict (cold): the server takes the namespace from
+// clients, drops its data, and hydrates it from the chain.
 type restoreExecutor struct {
 	backupReader service.BackupReader
 }
@@ -76,9 +78,17 @@ func (r *restoreExecutor) start(
 	}
 	common.SetList = strings.Join(request.Policy.SetList, ",")
 
-	// A limit the policy leaves unset is zero, which the request omits: the server's default applies.
 	jobID := newJobID(time.Now())
 	infoClient := client.InfoClient()
+	policy := infomodels.RestorePolicyFuzzy
+	if len(backupIDs) > 1 {
+		policy = infomodels.RestorePolicyStrict
+		if err := prepareColdRestore(ctx, infoClient, namespace, jobID); err != nil {
+			return nil, err
+		}
+	}
+
+	// A limit the policy leaves unset is zero, which the request omits: the server's default applies.
 	err = infoClient.StartRestore(ctx, &infomodels.RequestRestore{
 		RequestCommon:        common,
 		JobID:                jobID,
@@ -86,13 +96,54 @@ func (r *restoreExecutor) start(
 		RestoreWorkerThreads: ptr.ValueOrZero(request.Policy.Parallel),
 		RestoreRPS:           ptr.ValueOrZero(request.Policy.Tps),
 		ExtraTTL:             int(ptr.ValueOrZero(request.Policy.ExtraTTL)),
-		Fuzzy:                &infomodels.RequestFuzzyRestore{},
+		Policy:               policy,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to start server restore: %w", err)
 	}
 
 	return newRestoreHandler(infoClient, namespace, jobID), nil
+}
+
+// prepareColdRestore takes namespace from clients for the cold restore jobID and waits until
+// it is empty on every node, clearing the storage of the nodes that still hold data. A failed
+// preparation leaves the namespace gated until the job is released with restore-open.
+func prepareColdRestore(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
+	err := infoClient.PrepareRestore(ctx, &infomodels.RequestPrepareRestore{Namespace: namespace, JobID: jobID})
+	if err != nil {
+		return fmt.Errorf("failed to prepare server restore: %w", err)
+	}
+
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+
+		status, err := infoClient.GetRestoreStatus(ctx, namespace, jobID)
+		if errors.Is(err, asinfo.ErrNotFound) {
+			continue // the job is not visible on the cluster yet.
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get server restore status: %w", err)
+		}
+
+		switch {
+		case status.NsState == infomodels.NamespaceStateReady:
+			return nil
+		case status.NsState == infomodels.NamespaceStateFailed:
+			return fmt.Errorf("server restore %s failed to prepare namespace %s: %s", jobID, namespace, status.ErrorReason)
+		case status.Clear == infomodels.ClearStateRequired:
+			if err := infoClient.ClearRestoreStorage(ctx, namespace, jobID); err != nil {
+				return fmt.Errorf("failed to clear namespace %s for server restore %s: %w", namespace, jobID, err)
+			}
+		default:
+		}
+	}
 }
 
 // destinationNamespace returns the namespace to restore into: the mapped destination, or

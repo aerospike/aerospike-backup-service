@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -71,21 +70,14 @@ func (c *catalog) getRoutineBackups(ctx context.Context, filter *service.Routine
 	return matching, nil
 }
 
-// getPathBackup reads the backup whose job id is the filter's path. The lister applies its
-// prefix to listing only (BKRS-474), so the backup is addressed by its key under the storage
-// path.
+// getPathBackup reads the backup whose job id is the filter's path.
 func (c *catalog) getPathBackup(ctx context.Context, filter *service.PathFilter) ([]model.BackupDetails, error) {
-	s3Storage, err := toS3Storage(filter.Storage())
+	backupLister, err := c.newLister(ctx, filter.Storage())
 	if err != nil {
 		return nil, err
 	}
 
-	backupLister, err := c.newLister(ctx, s3Storage)
-	if err != nil {
-		return nil, err
-	}
-
-	metadata, err := backupLister.GetMetadata(ctx, path.Join(s3Storage.Path, filter.Path()))
+	metadata, err := backupLister.GetMetadata(ctx, filter.Path())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read server backup metadata: %w", err)
 	}
@@ -107,7 +99,7 @@ func (c *catalog) listBackups(ctx context.Context, storage model.Storage) ([]mod
 
 	backups := make([]model.BackupDetails, 0, len(all))
 	for _, metadata := range all {
-		if metadata.Status == listermodels.MetadataStatusComplete {
+		if metadata.Status == listermodels.BackupStatusComplete {
 			backups = append(backups, toBackupDetails(metadata, storage))
 		}
 	}
@@ -136,8 +128,8 @@ func (c *catalog) newLister(ctx context.Context, storage model.Storage) (*lister
 // so that restore does not take the backup for an empty one.
 func toBackupDetails(metadata listermodels.Metadata, storage model.Storage) model.BackupDetails {
 	var from time.Time
-	if metadata.ModifiedAfter != 0 {
-		from = time.Unix(metadata.ModifiedAfter, 0).UTC()
+	if metadata.ModifiedAfterUnixS != 0 {
+		from = time.Unix(metadata.ModifiedAfterUnixS, 0).UTC()
 	}
 
 	return model.NewBackupDetails(

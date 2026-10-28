@@ -9,7 +9,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.8.2
 	github.com/aerospike/aerospike-client-go/v8 v8.9.0
 	github.com/aerospike/aerospike-management-lib v1.12.0
-	github.com/aerospike/backup-go v0.11.1-0.20261020113656-4b88c0f90d4a
+	github.com/aerospike/backup-go v0.11.1-0.20261025150749-fc4209b72c02
 	github.com/aws/aws-sdk-go-v2 v1.47.4
 	github.com/aws/aws-sdk-go-v2/config v1.33.10
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.10
@@ -159,7 +159,7 @@ require (
 	github.com/swaggo/files/v2 v2.0.2 // indirect
 	github.com/tklauser/go-sysconf v0.4.0 // indirect
 	github.com/tklauser/numcpus v0.12.0 // indirect
-	github.com/vektra/mockery/v3 v3.8.0 // indirect
+	github.com/vektra/mockery/v3 v3.8.1 // indirect
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
