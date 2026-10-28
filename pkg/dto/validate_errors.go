@@ -100,3 +100,7 @@ func errValidationInvalidPath(field string, path Path, err error) error {
 
 	return fmt.Errorf("%w: %s %q: %w", errInvalidPath, field, path, err)
 }
+
+func errValidationPartitionList(partitionList string, err error) error {
+	return fmt.Errorf("%w: %s %q: %w", errInvalidValue, partitionListField, partitionList, err)
+}

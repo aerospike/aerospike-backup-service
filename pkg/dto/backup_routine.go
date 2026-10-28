@@ -1,14 +1,16 @@
 package dto
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
-	"strconv"
+	"slices"
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
+	"github.com/aerospike/backup-go"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -56,10 +58,13 @@ type BackupRoutine struct {
 	RackList []int `yaml:"rack-list,omitempty" json:"rack-list,omitempty" extensions:"x-nullable"`
 
 	// PartitionList defines the list of partitions to include in the backup.
-	// The format supports individual partitions or ranges.
+	// The format supports individual partitions, ranges or record digests.
 	// - A range is specified as "<start>-<count>" (e.g., "100-50" backs up 50 partitions starting from 100).
 	// - A single partition is specified as a number (e.g., "0").
+	// - A base64 record digest selects the partition holding that record.
 	// Multiple entries can be comma-separated: e.g., "0,100,200,300,400,500".
+	// Entries must not contain whitespace or select a partition more than once,
+	// and there must be no more entries than the backup policy's parallel.
 	// By default, all partitions (0 to 4095) are backed up.
 	// Mutually exclusive with node-list and rack-list in this routine,
 	// and also mutually exclusive with the cluster's prefer-racks setting.
@@ -142,7 +147,7 @@ func (r *BackupRoutine) Validate() error {
 		}
 	}
 	if err := validatePartitionList(r.PartitionList); err != nil {
-		return fmt.Errorf("invalid partition list: %q", r.PartitionList)
+		return errValidationPartitionList(r.PartitionList, err)
 	}
 	if err := validateRoutineSelectorExclusivity(r.PartitionList, r.RackList, r.NodeList); err != nil {
 		return err
@@ -202,59 +207,51 @@ func validateFilterExpression(filterExpression string, setList []string) error {
 	return nil
 }
 
+// validatePartitionList accepts the entries backup-go parses for the backup, as long as they stay
+// within the partition count and do not select a partition twice.
 func validatePartitionList(partitionList string) error {
 	if partitionList == "" {
-		return nil // empty list is valid
-	}
-
-	for entry := range strings.SplitSeq(partitionList, ",") {
-		entry = strings.TrimSpace(entry)
-		if entry == "" {
-			return errors.New("empty entry in partition list")
-		}
-
-		if err := validatePartitionEntry(entry); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func validatePartitionEntry(entry string) error {
-	if strings.Contains(entry, "-") {
-		return validatePartitionRange(entry)
-	}
-
-	if isValidPartitionID(entry) {
 		return nil
 	}
 
-	return fmt.Errorf("invalid partition entry: %q", entry)
-}
-
-func validatePartitionRange(entry string) error {
-	parts := strings.SplitN(entry, "-", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid range format: %q", entry)
+	entries := strings.Split(partitionList, ",")
+	filters := make([]*as.PartitionFilter, len(entries))
+	for i, entry := range entries {
+		// A digest selects the partition holding it, which does not depend on the namespace.
+		f, err := backup.ParsePartitionFilterString("", entry)
+		if err != nil {
+			return fmt.Errorf("%q is not a partition ID, <begin>-<count> range or digest", entry)
+		}
+		if f.Begin+f.Count > backup.MaxPartitions {
+			return fmt.Errorf("%q exceeds the last partition %d", entry, backup.MaxPartitions-1)
+		}
+		filters[i] = f
 	}
 
-	start, err := strconv.Atoi(parts[0])
-	if err != nil || start < 0 || start > 4095 {
-		return fmt.Errorf("invalid start in range %q: must be int between 0 and 4095", entry)
-	}
-
-	count, err := strconv.Atoi(parts[1])
-	if err != nil || count < 1 || start+count > 4096 {
-		return fmt.Errorf("invalid count in range %q: must be >=1 and start+count <= 4096", entry)
+	slices.SortFunc(filters, func(a, b *as.PartitionFilter) int { return cmp.Compare(a.Begin, b.Begin) })
+	for i := 1; i < len(filters); i++ {
+		if filters[i].Begin < filters[i-1].Begin+filters[i-1].Count {
+			return fmt.Errorf("partition %d is selected more than once", filters[i].Begin)
+		}
 	}
 
 	return nil
 }
 
-func isValidPartitionID(entry string) bool {
-	id, err := strconv.Atoi(entry)
-	return err == nil && id >= 0 && id <= 4095
+// validatePartitionListParallel rejects more entries than scan workers: backup-go scans each entry
+// in a worker of its own.
+func validatePartitionListParallel(partitionList string, policy *model.BackupPolicy) error {
+	if partitionList == "" {
+		return nil
+	}
+
+	entries := strings.Count(partitionList, ",") + 1
+	if parallel := policy.GetParallelOrDefault(); entries > parallel {
+		return errValidationPartitionList(partitionList,
+			fmt.Errorf("%d entries exceed the backup policy parallel %d", entries, parallel))
+	}
+
+	return nil
 }
 
 func (r *BackupRoutine) ToModel(
@@ -273,12 +270,14 @@ func (r *BackupRoutine) ToModel(
 	}
 
 	// Enforce mutual exclusivity between routine-level selectors and cluster-level prefer-racks
-
 	if err := r.validateRacks(cluster); err != nil {
 		return nil, err
 	}
 
 	if err := ValidateBackupPolicyParallelism(policy, cluster); err != nil {
+		return nil, err
+	}
+	if err := validatePartitionListParallel(r.PartitionList, policy); err != nil {
 		return nil, err
 	}
 

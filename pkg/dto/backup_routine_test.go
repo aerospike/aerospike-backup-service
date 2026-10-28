@@ -9,44 +9,98 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidSinglePartitionID(t *testing.T) {
-	err := validatePartitionList("0,100,4095")
-	require.NoError(t, err)
+func TestValidatePartitionList(t *testing.T) {
+	valid := []string{
+		"",
+		"0,100,4095",
+		"0-1,100-50,4095-1",
+		"0-4096",
+		"0-100,100-100",
+		"200,0-100,100",
+		"EjRWeJq83vEjRRI0VniavN7xI0U=",
+	}
+	for _, list := range valid {
+		t.Run(list, func(t *testing.T) {
+			require.NoError(t, validatePartitionList(list))
+		})
+	}
+
+	const notAnEntry = "is not a partition ID, <begin>-<count> range or digest"
+	tests := []struct {
+		name    string
+		list    string
+		wantErr string
+	}{
+		{name: "space after comma", list: "0, 100", wantErr: `" 100" ` + notAnEntry},
+		{name: "space inside a range", list: "0 -10", wantErr: `"0 -10" ` + notAnEntry},
+		{name: "empty entry", list: "100,,200", wantErr: `"" ` + notAnEntry},
+		{name: "trailing comma", list: "100,", wantErr: `"" ` + notAnEntry},
+		{name: "range with zero count", list: "100-0", wantErr: notAnEntry},
+		{name: "double dash", list: "100--200", wantErr: notAnEntry},
+		{name: "id out of range", list: "4096", wantErr: `"4096" exceeds the last partition 4095`},
+		{name: "range out of range", list: "4095-2", wantErr: `"4095-2" exceeds the last partition 4095`},
+		{name: "duplicate id", list: "5,5", wantErr: "partition 5 is selected more than once"},
+		{name: "id inside a range", list: "0-10,5", wantErr: "partition 5 is selected more than once"},
+		{name: "overlapping ranges", list: "100-50,0-101", wantErr: "partition 100 is selected more than once"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.ErrorContains(t, validatePartitionList(tt.list), tt.wantErr)
+		})
+	}
 }
 
-func TestInvalidPartitionID_OutOfRange(t *testing.T) {
-	err := validatePartitionList("4096")
-	require.Error(t, err)
+func TestBackupRoutine_Validate_PartitionList(t *testing.T) {
+	routine := &BackupRoutine{
+		IntervalCron:  "@daily",
+		SourceCluster: "cluster",
+		Storage:       "storage",
+		Namespaces:    &[]NamespaceName{"test"},
+		PartitionList: "0, 100",
+	}
+
+	err := routine.Validate()
+
+	require.ErrorIs(t, err, errInvalidValue)
+	assert.ErrorContains(t, err, `partition-list "0, 100": " 100" is not a partition ID`)
 }
 
-func TestValidPartitionRange(t *testing.T) {
-	err := validatePartitionList("0-1,100-50,4095-1")
-	require.NoError(t, err)
-}
+func TestBackupRoutine_ToModel_PartitionListParallel(t *testing.T) {
+	tests := []struct {
+		name     string
+		parallel int
+		wantErr  string
+	}{
+		{name: "one entry per worker", parallel: 3},
+		{name: "more entries than workers", parallel: 2, wantErr: "3 entries exceed the backup policy parallel 2"},
+	}
 
-func TestInvalidPartitionRange_StartTooHigh(t *testing.T) {
-	err := validatePartitionList("4095-2")
-	require.Error(t, err)
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			routine := &BackupRoutine{
+				BackupPolicy:  "policy",
+				SourceCluster: "cluster",
+				Storage:       "storage",
+				IntervalCron:  "@daily",
+				Namespaces:    &[]NamespaceName{"test"},
+				PartitionList: "0,1,2",
+			}
+			config := &model.BackupConfig{
+				BackupPolicies:    map[string]*model.BackupPolicy{"policy": {Parallel: &tt.parallel}},
+				AerospikeClusters: map[string]*model.AerospikeCluster{"cluster": {}},
+				Storage:           map[string]model.Storage{"storage": &model.LocalStorage{}},
+			}
 
-func TestInvalidPartitionRange_CountZero(t *testing.T) {
-	err := validatePartitionList("100-0")
-	require.Error(t, err)
-}
+			_, err := routine.ToModel(config, "r", model.NewServiceLocation("", nil))
 
-func TestInvalidPartitionRange_BadFormat(t *testing.T) {
-	err := validatePartitionList("100--200")
-	require.Error(t, err)
-}
-
-func TestEmptyString(t *testing.T) {
-	err := validatePartitionList("")
-	require.NoError(t, err)
-}
-
-func TestEmptyEntry(t *testing.T) {
-	err := validatePartitionList("100,,200")
-	require.Error(t, err)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, errInvalidValue)
+			assert.ErrorContains(t, err, tt.wantErr)
+		})
+	}
 }
 
 func TestBackupRoutine_ToModel(t *testing.T) {

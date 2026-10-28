@@ -103,6 +103,10 @@ and runs the `.deb`/`.rpm` installation as an unprivileged service account under
   present must set `mode` explicitly; A `compression` block without `mode` is now rejected at startup.
   For compression, `ZSTD` requires `level` (-1 to 22) and `NONE` must not set it. To disable compression or
   encryption, either set `mode: NONE` or omit the block.
+- **Stricter routine `partition-list`** — a list the backup could not use is now rejected when the configuration is
+  loaded or updated, instead of failing every backup of the routine. A list that contains whitespace (`"0, 100"`),
+  selects a partition twice (`"0-10,5"`) or has more entries than the backup policy's `parallel` stops the service
+  from starting. Remove the spaces, merge the overlapping entries, or raise `parallel`.
 
 #### Improvements
 

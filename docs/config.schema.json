@@ -533,7 +533,7 @@
             "nullable": true
           },
           "partition-list": {
-            "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"<start>-<count>\" (e.g., \"100-50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nMutually exclusive with node-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.",
+            "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions, ranges or record digests.\n- A range is specified as \"<start>-<count>\" (e.g., \"100-50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\n- A base64 record digest selects the partition holding that record.\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nEntries must not contain whitespace or select a partition more than once,\nand there must be no more entries than the backup policy's parallel.\nBy default, all partitions (0 to 4095) are backed up.\nMutually exclusive with node-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.",
             "type": "string",
             "nullable": true
           },

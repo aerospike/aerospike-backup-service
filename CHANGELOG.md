@@ -29,6 +29,8 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
 - **Breaking:** stricter configuration validation: entity names must be a single path segment,
   paths must be clean, secret references are checked at load, and `compression`/`encryption`
   policies must set `mode`.
+- **Breaking:** a routine `partition-list` with whitespace, overlapping entries, or more entries
+  than the backup policy's `parallel` is rejected at load instead of failing every backup.
 - **Breaking:** an empty rate-limiter `white-list` limits every client; use `0.0.0.0/0` to exempt all.
 - A failed namespace is retried in its own attempt folder and no longer deletes other namespaces'
   data; permanent failures are not retried, and a namespace that cannot start fails the run.
