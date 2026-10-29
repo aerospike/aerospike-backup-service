@@ -33,7 +33,50 @@ Existing backup or restore jobs continue using the credentials that were resolve
 
 ## Configuration
 
-Secret Agent endpoints are configured under `secret-agents`. Clusters, storage backends, and backup routines can reference a configured Secret Agent using `secret-agent-name` or define an inline `secret-agent` block.
+Secret Agent endpoints are configured under `secret-agents`. How an entity selects one depends on the entity:
+
+* **Storage** ([S3](readme/dto/dto.s3storage.md), [Azure](readme/dto/dto.azurestorage.md), [GCP](readme/dto/dto.gcpstorage.md))
+  and **HTTPS listener** ([`service.https`](readme/dto/dto.serverconfighttps.md)): `secret-agent-name` referencing an
+  entry under `secret-agents`, or an inline `secret-agent` block. The two are mutually exclusive.
+* **Cluster**: the same two keys, placed under [`credentials`](readme/dto/dto.credentials.md), not on the cluster itself.
+* **Backup routine**: [`secret-agent`](readme/dto/dto.backuproutine.md) holding the name of an entry under
+  `secret-agents`. A routine accepts neither `secret-agent-name` nor an inline block. The routine's agent resolves the
+  encryption policy's `key-secret`.
+
+```yaml
+secret-agents:
+  my-agent:
+    address: localhost
+    port: 5000
+    connection-type: TCP
+
+aerospike-clusters:
+  my-cluster:
+    seed-nodes:
+      - host-name: localhost
+        port: 3000
+    credentials:
+      user: backup
+      password: secrets:abs:cluster-password
+      secret-agent-name: my-agent
+
+storage:
+  my-s3:
+    s3-storage:
+      bucket: my-bucket
+      s3-region: eu-central-1
+      access-key-id: secrets:abs:s3-access-key-id
+      secret-access-key: secrets:abs:s3-secret-access-key
+      secret-agent-name: my-agent
+
+backup-routines:
+  my-routine:
+    source-cluster: my-cluster
+    storage: my-s3
+    interval-cron: "0 0 0 * * ? *"
+    namespaces: [ "test" ]
+    secret-agent: my-agent
+```
 
 For configuration examples and details, see the [Configuration guide](configuration.md) 
 and the [Aerospike Secret Agent documentation](https://aerospike.com/docs/tools/secret-agent).
