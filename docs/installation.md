@@ -134,6 +134,6 @@ IMAGE_TAG="<tag>" make docker-build
 ### Build Linux packages
 
 Run `make packages`.
-This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`linux/arm64`) with respective `sha256`
-checksum file in the `build/target` directory.
+This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`linux/arm64`) in the `build/target`
+directory. Run `make checksums` afterwards to write a `.sha256` file next to each package.
 See the quick [guide](../build/package/README.md) on how to get started with the Linux packages.
