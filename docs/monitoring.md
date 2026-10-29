@@ -48,9 +48,14 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
 
   `sum(aerospike_backup_service_backup_events_total{outcome="canceled"})`
 
-- ⏰ Time since last backup for routine:
+- ⏰ Time since the last successful backup of any type for a routine. The metric has one series per `type` (`full` and
+  `incremental`), so take the most recent:
 
-  `time() - aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1"}`
+  `time() - max by (routine) (aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1"})`
+
+- ⏰ Time since the last successful full backup for a routine:
+
+  `time() - aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1", type="full"}`
 
 **Example Prometheus Alert**
 
@@ -66,11 +71,14 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
     description: "At least one backup job has failed in the last 15 minutes."
 ```
 
-- Alert if no successful backup in the last 24h for a specific routine (e.g., daily-ns1):
+- Alert if no successful backup of any type in the last 24h for a specific routine (e.g., daily-ns1). Without
+  `max by (routine)` the rule would evaluate the `full` and `incremental` series separately and fire on whichever is
+  older, for example on the full backup of a routine with weekly full and hourly incremental backups. To alert on full
+  backups only, select `type="full"` and set the threshold to the full backup interval.
 
 ```yaml
 - alert: BackupTooOld
-  expr: (time() - aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1"}) > 86400
+  expr: (time() - max by (routine) (aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1"})) > 86400
   labels:
     severity: critical
   annotations:
