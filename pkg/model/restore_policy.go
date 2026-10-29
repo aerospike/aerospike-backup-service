@@ -72,6 +72,12 @@ func (p *RestorePolicy) GetRetryPolicyOrDefault() *RetryPolicy {
 	return defaultConfig.restorePolicy.RetryPolicy
 }
 
+// IsUniqueOrDefault reports whether the restore creates records only (CREATE_ONLY), leaving
+// existing ones as they are. Off by default.
+func (p *RestorePolicy) IsUniqueOrDefault() bool {
+	return p.Unique != nil && *p.Unique
+}
+
 func (p *RestorePolicy) GetParallelOrDefault() int {
 	if p.Parallel != nil {
 		return *p.Parallel

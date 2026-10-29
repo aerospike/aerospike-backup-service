@@ -31,23 +31,32 @@ func (bd BackupDetails) IsEmpty() bool {
 	return bd.FileCount == 0
 }
 
+// BackupType returns incremental for a backup with a lower time bound, full otherwise.
+func (m BackupMetadata) BackupType() BackupType {
+	if m.From.IsZero() {
+		return BackupTypeFull
+	}
+
+	return BackupTypeIncremental
+}
+
 // BackupMetadata is an internal container for storing backup metadata.
 // It is stored as a separate metadata file within each backup.
 type BackupMetadata struct {
 	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created" json:"created"`
-	// The time the backup operation completed.
+	// The time the backup operation completed. Unknown for server-side backups.
 	Finished time.Time `yaml:"finished" json:"finished"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups).
 	// It's 0 for full backups.
 	From time.Time `yaml:"from" json:"from"`
 	// The namespace of a backup.
 	Namespace string `yaml:"namespace" json:"namespace"`
-	// The total number of records backed up.
+	// The total number of records backed up. Unknown for server-side backups.
 	RecordCount uint64 `yaml:"record-count" json:"record-count"`
-	// The size of the backup in bytes.
+	// The size of the backup in bytes. Unknown for server-side backups.
 	ByteCount uint64 `yaml:"byte-count" json:"byte-count"`
-	// The number of backup files created.
+	// The number of backup files created. Unknown for server-side backups.
 	FileCount uint64 `yaml:"file-count" json:"file-count"`
 	// The number of secondary indexes backed up.
 	SecondaryIndexCount uint64 `yaml:"secondary-index-count" json:"secondary-index-count"`

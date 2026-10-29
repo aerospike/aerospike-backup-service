@@ -62,8 +62,8 @@ github.com/aerospike/aerospike-client-go/v8 v8.9.0 h1:SKcGzskEaq1ewOB8dX233hDVp/
 github.com/aerospike/aerospike-client-go/v8 v8.9.0/go.mod h1:c/IWx9hALIo6sD4aXP/9C5zMp937vJdskNytuVWdqvc=
 github.com/aerospike/aerospike-management-lib v1.12.0 h1:KjZ40EDw7nTZcTzlX1RzjPSjEzPTFFAf9aWFZynFP8g=
 github.com/aerospike/aerospike-management-lib v1.12.0/go.mod h1:uti1Rz/ZRolcVZulKsi9AqQCqBl241M7w/ps87tNab0=
-github.com/aerospike/backup-go v0.12.0 h1:LNyZU2P0lsCf9M7y4temS7EIGp2rymT6mlk5JOiU760=
-github.com/aerospike/backup-go v0.12.0/go.mod h1:DOpUWiYQSEMgRUCLrQbUqciJnxjBV0DOGpA+vC3feqw=
+github.com/aerospike/backup-go v0.11.1-0.20261025150749-fc4209b72c02 h1:MZDYuKm5XTW7/xDgsQOOAg3wGWRzBTBw9zhq8X02YvE=
+github.com/aerospike/backup-go v0.11.1-0.20261025150749-fc4209b72c02/go.mod h1:HBho2LcuMC+suNRR3LNDel1kSneHL0QxDrR9dVB/Wzw=
 github.com/andybalholm/brotli v1.2.2 h1:HzTuoo2ErYQqf5qvcJInB8uvqSVxRttzkFexPWtnceM=
 github.com/andybalholm/brotli v1.2.2/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/apache/arrow-go/v18 v18.7.0 h1:Vw/i+cJyebUofT7JlqFpe65LrmwxULn166jjwStM4HY=
@@ -353,8 +353,8 @@ github.com/tklauser/go-sysconf v0.4.0 h1:7H0uAN+7RkwWRaxhYXDLqa5V3LPrJeV8wmD9dRU
 github.com/tklauser/go-sysconf v0.4.0/go.mod h1:8mTNWyog7H+MpKijp4VmKJAd2bbYQ2zuUwkYRbUArPI=
 github.com/tklauser/numcpus v0.12.0 h1:NR85qdvHA9pFse3x3weVZ0r0ST8R6l5RHbZrlRaqob4=
 github.com/tklauser/numcpus v0.12.0/go.mod h1:ABHeXzJnr/qqwguhClkZKT1/8VABcYrsyUiUGobwWJg=
-github.com/vektra/mockery/v3 v3.8.0 h1:Tklqcx844iV8GtYziqJXam1a8RdcKip4UErMa66Nxps=
-github.com/vektra/mockery/v3 v3.8.0/go.mod h1:K+L72OoFVizA9eWtO4L+kU65oylgreiJEJ57Gu8g9Ew=
+github.com/vektra/mockery/v3 v3.8.1 h1:TDDa46ooae8DWWR0uCPNyqqDL3uGK0uRvNae0/uotJ8=
+github.com/vektra/mockery/v3 v3.8.1/go.mod h1:1+hDVtNiQfxGv9YhpYmQ1q1Drf7z4w1rUvsAvwe2aIY=
 github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad h1:W0LEBv82YCGEtcmPA3uNZBI33/qF//HAAs3MawDjRa0=
 github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad/go.mod h1:Hy8o65+MXnS6EwGElrSRjUzQDLXreJlzYLlWiHtt8hM=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=

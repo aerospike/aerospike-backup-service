@@ -48,8 +48,8 @@ func TestRoutineBackupRunner_Run_Success(t *testing.T) {
 
 	op, err := runner.Run(t.Context(), routine, model.BackupRunSpec{Type: model.BackupTypeFull}, slog.Default())
 	require.NoError(t, err)
-	require.NotNil(t, op)
-	assert.Len(t, op.handlers, 2)
+	require.IsType(t, &BackupNamespacesOperation{}, op)
+	assert.Len(t, op.(*BackupNamespacesOperation).handlers, 2)
 }
 
 func TestRoutineBackupRunner_Run_ResolverError(t *testing.T) {

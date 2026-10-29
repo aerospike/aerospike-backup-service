@@ -11,7 +11,7 @@ import (
 // TestBackupWithFilterExpression backs up with a routine filter-exp of age > 25 and
 // checks that only the two matching records out of five are in the backup.
 func (s *BackupSuite) TestBackupWithFilterExpression() {
-	filterExpression, err := as.ExpGreater(as.ExpIntBin("age"), as.ExpIntVal(25)).Base64()
+	filterExpression, err := as.ExpGreater(as.ExpIntBin(ageBin), as.ExpIntVal(25)).Base64()
 	s.Require().NoError(err)
 
 	e := s.setupEnv(func(c *dto.Config) {

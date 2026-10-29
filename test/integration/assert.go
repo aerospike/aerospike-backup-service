@@ -90,15 +90,21 @@ func (s *Suite) assertRecordsRestored(ages []int) {
 
 func (s *Suite) assertRecordsRestoredWith(client *as.Client, ages []int) {
 	s.T().Helper()
+	s.assertRecordsIn(client, namespace, ages)
+}
+
+// assertRecordsIn checks that the records seedRecordsIn(ns, ages) wrote are in ns.
+func (s *Suite) assertRecordsIn(client *as.Client, ns string, ages []int) {
+	s.T().Helper()
 
 	for i, age := range ages {
-		key, err := as.NewKey(namespace, setName, i)
+		key, err := as.NewKey(ns, setName, i)
 		s.Require().NoError(err)
 
 		record, err := client.Get(nil, key)
 		s.Require().NoError(err)
 		s.Require().NotNil(record)
-		s.Equal(age, record.Bins["age"])
+		s.Equal(age, record.Bins[ageBin])
 	}
 }
 
