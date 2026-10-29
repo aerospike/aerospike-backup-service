@@ -40,7 +40,7 @@ Secret Agent endpoints are configured under `secret-agents`. How an entity selec
   entry under `secret-agents`, or an inline `secret-agent` block. The two are mutually exclusive.
 * **Cluster**: the same two keys, placed under [`credentials`](readme/dto/dto.credentials.md), not on the cluster itself.
 * **Backup routine**: [`secret-agent`](readme/dto/dto.backuproutine.md) holding the name of an entry under
-  `secret-agents`.The routine's agent resolves the encryption policy's `key-secret`.
+  `secret-agents`. The routine's agent resolves the encryption policy's `key-secret`.
 
 ```yaml
 secret-agents:
