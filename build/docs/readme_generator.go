@@ -38,6 +38,7 @@ var targetFiles = []string{
 	"docs/migration.md",
 	"docs/security.md",
 	"docs/development.md",
+	"build/package/README.md",
 	integrationTestsDir + "/README.md",
 }
 
@@ -117,6 +118,7 @@ func newRenderers(endpoints map[string]endpoint, metricsTable string) map[string
 	}))
 	add("generator", "GoVersion", noArgs("GoVersion", renderGoVersion))
 	add("generator", "CLIHelp", noArgs("CLIHelp", renderCLIHelp))
+	add("generator", "PackageInstall", renderPackageInstall)
 	add("generator", "FilterExpressions", noArgs("FilterExpressions", renderFilterExpressions))
 	add("generator", "IntegrationTests", noArgs("IntegrationTests", renderIntegrationTests))
 	// Reserved for the security plan: a document may carry the tag before there
