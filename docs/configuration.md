@@ -221,8 +221,11 @@ named routine, and add, remove, or update an existing routine:
 [`GET {{baseUrl}}/v1/config/routines`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readRoutines)
 <!-- /tag -->
 
-:warning: Incremental backups are deleted if they are empty and after each full backup. System metadata is backed up
-only on full backups.
+:warning: Backups are deleted only by the [retention policy](readme/dto/dto.retentionpolicy.md) (`retention`) of the
+routine's backup policy; without one, nothing is deleted. Retention runs after each successful full backup: it keeps the
+last `full` full backups and the incremental backups for the last `incremental` of them (`incremental` defaults to
+`full`; `0` deletes all incremental backups). An incremental backup that finds no changed records is not kept as a
+backup. System metadata is backed up only on full backups.
 
 ## Partial backup with filter expressions
 
