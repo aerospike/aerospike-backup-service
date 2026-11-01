@@ -62,9 +62,6 @@ func (s *BackupScheduler) DeleteJob(key *quartz.JobKey) error {
 }
 
 // ScheduleRoutines registers cron triggers for the given routines (full and optional incremental).
-// Validation guarantees every schedule parses and fires again, so a routine that still cannot be
-// scheduled - one whose last fire time passed since it was validated - is logged and skipped
-// without holding back the others.
 func (s *BackupScheduler) ScheduleRoutines(routines []*model.BackupRoutine) {
 	for _, routine := range routines {
 		if routine.Disabled {

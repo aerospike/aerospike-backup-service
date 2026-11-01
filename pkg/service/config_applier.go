@@ -15,8 +15,7 @@ import (
 type ConfigApplier interface {
 	// ApplyNewConfig reschedules the jobs of every invalidated routine, warns about namespaces
 	// its source cluster does not have, and queues a history sync for those that still exist.
-	// The sync runs once the registry is started. It acts on a configuration that is already
-	// validated and in effect, so it has nothing to report back.
+	// The sync runs once the registry is started.
 	ApplyNewConfig(ctx context.Context)
 }
 
