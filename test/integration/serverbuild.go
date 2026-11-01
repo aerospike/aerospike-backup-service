@@ -74,10 +74,10 @@ const (
 	gapRestoreStats = "server-side backup gap: a server restore job reports no record or index counts"
 	gapEmptyIncr    = "server-side backup gap: an incremental backup with no changes is written, listed " +
 		"and counted as the last incremental"
-	gapEmptyRestore = "server bug: a fuzzy restore of a backup with no records never ends, " +
+	gapEmptyRestore = "server bug: a restore of a backup with no records fails, " +
 		"the server takes its zero partition manifests for a failed fetch"
-	gapNamespaceMapping = "server bug: a fuzzy restore into another namespace reads the backup under the " +
-		"destination namespace, finds nothing there and never ends"
+	gapNamespaceMapping = "server bug: a restore into another namespace reads the backup under the " +
+		"destination namespace, finds nothing there and fails"
 	gapNoIndexes     = "server-side backup gap: ABS does not send the policy's no-indexes to the server"
 	gapCompression   = "server-side backup gap: compression and encryption policies are accepted and ignored"
 	gapRetention     = "server-side backup gap: no retention is applied to server backups"
