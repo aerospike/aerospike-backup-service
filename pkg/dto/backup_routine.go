@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/cron"
 	as "github.com/aerospike/aerospike-client-go/v8"
-	"github.com/reugn/go-quartz/quartz"
 )
 
 const maxChunks = 10_000
@@ -121,11 +122,11 @@ func (r *BackupRoutine) Validate() error {
 	if r.Storage == "" {
 		return errValidationEmptyField("storage")
 	}
-	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
+	if err := validateCron(r.IntervalCron); err != nil {
 		return fmt.Errorf("backup interval string '%s' invalid: %w", r.IntervalCron, err)
 	}
 	if r.IncrIntervalCron != "" { // incremental interval is optional
-		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
+		if err := validateCron(r.IncrIntervalCron); err != nil {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IncrIntervalCron, err)
 		}
 	}
@@ -199,6 +200,14 @@ func validateFilterExpression(filterExpression string, setList []string) error {
 	}
 
 	return nil
+}
+
+// validateCron rejects an expression that does not parse or will never fire again, such as one
+// pinned to a past year: the scheduler cannot schedule either.
+func validateCron(expression string) error {
+	_, err := cron.NewSchedule(expression, time.UTC).NextTrigger()
+
+	return err
 }
 
 func validatePartitionList(partitionList string) error {

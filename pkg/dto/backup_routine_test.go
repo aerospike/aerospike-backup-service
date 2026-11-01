@@ -489,6 +489,48 @@ func TestBackupRoutine_Validate_FilterExpressionWithMultipleSets(t *testing.T) {
 	assert.Contains(t, err.Error(), "filter-exp cannot be used when backing up multiple sets")
 }
 
+func TestBackupRoutine_Validate_Cron(t *testing.T) {
+	tests := []struct {
+		name      string
+		full      string
+		incr      string
+		wantError string
+	}{
+		{name: "fires again", full: "0 0 * * * *", incr: "0 */10 * * * *"},
+		{name: "unparseable full", full: "cron", wantError: "backup interval string 'cron' invalid"},
+		{
+			name:      "full in a past year",
+			full:      "0 0 0 1 1 * 2020",
+			wantError: "backup interval string '0 0 0 1 1 * 2020' invalid",
+		},
+		{
+			name:      "incremental in a past year",
+			full:      "0 0 * * * *",
+			incr:      "0 0 0 1 1 * 2020",
+			wantError: "incremental backup interval string '0 0 0 1 1 * 2020' invalid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &BackupRoutine{
+				SourceCluster:    "cluster1",
+				Storage:          "storage1",
+				IntervalCron:     tt.full,
+				IncrIntervalCron: tt.incr,
+				Namespaces:       &[]NamespaceName{"ns1"},
+			}
+
+			err := r.Validate()
+			if tt.wantError == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantError)
+		})
+	}
+}
+
 func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
 	routineDTO := &BackupRoutine{
 		BackupPolicy:  "policy1",
