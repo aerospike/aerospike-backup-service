@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -42,7 +43,8 @@ func errBadRequest(err error) error {
 
 // notPersistedError marks a valid configuration change that could not be written to the
 // configuration source, such as a read-only file or one served over HTTP(S). The change was not
-// applied either, so the running configuration is the one the source still holds.
+// applied either, so the running configuration is the one the source still holds. A read-only
+// source (configuration.ErrReadOnly) is reported as 405, any other failure as 503.
 type notPersistedError struct {
 	Err error
 }
@@ -79,11 +81,21 @@ func httpError(w http.ResponseWriter, err error) {
 		return
 	}
 	if notPersisted, ok := errors.AsType[*notPersistedError](err); ok {
-		http.Error(w, notPersisted.Error(), http.StatusServiceUnavailable)
+		http.Error(w, notPersisted.Error(), notPersistedStatus(notPersisted))
 		return
 	}
 
 	http.Error(w, err.Error(), http.StatusInternalServerError)
+}
+
+// notPersistedStatus tells a read-only configuration source apart from a write that failed this
+// time.
+func notPersistedStatus(err *notPersistedError) int {
+	if errors.Is(err, configuration.ErrReadOnly) {
+		return http.StatusMethodNotAllowed
+	}
+
+	return http.StatusServiceUnavailable
 }
 
 // writeRedactedJSON marshals v to JSON with secret fields redacted and writes it to w.

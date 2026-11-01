@@ -3,6 +3,7 @@ package configuration
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -18,6 +19,11 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
+
+// ErrReadOnly marks a write to a configuration source that no retry can make succeed until the
+// deployment changes: one served over HTTP(S), or a file on a read-only file system or without
+// write permission.
+var ErrReadOnly = errors.New("configuration source is read-only")
 
 // Manager reads and writes the whole service configuration in its backing source:
 // a local file, an HTTP endpoint, or a storage backend.

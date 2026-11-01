@@ -95,7 +95,7 @@ func TestHTTPConfigurationManager_Write(t *testing.T) {
 	manager := newHTTPConfigurationManager("http://example.com/config.yaml")
 
 	err := manager.Write(t.Context(), model.NewConfig())
-	require.Error(t, err)
+	require.ErrorIs(t, err, ErrReadOnly)
 	require.Contains(t, err.Error(), "writing configuration is not supported for HTTP")
 }
 
