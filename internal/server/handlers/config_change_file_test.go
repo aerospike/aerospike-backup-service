@@ -42,7 +42,7 @@ func newFileBackedService(t *testing.T, applyCalls int) (*Service, string) {
 	require.NoError(t, err)
 
 	applier := service.NewMockConfigApplier(ctrl)
-	applier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil).Times(applyCalls)
+	applier.EXPECT().ApplyNewConfig(gomock.Any()).Times(applyCalls)
 
 	return NewService(config, applier, nil, nil, nil, nil, nil, manager, prober), path
 }

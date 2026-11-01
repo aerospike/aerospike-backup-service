@@ -1011,11 +1011,9 @@ func (m *MockConfigApplier) EXPECT() *MockConfigApplierMockRecorder {
 }
 
 // ApplyNewConfig mocks base method.
-func (m *MockConfigApplier) ApplyNewConfig(ctx context.Context) error {
+func (m *MockConfigApplier) ApplyNewConfig(ctx context.Context) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyNewConfig", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "ApplyNewConfig", ctx)
 }
 
 // ApplyNewConfig indicates an expected call of ApplyNewConfig.
