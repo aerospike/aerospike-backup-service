@@ -80,22 +80,16 @@ func httpError(w http.ResponseWriter, err error) {
 		http.Error(w, badRequest.Error(), http.StatusBadRequest)
 		return
 	}
+	if errors.Is(err, configuration.ErrReadOnly) {
+		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
+		return
+	}
 	if notPersisted, ok := errors.AsType[*notPersistedError](err); ok {
-		http.Error(w, notPersisted.Error(), notPersistedStatus(notPersisted))
+		http.Error(w, notPersisted.Error(), http.StatusServiceUnavailable)
 		return
 	}
 
 	http.Error(w, err.Error(), http.StatusInternalServerError)
-}
-
-// notPersistedStatus tells a read-only configuration source apart from a write that failed this
-// time.
-func notPersistedStatus(err *notPersistedError) int {
-	if errors.Is(err, configuration.ErrReadOnly) {
-		return http.StatusMethodNotAllowed
-	}
-
-	return http.StatusServiceUnavailable
 }
 
 // writeRedactedJSON marshals v to JSON with secret fields redacted and writes it to w.
