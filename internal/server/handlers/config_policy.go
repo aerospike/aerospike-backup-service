@@ -18,6 +18,7 @@ import (
 // @Failure     400 {string} string
 // @Failure     409 {string} string "A policy with that name already exists"
 // @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 	newPolicy, ok := decodeBodyValidated[dto.BackupPolicy](w, r)
 	if !ok {
@@ -81,6 +82,7 @@ func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 // @Failure     404 {string} string "The specified policy was not found"
 // @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	updatedPolicy, ok := decodeBodyValidated[dto.BackupPolicy](w, r)
 	if !ok {
@@ -110,6 +112,7 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Failure     404 {string} string "The specified policy was not found"
 // @Failure     409 {string} string "The policy is still used by a backup routine"
 // @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 

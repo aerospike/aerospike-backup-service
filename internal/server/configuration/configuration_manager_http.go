@@ -53,5 +53,5 @@ func (h *httpConfigurationManager) Read(ctx context.Context) (*model.Config, err
 
 // WriteConfiguration is unsupported for httpConfigurationManager.
 func (h *httpConfigurationManager) Write(_ context.Context, _ *model.Config) error {
-	return fmt.Errorf("writing configuration is not supported for HTTP: %w", errors.ErrUnsupported)
+	return fmt.Errorf("writing configuration is not supported for HTTP: %w", ErrReadOnly)
 }

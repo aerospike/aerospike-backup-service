@@ -31,6 +31,7 @@ func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 // @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	newConfig, ok := decodeBody[dto.Config](w, r)
 	if !ok {

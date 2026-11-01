@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -71,6 +72,13 @@ func TestService_UpdateConfig(t *testing.T) {
 			writeErr:       errors.New("write boom"),
 			expectedStatus: http.StatusServiceUnavailable,
 			expectedError:  "write boom",
+		},
+		{
+			name:           "read-only configuration source",
+			requestBody:    `{}`,
+			writeErr:       fmt.Errorf("not supported for HTTP: %w", configuration.ErrReadOnly),
+			expectedStatus: http.StatusMethodNotAllowed,
+			expectedError:  "not supported for HTTP",
 		},
 		{
 			name:           "success",

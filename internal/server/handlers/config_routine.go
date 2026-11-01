@@ -19,6 +19,7 @@ import (
 // @Failure     400 {string} string
 // @Failure     409 {string} string "A routine with that name already exists"
 // @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	newRoutine, ok := decodeBodyValidated[dto.BackupRoutine](w, r)
@@ -85,6 +86,7 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure      400 {string} string
 // @Failure      404 {string} string "The specified routine was not found"
 // @Failure      503 {string} string "The configuration could not be persisted"
+// @Failure      405 {string} string "The configuration source is read-only"
 func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
@@ -113,6 +115,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 // @Failure     404 {string} string "The specified routine was not found"
 // @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
@@ -136,6 +139,7 @@ func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure     404 {string} string "The specified routine was not found"
 // @Router      /v1/config/routines/{name}/enable [put]
 // @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
@@ -159,6 +163,7 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure     404 {string} string "The specified routine was not found"
 // @Router      /v1/config/routines/{name}/disable [put]
 // @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 

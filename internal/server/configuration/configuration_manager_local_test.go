@@ -2,11 +2,15 @@ package configuration
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -111,6 +115,29 @@ func TestFileConfigurationManager_Write(t *testing.T) {
 			content, readErr := os.ReadFile(tt.filePath)
 			require.NoError(t, readErr)
 			require.Contains(t, string(content), "yaml-language-server")
+		})
+	}
+}
+
+func TestMarkReadOnly(t *testing.T) {
+	tests := []struct {
+		name         string
+		err          error
+		wantReadOnly bool
+	}{
+		{name: "read-only file system", err: &fs.PathError{Op: "open", Err: syscall.EROFS}, wantReadOnly: true},
+		{name: "permission denied", err: &fs.PathError{Op: "open", Err: syscall.EACCES}, wantReadOnly: true},
+		{name: "operation not permitted", err: &fs.PathError{Op: "open", Err: syscall.EPERM}, wantReadOnly: true},
+		{name: "no space left", err: &fs.PathError{Op: "open", Err: syscall.ENOSPC}},
+		{name: "is a directory", err: &fs.PathError{Op: "open", Err: syscall.EISDIR}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := markReadOnly(tt.err)
+
+			require.ErrorIs(t, err, tt.err)
+			assert.Equal(t, tt.wantReadOnly, errors.Is(err, ErrReadOnly))
 		})
 	}
 }
