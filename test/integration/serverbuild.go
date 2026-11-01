@@ -167,9 +167,14 @@ func (s *ServerBuildSuite) serverBackupConfig(c *dto.Config) {
 		S3EndpointOverride: s.s3Endpoint,
 		S3Profile:          s3Profile,
 		// The tests share the bucket: each lists only the backups it made.
-		Path: dto.Path(strings.ReplaceAll(s.T().Name(), "/", "-")),
+		Path: dto.Path(s.backupPath()),
 	}}
 	c.BackupRoutines[routineName].Namespaces = new([]dto.NamespaceName{serverNamespace})
+}
+
+// backupPath is the path in the MinIO bucket that serverBackupConfig gives the test's backups.
+func (s *ServerBuildSuite) backupPath() string {
+	return strings.ReplaceAll(s.T().Name(), "/", "-")
 }
 
 // startServerBuild starts a single-node cluster from the asd binary and feature key file on
@@ -199,7 +204,8 @@ func (s *ServerBuildSuite) startServerBuild(name, binary, featuresConf string) (
 		),
 		testcontainers.WithEntrypoint("sh", "-c",
 			"mkdir -p /opt/aerospike/data /opt/aerospike/smd /opt/aerospike/usr/udf/lua && "+
-				"exec /usr/bin/asd --config-file /etc/aerospike/aerospike.conf --foreground"),
+				"exec /usr/bin/asd --config-file /etc/aerospike/aerospike.conf --foreground "+
+				"--preview backup-restore"),
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("service ready").WithStartupTimeout(serverStartTimeout)),
 	)
