@@ -62,8 +62,8 @@ github.com/aerospike/aerospike-client-go/v8 v8.9.0 h1:SKcGzskEaq1ewOB8dX233hDVp/
 github.com/aerospike/aerospike-client-go/v8 v8.9.0/go.mod h1:c/IWx9hALIo6sD4aXP/9C5zMp937vJdskNytuVWdqvc=
 github.com/aerospike/aerospike-management-lib v1.12.0 h1:KjZ40EDw7nTZcTzlX1RzjPSjEzPTFFAf9aWFZynFP8g=
 github.com/aerospike/aerospike-management-lib v1.12.0/go.mod h1:uti1Rz/ZRolcVZulKsi9AqQCqBl241M7w/ps87tNab0=
-github.com/aerospike/backup-go v0.11.1-0.20261028120829-4de913d8cfdf h1:lGicISmnY1Aa/7yGGTFQPhU8DURlK9yCinw8vrGUXSQ=
-github.com/aerospike/backup-go v0.11.1-0.20261028120829-4de913d8cfdf/go.mod h1:HBho2LcuMC+suNRR3LNDel1kSneHL0QxDrR9dVB/Wzw=
+github.com/aerospike/backup-go v0.11.1-0.20261101125103-49c84d184624 h1:ZCA8woy4YIXuQ8fERDn0RWwb+6HoVr/WB77ZrtB8+hk=
+github.com/aerospike/backup-go v0.11.1-0.20261101125103-49c84d184624/go.mod h1:h6mlLzKEfDq0CHyH7ZmIqmvqyVBLGuNf9D2vKlVMk2g=
 github.com/andybalholm/brotli v1.2.2 h1:HzTuoo2ErYQqf5qvcJInB8uvqSVxRttzkFexPWtnceM=
 github.com/andybalholm/brotli v1.2.2/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/apache/arrow-go/v18 v18.7.0 h1:Vw/i+cJyebUofT7JlqFpe65LrmwxULn166jjwStM4HY=
