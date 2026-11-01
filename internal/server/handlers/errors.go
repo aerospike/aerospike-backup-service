@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -42,7 +43,8 @@ func errBadRequest(err error) error {
 
 // notPersistedError marks a valid configuration change that could not be written to the
 // configuration source, such as a read-only file or one served over HTTP(S). The change was not
-// applied either, so the running configuration is the one the source still holds.
+// applied either, so the running configuration is the one the source still holds. A read-only
+// source (configuration.ErrReadOnly) is reported as 405, any other failure as 503.
 type notPersistedError struct {
 	Err error
 }
@@ -76,6 +78,10 @@ func httpError(w http.ResponseWriter, err error) {
 	}
 	if badRequest, ok := errors.AsType[*badRequestError](err); ok {
 		http.Error(w, badRequest.Error(), http.StatusBadRequest)
+		return
+	}
+	if errors.Is(err, configuration.ErrReadOnly) {
+		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
 		return
 	}
 	if notPersisted, ok := errors.AsType[*notPersistedError](err); ok {

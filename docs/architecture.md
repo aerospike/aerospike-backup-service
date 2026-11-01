@@ -119,8 +119,9 @@ Hot-reload — applying configuration changes without restarting the process —
 
 1. The REST configuration API (`/v1/config/...`) validates a change and persists it back to the configuration source.
    Only once the write succeeds does the change replace the in-memory `model.Config` and mark the affected routine(s)
-   as invalidated. A change that cannot be persisted (for example, a read-only configuration file, or a configuration
-   served over HTTP(S)) is rejected with `503` and leaves the running configuration untouched.
+   as invalidated. A change that cannot be persisted is rejected and leaves the running configuration untouched: with
+   `405` when the source is read-only (a configuration served over HTTP(S), or a file on a read-only file system or
+   without write permission), and with `503` for any other write failure.
 2. `ConfigApplier.ApplyNewConfig` pops the invalidated-routine set, deletes the corresponding periodic Quartz jobs
    (full and incremental), and reschedules current ones from the updated config. This two-phase delete-then-reschedule
    sequence is required because Quartz has no atomic "replace job" API. The rescheduled routines are then checked
