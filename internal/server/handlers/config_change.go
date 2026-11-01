@@ -85,7 +85,8 @@ func (s *Service) prepareConfig(
 // commitConfig persists next and only then makes it the live backup configuration and
 // reschedules the named routines. A change that did not reach the configuration source never
 // becomes visible, so memory, file and scheduler cannot come to describe different
-// configurations. The service configuration is static, so the live one is what gets persisted.
+// configurations; once it has, nothing is left to fail. The service configuration is static, so
+// the live one is what gets persisted.
 //
 // The caller holds changeConfigLock.
 func (s *Service) commitConfig(ctx context.Context, next *model.BackupConfig, routinesToInvalidate []string) error {
@@ -100,10 +101,7 @@ func (s *Service) commitConfig(ctx context.Context, next *model.BackupConfig, ro
 
 	s.config.SetBackupConfig(next)
 	s.config.InvalidateRoutines(routinesToInvalidate)
-
-	if err := s.configApplier.ApplyNewConfig(ctx); err != nil {
-		return fmt.Errorf("failed to apply new configuration: %w", err)
-	}
+	s.configApplier.ApplyNewConfig(ctx)
 
 	return nil
 }

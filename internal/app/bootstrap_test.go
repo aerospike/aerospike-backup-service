@@ -264,7 +264,7 @@ backup-routines:
 	require.NoError(t, err)
 	require.Empty(t, keys, "a routine was scheduled before Start")
 
-	require.NoError(t, components.Start(ctx))
+	components.Start(ctx)
 	keys, err = components.Scheduler.GetJobKeys()
 	require.NoError(t, err)
 	require.Len(t, keys, 1)

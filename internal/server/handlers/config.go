@@ -84,12 +84,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 
 	s.config.SetBackupConfig(config.BackupConfigCopy())
 	s.config.InvalidateAllRoutines()
-	err = s.configApplier.ApplyNewConfig(r.Context())
-
-	if err != nil {
-		httpError(w, err)
-		return
-	}
+	s.configApplier.ApplyNewConfig(r.Context())
 
 	w.WriteHeader(http.StatusOK)
 }

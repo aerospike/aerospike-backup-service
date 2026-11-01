@@ -123,7 +123,9 @@ Hot-reload — applying configuration changes without restarting the process —
    served over HTTP(S)) is rejected with `503` and leaves the running configuration untouched.
 2. `ConfigApplier.ApplyNewConfig` pops the invalidated-routine set, deletes the corresponding periodic Quartz jobs
    (full and incremental), and reschedules current ones from the updated config. This two-phase delete-then-reschedule
-   sequence is required because Quartz has no atomic "replace job" API. The rescheduled routines are then checked
+   sequence is required because Quartz has no atomic "replace job" API. Validation guarantees every schedule parses and
+   fires again, so `ApplyNewConfig` returns no error: a routine that still cannot be scheduled is logged and skipped
+   without holding back the others. The rescheduled routines are then checked
    against their source clusters for namespaces that do not exist; a missing namespace is logged as a warning and does
    not reject the configuration.
 3. Backup history for the affected routines is resynchronized from storage in the background so that subsequent

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -63,19 +62,20 @@ func (s *BackupScheduler) DeleteJob(key *quartz.JobKey) error {
 }
 
 // ScheduleRoutines registers cron triggers for the given routines (full and optional incremental).
-func (s *BackupScheduler) ScheduleRoutines(routines []*model.BackupRoutine) error {
-	var errs error
-
+// Validation guarantees every schedule parses and fires again, so a routine that still cannot be
+// scheduled - one whose last fire time passed since it was validated - is logged and skipped
+// without holding back the others.
+func (s *BackupScheduler) ScheduleRoutines(routines []*model.BackupRoutine) {
 	for _, routine := range routines {
 		if routine.Disabled {
 			slog.Debug("Skipping disabled routine", attr.Routine(routine.Name))
 			continue
 		}
 
-		errs = errors.Join(errs, s.scheduleRoutineBackups(routine.Copy()))
+		if err := s.scheduleRoutineBackups(routine.Copy()); err != nil {
+			slog.Error("Failed to schedule routine", attr.Routine(routine.Name), attr.Error(err))
+		}
 	}
-
-	return errs
 }
 
 // scheduleRoutineBackups registers the full cron job and, when configured, the incremental cron job for one routine.
