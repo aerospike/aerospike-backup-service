@@ -23,8 +23,9 @@ const maxChainLength = 32
 
 // restoreExecutor asks the server to run a cold restore of server backups, identified by their
 // job ids: a single backup, or a full backup and the incremental backups that follow it. A cold
-// restore takes the namespace from clients and hydrates it, so it restores into an empty
-// namespace only.
+// restore takes the namespace from clients, clears its storage and hydrates it, so the namespace
+// holds the backups' data only. A restore that does not complete releases the namespace to
+// clients with whatever it wrote.
 type restoreExecutor struct {
 	backupReader service.BackupReader
 }
@@ -95,21 +96,32 @@ func (r *restoreExecutor) start(
 		Policy:               infomodels.RestorePolicyStrict,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to start server restore: %w", err)
+		return nil, errors.Join(fmt.Errorf("failed to start server restore: %w", err),
+			releaseNamespace(ctx, infoClient, namespace, jobID))
 	}
 
 	return newRestoreHandler(infoClient, namespace, jobID), nil
 }
 
 // prepareColdRestore takes namespace from clients for the cold restore jobID and waits until it
-// is ready on every node. It fails when a node still holds data in the namespace. A failed
-// preparation leaves the namespace gated until the job is released with restore-open.
+// is ready on every node. A refused preparation leaves the namespace open; one that fails later
+// releases it.
 func prepareColdRestore(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
 	err := infoClient.PrepareRestore(ctx, &infomodels.RequestPrepareRestore{Namespace: namespace, JobID: jobID})
 	if err != nil {
 		return fmt.Errorf("failed to prepare server restore: %w", err)
 	}
 
+	if err := awaitPrepared(ctx, infoClient, namespace, jobID); err != nil {
+		return errors.Join(err, releaseNamespace(ctx, infoClient, namespace, jobID))
+	}
+
+	return nil
+}
+
+// awaitPrepared waits until namespace is ready for the cold restore jobID on every node, clearing
+// the storage of the nodes that still hold data in it.
+func awaitPrepared(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
@@ -134,10 +146,29 @@ func prepareColdRestore(ctx context.Context, infoClient backup.ServerBackupInfo,
 		case status.NsState == infomodels.NamespaceStateFailed:
 			return fmt.Errorf("server restore %s failed to prepare namespace %s: %s", jobID, namespace, status.ErrorReason)
 		case status.Clear == infomodels.ClearStateRequired:
-			return fmt.Errorf("server restore %s: namespace %s is not empty", jobID, namespace)
+			if err := infoClient.ClearRestoreStorage(ctx, namespace, jobID); err != nil {
+				return fmt.Errorf("failed to clear namespace %s for server restore %s: %w", namespace, jobID, err)
+			}
 		default:
 		}
 	}
+}
+
+// releaseNamespace aborts the cold restore jobID and opens namespace to clients with whatever the
+// restore wrote: an aborted cold restore keeps the namespace from clients until restore-open. It
+// runs even when ctx is canceled, since a canceled restore holds the namespace as well.
+func releaseNamespace(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
+	ctx = context.WithoutCancel(ctx)
+
+	if err := infoClient.AbortRestore(ctx, namespace, jobID); err != nil {
+		return fmt.Errorf("failed to abort server restore %s: %w", jobID, err)
+	}
+
+	if err := infoClient.OpenRestore(ctx, namespace, jobID); err != nil {
+		return fmt.Errorf("failed to open namespace %s after server restore %s: %w", namespace, jobID, err)
+	}
+
+	return nil
 }
 
 // destinationNamespace returns the namespace to restore into: the mapped destination, or
@@ -185,10 +216,20 @@ func newRestoreHandler(infoClient backup.ServerBackupInfo, namespace, jobID stri
 }
 
 // Wait polls the restore job until it ends and the namespace is open to clients again, or ctx
-// is canceled.
+// is canceled. A restore that does not complete is aborted and its namespace released.
 func (h *restoreHandler) Wait(ctx context.Context) error {
 	defer h.stats.Stop()
 
+	if err := h.awaitComplete(ctx); err != nil {
+		return errors.Join(err, releaseNamespace(ctx, h.infoClient, h.namespace, h.jobID))
+	}
+
+	return nil
+}
+
+// awaitComplete polls the restore job until it completes and the namespace is open to clients
+// again. It fails when the job fails or is aborted, or ctx is canceled.
+func (h *restoreHandler) awaitComplete(ctx context.Context) error {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
