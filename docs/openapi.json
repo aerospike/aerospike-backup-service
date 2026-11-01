@@ -624,6 +624,16 @@
                             }
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "content": {
@@ -780,6 +790,16 @@
                             }
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "content": {
@@ -818,6 +838,16 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -881,6 +911,16 @@
                     },
                     "404": {
                         "description": "The specified cluster was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1031,6 +1071,16 @@
                             }
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "content": {
@@ -1069,6 +1119,16 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1132,6 +1192,16 @@
                     },
                     "404": {
                         "description": "The specified policy was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1292,6 +1362,16 @@
                             }
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "content": {
@@ -1330,6 +1410,16 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1401,6 +1491,16 @@
                             }
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "content": {
@@ -1446,6 +1546,16 @@
                             }
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "content": {
@@ -1483,6 +1593,16 @@
                     },
                     "404": {
                         "description": "The specified routine was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1623,6 +1743,16 @@
                             }
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "content": {
@@ -1661,6 +1791,16 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1724,6 +1864,16 @@
                     },
                     "404": {
                         "description": "The specified storage was not found",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "content": {
                             "*/*": {
                                 "schema": {

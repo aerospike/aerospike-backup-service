@@ -23,7 +23,7 @@ func TestConfigApplier_ApplyNewConfig_NoInvalidations(t *testing.T) {
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig(t.Context()))
+	applier.ApplyNewConfig(t.Context())
 }
 
 func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T) {
@@ -53,7 +53,7 @@ func TestConfigApplier_ApplyNewConfig_ReschedulesInvalidatedRoutine(t *testing.T
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig(t.Context()))
+	applier.ApplyNewConfig(t.Context())
 }
 
 func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
@@ -76,61 +76,42 @@ func TestConfigApplier_ApplyNewConfig_SkipsDeletedRoutine(t *testing.T) {
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig(t.Context()))
+	applier.ApplyNewConfig(t.Context())
 }
 
-func TestConfigApplier_ApplyNewConfig_ScheduleError(t *testing.T) {
+// A routine that cannot be scheduled is skipped: the other routines are still scheduled, and
+// namespace checks and history sync still run for all of them.
+func TestConfigApplier_ApplyNewConfig_ScheduleFailureDoesNotStopOthers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	cfg := model.NewConfig()
-	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
-		Name:         "routine-1",
-		IntervalCron: "not-a-cron",
-		Timezone:     model.NewServiceLocation("", nil),
-	}))
+	for _, name := range []string{"routine-1", "routine-2"} {
+		require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
+			Name:         name,
+			IntervalCron: "0 0 * * * *",
+			Timezone:     model.NewServiceLocation("", nil),
+		}))
+	}
 	cfg.PopInvalidatedRoutineNames()
-	cfg.InvalidateRoutines([]string{"routine-1"})
+	cfg.InvalidateRoutines([]string{"routine-1", "routine-2"})
 
 	scheduler := NewMockJobScheduler(ctrl)
-	scheduler.EXPECT().DeleteJob(gomock.Any()).Return(nil).Times(2)
+	scheduler.EXPECT().DeleteJob(gomock.Any()).Return(nil).Times(4)
+	gomock.InOrder(
+		scheduler.EXPECT().ScheduleJob(gomock.Any(), gomock.Any()).Return(errors.New("schedule failed")),
+		scheduler.EXPECT().ScheduleJob(gomock.Any(), gomock.Any()).Return(nil),
+	)
+
+	registry := NewMockBackupStateRegistry(ctrl)
+	registry.EXPECT().RequestHistorySync(gomock.Len(2))
 
 	applier := NewConfigApplier(
 		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
-		NewMockBackupStateRegistry(ctrl),
+		registry,
 		noopNamespaceValidator(ctrl),
 		cfg,
 	)
 
-	err := applier.ApplyNewConfig(t.Context())
-	require.Error(t, err)
-	require.ErrorContains(t, err, "failed to schedule periodic backups")
-}
-
-func TestConfigApplier_ApplyNewConfig_ScheduleJobError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	cfg := model.NewConfig()
-	require.NoError(t, cfg.AddRoutine(&model.BackupRoutine{
-		Name:         "routine-1",
-		IntervalCron: "0 0 * * * *",
-		Timezone:     model.NewServiceLocation("", nil),
-	}))
-	cfg.PopInvalidatedRoutineNames()
-	cfg.InvalidateRoutines([]string{"routine-1"})
-
-	scheduleErr := errors.New("schedule failed")
-	scheduler := NewMockJobScheduler(ctrl)
-	scheduler.EXPECT().DeleteJob(gomock.Any()).Return(nil).Times(2)
-	scheduler.EXPECT().ScheduleJob(gomock.Any(), gomock.Any()).Return(scheduleErr)
-
-	applier := NewConfigApplier(
-		NewBackupScheduler(scheduler, NewBackupOrchestrator(nil, nil, nil, nil, nil)),
-		NewMockBackupStateRegistry(ctrl),
-		noopNamespaceValidator(ctrl),
-		cfg,
-	)
-
-	err := applier.ApplyNewConfig(t.Context())
-	require.Error(t, err)
-	require.ErrorIs(t, err, scheduleErr)
+	applier.ApplyNewConfig(t.Context())
 }
 
 // Namespace validation is advisory and scoped: only the routines that were invalidated and
@@ -169,7 +150,7 @@ func TestConfigApplier_ApplyNewConfig_ValidatesAppliedRoutinesOnly(t *testing.T)
 		cfg,
 	)
 
-	require.NoError(t, applier.ApplyNewConfig(t.Context()))
+	applier.ApplyNewConfig(t.Context())
 }
 
 func noopNamespaceValidator(ctrl *gomock.Controller) aerospike.NamespaceValidator {

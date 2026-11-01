@@ -96,6 +96,33 @@ func renderGoVersion() string {
 	return string(match[1])
 }
 
+// packageName is the name nfpm gives the deb and rpm packages.
+const packageName = "aerospike-backup-service"
+
+// renderPackageInstall renders the command that installs a release package of
+// the given format, "deb" or "rpm", named the way the release assets are.
+//
+// The version is read from VERSION, which the release rewrites, so the command
+// names the current release without anyone retyping it. Architecture and distro
+// differ per download and stay as placeholders.
+func renderPackageInstall(format string) string {
+	content, err := os.ReadFile("VERSION")
+	if err != nil {
+		panic(fmt.Errorf("failed to read VERSION: %w", err))
+	}
+
+	version := strings.TrimPrefix(strings.TrimSpace(string(content)), "v")
+
+	switch format {
+	case "deb":
+		return fence("shell", fmt.Appendf(nil, "sudo dpkg -i %s_%s_<arch>_<distro>.deb", packageName, version))
+	case "rpm":
+		return fence("shell", fmt.Appendf(nil, "sudo rpm -i %s-%s-1.<distro>.<arch>.rpm", packageName, version))
+	default:
+		panic(fmt.Errorf("tag PackageInstall takes deb or rpm, got %q", format))
+	}
+}
+
 // filterExpressionExamples are the worked examples for the `filter-exp` routine
 // field, each paired with the client call that produces it.
 //

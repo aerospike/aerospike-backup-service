@@ -160,7 +160,7 @@ Patch release; see the GitHub release notes.
 ### Added
 
 - Strict configuration validation at startup.
-- Partition-list filtering for backups (`partition-list` on backup policy).
+- Partition-list filtering for backups (`partition-list` on backup routine).
 - Object storage class support for S3, Azure Blob Storage, and Google Cloud Storage.
 - `concurrent-incremental` flag on backup policy, to allow incremental backups to run alongside full backups.
 - `with-cluster-configuration` flag on backup policy, to skip cluster config backup.

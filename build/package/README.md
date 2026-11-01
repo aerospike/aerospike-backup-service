@@ -124,9 +124,14 @@ recognised and are ignored; the rest of the sandbox applies.
 
 ### Installation
 
+`<arch>` is `amd64` or `arm64`; `<distro>` is the distro suffix of the release asset, for example `debian12` or `ubuntu24.04`.
+
+<!-- tag PackageInstall deb -->
+
 ```shell
-sudo dpkg -i aerospike-backup-service_3.6.1-1_amd64.deb
+sudo dpkg -i aerospike-backup-service_3.7.0_<arch>_<distro>.deb
 ```
+<!-- /tag -->
 
 ### Verify Installation
 
@@ -200,9 +205,14 @@ sudo rm -rf /var/lib/aerospike-backup-service
 
 ### Installation
 
+`<arch>` is `x86_64` or `aarch64`; `<distro>` is the distro suffix of the release asset, for example `el9` or `amzn2023`.
+
+<!-- tag PackageInstall rpm -->
+
 ```shell
-sudo rpm -i aerospike-backup-service-3.6.1-1.x86_64.rpm
+sudo rpm -i aerospike-backup-service-3.7.0-1.<distro>.<arch>.rpm
 ```
+<!-- /tag -->
 
 ### Verify Installation
 

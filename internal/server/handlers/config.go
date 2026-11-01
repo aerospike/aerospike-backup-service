@@ -31,6 +31,7 @@ func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 // @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	newConfig, ok := decodeBody[dto.Config](w, r)
 	if !ok {
@@ -84,12 +85,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 
 	s.config.SetBackupConfig(config.BackupConfigCopy())
 	s.config.InvalidateAllRoutines()
-	err = s.configApplier.ApplyNewConfig(r.Context())
-
-	if err != nil {
-		httpError(w, err)
-		return
-	}
+	s.configApplier.ApplyNewConfig(r.Context())
 
 	w.WriteHeader(http.StatusOK)
 }

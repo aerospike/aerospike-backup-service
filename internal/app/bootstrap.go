@@ -51,9 +51,7 @@ type component interface {
 // blocks for as long as the service runs: a caller that wants the service up without
 // giving up its goroutine - a test serving the handler itself - uses Start instead.
 func (c *Components) Run(ctx context.Context) error {
-	if err := c.Start(ctx); err != nil {
-		return err
-	}
+	c.Start(ctx)
 
 	return server.Run(ctx, c.Servers)
 }
@@ -62,18 +60,13 @@ func (c *Components) Run(ctx context.Context) error {
 // running scheduler, and returns. It is the one place the run context is handed out: a
 // component that outlives a single request takes its lifetime from here, never from the
 // context that built the graph. It is called exactly once.
-func (c *Components) Start(ctx context.Context) error {
+func (c *Components) Start(ctx context.Context) {
 	c.registry.Start(ctx)
 	c.restoreJobs.Start(ctx)
 	c.Scheduler.Start(ctx)
 	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	c.TLSProvider.Start(ctx)
-
-	if err := c.configApplier.ApplyNewConfig(ctx); err != nil {
-		return fmt.Errorf("failed to apply configuration: %w", err)
-	}
-
-	return nil
+	c.configApplier.ApplyNewConfig(ctx)
 }
 
 // InitComponents builds the full object graph.

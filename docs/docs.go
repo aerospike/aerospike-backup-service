@@ -536,6 +536,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "schema": {
@@ -674,6 +680,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "schema": {
@@ -719,6 +731,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "409": {
                         "description": "A cluster with that name already exists",
                         "schema": {
@@ -760,6 +778,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "The specified cluster was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "schema": {
                             "type": "string"
                         }
@@ -885,6 +909,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "schema": {
@@ -930,6 +960,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "409": {
                         "description": "A policy with that name already exists",
                         "schema": {
@@ -971,6 +1007,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "The specified policy was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "schema": {
                             "type": "string"
                         }
@@ -1102,6 +1144,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "schema": {
@@ -1143,6 +1191,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "schema": {
                             "type": "string"
                         }
@@ -1192,6 +1246,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "schema": {
@@ -1227,6 +1287,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "schema": {
@@ -1258,6 +1324,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "The specified routine was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "schema": {
                             "type": "string"
                         }
@@ -1377,6 +1449,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "503": {
                         "description": "The configuration could not be persisted",
                         "schema": {
@@ -1422,6 +1500,12 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "409": {
                         "description": "A storage with that name already exists",
                         "schema": {
@@ -1463,6 +1547,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "The specified storage was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
                         "schema": {
                             "type": "string"
                         }

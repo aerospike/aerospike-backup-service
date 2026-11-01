@@ -103,7 +103,7 @@ func (s *Suite) initComponents(customize ...func(*dto.Config)) *app.Components {
 	components, err := app.InitComponents(ctx, configPath, false)
 	s.Require().NoError(err)
 
-	s.Require().NoError(components.Start(ctx))
+	components.Start(ctx)
 
 	return components
 }

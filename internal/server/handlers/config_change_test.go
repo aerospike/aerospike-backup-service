@@ -137,7 +137,7 @@ func TestChangeBackupConfig_WritesCandidateBeforePublishing(t *testing.T) {
 			return nil
 		})
 	applier := service.NewMockConfigApplier(ctrl)
-	applier.EXPECT().ApplyNewConfig(gomock.Any()).Return(nil)
+	applier.EXPECT().ApplyNewConfig(gomock.Any())
 
 	svc := NewService(model.NewConfig(), applier, nil, nil, nil, nil, nil, manager, newMockTLSProber(ctrl))
 
