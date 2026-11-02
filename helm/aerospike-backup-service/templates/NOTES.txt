@@ -3,7 +3,8 @@
 {{- if .Values.ingress.enabled }}
 {{- range $host := .Values.ingress.hosts }}
   {{- range .paths }}
-  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- /* A catch-all "/" path forwards the full URL, so the API sits under the context path. */}}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ if eq .path "/" }}{{ $ctx }}{{ else }}{{ .path }}{{ end }}
   {{- end }}
 {{- end }}
 {{- else if contains "NodePort" .Values.service.type }}
@@ -28,7 +29,7 @@
   metrics    Prometheus metrics
   api-docs/  API documentation
   v1/        REST API
-{{- if or .Values.autoscaling.enabled (gt (int .Values.replicaCount) 1) }}
+{{- if or (and .Values.autoscaling.enabled (gt (int .Values.autoscaling.maxReplicas) 1)) (and (not .Values.autoscaling.enabled) (gt (int .Values.replicaCount) 1)) }}
 
 WARNING: More than one replica is configured. Backup Service instances do not
 coordinate, so every replica runs every backup routine. Keep replicaCount: 1 and

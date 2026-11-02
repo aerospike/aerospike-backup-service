@@ -71,14 +71,75 @@ Create the name of the service account to use
 {{- end -}}
 
 {{/*
+backupServiceConfig.service.<listener> as YAML, or {} when any level is missing, null or not
+a map (for example `http:` left with every child commented out). Call with (list $ "http").
+Usage: include "aerospike-backup-service.listener" (list $ "http") | fromYaml
+*/}}
+{{- define "aerospike-backup-service.listener" -}}
+{{- $root := index . 0 -}}
+{{- $out := dict -}}
+{{- $cfg := $root.Values.backupServiceConfig -}}
+{{- if kindIs "map" $cfg -}}
+{{- $svc := index $cfg "service" -}}
+{{- if kindIs "map" $svc -}}
+{{- $l := index $svc (index . 1) -}}
+{{- if kindIs "map" $l }}{{ $out = $l }}{{ end -}}
+{{- end -}}
+{{- end -}}
+{{- toYaml $out -}}
+{{- end -}}
+
+{{/*
+Port ABS listens on for HTTP: backupServiceConfig.service.http.port, default 8080.
+*/}}
+{{- define "aerospike-backup-service.httpPort" -}}
+{{- $http := include "aerospike-backup-service.listener" (list . "http") | fromYaml -}}
+{{- $http.port | default 8080 | int -}}
+{{- end -}}
+
+{{/*
+"true" when ABS serves HTTPS: the backupServiceConfig.service.https block is a map and is not
+disabled (the same rule as pkg/dto/service_config.go). Empty string otherwise.
+*/}}
+{{- define "aerospike-backup-service.httpsEnabled" -}}
+{{- $cfg := .Values.backupServiceConfig -}}
+{{- if and (kindIs "map" $cfg) (kindIs "map" (index $cfg "service")) (kindIs "map" (index (index $cfg "service") "https")) -}}
+{{- $https := include "aerospike-backup-service.listener" (list . "https") | fromYaml -}}
+{{- if not $https.disabled }}true{{ end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Port ABS listens on for HTTPS: backupServiceConfig.service.https.port, default 8443.
+*/}}
+{{- define "aerospike-backup-service.httpsPort" -}}
+{{- $https := include "aerospike-backup-service.listener" (list . "https") | fromYaml -}}
+{{- $https.port | default 8443 | int -}}
+{{- end -}}
+
+{{/*
 The HTTP listener's context path bounded by slashes ("/" by default), matching
 normalizeContextPath in internal/server/server.go, so endpoint names can be appended directly.
 */}}
 {{- define "aerospike-backup-service.contextPath" -}}
-{{- $p := dig "service" "http" "context-path" "/" (.Values.backupServiceConfig | default dict) | toString -}}
+{{- $http := include "aerospike-backup-service.listener" (list . "http") | fromYaml -}}
+{{- $p := index $http "context-path" | default "/" | toString -}}
 {{- if not (hasPrefix "/" $p) }}{{ $p = printf "/%s" $p }}{{ end -}}
 {{- if not (hasSuffix "/" $p) }}{{ $p = printf "%s/" $p }}{{ end -}}
 {{- $p -}}
+{{- end -}}
+
+{{/*
+A probe from values, with an httpGet on the named "http" port and <context-path><endpoint>
+added when the values define no handler of their own. Call with (list $ .Values.livenessProbe "health").
+*/}}
+{{- define "aerospike-backup-service.probe" -}}
+{{- $root := index . 0 -}}
+{{- $probe := deepCopy (index . 1 | default dict) -}}
+{{- if not (or $probe.httpGet $probe.tcpSocket $probe.exec $probe.grpc) -}}
+{{- $_ := set $probe "httpGet" (dict "path" (printf "%s%s" (include "aerospike-backup-service.contextPath" $root) (index . 2)) "port" "http") -}}
+{{- end -}}
+{{- toYaml $probe -}}
 {{- end -}}
 
 {{/*

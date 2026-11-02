@@ -32,6 +32,7 @@ configmap:
 # ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml"].
 # A non-empty list replaces that default, so include -c yourself. Example (remote config,
 # where the mounted file holds the location of the real configuration):
+# Chart 2.1.0 and earlier ignored this value. Check it before upgrading from those versions.
 # args: ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml", "-r"]
 args: []
 envFrom: []
@@ -63,8 +64,8 @@ backupServiceConfig: {}
 # service:
 #   http:
 #     address: <address> # Optional. Default: 0.0.0.0
-#     port: <port> # Optional. Default: 8080. Must match service.port below.
-#     context-path: <path> # Optional. Default: "/". If changed, update the probe paths below.
+#     port: <port> # Optional. Default: 8080. The chart uses it for the container port and probes.
+#     context-path: <path> # Optional. Default: "/". The chart adds it to the probe paths.
 #     disabled: <true/false> # Optional. Default: false
 #     rate:
 #       tps: <tokens-per-second> # Optional. Default: 1024
@@ -72,7 +73,7 @@ backupServiceConfig: {}
 #       white-list: [ <ips> ] # Optional. Default: empty list
 #   https: # Optional. Enabled when this block is present. See the chart README, "HTTPS".
 #     disabled: <true/false> # Optional. Default: false
-#     port: <port> # Optional. Default: 8443. Set service.httpsPort below to the same value.
+#     port: <port> # Optional. Default: 8443. The chart exposes it as port "https".
 #     cert-file: <path> # Mandatory when enabled
 #     key-file: <path> # Mandatory when enabled
 #     client-auth: <mode> # Optional. Default: none. Valid values: none, request, require-and-verify (mTLS)
@@ -277,14 +278,12 @@ securityContext:
     type: RuntimeDefault
 service:
   type: ClusterIP
-  # Used as the Service port, targetPort and containerPort, and (through the &p anchor)
-  # by the probes below. It must equal backupServiceConfig.service.http.port (default 8080).
-  # If you override it, override livenessProbe/readinessProbe httpGet.port too: the anchor
-  # only applies inside this file.
-  port: &p 8080
-  # HTTPS port, exposed as container port and Service port "https" when set. Set it when
-  # backupServiceConfig.service.https is enabled; it must equal service.https.port (default 8443).
-  # Probes, the chart notes and `helm test` keep using the HTTP port.
+  # Service port for HTTP. The container port comes from backupServiceConfig.service.http.port
+  # (default 8080); the Service forwards to it by name.
+  port: 8080
+  # Service port for HTTPS, added when backupServiceConfig.service.https is enabled.
+  # Default: the container port, backupServiceConfig.service.https.port (default 8443).
+  # Probes, the chart notes and `helm test` keep using HTTP.
   httpsPort: null
 ingress:
   enabled: false
@@ -313,21 +312,17 @@ resources: {}
 #   cpu: 100m
 #   memory: 128Mi
 
-# Probe paths include the HTTP context path. If you set
-# backupServiceConfig.service.http.context-path (e.g. /abs), change them to /abs/health
-# and /abs/ready.
+# Without a handler (httpGet, tcpSocket, exec or grpc) of your own, the chart adds
+# httpGet <context-path>health / <context-path>ready on the container's "http" port.
 livenessProbe:
-  httpGet:
-    path: /health
-    port: *p
   initialDelaySeconds: 15
   periodSeconds: 10
 readinessProbe:
-  httpGet:
-    path: /ready
-    port: *p
   initialDelaySeconds: 15
   periodSeconds: 10
+# ABS stops accepting requests and drains the HTTP server for up to 30 seconds on shutdown;
+# this leaves headroom before the kubelet sends SIGKILL.
+terminationGracePeriodSeconds: 45
 # Not recommended: instances do not coordinate, so every replica runs every backup routine.
 # Utilization targets also need resources.requests to be set.
 autoscaling:

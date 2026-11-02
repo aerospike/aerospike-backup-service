@@ -130,7 +130,7 @@ through the Service.
 | `fullnameOverride`        | Replaces the full resource name.                                                                                                                                                                                                                                 | `""`                                                        |
 | `utilityImage`            | Image used by the `config-injector` init container (when `configmap.create` is `false`) and by the `helm test` pod. Needs `/bin/sh`, `base64` and `wget`.                                                                                                       | `busybox:1.37.0`, `IfNotPresent`                            |
 | `configmap.create`        | How `backupServiceConfig` reaches the pod. See [Configuration source](#configuration-source).                                                                                                                                                                   | `true`                                                      |
-| `args`                    | ABS command-line arguments. Empty means `-c /etc/aerospike-backup-service/aerospike-backup-service.yml`. A non-empty list replaces that default, so include `-c` yourself. Add `-r` to treat the mounted file as a [remote configuration](#remote-configuration) pointer. | `[]`                                                        |
+| `args`                    | ABS command-line arguments. Empty means `-c /etc/aerospike-backup-service/aerospike-backup-service.yml`. A non-empty list replaces that default, so include `-c` yourself. Add `-r` to treat the mounted file as a [remote configuration](#remote-configuration) pointer. Chart 2.1.0 and earlier ignored this value; see [Upgrading from chart 2.1.0](#upgrading-from-chart-210). | `[]`                                                        |
 | `env`                     | Extra container environment variables, for example `valueFrom.secretKeyRef`.                                                                                                                                                                                    | `[]`                                                        |
 | `envFrom`                 | Import all keys of a ConfigMap or Secret as environment variables.                                                                                                                                                                                               | `[]`                                                        |
 | `backupServiceConfig`     | ABS configuration, written to `/etc/aerospike-backup-service/aerospike-backup-service.yml`. Unknown keys fail startup. See the commented reference in [values.yaml](values.yaml) and the [field reference](https://github.com/aerospike/aerospike-backup-service/tree/main/docs/readme/dto). | `{}`                                                        |
@@ -141,12 +141,13 @@ through the Service.
 | `podSecurityContext`      | Pod [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).                                                                                                                                                              | `runAsNonRoot: true`, `fsGroup: 65532`, seccomp `RuntimeDefault` |
 | `securityContext`         | Container [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container). Hardened: non-root uid/gid 65532, `readOnlyRootFilesystem`, no privilege escalation, all capabilities dropped, seccomp `RuntimeDefault`. | see [values.yaml](values.yaml)                              |
 | `service.type`            | Kubernetes Service type.                                                                                                                                                                                                                                         | `ClusterIP`                                                 |
-| `service.port`            | Service port, target port and container port. Must equal `backupServiceConfig.service.http.port`. See [Port, context path and probes](#port-context-path-and-probes).                                                                                          | `8080`                                                      |
-| `service.httpsPort`       | HTTPS port, added to the container and the Service as port `https` when set. Must equal `backupServiceConfig.service.https.port`. See [HTTPS](#https).                                                                                                        | unset                                                       |
+| `service.port`            | Service port for HTTP. The Service forwards to the container port named `http`, which the chart takes from `backupServiceConfig.service.http.port` (default `8080`). See [Ports, context path and probes](#ports-context-path-and-probes). | `8080` |
+| `service.httpsPort`       | Service port for HTTPS. The chart adds the `https` container and Service ports whenever `backupServiceConfig.service.https` is enabled; this only changes the Service port. See [HTTPS](#https). | the HTTPS container port (`8443` by default) |
 | `ingress`                 | Optional Ingress: `enabled`, `className`, `annotations`, `hosts[].paths[]`, `tls`.                                                                                                                                                                               | `enabled: false`                                            |
 | `resources`               | Container [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).                                                                                                                                                  | `{}`                                                        |
-| `livenessProbe`           | Liveness probe.                                                                                                                                                                                                                                                  | `GET /health` on port `8080`, delay 15s, period 10s         |
-| `readinessProbe`          | Readiness probe.                                                                                                                                                                                                                                                 | `GET /ready` on port `8080`, delay 15s, period 10s          |
+| `livenessProbe`           | Liveness probe. Without a handler of your own (`httpGet`, `tcpSocket`, `exec`, `grpc`), the chart adds `httpGet` on `<context-path>health`, port `http`. | delay 15s, period 10s |
+| `readinessProbe`          | Readiness probe. Without a handler of your own, the chart adds `httpGet` on `<context-path>ready`, port `http`. | delay 15s, period 10s |
+| `terminationGracePeriodSeconds` | Time the pod gets to stop before it is killed. Longer than the 30 seconds ABS spends draining the HTTP server on shutdown. | `45` |
 | `autoscaling`             | HorizontalPodAutoscaler (`autoscaling/v2`). Not recommended; see [Replicas and scaling](#replicas-and-scaling).                                                                                                                                                 | `enabled: false`                                            |
 | `volumes`                 | Extra pod volumes (Secrets, PVCs, ConfigMaps, ...).                                                                                                                                                                                                              | `[]`                                                        |
 | `extraVolumeMounts`       | Mounts for entries in `volumes`: `name`, `mountPath`, `readOnly`. `readOnly` defaults to `true`; booleans and the strings `"true"`/`"false"` are accepted.                                                                                                     | `[]`                                                        |
@@ -183,16 +184,22 @@ backupServiceConfig:
 See [Installation](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/installation.md) for the remote
 configuration format.
 
-### Port, context path and probes
+### Ports, context path and probes
 
-- `service.port` sets the container port, the Service port and target port, and the probe port. It does not change the
-  port ABS listens on. If you change it, also set `backupServiceConfig.service.http.port` to the same value, and set
-  `livenessProbe.httpGet.port` and `readinessProbe.httpGet.port`: in `values.yaml` the probes share the default through
-  a YAML anchor, which does not apply to your own values file.
-- If you set `backupServiceConfig.service.http.context-path` (for example `/abs`), prefix the probe paths with it
-  (`/abs/health`, `/abs/ready`). The chart notes and `helm test` add the context path for you.
-- The probes, the chart notes and `helm test` use plain HTTP on `service.port`. Keep the HTTP listener enabled when
-  you also enable [HTTPS](#https).
+The chart reads the listener settings from `backupServiceConfig.service`, so you set them in one place:
+
+- The container port `http` is `backupServiceConfig.service.http.port` (default `8080`). `service.port` only sets the
+  port the Service exposes, which forwards to `http` by name.
+- When `backupServiceConfig.service.https` is present and not disabled, the chart also adds the container and Service
+  port `https` (`backupServiceConfig.service.https.port`, default `8443`). See [HTTPS](#https).
+- The default probes request `<context-path>health` and `<context-path>ready` on port `http`, so a
+  `backupServiceConfig.service.http.context-path` such as `/abs` needs no further change. The chart notes and
+  `helm test` use the context path too.
+- The probes, the chart notes and `helm test` use plain HTTP. Keep the HTTP listener enabled when you also enable
+  HTTPS.
+- With [remote configuration](#remote-configuration), `backupServiceConfig` holds only the pointer, so the chart
+  assumes the defaults: port `8080`, no HTTPS port, context path `/`. If the remote configuration changes them, set
+  `livenessProbe.httpGet` and `readinessProbe.httpGet` yourself.
 
 ### Writable paths (`readOnlyRootFilesystem`)
 
@@ -337,12 +344,10 @@ authentication. The only built-in client authentication is mutual TLS on the HTT
 
 ### HTTPS
 
-To serve HTTPS, mount the server certificate and key (and a client CA for mTLS) from a Secret, configure
-`service.https`, and expose the port with `service.httpsPort`:
+To serve HTTPS, mount the server certificate and key (and a client CA for mTLS) from a Secret and configure
+`service.https`:
 
 ```yaml
-service:
-  httpsPort: 8443 # must equal backupServiceConfig.service.https.port
 volumes:
   - name: abs-https
     secret:
@@ -360,7 +365,8 @@ backupServiceConfig:
       client-ca-file: /etc/abs-secrets/https/ca.crt
 ```
 
-The Service then has a second port named `https` next to `http`. The `ingress` backend, the probes, the chart notes
+The chart then adds a container and Service port named `https` next to `http` (set `service.httpsPort` to expose a
+different Service port, such as 443). The `ingress` backend, the probes, the chart notes
 and `helm test` still use the HTTP port. To route an Ingress to HTTPS, point your own Ingress at the `https`
 Service port and configure your controller for an HTTPS backend. Mount the Secret as a directory (not with `subPath`) so certificate rotation reaches the pod;
 ABS reloads rewritten certificate files without a restart. See
@@ -424,8 +430,9 @@ helm upgrade --namespace aerospike abs -f abs-values.yaml aerospike/aerospike-ba
 A change to `backupServiceConfig` changes a checksum annotation on the pod, so the pod is replaced and starts with
 the new configuration. Keep in mind:
 
-- Backups and restores running on the old pod are interrupted. On shutdown ABS waits up to 30 seconds, which matches
-  the Kubernetes default termination grace period. Schedule upgrades outside backup windows.
+- Backups and restores running on the old pod are interrupted. On shutdown ABS drains the HTTP server for up to
+  30 seconds; `terminationGracePeriodSeconds` (default 45) gives it time to finish before the kubelet kills the
+  container. Schedule upgrades outside backup windows.
 - Only `backupServiceConfig` is tracked. After rotating a Secret or ConfigMap used through `env`, `envFrom` or a
   `subPath` mount, restart the pod yourself:
   `kubectl -n aerospike rollout restart deployment/abs-aerospike-backup-service`.
@@ -433,6 +440,20 @@ the new configuration. Keep in mind:
   [Security](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/security.md) for when ABS picks up
   each kind of credential.
 - If ABS rejects the new configuration, the new pod does not become ready; see [Troubleshooting](#troubleshooting).
+
+### Upgrading from chart 2.1.0
+
+Chart 2.1.1 changes behavior in ways that can affect an existing values file:
+
+- **`args` is now applied.** Earlier charts ignored it and always started ABS with
+  `-c /etc/aerospike-backup-service/aerospike-backup-service.yml`. If your values set `args`, check that the list is
+  what you want ABS to run with, including `-c`, or remove it.
+- **Ports come from `backupServiceConfig`.** The container port and probe port follow
+  `backupServiceConfig.service.http.port`, and the HTTPS port is added automatically when HTTPS is enabled.
+  `service.port` is now only the Service port.
+- **Probes follow the context path.** If your values set `httpGet` on the probes only to add a context path, you can
+  remove it.
+- **`terminationGracePeriodSeconds` is 45** instead of the Kubernetes default of 30.
 
 ### Replicas and scaling
 
@@ -480,6 +501,6 @@ Common causes shown in the events:
 
 The most likely cause is an invalid `backupServiceConfig`: unknown keys and invalid values stop ABS at startup.
 [Check the logs](#get-logs), fix the values file and [upgrade](#updating-the-configuration). If ABS starts but the
-pod is not ready, check that `service.port`, `backupServiceConfig.service.http.port`, the context path and the probes
-agree (see [Port, context path and probes](#port-context-path-and-probes)), and that the Aerospike cluster is
-reachable from the pod.
+pod is not ready, check that the HTTP listener is enabled and, if you set your own probes, that they match the port
+and context path (see [Ports, context path and probes](#ports-context-path-and-probes)). Also check that the Aerospike
+cluster is reachable from the pod.
