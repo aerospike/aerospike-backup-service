@@ -74,6 +74,15 @@ func (s *Suite) putRecordIn(client *as.Client, ns string, key, age int) {
 	s.Require().NoError(client.Put(as.NewWritePolicy(0, 0), asKey, as.BinMap{ageBin: age}))
 }
 
+// deleteRecordIn deletes the record under key in setName of ns.
+func (s *Suite) deleteRecordIn(client *as.Client, ns string, key int) {
+	asKey, err := as.NewKey(ns, setName, key)
+	s.Require().NoError(err)
+
+	_, err = client.Delete(nil, asKey)
+	s.Require().NoError(err)
+}
+
 // eventually calls check every interval until it returns true, and reports whether
 // it did so within timeout. It stops early, returning false, when the test ends.
 func (s *Suite) eventually(timeout, interval time.Duration, check func() bool) bool {

@@ -253,7 +253,7 @@ func TestRestoreHandler_Wait_UntilNamespaceOpen(t *testing.T) {
 		}, nil),
 	)
 
-	require.NoError(t, newRestoreHandler(infoClient, "bar", "job").Wait(t.Context()))
+	require.NoError(t, newRestoreHandler(infoClient, "bar", "job", laneOf(model.RestoreModeStrict)).Wait(t.Context()))
 }
 
 func TestRestoreHandler_Wait_ReleasesNamespace(t *testing.T) {
@@ -279,7 +279,8 @@ func TestRestoreHandler_Wait_ReleasesNamespace(t *testing.T) {
 				&infomodels.ResponseRestoreState{State: tt.state}, nil)
 			expectRelease(t, infoClient, &jobID)
 
-			require.ErrorContains(t, newRestoreHandler(infoClient, "bar", jobID).Wait(t.Context()), tt.wantErr)
+			handler := newRestoreHandler(infoClient, "bar", jobID, laneOf(model.RestoreModeStrict))
+			require.ErrorContains(t, handler.Wait(t.Context()), tt.wantErr)
 		})
 	}
 }
@@ -296,5 +297,65 @@ func TestRestoreHandler_Wait_Canceled(t *testing.T) {
 	infoClient := aerospike.NewMockInfoGetter(ctrl)
 	expectRelease(t, infoClient, &jobID)
 
-	require.ErrorIs(t, newRestoreHandler(infoClient, "bar", jobID).Wait(ctx), context.Canceled)
+	handler := newRestoreHandler(infoClient, "bar", jobID, laneOf(model.RestoreModeStrict))
+	require.ErrorIs(t, handler.Wait(ctx), context.Canceled)
+}
+
+func TestRestoreExecutor_Run_Fuzzy(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+
+	// A fuzzy restore writes into the live namespace: no preparation.
+	infoClient := aerospike.NewMockInfoGetter(ctrl)
+	infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, request *infomodels.RequestRestore) error {
+			assert.Equal(t, infomodels.RestorePolicyFuzzy, request.Policy)
+			assert.Equal(t, fullID+","+incr1ID, request.BackupIDs)
+
+			return nil
+		})
+
+	handler, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
+		fuzzyRequest(fullID), fuzzyRequest(incr1ID))
+	require.NoError(t, err)
+	assert.NotNil(t, handler)
+}
+
+// TestRestoreExecutor_Fuzzy_AbortsOnly checks that a fuzzy restore that does not complete is
+// aborted, and that its namespace, which it never held, is not opened.
+func TestRestoreExecutor_Fuzzy_AbortsOnly(t *testing.T) {
+	t.Parallel()
+
+	t.Run("start refused", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+
+		infoClient := aerospike.NewMockInfoGetter(ctrl)
+		infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(errors.New("refused"))
+		infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", gomock.Any()).Return(nil)
+
+		_, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
+			fuzzyRequest(fullID))
+		require.ErrorContains(t, err, "failed to start server restore")
+	})
+
+	t.Run("job failed", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+
+		infoClient := aerospike.NewMockInfoGetter(ctrl)
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
+			&infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed}, nil)
+		infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(nil)
+
+		err := newRestoreHandler(infoClient, "bar", "job", laneOf(model.RestoreModeFuzzy)).Wait(t.Context())
+		require.ErrorContains(t, err, "server restore job failed")
+	})
+}
+
+func fuzzyRequest(backupID string) *model.RestoreRequest {
+	request := chainRequest(backupID)
+	request.Policy.Mode = model.RestoreModeFuzzy
+
+	return request
 }

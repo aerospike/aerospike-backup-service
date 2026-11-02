@@ -21,11 +21,11 @@ import (
 // maxChainLength is the most backups the server restores in one job (AS_RESTORE_CHAIN_MAX_LINKS).
 const maxChainLength = 32
 
-// restoreExecutor asks the server to run a cold restore of server backups, identified by their
-// job ids: a single backup, or a full backup and the incremental backups that follow it. A cold
-// restore takes the namespace from clients, clears its storage and hydrates it, so the namespace
-// holds the backups' data only. A restore that does not complete releases the namespace to
-// clients with whatever it wrote.
+// restoreExecutor asks the server to restore server backups, identified by their job ids: a
+// single backup, or a full backup and the incremental backups that follow it. The policy's mode
+// picks the lane: a strict restore is cold, a fuzzy one writes into the live namespace. A
+// restore that does not complete is aborted, and a cold one's namespace released to clients with
+// whatever it wrote.
 type restoreExecutor struct {
 	backupReader service.BackupReader
 }
@@ -79,9 +79,10 @@ func (r *restoreExecutor) start(
 	}
 	common.SetList = strings.Join(request.Policy.SetList, ",")
 
+	lane := laneOf(request.Policy.Mode)
 	jobID := newJobID(time.Now())
 	infoClient := client.InfoClient()
-	if err := prepareColdRestore(ctx, infoClient, namespace, jobID); err != nil {
+	if err := lane.prepare(ctx, infoClient, namespace, jobID); err != nil {
 		return nil, err
 	}
 
@@ -93,14 +94,40 @@ func (r *restoreExecutor) start(
 		RestoreWorkerThreads: ptr.ValueOrZero(request.Policy.Parallel),
 		RestoreRPS:           ptr.ValueOrZero(request.Policy.Tps),
 		ExtraTTL:             int(ptr.ValueOrZero(request.Policy.ExtraTTL)),
-		Policy:               infomodels.RestorePolicyStrict,
+		Policy:               lane.policy,
 	})
 	if err != nil {
 		return nil, errors.Join(fmt.Errorf("failed to start server restore: %w", err),
-			releaseNamespace(ctx, infoClient, namespace, jobID))
+			lane.release(ctx, infoClient, namespace, jobID))
 	}
 
-	return newRestoreHandler(infoClient, namespace, jobID), nil
+	return newRestoreHandler(infoClient, namespace, jobID, lane), nil
+}
+
+// restoreLane is how the server runs a restore job of one mode: the policy it starts with, what
+// runs before it starts, and how a job that does not complete is released.
+type restoreLane struct {
+	policy  infomodels.RestorePolicy
+	prepare func(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error
+	release func(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error
+}
+
+// laneOf returns the lane of mode. A fuzzy restore writes into the live namespace, so it needs
+// no preparation, and an aborted one holds nothing.
+func laneOf(mode model.RestoreMode) restoreLane {
+	if mode == model.RestoreModeFuzzy {
+		return restoreLane{
+			policy:  infomodels.RestorePolicyFuzzy,
+			prepare: func(context.Context, backup.ServerBackupInfo, string, string) error { return nil },
+			release: abortRestore,
+		}
+	}
+
+	return restoreLane{
+		policy:  infomodels.RestorePolicyStrict,
+		prepare: prepareColdRestore,
+		release: releaseNamespace,
+	}
 }
 
 // prepareColdRestore takes namespace from clients for the cold restore jobID and waits until it
@@ -160,12 +187,21 @@ func awaitPrepared(ctx context.Context, infoClient backup.ServerBackupInfo, name
 func releaseNamespace(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
 	ctx = context.WithoutCancel(ctx)
 
-	if err := infoClient.AbortRestore(ctx, namespace, jobID); err != nil {
-		return fmt.Errorf("failed to abort server restore %s: %w", jobID, err)
+	if err := abortRestore(ctx, infoClient, namespace, jobID); err != nil {
+		return err
 	}
 
 	if err := infoClient.OpenRestore(ctx, namespace, jobID); err != nil {
 		return fmt.Errorf("failed to open namespace %s after server restore %s: %w", namespace, jobID, err)
+	}
+
+	return nil
+}
+
+// abortRestore aborts the restore jobID, even when ctx is canceled.
+func abortRestore(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
+	if err := infoClient.AbortRestore(context.WithoutCancel(ctx), namespace, jobID); err != nil {
+		return fmt.Errorf("failed to abort server restore %s: %w", jobID, err)
 	}
 
 	return nil
@@ -198,12 +234,13 @@ type restoreHandler struct {
 	infoClient backup.ServerBackupInfo
 	namespace  string
 	jobID      string
+	lane       restoreLane
 	stats      *models.RestoreStats
 }
 
 var _ restoreexecutor.RestoreHandler = (*restoreHandler)(nil)
 
-func newRestoreHandler(infoClient backup.ServerBackupInfo, namespace, jobID string) *restoreHandler {
+func newRestoreHandler(infoClient backup.ServerBackupInfo, namespace, jobID string, lane restoreLane) *restoreHandler {
 	stats := models.NewRestoreStats()
 	stats.Start()
 
@@ -211,17 +248,18 @@ func newRestoreHandler(infoClient backup.ServerBackupInfo, namespace, jobID stri
 		infoClient: infoClient,
 		namespace:  namespace,
 		jobID:      jobID,
+		lane:       lane,
 		stats:      stats,
 	}
 }
 
 // Wait polls the restore job until it ends and the namespace is open to clients again, or ctx
-// is canceled. A restore that does not complete is aborted and its namespace released.
+// is canceled. A restore that does not complete is released as its lane releases it.
 func (h *restoreHandler) Wait(ctx context.Context) error {
 	defer h.stats.Stop()
 
 	if err := h.awaitComplete(ctx); err != nil {
-		return errors.Join(err, releaseNamespace(ctx, h.infoClient, h.namespace, h.jobID))
+		return errors.Join(err, h.lane.release(ctx, h.infoClient, h.namespace, h.jobID))
 	}
 
 	return nil

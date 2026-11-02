@@ -167,14 +167,9 @@ func (s *ServerBuildSuite) serverBackupConfig(c *dto.Config) {
 		S3EndpointOverride: s.s3Endpoint,
 		S3Profile:          s3Profile,
 		// The tests share the bucket: each lists only the backups it made.
-		Path: dto.Path(s.backupPath()),
+		Path: dto.Path(strings.ReplaceAll(s.T().Name(), "/", "-")),
 	}}
 	c.BackupRoutines[routineName].Namespaces = new([]dto.NamespaceName{serverNamespace})
-}
-
-// backupPath is the path in the MinIO bucket that serverBackupConfig gives the test's backups.
-func (s *ServerBuildSuite) backupPath() string {
-	return strings.ReplaceAll(s.T().Name(), "/", "-")
 }
 
 // startServerBuild starts a single-node cluster from the asd binary and feature key file on
@@ -309,33 +304,57 @@ func (s *ServerBuildSuite) assertServerBackupListed(e *env, backupType model.Bac
 	s.Failf("backup not listed", "%s backup %s is not listed", backupType, want.Key)
 }
 
-// restoreIntoDestination restores the backup at key into the destination cluster via
+// restoreIntoDestination restores the backup at key into the destination cluster, strict, via
 // POST /v1/restore/full, and waits for the job to succeed.
 func (s *ServerBuildSuite) restoreIntoDestination(e *env, key string) dto.RestoreJobStatus {
+	return s.restoreIntoDestinationWithPolicy(e, key, &dto.RestorePolicy{})
+}
+
+// restoreIntoDestinationWithPolicy restores the backup at key into the destination cluster with
+// policy, strict, via POST /v1/restore/full, and waits for the job to succeed.
+func (s *ServerBuildSuite) restoreIntoDestinationWithPolicy(
+	e *env,
+	key string,
+	policy *dto.RestorePolicy,
+) dto.RestoreJobStatus {
+	policy.Mode = dto.RestoreModeStrict
+
+	return s.restoreByPathInto(e, key, destinationClusterName, policy)
+}
+
+// restoreByPathInto restores the backup at key into cluster with policy via POST
+// /v1/restore/full, and waits for the job to succeed.
+func (s *ServerBuildSuite) restoreByPathInto(
+	e *env,
+	key, cluster string,
+	policy *dto.RestorePolicy,
+) dto.RestoreJobStatus {
 	request := defaultRestoreRequest(key)
-	request.DestinationClusterConfig.Name = destinationClusterName
+	request.DestinationClusterConfig.Name = cluster
+	request.Policy = policy
 
 	return s.restoreWithin(e, e.baseURL+"/v1/restore/full", request, serverJobTimeout)
 }
 
-// restoreIntoDestinationWithPolicy restores the backup at key into the destination cluster with
-// policy via POST /v1/restore/full, and waits for the job to succeed.
-func (s *ServerBuildSuite) restoreIntoDestinationWithPolicy(e *env, key string, policy *dto.RestorePolicy) {
-	request := defaultRestoreRequest(key)
-	request.DestinationClusterConfig.Name = destinationClusterName
-	request.Policy = policy
-
-	s.restoreWithin(e, e.baseURL+"/v1/restore/full", request, serverJobTimeout)
+// restoreIntoDestinationByTimestamp restores the routine's backups up to timestamp into the
+// destination cluster, strict, via POST /v1/restore/timestamp, and waits for the job to succeed.
+func (s *ServerBuildSuite) restoreIntoDestinationByTimestamp(e *env, timestamp time.Time) dto.RestoreJobStatus {
+	return s.restoreByTimestampInto(e, timestamp, destinationClusterName, dto.RestoreModeStrict)
 }
 
-// restoreIntoDestinationByTimestamp restores the routine's backups up to timestamp into the
-// destination cluster via POST /v1/restore/timestamp, and waits for the job to succeed.
-func (s *ServerBuildSuite) restoreIntoDestinationByTimestamp(e *env, timestamp time.Time) dto.RestoreJobStatus {
+// restoreByTimestampInto restores the routine's backups up to timestamp into cluster with mode
+// via POST /v1/restore/timestamp, and waits for the job to succeed.
+func (s *ServerBuildSuite) restoreByTimestampInto(
+	e *env,
+	timestamp time.Time,
+	cluster string,
+	mode dto.RestoreMode,
+) dto.RestoreJobStatus {
 	return s.restoreWithin(e, e.baseURL+"/v1/restore/timestamp", dto.RestoreTimestampRequest{
 		DestinationClusterConfig: dto.DestinationClusterConfig{
-			Name: destinationClusterName,
+			Name: cluster,
 		},
-		Policy:  &dto.TimestampRestorePolicy{},
+		Policy:  &dto.TimestampRestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Mode: mode}},
 		Time:    timestamp.UnixMilli(),
 		Routine: routineName,
 	}, serverJobTimeout)

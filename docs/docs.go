@@ -3046,6 +3046,18 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.RestoreMode": {
+            "description": "RestoreMode selects how the server restores a server-side backup.",
+            "type": "string",
+            "enum": [
+                "strict",
+                "fuzzy"
+            ],
+            "x-enum-varnames": [
+                "RestoreModeStrict",
+                "RestoreModeFuzzy"
+            ]
+        },
         "dto.RestoreNamespace": {
             "description": "RestoreNamespace specifies an alternative namespace name for the restore operation. Only a single namespace can be remapped per restore.",
             "type": "object",
@@ -3126,6 +3138,20 @@ const docTemplate = `{
                     "type": "integer",
                     "default": 128,
                     "example": 32
+                },
+                "mode": {
+                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
+                    "enum": [
+                        "strict",
+                        "fuzzy"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RestoreMode"
+                        }
+                    ],
+                    "x-nullable": true,
+                    "example": "strict"
                 },
                 "namespace": {
                     "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to ` + "`" + `source` + "`" + `, otherwise it is rejected. For a restore by path, point\n` + "`" + `backup-data-path` + "`" + ` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",
@@ -4113,6 +4139,20 @@ const docTemplate = `{
                     "type": "integer",
                     "default": 128,
                     "example": 32
+                },
+                "mode": {
+                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
+                    "enum": [
+                        "strict",
+                        "fuzzy"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RestoreMode"
+                        }
+                    ],
+                    "x-nullable": true,
+                    "example": "strict"
                 },
                 "namespace": {
                     "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to ` + "`" + `source` + "`" + `, otherwise it is rejected. For a restore by path, point\n` + "`" + `backup-data-path` + "`" + ` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",

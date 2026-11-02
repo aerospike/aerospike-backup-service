@@ -118,12 +118,9 @@ func (s *ServerBackupSuite) TestServerRestoreNamespaceMapping() {
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
 
 	s.gap("restore", gapNamespaceMapping, func() {
-		request := defaultRestoreRequest(backup.Key)
-		request.DestinationClusterConfig.Name = destinationClusterName
-		request.Policy = &dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{
+		s.restoreIntoDestinationWithPolicy(e, backup.Key, &dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{
 			Namespace: &dto.RestoreNamespace{Source: serverNamespace, Destination: otherNamespace},
-		}}
-		s.restoreWithin(e, e.baseURL+"/v1/restore/full", request, serverJobTimeout)
+		}})
 
 		s.assertRecordsIn(s.destinationClient, otherNamespace, []int{5, 6})
 	})
