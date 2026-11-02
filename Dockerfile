@@ -42,8 +42,11 @@ ARG TARGETARCH
 RUN apk upgrade --no-cache
 
 # addgroup/adduser are BusyBox applets, so no extra packages are needed.
+# The log directory matches the documented file-writer path, so a file log works
+# without mounting a volume (the service checks it is writable at startup).
 RUN addgroup -g 65532 -S abgroup && \
-    adduser -S -u 65532 -G abgroup -h /home/absuser absuser
+    adduser -S -u 65532 -G abgroup -h /home/absuser absuser && \
+    install -d -o absuser -g abgroup -m 0750 /var/log/aerospike-backup-service
 
 COPY --chown=absuser:absgroup --chmod=0755 --from=builder \
     /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH} \

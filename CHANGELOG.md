@@ -35,7 +35,8 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
 - Retention deletes only completed incrementals; partial backups left by a crashed run are removed
   at startup.
 - The Docker image is based on Alpine 3.24 (latest 3.24.x patch release) instead of `alpine:latest`,
-  and no longer installs the unused `shadow` package.
+  and no longer installs the unused `shadow` package. It now creates `/var/log/aerospike-backup-service`
+  owned by the service user, so the default `file-writer` path works without mounting a volume.
 
 ### Security
 
