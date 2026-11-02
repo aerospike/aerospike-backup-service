@@ -284,7 +284,9 @@ jobs:
           set -euo pipefail
           SVC="$(kubectl get svc -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=aerospike-backup-service -o jsonpath='{.items[0].metadata.name}')"
           echo "svc=${SVC}" >> "$GITHUB_OUTPUT"
-          kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=aerospike-backup-service -n ${{ env.NAMESPACE }} --timeout=180s
+          # Wait on the Deployment: the pod label also matches the finished `helm test` pod,
+          # which ends Completed and never becomes Ready. The Deployment shares the Service name.
+          kubectl wait --for=condition=Available "deployment/${SVC}" -n ${{ env.NAMESPACE }} --timeout=180s
 
       - name: Seed records
         uses: ./.github/actions/seed-and-verify-aerospike
