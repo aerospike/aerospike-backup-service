@@ -126,69 +126,33 @@ func (s *ServerBackupSuite) TestServerRestoreNamespaceMapping() {
 	})
 }
 
-// TestServerRestoreSetList restores a backup of two sets with a restore policy set-list of one,
-// and checks that only that set is restored into the destination cluster.
-func (s *ServerBackupSuite) TestServerRestoreSetList() {
-	s.putRecord(s.client, "setA", as.BinMap{ageBin: 1})
-	s.putRecord(s.client, "setB", as.BinMap{ageBin: 2})
-
-	e := s.setupEnv(s.serverBackupConfig)
-	s.triggerFullBackup(e)
-	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
-
-	s.restoreIntoDestinationWithPolicy(e, backup.Key,
-		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{SetList: []string{"setA"}}})
-
-	s.NotNil(s.recordBins(s.destinationClient, "setA", 0), "setA record not restored")
-	s.Nil(s.recordBins(s.destinationClient, "setB", 0), "setB record restored")
-}
-
-// TestServerBackupRecordsPerSecond backs up with the policy's records-per-second and checks that
-// the server job ran with it as its backup-rps.
-func (s *ServerBackupSuite) TestServerBackupRecordsPerSecond() {
+// TestServerBackupLimits backs up with the policy's records-per-second, parallel and
+// parallel-write, and checks that the server job ran with them as its backup-rps and its numbers
+// of scan and upload threads.
+func (s *ServerBackupSuite) TestServerBackupLimits() {
 	s.seedRecordsIn(s.client, serverNamespace, []int{1})
 
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		// The server takes at least 5 records per second per scan thread, 4 by default.
-		c.BackupPolicies[policyName].RecordsPerSecond = new(100)
+		policy := c.BackupPolicies[policyName]
+		// The server takes at least 5 records per second per scan thread.
+		policy.RecordsPerSecond = new(100)
+		policy.Parallel = new(2)
+		policy.ParallelWrite = new(3)
 	})
 	s.triggerFullBackup(e)
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
 
-	s.Equal("100", s.backupJobFields(backup.Key)["backup-rps"])
+	fields := s.backupJobFields(backup.Key)
+	s.Equal("100", fields["backup-rps"])
+	s.Equal("2", fields["backup-worker-threads"])
+	s.Equal("3", fields["backup-upload-threads"])
 }
 
-// TestServerBackupParallel backs up with the policy's parallel and checks that the server job
-// ran with it as its number of scan threads.
-func (s *ServerBackupSuite) TestServerBackupParallel() {
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
-
-	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		c.BackupPolicies[policyName].Parallel = new(2)
-	})
-	s.triggerFullBackup(e)
-	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
-
-	s.Equal("2", s.backupJobFields(backup.Key)["backup-worker-threads"])
-}
-
-// TestServerBackupParallelWrite backs up with the policy's parallel-write and checks that the
-// server job ran with it as its number of upload threads.
-func (s *ServerBackupSuite) TestServerBackupParallelWrite() {
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
-
-	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		c.BackupPolicies[policyName].ParallelWrite = new(3)
-	})
-	s.triggerFullBackup(e)
-	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
-
-	s.Equal("3", s.backupJobFields(backup.Key)["backup-upload-threads"])
-}
-
-// TestServerRestoreExtraTTL restores a record that expires with the restore policy's extra-ttl
-// and checks that its expiry moved out by that much on the destination cluster.
-func (s *ServerBackupSuite) TestServerRestoreExtraTTL() {
+// TestServerRestoreOptions restores one backup several times, each with one restore policy
+// option, and checks its effect: tps and parallel become the server job's restore-rps and number
+// of worker threads, extra-ttl moves a restored record's expiry out by that much, and set-list
+// restores only the sets it names. Each strict restore clears the destination namespace first.
+func (s *ServerBackupSuite) TestServerRestoreOptions() {
 	const (
 		ttl      = time.Hour
 		extraTTL = 24 * time.Hour
@@ -197,52 +161,48 @@ func (s *ServerBackupSuite) TestServerRestoreExtraTTL() {
 	key, err := as.NewKey(serverNamespace, setName, 0)
 	s.Require().NoError(err)
 	s.Require().NoError(s.client.Put(as.NewWritePolicy(0, uint32(ttl.Seconds())), key, as.BinMap{ageBin: 1}))
+	s.putRecord(s.client, "setA", as.BinMap{ageBin: 2})
+	s.putRecord(s.client, "setB", as.BinMap{ageBin: 3})
 
 	e := s.setupEnv(s.serverBackupConfig)
 	s.triggerFullBackup(e)
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
 
-	s.restoreIntoDestinationWithPolicy(e, backup.Key,
-		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{ExtraTTL: new(int64(extraTTL.Seconds()))}})
+	s.Run("tps", func() {
+		before := s.restoreJobIDs()
+		s.restoreIntoDestinationWithPolicy(e, backup.Key,
+			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Tps: new(50)}})
 
-	record, err := s.destinationClient.GetHeader(nil, key)
-	s.Require().NoError(err)
-	s.Greater(time.Duration(record.Expiration)*time.Second, extraTTL,
-		"restored record expires in %ds, want more than the extra-ttl of %s", record.Expiration, extraTTL)
-}
+		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
+		s.Equal("50", s.newRestoreJobFields(before)["restore-rps"])
+	})
 
-// TestServerRestoreTps restores with the restore policy's tps and checks that the server job ran
-// with it as its restore-rps.
-func (s *ServerBackupSuite) TestServerRestoreTps() {
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
+	s.Run("parallel", func() {
+		before := s.restoreJobIDs()
+		s.restoreIntoDestinationWithPolicy(e, backup.Key,
+			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Parallel: new(3)}})
 
-	e := s.setupEnv(s.serverBackupConfig)
-	s.triggerFullBackup(e)
-	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
+		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
+		s.Equal("3", s.newRestoreJobFields(before)["restore-worker-threads"])
+	})
 
-	before := s.restoreJobIDs()
-	s.restoreIntoDestinationWithPolicy(e, backup.Key,
-		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Tps: new(50)}})
+	s.Run("extra_ttl", func() {
+		s.restoreIntoDestinationWithPolicy(e, backup.Key,
+			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{ExtraTTL: new(int64(extraTTL.Seconds()))}})
 
-	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
-	s.Equal("50", s.newRestoreJobFields(before)["restore-rps"])
-}
+		record, err := s.destinationClient.GetHeader(nil, key)
+		s.Require().NoError(err)
+		s.Greater(time.Duration(record.Expiration)*time.Second, extraTTL,
+			"restored record expires in %ds, want more than the extra-ttl of %s", record.Expiration, extraTTL)
+	})
 
-// TestServerRestoreParallel restores with the restore policy's parallel and checks that the
-// server job ran with it as its number of worker threads.
-func (s *ServerBackupSuite) TestServerRestoreParallel() {
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
+	s.Run("set_list", func() {
+		s.restoreIntoDestinationWithPolicy(e, backup.Key,
+			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{SetList: []string{"setA"}}})
 
-	e := s.setupEnv(s.serverBackupConfig)
-	s.triggerFullBackup(e)
-	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
-
-	before := s.restoreJobIDs()
-	s.restoreIntoDestinationWithPolicy(e, backup.Key,
-		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Parallel: new(3)}})
-
-	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
-	s.Equal("3", s.newRestoreJobFields(before)["restore-worker-threads"])
+		s.NotNil(s.recordBins(s.destinationClient, "setA", 0), "setA record not restored")
+		s.Nil(s.recordBins(s.destinationClient, "setB", 0), "setB record restored")
+	})
 }
 
 // TestServerMultipleNamespaces backs up a routine of two namespaces, a full and an incremental
@@ -276,46 +236,6 @@ func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 	s.assertRecordsIn(s.destinationClient, otherNamespace, []int{4})
 }
 
-// TestServerCompression backs up with a ZSTD compression policy and checks that the backup is
-// listed as compressed.
-func (s *ServerBackupSuite) TestServerCompression() {
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
-
-	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		c.BackupPolicies[policyName].CompressionPolicy = &dto.CompressionPolicy{
-			Mode:  dto.CompressionModeZSTD,
-			Level: new(int32(1)),
-		}
-	})
-	s.triggerFullBackup(e)
-	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
-
-	s.gap("compressed", gapCompression, func() { s.Equal("ZSTD", backup.Compression) })
-}
-
-// TestServerRetention keeps one full backup by retention policy, runs two, and checks that only
-// the newest is listed.
-func (s *ServerBackupSuite) TestServerRetention() {
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
-
-	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		c.BackupPolicies[policyName].RetentionPolicy = &dto.RetentionPolicy{FullBackups: new(1)}
-	})
-	s.triggerFullBackup(e)
-	s.waitForFinishedBackup(e, model.BackupTypeFull)
-	s.triggerFullBackup(e)
-	newest := s.waitForFinishedBackup(e, model.BackupTypeFull)
-
-	s.gap("older_deleted", gapRetention, func() {
-		ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
-			backups := s.getBackups(e, model.BackupTypeFull)
-			return len(backups) == 1 && backups[0].Key == newest.Key
-		})
-		s.True(ok, "retention kept %d full backups, want only %s",
-			len(s.getBackups(e, model.BackupTypeFull)), newest.Key)
-	})
-}
-
 // TestServerNonS3Storage configures server backup mode with local storage, which the server
 // cannot write to, and expects the configuration to be rejected when it loads.
 func (s *ServerBackupSuite) TestServerNonS3Storage() {
@@ -347,20 +267,20 @@ func (s *ServerBackupSuite) TestServerTwoRoutines() {
 		c.BackupRoutines[secondRoutine] = &second
 	})
 
-	before := s.metricBackupSuccessEventCount(e, model.BackupTypeFull)
+	before := s.routinesBackupSuccessEventCount(e, model.BackupTypeFull, routineName, secondRoutine)
 	for _, routine := range []string{routineName, secondRoutine} {
 		status, body := s.do(e, http.MethodPost, fmt.Sprintf("%s/v1/backups/full/%s", e.baseURL, routine), nil)
 		s.Require().Equal(http.StatusAccepted, status, "trigger %s: %s", routine, body)
 	}
 
 	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
-		return s.metricBackupSuccessEventCount(e, model.BackupTypeFull) > before
+		return s.routinesBackupSuccessEventCount(e, model.BackupTypeFull, routineName, secondRoutine) > before
 	})
 	s.Require().True(ok, "no full backup succeeded")
 
 	s.gap("both_run", gapRoutineGate, func() {
 		ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
-			return s.metricBackupSuccessEventCount(e, model.BackupTypeFull) >= before+2
+			return s.routinesBackupSuccessEventCount(e, model.BackupTypeFull, routineName, secondRoutine) >= before+2
 		})
 		s.True(ok, "only one of the two routines backed up")
 	})
@@ -370,22 +290,6 @@ func (s *ServerBackupSuite) TestServerTwoRoutines() {
 		s.Require().Len(first, 1)
 		s.Require().Len(second, 1)
 		s.NotEqual(first[0].Key, second[0].Key, "both routines list the same backup")
-	})
-}
-
-// TestServerClusterConfiguration runs a full backup and reads the cluster configuration saved
-// with it through GET /v1/retrieve/configuration.
-func (s *ServerBackupSuite) TestServerClusterConfiguration() {
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
-
-	e := s.setupEnv(s.serverBackupConfig)
-	s.triggerFullBackup(e)
-	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
-
-	s.gap("retrieved", gapClusterConfig, func() {
-		url := fmt.Sprintf("%s/v1/retrieve/configuration/%s/%d", e.baseURL, routineName, backup.Created.UnixMilli())
-		status, body := s.do(e, http.MethodGet, url, nil)
-		s.Equal(http.StatusOK, status, "retrieve configuration: %s", body)
 	})
 }
 

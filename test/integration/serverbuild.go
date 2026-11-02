@@ -78,12 +78,9 @@ const (
 		"the server takes its zero partition manifests for a failed fetch"
 	gapNamespaceMapping = "server bug: a restore into another namespace reads the backup under the " +
 		"destination namespace, finds nothing there and fails"
-	gapNoIndexes     = "server-side backup gap: ABS does not send the policy's no-indexes to the server"
-	gapCompression   = "server-side backup gap: compression and encryption policies are accepted and ignored"
-	gapRetention     = "server-side backup gap: no retention is applied to server backups"
-	gapStorage       = "server-side backup gap: storage other than S3 is accepted when the configuration loads"
-	gapClusterConfig = "server-side backup gap: no cluster configuration is saved with a server backup"
-	gapProgress      = "server-side backup gap: a running server backup reports its progress in percent, " +
+	gapNoIndexes = "server-side backup gap: ABS does not send the policy's no-indexes to the server"
+	gapStorage   = "server-side backup gap: storage other than S3 is accepted when the configuration loads"
+	gapProgress  = "server-side backup gap: a running server backup reports its progress in percent, " +
 		"not in records"
 	gapRoutineGate = "server-side backup gap: a second routine on the same cluster is skipped while a backup " +
 		"of another routine runs"
