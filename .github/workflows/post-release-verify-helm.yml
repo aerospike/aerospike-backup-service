@@ -191,8 +191,14 @@ jobs:
               skipXdrDlogFileValidate: true
           EOF
 
-          kubectl wait --for=create pod/aerocluster-0-0 pod/aerocluster-0-1 --namespace ${{ env.NAMESPACE }} --timeout=300s
-          kubectl wait --for=condition=Ready pod/aerocluster-0-0 pod/aerocluster-0-1 --namespace ${{ env.NAMESPACE }} --timeout=300s
+          # The operator creates the pods asynchronously, and `kubectl wait --for=create` with
+          # several names fails with NotFound instead of waiting, so poll until both exist.
+          for i in $(seq 1 60); do
+            kubectl get pod aerocluster-0-0 aerocluster-0-1 --namespace ${{ env.NAMESPACE }} >/dev/null 2>&1 && break
+            [ "$i" -eq 60 ] && { echo "::error::Aerospike pods were not created within 5 minutes"; kubectl get aerospikecluster,statefulset,pods --namespace ${{ env.NAMESPACE }}; exit 1; }
+            sleep 5
+          done
+          kubectl wait --for=condition=Ready pod/aerocluster-0-0 pod/aerocluster-0-1 --namespace ${{ env.NAMESPACE }} --timeout=600s
 
       # New: helm-chart-tests.yml only creates a minio-credentials Secret, no actual MinIO server.
       - name: Deploy real MinIO
