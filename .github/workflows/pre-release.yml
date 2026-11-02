@@ -752,7 +752,7 @@ jobs:
         {"org.opencontainers.image.title":"Aerospike Backup Service",
         "org.opencontainers.image.description":"Aerospike Backup Service provides a set of REST APIs to schedule full and incremental backups. Additionally, these APIs can be used to restore data from a backup to a cluster",
         "org.opencontainers.image.documentation":"https://github.com/aerospike/aerospike-backup-service?tab=readme-ov-file#aerospike-backup-service",
-        "org.opencontainers.image.base.name":"registry.access.redhat.com/ubi9/ubi-minimal",
+        "org.opencontainers.image.base.name":"docker.io/alpine:3.24",
         "org.opencontainers.image.vendor":"Aerospike",
         "org.opencontainers.image.licenses":"Apache-2.0"}
 
