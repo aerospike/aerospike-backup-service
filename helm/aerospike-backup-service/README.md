@@ -27,12 +27,16 @@ patch version. To pin an install, pass `--version <chart version>` to `helm inst
 
 ## Adding the helm chart repository
 
-Add the `aerospike` helm repository if not already done
+The chart is published to Aerospike's JFrog Artifactory, in the public `database-helm-prod-public-local` repository.
+Add it as the `aerospike` Helm repository if not already done:
 
 ```shell
-helm repo add aerospike https://aerospike.github.io/helm-charts
+helm repo add aerospike https://aerospike.jfrog.io/artifactory/api/helm/database-helm-prod-public-local
 helm repo update
+helm search repo aerospike/aerospike-backup-service --versions
 ```
+
+The repository serves chart 2.1.0 and later.
 
 ## Quick start
 

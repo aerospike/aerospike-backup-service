@@ -69,11 +69,11 @@ MinIO containers.
 
 #### Kubernetes (Helm)
 
-Install with the Helm chart from the `aerospike` chart repository, passing the ABS configuration under
+Install with the Helm chart from Aerospike's JFrog Artifactory, passing the ABS configuration under
 `backupServiceConfig` in a values file:
 
 ```bash
-helm repo add aerospike https://aerospike.github.io/helm-charts
+helm repo add aerospike https://aerospike.jfrog.io/artifactory/api/helm/database-helm-prod-public-local
 helm install abs aerospike/aerospike-backup-service --namespace aerospike --create-namespace -f abs-values.yaml
 ```
 
