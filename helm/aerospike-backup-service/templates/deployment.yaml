@@ -50,12 +50,15 @@ spec:
             runAsGroup: 65532
             seccompProfile:
               type: RuntimeDefault
-          image: busybox
+          image: "{{ .Values.utilityImage.repository }}:{{ .Values.utilityImage.tag }}"
+          imagePullPolicy: {{ .Values.utilityImage.pullPolicy }}
+          # The config travels base64-encoded so no character in it ($, `, \, quotes) is ever
+          # interpreted by the shell.
           command:
             - /bin/sh
             - -c
             - |
-              echo -e {{ .Values.backupServiceConfig | toYaml | quote }} > /etc/aerospike-backup-service/aerospike-backup-service.yml
+              echo {{ .Values.backupServiceConfig | toYaml | b64enc | quote }} | base64 -d > /etc/aerospike-backup-service/aerospike-backup-service.yml
           volumeMounts:
             - name: aerospike-backup-service-config
               mountPath: /etc/aerospike-backup-service
@@ -69,6 +72,8 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            {{- include "args.list" . | nindent 12 }}
           {{- with .Values.env }}
           env:
             {{- toYaml . | nindent 12 }}
@@ -81,6 +86,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+            {{- with .Values.service.httpsPort }}
+            - name: https
+              containerPort: {{ . }}
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:

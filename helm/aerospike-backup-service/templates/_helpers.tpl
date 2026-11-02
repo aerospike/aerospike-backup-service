@@ -71,6 +71,17 @@ Create the name of the service account to use
 {{- end -}}
 
 {{/*
+The HTTP listener's context path bounded by slashes ("/" by default), matching
+normalizeContextPath in internal/server/server.go, so endpoint names can be appended directly.
+*/}}
+{{- define "aerospike-backup-service.contextPath" -}}
+{{- $p := dig "service" "http" "context-path" "/" (.Values.backupServiceConfig | default dict) | toString -}}
+{{- if not (hasPrefix "/" $p) }}{{ $p = printf "/%s" $p }}{{ end -}}
+{{- if not (hasSuffix "/" $p) }}{{ $p = printf "%s/" $p }}{{ end -}}
+{{- $p -}}
+{{- end -}}
+
+{{/*
 Resolve a volume mount's readOnly flag.
 Accepts a YAML boolean, or the strings "true"/"false" (Terraform and other templating
 layers serialise booleans as strings). Anything else, including an absent value,

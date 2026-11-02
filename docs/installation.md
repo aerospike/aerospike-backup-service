@@ -1,7 +1,7 @@
 # Installation
 
-This guide covers running Aerospike Backup Service (ABS) as a binary, in Docker, as a systemd service, and
-building it from source. For the fastest path to a running instance, see the
+This guide covers running Aerospike Backup Service (ABS) as a binary, in Docker, on Kubernetes, as a systemd
+service, and building it from source. For the fastest path to a running instance, see the
 [quickstart](../README.md#quickstart) in the main README.
 
 ## Run
@@ -66,6 +66,19 @@ docker run -d -p 8080:8080 -v $(pwd)/config.yml:/etc/aerospike-backup-service/ae
 
 See the [Docker Compose guide](../build/docker-compose/README.md) for a full local stack, including Aerospike and
 MinIO containers.
+
+#### Kubernetes (Helm)
+
+Install with the Helm chart from the `aerospike` chart repository, passing the ABS configuration under
+`backupServiceConfig` in a values file:
+
+```bash
+helm repo add aerospike https://aerospike.github.io/helm-charts
+helm install abs aerospike/aerospike-backup-service --namespace aerospike --create-namespace -f abs-values.yaml
+```
+
+See the [chart README](../helm/aerospike-backup-service/README.md) for the values reference, Secrets and cloud
+credentials, persistent local storage, monitoring, and why the chart should run a single replica.
 
 #### Service
 

@@ -12,5 +12,12 @@ spec:
       appProtocol: HTTP
       protocol: TCP
       name: http
+    {{- with .Values.service.httpsPort }}
+    - port: {{ . }}
+      targetPort: https
+      appProtocol: HTTPS
+      protocol: TCP
+      name: https
+    {{- end }}
   selector:
     {{- include "aerospike-backup-service.selectorLabels" . | nindent 4 }}
