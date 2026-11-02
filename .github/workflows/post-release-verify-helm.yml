@@ -140,7 +140,16 @@ jobs:
           EOF
           )
 
-          ASDB_VERSION="$(curl -s "https://hub.docker.com/v2/repositories/aerospike/aerospike-server/tags?page_size=1024" | jq -r '[.results[].name | select(test("^\\d+\\.\\d+$"))] | sort_by(.) | reverse | .[1]').0"
+          # Latest release of the second-newest minor line of the enterprise image. Enterprise tags
+          # are four-part (e.g. 8.1.2.5); there is no X.Y.0 tag to derive from the community repo.
+          ASDB_VERSION="$(curl -sf 'https://hub.docker.com/v2/repositories/aerospike/aerospike-server-enterprise/tags?page_size=100' \
+            | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$"))' | sort -V \
+            | awk -F. '{line=$1"."$2; last[line]=$0; if (!(line in seen)) {seen[line]=1; order[++n]=line}} END {if (n>1) print last[order[n-1]]}')"
+          if [ -z "$ASDB_VERSION" ]; then
+            echo "::error::Could not determine an aerospike-server-enterprise version"
+            exit 1
+          fi
+          echo "Using aerospike-server-enterprise:${ASDB_VERSION}"
 
           cat <<EOF | kubectl apply -f -
           apiVersion: asdb.aerospike.com/v1
@@ -182,8 +191,8 @@ jobs:
               skipXdrDlogFileValidate: true
           EOF
 
-          kubectl wait --for=condition=Ready pod -l app=aerospike-cluster --namespace ${{ env.NAMESPACE }} --timeout=300s || \
-            kubectl wait --for=condition=Ready pod/aerocluster-0-0 pod/aerocluster-0-1 --namespace ${{ env.NAMESPACE }} --timeout=300s
+          kubectl wait --for=create pod/aerocluster-0-0 pod/aerocluster-0-1 --namespace ${{ env.NAMESPACE }} --timeout=300s
+          kubectl wait --for=condition=Ready pod/aerocluster-0-0 pod/aerocluster-0-1 --namespace ${{ env.NAMESPACE }} --timeout=300s
 
       # New: helm-chart-tests.yml only creates a minio-credentials Secret, no actual MinIO server.
       - name: Deploy real MinIO
@@ -251,6 +260,7 @@ jobs:
           extraSecretVolumeMounts:
             - name: minio-credentials
               mountPath: /home/absuser/.aws/credentials
+              subPath: credentials
               readOnly: true
           image:
             # repository must NOT include the tag -- templates/deployment.yaml renders
