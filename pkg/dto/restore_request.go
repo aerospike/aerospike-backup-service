@@ -149,6 +149,9 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 	if err := validateEncryptionKeyAgent(policy.EncryptionPolicy, secretAgent); err != nil {
 		return nil, err
 	}
+	if err := validateRestoreMode(policy.Mode, config); err != nil {
+		return nil, err
+	}
 
 	return &model.RestoreTimestampRequest{
 		DestinationCluster: *cluster,
@@ -179,6 +182,9 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 
 	policy := r.Policy.ToModel()
 	if err := validateEncryptionKeyAgent(policy.EncryptionPolicy, secretAgent); err != nil {
+		return nil, err
+	}
+	if err := validateRestoreMode(policy.Mode, config); err != nil {
 		return nil, err
 	}
 

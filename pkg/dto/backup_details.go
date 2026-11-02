@@ -14,20 +14,26 @@ type BackupDetails struct {
 	// The backup time in epoch millis.
 	Timestamp int64 `yaml:"timestamp" json:"timestamp" example:"1685458200000" format:"int64"`
 	// The time the backup operation completed.
+	// Unknown for server-side backups.
 	Finished time.Time `yaml:"finished" json:"finished" example:"2023-03-20T14:50:00Z"`
 	// The backup finish time in epoch millis.
+	// Unknown for server-side backups.
 	FinishedTimestamp int64 `yaml:"finished-timestamp" json:"finished-timestamp" example:"1685458200000" format:"int64"`
 	// Duration represents the elapsed time taken by the backup process in seconds.
+	// Unknown for server-side backups.
 	Duration uint `yaml:"duration" json:"duration"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).
 	From time.Time `yaml:"from,omitempty" json:"from,omitzero" example:"2023-03-19T14:50:00Z"`
 	// The namespace of a backup.
 	Namespace string `yaml:"namespace" json:"namespace" example:"testNamespace"`
 	// The total number of records backed up.
+	// Unknown for server-side backups.
 	RecordCount uint64 `yaml:"record-count" json:"record-count" format:"int64" example:"100"`
 	// The size of the backup in bytes.
+	// Unknown for server-side backups.
 	ByteCount uint64 `yaml:"byte-count" json:"byte-count" format:"int64" example:"2000"`
 	// The number of backup files created.
+	// Unknown for server-side backups.
 	FileCount uint64 `yaml:"file-count" json:"file-count" format:"int64" example:"1"`
 	// The number of secondary indexes backed up.
 	SecondaryIndexCount uint64 `yaml:"secondary-index-count" json:"secondary-index-count" format:"int64" example:"5"`
@@ -60,8 +66,7 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupCo
 	d.Created = m.Created
 	d.Timestamp = m.Created.UnixMilli()
 	d.Finished = m.Finished
-	d.FinishedTimestamp = m.Finished.UnixMilli()
-	d.Duration = uint(m.Finished.Sub(d.Created) / time.Second)
+	d.FinishedTimestamp, d.Duration = finishTimestampAndDuration(m.Created, m.Finished)
 	d.From = m.From
 	d.Namespace = m.Namespace
 	d.RecordCount = m.RecordCount
@@ -72,4 +77,14 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupCo
 	d.Encryption = m.Encryption.String()
 	d.Compression = m.Compression.String()
 	d.Storage = NewStorageFromModel(m.Storage, config)
+}
+
+// finishTimestampAndDuration returns the finish time in epoch millis and the duration in
+// seconds, both zero when the finish time is unknown.
+func finishTimestampAndDuration(created, finished time.Time) (int64, uint) {
+	if finished.IsZero() {
+		return 0, 0
+	}
+
+	return finished.UnixMilli(), uint(finished.Sub(created) / time.Second)
 }

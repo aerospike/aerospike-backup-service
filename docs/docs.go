@@ -2090,6 +2090,20 @@ const docTemplate = `{
             "description": "BackupCommonConfig represents service-level backup settings.",
             "type": "object",
             "properties": {
+                "backup-mode": {
+                    "description": "Backup mode for the whole service instance (optional).\nAllowed values:\n* scan (default): the service scans the cluster and writes the backup data itself.\n* server: the Aerospike server writes the backup to S3 storage itself.\nChanging the mode requires a restart.",
+                    "default": "scan",
+                    "enum": [
+                        "scan",
+                        "server"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.BackupMode"
+                        }
+                    ],
+                    "x-nullable": true
+                },
                 "schedule-timezone": {
                     "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or any IANA timezone name resolvable\nby Go's time.LoadLocation (for example, America/New_York or Japan).\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nPrefer canonical Area/Location names: legacy aliases such as EST resolve as\nfixed UTC-5 with no DST, which is rarely what \"Eastern Time\" is meant to be.\nChanging this service-level default requires a restart.",
                     "type": "string",
@@ -2112,7 +2126,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "byte-count": {
-                    "description": "The size of the backup in bytes.",
+                    "description": "The size of the backup in bytes.\nUnknown for server-side backups.",
                     "type": "integer",
                     "format": "int64",
                     "example": 2000
@@ -2127,7 +2141,7 @@ const docTemplate = `{
                     "example": "2023-03-20T14:50:00Z"
                 },
                 "duration": {
-                    "description": "Duration represents the elapsed time taken by the backup process in seconds.",
+                    "description": "Duration represents the elapsed time taken by the backup process in seconds.\nUnknown for server-side backups.",
                     "type": "integer"
                 },
                 "encryption": {
@@ -2135,18 +2149,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "file-count": {
-                    "description": "The number of backup files created.",
+                    "description": "The number of backup files created.\nUnknown for server-side backups.",
                     "type": "integer",
                     "format": "int64",
                     "example": 1
                 },
                 "finished": {
-                    "description": "The time the backup operation completed.",
+                    "description": "The time the backup operation completed.\nUnknown for server-side backups.",
                     "type": "string",
                     "example": "2023-03-20T14:50:00Z"
                 },
                 "finished-timestamp": {
-                    "description": "The backup finish time in epoch millis.",
+                    "description": "The backup finish time in epoch millis.\nUnknown for server-side backups.",
                     "type": "integer",
                     "format": "int64",
                     "example": 1685458200000
@@ -2167,7 +2181,7 @@ const docTemplate = `{
                     "example": "testNamespace"
                 },
                 "record-count": {
-                    "description": "The total number of records backed up.",
+                    "description": "The total number of records backed up.\nUnknown for server-side backups.",
                     "type": "integer",
                     "format": "int64",
                     "example": 100
@@ -2199,6 +2213,18 @@ const docTemplate = `{
                     "example": 2
                 }
             }
+        },
+        "dto.BackupMode": {
+            "description": "BackupMode selects how the whole service instance backs up and restores data.",
+            "type": "string",
+            "enum": [
+                "scan",
+                "server"
+            ],
+            "x-enum-varnames": [
+                "BackupModeScan",
+                "BackupModeServer"
+            ]
         },
         "dto.BackupPolicy": {
             "description": "BackupPolicy represents a scheduled backup policy.",
@@ -3020,6 +3046,18 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.RestoreMode": {
+            "description": "RestoreMode selects how the server restores a server-side backup.",
+            "type": "string",
+            "enum": [
+                "strict",
+                "fuzzy"
+            ],
+            "x-enum-varnames": [
+                "RestoreModeStrict",
+                "RestoreModeFuzzy"
+            ]
+        },
         "dto.RestoreNamespace": {
             "description": "RestoreNamespace specifies an alternative namespace name for the restore operation. Only a single namespace can be remapped per restore.",
             "type": "object",
@@ -3100,6 +3138,20 @@ const docTemplate = `{
                     "type": "integer",
                     "default": 128,
                     "example": 32
+                },
+                "mode": {
+                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
+                    "enum": [
+                        "strict",
+                        "fuzzy"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RestoreMode"
+                        }
+                    ],
+                    "x-nullable": true,
+                    "example": "strict"
                 },
                 "namespace": {
                     "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to ` + "`" + `source` + "`" + `, otherwise it is rejected. For a restore by path, point\n` + "`" + `backup-data-path` + "`" + ` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",
@@ -4087,6 +4139,20 @@ const docTemplate = `{
                     "type": "integer",
                     "default": 128,
                     "example": 32
+                },
+                "mode": {
+                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
+                    "enum": [
+                        "strict",
+                        "fuzzy"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RestoreMode"
+                        }
+                    ],
+                    "x-nullable": true,
+                    "example": "strict"
                 },
                 "namespace": {
                     "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to ` + "`" + `source` + "`" + `, otherwise it is rejected. For a restore by path, point\n` + "`" + `backup-data-path` + "`" + ` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",

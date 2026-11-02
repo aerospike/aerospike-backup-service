@@ -28,10 +28,18 @@ type env struct {
 	// newestBeforeTrigger is when the newest backup of each type listed just before
 	// the last trigger of that type was created.
 	newestBeforeTrigger map[model.BackupType]time.Time
+	// successesBeforeTrigger is the backup success count of each type just before the last
+	// trigger of that type. The metrics are process-wide, so earlier tests count too.
+	successesBeforeTrigger map[model.BackupType]int
 }
 
 func newEnv(baseURL string, client *http.Client) *env {
-	return &env{baseURL: baseURL, client: client, newestBeforeTrigger: map[model.BackupType]time.Time{}}
+	return &env{
+		baseURL:                baseURL,
+		client:                 client,
+		newestBeforeTrigger:    map[model.BackupType]time.Time{},
+		successesBeforeTrigger: map[model.BackupType]int{},
+	}
 }
 
 // setupEnv starts ABS on plain HTTP with baseConfig, after passing the config through

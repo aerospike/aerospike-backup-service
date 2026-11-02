@@ -12,7 +12,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 )
 
-var errBackupSkipped = errors.New("backup skipped")
+// ErrBackupSkipped is wrapped by every StartController denial: the backup was not started.
+var ErrBackupSkipped = errors.New("backup skipped")
 
 // BackupOrchestrator runs one full or incremental backup of a routine, from admission
 // through execution to completion handling and reporting.

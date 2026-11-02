@@ -6,6 +6,8 @@ import (
 
 // RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
+	// How the server restores a server-side backup; empty for a scan restore.
+	Mode RestoreMode
 	// The number of concurrent record readers from backup files. Default: 20
 	Parallel *int
 	// Do not restore any record data (metadata or bin data).
@@ -70,6 +72,12 @@ func (p *RestorePolicy) GetRetryPolicyOrDefault() *RetryPolicy {
 	}
 
 	return defaultConfig.restorePolicy.RetryPolicy
+}
+
+// IsUniqueOrDefault reports whether the restore creates records only (CREATE_ONLY), leaving
+// existing ones as they are. Off by default.
+func (p *RestorePolicy) IsUniqueOrDefault() bool {
+	return p.Unique != nil && *p.Unique
 }
 
 func (p *RestorePolicy) GetParallelOrDefault() int {

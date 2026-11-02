@@ -43,6 +43,51 @@ test is about; everything else comes from the minimal base config.
    tests share) goes in a non-test file.
 5. Run `make docs` to regenerate the table.
 
+## Server-side backup
+
+`TestServerBackup` runs the same scenarios as the scan tests in `restore_path_test.go`,
+`restore_timestamp_test.go` and `restore_timestamp_cumulative_test.go` with `backup-mode:
+server` (`server_backup_test.go`), and checks the routine, policy and API features a server
+backup should honour (`server_backup_features_test.go`). Server-side backup is not in a
+published image, so the suite starts two single-node clusters from a locally built `asd` in the
+`aerospike-builder:latest` image, and skips when the build is missing:
+
+- `ABS_IT_ASD_BINARY`: the `asd` binary, built for Linux on the Docker host's architecture.
+  Default: `~/work/aerospike-server/target/Linux-<arch>/bin/asd`.
+- `ABS_IT_FEATURES_CONF`: the Enterprise feature key file.
+  Default: `~/work/aerospike-server-enterprise/etc/features.conf`.
+
+Unlike the scan tests, every restore goes into the second cluster. Each check a scan backup
+passes and server-side backup cannot pass yet is kept as a subtest skipped with the gap as its
+reason (`gap*` in `serverbuild.go`).
+
+### Gaps
+
+**Fix in** names the component the fix belongs to; where one fix needs another first, the
+first is listed first.
+
+| Gap | Effect | Fix in | Fix | Test |
+|---|---|---|---|---|
+| A backup's metadata records no record or byte count | `record-count` and `byte-count` are 0; `file-count` is 1, so that restore does not take the backup for an empty one | server, backup-go, ABS | The server writes the counts it already has (in the partition manifests) into `metadata.json`; the lister returns them; ABS lists them | `TestServerRestoreByPath`, both timestamp workflows |
+| A backup's metadata records no finish time | `finished` is the zero time, `finished-timestamp` and `duration` are 0 | server, backup-go, ABS | The server writes the finish time into `metadata.json`; the lister returns it; ABS lists it | none |
+| The index and UDF counts of a backup are not read | `secondary-index-count` and `udf-count` are 0 | backup-go, ABS | The lister counts the definitions in `sindex.json` and `udf.json`; ABS lists them. Reliable only once the server writes those files before `metadata.json` | `TestServerBackupRestoreWithIndexes` |
+| A restore job reports no record or index counts | `inserted-records` and `index-count` of the restore status are 0 | ABS | The server reports them in `restore-status` and backup-go returns them (`Applied`, `Read`, …); ABS's restore handler does not read them | `TestServerRestoreByPath` |
+| A running backup reports its progress in percent | `total-records` of the running job is 100 and `done-records` the percentage, not records | ABS | Report `done-records` from `RecsBackedUp` of the backup status; the server knows no total ahead of time, so the total stays an estimate | `TestServerProgress` |
+| An incremental backup with no changes is written and listed | It is listed, and becomes the last incremental; a scan backup skips it | server, then ABS | Once the metadata records counts, ABS skips an incremental with none, as it does for a scan backup. Alternatively the server does not commit an empty incremental | `TestServerRestoreByTimestampWorkflow` |
+| A restore of a backup with no records fails | The server finds no partition manifests in the backup, fails the fetch and aborts the restore: a backup of only indexes and UDFs, or a chain whose full backup has no records, cannot be restored | server | Treat a backup with zero partition manifests as an empty backup and finish | `TestServerBackupRestoreWithIndexes`, `TestServerRestoreByTimestampCumulativeWorkflow` |
+| A restore into another namespace fails | A restore with a namespace mapping is aborted | server, ABS | The server reads the backup under the destination namespace instead of the backup's own and finds no manifests; it should read the backup's namespace, or refuse the mapping. Until it does, ABS should reject a mapping in server mode | `TestServerRestoreNamespaceMapping` |
+| `metadata.json` is committed before `sindex.json`, `udf.json` and the final manifests are written | A backup is listed a few seconds before it can be fully restored | server | Write `metadata.json` last: it is the commit record | none |
+| The backup policy's `no-indexes` and `no-udfs` are not sent | The server backs up the indexes and the UDFs | ABS | Send them: backup-go's backup request has `NoIndexes` and `NoUDFs` | `TestServerNoIndexes` |
+| The backup policy's `bandwidth` is accepted | It is ignored | ABS | Reject it in the DTO validation when `backup-mode` is `server`: it has no server equivalent | none |
+| The restore policy's `no-indexes` and `no-udfs` are not sent | The indexes and the UDFs of the backup are restored | ABS | Send them: backup-go's restore request has `NoIndexes` and `NoUDFs` | none |
+| Options the server has no equivalent for are accepted | The routine's `rack-list`, `partition-list` and `node-list`, and the restore policy's `replace`, `unique`, `no-generation` and `bin-list`, are ignored | ABS | Reject them in the DTO validation when `backup-mode` is `server` | none |
+| Compression and encryption policies are accepted | A backup is written uncompressed and unencrypted, and listed as `NONE` | ABS | Reject them in the DTO validation when `backup-mode` is `server`; the server has neither | none |
+| Storage other than S3 is accepted | The configuration loads; every backup fails | ABS | Reject it in the DTO validation when `backup-mode` is `server` | `TestServerNonS3Storage` |
+| No retention is applied | Every backup is kept | ABS | Delete the oldest server backups under the storage path, as the scan retention manager does for its folders | none |
+| No cluster configuration is saved | `GET /v1/retrieve/configuration` finds none | ABS | Write the cluster configuration next to each server backup, under a key the configuration retriever can find | none |
+| Only one backup runs per cluster at a time | A routine triggered while another routine backs up the same cluster is skipped | ABS | Queue the second routine's backup until the cluster is free, instead of skipping it | `TestServerTwoRoutines` |
+| Backups are not kept per routine | Routines sharing a storage list each other's backups | ABS | Put each routine's server backups under a path of its own, such as `<storage path>/<routine>` | `TestServerTwoRoutines` |
+
 ## Tests
 
 Generated by `make docs` from the doc comments in this directory; do not edit.
@@ -83,5 +128,31 @@ AuthSuite backs up from Aerospike nodes with security enabled, one per transport
 | [`TestInternalPlain`](auth_test.go) | Backs up over plaintext with auth-mode INTERNAL, taking the password from each place ABS can read it. | `literal password`<br>`password path`<br>`password from secret agent` |
 | [`TestInternalServerTLS`](auth_test.go) | Backs up with auth-mode INTERNAL over TLS where only the server presents a certificate, trusted through ca-path. |  |
 | [`TestMutualTLS`](auth_test.go) | Backs up over mutual TLS with an encrypted client key, both as an INTERNAL user and as a PKI user identified by the certificate alone. | `internal`<br>`pki`<br>`internal with key-file-password from secret agent` |
+
+### TestServerBackup
+
+ServerBackupSuite backs up with server-side backup from one cluster running a locally built server and restores into another. It skips unless the server build is configured.
+
+| Test | What it checks | Cases |
+|---|---|---|
+| [`TestServerSetList`](server_backup_features_test.go) | Backs up with a routine set-list of one set and checks that only that set is restored into the destination cluster. |  |
+| [`TestServerBinList`](server_backup_features_test.go) | Backs up with a routine bin-list of one bin and checks that only that bin is restored into the destination cluster. |  |
+| [`TestServerFilterExpression`](server_backup_features_test.go) | Backs up with a routine filter-exp of age > 25 and checks that only the matching records are restored into the destination cluster. |  |
+| [`TestServerNoIndexes`](server_backup_features_test.go) | Backs up with the policy's no-indexes set and checks that restoring the backup creates no index on the destination cluster. |  |
+| [`TestServerRestoreNamespaceMapping`](server_backup_features_test.go) | Restores a backup of one namespace into another one of the destination cluster through the restore policy's namespace mapping. |  |
+| [`TestServerBackupLimits`](server_backup_features_test.go) | Backs up with the policy's records-per-second, parallel and parallel-write, and checks that the server job ran with them as its backup-rps and its numbers of scan and upload threads. |  |
+| [`TestServerRestoreOptions`](server_backup_features_test.go) | Restores one backup several times, each with one restore policy option, and checks its effect: tps and parallel become the server job's restore-rps and number of worker threads, extra-ttl moves a restored record's expiry out by that much, and set-list restores only the sets it names. Each strict restore clears the destination namespace first. | `tps`<br>`parallel`<br>`extra_ttl`<br>`set_list` |
+| [`TestServerMultipleNamespaces`](server_backup_features_test.go) | Backs up a routine of two namespaces, a full and an incremental server backup each, and restores both chains into the destination cluster by timestamp. Restore by timestamp runs the namespaces at the same time, so the two cold restores overlap. |  |
+| [`TestServerNonS3Storage`](server_backup_features_test.go) | Configures server backup mode with local storage, which the server cannot write to, and expects the configuration to be rejected when it loads. |  |
+| [`TestServerTwoRoutines`](server_backup_features_test.go) | Triggers full backups of two routines on the same cluster and storage at once, and checks that each runs and lists its own backup only. |  |
+| [`TestServerProgress`](server_backup_features_test.go) | Checks that a running full backup reports its progress through GET /v1/backups/currentBackup. |  |
+| [`TestServerBackupCancel`](server_backup_features_test.go) | Cancels a running full backup through POST /v1/backups/cancel and checks that the server aborts the job and nothing is listed. |  |
+| [`TestServerRestoreByPath`](server_backup_test.go) | Mirrors TestRestoreByPath with server-side backup: runs a full backup, restores it via POST /v1/restore/full into the destination cluster, and verifies the backup details, the restored data and the exposed restore metrics. |  |
+| [`TestServerBackupRestoreWithIndexes`](server_backup_test.go) | Mirrors TestBackupRestoreWithIndexes with server-side backup: backs up a secondary index and a set index and checks that restoring the backup into the destination cluster creates them there. |  |
+| [`TestServerRestoreByTimestampWorkflow`](server_backup_test.go) | Mirrors TestRestoreByTimestampWorkflow with server-side backup: runs full backup, incremental backup, empty incremental backup, then restores the namespace into the destination cluster to a point in time via POST /v1/restore/timestamp. Unlike the scan test, the full backup holds a record, which the incremental backup holds updated: the server cannot restore an empty backup, and the restore must end with the newest value. Subtests share env, backup storage, and Aerospike state. | `full`<br>`incremental`<br>`empty_incremental`<br>`restore_by_timestamp` |
+| [`TestServerRestoreByTimestampCumulativeWorkflow`](server_backup_test.go) | Mirrors TestRestoreByTimestampCumulativeWorkflow with server-side backup: runs full backup, incremental backup, another incremental backup, then restores the namespace into the destination cluster to a point in time. Since the mode is cumulative, the second incremental should cover the first one. | `full`<br>`incremental_1`<br>`incremental_2` |
+| [`TestServerFuzzyRestoreIntoSource`](server_fuzzy_restore_test.go) | Backs up the source cluster, then updates one record, deletes another and adds a third, and restores the backup in fuzzy mode into the source cluster itself, which stays live. The updated and deleted records get their backed-up values back; the added record, which the backup does not hold, stays. |  |
+| [`TestServerFuzzyRestoreByTimestamp`](server_fuzzy_restore_test.go) | Backs up a full and an incremental backup of the source cluster, updates the record again, and restores the chain by timestamp in fuzzy mode into the source cluster: the record ends with its value from the incremental backup. |  |
+| [`TestServerRestoreModeRequired`](server_fuzzy_restore_test.go) | Sends a restore without a mode, which server mode requires, and expects it to be rejected before any job starts. |  |
 
 <!-- /tag -->

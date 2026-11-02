@@ -39,7 +39,7 @@ func TestBackupReporter_Report_Skipped(t *testing.T) {
 		"routine-skip",
 		model.BackupTypeIncremental,
 		time.Minute,
-		fmt.Errorf("wrapped: %w", errBackupSkipped),
+		fmt.Errorf("wrapped: %w", ErrBackupSkipped),
 		slog.New(slog.DiscardHandler),
 	)
 	require.Equal(t, before+1, backupEventCount(t))

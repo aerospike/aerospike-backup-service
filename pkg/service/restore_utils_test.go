@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -35,6 +36,38 @@ func waitForRestore(
 	return jobStatus, err
 }
 
+// oneByOneRestore passes the backups of a restore to restore one at a time, in the order the
+// time runner gives them, so that tests set their expectations per backup.
+type oneByOneRestore struct {
+	restore *restoreexecutor.MockRestore
+}
+
+// Run restores each request after the previous one has finished. The handler of the last one
+// started is returned: it reports a failure that ended the chain early from its Wait.
+func (o oneByOneRestore) Run(
+	ctx context.Context,
+	client aerospike.Client,
+	full *model.RestoreRequest,
+	incrementals ...*model.RestoreRequest,
+) (restoreexecutor.RestoreHandler, error) {
+	requests := append([]*model.RestoreRequest{full}, incrementals...)
+
+	var handler restoreexecutor.RestoreHandler
+	for i, request := range requests {
+		started, err := o.restore.Run(ctx, client, request)
+		if err != nil {
+			return nil, err
+		}
+
+		handler = started
+		if i < len(requests)-1 && handler.Wait(ctx) != nil {
+			break
+		}
+	}
+
+	return handler, nil //nolint:nilerr // the handler of a failed restore reports it from Wait.
+}
+
 // testRestoreEnv holds the components needed for restore tests.
 type testRestoreEnv struct {
 	ctrl              *gomock.Controller
@@ -61,7 +94,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	validator := NewMockRestoreValidator(ctrl)
 
 	restoreManager := NewRestoreManager(
-		mockRestore,
+		oneByOneRestore{restore: mockRestore},
 		mockClientManager,
 		restoreJobsHolder,
 		mockBackupReader,

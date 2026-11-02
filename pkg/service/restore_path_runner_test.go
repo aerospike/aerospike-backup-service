@@ -290,6 +290,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 			ctx context.Context,
 			_ aerospike.Client,
 			_ *model.RestoreRequest,
+			_ ...*model.RestoreRequest,
 		) (restoreexecutor.RestoreHandler, error) {
 			// Signal that the Run method has started.
 			runStarted.Done()
