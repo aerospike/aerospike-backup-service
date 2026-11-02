@@ -174,7 +174,18 @@ jobs:
             [ "$i" -eq 60 ] && { echo "::error::Aerospike pods were not created within 5 minutes"; kubectl get aerospikecluster,statefulset,pods --namespace aerospike; exit 1; }
             sleep 5
           done
-          kubectl wait --for=condition=Ready pod/aerocluster-0-0 pod/aerocluster-0-1 --namespace aerospike --timeout=600s
+          if ! kubectl wait --for=condition=Ready pod/aerocluster-0-0 pod/aerocluster-0-1 --namespace aerospike --timeout=600s; then
+            for pod in aerocluster-0-0 aerocluster-0-1; do
+              echo "::group::${pod} aerospike-server logs (previous crash)"
+              kubectl logs "$pod" -c aerospike-server --previous --namespace aerospike --tail=100 || true
+              echo "::endgroup::"
+              echo "::group::${pod} aerospike-server logs (current)"
+              kubectl logs "$pod" -c aerospike-server --namespace aerospike --tail=100 || true
+              echo "::endgroup::"
+            done
+            kubectl get aerospikecluster aerocluster --namespace aerospike -o yaml | yq '.status' || true
+            exit 1
+          fi
 
       - name: Deploy MinIO
         run: |
@@ -383,3 +394,6 @@ jobs:
           kubectl get pods -n ${{ env.NAMESPACE }} -o wide || true
           kubectl get events -n ${{ env.NAMESPACE }} --sort-by=.lastTimestamp | tail -50 || true
           kubectl logs -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=aerospike-backup-service --all-containers --tail=300 || true
+          for pod in aerocluster-0-0 aerocluster-0-1; do
+            kubectl logs "$pod" -c aerospike-server --namespace ${{ env.NAMESPACE }} --tail=100 || true
+          done
