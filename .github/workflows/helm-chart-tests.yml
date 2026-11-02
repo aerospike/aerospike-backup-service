@@ -205,7 +205,8 @@ jobs:
               spec:
                 containers:
                   - name: minio
-                    image: minio/minio:latest
+                    # minio/minio is no longer published on Docker Hub.
+                    image: coollabsio/minio:RELEASE.2025-10-15T17-29-55Z
                     args: ["server", "/data"]
                     env:
                       - name: MINIO_ROOT_USER
@@ -232,10 +233,16 @@ jobs:
           EOF
           kubectl wait --for=condition=Available deployment/minio --namespace ${{ env.NAMESPACE }} --timeout=180s
 
-          kubectl run mc --image=minio/mc -n ${{ env.NAMESPACE }} --restart=Never --command -- sleep 3600
-          kubectl wait --for=condition=Ready pod/mc -n ${{ env.NAMESPACE }} --timeout=120s
-          kubectl exec -n ${{ env.NAMESPACE }} mc -- sh -c \
-            "mc alias set myminio http://minio:9000 minioadmin minioadmin && mc mb myminio/${{ env.BUCKET }}"
+          # minio/mc is no longer published either, so talk S3 with SigV4-signed curl requests
+          # from a long-lived pod. 409 means the bucket already exists.
+          kubectl run s3 --image=curlimages/curl:8.22.0 -n ${{ env.NAMESPACE }} --restart=Never --command -- sleep 3600
+          kubectl wait --for=condition=Ready pod/s3 -n ${{ env.NAMESPACE }} --timeout=120s
+          STATUS="$(kubectl exec -n ${{ env.NAMESPACE }} s3 -- curl -s -o /dev/null -w '%{http_code}' -X PUT \
+            --user minioadmin:minioadmin --aws-sigv4 aws:amz:us-east-1:s3 http://minio:9000/${{ env.BUCKET }})"
+          case "$STATUS" in
+            200|409) echo "Bucket ${{ env.BUCKET }} ready (HTTP $STATUS)" ;;
+            *) echo "::error::Creating bucket ${{ env.BUCKET }} returned HTTP $STATUS"; exit 1 ;;
+          esac
 
       - name: Run chart-testing (install)
         env:
@@ -327,7 +334,8 @@ jobs:
 
       - name: Verify backup files in MinIO
         run: |
-          kubectl exec -n ${{ env.NAMESPACE }} mc -- sh -c "mc ls --recursive myminio/${{ env.BUCKET }}" | tee minio-ls.txt
+          kubectl exec -n ${{ env.NAMESPACE }} s3 -- curl -sf --user minioadmin:minioadmin --aws-sigv4 aws:amz:us-east-1:s3 \
+            "http://minio:9000/${{ env.BUCKET }}?list-type=2" | grep -o '<Key>[^<]*</Key>' | tee minio-ls.txt
           [ -s minio-ls.txt ] || { echo "::error::No objects found in MinIO after backup"; exit 1; }
 
       - name: Truncate namespace
