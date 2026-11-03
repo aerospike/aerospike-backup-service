@@ -34,6 +34,8 @@ var docFiles = []string{
 	"docs/security.md",
 	"docs/migration.md",
 	"README.md",
+	"helm/aerospike-backup-service/README.md",
+	"helm/aerospike-backup-service/values.yaml",
 }
 
 // TestOpenAPIMatchesRoutes is the one hop in the documentation chain that

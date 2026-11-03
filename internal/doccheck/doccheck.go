@@ -2,7 +2,7 @@
 // honest.
 //
 // The generated documentation is reproduced byte-for-byte from the code, so it
-// cannot drift. Four things outside it can, and the tests here check each one
+// cannot drift. Five things outside it can, and the tests here check each one
 // against the code, so a doc that no longer matches fails the build rather than
 // a support ticket:
 //   - a default written down in a `default:` struct tag and again in the code
@@ -11,6 +11,8 @@
 //   - a field name written in prose, against the properties docs/openapi.json
 //     declares;
 //   - the Go version the Docker build defaults to, against the go.mod directive.
+//   - the Helm chart's commented backupServiceConfig reference and README
+//     examples, against the DTOs and the validation the service applies.
 package doccheck
 
 import (

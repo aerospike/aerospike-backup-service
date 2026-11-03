@@ -23,7 +23,12 @@ var fieldToken = regexp.MustCompile("`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`")
 // field that does not exist.
 //
 //nolint:gochecknoglobals // a table, read by the test below.
-var nonFieldTokens = map[string]bool{}
+var nonFieldTokens = map[string]bool{
+	// The Helm chart README names a release, an init container and a chart repository.
+	"abs-aerospike-backup-service":    true,
+	"config-injector":                 true,
+	"database-helm-prod-public-local": true,
+}
 
 const openapi = "docs/openapi.json"
 
