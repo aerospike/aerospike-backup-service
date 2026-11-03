@@ -2093,6 +2093,7 @@ const docTemplate = `{
                 "schedule-timezone": {
                     "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or any IANA timezone name resolvable\nby Go's time.LoadLocation (for example, America/New_York or Japan).\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nPrefer canonical Area/Location names: legacy aliases such as EST resolve as\nfixed UTC-5 with no DST, which is rarely what \"Eastern Time\" is meant to be.\nChanging this service-level default requires a restart.",
                     "type": "string",
+                    "default": "UTC",
                     "x-nullable": true,
                     "example": "America/New_York"
                 },
@@ -2226,6 +2227,7 @@ const docTemplate = `{
                 "concurrent-incremental": {
                     "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
                     "type": "boolean",
+                    "default": false,
                     "x-nullable": true
                 },
                 "encryption": {
@@ -2325,6 +2327,7 @@ const docTemplate = `{
                 "use-scan-compression": {
                     "description": "Enables built-in compression during scan operation.\nValid for Aerospike Server Enterprise Edition only.",
                     "type": "boolean",
+                    "default": false,
                     "x-nullable": true
                 },
                 "with-cluster-configuration": {

@@ -1,67 +1,224 @@
 # Aerospike Backup Service
 
-This Helm chart allows you to configure and run our official [Aerospike Backup Service](https://github.com/aerospike/aerospike-backup-service)
-docker image on a Kubernetes cluster.
+This Helm chart runs the official [Aerospike Backup Service](https://github.com/aerospike/aerospike-backup-service)
+(ABS) Docker image on a Kubernetes cluster. It creates a `Deployment`, a `Service`, a `ServiceAccount`, a `ConfigMap`
+holding the service configuration, and optionally an `Ingress`. It runs one pod per release; see
+[One pod per release](#one-pod-per-release).
 
-This helm chart sets up a `Deployment` for Aerospike Backup Service.
-
+For the service itself, see the
+[Aerospike Backup Service documentation](https://aerospike.com/docs/database/tools/backup-and-restore/backup-service/)
+on aerospike.com. The [project docs](https://github.com/aerospike/aerospike-backup-service/tree/main/docs) on GitHub
+include the reference for every configuration field.
 
 ## Prerequisites
-- Kubernetes cluster
-- Helm v3
-- An Aerospike cluster that can connect to Pods in the Kubernetes cluster.
-  The Aerospike cluster can be deployed in the same Kubernetes cluster using [Aerospike Kubernetes Operator](https://docs.aerospike.com/cloud/kubernetes/operator)
+
+- Kubernetes 1.23 or later.
+- Helm v3 or later.
+- An Aerospike cluster reachable from the pods. It can run in the same Kubernetes cluster using the
+  [Aerospike Kubernetes Operator](https://aerospike.com/docs/kubernetes/).
+
+## Versions
+
+| Chart  | Aerospike Backup Service (`appVersion`, default `image.tag`) |
+|--------|--------------------------------------------------------------|
+| 2.1.0  | 3.7.0                                                        |
+| 2.0.12 | 3.6.2                                                        |
+| 2.0.11 | 3.6.1                                                        |
+| 2.0.13 | 3.5.1                                                        |
+| 2.0.9  | 3.5.0                                                        |
+| 2.0.8  | 3.4.0                                                        |
+| 2.0.7  | 3.3.1                                                        |
+| 2.0.6  | 3.3.0                                                        |
+| 2.0.5  | 3.2.0                                                        |
+| 2.0.4  | 3.1.0                                                        |
+
+From ABS 3.7.0, the chart minor version advances once per ABS minor line and the chart patch version matches the ABS
+patch version. To pin an install, pass `--version <chart version>` to `helm install` and `helm upgrade`.
 
 ## Adding the helm chart repository
 
-Add the `aerospike` helm repository if not already done
+The chart is published to Aerospike's JFrog Artifactory, in the public `database-helm-prod-public-local` repository.
+Add it as the `aerospike` Helm repository if not already done:
 
 ```shell
-helm repo add aerospike https://aerospike.github.io/helm-charts
+helm repo add aerospike https://aerospike.jfrog.io/artifactory/api/helm/database-helm-prod-public-local
+helm repo update
+helm search repo aerospike/aerospike-backup-service --versions
 ```
 
-## Supported configuration
+The repository serves chart 2.1.0 and later.
 
-### Configuration
+## Quick start
 
-| Parameter                 | Description                                                                                                                                                                          | Default                        |
-|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|
-| `replicaCount`            | Configures the number Aerospike Backup Service instance pods to run.                                                                                                                 | '1'                            |
-| `image`                   | Configures Aerospike Aerospike Backup Service image repository, tag and pull policy.                                                                                                 | see [values.yaml](values.yaml) |
-| `imagePullSecrets`        | For Private docker registries, when authentication is needed.                                                                                                                        | see [values.yaml](values.yaml) |
-| `args`                    | Arguments to pass to ABS                                                                                                                                                             | `[]`                           |
-| `backupServiceConfig`     | ABS cluster configuration deployed to `/etc/aerospike-backup-service/aerospike-backup-service.yml`.                                                                                  | see [values.yaml](values.yaml) |
-| `initContainers`          | List of initContainers added to each abs pods for custom cluster behavior.                                                                                                           | `[]`                           |
-| `serviceAccount`          | Service Account details like name and annotations. `automount` defaults to `false`. The pod also sets `automountServiceAccountToken: false`.                                         | see [values.yaml](values.yaml) |
-| `podAnnotations`          | Additional pod [annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/). Should be specified as a map of annotation names to annotation values. | `{}`                           |
-| `podLabels`               | Additional pod [labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). Should be specified as a map of label names to label values.                     | `{}`                           |
-| `podSecurityContext`      | Pod [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)                                                                                   | `{}`                           |
-| `securityContext`         | Container [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container). Hardened by default (`runAsNonRoot`, `readOnlyRootFilesystem`, drop ALL capabilities, `seccompProfile: RuntimeDefault`). | see [values.yaml](values.yaml) |
-| `service`                 | Load-Balancer configuration for more details please refer to a Load-Balancer docs.                                                                                                   | `{}`                           |
-| `resources`               | Resource [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) for the abs pods.                                                     | `{}`                           |
-| `autoscaling`             | Enable the horizontal pod auto-scaler.                                                                                                                                               | see [values.yaml](values.yaml) |
-| `volumes`                 | List of additional volumes to attach to the abs pod.                                                                                                                                 | see [values.yaml](values.yaml) |
-| `extraVolumeMounts`       | Extra volume mounts corresponding to the volumes added to `extraVolumes`.                                                                                                            | see [values.yaml](values.yaml) |
-| `extraSecretVolumeMounts` | Extra secret volume mounts corresponding to the volumes added to `extraVolumes`.                                                                                                     | see [values.yaml](values.yaml) |
-| `affinity`                | [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)  rules if any for the pods.                                          | `{}`                           |
-| `nodeSelector`            | [Node selector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector)  for the pods.                                                                | `{}`                           |
-| `tolerations`             | [Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)  for the pods.                                                                          | `{}`                           |
+Create a values file, for example `abs-values.yaml`. The `backupServiceConfig` key holds the ABS
+[configuration file](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/configuration.md); the rest
+configures Kubernetes. This example backs up namespace `test` to S3 every night and reads the Aerospike password from a
+Kubernetes Secret:
 
+```yaml
+backupServiceConfig:
+  aerospike-clusters:
+    main:
+      seed-nodes:
+        - host-name: aerocluster.aerospike.svc.cluster.local
+          port: 3000
+      credentials:
+        user: backup
+        password-path: /etc/abs-secrets/aerospike-password
+  storage:
+    s3:
+      s3-storage:
+        bucket: my-backup-bucket
+        s3-region: us-east-1
+        path: abs
+  backup-policies:
+    keep-week:
+      retention:
+        full: 7
+  backup-routines:
+    nightly:
+      source-cluster: main
+      storage: s3
+      backup-policy: keep-week
+      interval-cron: "@daily"
+      incr-interval-cron: "@hourly"
+      namespaces: [ "test" ]
 
+volumes:
+  - name: aerospike-password
+    secret:
+      secretName: abs-aerospike
+extraSecretVolumeMounts:
+  - name: aerospike-password
+    mountPath: /etc/abs-secrets/aerospike-password
+    subPath: password
+```
 
-## Deploy the ABS
+S3 credentials for this example come from the default AWS chain; see [Cloud storage credentials](#cloud-storage-credentials).
 
-We recommend creating a new `.yaml` for providing configuration values to the helm chart for deployment.
-See the [examples](examples) folder for examples.
+Create the namespace and the Secret, then install:
 
+```shell
+kubectl create namespace aerospike
+kubectl -n aerospike create secret generic abs-aerospike --from-literal=password='<aerospike password>'
 
-We recommend naming the file with the name of the ABS service. For example if you want to name your service as
-`abs`, create a file `abs-values.yaml`.
-Once you have created this custom values file, deploy the ABS, using the following commands.
+# helm install --namespace <target namespace> <release name> -f <values file> aerospike/aerospike-backup-service
+helm install abs aerospike/aerospike-backup-service \
+  --namespace aerospike \
+  --values abs-values.yaml \
+  --wait
+```
+
+Here `abs` is the release name. Resources are named `<release name>-aerospike-backup-service`
+(here `abs-aerospike-backup-service`) unless the release name already contains the chart name, or you set
+`nameOverride` or `fullnameOverride`.
+
+On success, Helm prints the release status and the chart notes, which show how to reach the API:
+
+```text
+NAME: abs
+NAMESPACE: aerospike
+STATUS: deployed
+REVISION: 1
+NOTES:
+1. Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace aerospike -l "app.kubernetes.io/name=aerospike-backup-service,app.kubernetes.io/instance=abs" -o jsonpath="{.items[0].metadata.name}")
+  ...
+```
+
+To check the release, run `helm test abs -n aerospike`. It starts a short-lived pod that requests the `health` endpoint
+through the Service.
+
+## Configuration
+
+| Parameter                 | Description                                                                                                                                                                                                                                                      | Default                                                     |
+|---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------|
+| `replicaCount`            | Number of ABS pods: `1`, or `0` to stop the service. Values above `1` fail the install; see [One pod per release](#one-pod-per-release). | `1` |
+| `image`                   | ABS image `repository`, `tag` and `pullPolicy`. `tag` falls back to the chart `appVersion` when empty.                                                                                                                                                           | `aerospike/aerospike-backup-service:3.7.0`, `Always`        |
+| `imagePullSecrets`        | Secrets for pulling from a private registry.                                                                                                                                                                                                                     | `[]`                                                        |
+| `nameOverride`            | Replaces the chart name in resource names and the `app.kubernetes.io/name` label.                                                                                                                                                                                | `""`                                                        |
+| `fullnameOverride`        | Replaces the full resource name.                                                                                                                                                                                                                                 | `""`                                                        |
+| `utilityImage`            | Image used by the `config-injector` init container (when `configmap.create` is `false`) and by the `helm test` pod. Needs `/bin/sh`, `base64` and `wget`.                                                                                                       | `busybox:1.37.0`, `IfNotPresent`                            |
+| `configmap.create`        | How `backupServiceConfig` reaches the pod. See [Configuration source](#configuration-source).                                                                                                                                                                   | `true`                                                      |
+| `args`                    | ABS command-line arguments. Empty means `-c /etc/aerospike-backup-service/aerospike-backup-service.yml`. A non-empty list replaces that default, so include `-c` yourself. Add `-r` to treat the mounted file as a [remote configuration](#remote-configuration) pointer. Chart 2.1.0 and earlier ignored this value; see [Upgrading from chart 2.1.0](#upgrading-from-chart-210). | `[]`                                                        |
+| `env`                     | Extra container environment variables, for example `valueFrom.secretKeyRef`.                                                                                                                                                                                    | `[]`                                                        |
+| `envFrom`                 | Import all keys of a ConfigMap or Secret as environment variables.                                                                                                                                                                                               | `[]`                                                        |
+| `backupServiceConfig`     | ABS configuration, written to `/etc/aerospike-backup-service/aerospike-backup-service.yml`. Unknown keys fail startup. See the commented reference in [values.yaml](values.yaml) and the [field reference](https://github.com/aerospike/aerospike-backup-service/tree/main/docs/readme/dto). | `{}`                                                        |
+| `initContainers`          | Extra init containers, run after `config-injector`.                                                                                                                                                                                                              | `[]`                                                        |
+| `serviceAccount`          | `create`, `name` and `annotations` (for IRSA or Workload Identity). `automount` sets the field on the ServiceAccount object only: the pod always sets `automountServiceAccountToken: false`.                                                                    | `create: true`, `automount: false`                          |
+| `podAnnotations`          | Extra pod [annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/).                                                                                                                                                          | `{}`                                                        |
+| `podLabels`               | Extra pod [labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).                                                                                                                                                                    | `{}`                                                        |
+| `podSecurityContext`      | Pod [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).                                                                                                                                                              | `runAsNonRoot: true`, `fsGroup: 65532`, seccomp `RuntimeDefault` |
+| `securityContext`         | Container [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container). Hardened: non-root uid/gid 65532, `readOnlyRootFilesystem`, no privilege escalation, all capabilities dropped, seccomp `RuntimeDefault`. | see [values.yaml](values.yaml)                              |
+| `service.type`            | Kubernetes Service type.                                                                                                                                                                                                                                         | `ClusterIP`                                                 |
+| `service.port`            | Service port for HTTP. The Service forwards to the container port named `http`, which the chart takes from `backupServiceConfig.service.http.port` (default `8080`). See [Ports, context path and probes](#ports-context-path-and-probes). | `8080` |
+| `service.httpsPort`       | Service port for HTTPS. The chart adds the `https` container and Service ports whenever `backupServiceConfig.service.https` is enabled; this only changes the Service port. See [HTTPS](#https). | the HTTPS container port (`8443` by default) |
+| `ingress`                 | Optional Ingress: `enabled`, `className`, `annotations`, `hosts[].paths[]`, `tls`.                                                                                                                                                                               | `enabled: false`                                            |
+| `resources`               | Container [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).                                                                                                                                                  | `{}`                                                        |
+| `livenessProbe`           | Liveness probe. Without a handler of your own (`httpGet`, `tcpSocket`, `exec`, `grpc`), the chart adds `httpGet` on `<context-path>health`, port `http`. | delay 15s, period 10s |
+| `readinessProbe`          | Readiness probe. Without a handler of your own, the chart adds `httpGet` on `<context-path>ready`, port `http`. | delay 15s, period 10s |
+| `terminationGracePeriodSeconds` | Time the pod gets to stop before it is killed. Longer than the 30 seconds ABS spends draining the HTTP server on shutdown. | `45` |
+| `volumes`                 | Extra pod volumes (Secrets, PVCs, ConfigMaps, ...).                                                                                                                                                                                                              | `[]`                                                        |
+| `extraVolumeMounts`       | Mounts for entries in `volumes`: `name`, `mountPath`, `readOnly`. `readOnly` defaults to `true`; booleans and the strings `"true"`/`"false"` are accepted.                                                                                                     | `[]`                                                        |
+| `extraSecretVolumeMounts` | Like `extraVolumeMounts`, plus `subPath` to mount one key of a Secret as a file.                                                                                                                                                                                 | `[]`                                                        |
+| `nodeSelector`            | [Node selector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector).                                                                                                                                                          | `{}`                                                        |
+| `tolerations`             | [Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).                                                                                                                                                                    | `[]`                                                        |
+| `affinity`                | [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) rules.                                                                                                                                           | `{}`                                                        |
+
+### Configuration source
+
+- **`configmap.create: true` (default).** `backupServiceConfig` is rendered into the ConfigMap
+  `<fullname>-cm` and mounted read-only. The configuration REST API cannot change it: write requests return
+  `405 Method Not Allowed`. Change `backupServiceConfig` and run `helm upgrade` instead.
+- **`configmap.create: false`.** The `config-injector` init container (image `utilityImage`) writes
+  `backupServiceConfig` into an `emptyDir`, so the configuration REST API can change it. Those changes live only in
+  the pod: they are lost when the pod is recreated, including on every `helm upgrade` that changes the pod. Copy any
+  change you want to keep back into your values file.
+
+### Remote configuration
+
+With `args: ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml", "-r"]`, the mounted file does not
+hold the configuration itself but the location of it, for example an S3 object. `backupServiceConfig` then contains
+only that pointer:
+
+```yaml
+args: ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml", "-r"]
+backupServiceConfig:
+  s3-storage:
+    bucket: my-config-bucket
+    path: config.yml
+    s3-region: us-east-1
+```
+
+See [Installation](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/installation.md) for the remote
+configuration format.
+
+### Ports, context path and probes
+
+The chart reads the listener settings from `backupServiceConfig.service`, so you set them in one place:
+
+- The container port `http` is `backupServiceConfig.service.http.port` (default `8080`). `service.port` only sets the
+  port the Service exposes, which forwards to `http` by name.
+- When `backupServiceConfig.service.https` is present and not disabled, the chart also adds the container and Service
+  port `https` (`backupServiceConfig.service.https.port`, default `8443`). See [HTTPS](#https).
+- The default probes request `<context-path>health` and `<context-path>ready` on port `http`, so a
+  `backupServiceConfig.service.http.context-path` such as `/abs` needs no further change. The chart notes and
+  `helm test` use the context path too.
+- The probes, the `ingress` backend, the chart notes and `helm test` use HTTP. When
+  `backupServiceConfig.service.http.disabled` is `true`, the chart drops the `http` port and they use the `https` port
+  and its context path instead; the probes use scheme `HTTPS` and do not verify the certificate. With
+  `client-auth: require-and-verify` the kubelet cannot present a client certificate, so set `livenessProbe` and
+  `readinessProbe` (for example `tcpSocket: {port: https}`) yourself.
+- With [remote configuration](#remote-configuration), `backupServiceConfig` holds only the pointer, so the chart
+  assumes the defaults: port `8080`, no HTTPS port, context path `/`. If the remote configuration changes them, set
+  `livenessProbe.httpGet` and `readinessProbe.httpGet` yourself.
 
 ### Writable paths (`readOnlyRootFilesystem`)
 
-The default container `securityContext` sets `readOnlyRootFilesystem: true`. The chart mounts an `emptyDir` at `/tmp` so the process can start. File-based local storage or a log file on disk need an extra writable volume, for example:
+The default container `securityContext` sets `readOnlyRootFilesystem: true`. The chart mounts an `emptyDir` at `/tmp`;
+everything else in the image, including `/var/log/aerospike-backup-service`, is read-only. Local backup storage and a
+log file (`service.logger.file-writer`) need a writable volume. Use a
+PersistentVolumeClaim for local storage: an `emptyDir` is deleted with the pod, and the backups with it.
 
 ```yaml
 backupServiceConfig:
@@ -70,137 +227,305 @@ backupServiceConfig:
       local-storage:
         path: /backup
 volumes:
-  - name: local-storage
-    emptyDir: {}
+  - name: backups
+    persistentVolumeClaim:
+      claimName: abs-backups # create this PVC first
 extraVolumeMounts:
-  - name: local-storage
+  - name: backups
     mountPath: /backup
     readOnly: false
 ```
 
-Override `securityContext.readOnlyRootFilesystem` only if you cannot mount a volume. Full operator guidance will live in `docs/security.md` (BKRS-295 / Phase 5 `p5-deploy-docs`).
+The pod's `fsGroup: 65532` makes the volume writable for the ABS user on most storage classes. Logs go to standard
+output by default (`service.logger.stdout-writer: true`), which is what `kubectl logs` reads; this is the recommended
+setup on Kubernetes. Override `securityContext.readOnlyRootFilesystem` only if you cannot mount a volume.
 
-### Create a new namespace
-We recommend using `aerospike` namespace for the ABS. If the namespace does not exist run the following command:
+## Secrets and credentials
+
+Keep credentials out of `backupServiceConfig`: the chart stores it in a ConfigMap, which is not encrypted and is
+readable by anyone who can read ConfigMaps in the namespace. Instead, put them in Kubernetes Secrets and either mount
+them as files (`volumes` with `extraSecretVolumeMounts`) or expose them as environment variables (`env`). ABS can also
+read secrets from an [Aerospike Secret Agent](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/security.md).
+
+### Aerospike password
+
+Shown in the [Quick start](#quick-start): mount the Secret key as a file and point `credentials.password-path` at it.
+
+### TLS to Aerospike
+
 ```shell
-kubectl create namespace aerospike
+kubectl -n aerospike create secret generic aerospike-tls \
+  --from-file=ca.pem --from-file=cert.pem --from-file=key.pem
 ```
 
-### Create secrets
-
-You can create additional secrets, for confidential data like TLS certificates, S3 credentials, and Aerospike cluster password these are mounted to the ABS pods as files.
-The ABS can then be configured to use these secrets. 
-
-### Deploy Aerospike Backup Service
-
-```shell
-# helm install --namespace <target namespace> <helm release name/cluster name> -f <path to custom values yaml> aerospike/aerospike-backup-service
-helm install abs "aerospike/aerospike-backup-service" \
---namespace aerospike \
---values abs-values.yaml \
---create-namespace \
---wait
+```yaml
+volumes:
+  - name: aerospike-tls
+    secret:
+      secretName: aerospike-tls
+extraVolumeMounts:
+  - name: aerospike-tls
+    mountPath: /etc/abs-secrets/tls
+backupServiceConfig:
+  aerospike-clusters:
+    main:
+      seed-nodes:
+        - host-name: aerocluster.aerospike.svc.cluster.local
+          port: 4333
+          tls-name: aerocluster
+      tls:
+        name: aerocluster
+        ca-file: /etc/abs-secrets/tls/ca.pem
+        cert-file: /etc/abs-secrets/tls/cert.pem # for PKI or mutual TLS
+        key-file: /etc/abs-secrets/tls/key.pem
 ```
 
-Here `abs` is the release name for the Aerospike Backup Service.
+### Cloud storage credentials
 
-On successful deployment you should see output similar to below:
+**S3.** Without `access-key-id`/`secret-access-key`, ABS uses the default AWS credential chain. On EKS, use
+[IRSA](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) or EKS Pod Identity:
 
-```shell
-NAME: abs
-LAST DEPLOYED: Wed May 22 11:46:26 2024
-NAMESPACE: aerospike
-STATUS: deployed
-REVISION: 1
-NOTES:
+```yaml
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::<account-id>:role/<role-name>
 ```
 
-## List pods for the ABS
-To list the pods for the ABS run the following command:
+Elsewhere, mount an AWS credentials file at the ABS user's home directory and select a profile with `s3-profile`:
+
 ```shell
-# kubectl get pods --namespace aerospike --selector=app=<helm release name>-aerospike-backup-service
+kubectl -n aerospike create secret generic s3-credentials --from-file=credentials=./aws-credentials
+```
+
+```yaml
+volumes:
+  - name: s3-credentials
+    secret:
+      secretName: s3-credentials
+extraSecretVolumeMounts:
+  - name: s3-credentials
+    mountPath: /home/absuser/.aws/credentials
+    subPath: credentials
+```
+
+**GCP.** Without `key-file-path` or `key`, ABS uses Application Default Credentials, which works with
+[GKE Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
+(`serviceAccount.annotations: {iam.gke.io/gcp-service-account: <gsa>@<project>.iam.gserviceaccount.com}`).
+Otherwise mount a service account key from a Secret and set `key-file-path` to it.
+
+**Azure.** Without `account-name`/`account-key` or `tenant-id`/`client-id`/`client-secret`, ABS uses the Azure default
+credential chain, which includes [Workload Identity](https://learn.microsoft.com/azure/aks/workload-identity-overview)
+(set the `azure.workload.identity/client-id` ServiceAccount annotation and the `azure.workload.identity/use: "true"`
+pod label through `podLabels`).
+
+Values such as `secret-access-key`, `account-key` or `client-secret` can also reference a Secret Agent with
+`secrets:<resource>:<key>`.
+
+### Encryption keys
+
+Pass the key from a Secret through an environment variable and reference it with `key-env`:
+
+```yaml
+env:
+  - name: ABS_ENCRYPTION_KEY
+    valueFrom:
+      secretKeyRef:
+        name: abs-encryption-key
+        key: key.pem
+backupServiceConfig:
+  backup-policies:
+    encrypted:
+      encryption:
+        mode: AES256
+        key-env: ABS_ENCRYPTION_KEY
+```
+
+Alternatively mount the Secret as a file and use `key-file`.
+
+## Exposing and securing the API
+
+The REST API can change the configuration, start and cancel backups, and restore data. It has no user or token
+authentication. The only built-in client authentication is mutual TLS on the HTTPS listener. Keep the default
+`ClusterIP` Service and reach the API with `kubectl port-forward` (see the chart notes), or restrict access:
+
+- Use a [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) to allow only the
+  clients that need the API.
+- If you enable `ingress`, put authentication in front of it (for example your ingress controller's auth annotations)
+  and terminate TLS (`ingress.tls`).
+- `backupServiceConfig.service.http.rate.white-list` exempts listed IPs from the rate limiter; it does not restrict access.
+
+### HTTPS
+
+To serve HTTPS, mount the server certificate and key (and a client CA for mTLS) from a Secret and configure
+`service.https`:
+
+```yaml
+volumes:
+  - name: abs-https
+    secret:
+      secretName: abs-https # tls.crt, tls.key, ca.crt
+extraVolumeMounts:
+  - name: abs-https
+    mountPath: /etc/abs-secrets/https
+backupServiceConfig:
+  service:
+    https:
+      port: 8443
+      cert-file: /etc/abs-secrets/https/tls.crt
+      key-file: /etc/abs-secrets/https/tls.key
+      client-auth: require-and-verify # mutual TLS
+      client-ca-file: /etc/abs-secrets/https/ca.crt
+```
+
+The chart then adds a container and Service port named `https` next to `http` (set `service.httpsPort` to expose a
+different Service port, such as 443). The `ingress` backend, the probes, the chart notes
+and `helm test` keep using the HTTP port unless `backupServiceConfig.service.http.disabled` is `true` (see
+[Ports, context path and probes](#ports-context-path-and-probes)). To route an Ingress to HTTPS, point your own Ingress at the `https`
+Service port and configure your controller for an HTTPS backend. Mount the Secret as a directory (not with `subPath`) so certificate rotation reaches the pod;
+ABS reloads rewritten certificate files without a restart. See
+[Security](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/security.md).
+
+## Monitoring
+
+ABS serves Prometheus metrics at `<context-path>metrics` (default `/metrics`) on the HTTP port. The Service names that
+port `http`. With the Prometheus Operator, a ServiceMonitor such as this one scrapes it:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: abs
+  namespace: aerospike
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: abs
+      app.kubernetes.io/name: aerospike-backup-service
+  endpoints:
+    - port: http
+      path: /metrics
+```
+
+With annotation-based scraping, set `podAnnotations` (`prometheus.io/scrape: "true"`, `prometheus.io/port: "8080"`,
+`prometheus.io/path: /metrics`). See [Monitoring](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/monitoring.md)
+for the available metrics.
+
+## Operations
+
+### List pods
+
+```shell
+# kubectl get pods --namespace aerospike --selector=app=<fullname>
 kubectl get pods --namespace aerospike --selector=app=abs-aerospike-backup-service
 ```
 
-You should see output similar to the following:
-```shell
+```text
 NAME                                            READY   STATUS    RESTARTS   AGE
 abs-aerospike-backup-service-544cc664c9-g5gdj   1/1     Running   0          22m
 ```
 
-## Get logs for all ABS instances
+### Get logs
 
 ```shell
-# kubectl -n aerospike logs -f deployment/<helm release name>-aerospike-backup-service
-# Skip the -f flag to get a one time dump of the log
+# Skip -f for a one-time dump
 kubectl -n aerospike logs -f deployment/abs-aerospike-backup-service
 ```
 
-## Get logs for one ABS pod
+### Updating the configuration
+
+Edit `backupServiceConfig` in your values file and upgrade the release:
 
 ```shell
-# kubectl -n aerospike logs -f <helm release name>-aerospike-backup-service-<random-hash>
-# Skip the -f flag to get a one time dump of the log
-kubectl -n aerospike logs -f abs-aerospike-backup-service-544cc664c9-g5gdj
-```
-
-## Updating ABS configuration
-
-Edit the `backupServiceConfig` section in the custom values file and save the changes.
-
-Upgrade the ABS deployment using the following command.
-
-```shell
-#helm upgrade --namespace <target namespace> <helm release name> -f <path to custom values yaml file> aerospike/aerospike-backup-service
+# helm upgrade --namespace <target namespace> <release name> -f <values file> aerospike/aerospike-backup-service
 helm upgrade --namespace aerospike abs -f abs-values.yaml aerospike/aerospike-backup-service
 ```
 
-On successful execution of the command the ABS pods will undergo a rolling restart and come up with the new configuration.
+A change to `backupServiceConfig` changes a checksum annotation on the pod, so the pod is replaced and starts with
+the new configuration. Keep in mind:
 
-To verify the changes are applied
-- [List the pods](#list-pods-for-the-abs)
-- [Verify the configuration in abs logs](#get-logs-for-all-abs-instances)
+- Backups and restores running on the old pod are interrupted. On shutdown ABS drains the HTTP server for up to
+  30 seconds; `terminationGracePeriodSeconds` (default 45) gives it time to finish before the kubelet kills the
+  container. Schedule upgrades outside backup windows.
+- Only `backupServiceConfig` is tracked. After rotating a Secret or ConfigMap used through `env`, `envFrom` or a
+  `subPath` mount, restart the pod yourself:
+  `kubectl -n aerospike rollout restart deployment/abs-aerospike-backup-service`.
+  Secrets mounted as whole directories are updated in place by the kubelet; see
+  [Security](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/security.md) for when ABS picks up
+  each kind of credential.
+- If ABS rejects the new configuration, the new pod does not become ready; see [Troubleshooting](#troubleshooting).
 
-**_NOTE:_** The changes might take some time to apply. If you do not see the desired ABS config try again after some time.
-If ABS pods are not being listed or report status as crashed see [troubleshooting](#troubleshooting).
+### Upgrading from chart 2.1.0
 
-## Scaling up/down the ABS
+Charts released after 2.1.0 change behavior in ways that can affect an existing values file:
 
-Edit the `replicaCount` to the desired ABS count and upgrade the ABS deployment using the following command.
+- **`args` is now applied.** Earlier charts ignored it and always started ABS with
+  `-c /etc/aerospike-backup-service/aerospike-backup-service.yml`. If your values set `args`, check that the list is
+  what you want ABS to run with, including `-c`, or remove it.
+- **Ports come from `backupServiceConfig`.** The container port and probe port follow
+  `backupServiceConfig.service.http.port`, and the HTTPS port is added automatically when HTTPS is enabled.
+  `service.port` is now only the Service port.
+- **Probes follow the context path.** If your values set `httpGet` on the probes only to add a context path, you can
+  remove it.
+- **`terminationGracePeriodSeconds` is 45** instead of the Kubernetes default of 30.
+- **One pod per release.** `replicaCount` above `1` and `autoscaling.enabled: true` now fail the install, and the
+  chart no longer creates a HorizontalPodAutoscaler. Remove `autoscaling` from your values file.
+- **Upgrades replace the pod.** The Deployment uses the `Recreate` strategy, so an upgrade stops the old pod before it
+  starts the new one. Expect a short outage during each upgrade instead of two pods running side by side.
+
+### One pod per release
+
+ABS has no leader election or coordination between instances, and each pod needs its own configuration. Pods of one
+release share its `backupServiceConfig`, so a second pod would run every backup routine again, against the same cluster
+and the same storage. The chart therefore runs one pod per release: `replicaCount` accepts only `0` (stopped) or `1`,
+and there is no autoscaling. `helm install` and `helm upgrade` fail if the values ask for more. The Deployment also
+uses the `Recreate` strategy, so a rollout never runs the old and new pod at the same time.
+
+To spread load, run separate pods with different routines: install a separate release for each set of routines, each
+with its own values file and `backupServiceConfig`.
 
 ```shell
-#helm upgrade --namespace <target namespace> <helm release name> -f <path to custom values yaml file> aerospike/aerospike-backup-service
-helm upgrade --namespace aerospike abs -f abs-values.yaml aerospike/aerospike-backup-service
+helm install abs-nightly aerospike/aerospike-backup-service --namespace aerospike -f abs-nightly-values.yaml
+helm install abs-hourly aerospike/aerospike-backup-service --namespace aerospike -f abs-hourly-values.yaml
 ```
 
-Verify that the ABS have been scaled.
-- [List the pods](#list-pods-for-the-abs) and verify the count of abs instances is as desired
+Make sure no routine appears in more than one release. To give a pod more capacity, raise its `resources`.
 
-**_NOTE:_** The changes might take some time to apply. If you do not see the desired count try again after some time.
-If ABS pods are not being listed or report status as crashed see [troubleshooting](#troubleshooting).
+### Uninstall
+
+```shell
+helm uninstall abs --namespace aerospike
+```
+
+This removes the chart's resources. PersistentVolumeClaims and Secrets you created yourself, and backups in remote
+storage, are left in place.
 
 ## Troubleshooting
 
-### ABS pods not listed
+### Pods not listed
 
-Check for any error events on the Deployment created for the ABS.
+Check for error events on the Deployment:
+
 ```shell
-# kubectl -n aerospike describe deployment <helm release name>-aerospike-backup-service
 kubectl -n aerospike describe deployment abs-aerospike-backup-service
 ```
 
-### ABS pods stuck in `init` or `pending` state
+### Pods stuck in `Init`, `Pending` or `ContainerCreating`
 
-Check for any error events on the pod created for the ABS.
 ```shell
-# kubectl -n aerospike describe pod <helm release name>-aerospike-backup-service--<random-hash>
-kubectl -n aerospike describe pod abs-aerospike-backup-service-544cc664c9-g5gdj
+kubectl -n aerospike describe pod <pod name>
 ```
 
-The most likely reason is secret listed in `backupServiceConfig` has not been created in the ABS namespace.
+Common causes shown in the events:
 
-### ABS pods in crashed state
+- A Secret, ConfigMap or PersistentVolumeClaim referenced in `volumes` does not exist in the release namespace.
+- An unbound PersistentVolumeClaim, or no node matching `nodeSelector`, `affinity` or `tolerations`.
+- The image (or `utilityImage`) cannot be pulled; check `imagePullSecrets`.
+- The namespace enforces a Pod Security admission level the pod does not meet.
 
-The most likely reason is ABS configuration provided in `backupServiceConfig` is invalid.
-Verify this by [viewing the abs logs](#get-logs-for-all-abs-instances), fix and [update](#updating-abs-configuration)
-the ABS configuration.
+### Pods crash or never become ready
+
+The most likely cause is an invalid `backupServiceConfig`: unknown keys and invalid values stop ABS at startup.
+[Check the logs](#get-logs), fix the values file and [upgrade](#updating-the-configuration). If ABS starts but the
+pod is not ready, check that the HTTP listener is enabled and, if you set your own probes, that they match the port
+and context path (see [Ports, context path and probes](#ports-context-path-and-probes)). Also check that the Aerospike
+cluster is reachable from the pod.
