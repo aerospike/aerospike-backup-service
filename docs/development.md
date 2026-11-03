@@ -238,9 +238,10 @@ The following steps apply to both regular releases and hotfixes:
      ([strategy](https://aerospike.atlassian.net/wiki/spaces/DevOps/pages/4648566799)).
    - A dev or PM/EM manually runs [`release.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/release.yml)
      (`workflow_dispatch`, with the release version as input). It verifies the bundle was actually promoted to
-     `PROD`, then downloads the already-signed artifacts straight from JFrog's `PROD`-public repos and publishes
-     them as a new, immutable GitHub **pre-release** — nothing is rebuilt, re-signed, or re-checksummed at
-     this point.
+     `PROD`, then downloads the already-signed `.deb`/`.rpm` packages straight from JFrog's `PROD`-public repos
+     and publishes them as a new, immutable GitHub **pre-release** — nothing is rebuilt, re-signed, or
+     re-checksummed at this point. The Helm chart is not attached to the GitHub Release; it is distributed
+     only through the Helm repository.
 10. When ready to announce GA, a PM/EM edits that GitHub Release and clears **Set as a pre-release** only.
     The GitHub **Set as the latest release** checkbox is unrelated to any registry tag and can be left
     unchecked. Until the pre-release flag is cleared, the release does not appear as GA on GitHub.

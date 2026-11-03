@@ -1,7 +1,7 @@
 # Post-release Helm smoke test: unlike helm-chart-tests.yml (PR-triggered, builds the chart/image
 # fresh, only does a trivial wget reachability check), this pulls the *released* chart+image from
-# JFrog PROD/GitHub Release, deploys a real MinIO server into the kind cluster (helm-chart-tests.yml
-# only creates a credentials Secret, no actual MinIO), and drives a real backup->restore->record-count
+# JFrog PROD (the chart is never attached to the GitHub Release), deploys a real MinIO server into
+# the kind cluster (helm-chart-tests.yml only creates a credentials Secret, no actual MinIO), and drives a real backup->restore->record-count
 # check through the REST API via kubectl port-forward. The chart's own trivial test-connection.yaml
 # Helm test hook is left untouched; this workflow adds real validation on top, after ct install
 # succeeds.
@@ -80,13 +80,31 @@ jobs:
       - name: Create Kind Cluster
         uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
 
+      # The chart is published only to the Helm repository, not to the GitHub Release. The
+      # database-*-prod-public-local repos are world-readable, so search by the "version"
+      # property and download anonymously, as release.yml does for the packages. The chart's
+      # version is tracked independently of the package version, so read it from Chart.yaml at
+      # the release tag.
       - name: Download released chart and pull released image
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
+          HELM_REPO: ${{ vars.JF_ARTIFACTORY_HELM_PROD }}
         run: |
           set -euo pipefail
-          gh release download "${{ inputs.version }}" --repo "${{ github.repository }}" --pattern '*.tgz' --dir chart-download --clobber
-          CHART_FILE="$(ls -1 chart-download/*.tgz | head -1)"
+          HELM_VERSION="$(yq '.version' helm/aerospike-backup-service/Chart.yaml | tr -d '\n')"
+          RT_URL="${JF_URL%/}"
+          RT_URL="${RT_URL%/artifactory}/artifactory"
+          CHART_URI="$(curl -fsS --retry 3 -G "${RT_URL}/api/search/prop" \
+              --data-urlencode "version=${HELM_VERSION}" --data-urlencode "repos=${HELM_REPO}" |
+            jq -r '.results[]?.uri' | grep -E '/aerospike-backup-service-[^/]*\.tgz$' | head -1 || true)"
+          if [ -z "$CHART_URI" ]; then
+            echo "::error::No aerospike-backup-service chart at version ${HELM_VERSION} found in ${HELM_REPO}"
+            exit 1
+          fi
+          CHART_PATH="$(curl -fsS --retry 3 "$CHART_URI" | jq -r '.repo + .path')"
+          mkdir -p chart-download
+          CHART_FILE="chart-download/$(basename "$CHART_PATH")"
+          curl -fsSL --retry 3 -o "$CHART_FILE" "${RT_URL}/${CHART_PATH}"
           echo "CHART_FILE=${CHART_FILE}" >> "$GITHUB_ENV"
 
           # chart-testing's --charts takes chart *directories* (it reads <path>/Chart.yaml), so
