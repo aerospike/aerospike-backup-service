@@ -101,7 +101,7 @@ backupServiceConfig: {}
 #       - host-name: <cluster ip/dns-name> # Mandatory
 #         port: 3000 # Mandatory
 #         tls-name: <tls-name> # Mandatory if TLS is enabled
-#     conn-timeout: <connection-timeout> # Optional. Milliseconds, e.g. 5000
+#     conn-timeout: <connection-timeout> # Optional. Milliseconds. Default: 30000
 #     use-services-alternate: <true/false> # Optional. Default: false
 #     max-parallel-scans: <n> # Optional. Shared by all backups of this cluster. Default: unlimited
 #     prefer-racks: [ <rack-ids> ] # Optional. Racks to read from, in order of preference
@@ -136,7 +136,7 @@ backupServiceConfig: {}
 #       s3-endpoint-override: <s3-endpoint> # Optional, e.g. http://minio:9000
 #       s3-log-level: <level> # Optional. Default: FATAL. Valid values: OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE
 #       min-part-size: <bytes> # Optional. Default: 52428800
-#       max-async-connections: <n> # Optional. Default: 16
+#       max-async-connections: <n> # Optional. Default: no limit
 #       access-key-id: <access-key-id> # Optional. Static credentials; omit to use the default AWS chain (e.g. IRSA)
 #       secret-access-key: <secret-access-key> # Optional
 #       secret-agent-name: <agent-name> # Optional. Mutually exclusive with secret-agent
@@ -173,11 +173,11 @@ backupServiceConfig: {}
 # backup-policies:
 #   <policy-name>:
 #     parallel: <n> # Optional. Max parallel scan calls. Default: 8
-#     parallel-write: <n> # Optional. Writer threads. Default: same as parallel
+#     parallel-write: <n> # Optional. Writer threads. Default: 8, or parallel when set
 #     max-concurrent-nodes: <n> # Optional. Default: all nodes in parallel
-#     socket-timeout: <ms> # Optional. 0 means total-timeout is used
+#     socket-timeout: <ms> # Optional. Default: 600000. 0 means total-timeout is used
 #     total-timeout: <ms> # Optional. Default: 0 (no timeout)
-#     retry-policy: # Optional. Default: 5 retries, 1 minute base delay, multiplier 1.5
+#     retry-policy: # Optional. When omitted: 5 retries, 1 minute base delay, multiplier 1.5
 #       base-timeout: <ms> # Initial delay between retry attempts
 #       multiplier: <multiplier> # Factor to increase the delay between retries
 #       max-retries: <n> # Maximum number of retries. 0 means no retries
