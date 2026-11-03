@@ -12,7 +12,9 @@
 //     declares;
 //   - the Go version the Docker build defaults to, against the go.mod directive;
 //   - the Helm chart's commented configuration reference in values.yaml, which
-//     must decode strictly and match the published defaults and required fields.
+//     must decode strictly and match the published defaults and required fields,
+//     and the backupServiceConfig examples in the chart README, which must load
+//     the way the service loads its configuration file.
 package doccheck
 
 import (

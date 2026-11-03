@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 // The Helm chart's values.yaml carries a commented reference of the whole
@@ -27,6 +29,7 @@ import (
 
 const (
 	helmValues     = "helm/aerospike-backup-service/values.yaml"
+	helmReadme     = "helm/aerospike-backup-service/README.md"
 	configSchema   = "docs/config.schema.json"
 	helmBlockStart = "backupServiceConfig: {}"
 )
@@ -85,6 +88,88 @@ func TestHelmConfigReferenceDecodes(t *testing.T) {
 
 	_, err := dto.NewFromReader[dto.Config](strings.NewReader(doc.String()), decoder.YAML)
 	require.NoErrorf(t, err, "the configuration reference in %s does not decode:\n%s", helmValues, doc.String())
+}
+
+// TestHelmReadmeExamplesValidate loads every backupServiceConfig example in the
+// chart README the way the service loads its configuration file: the strict
+// decoder, Validate(), then ToModel(), which resolves the references between
+// sections (a routine's storage, cluster and policy). So an example a user
+// copies is one the service accepts. An example whose args pass
+// -r holds a remote-configuration pointer rather than the configuration itself,
+// and is checked as the dto.Storage the service reads it into.
+func TestHelmReadmeExamplesValidate(t *testing.T) {
+	examples := readmeConfigExamples(t)
+	require.NotEmptyf(t, examples, "no backupServiceConfig examples found in %s; the scan is broken", helmReadme)
+
+	for _, example := range examples {
+		t.Run(example.at, func(t *testing.T) {
+			if example.remote {
+				storage, err := dto.NewFromReader[dto.Storage](strings.NewReader(example.config), decoder.YAML)
+				require.NoErrorf(t, err, "%s: remote-configuration pointer does not decode:\n%s", example.at, example.config)
+				require.NoErrorf(t, storage.Validate(), "%s: remote-configuration pointer is invalid", example.at)
+
+				return
+			}
+
+			config, err := dto.NewFromReader[dto.Config](strings.NewReader(example.config), decoder.YAML)
+			require.NoErrorf(t, err, "%s: example does not decode:\n%s", example.at, example.config)
+			require.NoErrorf(t, config.Validate(), "%s: example is invalid", example.at)
+
+			_, err = config.ToModel()
+			require.NoErrorf(t, err, "%s: example does not convert to the service model", example.at)
+		})
+	}
+}
+
+// readmeExample is one backupServiceConfig taken from a yaml block in the README.
+type readmeExample struct {
+	// at is "file:line" of the block.
+	at string
+	// config is the backupServiceConfig value, as YAML.
+	config string
+	// remote is true when the block's args pass -r.
+	remote bool
+}
+
+var yamlBlock = regexp.MustCompile("(?s)```yaml\n(.*?)```")
+
+// readmeConfigExamples returns the backupServiceConfig of every yaml block in
+// the chart README that sets one.
+func readmeConfigExamples(t *testing.T) []readmeExample {
+	t.Helper()
+
+	content, err := os.ReadFile(filepath.Join(doccheck.Root(t), helmReadme))
+	require.NoErrorf(t, err, "read %s", helmReadme)
+
+	text := string(content)
+
+	var examples []readmeExample
+
+	for _, match := range yamlBlock.FindAllStringSubmatchIndex(text, -1) {
+		at := fmt.Sprintf("%s:%d", helmReadme, 1+strings.Count(text[:match[0]], "\n"))
+
+		var values struct {
+			Args   []string  `yaml:"args"`
+			Config yaml.Node `yaml:"backupServiceConfig"` //nolint:tagliatelle // the chart's own camelCase value name
+		}
+
+		require.NoErrorf(t, yaml.Unmarshal([]byte(text[match[2]:match[3]]), &values), "%s: not valid YAML", at)
+
+		if values.Config.Kind == 0 {
+			continue
+		}
+
+		config, err := yaml.Marshal(&values.Config)
+		require.NoErrorf(t, err, "%s: re-encode backupServiceConfig", at)
+
+		examples = append(examples, readmeExample{
+			at:     at,
+			config: string(config),
+			remote: slices.Contains(values.Args, "-r") || slices.Contains(values.Args, "--remote"),
+		})
+	}
+
+	return examples
 }
 
 // TestHelmConfigReferenceMatchesSchema checks each documented field against the
