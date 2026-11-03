@@ -136,6 +136,40 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("service validation error: %w", err)
 	}
 
+	return c.validateServerMode()
+}
+
+// validateServerMode checks that in the server backup mode every routine backs up to S3 storage,
+// the only storage the server writes to, and sets no option the server has no equivalent for.
+func (c *Config) validateServerMode() error {
+	if c.ServiceConfig.Backup == nil || c.ServiceConfig.Backup.BackupMode.ToModel() != model.BackupModeServer {
+		return nil
+	}
+
+	for name, routine := range c.BackupRoutines {
+		if storage, ok := c.Storage[routine.Storage]; ok && storage.S3Storage == nil {
+			return fmt.Errorf("backup routine '%s' validation error: %w: storage %q is not S3 storage, "+
+				"which backup-mode %q requires", name, errInvalidValue, routine.Storage, model.BackupModeServer)
+		}
+		if err := rejectServerUnsupported(fmt.Sprintf("backup routine '%s'", name),
+			serverOption{"rack-list", len(routine.RackList) > 0},
+			serverOption{"partition-list", routine.PartitionList != ""},
+			serverOption{"node-list", len(routine.NodeList) > 0},
+		); err != nil {
+			return err
+		}
+	}
+
+	for name, policy := range c.BackupPolicies {
+		if err := rejectServerUnsupported(fmt.Sprintf("policy '%s'", name),
+			serverOption{"bandwidth", policy.Bandwidth != nil},
+			serverOption{"encryption", encrypts(policy.EncryptionPolicy.ToModel())},
+			serverOption{"compression", compresses(policy.CompressionPolicy.ToModel())},
+		); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

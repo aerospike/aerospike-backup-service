@@ -1395,9 +1395,23 @@
             "description": "LastFull: the time of the last successful full backup.\nA nil value indicates that there has never been a full backup.",
             "type": "string"
           },
+          "last-full-jobs": {
+            "description": "LastFullJobs: the server jobs of the last finished full backup, one per namespace, whatever\nits outcome. Only reported in the server backup mode, and kept in memory: empty until the\nfirst full backup since the service started has ended.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/dto.ServerBackupJob"
+            }
+          },
           "last-incremental": {
             "description": "LastIncremental: the time of the last successful incremental backup.\nA nil value indicates that there has never been an incremental backup.",
             "type": "string"
+          },
+          "last-incremental-jobs": {
+            "description": "LastIncrementalJobs: the server jobs of the last finished incremental backup, as LastFullJobs.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/dto.ServerBackupJob"
+            }
           },
           "next-full": {
             "description": "NextFull: the time of the next scheduled full backup.",
@@ -1679,6 +1693,67 @@
             "type": "string",
             "example": "certName",
             "nullable": true
+          }
+        }
+      },
+      "dto.ServerBackupJob": {
+        "description": "ServerBackupJob is a server-side backup job of one namespace, as the server last reported it.",
+        "type": "object",
+        "properties": {
+          "abort-origin": {
+            "description": "What aborted the job: an operator request, a failure on a node or a cluster event.",
+            "type": "string",
+            "enum": [
+              "operator",
+              "server",
+              "cluster"
+            ],
+            "example": "operator"
+          },
+          "bytes-backed-up": {
+            "description": "The number of bytes backed up.",
+            "type": "integer",
+            "example": 1048576
+          },
+          "error-reason": {
+            "description": "Why the job failed or was aborted, as the server reports it.",
+            "type": "string",
+            "example": "S3 PUT failed: 403 Forbidden"
+          },
+          "finish-time": {
+            "description": "The time the job finished.",
+            "type": "string",
+            "example": "2006-01-02T15:04:05Z07:00"
+          },
+          "job-id": {
+            "description": "The server's job id.",
+            "type": "string",
+            "example": "20261103T101500-0a1b"
+          },
+          "namespace": {
+            "description": "The namespace the job backed up.",
+            "type": "string",
+            "example": "test"
+          },
+          "records-backed-up": {
+            "description": "The number of records backed up.",
+            "type": "integer",
+            "example": 1000
+          },
+          "records-read-failed": {
+            "description": "The number of records the server could not read: a complete job that has any is missing them.",
+            "type": "integer",
+            "example": 0
+          },
+          "start-time": {
+            "description": "The time the job started.",
+            "type": "string",
+            "example": "2006-01-02T15:04:05Z07:00"
+          },
+          "state": {
+            "description": "The server's job state, e.g. COMPLETE, FAILED or ABORTED.",
+            "type": "string",
+            "example": "COMPLETE"
           }
         }
       },

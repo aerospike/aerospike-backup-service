@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -23,6 +25,8 @@ import (
 const (
 	// pollInterval is how often a running server job is asked for its status.
 	pollInterval = time.Second
+	// abortTimeout bounds the wait for an aborted server job to end.
+	abortTimeout = 30 * time.Second
 	// progressScale turns the server's progress percentage into the record counters
 	// the service reports progress from.
 	progressScale = 100
@@ -117,6 +121,8 @@ func (r *routineRunner) backupNamespace(
 	}
 	common.SetList = strings.Join(routine.SetList, ",")
 	common.FilterExp = routine.FilterExpression
+	common.NoIndexes = routine.BackupPolicy.NoIndexes
+	common.NoUDFs = routine.BackupPolicy.NoUdfs
 
 	modifiedAfter, err := r.modifiedAfter(ctx, routine, runSpec.Type, namespace)
 	if err != nil {
@@ -143,7 +149,7 @@ func (r *routineRunner) backupNamespace(
 	return waitForBackup(ctx, infoClient, jobID, operation, logger)
 }
 
-// waitForBackup polls the job until it ends. A canceled ctx aborts the job on the server.
+// waitForBackup waits for the job to end. A canceled ctx aborts the job on the server.
 func waitForBackup(
 	ctx context.Context,
 	infoClient backup.ServerBackupInfo,
@@ -151,16 +157,40 @@ func waitForBackup(
 	operation *backupOperation,
 	logger *slog.Logger,
 ) error {
+	status, err := pollBackup(ctx, infoClient, jobID, operation)
+	if ctx.Err() != nil {
+		abortJob(context.WithoutCancel(ctx), infoClient, jobID, operation, logger)
+		return ctx.Err()
+	}
+	if err != nil {
+		return err
+	}
+
+	switch status.State {
+	case infomodels.BackupStateFailed:
+		return fmt.Errorf("server backup %s failed: %s", jobID, status.ErrorReason)
+	case infomodels.BackupStateAborted:
+		return fmt.Errorf("server backup %s was aborted", jobID)
+	default:
+		return nil
+	}
+}
+
+// pollBackup polls the job, recording each status in operation, until the job ends, and
+// returns its final status.
+func pollBackup(
+	ctx context.Context,
+	infoClient backup.ServerBackupInfo,
+	jobID string,
+	operation *backupOperation,
+) (*infomodels.ResponseBackupState, error) {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			if err := infoClient.AbortBackup(context.WithoutCancel(ctx), jobID); err != nil {
-				logger.Warn("Failed to abort server backup", slog.String("jobId", jobID), attr.Error(err))
-			}
-			return ctx.Err()
+			return nil, ctx.Err()
 		case <-ticker.C:
 		}
 
@@ -169,20 +199,38 @@ func waitForBackup(
 			continue // the job is not visible on the cluster yet.
 		}
 		if err != nil {
-			return fmt.Errorf("failed to get server backup status: %w", err)
+			return nil, fmt.Errorf("failed to get server backup status: %w", err)
 		}
 
-		operation.reportProgress(status.ProgressPct)
+		operation.report(status)
 
 		switch status.State {
-		case infomodels.BackupStateComplete:
-			return nil
-		case infomodels.BackupStateFailed:
-			return fmt.Errorf("server backup %s failed: %s", jobID, status.ErrorReason)
-		case infomodels.BackupStateAborted:
-			return fmt.Errorf("server backup %s was aborted", jobID)
+		case infomodels.BackupStateComplete, infomodels.BackupStateFailed, infomodels.BackupStateAborted:
+			return status, nil
 		default:
 		}
+	}
+}
+
+// abortJob aborts the job on the server and waits, up to abortTimeout, for the abort to end it,
+// so the job is recorded as the server ends it.
+func abortJob(
+	ctx context.Context,
+	infoClient backup.ServerBackupInfo,
+	jobID string,
+	operation *backupOperation,
+	logger *slog.Logger,
+) {
+	if err := infoClient.AbortBackup(ctx, jobID); err != nil {
+		logger.Warn("Failed to abort server backup", slog.String("jobId", jobID), attr.Error(err))
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, abortTimeout)
+	defer cancel()
+
+	if _, err := pollBackup(ctx, infoClient, jobID, operation); err != nil {
+		logger.Warn("Aborted server backup did not end", slog.String("jobId", jobID), attr.Error(err))
 	}
 }
 
@@ -231,15 +279,22 @@ func unixSeconds(t *time.Time) string {
 }
 
 // backupOperation is the handle of a routine's server backup run. The run itself happens
-// in the routine runner; the operation only reports its progress and outcome.
+// in the routine runner; the operation only reports its progress, outcome and server jobs.
 type backupOperation struct {
 	cancel context.CancelFunc
 	stats  *models.BackupStats
 	done   chan struct{}
 	err    error
+
+	jobsMu sync.Mutex
+	// jobs are the server jobs of the run in the order they started, each as last reported.
+	jobs []model.ServerBackupJob
 }
 
-var _ service.CancelableBackupHandler = (*backupOperation)(nil)
+var (
+	_ service.CancelableBackupHandler = (*backupOperation)(nil)
+	_ service.ServerJobReporter       = (*backupOperation)(nil)
+)
 
 func newBackupOperation(cancel context.CancelFunc) *backupOperation {
 	stats := models.NewBackupStats()
@@ -253,9 +308,51 @@ func newBackupOperation(cancel context.CancelFunc) *backupOperation {
 	}
 }
 
-// reportProgress records the progress percentage of the namespace being backed up.
-func (o *backupOperation) reportProgress(percent float64) {
-	o.stats.ReadRecords.Store(uint64(percent))
+// report records the latest status of a job, whose progress is the progress of the run.
+func (o *backupOperation) report(status *infomodels.ResponseBackupState) {
+	o.stats.ReadRecords.Store(uint64(status.ProgressPct))
+
+	job := newServerBackupJob(status)
+
+	o.jobsMu.Lock()
+	defer o.jobsMu.Unlock()
+
+	if last := len(o.jobs) - 1; last >= 0 && o.jobs[last].JobID == job.JobID {
+		o.jobs[last] = job
+		return
+	}
+	o.jobs = append(o.jobs, job)
+}
+
+// ServerJobs returns the server jobs of the run, each as last reported.
+func (o *backupOperation) ServerJobs() []model.ServerBackupJob {
+	o.jobsMu.Lock()
+	defer o.jobsMu.Unlock()
+
+	return slices.Clone(o.jobs)
+}
+
+func newServerBackupJob(status *infomodels.ResponseBackupState) model.ServerBackupJob {
+	return model.ServerBackupJob{
+		JobID:             status.JobID,
+		Namespace:         status.Namespace,
+		State:             string(status.State),
+		ErrorReason:       status.ErrorReason,
+		AbortOrigin:       string(status.AbortOrigin),
+		StartTime:         nonZeroTime(status.StartTime),
+		FinishTime:        nonZeroTime(status.FinishTime),
+		RecordsBackedUp:   status.RecsBackedUp,
+		BytesBackedUp:     status.BytesBackedUp,
+		RecordsReadFailed: status.RecsReadFailed,
+	}
+}
+
+func nonZeroTime(t time.Time) *time.Time {
+	if t.IsZero() {
+		return nil
+	}
+
+	return &t
 }
 
 func (o *backupOperation) finish(err error) {

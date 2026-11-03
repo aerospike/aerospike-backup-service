@@ -136,6 +136,17 @@ func TestRestoreExecutor_Run_ReleasesNamespace(t *testing.T) {
 			},
 			wantErr: "failed to clear namespace bar",
 		},
+		{
+			name: "held by truncate state",
+			expect: func(infoClient *aerospike.MockInfoGetter) {
+				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
+					&infomodels.ResponseRestoreState{
+						NsState:    infomodels.NamespaceStatePreparing,
+						HeldReason: infomodels.HeldReasonTruncateStateLive,
+					}, nil)
+			},
+			wantErr: "clear it with the info command 'truncate-namespace-undo:namespace=bar'",
+		},
 	}
 
 	for _, tt := range tests {
@@ -163,15 +174,35 @@ func TestRestoreExecutor_Run_ReleasesNamespace(t *testing.T) {
 
 func TestRestoreExecutor_Run_PrepareRefused(t *testing.T) {
 	t.Parallel()
-	ctrl := gomock.NewController(t)
 
-	// A refused restore-prepare leaves the namespace open: nothing to release.
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	infoClient.EXPECT().PrepareRestore(gomock.Any(), gomock.Any()).Return(errors.New("refused"))
+	tests := []struct {
+		name    string
+		refusal string
+		wantErr string
+	}{
+		{name: "refused", refusal: "refused", wantErr: "failed to prepare server restore: refused"},
+		{
+			name:    "truncate state",
+			refusal: "ERROR:22:restore-prepare: ns=bar holds truncate state - see the log to clear it",
+			wantErr: "clear it with the info command 'truncate-namespace-undo:namespace=bar'",
+		},
+	}
 
-	_, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
-		chainRequest(fullID))
-	require.ErrorContains(t, err, "failed to prepare server restore")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+
+			// A refused restore-prepare leaves the namespace open: nothing to release.
+			infoClient := aerospike.NewMockInfoGetter(ctrl)
+			infoClient.EXPECT().PrepareRestore(gomock.Any(), gomock.Any()).Return(errors.New(tt.refusal))
+
+			_, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
+				chainRequest(fullID))
+			require.ErrorContains(t, err, tt.wantErr)
+			require.ErrorContains(t, err, tt.refusal)
+		})
+	}
 }
 
 // expectRelease expects the job *jobID of namespace bar to be aborted, then its namespace opened.
@@ -319,6 +350,26 @@ func TestRestoreExecutor_Run_Fuzzy(t *testing.T) {
 		fuzzyRequest(fullID), fuzzyRequest(incr1ID))
 	require.NoError(t, err)
 	assert.NotNil(t, handler)
+}
+
+func TestRestoreExecutor_Run_SkipsIndexesAndUDFs(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+
+	infoClient := aerospike.NewMockInfoGetter(ctrl)
+	infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, request *infomodels.RequestRestore) error {
+			assert.Equal(t, new(true), request.NoIndexes)
+			assert.Equal(t, new(true), request.NoUDFs)
+
+			return nil
+		})
+	request := fuzzyRequest(fullID)
+	request.Policy.NoIndexes = new(true)
+	request.Policy.NoUdfs = new(true)
+
+	_, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient), request)
+	require.NoError(t, err)
 }
 
 // TestRestoreExecutor_Fuzzy_AbortsOnly checks that a fuzzy restore that does not complete is

@@ -78,6 +78,8 @@ func (r *restoreExecutor) start(
 		return nil, err
 	}
 	common.SetList = strings.Join(request.Policy.SetList, ",")
+	common.NoIndexes = request.Policy.NoIndexes
+	common.NoUDFs = request.Policy.NoUdfs
 
 	lane := laneOf(request.Policy.Mode)
 	jobID := newJobID(time.Now())
@@ -136,7 +138,7 @@ func laneOf(mode model.RestoreMode) restoreLane {
 func prepareColdRestore(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
 	err := infoClient.PrepareRestore(ctx, &infomodels.RequestPrepareRestore{Namespace: namespace, JobID: jobID})
 	if err != nil {
-		return fmt.Errorf("failed to prepare server restore: %w", err)
+		return fmt.Errorf("failed to prepare server restore: %w", explainPrepareRefusal(err, namespace))
 	}
 
 	if err := awaitPrepared(ctx, infoClient, namespace, jobID); err != nil {
@@ -144,6 +146,27 @@ func prepareColdRestore(ctx context.Context, infoClient backup.ServerBackupInfo,
 	}
 
 	return nil
+}
+
+// truncateStateRefusal marks the server's refusal of a cold restore into a namespace that holds
+// truncate state: the restored records keep their backup times, which the truncate filters out.
+const truncateStateRefusal = "holds truncate state"
+
+// explainPrepareRefusal adds the remedy to a refusal whose own text points to the server log.
+func explainPrepareRefusal(err error, namespace string) error {
+	if !strings.Contains(err.Error(), truncateStateRefusal) {
+		return err
+	}
+
+	return fmt.Errorf("%w: %w", errTruncateState(namespace), err)
+}
+
+// errTruncateState tells how to clear the truncate state that keeps a cold restore out of namespace.
+func errTruncateState(namespace string) error {
+	return fmt.Errorf("namespace %s holds truncate state, which would filter out the restored records: "+
+		"clear it with the info command 'truncate-namespace-undo:namespace=%s', or "+
+		"'truncate-undo:namespace=%s;set=<set>' for each truncated set the server log names, and retry",
+		namespace, namespace, namespace)
 }
 
 // awaitPrepared waits until namespace is ready for the cold restore jobID on every node, clearing
@@ -172,6 +195,8 @@ func awaitPrepared(ctx context.Context, infoClient backup.ServerBackupInfo, name
 			return nil
 		case status.NsState == infomodels.NamespaceStateFailed:
 			return fmt.Errorf("server restore %s failed to prepare namespace %s: %s", jobID, namespace, status.ErrorReason)
+		case status.HeldReason == infomodels.HeldReasonTruncateStateLive:
+			return fmt.Errorf("server restore %s is held: %w", jobID, errTruncateState(namespace))
 		case status.Clear == infomodels.ClearStateRequired:
 			if err := infoClient.ClearRestoreStorage(ctx, namespace, jobID); err != nil {
 				return fmt.Errorf("failed to clear namespace %s for server restore %s: %w", namespace, jobID, err)

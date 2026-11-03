@@ -299,10 +299,12 @@ func (r *backupStateRegistry) GetRoutineState(routine *model.BackupRoutine) mode
 	}
 
 	return model.RoutineState{
-		Full:        snapshot.full,
-		Incremental: snapshot.incr,
-		LastRunTime: snapshot.lastRun,
-		NextRunTime: nextRunTime,
+		Full:                snapshot.full,
+		Incremental:         snapshot.incr,
+		LastRunTime:         snapshot.lastRun,
+		NextRunTime:         nextRunTime,
+		LastFullJobs:        snapshot.lastFullJobs,
+		LastIncrementalJobs: snapshot.lastIncrJobs,
 	}
 }
 

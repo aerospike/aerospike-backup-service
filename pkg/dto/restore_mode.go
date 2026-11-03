@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // RestoreMode selects how the server restores a server-side backup.
@@ -38,15 +39,26 @@ func (m RestoreMode) ToModel() model.RestoreMode {
 	return model.RestoreMode(c)
 }
 
-// validateRestoreMode checks mode against the service's backup mode: a server-side restore
-// must choose one, and a scan restore has none.
-func validateRestoreMode(mode model.RestoreMode, config *model.Config) error {
+// validateRestorePolicy checks policy against the service's backup mode: a server-side restore
+// must choose a mode and sets no option the server has no equivalent for, and a scan restore has
+// no mode.
+func validateRestorePolicy(policy *model.RestorePolicy, config *model.Config) error {
 	server := config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == model.BackupModeServer
 
 	switch {
-	case server && mode == "":
+	case server && policy.Mode == "":
 		return errValidationEmptyField("mode")
-	case !server && mode != "":
+	case server:
+		return rejectServerUnsupported("restore policy",
+			serverOption{"bin-list", len(policy.BinList) > 0},
+			serverOption{"replace", ptr.ValueOrZero(policy.Replace)},
+			serverOption{"unique", ptr.ValueOrZero(policy.Unique)},
+			serverOption{"no-generation", ptr.ValueOrZero(policy.NoGeneration)},
+			serverOption{"bandwidth", policy.Bandwidth != nil},
+			serverOption{"encryption", encrypts(policy.EncryptionPolicy)},
+			serverOption{"compression", compresses(policy.CompressionPolicy)},
+		)
+	case policy.Mode != "":
 		return fmt.Errorf("%w: \"mode\" applies only to backup-mode %q", errInvalidValue, model.BackupModeServer)
 	default:
 		return nil

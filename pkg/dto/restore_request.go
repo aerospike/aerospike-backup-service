@@ -149,7 +149,7 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 	if err := validateEncryptionKeyAgent(policy.EncryptionPolicy, secretAgent); err != nil {
 		return nil, err
 	}
-	if err := validateRestoreMode(policy.Mode, config); err != nil {
+	if err := validateRestorePolicy(policy, config); err != nil {
 		return nil, err
 	}
 
@@ -184,7 +184,7 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 	if err := validateEncryptionKeyAgent(policy.EncryptionPolicy, secretAgent); err != nil {
 		return nil, err
 	}
-	if err := validateRestoreMode(policy.Mode, config); err != nil {
+	if err := validateRestorePolicy(policy, config); err != nil {
 		return nil, err
 	}
 

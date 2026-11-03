@@ -103,9 +103,7 @@ func (s *ServerBackupSuite) TestServerNoIndexes() {
 	s.restoreIntoDestination(e, backup.Key)
 
 	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
-	s.gap("no_index", gapNoIndexes, func() {
-		s.NotContains(s.destinationIndexes(), "age_sidx", "index backed up despite no-indexes")
-	})
+	s.NotContains(s.destinationIndexes(), "age_sidx", "index backed up despite no-indexes")
 }
 
 // TestServerRestoreNamespaceMapping restores a backup of one namespace into another one of the
@@ -152,6 +150,8 @@ func (s *ServerBackupSuite) TestServerBackupLimits() {
 // option, and checks its effect: tps and parallel become the server job's restore-rps and number
 // of worker threads, extra-ttl moves a restored record's expiry out by that much, and set-list
 // restores only the sets it names. Each strict restore clears the destination namespace first.
+// Last, it restores into a truncated namespace, which the server refuses until the truncate is
+// undone with the command the error names.
 func (s *ServerBackupSuite) TestServerRestoreOptions() {
 	const (
 		ttl      = time.Hour
@@ -203,6 +203,24 @@ func (s *ServerBackupSuite) TestServerRestoreOptions() {
 		s.NotNil(s.recordBins(s.destinationClient, "setA", 0), "setA record not restored")
 		s.Nil(s.recordBins(s.destinationClient, "setB", 0), "setB record restored")
 	})
+
+	s.Run("truncated_namespace", func() {
+		undo := "truncate-namespace-undo:namespace=" + serverNamespace
+		s.Require().NoError(s.destinationClient.Truncate(nil, serverNamespace, "", nil))
+		// Later tests restore into the namespace too.
+		s.T().Cleanup(func() { s.info(s.destinationClient, undo) })
+
+		request := defaultRestoreRequest(backup.Key)
+		request.DestinationClusterConfig.Name = destinationClusterName
+		request.Policy = &dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Mode: dto.RestoreModeStrict}}
+		job := s.waitForRestoreEnd(e, s.startRestore(e, e.baseURL+"/v1/restore/full", request), serverJobTimeout)
+		s.Equal(dto.RestoreFailure, job.Status)
+		s.Contains(job.Error, "'"+undo+"'")
+
+		s.Equal("ok", s.info(s.destinationClient, undo))
+		s.restoreIntoDestinationWithPolicy(e, backup.Key, &dto.RestorePolicy{})
+		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
+	})
 }
 
 // TestServerMultipleNamespaces backs up a routine of two namespaces, a full and an incremental
@@ -225,6 +243,13 @@ func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 	}
 	s.ElementsMatch([]string{serverNamespace, otherNamespace}, namespaces)
 	s.waitForLastBackup(e, model.BackupTypeFull, backups[len(backups)-1].Created)
+
+	jobs := s.routineState(e).LastFullJobs
+	s.Require().Len(jobs, 2, "server jobs of the full backup")
+	for i, namespace := range []string{serverNamespace, otherNamespace} {
+		s.Equal(namespace, jobs[i].Namespace)
+		s.Equal("COMPLETE", jobs[i].State, "job of namespace %s", namespace)
+	}
 
 	s.seedRecordsIn(s.client, serverNamespace, []int{3})
 	s.seedRecordsIn(s.client, otherNamespace, []int{4})
@@ -249,10 +274,8 @@ func (s *ServerBackupSuite) TestServerNonS3Storage() {
 	configPath := filepath.Join(s.T().TempDir(), "config.yml")
 	s.Require().NoError(os.WriteFile(configPath, configYAML, 0o600))
 
-	s.gap("rejected", gapStorage, func() {
-		_, err := app.InitComponents(s.T().Context(), configPath, false)
-		s.Error(err, "server backup mode with local storage was accepted")
-	})
+	_, err = app.InitComponents(s.T().Context(), configPath, false)
+	s.ErrorContains(err, "is not S3 storage")
 }
 
 // TestServerTwoRoutines triggers full backups of two routines on the same cluster and storage at
@@ -321,7 +344,7 @@ func (s *ServerBackupSuite) TestServerProgress() {
 }
 
 // TestServerBackupCancel cancels a running full backup through POST /v1/backups/cancel and checks
-// that the server aborts the job and nothing is listed.
+// that the server aborts the job, the routine state reports the abort and nothing is listed.
 func (s *ServerBackupSuite) TestServerBackupCancel() {
 	s.seedRecordsIn(s.client, serverNamespace, []int{1})
 
@@ -338,5 +361,16 @@ func (s *ServerBackupSuite) TestServerBackupCancel() {
 		return strings.Contains(s.info(s.client, "backup-status"), "state=ABORTED")
 	})
 	s.True(ok, "server job not aborted: backup-status %s", s.info(s.client, "backup-status"))
+
+	var jobs []dto.ServerBackupJob
+	ok = s.eventually(serverJobTimeout, pollInterval, func() bool {
+		jobs = s.routineState(e).LastFullJobs
+		return len(jobs) > 0
+	})
+	s.Require().True(ok, "no server job reported for the canceled backup")
+	s.Require().Len(jobs, 1, "server jobs of the canceled backup")
+	s.Equal("ABORTED", jobs[0].State)
+	s.Equal("operator", jobs[0].AbortOrigin)
+
 	s.Empty(s.getBackups(e, model.BackupTypeFull), "a canceled backup is listed")
 }

@@ -78,9 +78,7 @@ const (
 		"the server takes its zero partition manifests for a failed fetch"
 	gapNamespaceMapping = "server bug: a restore into another namespace reads the backup under the " +
 		"destination namespace, finds nothing there and fails"
-	gapNoIndexes = "server-side backup gap: ABS does not send the policy's no-indexes to the server"
-	gapStorage   = "server-side backup gap: storage other than S3 is accepted when the configuration loads"
-	gapProgress  = "server-side backup gap: a running server backup reports its progress in percent, " +
+	gapProgress = "server-side backup gap: a running server backup reports its progress in percent, " +
 		"not in records"
 	gapRoutineGate = "server-side backup gap: a second routine on the same cluster is skipped while a backup " +
 		"of another routine runs"
@@ -119,16 +117,16 @@ func (s *ServerBuildSuite) SetupSuite() {
 	s.s3Endpoint = s.startSharedMinIO()
 }
 
-// SetupTest empties the namespace on both clusters and gives ABS the s3Profile credentials.
+// SetupTest empties the namespaces of the source cluster and gives ABS the s3Profile credentials.
+// The destination is left as it is: a cold restore clears the namespace itself, and refuses one
+// that holds truncate state, which would filter out the restored records.
 func (s *ServerBuildSuite) SetupTest() {
 	credentialsFile := filepath.Join(s.T().TempDir(), "credentials")
 	s.Require().NoError(os.WriteFile(credentialsFile, []byte(awsCredentials()), 0o600))
 	s.T().Setenv("AWS_SHARED_CREDENTIALS_FILE", credentialsFile)
 
-	for _, client := range []*as.Client{s.client, s.destinationClient} {
-		for _, ns := range []string{serverNamespace, otherNamespace} {
-			s.Require().NoError(client.Truncate(nil, ns, "", nil))
-		}
+	for _, ns := range []string{serverNamespace, otherNamespace} {
+		s.Require().NoError(s.client.Truncate(nil, ns, "", nil))
 	}
 }
 

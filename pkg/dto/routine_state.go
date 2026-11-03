@@ -23,16 +23,24 @@ type RoutineState struct {
 	NextFull *time.Time `json:"next-full,omitempty"`
 	// NextIncremental: the time of the next scheduled incremental backup.
 	NextIncremental *time.Time `json:"next-incremental,omitempty"`
+	// LastFullJobs: the server jobs of the last finished full backup, one per namespace, whatever
+	// its outcome. Only reported in the server backup mode, and kept in memory: empty until the
+	// first full backup since the service started has ended.
+	LastFullJobs []ServerBackupJob `json:"last-full-jobs,omitempty"`
+	// LastIncrementalJobs: the server jobs of the last finished incremental backup, as LastFullJobs.
+	LastIncrementalJobs []ServerBackupJob `json:"last-incremental-jobs,omitempty"`
 }
 
 func NewRoutineStateFromModel(m model.RoutineState) RoutineState {
 	return RoutineState{
-		Full:            NewRunningJobFromModel(m.Full),
-		Incremental:     NewRunningJobFromModel(m.Incremental),
-		LastFull:        m.LastRunTime.FullBackupTime(),
-		LastIncremental: m.LastRunTime.IncrementalBackupTime(),
-		NextFull:        m.NextRunTime.FullBackupTime(),
-		NextIncremental: m.NextRunTime.IncrementalBackupTime(),
+		Full:                NewRunningJobFromModel(m.Full),
+		Incremental:         NewRunningJobFromModel(m.Incremental),
+		LastFull:            m.LastRunTime.FullBackupTime(),
+		LastIncremental:     m.LastRunTime.IncrementalBackupTime(),
+		NextFull:            m.NextRunTime.FullBackupTime(),
+		NextIncremental:     m.NextRunTime.IncrementalBackupTime(),
+		LastFullJobs:        newServerBackupJobsFromModel(m.LastFullJobs),
+		LastIncrementalJobs: newServerBackupJobsFromModel(m.LastIncrementalJobs),
 	}
 }
 

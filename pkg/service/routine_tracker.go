@@ -19,6 +19,8 @@ type routineTracker struct {
 
 	// --- History State ---
 	lastRun *model.BackupTime
+	// lastJobs holds the server jobs of the last finished server backup of each type.
+	lastJobs map[model.BackupType][]model.ServerBackupJob
 
 	// --- Scan State ---
 	// scanDone is closed when no scan is in progress. getState blocks on it
@@ -36,14 +38,17 @@ func newRoutineTracker() *routineTracker {
 		scanDone: make(chan struct{}), // open = blocks until first scan completes
 		handlers: make(map[model.BackupType]CancelableBackupHandler),
 		lastRun:  model.NewNoBackupTime(),
+		lastJobs: make(map[model.BackupType][]model.ServerBackupJob),
 	}
 }
 
 // trackerSnapshot holds a point-in-time snapshot of a routine's state.
 type trackerSnapshot struct {
-	full    *model.RunningJob
-	incr    *model.RunningJob
-	lastRun *model.BackupTime
+	full         *model.RunningJob
+	incr         *model.RunningJob
+	lastRun      *model.BackupTime
+	lastFullJobs []model.ServerBackupJob
+	lastIncrJobs []model.ServerBackupJob
 }
 
 // getState returns a consistent, point-in-time snapshot of the routine's state.
@@ -68,9 +73,11 @@ func (t *routineTracker) getState(timeout time.Duration) (*trackerSnapshot, erro
 		t.mu.RLock()
 		if t.scanDone == done {
 			snapshot := &trackerSnapshot{
-				full:    currentBackupStatus(t.handlers[model.BackupTypeFull]),
-				incr:    currentBackupStatus(t.handlers[model.BackupTypeIncremental]),
-				lastRun: t.lastRun,
+				full:         currentBackupStatus(t.handlers[model.BackupTypeFull]),
+				incr:         currentBackupStatus(t.handlers[model.BackupTypeIncremental]),
+				lastRun:      t.lastRun,
+				lastFullJobs: t.lastJobs[model.BackupTypeFull],
+				lastIncrJobs: t.lastJobs[model.BackupTypeIncremental],
 			}
 			t.mu.RUnlock()
 
@@ -89,11 +96,15 @@ func (t *routineTracker) register(backupType model.BackupType, handler Cancelabl
 	t.handlers[backupType] = handler
 }
 
-// clearBackup removes a backup handler from the tracker.
+// clearBackup removes the handler of a finished backup from the tracker, keeping the server jobs
+// it reports.
 func (t *routineTracker) clearBackup(backupType model.BackupType) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
+	if reporter, ok := t.handlers[backupType].(ServerJobReporter); ok {
+		t.lastJobs[backupType] = reporter.ServerJobs()
+	}
 	delete(t.handlers, backupType)
 }
 

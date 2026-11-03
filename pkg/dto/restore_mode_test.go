@@ -39,21 +39,45 @@ func TestRestoreMode_Validate(t *testing.T) {
 	}
 }
 
-func TestValidateRestoreMode(t *testing.T) {
+func TestValidateRestorePolicy(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name       string
 		backupMode model.BackupMode
-		mode       model.RestoreMode
-		wantErr    error
+		policy     model.RestorePolicy
+		wantErr    string
 	}{
-		{name: "server mode with a mode", backupMode: model.BackupModeServer, mode: model.RestoreModeFuzzy},
+		{name: "server mode with a mode", backupMode: model.BackupModeServer,
+			policy: model.RestorePolicy{Mode: model.RestoreModeFuzzy}},
+		{name: "server mode with options it supports", backupMode: model.BackupModeServer,
+			policy: model.RestorePolicy{
+				Mode:              model.RestoreModeStrict,
+				Replace:           new(false),
+				EncryptionPolicy:  &model.EncryptionPolicy{Mode: model.EncryptionModeNone},
+				CompressionPolicy: &model.CompressionPolicy{Mode: model.CompressionModeNone},
+			}},
 		{name: "scan mode without a mode", backupMode: model.BackupModeScan},
+		{name: "scan mode with options the server lacks", backupMode: model.BackupModeScan,
+			policy: model.RestorePolicy{Replace: new(true), Bandwidth: new(int64(1))}},
 		{name: "default mode without a mode"},
-		{name: "server mode without a mode", backupMode: model.BackupModeServer, wantErr: errEmpty},
-		{name: "scan mode with a mode", backupMode: model.BackupModeScan, mode: model.RestoreModeStrict,
-			wantErr: errInvalidValue},
+		{name: "server mode without a mode", backupMode: model.BackupModeServer, wantErr: `"mode" required`},
+		{name: "scan mode with a mode", backupMode: model.BackupModeScan,
+			policy:  model.RestorePolicy{Mode: model.RestoreModeStrict},
+			wantErr: `"mode" applies only to backup-mode "server"`},
+		{name: "server mode with options it lacks", backupMode: model.BackupModeServer,
+			policy: model.RestorePolicy{
+				Mode:              model.RestoreModeStrict,
+				BinList:           []string{"bin"},
+				Replace:           new(true),
+				Unique:            new(true),
+				NoGeneration:      new(true),
+				Bandwidth:         new(int64(1)),
+				EncryptionPolicy:  &model.EncryptionPolicy{Mode: model.EncryptionModeAES128},
+				CompressionPolicy: &model.CompressionPolicy{Mode: model.CompressionModeZSTD},
+			},
+			wantErr: "restore policy sets bin-list, replace, unique, no-generation, bandwidth, encryption, " +
+				`compression, which backup-mode "server" does not support`},
 	}
 
 	for _, tt := range tests {
@@ -64,9 +88,9 @@ func TestValidateRestoreMode(t *testing.T) {
 				Backup: &model.BackupCommonConfig{BackupMode: tt.backupMode},
 			}}
 
-			err := validateRestoreMode(tt.mode, config)
-			if tt.wantErr != nil {
-				require.ErrorIs(t, err, tt.wantErr)
+			err := validateRestorePolicy(&tt.policy, config)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
 				return
 			}
 

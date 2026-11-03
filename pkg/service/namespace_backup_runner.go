@@ -58,6 +58,13 @@ type CancelableBackupHandler interface {
 	Cancel()
 }
 
+// ServerJobReporter is implemented by the handler of a server backup: it reports the jobs the
+// server ran, so the outcome the server recorded stays visible after the backup ends.
+type ServerJobReporter interface {
+	// ServerJobs returns the server jobs of the backup, each as last reported.
+	ServerJobs() []model.ServerBackupJob
+}
+
 // Run starts a retryable backup for one namespace via [backupexecutor.Backup.Run],
 // writing each attempt to a folder of its own in the routine's storage layout, and returns
 // once the pipeline is running. A run that gives up before starting one returns its error.

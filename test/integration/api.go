@@ -154,6 +154,11 @@ func (s *Suite) restore(e *env, url string, request any) dto.RestoreJobStatus {
 
 // restoreWithin is restore for a job that may take up to timeout.
 func (s *Suite) restoreWithin(e *env, url string, request any, timeout time.Duration) dto.RestoreJobStatus {
+	return s.waitForRestore(e, s.startRestore(e, url, request), timeout)
+}
+
+// startRestore posts request to the restore endpoint url and returns the id of the job it starts.
+func (s *Suite) startRestore(e *env, url string, request any) int64 {
 	requestBody, err := decoder.Marshal(request, decoder.JSON, false)
 	s.Require().NoError(err)
 
@@ -163,11 +168,19 @@ func (s *Suite) restoreWithin(e *env, url string, request any, timeout time.Dura
 	jobID, err := strconv.ParseInt(string(body), 10, 64)
 	s.Require().NoError(err)
 
-	return s.waitForRestore(e, jobID, timeout)
+	return jobID
 }
 
 // waitForRestore polls the job for up to timeout until it stops running, and fails unless it succeeded.
 func (s *Suite) waitForRestore(e *env, jobID int64, timeout time.Duration) dto.RestoreJobStatus {
+	job := s.waitForRestoreEnd(e, jobID, timeout)
+	s.Require().Equal(dto.RestoreSuccess, job.Status, "restore job failed with error: %s", job.Error)
+
+	return job
+}
+
+// waitForRestoreEnd polls the job for up to timeout until it stops running, whatever its outcome.
+func (s *Suite) waitForRestoreEnd(e *env, jobID int64, timeout time.Duration) dto.RestoreJobStatus {
 	url := fmt.Sprintf("%s/v1/restore/status/%d", e.baseURL, jobID)
 
 	var job dto.RestoreJobStatus
@@ -180,7 +193,6 @@ func (s *Suite) waitForRestore(e *env, jobID int64, timeout time.Duration) dto.R
 		return job.Status != dto.RestoreRunning
 	})
 	s.Require().True(ok, "restore job %d was still running after %s", jobID, timeout)
-	s.Require().Equal(dto.RestoreSuccess, job.Status, "restore job failed with error: %s", job.Error)
 
 	return job
 }

@@ -131,6 +131,51 @@ func TestClearFailedBackup(t *testing.T) {
 	assert.Nil(t, snapshot.lastRun.FullBackupTime()) // lastRun should not be updated
 }
 
+// serverBackupHandler is the handler of a server backup, which reports its server jobs.
+type serverBackupHandler struct {
+	*MockCancelableBackupHandler
+	jobs []model.ServerBackupJob
+}
+
+func (h serverBackupHandler) ServerJobs() []model.ServerBackupJob {
+	return h.jobs
+}
+
+func TestClearBackup_KeepsServerJobs(t *testing.T) {
+	t.Parallel()
+	tracker := newRoutineTracker()
+	tracker.markScanDone()
+
+	ctrl := gomock.NewController(t)
+	jobs := []model.ServerBackupJob{{JobID: "job", Namespace: "test", State: "FAILED", ErrorReason: "s3 PUT 403"}}
+	tracker.register(model.BackupTypeFull, serverBackupHandler{NewMockCancelableBackupHandler(ctrl), jobs})
+	tracker.clearBackup(model.BackupTypeFull)
+
+	// The next full backup is running: the last finished one stays reported.
+	next := NewMockCancelableBackupHandler(ctrl)
+	next.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+	next.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+	tracker.register(model.BackupTypeFull, next)
+
+	snapshot, err := tracker.getState(1 * time.Second)
+	require.NoError(t, err)
+	assert.Equal(t, jobs, snapshot.lastFullJobs)
+	assert.Empty(t, snapshot.lastIncrJobs)
+}
+
+func TestClearBackup_ScanBackupHasNoServerJobs(t *testing.T) {
+	t.Parallel()
+	tracker := newRoutineTracker()
+	tracker.markScanDone()
+
+	tracker.register(model.BackupTypeFull, NewMockCancelableBackupHandler(gomock.NewController(t)))
+	tracker.clearBackup(model.BackupTypeFull)
+
+	snapshot, err := tracker.getState(1 * time.Second)
+	require.NoError(t, err)
+	assert.Empty(t, snapshot.lastFullJobs)
+}
+
 func TestSetLastRun(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
