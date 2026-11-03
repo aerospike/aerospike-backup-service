@@ -3,6 +3,12 @@ on:
   pull_request:
     paths:
       - helm/aerospike-backup-service/**
+      - .github/workflows/helm-chart-tests.yml
+      - .github/actions/seed-and-verify-aerospike/**
+      - .github/actions/poll-abs-job/**
+      - .github/actions/deploy-aerospike-cluster/**
+      - .github/actions/minio/**
+      - .github/config/test-chart-abs-conf.yaml
   workflow_dispatch:
 
 permissions:
@@ -31,11 +37,6 @@ jobs:
         with:
           version: latest
 
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.11'
-          check-latest: true
-
       - name: Set up chart-testing
         uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
 
@@ -46,6 +47,12 @@ jobs:
 
   test-chart:
     runs-on: ubuntu-24.04
+    env:
+      NAMESPACE: aerospike
+      ASDB_NAMESPACE: test
+      BUCKET: abs-testing-bucket
+      RECORD_COUNT: 1000
+      ROUTINE: minioKeepFilesRoutine
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -66,12 +73,6 @@ jobs:
         uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: latest
-
-      - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.x'
-          check-latest: true
 
       - name: Set up Chart Testing
         uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
@@ -115,48 +116,18 @@ jobs:
           EOF
           )
 
-          echo "Deploy ASDB"
-          ASDB_VERSION="$(curl -s "https://hub.docker.com/v2/repositories/aerospike/aerospike-server/tags?page_size=1024" | jq -r '[.results[].name | select(test("^\\d+\\.\\d+$"))] | sort_by(.) | reverse | .[1]').0"
+      - name: Deploy the Aerospike cluster
+        uses: ./.github/actions/deploy-aerospike-cluster
+        with:
+          kubectl-namespace: ${{ env.NAMESPACE }}
+          asdb-namespace: ${{ env.ASDB_NAMESPACE }}
 
-          cat <<EOF | kubectl apply -f -
-          apiVersion: asdb.aerospike.com/v1
-          kind: AerospikeCluster
-          metadata:
-            name: aerocluster
-            namespace: aerospike
-          spec:
-            aerospikeConfig:
-              namespaces:
-                - name: test
-                  replication-factor: 2
-                  storage-engine:
-                    data-size: 1073741824
-                    type: memory
-              network:
-                fabric:
-                  port: 3001
-                heartbeat:
-                  port: 3002
-                service:
-                  port: 3000
-              service:
-                feature-key-file: /etc/aerospike/secret/features.conf
-            image: "aerospike/aerospike-server-enterprise:${ASDB_VERSION}"
-            podSpec:
-              multiPodPerHost: true
-            size: 2
-            storage:
-              volumes:
-                - aerospike:
-                    path: /etc/aerospike/secret
-                  name: aerospike-config-secret
-                  source:
-                    secret:
-                      secretName: aerospike-secret
-            validationPolicy:
-              skipWorkDirValidate: true
-              skipXdrDlogFileValidate: true
-          EOF
+      - name: Deploy MinIO
+        uses: ./.github/actions/minio
+        with:
+          mode: deploy
+          kubectl-namespace: ${{ env.NAMESPACE }}
+          bucket: ${{ env.BUCKET }}
 
       - name: Run chart-testing (install)
         env:
@@ -173,6 +144,7 @@ jobs:
           extraSecretVolumeMounts:
             - name: minio-credentials
               mountPath: /home/absuser/.aws/credentials
+              subPath: credentials
               readOnly: true
           image:
             pullPolicy: IfNotPresent
@@ -181,9 +153,144 @@ jobs:
             create: false
           EOF
 
+          # --skip-clean-up keeps the release after its helm test so the steps below can run a real
+          # backup and restore through it. The kind cluster is discarded with the runner.
+          # --charts installs the chart even when the PR changed only this workflow or its actions;
+          # change detection against the target branch would install nothing and break the steps below.
           ct install \
           --namespace aerospike \
-          --chart-dirs helm \
-          --target-branch "$GITHUB_DEFAULT_BRANCH" \
+          --charts helm/aerospike-backup-service \
+          --skip-clean-up \
           --debug --helm-extra-args="--debug" \
           --helm-extra-set-args="--values=ct-values.yaml --values=abs-values.yaml"
+
+      - name: Discover ABS service and wait for readiness
+        id: discover
+        run: |
+          set -euo pipefail
+          SVC="$(kubectl get svc -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=aerospike-backup-service -o jsonpath='{.items[0].metadata.name}')"
+          echo "svc=${SVC}" >> "$GITHUB_OUTPUT"
+          # Wait on the Deployment: the pod label also matches the finished `helm test` pod,
+          # which ends Completed and never becomes Ready. The Deployment shares the Service name.
+          kubectl wait --for=condition=Available "deployment/${SVC}" -n ${{ env.NAMESPACE }} --timeout=180s
+
+      - name: Seed records
+        uses: ./.github/actions/seed-and-verify-aerospike
+        with:
+          mode: seed
+          namespace: ${{ env.ASDB_NAMESPACE }}
+          record-count: ${{ env.RECORD_COUNT }}
+          kubectl-namespace: ${{ env.NAMESPACE }}
+          aerospike-k8s-host: aerocluster-0-0:3000
+
+      - name: Count seeded records
+        id: seed-count
+        uses: ./.github/actions/seed-and-verify-aerospike
+        with:
+          mode: count
+          namespace: ${{ env.ASDB_NAMESPACE }}
+          kubectl-namespace: ${{ env.NAMESPACE }}
+          aerospike-k8s-host: aerocluster-0-0:3000
+
+      - name: Assert seeded count
+        run: |
+          if [ "${{ steps.seed-count.outputs.record_count }}" != "${{ env.RECORD_COUNT }}" ]; then
+            echo "::error::Expected ${{ env.RECORD_COUNT }} records after seeding, got ${{ steps.seed-count.outputs.record_count }}"
+            exit 1
+          fi
+
+      - name: Port-forward ABS service
+        run: |
+          kubectl port-forward -n ${{ env.NAMESPACE }} svc/${{ steps.discover.outputs.svc }} 8080:8080 &
+          echo $! > port-forward.pid
+          for i in $(seq 1 10); do
+            curl -sf http://127.0.0.1:8080/health && break
+            [ "$i" -eq 10 ] && { echo "::error::port-forward to ABS never became reachable"; exit 1; }
+            sleep 3
+          done
+
+      - name: Trigger full backup
+        run: curl -sf -X POST "http://127.0.0.1:8080/v1/backups/full/${{ env.ROUTINE }}"
+
+      - name: Wait for the backup
+        id: backup
+        uses: ./.github/actions/poll-abs-job
+        with:
+          base-url: http://127.0.0.1:8080
+          kind: backup
+          routine: ${{ env.ROUTINE }}
+
+      - name: Verify backup files in MinIO
+        uses: ./.github/actions/minio
+        with:
+          mode: list-objects
+          kubectl-namespace: ${{ env.NAMESPACE }}
+          bucket: ${{ env.BUCKET }}
+
+      - name: Truncate namespace
+        run: |
+          kubectl exec -n ${{ env.NAMESPACE }} aerocluster-0-0 -- \
+            asinfo -v "truncate-namespace:namespace=${{ env.ASDB_NAMESPACE }}"
+
+      - name: Wait for the namespace to drain
+        uses: ./.github/actions/seed-and-verify-aerospike
+        with:
+          mode: wait-empty
+          namespace: ${{ env.ASDB_NAMESPACE }}
+          kubectl-namespace: ${{ env.NAMESPACE }}
+          aerospike-k8s-host: aerocluster-0-0:3000
+
+      - name: Trigger restore
+        id: restore
+        run: |
+          set -euo pipefail
+          RESPONSE="$(curl -sf -X POST "http://127.0.0.1:8080/v1/restore/full" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "destination-name": "asdb-cluster",
+              "source-name": "minio",
+              "backup-data-path": "${{ steps.backup.outputs.backup-data-path }}",
+              "policy": {}
+            }')"
+          echo "$RESPONSE"
+          # POST /v1/restore/full returns a bare job id.
+          JOB_ID="$(printf '%s' "$RESPONSE" | tr -d '[:space:]')"
+          if ! printf '%s' "$JOB_ID" | grep -qE '^[0-9]+$'; then
+            echo "::error::Expected a numeric job id from /v1/restore/full, got: ${RESPONSE}"
+            exit 1
+          fi
+          echo "job-id=${JOB_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for the restore
+        uses: ./.github/actions/poll-abs-job
+        with:
+          base-url: http://127.0.0.1:8080
+          kind: restore
+          job-id: ${{ steps.restore.outputs.job-id }}
+
+      - name: Count restored records
+        id: final-count
+        uses: ./.github/actions/seed-and-verify-aerospike
+        with:
+          mode: count
+          namespace: ${{ env.ASDB_NAMESPACE }}
+          kubectl-namespace: ${{ env.NAMESPACE }}
+          aerospike-k8s-host: aerocluster-0-0:3000
+
+      - name: Assert restored count
+        run: |
+          if [ "${{ steps.final-count.outputs.record_count }}" != "${{ env.RECORD_COUNT }}" ]; then
+            echo "::error::Expected ${{ env.RECORD_COUNT }} records after restore, got ${{ steps.final-count.outputs.record_count }}"
+            exit 1
+          fi
+          echo "Helm backup/restore test passed."
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl get pods -n ${{ env.NAMESPACE }} -o wide || true
+          kubectl get events -n ${{ env.NAMESPACE }} --sort-by=.lastTimestamp | tail -50 || true
+          kubectl logs -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=aerospike-backup-service --all-containers --tail=300 || true
+          for pod in aerocluster-0-0 aerocluster-0-1; do
+            kubectl logs "$pod" -c aerospike-server --namespace ${{ env.NAMESPACE }} --tail=100 || true
+          done

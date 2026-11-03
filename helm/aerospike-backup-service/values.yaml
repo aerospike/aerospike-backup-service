@@ -2,6 +2,9 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# Number of Backup Service pods: 1, or 0 to stop the service. Values above 1 are rejected:
+# each pod needs its own configuration, and pods of one release share backupServiceConfig.
+# Install a separate release for each set of routines.
 replicaCount: 1
 image:
   repository: aerospike/aerospike-backup-service
@@ -9,13 +12,28 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "3.7.0"
 imagePullSecrets: []
+# Overrides the chart name used in resource names and the app.kubernetes.io/name label.
 nameOverride: ""
+# Overrides the full resource name (default: <release>-aerospike-backup-service).
 fullnameOverride: ""
+# Small image used by the config-injector init container (configmap.create: false)
+# and by the `helm test` pod. It must provide /bin/sh, base64 and wget.
+utilityImage:
+  repository: busybox
+  tag: "1.37.0"
+  pullPolicy: IfNotPresent
 configmap:
-  # Specifies whether a configmap should be created with the backupServiceConfig.
-  # When false the backupServiceConfig will get created in the deployment init container.
-  # Set to false when needing to change the config at runtime.
+  # true: backupServiceConfig is rendered into a ConfigMap and mounted read-only at
+  #   /etc/aerospike-backup-service. Configuration changes through the REST API are rejected
+  #   with 405; change backupServiceConfig and run `helm upgrade` instead.
+  # false: an init container writes backupServiceConfig into an emptyDir, so the REST API can
+  #   change the configuration. Those changes are lost whenever the pod is recreated.
   create: true
+# Command-line arguments for the service. Empty uses
+# ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml"].
+# A non-empty list replaces that default, so include -c yourself.
+# Chart 2.1.0 and earlier ignored this value. Check it before upgrading from those versions.
+# Example (remote config, where the mounted file holds the location of the real configuration):
 # args: ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml", "-r"]
 args: []
 envFrom: []
@@ -29,7 +47,7 @@ env: []
 #   value: some-env-var-value
 # - name: SOME_ENV_VAR_FROM_CONFIG_MAP
 #   valueFrom:
-#     configMapRef:
+#     configMapKeyRef:
 #       name: configmap-name
 #       key: config-key
 # - name: SOME_ENV_SECRET
@@ -38,193 +56,197 @@ env: []
 #       name: secret-name
 #       key: secret-key
 
+# The Backup Service configuration file, written to
+# /etc/aerospike-backup-service/aerospike-backup-service.yml.
+# Unknown keys are rejected at startup. The full field reference is
+# https://github.com/aerospike/aerospike-backup-service/tree/main/docs/readme/dto
+# (start at dto.config.md) and the JSON schema is docs/config.schema.json.
 backupServiceConfig: {}
 # service:
 #   http:
-#     address: <address> # Optional default: 0.0.0.0
-#     port: <port> # Optional default: 8080
+#     address: <address> # Optional. Default: 0.0.0.0
+#     port: <port> # Optional. Default: 8080. The chart uses it for the container port and probes.
+#     context-path: <path> # Optional. Default: "/". The chart adds it to the probe paths.
+#     disabled: <true/false> # Optional. Default: false. When true, the chart drops port "http" and probes over HTTPS
 #     rate:
-#       tps: <tokens-per-second-threshold> # Optional default: 1024
-#       size: <token=bucket-size> # Optional default: 1024
-#       white-list: [ <ips> ] # Optional default: empty list
-#     context-path: <custom-path-for-api-endpoints> # Optional default: "/"
+#       tps: <tokens-per-second> # Optional. Default: 1024
+#       size: <token-bucket-size> # Optional. Default: 1024
+#       white-list: [ <ips> ] # Optional. Default: empty list
+#   https: # Optional. Enabled when this block is present. See the chart README, "HTTPS".
+#     disabled: <true/false> # Optional. Default: false
+#     port: <port> # Optional. Default: 8443. The chart exposes it as port "https".
+#     cert-file: <path> # Mandatory when enabled
+#     key-file: <path> # Mandatory when enabled
+#     client-auth: <mode> # Optional. Default: none. Valid values: none, request, require-and-verify (mTLS)
+#     client-ca-file: <path> # Mandatory when client certificates are verified
+#     crl-file: <path> # Optional
 #   logger:
-#     level: <log-level> # Optional default: INFO Valid values: (TRACE,DEBUG,INFO,WARN,WARNING,ERROR)
-#     format: <format> # Optional default: PLAIN Valid values: (PLAIN,JSON)
-#     stdout-writer: <true/false> # Optional default: true
-#     file-writer:
-#       filename: <filename-path> # Optional default: log.txt
-#       maxsize: <max-logfile-size> # Optional default: 100 (Size is in megabytes)
-#       maxage: <max-days-retain-logs> # Optional default: 0
-#       maxbackups: <backup-logfiles> # Optional default: 0
-#       compress: <true/false> # Optional default: false
+#     level: <log-level> # Optional. Default: INFO. Valid values: TRACE, DEBUG, INFO, WARN, WARNING, ERROR
+#     format: <format> # Optional. Default: PLAIN. Valid values: PLAIN, JSON
+#     stdout-writer: <true/false> # Optional. Default: true. Recommended on Kubernetes (kubectl logs).
+#     file-writer: # Optional. Needs a writable volume (readOnlyRootFilesystem is on).
+#       filename: <filename-path> # Mandatory when file-writer is set
+#       maxsize: <max-logfile-size> # Optional. Default: 100 (megabytes)
+#       maxage: <max-days-retain-logs> # Optional. Default: keep all
+#       maxbackups: <backup-logfiles> # Optional. Default: keep all
+#       compress: <true/false> # Optional. Default: false
 #   backup:
 #     timestamp-format: <ISO|EU|US> # Optional. Human-readable UTC timestamp suffix in backup paths
 #     schedule-timezone: <UTC|Local|IANA> # Optional timezone for cron evaluation. Default: UTC. Changing this requires a restart.
 #
 # aerospike-clusters:
-#   <cluster-name>: # At least one service is required
-#     label: <cluster-label> # Optional
-#     seed-nodes:
+#   <cluster-name>:
+#     label: <cluster-label> # Optional. Used only in logs and error messages.
+#     seed-nodes: # Mandatory
 #       - host-name: <cluster ip/dns-name> # Mandatory
 #         port: 3000 # Mandatory
-#         tls-name: <tls-socket-connection-name> # mandatory if TLS is enabled
-#     conn-timeout: <connection-timeout> # optional example: 5000
-#     use-services-alternate: <true/false> # optional default: false
+#         tls-name: <tls-name> # Mandatory if TLS is enabled
+#     conn-timeout: <connection-timeout> # Optional. Milliseconds. Default: 30000
+#     use-services-alternate: <true/false> # Optional. Default: false
+#     max-parallel-scans: <n> # Optional. Shared by all backups of this cluster. Default: unlimited
+#     prefer-racks: [ <rack-ids> ] # Optional. Racks to read from, in order of preference
 #     credentials:
-#       user: <cluster username> # Mandatory
-#       password: <cluster password> # Mandatory if  password-path is empty
-#       password-path: <path-to-password-file> # Mandatory if  password is empty
-#       auth-mode: <auth-mode> # Optional Valid values: INTERNAL, EXTERNAL, PKI
-#       secret-agent-name: <secret-agent-name> # optional
-#       secret-agent: #optional
-#         connection-type: <tcp/udp> # required
-#         address: <address> # Optional Address of the Secret Agent defaultL localhost
-#         port: <port> # Optional Secret Agent port default: 8080
-#         timeout: <timeout> # Optional timeout in milliseconds default: 0
-#         tls-ca-file: <path-to-ca-file> # Optional default: ""
-#         is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
+#       user: <cluster username>
+#       password: <cluster password> # Use password-path or a Secret Agent instead in production
+#       password-path: <path-to-password-file> # e.g. a file mounted from a Kubernetes Secret
+#       auth-mode: <auth-mode> # Optional. Default: INTERNAL. Valid values: INTERNAL, EXTERNAL, PKI
+#       secret-agent-name: <agent-name> # Optional. Mutually exclusive with secret-agent
+#       secret-agent: { <inline secret agent> } # Optional. Same fields as secret-agents.<agent-name>
 #     tls:
-#       ca-file: <path-to-ca-file> # Mandatory if TLS enabled and capath is empty
-#       ca-path: <path-to-ca-directory> # Mandatory if TLS enabled and ca-file if empty
-#       name: <tls-socket-connection-name> # Mandatory if TLS enabled
+#       ca-file: <path-to-ca-file> # Mandatory if TLS is enabled and ca-path is empty
+#       ca-path: <path-to-ca-directory> # Mandatory if TLS is enabled and ca-file is empty
+#       name: <tls-name> # Mandatory if TLS is enabled
 #       protocols: <protocols> # Optional
 #       cipher-suite: <cipher-suite> # Optional
+#       cert-file: <path-to-cert-file> # Optional
 #       key-file: <path-to-key-file> # Optional
 #       key-file-password: <keyfile-password> # Optional
-#       cert-file: <path-to-cert-file> # Optional
 #
 # storage:
-#   local-storage:
-#     path: <root-path> # Mandatory. The root path for the backup repository.
-#   s3-storage:
-#     path: <root-path> # Mandatory. The root path for the backup repository within the bucket.
-#     bucket: <bucket> # Mandatory. The S3 bucket name.
-#     s3-region: <s3-region> # Mandatory. The S3 region where the bucket resides (e.g., eu-central-1).
-#     s3-profile: <s3-profile> # Optional. AWS profile name (e.g., default).
-#     s3-endpoint-override: <s3-endpoint> # Optional. Alternative endpoint for the S3 SDK to communicate (e.g., http://host.docker.internal:9000).
-#     s3-log-level: <s3-log-level> # Optional. Log level of the AWS S3 SDK (OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE). Default: FATAL.
-#     min-part-size: <min-part-size> # Optional. Minimum size in bytes of individual S3 UploadParts. Default: 52428800.
-#     max-async-connections: <max-connections> # Optional. Maximum number of simultaneous requests to S3. Default: 16.
-#     access-key-id: <access-key-id> # Optional. Access Key ID for S3 StaticCredentialsProvider.
-#     secret-access-key: <secret-access-key> # Optional. Secret Access Key for S3 StaticCredentialsProvider.
-#     secret-agent-name: <secret-agent-name> # Optional
-#     secret-agent: #Optional
-#       connection-type: <tcp/udp> # required
-#       address: <address> # Optional Address of the Secret Agent defaultL localhost
-#       port: <port> # Optional Secret Agent port default: 8080
-#       timeout: <timeout> # Optional timeout in milliseconds default: 0
-#       tls-ca-file: <path-to-ca-file> # Optional default: ""
-#       is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
-#     storage-class: #Optional
-#       data: <STANDARD/GLACIER/etc> # Storage class for object data.
-#       metadata: <STANDARD/GLACIER/etc> # Storage class for metadata.
-#   gcp-storage:
-#     key-file-path: <key-file-path> # Optional. Path to the file containing the service account key in JSON format.
-#     key: <key> # Optional. Service account key in JSON format. Can be sensitive information.
-#     bucket-name: <bucket-name> # Mandatory. GCP storage bucket name.
-#     path: <root-path> # Optional. Root path for the backup repository. Defaults to the bucket's root.
-#     endpoint: <endpoint> # Optional. Alternative endpoint URL. Not recommended for production environments.
-#     min-part-size: <min-part-size> # Optional. Minimum size in bytes of individual UploadParts. Default: 52428800.
-#     secret-agent-name: <secret-agent-name> # Optional
-#     secret-agent: #Optional
-#       connection-type: <tcp/udp> # required
-#       address: <address> # Optional Address of the Secret Agent defaultL localhost
-#       port: <port> # Optional Secret Agent port default: 8080
-#       timeout: <timeout> # Optional timeout in milliseconds default: 0
-#       tls-ca-file: <path-to-ca-file> # Optional default: ""
-#       is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
-#     storage-class: #Optional
-#       data: <STANDARD/NEARLINE/etc> # Storage class for object data.
-#   azure-storage:
-#     endpoint: <endpoint> # Mandatory. Azure Blob service endpoint URL.
-#     container-name: <container-name> # Mandatory. Name of the Azure Blob container.
-#     path: <root-path> # Optional. Root path for the backup repository within the container. Defaults to the container's root.
-#     min-part-size: <min-part-size> # Optional. Minimum size in bytes of individual UploadParts. Default: 52428800.
-#     account-name: <account-name> # Optional. Azure storage account name for Shared Key authentication.
-#     account-key: <account-key> # Optional. Azure storage account key for Shared Key authentication.
-#     tenant-id: <tenant-id> # Optional. Azure Active Directory tenant ID for AAD authentication.
-#     client-id: <client-id> # Optional. Azure Active Directory client ID for AAD authentication.
-#     client-secret: <client-secret> # Optional. Azure Active Directory client secret for AAD authentication.#  backup-policies:
-#     secret-agent-name: <secret-agent-name> # optional
-#     secret-agent: #optional
-#       connection-type: <tcp/udp> # required
-#       address: <address> # Optional Address of the Secret Agent defaultL localhost
-#       port: <port> # Optional Secret Agent port default: 8080
-#       timeout: <timeout> # Optional timeout in milliseconds default: 0
-#       tls-ca-file: <path-to-ca-file> # Optional default: ""
-#       is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
-#     storage-class: #Optional
-#       data: <Hot/Cool/Cold/Archieve> # Storage class for object data.
-#       metadata: <Hot/Cool/Cold/Archieve> # Storage class for metadata.
+#   <storage-name>: # Each named storage sets exactly one of the backends below.
+#     local-storage:
+#       path: <root-path> # Mandatory. Needs a writable, persistent volume mounted at this path.
+#       min-part-size: <bytes> # Optional
+#   <s3-storage-name>:
+#     s3-storage:
+#       bucket: <bucket> # Mandatory
+#       s3-region: <s3-region> # Mandatory, e.g. us-east-1
+#       path: <root-path> # Optional. Root path inside the bucket.
+#       s3-profile: <s3-profile> # Optional. Profile in ~/.aws/credentials (/home/absuser/.aws/credentials)
+#       s3-endpoint-override: <s3-endpoint> # Optional, e.g. http://minio:9000
+#       s3-log-level: <level> # Optional. Default: FATAL. Valid values: OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE
+#       min-part-size: <bytes> # Optional. Default: 52428800
+#       max-async-connections: <n> # Optional. Default: no limit
+#       access-key-id: <access-key-id> # Optional. Static credentials; omit to use the default AWS chain (e.g. IRSA)
+#       secret-access-key: <secret-access-key> # Optional
+#       secret-agent-name: <agent-name> # Optional. Mutually exclusive with secret-agent
+#       storage-class: # Optional
+#         data: <STANDARD/GLACIER/etc> # Storage class for object data
+#         metadata: <STANDARD/GLACIER/etc> # Storage class for metadata
+#   <gcp-storage-name>:
+#     gcp-storage:
+#       bucket-name: <bucket-name> # Mandatory
+#       path: <root-path> # Optional. Default: bucket root
+#       key-file-path: <key-file-path> # Optional. Service account key (JSON) file; omit to use Workload Identity / ADC
+#       key: <key> # Optional. Service account key (JSON) inline. Sensitive.
+#       endpoint: <endpoint> # Optional. Not recommended for production
+#       min-part-size: <bytes> # Optional. Default: 52428800
+#       secret-agent-name: <agent-name> # Optional. Mutually exclusive with secret-agent
+#       storage-class: # Optional
+#         data: <STANDARD/NEARLINE/etc> # Storage class for object data
+#   <azure-storage-name>:
+#     azure-storage:
+#       endpoint: <endpoint> # Mandatory. Blob service endpoint URL
+#       container-name: <container-name> # Mandatory
+#       path: <root-path> # Optional. Default: container root
+#       account-name: <account-name> # Optional. Shared Key authentication
+#       account-key: <account-key> # Optional. Shared Key authentication
+#       tenant-id: <tenant-id> # Optional. Entra ID (AAD) authentication
+#       client-id: <client-id> # Optional. Entra ID (AAD) authentication
+#       client-secret: <client-secret> # Optional. Entra ID (AAD) authentication
+#       min-part-size: <bytes> # Optional. Default: 52428800
+#       secret-agent-name: <agent-name> # Optional. Mutually exclusive with secret-agent
+#       storage-class: # Optional
+#         data: <Hot/Cool/Cold/Archive> # Access tier for object data
+#         metadata: <Hot/Cool/Cold/Archive> # Access tier for metadata
 #
 # backup-policies:
 #   <policy-name>:
-#     parallel: <parallel> # Optional Max number of parallel scan calls default: 1
-#     socket-timeout: <socket-timeout> # Optional default: 0 (Timeout is in milliseconds)
-#     total-timeout: <total-timeout> # Optional default: 0 (Timeout is in milliseconds)
-#     retry-policy:
-#       base-timeout: <base-timeout> # Mandatory. Initial delay between retry attempts, in milliseconds.
-#       multiplier: <multiplier> # Mandatory. Factor to increase the delay between retries.
-#       max-retries: <max-retries> # Mandatory. Maximum number of retry attempts. Set to 0 for no retries.
+#     parallel: <n> # Optional. Max parallel scan calls. Default: 8
+#     parallel-write: <n> # Optional. Writer threads. Default: 8, or parallel when set
+#     max-concurrent-nodes: <n> # Optional. Default: all nodes in parallel
+#     socket-timeout: <ms> # Optional. Default: 600000. 0 means total-timeout is used
+#     total-timeout: <ms> # Optional. Default: 0 (no timeout)
+#     retry-policy: # Optional. When omitted: 5 retries, 1 minute base delay, multiplier 1.5
+#       base-timeout: <ms> # Initial delay between retry attempts
+#       multiplier: <multiplier> # Factor to increase the delay between retries
+#       max-retries: <n> # Maximum number of retries. 0 means no retries
 #     retention:
-#       full: <full> # Optional. Number of full backups to retain:
-#       incremental: <incremental> # Optional. Number of full backups to retain incremental backups for
-#     no-bins: <true/false> # Optional backup only metadata (digest, TTL, generation count, key) default: false
-#     no-records: <true/false> # Optional do not back up any record data (metadata or bin data) default: false
-#     no-indexes: <true/false> # Optional do not back up any secondary index definitions default: false
-#     no-udfs: <true/false> # Optional do not back up any UDF modules default: false
-#     with-cluster-configuration: <true/false> # Back up Aerospike cluster configuration. Default: false.
-#     bandwidth: <bandwidth> # Optional throttles write operations to backup files not exceeding bandwidth in MiB/s. default: 0
-#     records-per-second: <records-per-second> # Optional limit of total returned records per second. default: 0
-#     file-limit: <file-limit> # Optional .asb file size limit in MiB. default: 250
+#       full: <n> # Optional. Number of full backups to keep. Default: all
+#       incremental: <n> # Optional. Number of full backups to keep incremental backups for. Default: all
+#     no-records: <true/false> # Optional. Do not back up record data. Default: false
+#     no-indexes: <true/false> # Optional. Do not back up secondary index definitions. Default: false
+#     no-udfs: <true/false> # Optional. Do not back up UDF modules. Default: false
+#     with-cluster-configuration: <true/false> # Optional. Back up cluster configuration. Default: false
+#     bandwidth: <MiB/s> # Optional. Default: no limit
+#     records-per-second: <n> # Optional. Default: no limit
+#     file-limit: <MiB> # Optional. .asb file size limit. Default: 250
+#     compact: <true/false> # Optional. Do not base64-encode BLOBs. Default: false
+#     use-scan-compression: <true/false> # Optional. Enterprise Edition only. Default: false
 #     encryption:
-#       mode: <mode> # Required encryption mode to be used. Valid values: (NONE, AES128, AES256)
-#       key-file: <key-file> # Path to the file containing the encryption key; exactly one key source is required unless mode is NONE
-#       key-env: <key-env> # Optional environment variable containing the encryption key default: ""
-#       key-secret: <key-secret> # Optional secret keyword in Aerospike Secret Agent containing the encryption key default: ""
+#       mode: <mode> # Required. Valid values: NONE, AES128, AES256
+#       key-file: <path> # Exactly one key source is required unless mode is NONE
+#       key-env: <env-var-name> # Environment variable holding the key (see `env` above)
+#       key-secret: <secret-agent-key> # Key resolved through the routine's Secret Agent
 #     compression:
-#       mode: <mode> # Required compression mode to be used. Valid values: (NONE, ZSTD)
-#       level: <level> # Compression level from -1 to 22; higher compresses better, but not every step changes the result. Required for ZSTD, must not be set for NONE
-#     sealed: <true/false> # Optional determines whether backup should include keys updated during the backup process default: false
-#     concurrent-incremental: <true/false> #Allows incremental backups to run concurrently.
-#     incr-mode: <incr-mode> # Optional mode for incremental backups (differential or cumulative)
+#       mode: <mode> # Required. Valid values: NONE, ZSTD
+#       level: <level> # -1 to 22. Required for ZSTD, must not be set for NONE
+#     sealed: <true/false> # Optional. Exclude records updated during the backup. Default: false
+#     concurrent-incremental: <true/false> # Optional. Allow incremental backups to overlap. Default: false
+#     incr-mode: <mode> # Optional. differential (default) or cumulative
 #
 # backup-routines:
 #   <routine-name>:
-#     backup-policy: <policy-name> # Mandatory name of the corresponding backup policy
-#     source-cluster: <cluster-name> # Mandatory name of the corresponding source cluste
-#     storage: <storage-name> # Mandatory name of the corresponding storage provider configuration
-#     secret-agent: <secret-agent> # Optional Secret Agent configuration for the routine
-#     interval-cron: <interval-cron> # Mandatory interval for full backup as a cron expression string
-#     incr-interval-cron: <incr-interval-cron> # Optional interval for incremental backup as a cron expression string
-#     schedule-timezone: <UTC|Local|IANA> # Optional. Overrides service.backup.schedule-timezone for this routine. Default: inherit.
-#     namespaces: [ <namespace-name> ] # Mandatory list of the namespaces to back up default: empty list
-#     set-list: [ <set-names> ] # Optional list of backup set names default: empty list
-#     bin-list: [ <bin-names> ] # Optional list of backup bin names default: empty list
-#     prefer-racks: [ <rack-ids> ] # Optional list of rack IDs to prefer when reading records for a backup
-#     partition-list: <partition-list> # Optional list of partition filters default: empty string
-#     node-list: <node-list> #Optional. Aerospike nodes to include in the backup. Default: all nodes.
-#     disabled: <true/false> #Optional. Disabled routines are not executed.
+#     source-cluster: <cluster-name> # Mandatory. Key under aerospike-clusters
+#     storage: <storage-name> # Mandatory. Key under storage
+#     interval-cron: <cron> # Mandatory. Full backup schedule
+#     namespaces: [ <namespace-name> ] # Mandatory. Empty list backs up the whole cluster
+#     backup-policy: <policy-name> # Optional. Key under backup-policies
+#     incr-interval-cron: <cron> # Optional. Incremental backup schedule
+#     schedule-timezone: <UTC|Local|IANA> # Optional. Overrides service.backup.schedule-timezone. Default: inherit
+#     secret-agent: <agent-name> # Optional. Key under secret-agents; resolves encryption key-secret
+#     set-list: [ <set-names> ] # Optional. Default: all sets
+#     bin-list: [ <bin-names> ] # Optional. Default: all bins
+#     rack-list: [ <rack-ids> ] # Optional. Only scan nodes in these racks
+#     partition-list: <partition-list> # Optional. e.g. "0-1000"
+#     node-list: [ <nodes> ] # Optional. Default: all nodes
+#     filter-exp: <base64-expression> # Optional. Partial backup filter expression
+#     disabled: <true/false> # Optional. Disable scheduled backups. Default: false
 #
 # secret-agents:
 #   <agent-name>:
-#     connection-type: <tcp/udp> # required
-#     address: <address> # Optional Address of the Secret Agent defaultL localhost
-#     port: <port> # Optional Secret Agent port default: 8080
-#     timeout: <timeout> # Optional timeout in milliseconds default: 0
-#     tls-ca-file: <path-to-ca-file> # Optional default: ""
-#     is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
+#     connection-type: <TCP/UNIX> # Mandatory
+#     address: <address> # Mandatory
+#     port: <port> # Port of a TCP agent
+#     timeout: <ms> # Optional. Default: 1000
+#     is-base64: <true/false> # Optional. Default: false
+#     ca-file: <path> # Optional. Trusted CA for TLS to the agent
+#     name: <tls-server-name> # Optional. TLS ServerName (SNI)
+#     cert-file: <path> # Optional. Client certificate for mTLS
+#     key-file: <path> # Optional. Client key for mTLS
 
+# Extra init containers added to the pod, after config-injector.
 initContainers: []
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
-  # Automatically mount a ServiceAccount's API credentials?
-  # False: ABS does not call the Kubernetes API. Pod spec also sets
-  # automountServiceAccountToken: false.
+  # Value of automountServiceAccountToken on the ServiceAccount object.
+  # ABS does not call the Kubernetes API, and the pod spec always sets
+  # automountServiceAccountToken: false, so the token is never mounted.
   automount: false
-  # Annotations to add to the service account
+  # Annotations to add to the service account, e.g. for IRSA or GKE Workload Identity:
+  #   eks.amazonaws.com/role-arn: arn:aws:iam::<account>:role/<role>
+  #   iam.gke.io/gcp-service-account: <gsa>@<project>.iam.gserviceaccount.com
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
@@ -236,12 +258,11 @@ podSecurityContext:
   fsGroup: 65532
   seccompProfile:
     type: RuntimeDefault
-# fsGroup: 2000
 
-# Container securityContext is hardened by default (BKRS-302).
-# Override via values if a writable local-storage or log path is required
-# (readOnlyRootFilesystem: true needs an extraVolumeMount with readOnly: false).
-# Full override guidance belongs in docs/security.md (BKRS-295 / p5-deploy-docs).
+# Container securityContext is hardened by default.
+# readOnlyRootFilesystem: true means file-based local storage or a log file needs a
+# writable volume (volumes + extraVolumeMounts with readOnly: false).
+# See the chart README, "Writable paths".
 securityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true
@@ -258,7 +279,14 @@ securityContext:
     type: RuntimeDefault
 service:
   type: ClusterIP
-  port: &p 8080
+  # Service port for HTTP. The container port comes from backupServiceConfig.service.http.port
+  # (default 8080); the Service forwards to it by name.
+  port: 8080
+  # Service port for HTTPS, added when backupServiceConfig.service.https is enabled.
+  # Default: the container port, backupServiceConfig.service.https.port (default 8443).
+  # Probes, the Ingress, the chart notes and `helm test` use HTTP, or HTTPS when
+  # backupServiceConfig.service.http.disabled is true.
+  httpsPort: null
 ingress:
   enabled: false
   className: ""
@@ -286,24 +314,17 @@ resources: {}
 #   cpu: 100m
 #   memory: 128Mi
 
+# Without a handler (httpGet, tcpSocket, exec or grpc) of your own, the chart adds
+# httpGet <context-path>health / <context-path>ready on the container's "http" port.
 livenessProbe:
-  httpGet:
-    path: /health
-    port: *p
   initialDelaySeconds: 15
   periodSeconds: 10
 readinessProbe:
-  httpGet:
-    path: /ready
-    port: *p
   initialDelaySeconds: 15
   periodSeconds: 10
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+# ABS stops accepting requests and drains the HTTP server for up to 30 seconds on shutdown;
+# this leaves headroom before the kubelet sends SIGKILL.
+terminationGracePeriodSeconds: 45
 # Additional volumes on the output Deployment definition.
 volumes: []
 # - name: foo
@@ -311,24 +332,27 @@ volumes: []
 #     secretName: mysecret
 #     optional: false
 
-# Additional volumeMounts on the output Deployment definition.
-# For local-storage or a file log under readOnlyRootFilesystem, mount a
-# writable volume and set readOnly: false (see BKRS-295 / docs/security.md).
-# Example:
+# Additional volumeMounts for entries in `volumes`. readOnly defaults to true.
+# For local storage or a log file under readOnlyRootFilesystem, mount a writable,
+# persistent volume and set readOnly: false. Example:
 # volumes:
-#   - name: local-storage
-#     emptyDir: {}
+#   - name: backups
+#     persistentVolumeClaim:
+#       claimName: abs-backups
 # extraVolumeMounts:
-#   - name: local-storage
+#   - name: backups
 #     mountPath: /backup
 #     readOnly: false
 extraVolumeMounts: []
 # - name: foo
 #   mountPath: "/etc/foo"
 #   readOnly: true
+# Like extraVolumeMounts, but each entry also takes subPath to mount a single key
+# of a Secret as a file. readOnly defaults to true.
 extraSecretVolumeMounts: []
 # - name: foo
-#   mountPath: "/etc/foo"
+#   mountPath: "/etc/foo/password.txt"
+#   subPath: password.txt
 #   readOnly: true
 
 nodeSelector: {}

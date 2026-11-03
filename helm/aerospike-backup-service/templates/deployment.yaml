@@ -1,3 +1,4 @@
+{{- include "aerospike-backup-service.validate" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,9 +7,11 @@ metadata:
     app: {{ include "aerospike-backup-service.fullname" . }}
     {{- include "aerospike-backup-service.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
+  # Stop the old pod before starting the new one: during a rolling update both would run every
+  # routine (duplicate backups), and a ReadWriteOnce volume cannot attach to both.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       {{- include "aerospike-backup-service.selectorLabels" . | nindent 6 }}
@@ -32,6 +35,7 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "aerospike-backup-service.serviceAccountName" . }}
       automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       {{- if or (not .Values.configmap.create) .Values.initContainers }}
@@ -50,12 +54,21 @@ spec:
             runAsGroup: 65532
             seccompProfile:
               type: RuntimeDefault
-          image: busybox
+          image: "{{ .Values.utilityImage.repository }}:{{ .Values.utilityImage.tag }}"
+          imagePullPolicy: {{ .Values.utilityImage.pullPolicy }}
+          # The config travels base64-encoded so no character in it ($, `, \, quotes) is ever
+          # interpreted by the shell, split into 64 KiB arguments because Linux caps a single
+          # exec argument at 128 KiB (MAX_ARG_STRLEN).
+          {{- $b64 := .Values.backupServiceConfig | toYaml | b64enc }}
+          {{- $chunk := 65536 }}
           command:
             - /bin/sh
             - -c
-            - |
-              echo -e {{ .Values.backupServiceConfig | toYaml | quote }} > /etc/aerospike-backup-service/aerospike-backup-service.yml
+            - printf '%s' "$@" | base64 -d > /etc/aerospike-backup-service/aerospike-backup-service.yml
+            - config-injector
+            {{- range $i := until (div (add (len $b64) (sub $chunk 1)) $chunk | int) }}
+            - {{ substr (mul $i $chunk | int) (min (len $b64) (mul (add $i 1) $chunk) | int) $b64 | quote }}
+            {{- end }}
           volumeMounts:
             - name: aerospike-backup-service-config
               mountPath: /etc/aerospike-backup-service
@@ -69,6 +82,8 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            {{- include "args.list" . | nindent 12 }}
           {{- with .Values.env }}
           env:
             {{- toYaml . | nindent 12 }}
@@ -78,13 +93,20 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           ports:
+            {{- if include "aerospike-backup-service.httpEnabled" . }}
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ include "aerospike-backup-service.httpPort" . }}
               protocol: TCP
+            {{- end }}
+            {{- if include "aerospike-backup-service.httpsEnabled" . }}
+            - name: https
+              containerPort: {{ include "aerospike-backup-service.httpsPort" . }}
+              protocol: TCP
+            {{- end }}
           livenessProbe:
-            {{- toYaml .Values.livenessProbe | nindent 12 }}
+            {{- include "aerospike-backup-service.probe" (list . .Values.livenessProbe "health") | nindent 12 }}
           readinessProbe:
-            {{- toYaml   .Values.readinessProbe | nindent 12 }}
+            {{- include "aerospike-backup-service.probe" (list . .Values.readinessProbe "ready") | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:

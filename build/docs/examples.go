@@ -14,6 +14,7 @@ const (
 	valBackups        = "backups"
 	valAsBackupBucket = "as-backup-bucket"
 	valEuCentral1     = "eu-central-1"
+	valUsEast1        = "us-east-1"
 	valRoutine1       = "routine1"
 )
 
@@ -217,7 +218,7 @@ var yamlExamples = map[string]any{
 		S3Storage: &dto.S3Storage{
 			Path:     "config.yml",
 			Bucket:   valAsBackupBucket,
-			S3Region: valEuCentral1,
+			S3Region: valUsEast1,
 		},
 	},
 }
