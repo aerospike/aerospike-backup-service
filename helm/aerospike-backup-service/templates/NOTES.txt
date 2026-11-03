@@ -29,9 +29,3 @@
   metrics    Prometheus metrics
   api-docs/  API documentation
   v1/        REST API
-{{- if or (and .Values.autoscaling.enabled (gt (int .Values.autoscaling.maxReplicas) 1)) (and (not .Values.autoscaling.enabled) (gt (int .Values.replicaCount) 1)) }}
-
-WARNING: More than one replica is configured. Backup Service instances do not
-coordinate, so every replica runs every backup routine. Keep replicaCount: 1 and
-autoscaling.enabled: false unless each replica has its own configuration.
-{{- end }}

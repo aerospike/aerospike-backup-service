@@ -2,7 +2,8 @@
 
 This Helm chart runs the official [Aerospike Backup Service](https://github.com/aerospike/aerospike-backup-service)
 (ABS) Docker image on a Kubernetes cluster. It creates a `Deployment`, a `Service`, a `ServiceAccount`, a `ConfigMap`
-holding the service configuration, and optionally an `Ingress` and a `HorizontalPodAutoscaler`.
+holding the service configuration, and optionally an `Ingress`. It runs one pod per release; see
+[One pod per release](#one-pod-per-release).
 
 For the service itself, see the
 [Aerospike Backup Service documentation](https://aerospike.com/docs/database/tools/backup-and-restore/backup-service/)
@@ -132,7 +133,7 @@ through the Service.
 
 | Parameter                 | Description                                                                                                                                                                                                                                                      | Default                                                     |
 |---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------|
-| `replicaCount`            | Number of ABS pods. Keep at `1`; see [Replicas and scaling](#replicas-and-scaling).                                                                                                                                                                              | `1`                                                         |
+| `replicaCount`            | Number of ABS pods: `1`, or `0` to stop the service. Values above `1` fail the install; see [One pod per release](#one-pod-per-release). | `1` |
 | `image`                   | ABS image `repository`, `tag` and `pullPolicy`. `tag` falls back to the chart `appVersion` when empty.                                                                                                                                                           | `aerospike/aerospike-backup-service:3.7.0`, `Always`        |
 | `imagePullSecrets`        | Secrets for pulling from a private registry.                                                                                                                                                                                                                     | `[]`                                                        |
 | `nameOverride`            | Replaces the chart name in resource names and the `app.kubernetes.io/name` label.                                                                                                                                                                                | `""`                                                        |
@@ -157,7 +158,6 @@ through the Service.
 | `livenessProbe`           | Liveness probe. Without a handler of your own (`httpGet`, `tcpSocket`, `exec`, `grpc`), the chart adds `httpGet` on `<context-path>health`, port `http`. | delay 15s, period 10s |
 | `readinessProbe`          | Readiness probe. Without a handler of your own, the chart adds `httpGet` on `<context-path>ready`, port `http`. | delay 15s, period 10s |
 | `terminationGracePeriodSeconds` | Time the pod gets to stop before it is killed. Longer than the 30 seconds ABS spends draining the HTTP server on shutdown. | `45` |
-| `autoscaling`             | HorizontalPodAutoscaler (`autoscaling/v2`). Not recommended; see [Replicas and scaling](#replicas-and-scaling).                                                                                                                                                 | `enabled: false`                                            |
 | `volumes`                 | Extra pod volumes (Secrets, PVCs, ConfigMaps, ...).                                                                                                                                                                                                              | `[]`                                                        |
 | `extraVolumeMounts`       | Mounts for entries in `volumes`: `name`, `mountPath`, `readOnly`. `readOnly` defaults to `true`; booleans and the strings `"true"`/`"false"` are accepted.                                                                                                     | `[]`                                                        |
 | `extraSecretVolumeMounts` | Like `extraVolumeMounts`, plus `subPath` to mount one key of a Secret as a file.                                                                                                                                                                                 | `[]`                                                        |
@@ -187,7 +187,7 @@ backupServiceConfig:
   s3-storage:
     bucket: my-config-bucket
     path: config.yml
-    s3-region: eu-central-1
+    s3-region: us-east-1
 ```
 
 See [Installation](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/installation.md) for the remote
@@ -463,16 +463,25 @@ Charts released after 2.1.0 change behavior in ways that can affect an existing 
 - **Probes follow the context path.** If your values set `httpGet` on the probes only to add a context path, you can
   remove it.
 - **`terminationGracePeriodSeconds` is 45** instead of the Kubernetes default of 30.
+- **One pod per release.** `replicaCount` above `1` and `autoscaling.enabled: true` now fail the install, and the
+  chart no longer creates a HorizontalPodAutoscaler. Remove `autoscaling` from your values file.
 
-### Replicas and scaling
+### One pod per release
 
-ABS has no leader election or coordination between instances. Every pod loads the same configuration and runs every
-backup routine on its own schedule, so with more than one replica each backup runs once per pod, against the same
-cluster and the same storage. Keep `replicaCount: 1` and `autoscaling.enabled: false`. To spread load, run separate
-releases with different routines.
+ABS has no leader election or coordination between instances, and each pod needs its own configuration. Pods of one
+release share its `backupServiceConfig`, so a second pod would run every backup routine again, against the same cluster
+and the same storage. The chart therefore runs one pod per release: `replicaCount` accepts only `0` (stopped) or `1`,
+and there is no autoscaling. `helm install` and `helm upgrade` fail if the values ask for more.
 
-Scale vertically instead, with `resources`. If you enable `autoscaling` anyway, its utilization targets need
-`resources.requests` to be set.
+To spread load, run separate pods with different routines: install a separate release for each set of routines, each
+with its own values file and `backupServiceConfig`.
+
+```shell
+helm install abs-nightly aerospike/aerospike-backup-service --namespace aerospike -f abs-nightly-values.yaml
+helm install abs-hourly aerospike/aerospike-backup-service --namespace aerospike -f abs-hourly-values.yaml
+```
+
+Make sure no routine appears in more than one release. To give a pod more capacity, raise its `resources`.
 
 ### Uninstall
 

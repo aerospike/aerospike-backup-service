@@ -46,7 +46,7 @@ In this case, you could have a `remote_config.yaml` file containing S3 details:
 s3-storage:
   bucket: as-backup-bucket
   path: config.yml
-  s3-region: eu-central-1
+  s3-region: us-east-1
 ```
 <!-- /tag -->
 
@@ -78,7 +78,7 @@ helm install abs aerospike/aerospike-backup-service --namespace aerospike --crea
 ```
 
 See the [chart README](../helm/aerospike-backup-service/README.md) for the values reference, Secrets and cloud
-credentials, persistent local storage, monitoring, and why the chart should run a single replica.
+credentials, persistent local storage, monitoring, and why it runs one pod per release.
 
 #### Service
 

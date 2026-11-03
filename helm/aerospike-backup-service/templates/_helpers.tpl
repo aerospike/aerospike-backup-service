@@ -154,3 +154,17 @@ defaults to true so a mount is never made writable by accident.
 {{- else }}true
 {{- end }}
 {{- end -}}
+
+{{/*
+Fails the render when the values ask for more than one ABS pod. Each pod needs its own
+configuration: pods of one release share backupServiceConfig and every pod runs every routine,
+so a second pod duplicates every backup. Run a separate release per set of routines instead.
+*/}}
+{{- define "aerospike-backup-service.validate" -}}
+{{- if gt (int .Values.replicaCount) 1 -}}
+{{- fail (printf "replicaCount must be 0 or 1, got %v: each Aerospike Backup Service pod needs its own configuration, and pods of one release share backupServiceConfig. Install a separate release for each set of routines." .Values.replicaCount) -}}
+{{- end -}}
+{{- if dig "enabled" false (.Values.autoscaling | default dict) -}}
+{{- fail "autoscaling is not supported: each Aerospike Backup Service pod needs its own configuration, so the chart runs exactly one pod per release. Remove autoscaling from your values and install a separate release for each set of routines." -}}
+{{- end -}}
+{{- end -}}

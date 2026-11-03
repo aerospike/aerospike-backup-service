@@ -2,8 +2,9 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# Number of Backup Service pods. Keep this at 1: instances do not coordinate, so every
-# replica runs every backup routine and backups are duplicated.
+# Number of Backup Service pods: 1, or 0 to stop the service. Values above 1 are rejected:
+# each pod needs its own configuration, and pods of one release share backupServiceConfig.
+# Install a separate release for each set of routines.
 replicaCount: 1
 image:
   repository: aerospike/aerospike-backup-service
@@ -129,7 +130,7 @@ backupServiceConfig: {}
 #   <s3-storage-name>:
 #     s3-storage:
 #       bucket: <bucket> # Mandatory
-#       s3-region: <s3-region> # Mandatory, e.g. eu-central-1
+#       s3-region: <s3-region> # Mandatory, e.g. us-east-1
 #       path: <root-path> # Optional. Root path inside the bucket.
 #       s3-profile: <s3-profile> # Optional. Profile in ~/.aws/credentials (/home/absuser/.aws/credentials)
 #       s3-endpoint-override: <s3-endpoint> # Optional, e.g. http://minio:9000
@@ -323,14 +324,6 @@ readinessProbe:
 # ABS stops accepting requests and drains the HTTP server for up to 30 seconds on shutdown;
 # this leaves headroom before the kubelet sends SIGKILL.
 terminationGracePeriodSeconds: 45
-# Not recommended: instances do not coordinate, so every replica runs every backup routine.
-# Utilization targets also need resources.requests to be set.
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
 # Additional volumes on the output Deployment definition.
 volumes: []
 # - name: foo
