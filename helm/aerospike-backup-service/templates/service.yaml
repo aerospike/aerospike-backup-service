@@ -7,11 +7,13 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
+    {{- if include "aerospike-backup-service.httpEnabled" . }}
     - port: {{ .Values.service.port }}
       targetPort: http
       appProtocol: HTTP
       protocol: TCP
       name: http
+    {{- end }}
     {{- if include "aerospike-backup-service.httpsEnabled" . }}
     - port: {{ .Values.service.httpsPort | default (include "aerospike-backup-service.httpsPort" .) }}
       targetPort: https

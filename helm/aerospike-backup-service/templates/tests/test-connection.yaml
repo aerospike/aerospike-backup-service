@@ -25,8 +25,12 @@ spec:
           drop:
             - ALL
       command: ['wget']
+      {{- $scheme := include "aerospike-backup-service.primaryListener" . }}
       args:
         - '--quiet'
         - '--output-document=/dev/null'
-        - 'http://{{ include "aerospike-backup-service.fullname" . }}:{{ .Values.service.port }}{{ include "aerospike-backup-service.contextPath" . }}health'
+        {{- if eq $scheme "https" }}
+        - '--no-check-certificate'
+        {{- end }}
+        - '{{ $scheme }}://{{ include "aerospike-backup-service.fullname" . }}:{{ include "aerospike-backup-service.primaryServicePort" . }}{{ include "aerospike-backup-service.contextPath" . }}health'
   restartPolicy: Never

@@ -8,6 +8,10 @@ metadata:
     {{- include "aerospike-backup-service.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  # Stop the old pod before starting the new one: during a rolling update both would run every
+  # routine (duplicate backups), and a ReadWriteOnce volume cannot attach to both.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       {{- include "aerospike-backup-service.selectorLabels" . | nindent 6 }}
@@ -89,9 +93,11 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           ports:
+            {{- if include "aerospike-backup-service.httpEnabled" . }}
             - name: http
               containerPort: {{ include "aerospike-backup-service.httpPort" . }}
               protocol: TCP
+            {{- end }}
             {{- if include "aerospike-backup-service.httpsEnabled" . }}
             - name: https
               containerPort: {{ include "aerospike-backup-service.httpsPort" . }}

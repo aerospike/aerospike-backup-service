@@ -31,9 +31,9 @@ configmap:
   create: true
 # Command-line arguments for the service. Empty uses
 # ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml"].
-# A non-empty list replaces that default, so include -c yourself. Example (remote config,
-# where the mounted file holds the location of the real configuration):
+# A non-empty list replaces that default, so include -c yourself.
 # Chart 2.1.0 and earlier ignored this value. Check it before upgrading from those versions.
+# Example (remote config, where the mounted file holds the location of the real configuration):
 # args: ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml", "-r"]
 args: []
 envFrom: []
@@ -67,7 +67,7 @@ backupServiceConfig: {}
 #     address: <address> # Optional. Default: 0.0.0.0
 #     port: <port> # Optional. Default: 8080. The chart uses it for the container port and probes.
 #     context-path: <path> # Optional. Default: "/". The chart adds it to the probe paths.
-#     disabled: <true/false> # Optional. Default: false
+#     disabled: <true/false> # Optional. Default: false. When true, the chart drops port "http" and probes over HTTPS
 #     rate:
 #       tps: <tokens-per-second> # Optional. Default: 1024
 #       size: <token-bucket-size> # Optional. Default: 1024
@@ -111,7 +111,7 @@ backupServiceConfig: {}
 #       password-path: <path-to-password-file> # e.g. a file mounted from a Kubernetes Secret
 #       auth-mode: <auth-mode> # Optional. Default: INTERNAL. Valid values: INTERNAL, EXTERNAL, PKI
 #       secret-agent-name: <agent-name> # Optional. Mutually exclusive with secret-agent
-#       secret-agent: <inline secret agent> # Optional. Same fields as secret-agents.<agent-name>
+#       secret-agent: { <inline secret agent> } # Optional. Same fields as secret-agents.<agent-name>
 #     tls:
 #       ca-file: <path-to-ca-file> # Mandatory if TLS is enabled and ca-path is empty
 #       ca-path: <path-to-ca-directory> # Mandatory if TLS is enabled and ca-file is empty
@@ -284,7 +284,8 @@ service:
   port: 8080
   # Service port for HTTPS, added when backupServiceConfig.service.https is enabled.
   # Default: the container port, backupServiceConfig.service.https.port (default 8443).
-  # Probes, the chart notes and `helm test` keep using HTTP.
+  # Probes, the Ingress, the chart notes and `helm test` use HTTP, or HTTPS when
+  # backupServiceConfig.service.http.disabled is true.
   httpsPort: null
 ingress:
   enabled: false

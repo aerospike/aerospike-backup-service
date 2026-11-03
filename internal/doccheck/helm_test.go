@@ -46,6 +46,8 @@ type referenceLine struct {
 	key string
 	// hasValue is true when the key is followed by a scalar or flow value.
 	hasValue bool
+	// value is the text after the key, such as "<port>" or "[ <nodes> ]".
+	value string
 	// comment is the trailing "# ..." text, without the marker.
 	comment string
 }
@@ -178,7 +180,10 @@ func readmeConfigExamples(t *testing.T) []readmeExample {
 // the code that applies them):
 //   - a stated "Default: X" must be the published default;
 //   - a field with a published default must state it;
-//   - a field the schema requires must not be marked "Optional".
+//   - a field the schema requires must not be marked "Optional";
+//   - the documented shape (a scalar, a flow list "[ ... ]", a flow map
+//     "{ ... }", or nested lines) must match the schema type, since the
+//     decode test above replaces every value with null and cannot see it.
 func TestHelmConfigReferenceMatchesSchema(t *testing.T) {
 	schema := loadConfigSchema(t)
 	lines := helmReference(t)
@@ -228,6 +233,8 @@ var documentedDefault = regexp.MustCompile(`(?i)\bdefault:\s*("[^"]*"|\S+)`)
 func checkDocumentedField(t *testing.T, at string, line referenceLine, field map[string]any, required bool) {
 	t.Helper()
 
+	checkDocumentedShape(t, at, line, field)
+
 	comment := strings.TrimSpace(line.comment)
 
 	if required && strings.HasPrefix(strings.ToLower(comment), "optional") {
@@ -249,6 +256,71 @@ func checkDocumentedField(t *testing.T, at string, line referenceLine, field map
 	stated := strings.Trim(strings.TrimRight(match[1], ".,;"), `"`)
 	if want := formatDefault(published); stated != want {
 		t.Errorf("%s: %q documents the default %q, but the published default is %q", at, line.key, stated, want)
+	}
+}
+
+// checkDocumentedShape reports a value written in a shape the schema type
+// rejects, such as a scalar placeholder for a list.
+func checkDocumentedShape(t *testing.T, at string, line referenceLine, field map[string]any) {
+	t.Helper()
+
+	types := schemaTypes(field)
+	if len(types) == 0 {
+		return
+	}
+
+	var shape string
+
+	switch {
+	case !line.hasValue:
+		shape = "nested"
+	case strings.HasPrefix(line.value, "["):
+		shape = "array"
+	case strings.HasPrefix(line.value, "{"):
+		shape = "object"
+	default:
+		shape = "scalar"
+	}
+
+	accepts := func(want ...string) bool {
+		return slices.ContainsFunc(types, func(typ string) bool { return slices.Contains(want, typ) })
+	}
+
+	var ok bool
+
+	switch shape {
+	case "nested":
+		ok = accepts("object", "array")
+	case "array", "object":
+		ok = accepts(shape)
+	default:
+		ok = accepts("string", "integer", "number", "boolean")
+	}
+
+	if !ok {
+		t.Errorf("%s: %q is documented as %s %q, but the schema type is %v",
+			at, line.key, shape, line.value, types)
+	}
+}
+
+// schemaTypes returns the JSON schema "type" of a field as a list, or nil when
+// the schema does not state one.
+func schemaTypes(field map[string]any) []string {
+	switch typ := field["type"].(type) {
+	case string:
+		return []string{typ}
+	case []any:
+		var types []string
+
+		for _, item := range typ {
+			if name, ok := item.(string); ok {
+				types = append(types, name)
+			}
+		}
+
+		return types
+	default:
+		return nil
 	}
 }
 
@@ -307,6 +379,7 @@ func helmReference(t *testing.T) []referenceLine {
 			item:     match[2] != "",
 			key:      match[3],
 			hasValue: strings.TrimSpace(match[4]) != "",
+			value:    strings.TrimSpace(match[4]),
 			comment:  comment,
 		})
 	}

@@ -71,22 +71,38 @@ Create the name of the service account to use
 {{- end -}}
 
 {{/*
-backupServiceConfig.service.<listener> as YAML, or {} when any level is missing, null or not
-a map (for example `http:` left with every child commented out). Call with (list $ "http").
-Usage: include "aerospike-backup-service.listener" (list $ "http") | fromYaml
+backupServiceConfig.service.<listener> as YAML, or an empty string when any level is missing,
+null or not a map (for example `http:` left with every child commented out). A present block
+renders as at least "{}", so the result also tells whether the block exists. Call with
+(list $ "http"); "| fromYaml" turns either result into a map.
 */}}
 {{- define "aerospike-backup-service.listener" -}}
-{{- $root := index . 0 -}}
-{{- $out := dict -}}
-{{- $cfg := $root.Values.backupServiceConfig -}}
+{{- $cfg := (index . 0).Values.backupServiceConfig -}}
 {{- if kindIs "map" $cfg -}}
 {{- $svc := index $cfg "service" -}}
 {{- if kindIs "map" $svc -}}
 {{- $l := index $svc (index . 1) -}}
-{{- if kindIs "map" $l }}{{ $out = $l }}{{ end -}}
+{{- if kindIs "map" $l }}{{ toYaml $l }}{{ end -}}
 {{- end -}}
 {{- end -}}
-{{- toYaml $out -}}
+{{- end -}}
+
+{{/*
+"true" when ABS serves HTTP: backupServiceConfig.service.http is absent or not disabled
+(the same rule as pkg/dto/service_config.go). Empty string otherwise.
+*/}}
+{{- define "aerospike-backup-service.httpEnabled" -}}
+{{- $http := include "aerospike-backup-service.listener" (list . "http") | fromYaml -}}
+{{- if not $http.disabled }}true{{ end -}}
+{{- end -}}
+
+{{/*
+"true" when ABS serves HTTPS: the backupServiceConfig.service.https block is a map and is not
+disabled (the same rule as pkg/dto/service_config.go). Empty string otherwise.
+*/}}
+{{- define "aerospike-backup-service.httpsEnabled" -}}
+{{- $https := include "aerospike-backup-service.listener" (list . "https") -}}
+{{- if and $https (not ($https | fromYaml).disabled) }}true{{ end -}}
 {{- end -}}
 
 {{/*
@@ -98,18 +114,6 @@ Port ABS listens on for HTTP: backupServiceConfig.service.http.port, default 808
 {{- end -}}
 
 {{/*
-"true" when ABS serves HTTPS: the backupServiceConfig.service.https block is a map and is not
-disabled (the same rule as pkg/dto/service_config.go). Empty string otherwise.
-*/}}
-{{- define "aerospike-backup-service.httpsEnabled" -}}
-{{- $cfg := .Values.backupServiceConfig -}}
-{{- if and (kindIs "map" $cfg) (kindIs "map" (index $cfg "service")) (kindIs "map" (index (index $cfg "service") "https")) -}}
-{{- $https := include "aerospike-backup-service.listener" (list . "https") | fromYaml -}}
-{{- if not $https.disabled }}true{{ end -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
 Port ABS listens on for HTTPS: backupServiceConfig.service.https.port, default 8443.
 */}}
 {{- define "aerospike-backup-service.httpsPort" -}}
@@ -118,26 +122,51 @@ Port ABS listens on for HTTPS: backupServiceConfig.service.https.port, default 8
 {{- end -}}
 
 {{/*
-The HTTP listener's context path bounded by slashes ("/" by default), matching
+The listener the probes, the Ingress, the chart notes and `helm test` use: "http" while HTTP is
+enabled, "https" when backupServiceConfig.service.http.disabled is true. It is also the name of
+the container and Service port.
+*/}}
+{{- define "aerospike-backup-service.primaryListener" -}}
+{{- if include "aerospike-backup-service.httpEnabled" . }}http{{ else }}https{{ end -}}
+{{- end -}}
+
+{{/*
+The Service port of the primary listener: service.port for HTTP, service.httpsPort (default the
+HTTPS container port) for HTTPS.
+*/}}
+{{- define "aerospike-backup-service.primaryServicePort" -}}
+{{- if include "aerospike-backup-service.httpEnabled" . -}}
+{{- .Values.service.port -}}
+{{- else -}}
+{{- .Values.service.httpsPort | default (include "aerospike-backup-service.httpsPort" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The primary listener's context path bounded by slashes ("/" by default), matching
 normalizeContextPath in internal/server/server.go, so endpoint names can be appended directly.
 */}}
 {{- define "aerospike-backup-service.contextPath" -}}
-{{- $http := include "aerospike-backup-service.listener" (list . "http") | fromYaml -}}
-{{- $p := index $http "context-path" | default "/" | toString -}}
+{{- $l := include "aerospike-backup-service.listener" (list . (include "aerospike-backup-service.primaryListener" .)) | fromYaml -}}
+{{- $p := index $l "context-path" | default "/" | toString -}}
 {{- if not (hasPrefix "/" $p) }}{{ $p = printf "/%s" $p }}{{ end -}}
 {{- if not (hasSuffix "/" $p) }}{{ $p = printf "%s/" $p }}{{ end -}}
 {{- $p -}}
 {{- end -}}
 
 {{/*
-A probe from values, with an httpGet on the named "http" port and <context-path><endpoint>
-added when the values define no handler of their own. Call with (list $ .Values.livenessProbe "health").
+A probe from values, with an httpGet on the primary listener's port and
+<context-path><endpoint> added when the values define no handler of their own (scheme HTTPS
+when HTTP is disabled). Call with (list $ .Values.livenessProbe "health").
 */}}
 {{- define "aerospike-backup-service.probe" -}}
 {{- $root := index . 0 -}}
 {{- $probe := deepCopy (index . 1 | default dict) -}}
 {{- if not (or $probe.httpGet $probe.tcpSocket $probe.exec $probe.grpc) -}}
-{{- $_ := set $probe "httpGet" (dict "path" (printf "%s%s" (include "aerospike-backup-service.contextPath" $root) (index . 2)) "port" "http") -}}
+{{- $listener := include "aerospike-backup-service.primaryListener" $root -}}
+{{- $get := dict "path" (printf "%s%s" (include "aerospike-backup-service.contextPath" $root) (index . 2)) "port" $listener -}}
+{{- if eq $listener "https" }}{{ $_ := set $get "scheme" "HTTPS" }}{{ end -}}
+{{- $_ := set $probe "httpGet" $get -}}
 {{- end -}}
 {{- toYaml $probe -}}
 {{- end -}}
@@ -156,15 +185,20 @@ defaults to true so a mount is never made writable by accident.
 {{- end -}}
 
 {{/*
-Fails the render when the values ask for more than one ABS pod. Each pod needs its own
-configuration: pods of one release share backupServiceConfig and every pod runs every routine,
-so a second pod duplicates every backup. Run a separate release per set of routines instead.
+Fails the render when the values ask for more than one ABS pod, or disable both listeners.
+Each pod needs its own configuration: pods of one release share backupServiceConfig and every
+pod runs every routine, so a second pod duplicates every backup. Run a separate release per set
+of routines instead.
 */}}
 {{- define "aerospike-backup-service.validate" -}}
 {{- if gt (int .Values.replicaCount) 1 -}}
 {{- fail (printf "replicaCount must be 0 or 1, got %v: each Aerospike Backup Service pod needs its own configuration, and pods of one release share backupServiceConfig. Install a separate release for each set of routines." .Values.replicaCount) -}}
 {{- end -}}
-{{- if dig "enabled" false (.Values.autoscaling | default dict) -}}
+{{- $autoscaling := .Values.autoscaling -}}
+{{- if or (and (kindIs "map" $autoscaling) $autoscaling.enabled) (and $autoscaling (not (kindIs "map" $autoscaling))) -}}
 {{- fail "autoscaling is not supported: each Aerospike Backup Service pod needs its own configuration, so the chart runs exactly one pod per release. Remove autoscaling from your values and install a separate release for each set of routines." -}}
+{{- end -}}
+{{- if not (or (include "aerospike-backup-service.httpEnabled" .) (include "aerospike-backup-service.httpsEnabled" .)) -}}
+{{- fail "backupServiceConfig.service: http and https cannot both be disabled." -}}
 {{- end -}}
 {{- end -}}

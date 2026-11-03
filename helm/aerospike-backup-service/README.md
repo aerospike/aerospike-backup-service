@@ -204,8 +204,11 @@ The chart reads the listener settings from `backupServiceConfig.service`, so you
 - The default probes request `<context-path>health` and `<context-path>ready` on port `http`, so a
   `backupServiceConfig.service.http.context-path` such as `/abs` needs no further change. The chart notes and
   `helm test` use the context path too.
-- The probes, the chart notes and `helm test` use plain HTTP. Keep the HTTP listener enabled when you also enable
-  HTTPS.
+- The probes, the `ingress` backend, the chart notes and `helm test` use HTTP. When
+  `backupServiceConfig.service.http.disabled` is `true`, the chart drops the `http` port and they use the `https` port
+  and its context path instead; the probes use scheme `HTTPS` and do not verify the certificate. With
+  `client-auth: require-and-verify` the kubelet cannot present a client certificate, so set `livenessProbe` and
+  `readinessProbe` (for example `tcpSocket: {port: https}`) yourself.
 - With [remote configuration](#remote-configuration), `backupServiceConfig` holds only the pointer, so the chart
   assumes the defaults: port `8080`, no HTTPS port, context path `/`. If the remote configuration changes them, set
   `livenessProbe.httpGet` and `readinessProbe.httpGet` yourself.
@@ -376,7 +379,8 @@ backupServiceConfig:
 
 The chart then adds a container and Service port named `https` next to `http` (set `service.httpsPort` to expose a
 different Service port, such as 443). The `ingress` backend, the probes, the chart notes
-and `helm test` still use the HTTP port. To route an Ingress to HTTPS, point your own Ingress at the `https`
+and `helm test` keep using the HTTP port unless `backupServiceConfig.service.http.disabled` is `true` (see
+[Ports, context path and probes](#ports-context-path-and-probes)). To route an Ingress to HTTPS, point your own Ingress at the `https`
 Service port and configure your controller for an HTTPS backend. Mount the Secret as a directory (not with `subPath`) so certificate rotation reaches the pod;
 ABS reloads rewritten certificate files without a restart. See
 [Security](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/security.md).
@@ -465,13 +469,16 @@ Charts released after 2.1.0 change behavior in ways that can affect an existing 
 - **`terminationGracePeriodSeconds` is 45** instead of the Kubernetes default of 30.
 - **One pod per release.** `replicaCount` above `1` and `autoscaling.enabled: true` now fail the install, and the
   chart no longer creates a HorizontalPodAutoscaler. Remove `autoscaling` from your values file.
+- **Upgrades replace the pod.** The Deployment uses the `Recreate` strategy, so an upgrade stops the old pod before it
+  starts the new one. Expect a short outage during each upgrade instead of two pods running side by side.
 
 ### One pod per release
 
 ABS has no leader election or coordination between instances, and each pod needs its own configuration. Pods of one
 release share its `backupServiceConfig`, so a second pod would run every backup routine again, against the same cluster
 and the same storage. The chart therefore runs one pod per release: `replicaCount` accepts only `0` (stopped) or `1`,
-and there is no autoscaling. `helm install` and `helm upgrade` fail if the values ask for more.
+and there is no autoscaling. `helm install` and `helm upgrade` fail if the values ask for more. The Deployment also
+uses the `Recreate` strategy, so a rollout never runs the old and new pod at the same time.
 
 To spread load, run separate pods with different routines: install a separate release for each set of routines, each
 with its own values file and `backupServiceConfig`.
