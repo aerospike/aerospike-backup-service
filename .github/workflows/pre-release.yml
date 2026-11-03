@@ -735,6 +735,10 @@ jobs:
     with:
       jf-project: ${{ vars.JF_PROJECT }}
       jf-registry: ${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_DEV }}
+      # BuildKit is pulled from <jf-registry-base>/<jf-project>-docker-virtual. The default
+      # base is artifact.aerospike.io, a different host from jf-registry, and
+      # moby/buildkit:buildx-stable-1 is not on that host.
+      jf-registry-base: ${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}
       # repo-scope defaults to "-docker-dev-local", but our actual repo naming convention
       # (JF_ARTIFACTORY_CONTAINER_DEV) uses "-container-dev-local". Without this override, the
       # image gets pushed to .../container-dev-local correctly, but the build-info creation
