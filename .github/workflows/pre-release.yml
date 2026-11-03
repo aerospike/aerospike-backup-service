@@ -181,7 +181,9 @@ jobs:
       # 2.0.12 -- so `helm install` with no --version served the older service.
       #
       # Convention from v3.7.0 onward: the chart minor advances once per app minor line and the
-      # chart patch mirrors the app patch (v3.7.0 -> 2.1.0, v3.7.1 -> 2.1.1, v3.8.0 -> 2.2.0).
+      # chart patch mirrors the app patch. A breaking chart change bumps the chart major instead,
+      # keeping the patch rule: v3.7.0 shipped 2.1.0, v3.7.1 moved to 3.0.1 for breaking chart
+      # changes, so v3.7.2 -> 3.0.2 and v3.8.0 -> 3.1.0.
       # A hotfix on an older line then lands on that line's lower chart minor and cannot
       # overtake a newer release. Tags below the cutover predate the rule and are held only to
       # the ordering invariant.

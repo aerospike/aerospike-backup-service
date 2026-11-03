@@ -260,7 +260,7 @@ pr: tidy mocks-check format lint-fix test docs
 # Both variables are required in one invocation: helm-chart-release reads the VERSION that
 # service-release just wrote, so running them separately leaves Chart.yaml describing a
 # release that does not exist yet.
-#   NEXT_VERSION=v3.7.0 NEXT_HELM_CHART_VERSION=2.1.0 make release
+#   NEXT_VERSION=v3.8.0 NEXT_HELM_CHART_VERSION=3.1.0 make release
 .PHONY: release
 release: service-release helm-chart-release
 

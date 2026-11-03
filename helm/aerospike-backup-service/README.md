@@ -21,6 +21,7 @@ include the reference for every configuration field.
 
 | Chart  | Aerospike Backup Service (`appVersion`, default `image.tag`) |
 |--------|--------------------------------------------------------------|
+| 3.0.1  | 3.7.1                                                        |
 | 2.1.0  | 3.7.0                                                        |
 | 2.0.12 | 3.6.2                                                        |
 | 2.0.11 | 3.6.1                                                        |
@@ -134,7 +135,7 @@ through the Service.
 | Parameter                 | Description                                                                                                                                                                                                                                                      | Default                                                     |
 |---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------|
 | `replicaCount`            | Number of ABS pods: `1`, or `0` to stop the service. Values above `1` fail the install; see [One pod per release](#one-pod-per-release). | `1` |
-| `image`                   | ABS image `repository`, `tag` and `pullPolicy`. `tag` falls back to the chart `appVersion` when empty.                                                                                                                                                           | `aerospike/aerospike-backup-service:3.7.0`, `Always`        |
+| `image`                   | ABS image `repository`, `tag` and `pullPolicy`. `tag` falls back to the chart `appVersion` when empty.                                                                                                                                                           | `aerospike/aerospike-backup-service:3.7.1`, `Always`        |
 | `imagePullSecrets`        | Secrets for pulling from a private registry.                                                                                                                                                                                                                     | `[]`                                                        |
 | `nameOverride`            | Replaces the chart name in resource names and the `app.kubernetes.io/name` label.                                                                                                                                                                                | `""`                                                        |
 | `fullnameOverride`        | Replaces the full resource name.                                                                                                                                                                                                                                 | `""`                                                        |
