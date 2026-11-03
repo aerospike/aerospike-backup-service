@@ -10,7 +10,7 @@ image:
   repository: aerospike/aerospike-backup-service
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "3.7.0"
+  tag: "3.7.1"
 imagePullSecrets: []
 # Overrides the chart name used in resource names and the app.kubernetes.io/name label.
 nameOverride: ""
@@ -258,7 +258,6 @@ podSecurityContext:
   fsGroup: 65532
   seccompProfile:
     type: RuntimeDefault
-
 # Container securityContext is hardened by default.
 # readOnlyRootFilesystem: true means file-based local storage or a log file needs a
 # writable volume (volumes + extraVolumeMounts with readOnly: false).
