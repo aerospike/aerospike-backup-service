@@ -26,8 +26,6 @@ env:
 jobs:
   verify-github-release:
     runs-on: ubuntu-24.04
-    outputs:
-      helm-chart-file: ${{ steps.list.outputs.helm-chart-file }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
@@ -55,12 +53,18 @@ jobs:
           echo "Downloaded assets:"
           ls -la release-assets
 
-      - name: List helm chart asset
-        id: list
+      # The Helm chart is distributed only through the Helm repository (JFrog PROD, checked in
+      # verify-jfrog-prod below), never as a GitHub Release asset -- fail if one slipped in.
+      - name: Confirm no Helm chart is attached to the release
         run: |
+          set -euo pipefail
           cd release-assets
-          chart="$(ls -1 *.tgz 2>/dev/null | head -1 || true)"
-          echo "helm-chart-file=${chart}" >> "$GITHUB_OUTPUT"
+          shopt -s nullglob
+          charts=(*.tgz *.tgz.prov)
+          if [ "${#charts[@]}" -gt 0 ]; then
+            echo "::error::Helm chart assets must not be attached to the GitHub Release: ${charts[*]}"
+            exit 1
+          fi
 
       - name: Import GPG public key
         env:
@@ -185,36 +189,13 @@ jobs:
 
           exit $fail
 
-      - name: Verify Helm chart signature and checksum
-        if: steps.list.outputs.helm-chart-file != ''
-        run: |
-          set -euo pipefail
-          cd release-assets
-          chart="${{ steps.list.outputs.helm-chart-file }}"
-          prov="${chart}.prov"
-          if [ ! -f "$prov" ]; then
-            echo "::error::Missing ${prov}"
-            exit 1
-          fi
-          gpg --verify "$prov"
-          computed="$(sha256sum "$chart" | awk '{print $1}')"
-          recorded="$(gpg --decrypt --output - "$prov" 2>/dev/null | grep -A1 "^files:" | grep "$chart" | sed -n 's/.*sha256:\([0-9a-f]*\).*/\1/p')"
-          if [ -z "$recorded" ]; then
-            echo "::warning::Could not parse recorded sha256 out of ${prov}; skipping cross-check (signature was still verified above)."
-          elif [ "$computed" != "$recorded" ]; then
-            echo "::error::Helm chart checksum mismatch: computed=${computed} recorded(prov)=${recorded}"
-            exit 1
-          else
-            echo "Helm chart checksum OK: ${chart}"
-          fi
-
       - name: Write checksum summary for downstream jobs
         run: |
           cd release-assets
           python3 - <<'EOF'
           import glob, hashlib, json
           out = {}
-          for f in glob.glob("*.deb") + glob.glob("*.rpm") + glob.glob("*.tgz"):
+          for f in glob.glob("*.deb") + glob.glob("*.rpm"):
               h = hashlib.sha256()
               with open(f, "rb") as fh:
                   h.update(fh.read())
