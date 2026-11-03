@@ -4,8 +4,10 @@ This Helm chart runs the official [Aerospike Backup Service](https://github.com/
 (ABS) Docker image on a Kubernetes cluster. It creates a `Deployment`, a `Service`, a `ServiceAccount`, a `ConfigMap`
 holding the service configuration, and optionally an `Ingress` and a `HorizontalPodAutoscaler`.
 
-Full service documentation, including every configuration field, is in the
-[project docs](https://github.com/aerospike/aerospike-backup-service/tree/main/docs).
+For the service itself, see the
+[Aerospike Backup Service documentation](https://aerospike.com/docs/database/tools/backup-and-restore/backup-service/)
+on aerospike.com. The [project docs](https://github.com/aerospike/aerospike-backup-service/tree/main/docs) on GitHub
+include the reference for every configuration field.
 
 ## Prerequisites
 
@@ -18,9 +20,16 @@ Full service documentation, including every configuration field, is in the
 
 | Chart  | Aerospike Backup Service (`appVersion`, default `image.tag`) |
 |--------|--------------------------------------------------------------|
-| 2.1.x  | 3.7.x                                                        |
+| 2.1.0  | 3.7.0                                                        |
+| 2.0.12 | 3.6.2                                                        |
 | 2.0.11 | 3.6.1                                                        |
-| 2.0.10 | 3.6.0                                                        |
+| 2.0.13 | 3.5.1                                                        |
+| 2.0.9  | 3.5.0                                                        |
+| 2.0.8  | 3.4.0                                                        |
+| 2.0.7  | 3.3.1                                                        |
+| 2.0.6  | 3.3.0                                                        |
+| 2.0.5  | 3.2.0                                                        |
+| 2.0.4  | 3.1.0                                                        |
 
 From ABS 3.7.0, the chart minor version advances once per ABS minor line and the chart patch version matches the ABS
 patch version. To pin an install, pass `--version <chart version>` to `helm install` and `helm upgrade`.
@@ -443,7 +452,7 @@ the new configuration. Keep in mind:
 
 ### Upgrading from chart 2.1.0
 
-Chart 2.1.1 changes behavior in ways that can affect an existing values file:
+Charts released after 2.1.0 change behavior in ways that can affect an existing values file:
 
 - **`args` is now applied.** Earlier charts ignored it and always started ABS with
   `-c /etc/aerospike-backup-service/aerospike-backup-service.yml`. If your values set `args`, check that the list is
