@@ -84,11 +84,10 @@ func (r *restoreExecutor) start(
 	lane := laneOf(request.Policy.Mode)
 	jobID := newJobID(time.Now())
 	infoClient := client.InfoClient()
-	if err := lane.prepare(ctx, infoClient, namespace, jobID); err != nil {
-		return nil, err
-	}
 
 	// A limit the policy leaves unset is zero, which the request omits: the server's default applies.
+	// A cold restore needs no other command to start: the server gates and prepares the namespace
+	// on every node, and starts once every node is ready. A refused start gates nothing.
 	err = infoClient.StartRestore(ctx, &infomodels.RequestRestore{
 		RequestCommon:        common,
 		JobID:                jobID,
@@ -99,61 +98,39 @@ func (r *restoreExecutor) start(
 		Policy:               lane.policy,
 	})
 	if err != nil {
-		return nil, errors.Join(fmt.Errorf("failed to start server restore: %w", err),
-			lane.release(ctx, infoClient, namespace, jobID))
+		return nil, fmt.Errorf("failed to start server restore: %w", explainRefusal(err, namespace))
 	}
 
 	return newRestoreHandler(infoClient, namespace, jobID, lane), nil
 }
 
-// restoreLane is how the server runs a restore job of one mode: the policy it starts with, what
-// runs before it starts, and how a job that does not complete is released.
+// restoreLane is how the server runs a restore job of one mode: the policy it starts with, and how
+// a job that does not complete is released.
 type restoreLane struct {
 	policy  infomodels.RestorePolicy
-	prepare func(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error
 	release func(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error
 }
 
-// laneOf returns the lane of mode. A fuzzy restore writes into the live namespace, so it needs
-// no preparation, and an aborted one holds nothing.
+// laneOf returns the lane of mode. A fuzzy restore writes into the live namespace, so an aborted
+// one holds nothing.
 func laneOf(mode model.RestoreMode) restoreLane {
 	if mode == model.RestoreModeFuzzy {
-		return restoreLane{
-			policy:  infomodels.RestorePolicyFuzzy,
-			prepare: func(context.Context, backup.ServerBackupInfo, string, string) error { return nil },
-			release: abortRestore,
-		}
+		return restoreLane{policy: infomodels.RestorePolicyFuzzy, release: abortRestore}
 	}
 
-	return restoreLane{
-		policy:  infomodels.RestorePolicyStrict,
-		prepare: prepareColdRestore,
-		release: releaseNamespace,
-	}
-}
-
-// prepareColdRestore takes namespace from clients for the cold restore jobID and waits until it
-// is ready on every node. A refused preparation leaves the namespace open; one that fails later
-// releases it.
-func prepareColdRestore(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
-	err := infoClient.PrepareRestore(ctx, &infomodels.RequestPrepareRestore{Namespace: namespace, JobID: jobID})
-	if err != nil {
-		return fmt.Errorf("failed to prepare server restore: %w", explainPrepareRefusal(err, namespace))
-	}
-
-	if err := awaitPrepared(ctx, infoClient, namespace, jobID); err != nil {
-		return errors.Join(err, releaseNamespace(ctx, infoClient, namespace, jobID))
-	}
-
-	return nil
+	return restoreLane{policy: infomodels.RestorePolicyStrict, release: releaseNamespace}
 }
 
 // truncateStateRefusal marks the server's refusal of a cold restore into a namespace that holds
 // truncate state: the restored records keep their backup times, which the truncate filters out.
 const truncateStateRefusal = "holds truncate state"
 
-// explainPrepareRefusal adds the remedy to a refusal whose own text points to the server log.
-func explainPrepareRefusal(err error, namespace string) error {
+// heldByTruncateState is the held-reason of a node that holds the namespace of a cold restore in
+// preparation because a truncate committed after the restore started.
+const heldByTruncateState = "truncate-state-live"
+
+// explainRefusal adds the remedy to a refusal whose own text points to the server log.
+func explainRefusal(err error, namespace string) error {
 	if !strings.Contains(err.Error(), truncateStateRefusal) {
 		return err
 	}
@@ -167,43 +144,6 @@ func errTruncateState(namespace string) error {
 		"clear it with the info command 'truncate-namespace-undo:namespace=%s', or "+
 		"'truncate-undo:namespace=%s;set=<set>' for each truncated set the server log names, and retry",
 		namespace, namespace, namespace)
-}
-
-// awaitPrepared waits until namespace is ready for the cold restore jobID on every node, clearing
-// the storage of the nodes that still hold data in it.
-func awaitPrepared(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
-	ticker := time.NewTicker(pollInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-ticker.C:
-		}
-
-		status, err := infoClient.GetRestoreStatus(ctx, namespace, jobID)
-		if errors.Is(err, asinfo.ErrNotFound) {
-			continue // the job is not visible on the cluster yet.
-		}
-		if err != nil {
-			return fmt.Errorf("failed to get server restore status: %w", err)
-		}
-
-		switch {
-		case status.NsState == infomodels.NamespaceStateReady:
-			return nil
-		case status.NsState == infomodels.NamespaceStateFailed:
-			return fmt.Errorf("server restore %s failed to prepare namespace %s: %s", jobID, namespace, status.ErrorReason)
-		case status.HeldReason == infomodels.HeldReasonTruncateStateLive:
-			return fmt.Errorf("server restore %s is held: %w", jobID, errTruncateState(namespace))
-		case status.Clear == infomodels.ClearStateRequired:
-			if err := infoClient.ClearRestoreStorage(ctx, namespace, jobID); err != nil {
-				return fmt.Errorf("failed to clear namespace %s for server restore %s: %w", namespace, jobID, err)
-			}
-		default:
-		}
-	}
 }
 
 // releaseNamespace aborts the cold restore jobID and opens namespace to clients with whatever the
@@ -291,7 +231,9 @@ func (h *restoreHandler) Wait(ctx context.Context) error {
 }
 
 // awaitComplete polls the restore job until it completes and the namespace is open to clients
-// again. It fails when the job fails or is aborted, or ctx is canceled.
+// again, clearing the storage of the nodes that hold data in the namespace of a cold restore in
+// preparation. It fails when the job fails or is aborted, a truncate holds the namespace, or ctx is
+// canceled.
 func (h *restoreHandler) awaitComplete(ctx context.Context) error {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
@@ -311,15 +253,19 @@ func (h *restoreHandler) awaitComplete(ctx context.Context) error {
 			return fmt.Errorf("failed to get server restore status: %w", err)
 		}
 
-		switch status.State {
-		case infomodels.RestoreStateComplete:
-			// The job completes before the server releases the namespace to clients.
-			if status.NsState == infomodels.NamespaceStateNone {
-				return nil
+		switch {
+		case status.HeldReason == heldByTruncateState:
+			return fmt.Errorf("server restore %s is held: %w", h.jobID, errTruncateState(h.namespace))
+		case status.Clear == infomodels.ClearStateRequired:
+			if err := h.infoClient.ClearRestoreStorage(ctx, h.namespace, h.jobID); err != nil {
+				return fmt.Errorf("failed to clear namespace %s for server restore %s: %w", h.namespace, h.jobID, err)
 			}
-		case infomodels.RestoreStateFailed:
-			return fmt.Errorf("server restore %s failed: %s", h.jobID, status.ErrorReason)
-		case infomodels.RestoreStateAborted:
+		// The job completes before the server releases the namespace to clients.
+		case status.State == infomodels.RestoreStateComplete && status.NsState == infomodels.NamespaceStateNone:
+			return nil
+		case status.State == infomodels.RestoreStateFailed:
+			return fmt.Errorf("server restore %s failed", h.jobID)
+		case status.State == infomodels.RestoreStateAborted:
 			return fmt.Errorf("server restore %s was aborted", h.jobID)
 		default:
 		}

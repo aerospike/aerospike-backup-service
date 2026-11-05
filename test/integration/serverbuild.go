@@ -229,9 +229,11 @@ func (s *ServerBuildSuite) gap(name, reason string, check func()) {
 // soon as the server commits its metadata.json, a few seconds before its job ends.
 func (s *ServerBuildSuite) waitForFinishedBackup(e *env, backupType model.BackupType) dto.BackupDetails {
 	previousSuccesses := e.successesBeforeTrigger[backupType]
+	previousFailures := e.failuresBeforeTrigger[backupType]
 
 	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
-		s.Require().Zero(s.metricBackupEventCount(e, backupType, outcomeFailure), "%s backup failed", backupType)
+		s.Require().Equal(previousFailures, int(s.metricBackupEventCount(e, backupType, outcomeFailure)),
+			"%s backup failed", backupType)
 
 		return s.metricBackupSuccessEventCount(e, backupType) > previousSuccesses
 	})
@@ -345,14 +347,21 @@ func (s *ServerBuildSuite) restoreByTimestampInto(
 	cluster string,
 	mode dto.RestoreMode,
 ) dto.RestoreJobStatus {
-	return s.restoreWithin(e, e.baseURL+"/v1/restore/timestamp", dto.RestoreTimestampRequest{
+	return s.restoreWithin(e, e.baseURL+"/v1/restore/timestamp", timestampRestoreRequest(timestamp, cluster, mode),
+		serverJobTimeout)
+}
+
+// timestampRestoreRequest is a request to restore the routine's backups up to timestamp into
+// cluster with mode.
+func timestampRestoreRequest(timestamp time.Time, cluster string, mode dto.RestoreMode) dto.RestoreTimestampRequest {
+	return dto.RestoreTimestampRequest{
 		DestinationClusterConfig: dto.DestinationClusterConfig{
 			Name: cluster,
 		},
 		Policy:  &dto.TimestampRestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Mode: mode}},
 		Time:    timestamp.UnixMilli(),
 		Routine: routineName,
-	}, serverJobTimeout)
+	}
 }
 
 // putRecord writes bins under key 0 into set of serverNamespace.

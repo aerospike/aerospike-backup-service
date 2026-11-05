@@ -61,16 +61,64 @@ func (s *ServerBackupSuite) TestServerFuzzyRestoreByTimestamp() {
 	s.assertRecordsIn(s.client, serverNamespace, []int{incrementalAge})
 }
 
-// TestServerRestoreModeRequired sends a restore without a mode, which server mode requires, and
-// expects it to be rejected before any job starts.
-func (s *ServerBackupSuite) TestServerRestoreModeRequired() {
+// TestServerRestoreRequestRejected sends restore requests that server mode does not accept: one
+// by path and one by timestamp without a mode, which server mode requires, one with a mode that
+// does not exist, and one with an option the server has no equivalent for. Each is rejected
+// before any job starts.
+func (s *ServerBackupSuite) TestServerRestoreRequestRejected() {
 	e := s.setupEnv(s.serverBackupConfig)
 
-	request := defaultRestoreRequest("261101T120000-aaaa")
-	body, err := decoder.Marshal(request, decoder.JSON, false)
-	s.Require().NoError(err)
+	byPath := func(policy dto.BaseRestorePolicy) dto.RestoreRequest {
+		request := defaultRestoreRequest("261101T120000-aaaa")
+		request.DestinationClusterConfig.Name = destinationClusterName
+		request.Policy = &dto.RestorePolicy{BaseRestorePolicy: policy}
 
-	status, response := s.do(e, http.MethodPost, e.baseURL+"/v1/restore/full", body)
-	s.Equal(http.StatusBadRequest, status)
-	s.Contains(string(response), `"mode" required`)
+		return request
+	}
+
+	tests := []struct {
+		name    string
+		path    string
+		request any
+		wantErr string
+	}{
+		{
+			name:    "by path without a mode",
+			path:    "/v1/restore/full",
+			request: byPath(dto.BaseRestorePolicy{}),
+			wantErr: `"mode" required`,
+		},
+		{
+			name:    "by timestamp without a mode",
+			path:    "/v1/restore/timestamp",
+			request: timestampRestoreRequest(time.Now(), destinationClusterName, ""),
+			wantErr: `"mode" required`,
+		},
+		{
+			name:    "unknown mode",
+			path:    "/v1/restore/full",
+			request: byPath(dto.BaseRestorePolicy{Mode: "cold"}),
+			wantErr: "'cold' is not a valid mode",
+		},
+		{
+			name:    "option the server lacks",
+			path:    "/v1/restore/full",
+			request: byPath(dto.BaseRestorePolicy{Mode: dto.RestoreModeStrict, Replace: new(true)}),
+			wantErr: `restore policy sets replace, which backup-mode "server" does not support`,
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			body, err := decoder.Marshal(tt.request, decoder.JSON, false)
+			s.Require().NoError(err)
+			before := s.restoreJobIDs()
+
+			status, response := s.do(e, http.MethodPost, e.baseURL+tt.path, body)
+
+			s.Equal(http.StatusBadRequest, status)
+			s.Contains(string(response), tt.wantErr)
+			s.Equal(before, s.restoreJobIDs(), "a restore job started")
+		})
+	}
 }

@@ -28,9 +28,11 @@ type env struct {
 	// newestBeforeTrigger is when the newest backup of each type listed just before
 	// the last trigger of that type was created.
 	newestBeforeTrigger map[model.BackupType]time.Time
-	// successesBeforeTrigger is the backup success count of each type just before the last
-	// trigger of that type. The metrics are process-wide, so earlier tests count too.
+	// successesBeforeTrigger and failuresBeforeTrigger are the backup success and failure
+	// counts of each type just before the last trigger of that type. The metrics are
+	// process-wide, so earlier tests count too.
 	successesBeforeTrigger map[model.BackupType]int
+	failuresBeforeTrigger  map[model.BackupType]int
 }
 
 func newEnv(baseURL string, client *http.Client) *env {
@@ -39,6 +41,7 @@ func newEnv(baseURL string, client *http.Client) *env {
 		client:                 client,
 		newestBeforeTrigger:    map[model.BackupType]time.Time{},
 		successesBeforeTrigger: map[model.BackupType]int{},
+		failuresBeforeTrigger:  map[model.BackupType]int{},
 	}
 }
 

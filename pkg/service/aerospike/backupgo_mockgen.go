@@ -324,20 +324,6 @@ func (mr *MockInfoGetterMockRecorder) OpenRestore(ctx, namespace, jobID any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenRestore", reflect.TypeOf((*MockInfoGetter)(nil).OpenRestore), ctx, namespace, jobID)
 }
 
-// PrepareRestore mocks base method.
-func (m *MockInfoGetter) PrepareRestore(ctx context.Context, request *models0.RequestPrepareRestore) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareRestore", ctx, request)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// PrepareRestore indicates an expected call of PrepareRestore.
-func (mr *MockInfoGetterMockRecorder) PrepareRestore(ctx, request any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareRestore", reflect.TypeOf((*MockInfoGetter)(nil).PrepareRestore), ctx, request)
-}
-
 // StartBackup mocks base method.
 func (m *MockInfoGetter) StartBackup(ctx context.Context, request *models0.RequestBackup) (string, error) {
 	m.ctrl.T.Helper()

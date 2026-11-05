@@ -17,30 +17,32 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
-// TestServerSetList backs up with a routine set-list of one set and checks that only that set
-// is restored into the destination cluster.
+// TestServerSetList backs up with a routine set-list of two of three sets and checks that only
+// those sets are restored into the destination cluster.
 func (s *ServerBackupSuite) TestServerSetList() {
 	s.putRecord(s.client, "setA", as.BinMap{ageBin: 1})
 	s.putRecord(s.client, "setB", as.BinMap{ageBin: 2})
+	s.putRecord(s.client, "setC", as.BinMap{ageBin: 3})
 
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		c.BackupRoutines[routineName].SetList = []string{"setA"}
+		c.BackupRoutines[routineName].SetList = []string{"setA", "setC"}
 	})
 	s.triggerFullBackup(e)
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
 	s.restoreIntoDestination(e, backup.Key)
 
-	s.NotNil(s.recordBins(s.destinationClient, "setA", 0), "setA record not restored")
+	s.Equal(as.BinMap{ageBin: 1}, s.recordBins(s.destinationClient, "setA", 0), "setA record")
+	s.Equal(as.BinMap{ageBin: 3}, s.recordBins(s.destinationClient, "setC", 0), "setC record")
 	s.Nil(s.recordBins(s.destinationClient, "setB", 0), "setB record backed up")
 }
 
-// TestServerBinList backs up with a routine bin-list of one bin and checks that only that bin
-// is restored into the destination cluster.
+// TestServerBinList backs up with a routine bin-list of two of three bins and checks that only
+// those bins are restored into the destination cluster.
 func (s *ServerBackupSuite) TestServerBinList() {
-	s.putRecord(s.client, setName, as.BinMap{ageBin: 1, "name": "one"})
+	s.putRecord(s.client, setName, as.BinMap{ageBin: 1, "name": "one", "city": "Haifa"})
 
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		c.BackupRoutines[routineName].BinList = []string{ageBin}
+		c.BackupRoutines[routineName].BinList = []string{ageBin, "city"}
 	})
 	s.triggerFullBackup(e)
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
@@ -48,8 +50,7 @@ func (s *ServerBackupSuite) TestServerBinList() {
 
 	bins := s.recordBins(s.destinationClient, setName, 0)
 	s.Require().NotNil(bins, "record not restored")
-	s.Contains(bins, ageBin)
-	s.NotContains(bins, "name", "bin outside bin-list backed up")
+	s.Equal(as.BinMap{ageBin: 1, "city": "Haifa"}, bins, "bins outside bin-list backed up, or listed bins lost")
 }
 
 // TestServerFilterExpression backs up with a routine filter-exp of age > 25 and checks that only
@@ -149,9 +150,9 @@ func (s *ServerBackupSuite) TestServerBackupLimits() {
 // TestServerRestoreOptions restores one backup several times, each with one restore policy
 // option, and checks its effect: tps and parallel become the server job's restore-rps and number
 // of worker threads, extra-ttl moves a restored record's expiry out by that much, and set-list
-// restores only the sets it names. Each strict restore clears the destination namespace first.
-// Last, it restores into a truncated namespace, which the server refuses until the truncate is
-// undone with the command the error names.
+// restores only the sets it names: two of the backup's three. Each strict restore clears the
+// destination namespace first. Last, it restores into a truncated namespace, which the server
+// refuses until the truncate is undone with the command the error names.
 func (s *ServerBackupSuite) TestServerRestoreOptions() {
 	const (
 		ttl      = time.Hour
@@ -190,17 +191,22 @@ func (s *ServerBackupSuite) TestServerRestoreOptions() {
 		s.restoreIntoDestinationWithPolicy(e, backup.Key,
 			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{ExtraTTL: new(int64(extraTTL.Seconds()))}})
 
+		// The extra TTL adds to what remained of the record's own TTL; time passed since it was
+		// written, so it expires a little earlier than both together.
 		record, err := s.destinationClient.GetHeader(nil, key)
 		s.Require().NoError(err)
-		s.Greater(time.Duration(record.Expiration)*time.Second, extraTTL,
-			"restored record expires in %ds, want more than the extra-ttl of %s", record.Expiration, extraTTL)
+		expiry := time.Duration(record.Expiration) * time.Second
+		s.LessOrEqual(expiry, ttl+extraTTL, "restored record expires in %s", expiry)
+		s.Greater(expiry, ttl+extraTTL-10*time.Minute,
+			"restored record expires in %s, want its TTL of %s plus the extra-ttl of %s", expiry, ttl, extraTTL)
 	})
 
 	s.Run("set_list", func() {
 		s.restoreIntoDestinationWithPolicy(e, backup.Key,
-			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{SetList: []string{"setA"}}})
+			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{SetList: []string{"setA", setName}}})
 
 		s.NotNil(s.recordBins(s.destinationClient, "setA", 0), "setA record not restored")
+		s.NotNil(s.recordBins(s.destinationClient, setName, 0), setName+" record not restored")
 		s.Nil(s.recordBins(s.destinationClient, "setB", 0), "setB record restored")
 	})
 
@@ -225,10 +231,12 @@ func (s *ServerBackupSuite) TestServerRestoreOptions() {
 
 // TestServerMultipleNamespaces backs up a routine of two namespaces, a full and an incremental
 // server backup each, and restores both chains into the destination cluster by timestamp. Restore
-// by timestamp runs the namespaces at the same time, so the two cold restores overlap.
+// by timestamp runs the namespaces at the same time, so the two cold restores overlap. The
+// namespaces hold different numbers of records, and the routine state reports the server job of
+// each namespace, matched to the backup it wrote.
 func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 	s.seedRecordsIn(s.client, serverNamespace, []int{1})
-	s.seedRecordsIn(s.client, otherNamespace, []int{2})
+	s.seedRecordsIn(s.client, otherNamespace, []int{2, 5})
 
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
 		c.BackupRoutines[routineName].Namespaces = new([]dto.NamespaceName{serverNamespace, otherNamespace})
@@ -236,29 +244,58 @@ func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 	s.triggerFullBackup(e)
 	s.waitForFinishedBackup(e, model.BackupTypeFull)
 
-	backups := s.getBackups(e, model.BackupTypeFull)
-	namespaces := make([]string, 0, len(backups))
-	for _, backup := range backups {
-		namespaces = append(namespaces, backup.Namespace)
-	}
-	s.ElementsMatch([]string{serverNamespace, otherNamespace}, namespaces)
-	s.waitForLastBackup(e, model.BackupTypeFull, backups[len(backups)-1].Created)
-
-	jobs := s.routineState(e).LastFullJobs
-	s.Require().Len(jobs, 2, "server jobs of the full backup")
-	for i, namespace := range []string{serverNamespace, otherNamespace} {
-		s.Equal(namespace, jobs[i].Namespace)
-		s.Equal("COMPLETE", jobs[i].State, "job of namespace %s", namespace)
-	}
+	fullBackups := s.getBackups(e, model.BackupTypeFull)
+	s.Require().Len(fullBackups, 2, "one full backup per namespace")
+	s.waitForLastBackup(e, model.BackupTypeFull, fullBackups[len(fullBackups)-1].Created)
+	fullJobs := s.routineState(e).LastFullJobs
+	s.assertCompleteJobs(fullJobs, fullBackups, map[string]uint64{serverNamespace: 1, otherNamespace: 2})
 
 	s.seedRecordsIn(s.client, serverNamespace, []int{3})
 	s.seedRecordsIn(s.client, otherNamespace, []int{4})
 	s.triggerIncrementalBackup(e)
 	s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 
+	state := s.routineState(e)
+	s.assertCompleteJobs(state.LastIncrementalJobs, s.getBackups(e, model.BackupTypeIncremental),
+		map[string]uint64{serverNamespace: 1, otherNamespace: 1})
+	s.Equal(fullJobs, state.LastFullJobs, "an incremental backup replaced the full backup's jobs")
+
 	s.restoreIntoDestinationByTimestamp(e, time.Now())
 	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{3})
-	s.assertRecordsIn(s.destinationClient, otherNamespace, []int{4})
+	s.assertRecordsIn(s.destinationClient, otherNamespace, []int{4, 5})
+}
+
+// assertCompleteJobs checks that jobs are the complete server jobs that wrote backups, one per
+// namespace in the routine's order, each having backed up at least the given number of records.
+// The server counts a record once per scan that reads it, and a strict backup's incremental scan
+// reads again the records written shortly before the backup started: a count is not exact.
+func (s *ServerBackupSuite) assertCompleteJobs(
+	jobs []dto.ServerBackupJob,
+	backups []dto.BackupDetails,
+	minRecords map[string]uint64,
+) {
+	s.T().Helper()
+
+	keys := make(map[string]string, len(backups))
+	for _, backup := range backups {
+		keys[backup.Namespace] = backup.Key
+	}
+
+	s.Require().Len(jobs, 2, "server jobs")
+	for i, namespace := range []string{serverNamespace, otherNamespace} {
+		job := jobs[i]
+		s.Equal(namespace, job.Namespace)
+		s.Equal(keys[namespace], job.JobID, "job of namespace %s wrote its backup", namespace)
+		s.Equal("COMPLETE", job.State, "job of namespace %s", namespace)
+		s.Empty(job.ErrorReason)
+		s.Empty(job.AbortOrigin)
+		s.GreaterOrEqual(job.RecordsBackedUp, minRecords[namespace], "records of namespace %s", namespace)
+		s.Positive(job.BytesBackedUp, "bytes of namespace %s", namespace)
+		s.Zero(job.RecordsReadFailed)
+		s.Require().NotNil(job.StartTime)
+		s.Require().NotNil(job.FinishTime)
+		s.False(job.FinishTime.Before(*job.StartTime), "job of namespace %s finished before it started", namespace)
+	}
 }
 
 // TestServerNonS3Storage configures server backup mode with local storage, which the server
@@ -369,8 +406,46 @@ func (s *ServerBackupSuite) TestServerBackupCancel() {
 	})
 	s.Require().True(ok, "no server job reported for the canceled backup")
 	s.Require().Len(jobs, 1, "server jobs of the canceled backup")
+	s.Equal(serverNamespace, jobs[0].Namespace)
 	s.Equal("ABORTED", jobs[0].State)
 	s.Equal("operator", jobs[0].AbortOrigin)
+	s.NotNil(jobs[0].FinishTime, "the abort ended the job")
+	s.Nil(s.routineState(e).Full, "the canceled backup still shows as running")
 
 	s.Empty(s.getBackups(e, model.BackupTypeFull), "a canceled backup is listed")
+}
+
+// TestServerBackupFailure backs up to a bucket that does not exist. The backup fails: the
+// failure is counted, nothing shows as running, no last full backup time is set, and the routine
+// state reports the server's record of the job with its reason. The server aborts a job that
+// fails on a node, so the job is ABORTED by the server, unlike a canceled one (operator).
+func (s *ServerBackupSuite) TestServerBackupFailure() {
+	s.seedRecordsIn(s.client, serverNamespace, []int{1})
+
+	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
+		c.Storage[storageName].S3Storage.Bucket = "missing-bucket"
+	})
+	failures := s.metricBackupEventCount(e, model.BackupTypeFull, outcomeFailure)
+
+	// Not triggerFullBackup: it lists the backups first, which the missing bucket fails.
+	status, body := s.do(e, http.MethodPost, fmt.Sprintf("%s/v1/backups/full/%s", e.baseURL, routineName), nil)
+	s.Require().Equal(http.StatusAccepted, status, "trigger: %s", body)
+
+	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
+		return s.metricBackupEventCount(e, model.BackupTypeFull, outcomeFailure) > failures
+	})
+	s.Require().True(ok, "the backup did not fail")
+	s.Zero(s.metricBackupSuccessEventCount(e, model.BackupTypeFull))
+
+	state := s.routineState(e)
+	s.Nil(state.Full, "the failed backup still shows as running")
+	s.Nil(state.LastFull, "a failed backup set the last full backup time")
+	s.Require().Len(state.LastFullJobs, 1, "server jobs of the failed backup")
+	job := state.LastFullJobs[0]
+	s.Equal(serverNamespace, job.Namespace)
+	s.Equal("ABORTED", job.State)
+	s.Equal("server", job.AbortOrigin)
+	s.Contains(job.ErrorReason, "cannot reach or write to the backup destination")
+	s.Zero(job.RecordsBackedUp)
+	s.NotNil(job.FinishTime)
 }

@@ -12,11 +12,15 @@ import (
 
 // TestServerRestoreByPath mirrors TestRestoreByPath with server-side backup: runs a full
 // backup, restores it via POST /v1/restore/full into the destination cluster, and verifies the
-// backup details, the restored data and the exposed restore metrics.
+// backup details, the restored data and the exposed restore metrics. The destination namespace
+// holds records the backup does not: a strict restore leaves exactly the backed-up data.
 func (s *ServerBackupSuite) TestServerRestoreByPath() {
 	e := s.setupEnv(s.serverBackupConfig)
 	s.seedRecordsIn(s.client, serverNamespace, []int{10, 20, 30})
 	successCount := s.metricRestoreSuccessEventCount(e)
+
+	s.putRecordIn(s.destinationClient, serverNamespace, 7, 70)
+	s.putRecord(s.destinationClient, "strays", as.BinMap{ageBin: 71})
 
 	triggered := time.Now()
 	s.triggerFullBackup(e)
@@ -29,6 +33,8 @@ func (s *ServerBackupSuite) TestServerRestoreByPath() {
 	s.gap("inserted_records", gapRestoreStats, func() { s.Equal(uint64(3), status.InsertedRecords) })
 	s.Empty(status.Error)
 	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{10, 20, 30})
+	s.Nil(s.recordBins(s.destinationClient, setName, 7), "a record the backup does not hold was kept")
+	s.Nil(s.recordBins(s.destinationClient, "strays", 0), "a set the backup does not hold was kept")
 	s.assertMetricRestoreSuccessEventCount(e, successCount+1)
 }
 
@@ -78,7 +84,8 @@ func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 // namespace into the destination cluster to a point in time via POST /v1/restore/timestamp.
 // Unlike the scan test, the full backup holds a record, which the incremental backup holds
 // updated: the server cannot restore an empty backup, and the restore must end with the newest
-// value. Subtests share env, backup storage, and Aerospike state.
+// value. A point in time between the two backups restores the full backup alone, and one before
+// the full backup restores nothing. Subtests share env, backup storage, and Aerospike state.
 func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 	const (
 		fullAge        = 10
@@ -130,6 +137,27 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 		s.Empty(status.Error)
 		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{incrementalAge})
 		s.assertMetricRestoreSuccessEventCount(e, successCount+1)
+	})
+
+	s.Run("restore_between_full_and_incremental", func() {
+		between := fullBackup.Created.Add(incrBackup.Created.Sub(fullBackup.Created) / 2)
+		s.Require().True(between.After(fullBackup.Created) && between.Before(incrBackup.Created))
+
+		status := s.restoreIntoDestinationByTimestamp(e, between)
+		s.Empty(status.Error)
+		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{fullAge})
+	})
+
+	s.Run("restore_before_full", func() {
+		request := timestampRestoreRequest(fullBackup.Created.Add(-time.Second), destinationClusterName,
+			dto.RestoreModeStrict)
+		job := s.waitForRestoreEnd(e, s.startRestore(e, e.baseURL+"/v1/restore/timestamp", request),
+			serverJobTimeout)
+
+		s.Equal(dto.RestoreFailure, job.Status)
+		s.Contains(job.Error, "no full backups found")
+		// The failed restore left the destination as the last restore did.
+		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{fullAge})
 	})
 }
 

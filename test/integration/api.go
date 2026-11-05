@@ -91,6 +91,7 @@ func (s *Suite) restoreByTimestamp(e *env, timestamp time.Time) dto.RestoreJobSt
 func (s *Suite) triggerBackup(e *env, backupType model.BackupType) {
 	e.newestBeforeTrigger[backupType] = s.newestBackupCreated(e, backupType)
 	e.successesBeforeTrigger[backupType] = s.metricBackupSuccessEventCount(e, backupType)
+	e.failuresBeforeTrigger[backupType] = int(s.metricBackupEventCount(e, backupType, outcomeFailure))
 
 	status, body := s.do(e, http.MethodPost, e.backupsURL(backupType), nil)
 	s.Require().Equal(http.StatusAccepted, status, "trigger %s backup: %s", backupType, body)
@@ -115,11 +116,13 @@ func (s *Suite) waitForNewBackup(e *env, backupType model.BackupType) dto.Backup
 // waitForNewBackupWithin is waitForNewBackup for a backup that may take up to timeout.
 func (s *Suite) waitForNewBackupWithin(e *env, backupType model.BackupType, timeout time.Duration) dto.BackupDetails {
 	after := e.newestBeforeTrigger[backupType]
+	previousFailures := e.failuresBeforeTrigger[backupType]
 
 	var newest dto.BackupDetails
 
 	ok := s.eventually(timeout, pollInterval, func() bool {
-		s.Require().Zero(s.metricBackupEventCount(e, backupType, outcomeFailure), "%s backup failed", backupType)
+		s.Require().Equal(previousFailures, int(s.metricBackupEventCount(e, backupType, outcomeFailure)),
+			"%s backup failed", backupType)
 
 		backups := s.getBackups(e, backupType)
 		if len(backups) == 0 {
