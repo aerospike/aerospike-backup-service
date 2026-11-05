@@ -734,16 +734,8 @@ jobs:
     uses: aerospike/shared-workflows/.github/workflows/reusable_docker-build-deploy.yaml@308f37e0cd5c7a6386a99ea7afc379d5a4ea9256 # v5.1.0
     with:
       jf-project: ${{ vars.JF_PROJECT }}
-      jf-registry: ${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_DEV }}
-      # BuildKit is pulled from <jf-registry-base>/<jf-project>-docker-virtual. The default
-      # base is artifact.aerospike.io, a different host from jf-registry, and
-      # moby/buildkit:buildx-stable-1 is not on that host.
-      jf-registry-base: ${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}
-      # repo-scope defaults to "-docker-dev-local", but our actual repo naming convention
-      # (JF_ARTIFACTORY_CONTAINER_DEV) uses "-container-dev-local". Without this override, the
-      # image gets pushed to .../container-dev-local correctly, but the build-info creation
-      # step searches for it under .../docker-dev-local and fails with "Could not find docker
-      # image in Artifactory" since that's a different (likely nonexistent) repo.
+      # repo-scope defaults to "-docker-dev-local". Images go to JF_ARTIFACTORY_CONTAINER_DEV,
+      # which is <jf-project>-container-dev-local.
       repo-scope: -container-dev-local
       jf-build-name: aerospike-backup-service-container
       image-name: aerospike-backup-service
