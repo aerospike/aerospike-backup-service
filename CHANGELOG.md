@@ -10,7 +10,55 @@ Entries below `v3.0.0` predate this file; see the
 Detailed upgrade instructions (breaking changes and how to adapt existing configuration) live in
 [docs/migration.md](docs/migration.md); this file is the changelog, that one is the upgrade guide.
 
-## [3.7.0] - TBD
+## [3.7.1] - TBD
+
+Built on [backup-go v0.13.0](https://github.com/aerospike/backup-go/releases/tag/v0.13.0) and Go 1.26.
+
+### Changed
+
+- **Breaking (Helm):** the chart moves to 3.0.1 (from 2.1.0) because of changes that can affect an existing
+  values file. See [Upgrading from chart 2.1.0](helm/aerospike-backup-service/README.md#upgrading-from-chart-210).
+  - `args` is now applied; earlier charts ignored it.
+  - The container and probe ports follow `backupServiceConfig.service.http.port`, the HTTPS port is added when
+    HTTPS is enabled, and `service.port` is now only the Service port.
+  - Probes follow the configured context path.
+  - `terminationGracePeriodSeconds` is 45 instead of 30.
+  - One pod per release: `replicaCount` above `1` and `autoscaling.enabled: true` fail the install, and the chart
+    no longer creates a HorizontalPodAutoscaler.
+  - The Deployment uses the `Recreate` strategy, so an upgrade stops the old pod before starting the new one.
+- The Docker image is based on Alpine 3.24 (latest 3.24.x patch release) instead of `alpine:latest`,
+  and no longer installs the unused `shadow` package. It now creates `/var/log/aerospike-backup-service`
+  owned by the service user, so the default `file-writer` path works without mounting a volume.
+- A configuration source that cannot be written (a configuration served over HTTP(S), or a read-only file such as
+  a ConfigMap mount) is reported as `405` instead of `503`; `503` remains for write failures a retry may fix.
+- Configuration write failures are no longer reported as `400`: a rejected change is `400`, a configuration that
+  could not be persisted is `503`, and a scheduler that could not be reloaded is `500`.
+
+### Fixed
+
+- A configuration change is persisted before it is applied in memory, so a failed write no longer leaves the running
+  configuration out of sync with the file.
+- A cron expression that never fires again (for example, pinned to a past year) is rejected with `400` instead of
+  being saved and silently stopping the routine's backups. Applying a validated configuration can no longer fail.
+- The `"[secret]"` placeholder is rejected where there is no stored value behind it (a configuration file or URL,
+  `/v1/config/apply`, restore requests) instead of being used as the credential.
+- An encryption `key-secret` read from a Secret Agent requires `secret-agent` on the routine that runs the policy,
+  not on the policy; policies can again be defined before the routines that use them.
+- Removed a duplicate `enum` key from the generated OpenAPI spec and configuration schema.
+
+### Known limitations
+
+- Restore namespace remapping (`policy.namespace`) supports a single namespace only: the restore must
+  contain exactly one namespace, equal to `policy.namespace.source`. Otherwise the restore is rejected
+  upfront with `namespace remap from "<source>" requires the restore to be scoped to exactly that namespace`.
+  - Restore by path (`/v1/restore/full`, `/v1/restore/incremental`): point `backup-data-path` at a single
+    namespace's backup (the `key` returned by `GET /v1/backups/full`) and run one restore per namespace.
+  - Restore by timestamp (`/v1/restore/timestamp`): remapping works only for routines that back up a
+    single namespace.
+  - To restore several namespaces without remapping, omit `policy.namespace`; the destination cluster
+    must have namespaces with the same names.
+
+## [3.7.0] - 2026-09-29
 
 ### Added
 
@@ -148,7 +196,7 @@ Patch release; see the GitHub release notes.
 ### Added
 
 - Strict configuration validation at startup.
-- Partition-list filtering for backups (`partition-list` on backup policy).
+- Partition-list filtering for backups (`partition-list` on backup routine).
 - Object storage class support for S3, Azure Blob Storage, and Google Cloud Storage.
 - `concurrent-incremental` flag on backup policy, to allow incremental backups to run alongside full backups.
 - `with-cluster-configuration` flag on backup policy, to skip cluster config backup.
@@ -173,7 +221,8 @@ Patch release; see the GitHub release notes.
 - **Breaking:** restore requests now require a `backup-data-path` field; the `Storage.path` field is the storage
   root only and can no longer be reused as the backup data location.
 
-[3.7.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.2...HEAD
+[3.7.1]: https://github.com/aerospike/aerospike-backup-service/compare/v3.7.0...HEAD
+[3.7.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.2...v3.7.0
 [3.6.2]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.1...v3.6.2
 [3.6.1]: https://github.com/aerospike/aerospike-backup-service/compare/v3.6.0...v3.6.1
 [3.6.0]: https://github.com/aerospike/aerospike-backup-service/compare/v3.5.0...v3.6.0

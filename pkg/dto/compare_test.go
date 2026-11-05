@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +20,7 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			current: ServiceConfig{
 				ServerHTTP: &ServerConfigHTTP{
 					ListenerConfig: ListenerConfig{Address: "localhost"},
-					Port:           ptr.Of(Port(8080)),
+					Port:           new(Port(8080)),
 				},
 				Logger: &LoggerConfig{
 					Level:  "INFO",
@@ -31,7 +30,7 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			other: ServiceConfig{
 				ServerHTTP: &ServerConfigHTTP{
 					ListenerConfig: ListenerConfig{Address: "localhost"},
-					Port:           ptr.Of(Port(8080)),
+					Port:           new(Port(8080)),
 				},
 				Logger: &LoggerConfig{
 					Level:  "INFO",
@@ -45,13 +44,13 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			current: ServiceConfig{
 				ServerHTTP: &ServerConfigHTTP{
 					ListenerConfig: ListenerConfig{Address: "localhost"},
-					Port:           ptr.Of(Port(8080)),
+					Port:           new(Port(8080)),
 				},
 			},
 			other: ServiceConfig{
 				ServerHTTP: &ServerConfigHTTP{
 					ListenerConfig: ListenerConfig{Address: "0.0.0.0"},
-					Port:           ptr.Of(Port(9090)),
+					Port:           new(Port(9090)),
 				},
 			},
 			errors: []string{
@@ -83,14 +82,14 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 				Logger: &LoggerConfig{
 					Level:        "INFO",
 					Format:       "JSON",
-					StdoutWriter: ptr.Of(true),
+					StdoutWriter: new(true),
 				},
 			},
 			other: ServiceConfig{
 				Logger: &LoggerConfig{
 					Level:        "DEBUG",
 					Format:       "PLAIN",
-					StdoutWriter: ptr.Of(false),
+					StdoutWriter: new(false),
 				},
 			},
 			errors: []string{
@@ -200,13 +199,13 @@ func TestRateLimiterConfig_Compare(t *testing.T) {
 		{
 			name: "identical configs",
 			current: &RateLimiterConfig{
-				Tps:       ptr.Of(100),
-				Size:      ptr.Of(1000),
+				Tps:       new(100),
+				Size:      new(1000),
 				WhiteList: []string{"127.0.0.1", "localhost"},
 			},
 			other: &RateLimiterConfig{
-				Tps:       ptr.Of(100),
-				Size:      ptr.Of(1000),
+				Tps:       new(100),
+				Size:      new(1000),
 				WhiteList: []string{"127.0.0.1", "localhost"},
 			},
 			errors: nil,
@@ -214,13 +213,13 @@ func TestRateLimiterConfig_Compare(t *testing.T) {
 		{
 			name: "changed values",
 			current: &RateLimiterConfig{
-				Tps:       ptr.Of(100),
-				Size:      ptr.Of(1000),
+				Tps:       new(100),
+				Size:      new(1000),
 				WhiteList: []string{"127.0.0.1"},
 			},
 			other: &RateLimiterConfig{
-				Tps:       ptr.Of(200),
-				Size:      ptr.Of(2000),
+				Tps:       new(200),
+				Size:      new(2000),
 				WhiteList: []string{"127.0.0.1", "localhost"},
 			},
 			errors: []string{
@@ -255,12 +254,12 @@ func testServerHTTPConfig() *ServerConfigHTTP {
 		ListenerConfig: ListenerConfig{
 			Address:      "localhost",
 			ContextPath:  "/api",
-			Timeout:      ptr.Of(int64(5000)),
-			ReadTimeout:  ptr.Of(int64(30000)),
-			WriteTimeout: ptr.Of(int64(60000)),
-			IdleTimeout:  ptr.Of(int64(120000)),
+			Timeout:      new(int64(5000)),
+			ReadTimeout:  new(int64(30000)),
+			WriteTimeout: new(int64(60000)),
+			IdleTimeout:  new(int64(120000)),
 		},
-		Port: ptr.Of(Port(8080)),
+		Port: new(Port(8080)),
 	}
 }
 
@@ -285,12 +284,12 @@ func TestServerHTTPConfig_Compare(t *testing.T) {
 					Disabled:     true,
 					Address:      "0.0.0.0",
 					ContextPath:  "/v1/api",
-					Timeout:      ptr.Of(int64(10000)),
-					ReadTimeout:  ptr.Of(int64(45000)),
-					WriteTimeout: ptr.Of(int64(90000)),
-					IdleTimeout:  ptr.Of(int64(180000)),
+					Timeout:      new(int64(10000)),
+					ReadTimeout:  new(int64(45000)),
+					WriteTimeout: new(int64(90000)),
+					IdleTimeout:  new(int64(180000)),
 				},
-				Port: ptr.Of(Port(9090)),
+				Port: new(Port(9090)),
 			},
 			errors: []string{
 				"Disabled changed: false -> true",
@@ -336,7 +335,7 @@ func TestLoggerConfig_Compare(t *testing.T) {
 			current: &LoggerConfig{
 				Level:        "INFO",
 				Format:       "JSON",
-				StdoutWriter: ptr.Of(true),
+				StdoutWriter: new(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
 					MaxSize:  100,
@@ -345,7 +344,7 @@ func TestLoggerConfig_Compare(t *testing.T) {
 			other: &LoggerConfig{
 				Level:        "INFO",
 				Format:       "JSON",
-				StdoutWriter: ptr.Of(true),
+				StdoutWriter: new(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
 					MaxSize:  100,
@@ -358,7 +357,7 @@ func TestLoggerConfig_Compare(t *testing.T) {
 			current: &LoggerConfig{
 				Level:        "INFO",
 				Format:       "JSON",
-				StdoutWriter: ptr.Of(true),
+				StdoutWriter: new(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
 				},
@@ -366,7 +365,7 @@ func TestLoggerConfig_Compare(t *testing.T) {
 			other: &LoggerConfig{
 				Level:        "DEBUG",
 				Format:       "PLAIN",
-				StdoutWriter: ptr.Of(false),
+				StdoutWriter: new(false),
 				FileWriter: &FileLoggerConfig{
 					Filename: "new.log",
 				},

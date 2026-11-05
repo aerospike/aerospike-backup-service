@@ -277,12 +277,11 @@ behavior caused by invalid configurations.
 
 #### Filter by partition
 
-backup policy has new flag `partition-list`. When enabled, the backup service will back up only specific partitions of
-the
-cluster.
+Backup routine has new field [`partition-list`](readme/dto/dto.backuproutine.md). When set, the backup service backs up
+only the listed partitions of the cluster.
 The format supports individual partitions or ranges.
 
-- A range is specified as "<start>,<count>" (e.g., "100,50" backs up 50 partitions starting from 100).
+- A range is specified as "<start>-<count>" (e.g., "100-50" backs up 50 partitions starting from 100).
 - A single partition is specified as a number (e.g., "0").
 - Multiple entries can be comma-separated: e.g., "0,100,200,300,400,500".
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,8 +15,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -40,24 +39,20 @@ func TestService_ReadConfig(t *testing.T) {
 func newConfigTestService(t *testing.T) (*Service, *gomock.Controller) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
 
 	return &Service{
-		config:      model.NewConfig(),
-		nsValidator: mockNsValidator,
-		tlsProber:   newMockTLSProber(ctrl),
+		config:    model.NewConfig(),
+		tlsProber: newMockTLSProber(ctrl),
 	}, ctrl
 }
 
 func TestService_UpdateConfig(t *testing.T) {
 	tests := []struct {
-		name             string
-		requestBody      string
-		configApplierErr error
-		writeErr         error
-		expectedStatus   int
-		expectedError    string
+		name           string
+		requestBody    string
+		writeErr       error
+		expectedStatus int
+		expectedError  string
 	}{
 		{
 			name:           "invalid request",
@@ -75,15 +70,15 @@ func TestService_UpdateConfig(t *testing.T) {
 			name:           "write failure",
 			requestBody:    `{}`,
 			writeErr:       errors.New("write boom"),
-			expectedStatus: http.StatusInternalServerError,
+			expectedStatus: http.StatusServiceUnavailable,
 			expectedError:  "write boom",
 		},
 		{
-			name:             "apply failure",
-			requestBody:      `{}`,
-			configApplierErr: errors.New("apply boom"),
-			expectedStatus:   http.StatusInternalServerError,
-			expectedError:    "apply boom",
+			name:           "read-only configuration source",
+			requestBody:    `{}`,
+			writeErr:       fmt.Errorf("not supported for HTTP: %w", configuration.ErrReadOnly),
+			expectedStatus: http.StatusMethodNotAllowed,
+			expectedError:  "not supported for HTTP",
 		},
 		{
 			name:           "success",
@@ -103,8 +98,8 @@ func TestService_UpdateConfig(t *testing.T) {
 			svc.configurationManager = mockConfigurationManager
 
 			mockConfigApplier := service.NewMockConfigApplier(ctrl)
-			if tt.expectedStatus == http.StatusOK || tt.configApplierErr != nil {
-				mockConfigApplier.EXPECT().ApplyNewConfig().Return(tt.configApplierErr)
+			if tt.expectedStatus == http.StatusOK {
+				mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any())
 			}
 			svc.configApplier = mockConfigApplier
 
@@ -125,12 +120,11 @@ func TestService_UpdateConfig(t *testing.T) {
 
 func TestService_ApplyConfig(t *testing.T) {
 	tests := []struct {
-		name             string
-		readConfig       *model.Config
-		readErr          error
-		configApplierErr error
-		expectedStatus   int
-		expectedError    string
+		name           string
+		readConfig     *model.Config
+		readErr        error
+		expectedStatus int
+		expectedError  string
 	}{
 		{
 			name:           "read failure",
@@ -142,18 +136,11 @@ func TestService_ApplyConfig(t *testing.T) {
 			name: "static field changed",
 			readConfig: func() *model.Config {
 				c := model.NewConfig()
-				c.ServiceConfig.ServerHTTP = &model.ServerConfigHTTP{Port: ptr.Of(model.Port(9999))}
+				c.ServiceConfig.ServerHTTP = &model.ServerConfigHTTP{Port: new(model.Port(9999))}
 				return c
 			}(),
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  "static configuration has changed",
-		},
-		{
-			name:             "apply failure",
-			readConfig:       model.NewConfig(),
-			configApplierErr: errors.New("apply boom"),
-			expectedStatus:   http.StatusInternalServerError,
-			expectedError:    "apply boom",
 		},
 		{
 			name:           "success",
@@ -171,8 +158,8 @@ func TestService_ApplyConfig(t *testing.T) {
 			svc.configurationManager = mockConfigurationManager
 
 			mockConfigApplier := service.NewMockConfigApplier(ctrl)
-			if tt.expectedStatus == http.StatusOK || tt.configApplierErr != nil {
-				mockConfigApplier.EXPECT().ApplyNewConfig().Return(tt.configApplierErr)
+			if tt.expectedStatus == http.StatusOK {
+				mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any())
 			}
 			svc.configApplier = mockConfigApplier
 
@@ -189,7 +176,9 @@ func TestService_ApplyConfig(t *testing.T) {
 	}
 }
 
-func TestService_changeConfig(t *testing.T) {
+const putConfigWithCluster = `{"aerospike-clusters":{"c1":{"seed-nodes":[{"host-name":"localhost","port":3000}]}}}`
+
+func TestService_UpdateConfig_ReplacesConfig(t *testing.T) {
 	svc, ctrl := newConfigTestService(t)
 
 	mockConfigurationManager := configuration.NewMockManager(ctrl)
@@ -197,17 +186,16 @@ func TestService_changeConfig(t *testing.T) {
 	svc.configurationManager = mockConfigurationManager
 
 	mockConfigApplier := service.NewMockConfigApplier(ctrl)
-	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil)
+	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any())
 	svc.configApplier = mockConfigApplier
 
-	called := false
-	err := svc.changeConfig(t.Context(), func(config *model.Config) error {
-		called = true
-		return nil
-	})
+	req := httptest.NewRequestWithContext(
+		t.Context(), http.MethodPut, "/v1/config", strings.NewReader(putConfigWithCluster))
+	w := httptest.NewRecorder()
+	svc.UpdateConfig(w, req)
 
-	require.NoError(t, err)
-	assert.True(t, called)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Contains(t, svc.config.BackupConfigCopy().AerospikeClusters, "c1")
 }
 
 func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
@@ -229,7 +217,7 @@ func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
 	svc.configurationManager = mockConfigurationManager
 
 	mockConfigApplier := service.NewMockConfigApplier(ctrl)
-	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil)
+	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any())
 	svc.configApplier = mockConfigApplier
 
 	getReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/config", nil)
@@ -260,15 +248,25 @@ func TestService_UpdateConfig_PreservesSecretOnRoundTrip(t *testing.T) {
 	assert.Equal(t, "updated-label", updated.ClusterLabel)
 }
 
-func TestService_changeConfig_UpdateFuncError(t *testing.T) {
-	svc, _ := newConfigTestService(t)
+func TestService_UpdateConfig_WriteFailureKeepsConfig(t *testing.T) {
+	svc, ctrl := newConfigTestService(t)
 
-	err := svc.changeConfig(t.Context(), func(config *model.Config) error {
-		return errors.New("update boom")
-	})
+	mockConfigurationManager := configuration.NewMockManager(ctrl)
+	mockConfigurationManager.EXPECT().Write(gomock.Any(), gomock.Any()).Return(errors.New("disk full"))
+	svc.configurationManager = mockConfigurationManager
 
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "update boom")
+	mockConfigApplier := service.NewMockConfigApplier(ctrl)
+	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any()).Times(0)
+	svc.configApplier = mockConfigApplier
+
+	req := httptest.NewRequestWithContext(
+		t.Context(), http.MethodPut, "/v1/config", strings.NewReader(putConfigWithCluster))
+	w := httptest.NewRecorder()
+	svc.UpdateConfig(w, req)
+
+	require.Equal(t, http.StatusServiceUnavailable, w.Code, w.Body.String())
+	assert.Contains(t, w.Body.String(), "disk full")
+	assert.NotContains(t, svc.config.BackupConfigCopy().AerospikeClusters, "c1")
 }
 
 // commitWriteContext matches the context the persist step runs on: alive although the request
@@ -288,7 +286,7 @@ func TestService_UpdateConfig_CommitOutlivesRequest(t *testing.T) {
 	svc.configurationManager = mockConfigurationManager
 
 	mockConfigApplier := service.NewMockConfigApplier(ctrl)
-	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil)
+	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any())
 	svc.configApplier = mockConfigApplier
 
 	// The client disconnected before the handler reached the commit.
@@ -310,7 +308,7 @@ func TestService_changeBackupConfig_CommitOutlivesRequest(t *testing.T) {
 	svc.configurationManager = mockConfigurationManager
 
 	mockConfigApplier := service.NewMockConfigApplier(ctrl)
-	mockConfigApplier.EXPECT().ApplyNewConfig().Return(nil)
+	mockConfigApplier.EXPECT().ApplyNewConfig(gomock.Any())
 	svc.configApplier = mockConfigApplier
 
 	ctx, cancel := context.WithCancel(t.Context())

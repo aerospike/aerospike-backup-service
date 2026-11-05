@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,7 +27,7 @@ func TestAzureStorageValidate_RejectsPartialAuth(t *testing.T) {
 func TestS3Storage_KeepsSecretAgentWithoutStaticKeys(t *testing.T) {
 	dtoCfg := &Config{
 		SecretAgents: map[string]*SecretAgent{
-			"agent": {ConnectionType: "tcp", Address: "localhost", Port: ptr.Of(Port(3005))},
+			"agent": {ConnectionType: "tcp", Address: "localhost", Port: new(Port(3005))},
 		},
 		Storage: map[string]*Storage{
 			"s3": {S3Storage: &S3Storage{
@@ -56,7 +55,7 @@ func TestS3Storage_KeepsSecretAgentWithStaticKeys(t *testing.T) {
 
 	dtoCfg := &Config{
 		SecretAgents: map[string]*SecretAgent{
-			"agent": {ConnectionType: "tcp", Address: "localhost", Port: ptr.Of(Port(3005))},
+			"agent": {ConnectionType: "tcp", Address: "localhost", Port: new(Port(3005))},
 		},
 		Storage: map[string]*Storage{
 			"s3": {S3Storage: &S3Storage{

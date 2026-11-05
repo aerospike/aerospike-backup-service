@@ -9,7 +9,7 @@ import (
 
 func TestPtr(t *testing.T) {
 	var n int32
-	np := ptr.Of(n)
+	np := new(n)
 	assert.Equal(t, n, *np)
 }
 

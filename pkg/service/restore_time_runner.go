@@ -348,7 +348,7 @@ func prepareNamespaceRestore(
 		slices.Reverse(backups)
 
 		// old values are not important, because they qualify how to handle existing data in db.
-		effectivePolicy.Unique = ptr.Of(true)
+		effectivePolicy.Unique = new(true)
 		effectivePolicy.Replace = nil
 	}
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 )
 
 type jsonObject struct {
@@ -24,6 +25,10 @@ func decodeJSONObject(dec *json.Decoder) (*jsonObject, error) {
 		key, ok := token.(string)
 		if !ok {
 			return nil, fmt.Errorf("expected object key, got %T", token)
+		}
+
+		if _, seen := obj.values[key]; seen {
+			return nil, fmt.Errorf("duplicate key %q at offset %d", key, dec.InputOffset())
 		}
 
 		value, err := decodeJSONValue(dec)
@@ -211,7 +216,16 @@ func (o *jsonObject) removeKey(key string) {
 	delete(o.values, key)
 }
 
+// insertKeyAt places key at index, an index into the current keys. A key that is
+// already present is moved there, so an object never holds the same key twice.
 func (o *jsonObject) insertKeyAt(index int, key string, value any) {
-	o.keys = append(o.keys[:index], append([]string{key}, o.keys[index:]...)...)
+	if existing := o.keyIndex(key); existing >= 0 {
+		o.keys = slices.Delete(o.keys, existing, existing+1)
+		if existing < index {
+			index--
+		}
+	}
+
+	o.keys = slices.Insert(o.keys, index, key)
 	o.values[key] = value
 }

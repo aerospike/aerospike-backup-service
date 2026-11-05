@@ -1,7 +1,7 @@
 # Installation
 
-This guide covers running Aerospike Backup Service (ABS) as a binary, in Docker, as a systemd service, and
-building it from source. For the fastest path to a running instance, see the
+This guide covers running Aerospike Backup Service (ABS) as a binary, in Docker, on Kubernetes, as a systemd
+service, and building it from source. For the fastest path to a running instance, see the
 [quickstart](../README.md#quickstart) in the main README.
 
 ## Run
@@ -46,7 +46,7 @@ In this case, you could have a `remote_config.yaml` file containing S3 details:
 s3-storage:
   bucket: as-backup-bucket
   path: config.yml
-  s3-region: eu-central-1
+  s3-region: us-east-1
 ```
 <!-- /tag -->
 
@@ -66,6 +66,19 @@ docker run -d -p 8080:8080 -v $(pwd)/config.yml:/etc/aerospike-backup-service/ae
 
 See the [Docker Compose guide](../build/docker-compose/README.md) for a full local stack, including Aerospike and
 MinIO containers.
+
+#### Kubernetes (Helm)
+
+Install with the Helm chart from Aerospike's JFrog Artifactory, passing the ABS configuration under
+`backupServiceConfig` in a values file:
+
+```bash
+helm repo add aerospike https://aerospike.jfrog.io/artifactory/api/helm/database-helm-prod-public-local
+helm install abs aerospike/aerospike-backup-service --namespace aerospike --create-namespace -f abs-values.yaml
+```
+
+See the [chart README](../helm/aerospike-backup-service/README.md) for the values reference, Secrets and cloud
+credentials, persistent local storage, monitoring, and why it runs one pod per release.
 
 #### Service
 
@@ -103,7 +116,7 @@ privileged ports each need a look, and each fails at runtime rather than at star
 
 ### Prerequisites
 
-- Go <!-- tag GoVersion -->1.25.13<!-- /tag -->
+- Go <!-- tag GoVersion -->1.26.10<!-- /tag -->
 
 ### Build the service
 
@@ -134,6 +147,6 @@ IMAGE_TAG="<tag>" make docker-build
 ### Build Linux packages
 
 Run `make packages`.
-This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`linux/arm64`) with respective `sha256`
-checksum file in the `build/target` directory.
+This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`linux/arm64`) in the `build/target`
+directory. Run `make checksums` afterwards to write a `.sha256` file next to each package.
 See the quick [guide](../build/package/README.md) on how to get started with the Linux packages.

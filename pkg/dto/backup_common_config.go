@@ -22,7 +22,7 @@ type BackupCommonConfig struct {
 	// Prefer canonical Area/Location names: legacy aliases such as EST resolve as
 	// fixed UTC-5 with no DST, which is rarely what "Eastern Time" is meant to be.
 	// Changing this service-level default requires a restart.
-	ScheduleTimezone ScheduleTimezone `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"` //nolint:lll
+	ScheduleTimezone ScheduleTimezone `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" default:"UTC" example:"America/New_York" extensions:"x-nullable"` //nolint:lll
 }
 
 // Validate validates the backup subsection configuration.

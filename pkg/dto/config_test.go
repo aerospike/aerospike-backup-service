@@ -7,7 +7,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,14 +19,14 @@ func validConfig() *Config {
 				SourceCluster: "cluster1",
 				BackupPolicy:  "policy1",
 				Storage:       "storage1",
-				Namespaces:    ptr.Of([]NamespaceName{"ns1"}),
+				Namespaces:    new([]NamespaceName{"ns1"}),
 				IntervalCron:  "* * * * * *",
 			},
 			"routine2": {
 				SourceCluster: "cluster2",
 				BackupPolicy:  "policy2",
 				Storage:       "storage2",
-				Namespaces:    ptr.Of([]NamespaceName{"ns2"}),
+				Namespaces:    new([]NamespaceName{"ns2"}),
 				IntervalCron:  "* * * * * *",
 			},
 		},

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -33,7 +32,7 @@ func TestResolve(t *testing.T) {
 			credentials: &model.Credentials{
 				PasswordPath: passwordPath,
 			},
-			expectedPassword: ptr.Of("password"),
+			expectedPassword: new("password"),
 			expectedErr:      false,
 		},
 		{
@@ -42,7 +41,7 @@ func TestResolve(t *testing.T) {
 			credentials: &model.Credentials{
 				PasswordPath: passwordPath,
 			},
-			expectedPassword: ptr.Of("password"),
+			expectedPassword: new("password"),
 			expectedErr:      false,
 		},
 		{
@@ -51,7 +50,7 @@ func TestResolve(t *testing.T) {
 			credentials: &model.Credentials{
 				PasswordPath: passwordPath,
 			},
-			expectedPassword: ptr.Of("password"),
+			expectedPassword: new("password"),
 			expectedErr:      false,
 		},
 		{
@@ -82,7 +81,7 @@ func TestResolve(t *testing.T) {
 			credentials: &model.Credentials{
 				Password: "plain",
 			},
-			expectedPassword: ptr.Of("plain"),
+			expectedPassword: new("plain"),
 			expectedErr:      false,
 		},
 	}

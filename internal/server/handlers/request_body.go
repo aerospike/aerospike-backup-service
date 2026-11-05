@@ -57,9 +57,9 @@ func decodeBodyWith[T any](w http.ResponseWriter, r *http.Request, read dtoFromR
 
 // decodeBody decodes the request body into a T without validating it. Use decodeBodyValidated
 // unless T cannot be validated as it arrives: dto.Config is the only such payload, because its
-// Validate must run after the handler merges stored secrets into the incoming document. A
-// single-entity payload also needs that merge, but gets it in changeBackupConfig once the entity
-// sits in the surrounding config.
+// Validate must run after changeBackupConfig merges stored secrets into the incoming document.
+// A single-entity payload is validated on its own here and again, merged, as part of the whole
+// configuration there.
 func decodeBody[T any](w http.ResponseWriter, r *http.Request) (*T, bool) {
 	return decodeBodyWith(w, r, dto.NewFromReader[T])
 }

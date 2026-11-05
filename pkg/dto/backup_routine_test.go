@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -336,10 +335,10 @@ func TestBackupRoutine_ToModel_ParallelExceedsClusterMax(t *testing.T) {
 
 	config := &model.BackupConfig{
 		BackupPolicies: map[string]*model.BackupPolicy{
-			"policy1": {Parallel: ptr.Of(8)},
+			"policy1": {Parallel: new(8)},
 		},
 		AerospikeClusters: map[string]*model.AerospikeCluster{
-			"cluster1": {MaxParallelScans: ptr.Of(4)},
+			"cluster1": {MaxParallelScans: new(4)},
 		},
 		Storage: map[string]model.Storage{
 			"storage1": &model.S3Storage{},
@@ -360,10 +359,10 @@ func TestBackupRoutine_ToModel_ParallelWithinClusterMax(t *testing.T) {
 
 	config := &model.BackupConfig{
 		BackupPolicies: map[string]*model.BackupPolicy{
-			"policy1": {Parallel: ptr.Of(4)},
+			"policy1": {Parallel: new(4)},
 		},
 		AerospikeClusters: map[string]*model.AerospikeCluster{
-			"cluster1": {MaxParallelScans: ptr.Of(8)},
+			"cluster1": {MaxParallelScans: new(8)},
 		},
 		Storage: map[string]model.Storage{
 			"storage1": &model.S3Storage{},
@@ -384,10 +383,10 @@ func TestBackupRoutine_ToModel_ParallelEqualsClusterMax(t *testing.T) {
 
 	config := &model.BackupConfig{
 		BackupPolicies: map[string]*model.BackupPolicy{
-			"policy1": {Parallel: ptr.Of(4)},
+			"policy1": {Parallel: new(4)},
 		},
 		AerospikeClusters: map[string]*model.AerospikeCluster{
-			"cluster1": {MaxParallelScans: ptr.Of(4)},
+			"cluster1": {MaxParallelScans: new(4)},
 		},
 		Storage: map[string]model.Storage{
 			"storage1": &model.S3Storage{},
@@ -408,7 +407,7 @@ func TestBackupRoutine_ToModel_ParallelUncheckedWhenClusterMaxUnset(t *testing.T
 
 	config := &model.BackupConfig{
 		BackupPolicies: map[string]*model.BackupPolicy{
-			"policy1": {Parallel: ptr.Of(100)},
+			"policy1": {Parallel: new(100)},
 		},
 		AerospikeClusters: map[string]*model.AerospikeCluster{
 			"cluster1": {},
@@ -435,7 +434,7 @@ func TestBackupRoutine_ToModel_ParallelUncheckedWhenPolicyParallelUnset(t *testi
 			"policy1": {},
 		},
 		AerospikeClusters: map[string]*model.AerospikeCluster{
-			"cluster1": {MaxParallelScans: ptr.Of(4)},
+			"cluster1": {MaxParallelScans: new(4)},
 		},
 		Storage: map[string]model.Storage{
 			"storage1": &model.S3Storage{},
@@ -488,6 +487,48 @@ func TestBackupRoutine_Validate_FilterExpressionWithMultipleSets(t *testing.T) {
 	err := r.Validate()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "filter-exp cannot be used when backing up multiple sets")
+}
+
+func TestBackupRoutine_Validate_Cron(t *testing.T) {
+	tests := []struct {
+		name      string
+		full      string
+		incr      string
+		wantError string
+	}{
+		{name: "fires again", full: "0 0 * * * *", incr: "0 */10 * * * *"},
+		{name: "unparseable full", full: "cron", wantError: "backup interval string 'cron' invalid"},
+		{
+			name:      "full in a past year",
+			full:      "0 0 0 1 1 * 2020",
+			wantError: "backup interval string '0 0 0 1 1 * 2020' invalid",
+		},
+		{
+			name:      "incremental in a past year",
+			full:      "0 0 * * * *",
+			incr:      "0 0 0 1 1 * 2020",
+			wantError: "incremental backup interval string '0 0 0 1 1 * 2020' invalid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &BackupRoutine{
+				SourceCluster:    "cluster1",
+				Storage:          "storage1",
+				IntervalCron:     tt.full,
+				IncrIntervalCron: tt.incr,
+				Namespaces:       &[]NamespaceName{"ns1"},
+			}
+
+			err := r.Validate()
+			if tt.wantError == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantError)
+		})
+	}
 }
 
 func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
@@ -543,13 +584,13 @@ func TestValidateFileLimit(t *testing.T) {
 	}{
 		{
 			name:    "nil storage returns nil",
-			policy:  &model.BackupPolicy{FileLimit: ptr.Of(100 * 1024 * 1024)},
+			policy:  &model.BackupPolicy{FileLimit: new(100 * 1024 * 1024)},
 			storage: nil,
 		},
 		{
 			name:    "nil policy returns nil",
 			policy:  nil,
-			storage: &mockStorage{partSize: ptr.Of(100 * 1024 * 1024)},
+			storage: &mockStorage{partSize: new(100 * 1024 * 1024)},
 		},
 		{
 			name:    "nil file limit defaults to 250MB, nil part size defaults to 50MB",
@@ -560,50 +601,50 @@ func TestValidateFileLimit(t *testing.T) {
 		{
 			name:    "nil file limit defaults to 250MB with explicit part size",
 			policy:  &model.BackupPolicy{FileLimit: nil},
-			storage: &mockStorage{partSize: ptr.Of(100 * 1024 * 1024)},
+			storage: &mockStorage{partSize: new(100 * 1024 * 1024)},
 			// fileLimit = 250MB, chunks = ceil(250MB/100) = 2621440
 		},
 		{
 			name:    "valid: single chunk",
-			policy:  &model.BackupPolicy{FileLimit: ptr.Of(1)},
-			storage: &mockStorage{partSize: ptr.Of(defaultPartSize)},
+			policy:  &model.BackupPolicy{FileLimit: new(1)},
+			storage: &mockStorage{partSize: new(defaultPartSize)},
 			// fileLimit = 1MB, partSize = 50MB, chunks = 1
 		},
 		{
 			name:    "valid: exact chunk boundary",
-			policy:  &model.BackupPolicy{FileLimit: ptr.Of(500)},
-			storage: &mockStorage{partSize: ptr.Of(defaultPartSize)},
+			policy:  &model.BackupPolicy{FileLimit: new(500)},
+			storage: &mockStorage{partSize: new(defaultPartSize)},
 			// fileLimit = 500MB, partSize = 50MB, chunks = 10
 		},
 		{
 			name:    "valid: non-divisible rounds up",
-			policy:  &model.BackupPolicy{FileLimit: ptr.Of(51)},
-			storage: &mockStorage{partSize: ptr.Of(defaultPartSize)},
+			policy:  &model.BackupPolicy{FileLimit: new(51)},
+			storage: &mockStorage{partSize: new(defaultPartSize)},
 			// fileLimit = 51MB, partSize = 50MB, chunks = ceil(51MB/50MB) = 2
 		},
 		{
 			name:    "valid: just below max chunks",
-			policy:  &model.BackupPolicy{FileLimit: ptr.Of(maxChunks - 1)},
-			storage: &mockStorage{partSize: ptr.Of(1 * 1024 * 1024)},
+			policy:  &model.BackupPolicy{FileLimit: new(maxChunks - 1)},
+			storage: &mockStorage{partSize: new(1 * 1024 * 1024)},
 			// fileLimit = 9999MB, partSize = 1MB, chunks = 9999
 		},
 		{
 			name:    "invalid: exactly max chunks",
-			policy:  &model.BackupPolicy{FileLimit: ptr.Of(maxChunks)},
-			storage: &mockStorage{partSize: ptr.Of(1 * 1024 * 1024)},
+			policy:  &model.BackupPolicy{FileLimit: new(maxChunks)},
+			storage: &mockStorage{partSize: new(1 * 1024 * 1024)},
 			// fileLimit = 10000MB, partSize = 1MB, chunks = 10000
 			wantErr: "exceeds maximum of 10000",
 		},
 		{
 			name:    "invalid: exceeds max chunks",
-			policy:  &model.BackupPolicy{FileLimit: ptr.Of(maxChunks + 1)},
-			storage: &mockStorage{partSize: ptr.Of(1 * 1024 * 1024)},
+			policy:  &model.BackupPolicy{FileLimit: new(maxChunks + 1)},
+			storage: &mockStorage{partSize: new(1 * 1024 * 1024)},
 			// fileLimit = 10001MB, partSize = 1MB, chunks = 10001
 			wantErr: "exceeds maximum of 10000",
 		},
 		{
 			name:    "invalid: nil part size defaults to 50MB, file limit exceeds max chunks",
-			policy:  &model.BackupPolicy{FileLimit: ptr.Of(maxChunks * 50)},
+			policy:  &model.BackupPolicy{FileLimit: new(maxChunks * 50)},
 			storage: &mockStorage{partSize: nil},
 			// fileLimit = 500000MB, partSize = 50MB, chunks = 10000
 			wantErr: "exceeds maximum of 10000",

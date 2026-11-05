@@ -211,6 +211,6 @@ func checkGcpConnectivity(ctx context.Context, client gcp.Client, bucket string)
 // to, say, a network error): the server understood the request enough to route it, but has
 // no handler for it.
 func isNotImplemented(err error) bool {
-	var apiErr *googleapi.Error
-	return errors.As(err, &apiErr) && apiErr.Code == http.StatusNotFound
+	apiErr, ok := errors.AsType[*googleapi.Error](err)
+	return ok && apiErr.Code == http.StatusNotFound
 }

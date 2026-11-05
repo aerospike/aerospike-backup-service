@@ -18,10 +18,6 @@ const (
 	// silently relax the required-path check on whatever field it reaches.
 	ValidationAllowEmpty ValidationOptions = 1 << iota
 
-	// ValidationWithSecretAgent enables secret-agent reference validation for secret fields on DTOs
-	// that do not embed SecretAgentConfig (for example EncryptionPolicy and TLS).
-	ValidationWithSecretAgent
-
 	// ValidationWithTLS requires tls-name on seed nodes when the cluster has a TLS block configured.
 	// Set by AerospikeCluster when validating SeedNode entries.
 	ValidationWithTLS

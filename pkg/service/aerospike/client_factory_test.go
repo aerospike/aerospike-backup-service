@@ -17,7 +17,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -211,12 +210,12 @@ func TestClientPolicyWiresCredentialsAndConnectionSettings(t *testing.T) {
 			AuthMode: model.AuthModeExternal,
 		},
 		ConnTimeout:          &connTimeout,
-		UseServicesAlternate: ptr.Of(true),
+		UseServicesAlternate: new(true),
 		PreferRacks:          []int{2, 1},
 	}
 
 	factory := newTestClientFactory(t, secrets.NewMockClusterTLSResolver(gomock.NewController(t)))
-	factory.passwordResolver = staticPasswordResolver{password: ptr.Of("test-password")}
+	factory.passwordResolver = staticPasswordResolver{password: new("test-password")}
 
 	policy, err := factory.clientPolicy(t.Context(), cluster)
 	require.NoError(t, err)

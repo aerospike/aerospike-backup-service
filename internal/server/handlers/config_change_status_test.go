@@ -112,7 +112,7 @@ func TestConfigChangeStatusCodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := newServiceWithNamespaceValidator(t)
+			svc := setupTestService(t)
 			entities := addValidBackupConfig(svc)
 
 			req := httptest.NewRequestWithContext(
@@ -146,7 +146,7 @@ func TestConfigChangeRejectsBlankName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := newServiceWithNamespaceValidator(t)
+			svc := setupTestService(t)
 			entities := addValidBackupConfig(svc)
 
 			req := httptest.NewRequestWithContext(

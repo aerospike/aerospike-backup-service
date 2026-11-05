@@ -15,7 +15,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 	azure "github.com/aerospike/backup-go/io/storage/azure/blob"
 	"github.com/aerospike/backup-go/io/storage/options"
@@ -210,7 +209,7 @@ func checkAzureConnectivity(ctx context.Context, client *azblob.Client, containe
 	}
 
 	_, err = cc.NewListBlobsFlatPager(&azblob.ListBlobsFlatOptions{
-		MaxResults: ptr.Of(int32(1)),
+		MaxResults: new(int32(1)),
 	}).NextPage(ctx)
 	if err != nil {
 		return fmt.Errorf("azure blob storage read permission check failed: %w", err)

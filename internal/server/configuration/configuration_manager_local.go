@@ -4,28 +4,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"sync"
+	"syscall"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
 // fileConfigurationManager keeps the service configuration in a local file.
 type fileConfigurationManager struct {
 	sync.Mutex
-	FilePath    string
-	nsValidator aerospike.NamespaceValidator
+	FilePath string
 }
 
 var _ Manager = (*fileConfigurationManager)(nil)
 
 // newFileConfigurationManager returns a new fileConfigurationManager.
-func newFileConfigurationManager(path string, nsValidator aerospike.NamespaceValidator) Manager {
-	return &fileConfigurationManager{
-		FilePath:    path,
-		nsValidator: nsValidator,
-	}
+func newFileConfigurationManager(path string) Manager {
+	return &fileConfigurationManager{FilePath: path}
 }
 
 // ReadConfiguration returns a reader for the configuration file.
@@ -44,7 +41,7 @@ func (cm *fileConfigurationManager) Read(ctx context.Context) (*model.Config, er
 	}
 	defer func() { _ = file.Close() }()
 
-	return readConfig(ctx, file, cm.nsValidator)
+	return readConfig(file)
 }
 
 // Write writes the configuration to the given file path.
@@ -62,7 +59,7 @@ func (cm *fileConfigurationManager) Write(ctx context.Context, config *model.Con
 
 	file, err := os.OpenFile(cm.FilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return fmt.Errorf("failed to open file for writing %q: %w", cm.FilePath, err)
+		return fmt.Errorf("failed to open file for writing %q: %w", cm.FilePath, markReadOnly(err))
 	}
 
 	if err := writeConfig(file, config); err != nil {
@@ -76,4 +73,14 @@ func (cm *fileConfigurationManager) Write(ctx context.Context, config *model.Con
 	}
 
 	return nil
+}
+
+// markReadOnly marks a failure to open the file for writing as ErrReadOnly when it is the
+// file system or the file's permissions that refuse the write.
+func markReadOnly(err error) error {
+	if errors.Is(err, syscall.EROFS) || errors.Is(err, fs.ErrPermission) {
+		return fmt.Errorf("%w: %w", ErrReadOnly, err)
+	}
+
+	return err
 }

@@ -3,7 +3,6 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,12 +35,12 @@ func TestRateLimiterConfig_Validate_TpsAndSize(t *testing.T) {
 		cfg     *RateLimiterConfig
 		wantErr string
 	}{
-		{name: "positive", cfg: &RateLimiterConfig{Tps: ptr.Of(1), Size: ptr.Of(1)}},
+		{name: "positive", cfg: &RateLimiterConfig{Tps: new(1), Size: new(1)}},
 		{name: "unset", cfg: &RateLimiterConfig{}},
-		{name: "zero tps", cfg: &RateLimiterConfig{Tps: ptr.Of(0)}, wantErr: `"tps"`},
-		{name: "negative tps", cfg: &RateLimiterConfig{Tps: ptr.Of(-1)}, wantErr: `"tps"`},
-		{name: "zero size", cfg: &RateLimiterConfig{Size: ptr.Of(0)}, wantErr: `"size"`},
-		{name: "negative size", cfg: &RateLimiterConfig{Size: ptr.Of(-1)}, wantErr: `"size"`},
+		{name: "zero tps", cfg: &RateLimiterConfig{Tps: new(0)}, wantErr: `"tps"`},
+		{name: "negative tps", cfg: &RateLimiterConfig{Tps: new(-1)}, wantErr: `"tps"`},
+		{name: "zero size", cfg: &RateLimiterConfig{Size: new(0)}, wantErr: `"size"`},
+		{name: "negative size", cfg: &RateLimiterConfig{Size: new(-1)}, wantErr: `"size"`},
 	}
 
 	for _, tt := range tests {

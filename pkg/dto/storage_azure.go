@@ -81,18 +81,10 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 		return errValidationInvalidValue("min-part-size", *a.MinPartSize, "at least 1MiB")
 	}
 
-	withAgent := a.hasSecretAgent()
-	if err := validateSecret("account-key", a.AccountKey, withAgent); err != nil {
-		return err
-	}
-	if err := validateSecret("tenant-id", a.TenantID, withAgent); err != nil {
-		return err
-	}
-	if err := validateSecret("client-id", a.ClientID, withAgent); err != nil {
-		return err
-	}
-	if err := validateSecret("client-secret", a.ClientSecret, withAgent); err != nil {
-		return err
+	for field, secret := range a.secrets() {
+		if err := validateSecretForm(field, secret); err != nil {
+			return err
+		}
 	}
 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
@@ -105,6 +97,11 @@ func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
 	if err != nil {
 		return nil, err
 	}
+	for field, secret := range a.secrets() {
+		if err := validateSecretAgent(field, secret, agent != nil); err != nil {
+			return nil, err
+		}
+	}
 
 	return &model.AzureStorage{
 		Endpoint:      a.Endpoint,
@@ -115,6 +112,13 @@ func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
 		MinPartSize:   a.MinPartSize,
 		StorageClass:  a.StorageClass.ToModel(),
 	}, nil
+}
+
+// secrets returns the storage's secret fields by name.
+func (a *AzureStorage) secrets() map[string]Secret {
+	return map[string]Secret{
+		"account-key": a.AccountKey, "tenant-id": a.TenantID, "client-id": a.ClientID, "client-secret": a.ClientSecret,
+	}
 }
 
 func getAzureAuth(a *AzureStorage) model.AzureAuth {

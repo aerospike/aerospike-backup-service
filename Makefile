@@ -231,7 +231,7 @@ DOCS_GENERATED := docs/docs.go docs/openapi.json docs/config.schema.json \
 	README.md docs/installation.md docs/configuration.md docs/api-examples.md \
 	docs/architecture.md docs/monitoring.md docs/migration.md docs/security.md \
 	docs/development.md docs/examples/ docs/readme/dto/ docs/metrics.json \
-	test/integration/README.md
+	test/integration/README.md build/package/README.md
 
 # Ensure committed generated docs match the output of docs (no hand-edits, no stale docs).
 .PHONY: docs-check
@@ -260,7 +260,7 @@ pr: tidy mocks-check format lint-fix test docs
 # Both variables are required in one invocation: helm-chart-release reads the VERSION that
 # service-release just wrote, so running them separately leaves Chart.yaml describing a
 # release that does not exist yet.
-#   NEXT_VERSION=v3.7.0 NEXT_HELM_CHART_VERSION=2.1.0 make release
+#   NEXT_VERSION=v3.8.0 NEXT_HELM_CHART_VERSION=3.1.0 make release
 .PHONY: release
 release: service-release helm-chart-release
 

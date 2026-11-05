@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,9 +43,9 @@ func TestResolverNoCache(t *testing.T) {
 	resolver := NewResolver()
 	agent := &model.SecretAgent{
 		Address:        "127.0.0.1",
-		Port:           ptr.Of(model.Port(addr.Port)),
+		Port:           new(model.Port(addr.Port)),
 		ConnectionType: "tcp",
-		Timeout:        ptr.Of(1000),
+		Timeout:        new(1000),
 	}
 
 	result1, err := resolver.Resolve(t.Context(), agent, "secrets:agent:key")
@@ -87,9 +86,9 @@ func TestResolverFailClosed(t *testing.T) {
 	resolver := NewResolver()
 	agent := &model.SecretAgent{
 		Address:        "127.0.0.1",
-		Port:           ptr.Of(model.Port(addr.Port)),
+		Port:           new(model.Port(addr.Port)),
 		ConnectionType: "tcp",
-		Timeout:        ptr.Of(1000),
+		Timeout:        new(1000),
 	}
 
 	result, err := resolver.Resolve(t.Context(), agent, "secrets:agent:key")

@@ -13,7 +13,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -84,7 +83,7 @@ func (j *restoreJob) addTotalRecords(t uint64) {
 func (j *restoreJob) finish(err error, logger *slog.Logger) {
 	j.Lock()
 
-	j.finished = ptr.Of(time.Now().Truncate(time.Millisecond))
+	j.finished = new(time.Now().Truncate(time.Millisecond))
 	j.err = err
 
 	switch {

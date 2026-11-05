@@ -213,9 +213,9 @@ This request restores a backup from a specified path to a designated destination
 
 The `no-generation` parameter allows overwriting of existing keys if set to `true`.
 
-In the `source` section, `path` is the `key` value returned as a response in
-the [Retrieve Backup List](#retrieve-backup-list)
-example.
+`backup-data-path` is the `key` value returned as a response in the [Retrieve Backup List](#retrieve-backup-list)
+example. It is resolved relative to `path` in the `source` section, which is the storage root: the same `path` as in
+the routine's storage.
 
 The `destination` field says where to restore to. It can be any Aerospike cluster.
 

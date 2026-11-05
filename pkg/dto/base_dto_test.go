@@ -24,7 +24,7 @@ func TestConvertModelsToDTO(t *testing.T) {
 func TestConvertModelMapToDTO(t *testing.T) {
 	t.Parallel()
 
-	input := map[string]*int{"a": ptrInt(1), "b": ptrInt(2)}
+	input := map[string]*int{"a": new(1), "b": new(2)}
 	result := ConvertModelMapToDTO(input, func(m *int) *string {
 		s := strings.Repeat("y", *m)
 		return &s
@@ -49,5 +49,3 @@ func TestConvertStorageMapToDTO(t *testing.T) {
 	require.NotNil(t, result["local1"].LocalStorage)
 	assert.Equal(t, "/tmp/backups", string(result["local1"].LocalStorage.Path))
 }
-
-func ptrInt(v int) *int { return &v }

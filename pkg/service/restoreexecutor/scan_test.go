@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,16 +15,16 @@ func TestMakeRestoreConfig(t *testing.T) {
 		Policy: model.RestorePolicy{
 			BinList:            []string{"bin1", "bin2"},
 			SetList:            []string{"set1", "set2"},
-			NoRecords:          ptr.Of(false),
-			NoIndexes:          ptr.Of(false),
-			NoUdfs:             ptr.Of(false),
-			Tps:                ptr.Of(500),
-			Bandwidth:          ptr.Of(int64(1024)),
-			ExtraTTL:           ptr.Of(int64(3600)),
-			Parallel:           ptr.Of(8),
-			BatchSize:          ptr.Of(128),
-			MaxAsyncBatches:    ptr.Of(10),
-			DisableBatchWrites: ptr.Of(true),
+			NoRecords:          new(false),
+			NoIndexes:          new(false),
+			NoUdfs:             new(false),
+			Tps:                new(500),
+			Bandwidth:          new(int64(1024)),
+			ExtraTTL:           new(int64(3600)),
+			Parallel:           new(8),
+			BatchSize:          new(128),
+			MaxAsyncBatches:    new(10),
+			DisableBatchWrites: new(true),
 
 			Namespace: &model.RestoreNamespace{
 				Source:      "ns_source",
@@ -47,10 +46,10 @@ func TestMakeRestoreConfig(t *testing.T) {
 		SecretAgent: &model.SecretAgent{
 			ConnectionType: "tcp",
 			Address:        "127.0.0.1",
-			Port:           ptr.Of(model.Port(1234)),
-			Timeout:        ptr.Of(2000),
+			Port:           new(model.Port(1234)),
+			Timeout:        new(2000),
 			ClientTLS:      model.ClientTLS{CAFile: "ca-cert"},
-			IsBase64:       ptr.Of(true),
+			IsBase64:       new(true),
 		},
 	}
 

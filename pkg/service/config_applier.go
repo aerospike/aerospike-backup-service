@@ -1,20 +1,22 @@
 package service
 
 import (
-	"fmt"
+	"context"
 	"log/slog"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/quartz"
 )
 
-// ConfigApplier reschedules jobs and refreshes backup history for the routines that
-// a configuration change invalidated.
+// ConfigApplier reschedules jobs, checks namespaces and refreshes backup history for the
+// routines that a configuration change invalidated.
 type ConfigApplier interface {
-	// ApplyNewConfig reschedules the jobs of every invalidated routine and queues a
-	// history sync for those that still exist. The sync runs once the registry is started.
-	ApplyNewConfig() error
+	// ApplyNewConfig reschedules the jobs of every invalidated routine, warns about namespaces
+	// its source cluster does not have, and queues a history sync for those that still exist.
+	// The sync runs once the registry is started.
+	ApplyNewConfig(ctx context.Context)
 }
 
 // configApplier applies configuration changes by unscheduling affected cron jobs, rescheduling
@@ -23,6 +25,7 @@ type configApplier struct {
 	mu              sync.Mutex
 	backupScheduler *BackupScheduler
 	registry        BackupStateRegistry
+	nsValidator     aerospike.NamespaceValidator
 	config          *model.Config
 }
 
@@ -32,17 +35,20 @@ var _ ConfigApplier = (*configApplier)(nil)
 func NewConfigApplier(
 	backupScheduler *BackupScheduler,
 	registry BackupStateRegistry,
+	nsValidator aerospike.NamespaceValidator,
 	config *model.Config,
 ) ConfigApplier {
 	return &configApplier{
 		backupScheduler: backupScheduler,
 		registry:        registry,
+		nsValidator:     nsValidator,
 		config:          config,
 	}
 }
 
-// ApplyNewConfig reschedules periodic jobs and rescans backup history for routines marked invalid in config.
-func (a *configApplier) ApplyNewConfig() error {
+// ApplyNewConfig reschedules periodic jobs, checks namespaces and rescans backup history for
+// routines marked invalid in config.
+func (a *configApplier) ApplyNewConfig(ctx context.Context) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -50,7 +56,7 @@ func (a *configApplier) ApplyNewConfig() error {
 	// operate on the same coherent invalidation snapshot.
 	invalidatedRoutineNames := a.config.PopInvalidatedRoutineNames()
 	if len(invalidatedRoutineNames) == 0 {
-		return nil
+		return
 	}
 
 	// Quartz has no "replace these jobs atomically" API; we must do two phases:
@@ -63,15 +69,14 @@ func (a *configApplier) ApplyNewConfig() error {
 	// it should be unscheduled only and skipped for reschedule/rescan.
 	routinesToApply := a.existingRoutines(invalidatedRoutineNames)
 
-	err := a.backupScheduler.ScheduleRoutines(routinesToApply)
-	if err != nil {
-		return fmt.Errorf("failed to schedule periodic backups: %w", err)
-	}
+	a.backupScheduler.ScheduleRoutines(routinesToApply)
+
+	// Advisory: a routine whose cluster lacks a namespace is scheduled all the same and only
+	// warned about, so only the routines that changed are checked, not the whole configuration.
+	a.nsValidator.Validate(ctx, routinesToApply)
 
 	// Scan existing backups only for routines that were invalidated and still exist.
 	a.registry.RequestHistorySync(routineNames(routinesToApply))
-
-	return nil
 }
 
 // clearPeriodicSchedulerJobs deletes only scheduled jobs that correspond to invalidated routines.

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/swaggo/swag"
 	"github.com/swaggo/swag/gen"
 )
@@ -29,6 +30,9 @@ func generateOpenAPI() error {
 		return err
 	}
 	if err := finalizeOpenAPI(openAPIPath, configSchemaPath); err != nil {
+		return err
+	}
+	if err := validateOpenAPI(openAPIPath); err != nil {
 		return err
 	}
 
@@ -59,6 +63,22 @@ func generateSwagger(outputDir string) error {
 func convertSwaggerToOpenAPI(swaggerPath, openAPIPath string) error {
 	if err := runCommand("npx", "--yes", swagger2OpenAPIPackage, swaggerPath, "-o", openAPIPath); err != nil {
 		return fmt.Errorf("convert swagger to OpenAPI: %w", err)
+	}
+
+	return nil
+}
+
+// validateOpenAPI fails generation when the published spec is not a valid
+// OpenAPI 3 document: unresolved refs, or schemas, parameters, examples and
+// defaults that violate the specification.
+func validateOpenAPI(openAPIPath string) error {
+	loader := openapi3.NewLoader()
+	doc, err := loader.LoadFromFile(openAPIPath)
+	if err != nil {
+		return fmt.Errorf("load OpenAPI: %w", err)
+	}
+	if err := doc.Validate(loader.Context, openapi3.EnableSchemaDefaultsValidation()); err != nil {
+		return fmt.Errorf("validate OpenAPI: %w", err)
 	}
 
 	return nil
@@ -190,10 +210,15 @@ func newConfigSchema(openAPI *jsonObject) (*jsonObject, error) {
 	}, nil
 }
 
+// writeJSONObject writes doc to path.
 func writeJSONObject(path string, doc *jsonObject, indent string) error {
 	data, err := marshalJSONObjectIndent(doc, indent)
 	if err != nil {
 		return err
+	}
+	// parse the output to double-check it's valid.
+	if _, err := parseJSONObject(data); err != nil {
+		return fmt.Errorf("generated %s is not valid JSON: %w", path, err)
 	}
 
 	return os.WriteFile(path, data, 0600)

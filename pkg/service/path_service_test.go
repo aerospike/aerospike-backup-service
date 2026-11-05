@@ -89,7 +89,7 @@ func TestExtractBackupDirFromKey(t *testing.T) {
 	backupType := model.BackupTypeFull
 	now := time.Now()
 
-	for _, format := range []*model.TimestampFormat{nil, ptr.Of(model.TimestampFormatEU)} {
+	for _, format := range []*model.TimestampFormat{nil, new(model.TimestampFormatEU)} {
 		pathService := NewPathService(format)
 
 		t.Run(string(ptr.ValueOrZero(format)), func(t *testing.T) {

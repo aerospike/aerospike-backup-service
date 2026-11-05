@@ -9,7 +9,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -78,13 +77,13 @@ func (s *Suite) startSecretAgentWithKeys(secrets map[string]string) *dto.SecretA
 	return &dto.SecretAgent{
 		ConnectionType: "tcp",
 		Address:        host,
-		Port:           ptr.Of(dto.Port(mapped.Num())),
-		Timeout:        ptr.Of(5000),
+		Port:           new(dto.Port(mapped.Num())),
+		Timeout:        new(5000),
 		// The file backend stores values base64-encoded and returns them as stored,
 		// so the client has to decode. Without this the caller gets the encoded
 		// string: harmless for an encryption key that is only compared to itself,
 		// but a cluster password fails with INVALID_CREDENTIAL.
-		IsBase64: ptr.Of(true),
+		IsBase64: new(true),
 	}
 }
 

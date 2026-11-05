@@ -17,6 +17,8 @@ import (
 // @Success     201
 // @Failure     400 {string} string
 // @Failure     409 {string} string "A storage with that name already exists"
+// @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
@@ -80,6 +82,8 @@ func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 // @Failure     404 {string} string "The specified storage was not found"
+// @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
@@ -108,6 +112,8 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 // @Failure     404 {string} string "The specified storage was not found"
 // @Failure     409 {string} string "The storage is still used by a backup routine"
+// @Failure     503 {string} string "The configuration could not be persisted"
+// @Failure     405 {string} string "The configuration source is read-only"
 func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
