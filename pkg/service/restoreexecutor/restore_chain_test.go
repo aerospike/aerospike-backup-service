@@ -1,9 +1,11 @@
 package restoreexecutor
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -21,7 +23,7 @@ func TestRestoreExecutor_Run_ChainInGivenOrder(t *testing.T) {
 	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
 		testChainRequest("full"), testChainRequest("incr1"), testChainRequest("incr2"))
 	require.NoError(t, err)
-	require.NoError(t, chain.Wait(t.Context()))
+	require.NoError(t, waitChain(t, chain))
 	assert.Equal(t, uint64(3), chain.GetStats().GetRecordsInserted())
 }
 
@@ -75,7 +77,7 @@ func TestRestoreExecutor_Run_ChainStopsAtFirstFailure(t *testing.T) {
 	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
 		testChainRequest("full"), testChainRequest("incr1"))
 	require.NoError(t, err)
-	err = chain.Wait(t.Context())
+	err = waitChain(t, chain)
 	require.ErrorIs(t, err, wantErr)
 	assert.ErrorContains(t, err, "backup at full")
 }
@@ -100,7 +102,7 @@ func TestRestoreExecutor_Run_LaterStartFailureFromWait(t *testing.T) {
 	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
 		testChainRequest("full"), testChainRequest("incr1"))
 	require.NoError(t, err)
-	require.ErrorIs(t, chain.Wait(t.Context()), wantErr)
+	require.ErrorIs(t, waitChain(t, chain), wantErr)
 }
 
 func testChainRequest(path string) *model.RestoreRequest {
@@ -117,4 +119,15 @@ func restoreStatsInserted(n int) *models.RestoreStats {
 	}
 
 	return stats
+}
+
+// waitChain waits for the chain with a deadline: a failed expectation in its background
+// goroutine ends that goroutine without finishing the chain, which would otherwise hang Wait.
+func waitChain(t *testing.T, chain RestoreHandler) error {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	return chain.Wait(ctx)
 }

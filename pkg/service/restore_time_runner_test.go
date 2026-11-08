@@ -80,6 +80,63 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
 }
 
+// Empty backups (no files) are left out of the chain: an empty full backup leaves the chain to
+// the incremental after it, and a chain of only empty backups restores nothing and succeeds.
+func TestRestoreByTime_SkipsEmptyBackups(t *testing.T) {
+	tests := []struct {
+		name          string
+		fullFiles     uint64
+		incrFiles     uint64
+		expectRestore []string
+	}{
+		{name: "empty full backup", fullFiles: 0, incrFiles: 1, expectRestore: []string{"incr"}},
+		{name: "only empty backups", fullFiles: 0, incrFiles: 0, expectRestore: nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := setupTestRestoreEnv(t)
+
+			now := time.Now()
+			fullCreated := now.Add(-2 * time.Hour)
+			requestTime := now.Add(-1 * time.Hour)
+
+			request := &model.RestoreTimestampRequest{
+				RoutineName:       "test-routine",
+				Time:              requestTime,
+				DisableReordering: true,
+			}
+			backup := func(key string, created time.Time, files uint64) model.BackupDetails {
+				return model.BackupDetails{
+					BackupMetadata: model.BackupMetadata{Created: created, Namespace: "ns1", FileCount: files},
+					Key:            key,
+					Storage:        &model.LocalStorage{},
+				}
+			}
+
+			env.restoreValidator.EXPECT().
+				ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			env.mockBackupReader.EXPECT().
+				GetBackups(gomock.Any(), fullBackupFilterMatcher{toTime: requestTime}).
+				Return([]model.BackupDetails{backup("full", fullCreated, tt.fullFiles)}, nil)
+			env.mockBackupReader.EXPECT().
+				GetBackups(gomock.Any(), incrementalFilterMatcher{fromTime: fullCreated, toTime: requestTime}).
+				Return([]model.BackupDetails{backup("incr", fullCreated.Add(time.Minute), tt.incrFiles)}, nil)
+
+			client := env.expectSuccessfulClientInteraction(t)
+			for _, path := range tt.expectRestore {
+				env.mockRestore.EXPECT().
+					Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: path}).
+					Return(env.expectDefaultRestoreHandler(), nil)
+			}
+
+			jobStatus, err := waitForRestore(t, env.restoreManager, env.restoreManager.RestoreByTime(request))
+			require.NoError(t, err)
+			assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
+		})
+	}
+}
+
 func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
 	env := setupTestRestoreEnv(t)
 

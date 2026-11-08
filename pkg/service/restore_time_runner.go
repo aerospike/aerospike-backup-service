@@ -423,7 +423,7 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 
 	handler, err := r.restoreService.Run(ctx, client, logger, requests[0], requests[1:]...)
 	if err != nil {
-		return fmt.Errorf("failed to start restore of %d backups: %w", len(requests), err)
+		return err
 	}
 
 	r.restoreJobs.addHandler(jobID, handler)

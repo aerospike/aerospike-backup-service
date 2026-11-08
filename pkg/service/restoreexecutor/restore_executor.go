@@ -50,34 +50,20 @@ func (r *RestoreExecutor) Run(
 	first *model.RestoreRequest,
 	rest ...*model.RestoreRequest,
 ) (RestoreHandler, error) {
-	handler, err := r.startRestore(ctx, client, stepLogger(logger, first, 1, 1+len(rest)), first)
+	steps := 1 + len(rest)
+
+	step, err := r.start(ctx, client, logger.With(stepAttr(1, steps)), first)
 	if err != nil {
 		return nil, err
 	}
 
-	chain := newSequentialRestoreHandler(handler)
+	chain := newSequentialRestoreHandler(step.handler)
 
 	go func() {
-		chain.finish(r.runRest(ctx, client, logger, restoreStep{first, handler}, rest, chain))
+		chain.finish(r.runRest(ctx, client, logger, step, rest, chain))
 	}()
 
 	return chain, nil
-}
-
-// restoreStep is a restore that has started.
-type restoreStep struct {
-	request *model.RestoreRequest
-	handler RestoreHandler
-}
-
-// wait waits for the restore to finish. A failure names the backup, which the restore's own
-// error may not.
-func (s restoreStep) wait(ctx context.Context) error {
-	if err := s.handler.Wait(ctx); err != nil {
-		return fmt.Errorf("failed to restore backup at %s: %w", s.request.BackupDataPath, err)
-	}
-
-	return nil
 }
 
 // runRest waits for the first restore, then restores the rest one after another, stopping at
@@ -96,14 +82,14 @@ func (r *RestoreExecutor) runRest(
 
 	steps := 1 + len(rest)
 	for i, request := range rest {
-		handler, err := r.startRestore(ctx, client, stepLogger(logger, request, i+2, steps), request)
+		step, err := r.start(ctx, client, logger.With(stepAttr(i+2, steps)), request)
 		if err != nil {
 			return err
 		}
 
-		chain.add(handler)
+		chain.add(step.handler)
 
-		if err := (restoreStep{request, handler}).wait(ctx); err != nil {
+		if err := step.wait(ctx); err != nil {
 			return err
 		}
 	}
@@ -111,27 +97,42 @@ func (r *RestoreExecutor) runRest(
 	return nil
 }
 
-func (r *RestoreExecutor) startRestore(
+// restoreStep is a restore of one backup that has started.
+type restoreStep struct {
+	request *model.RestoreRequest
+	handler RestoreHandler
+}
+
+// start logs and starts the restore of one backup. Only the start of a step is logged: the
+// caller logs the outcome of the whole sequence once.
+func (r *RestoreExecutor) start(
 	ctx context.Context,
 	client aerospike.Client,
 	logger *slog.Logger,
 	request *model.RestoreRequest,
-) (RestoreHandler, error) {
-	logger.Info("Start restoring")
+) (restoreStep, error) {
+	logger.Info("Start restoring", slog.String("path", request.BackupDataPath))
 
 	handler, err := runScanRestore(ctx, client, request, r.operations)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start restore from backup at %s: %w", request.BackupDataPath, err)
+		return restoreStep{}, fmt.Errorf("failed to start restore from backup at %s: %w",
+			request.BackupDataPath, err)
 	}
 
-	return handler, nil
+	return restoreStep{request: request, handler: handler}, nil
 }
 
-// stepLogger returns the logger of one restore of a sequence, which logs only its start: the
-// caller logs the outcome of the whole sequence once.
-func stepLogger(logger *slog.Logger, request *model.RestoreRequest, step, steps int) *slog.Logger {
-	return logger.With(
-		slog.String("step", fmt.Sprintf("%d/%d", step, steps)),
-		slog.String("path", request.BackupDataPath),
-	)
+// wait waits for the restore to finish. A failure names the backup, which the restore's own
+// error may not.
+func (s restoreStep) wait(ctx context.Context) error {
+	if err := s.handler.Wait(ctx); err != nil {
+		return fmt.Errorf("failed to restore backup at %s: %w", s.request.BackupDataPath, err)
+	}
+
+	return nil
+}
+
+// stepAttr is the position of a restore in its sequence, as "i/n".
+func stepAttr(step, steps int) slog.Attr {
+	return slog.String("step", fmt.Sprintf("%d/%d", step, steps))
 }

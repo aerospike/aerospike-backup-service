@@ -91,9 +91,8 @@ func (r *pathRestoreRunner) executeRestore(
 
 	handler, err := r.restoreService.Run(ctx, client, logger, request)
 	if err != nil {
-		return fmt.Errorf("failed to start restore operation: %w", err)
+		return err
 	}
-	logger.Info("Restoring backup", slog.Any("backup", backups))
 
 	r.restoreJobs.addTotalRecords(jobID, recordsInBackup(backups))
 	r.restoreJobs.addHandler(jobID, handler)

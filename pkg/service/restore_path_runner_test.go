@@ -252,7 +252,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.RestoreFailure, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error.Error(), "failed to start restore operation")
+	assert.ErrorIs(t, jobStatus.Error, restoreErr)
 }
 
 func TestCancelRestore_RaceCondition(t *testing.T) {
