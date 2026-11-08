@@ -58,8 +58,18 @@ func (m incrementalFilterMatcher) String() string {
 type restoreRequestPathMatcher struct{ expectedPath string }
 
 func (m restoreRequestPathMatcher) Matches(x any) bool {
+	_, ok := matchRestoreRequest(x, m.expectedPath)
+	return ok
+}
+
+// matchRestoreRequest returns x as a restore request if it is one for the backup at path.
+func matchRestoreRequest(x any, path string) (*model.RestoreRequest, bool) {
 	req, ok := x.(*model.RestoreRequest)
-	return ok && req != nil && req.BackupDataPath == m.expectedPath
+	if !ok || req == nil || req.BackupDataPath != path {
+		return nil, false
+	}
+
+	return req, true
 }
 
 func (m restoreRequestPathMatcher) String() string {
@@ -74,9 +84,8 @@ type restoreRequestCompressionMatcher struct {
 }
 
 func (m restoreRequestCompressionMatcher) Matches(x any) bool {
-	req, ok := x.(*model.RestoreRequest)
-	return ok && req != nil && req.BackupDataPath == m.expectedPath &&
-		req.Policy.CompressionPolicy != nil && req.Policy.CompressionPolicy.Mode == m.expectedMode
+	req, ok := matchRestoreRequest(x, m.expectedPath)
+	return ok && req.Policy.CompressionPolicy != nil && req.Policy.CompressionPolicy.Mode == m.expectedMode
 }
 
 func (m restoreRequestCompressionMatcher) String() string {
@@ -91,9 +100,8 @@ type restoreRequestUniqueMatcher struct {
 }
 
 func (m restoreRequestUniqueMatcher) Matches(x any) bool {
-	req, ok := x.(*model.RestoreRequest)
-	return ok && req != nil && req.BackupDataPath == m.expectedPath &&
-		req.Policy.IsUniqueOrDefault() == m.expectedUnique
+	req, ok := matchRestoreRequest(x, m.expectedPath)
+	return ok && req.Policy.IsUniqueOrDefault() == m.expectedUnique
 }
 
 func (m restoreRequestUniqueMatcher) String() string {

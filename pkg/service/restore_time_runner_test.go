@@ -86,6 +86,7 @@ func TestRestoreByTime_SkipsEmptyBackups(t *testing.T) {
 		incrFiles     uint64
 		expectRestore []string
 	}{
+		{name: "no empty backups", fullFiles: 1, incrFiles: 1, expectRestore: []string{"full", "incr"}},
 		{name: "empty full backup", fullFiles: 0, incrFiles: 1, expectRestore: []string{"incr"}},
 		{name: "only empty backups", fullFiles: 0, incrFiles: 0, expectRestore: nil},
 	}
@@ -103,22 +104,14 @@ func TestRestoreByTime_SkipsEmptyBackups(t *testing.T) {
 				Time:              requestTime,
 				DisableReordering: true,
 			}
-			backup := func(key string, created time.Time, files uint64) model.BackupDetails {
-				return model.BackupDetails{
-					BackupMetadata: model.BackupMetadata{Created: created, Namespace: "ns1", FileCount: files},
-					Key:            key,
-					Storage:        &model.LocalStorage{},
-				}
-			}
-
 			env.restoreValidator.EXPECT().
 				ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			env.mockBackupReader.EXPECT().
 				GetBackups(gomock.Any(), fullBackupFilterMatcher{toTime: requestTime}).
-				Return([]model.BackupDetails{backup("full", fullCreated, tt.fullFiles)}, nil)
+				Return([]model.BackupDetails{testBackup("full", fullCreated, tt.fullFiles)}, nil)
 			env.mockBackupReader.EXPECT().
 				GetBackups(gomock.Any(), incrementalFilterMatcher{fromTime: fullCreated, toTime: requestTime}).
-				Return([]model.BackupDetails{backup("incr", fullCreated.Add(time.Minute), tt.incrFiles)}, nil)
+				Return([]model.BackupDetails{testBackup("incr", fullCreated.Add(time.Minute), tt.incrFiles)}, nil)
 
 			client := env.expectSuccessfulClientInteraction(t)
 			if len(tt.expectRestore) > 0 {
@@ -142,10 +135,12 @@ func TestRestoreByTime_SkipsEmptyBackups(t *testing.T) {
 // backup compressed differently do not share one policy.
 func TestRestoreByTime_CompressionPerBackup(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	full, incr, request := expectChainOfTwo(t, env)
-	full.Compression, incr.Compression = model.CompressionModeZSTD, model.CompressionModeNone
-	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{full}, nil)
-	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{incr}, nil)
+	now := time.Now()
+	full := testBackup("full", now.Add(-2*time.Hour), 1)
+	full.Compression = model.CompressionModeZSTD
+	incr := testBackup("incr", now.Add(-time.Hour), 1)
+	incr.Compression = model.CompressionModeNone
+	request := expectChainOfTwo(t, env, full, incr)
 
 	env.mockRestore.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any(),
@@ -161,9 +156,9 @@ func TestRestoreByTime_CompressionPerBackup(t *testing.T) {
 // A chain that fails fails the job with the chain's error.
 func TestRestoreByTime_ChainFailureFailsJob(t *testing.T) {
 	env := setupTestRestoreEnv(t)
-	full, incr, request := expectChainOfTwo(t, env)
-	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{full}, nil)
-	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{incr}, nil)
+	now := time.Now()
+	request := expectChainOfTwo(t, env,
+		testBackup("full", now.Add(-2*time.Hour), 1), testBackup("incr", now.Add(-time.Hour), 1))
 
 	restoreErr := errors.New("failed to restore backup at incr")
 	env.mockRestore.EXPECT().
@@ -176,29 +171,37 @@ func TestRestoreByTime_ChainFailureFailsJob(t *testing.T) {
 	require.ErrorIs(t, jobStatus.Error, restoreErr)
 }
 
-// expectChainOfTwo returns a full and an incremental backup of one namespace and a request to
-// restore them with reordering disabled, and sets the expectations of a restore that passes
-// validation.
+// expectChainOfTwo returns a request to restore, with reordering disabled, the chain of a full and
+// an incremental backup, and sets the expectations of finding that chain and passing validation.
 func expectChainOfTwo(
-	t *testing.T, env *testRestoreEnv,
-) (model.BackupDetails, model.BackupDetails, *model.RestoreTimestampRequest) {
+	t *testing.T, env *testRestoreEnv, full, incr model.BackupDetails,
+) *model.RestoreTimestampRequest {
 	t.Helper()
 
-	now := time.Now()
-	backup := func(key string, created time.Time) model.BackupDetails {
-		return model.BackupDetails{
-			BackupMetadata: model.BackupMetadata{Created: created, Namespace: "ns1", FileCount: 1},
-			Key:            key,
-			Storage:        &model.LocalStorage{},
-		}
+	request := &model.RestoreTimestampRequest{
+		RoutineName: "test-routine", Time: incr.Created.Add(time.Minute), DisableReordering: true,
 	}
 
+	env.mockBackupReader.EXPECT().
+		GetBackups(gomock.Any(), fullBackupFilterMatcher{toTime: request.Time}).
+		Return([]model.BackupDetails{full}, nil)
+	env.mockBackupReader.EXPECT().
+		GetBackups(gomock.Any(), incrementalFilterMatcher{fromTime: full.Created, toTime: request.Time}).
+		Return([]model.BackupDetails{incr}, nil)
 	env.restoreValidator.EXPECT().
 		ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	env.expectSuccessfulClientInteraction(t)
 
-	return backup("full", now.Add(-2*time.Hour)), backup("incr", now.Add(-time.Hour)),
-		&model.RestoreTimestampRequest{RoutineName: "test-routine", Time: now, DisableReordering: true}
+	return request
+}
+
+// testBackup returns the details of a backup of namespace ns1 in local storage.
+func testBackup(key string, created time.Time, files uint64) model.BackupDetails {
+	return model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{Created: created, Namespace: "ns1", FileCount: files},
+		Key:            key,
+		Storage:        &model.LocalStorage{},
+	}
 }
 
 func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
@@ -359,9 +362,11 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 					ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
 					AnyTimes()
-				// Incrementals with the same timestamp as full are skipped, so only full runs.
+				// Incrementals with the same timestamp as full are skipped, so only full runs, with
+				// the backup's compression.
 				env.mockRestore.EXPECT().
-					Run(gomock.Any(), client, gomock.Any(), gomock.Any()).
+					Run(gomock.Any(), client, gomock.Any(),
+						restoreRequestCompressionMatcher{backup.Key, tt.backupCompression}).
 					Return(env.expectDefaultRestoreHandler()).Times(1)
 			} else {
 				env.restoreValidator.EXPECT().
