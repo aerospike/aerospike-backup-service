@@ -48,11 +48,15 @@ RUN addgroup -g 65532 -S abgroup && \
     adduser -S -u 65532 -G abgroup -h /home/absuser absuser && \
     install -d -o absuser -g abgroup -m 0750 /var/log/aerospike-backup-service
 
-COPY --chown=absuser:abgroup --chmod=0755 --from=builder \
+# Numeric IDs (absuser:abgroup above) avoid a name lookup that can drift from the
+# addgroup/adduser line. The binary stays root-owned so the service cannot overwrite
+# its own executable; only the config is owned by absuser, because the service
+# rewrites it when the configuration is updated through the API.
+COPY --chown=0:0 --chmod=0755 --from=builder \
     /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH} \
     /usr/bin/aerospike-backup-service
 
-COPY --chown=absuser:abgroup --from=builder \
+COPY --chown=65532:65532 --from=builder \
     /app/aerospike-backup-service/build/package/config/aerospike-backup-service.yml \
     /etc/aerospike-backup-service/aerospike-backup-service.yml
 

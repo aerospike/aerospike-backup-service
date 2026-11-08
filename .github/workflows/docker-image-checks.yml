@@ -9,6 +9,9 @@ on:
       - main
     paths:
       - Dockerfile
+      - .dockerignore
+      - .gitmodules
+      - Makefile
       - go.mod
       - go.sum
       - build/package/config/**
@@ -17,6 +20,9 @@ on:
   pull_request:
     paths:
       - Dockerfile
+      - .dockerignore
+      - .gitmodules
+      - Makefile
       - go.mod
       - go.sum
       - build/package/config/**
