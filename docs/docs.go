@@ -3466,7 +3466,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "done-records": {
-                    "description": "The number of records that have been successfully done.\nAbsent for a server-side backup.",
+                    "description": "The number of records that have been successfully done.\nZero for a server-side backup.",
                     "type": "integer",
                     "example": 50
                 },
@@ -3503,7 +3503,7 @@ const docTemplate = `{
                     "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "total-records": {
-                    "description": "The total number of records to be processed.\nAbsent for a server-side backup, whose progress the server reports only as a percentage.",
+                    "description": "The total number of records to be processed.\nZero for a server-side backup, whose progress the server reports only as a percentage.",
                     "type": "integer",
                     "example": 100
                 }

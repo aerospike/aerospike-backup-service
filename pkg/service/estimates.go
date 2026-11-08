@@ -20,7 +20,7 @@ func currentBackupStatus(handlers backupexecutor.BackupHandler) *model.RunningJo
 	}
 
 	if reporter, ok := handlers.(ProgressReporter); ok {
-		return runningJob(stats.StartTime, nil, nil, reporter.Progress(), handlers.GetMetrics())
+		return runningJob(stats.StartTime, 0, 0, reporter.Progress(), handlers.GetMetrics())
 	}
 
 	done := stats.ReadRecords.Load()
@@ -31,11 +31,12 @@ func currentBackupStatus(handlers backupexecutor.BackupHandler) *model.RunningJo
 		progress = float64(done) / float64(total)
 	}
 
-	return runningJob(stats.StartTime, &done, &total, progress, handlers.GetMetrics())
+	return runningJob(stats.StartTime, done, total, progress, handlers.GetMetrics())
 }
 
-// runningJob is the state of a backup still running, whose progress is capped at 99%.
-func runningJob(startTime time.Time, done, total *uint64, progress float64, metrics *models.Metrics) *model.RunningJob {
+// runningJob is the state of a backup still running, whose progress is capped at 99%. A server
+// backup counts no records: done and total are zero and progress comes from the server.
+func runningJob(startTime time.Time, done, total uint64, progress float64, metrics *models.Metrics) *model.RunningJob {
 	progress = min(progress, 0.99)
 
 	return &model.RunningJob{
@@ -58,10 +59,8 @@ func NewRestoreRunningJob(
 ) *model.RunningJob {
 	if total == 0 { // edge case for empty restore
 		return &model.RunningJob{
-			StartTime:    startTime,
-			FinishTime:   finishTime,
-			DoneRecords:  &done,
-			TotalRecords: &total,
+			StartTime:  startTime,
+			FinishTime: finishTime,
 		}
 	}
 
@@ -84,8 +83,8 @@ func NewRestoreRunningJob(
 	return &model.RunningJob{
 		StartTime:        startTime,
 		FinishTime:       finishTime,
-		DoneRecords:      &done,
-		TotalRecords:     &total,
+		DoneRecords:      done,
+		TotalRecords:     total,
 		EstimatedEndTime: endTime,
 		Progress:         progress,
 		Metrics:          effectiveMetrics,

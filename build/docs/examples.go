@@ -136,8 +136,8 @@ var jsonExamples = map[string]any{
 	},
 	"CurrentBackupResponse": dto.RoutineState{
 		Full: &dto.RunningJob{
-			TotalRecords:     new(uint64(100_000)),
-			DoneRecords:      new(uint64(50_000)),
+			TotalRecords:     100_000,
+			DoneRecords:      50_000,
 			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 			FinishTime:       nil,
 			PercentageDone:   50,
@@ -163,8 +163,8 @@ var jsonExamples = map[string]any{
 		UDFCount:        1,
 		ErrorsInDoubt:   0,
 		CurrentRestore: &dto.RunningJob{
-			TotalRecords:     new(uint64(100_000)),
-			DoneRecords:      new(uint64(50_000)),
+			TotalRecords:     100_000,
+			DoneRecords:      50_000,
 			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 			FinishTime:       nil,
 			PercentageDone:   50,
@@ -193,8 +193,8 @@ var jsonExamples = map[string]any{
 			UDFCount:        1,
 			ErrorsInDoubt:   0,
 			CurrentRestore: &dto.RunningJob{
-				TotalRecords:     new(uint64(100_000)),
-				DoneRecords:      new(uint64(50_000)),
+				TotalRecords:     100_000,
+				DoneRecords:      50_000,
 				StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 				FinishTime:       nil,
 				PercentageDone:   50,

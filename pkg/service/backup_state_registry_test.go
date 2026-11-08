@@ -37,7 +37,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 	})
 
 	assert.NotNil(t, stat.Full)
-	assert.Equal(t, new(uint64(100)), stat.Full.TotalRecords)
+	assert.Equal(t, uint64(100), stat.Full.TotalRecords)
 	assert.Nil(t, stat.Incremental)
 }
 
@@ -65,7 +65,7 @@ func TestHistoryScan(t *testing.T) {
 		Timezone:     model.NewServiceLocation("", nil),
 	})
 	assert.NotNil(t, stat.Full)
-	assert.Equal(t, new(uint64(100)), stat.Full.TotalRecords)
+	assert.Equal(t, uint64(100), stat.Full.TotalRecords)
 	assert.Nil(t, stat.Incremental)
 	assert.Equal(t, stat.LastRunTime, backupTime)
 }

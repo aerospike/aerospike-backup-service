@@ -24,8 +24,8 @@ func TestCurrentBackupStatus_CountsRecords(t *testing.T) {
 
 	job := currentBackupStatus(handler)
 
-	assert.Equal(t, new(uint64(40)), job.DoneRecords)
-	assert.Equal(t, new(uint64(100)), job.TotalRecords)
+	assert.Equal(t, uint64(40), job.DoneRecords)
+	assert.Equal(t, uint64(100), job.TotalRecords)
 	assert.InDelta(t, 0.4, job.Progress, 1e-9)
 }
 
@@ -51,8 +51,8 @@ func TestCurrentBackupStatus_ReportsProgressWithoutRecords(t *testing.T) {
 	for _, tc := range []struct{ progress, want float64 }{{0.4, 0.4}, {1, 0.99}} {
 		job := currentBackupStatus(progressHandler{handler, tc.progress})
 
-		assert.Nil(t, job.DoneRecords)
-		assert.Nil(t, job.TotalRecords)
+		assert.Zero(t, job.DoneRecords)
+		assert.Zero(t, job.TotalRecords)
 		assert.InDelta(t, tc.want, job.Progress, 1e-9, "progress %v", tc.progress)
 		assert.Equal(t, stats.StartTime, job.StartTime)
 	}
@@ -68,8 +68,8 @@ func TestNewRunningJob(t *testing.T) {
 
 		assert.Equal(t, startTime, result.StartTime)
 		assert.Equal(t, &finishTime, result.FinishTime)
-		assert.Equal(t, new(uint64(0)), result.DoneRecords)
-		assert.Equal(t, new(uint64(0)), result.TotalRecords)
+		assert.Zero(t, result.DoneRecords)
+		assert.Zero(t, result.TotalRecords)
 		assert.Nil(t, result.EstimatedEndTime)
 		assert.Zero(t, result.Progress)
 	})
@@ -77,17 +77,17 @@ func TestNewRunningJob(t *testing.T) {
 	t.Run("zero progress", func(t *testing.T) {
 		result := NewRestoreRunningJob(startTime, nil, 0, 100, nil, jobRunning)
 
-		assert.Equal(t, new(uint64(0)), result.DoneRecords)
+		assert.Zero(t, result.DoneRecords)
 		assert.Zero(t, result.Progress)
-		assert.Equal(t, new(uint64(100)), result.TotalRecords)
+		assert.Equal(t, uint64(100), result.TotalRecords)
 		assert.Nil(t, result.EstimatedEndTime) // too early to estimate
 	})
 
 	t.Run("50 percent completion", func(t *testing.T) {
 		result := NewRestoreRunningJob(startTime, nil, 50, 100, nil, jobRunning)
 
-		assert.Equal(t, new(uint64(50)), result.DoneRecords)
-		assert.Equal(t, new(uint64(100)), result.TotalRecords)
+		assert.Equal(t, uint64(50), result.DoneRecords)
+		assert.Equal(t, uint64(100), result.TotalRecords)
 		assert.InDelta(t, 0.5, result.Progress, 0.01)
 		assert.True(t, result.EstimatedEndTime.After(startTime)) // should be in the future
 	})
@@ -95,8 +95,8 @@ func TestNewRunningJob(t *testing.T) {
 	t.Run("completed job", func(t *testing.T) {
 		result := NewRestoreRunningJob(startTime, &finishTime, 100, 100, nil, jobRunning)
 
-		assert.Equal(t, new(uint64(100)), result.DoneRecords)
-		assert.Equal(t, new(uint64(100)), result.TotalRecords)
+		assert.Equal(t, uint64(100), result.DoneRecords)
+		assert.Equal(t, uint64(100), result.TotalRecords)
 		assert.InDelta(t, 0.99, result.Progress, 0.01)
 		assert.Equal(t, &finishTime, result.FinishTime)
 	})
@@ -104,8 +104,8 @@ func TestNewRunningJob(t *testing.T) {
 	t.Run("exceed 100%", func(t *testing.T) {
 		result := NewRestoreRunningJob(startTime, nil, 110, 100, nil, jobRunning)
 
-		assert.Equal(t, new(uint64(110)), result.DoneRecords)
-		assert.Equal(t, new(uint64(100)), result.TotalRecords)
+		assert.Equal(t, uint64(110), result.DoneRecords)
+		assert.Equal(t, uint64(100), result.TotalRecords)
 		assert.InDelta(t, 0.99, result.Progress, 0.01)
 	})
 }
