@@ -12,14 +12,16 @@ import (
 type sequentialRestoreHandler struct {
 	mu       sync.Mutex
 	handlers []RestoreHandler
-	done     chan struct{}
-	err      error
+	// cancel stops the sequence.
+	cancel context.CancelFunc
+	done   chan struct{}
+	err    error
 }
 
 var _ RestoreHandler = (*sequentialRestoreHandler)(nil)
 
-func newSequentialRestoreHandler() *sequentialRestoreHandler {
-	return &sequentialRestoreHandler{done: make(chan struct{})}
+func newSequentialRestoreHandler(cancel context.CancelFunc) *sequentialRestoreHandler {
+	return &sequentialRestoreHandler{cancel: cancel, done: make(chan struct{})}
 }
 
 // add records a restore that has started.
@@ -36,14 +38,19 @@ func (h *sequentialRestoreHandler) finish(err error) {
 	close(h.done)
 }
 
-// Wait waits for every restore of the sequence to finish, or for the first one to fail.
+// Wait waits for every restore of the sequence to finish, or for the first one to fail. If ctx
+// ends first, Wait stops the sequence and returns once it has stopped, as backup-go's handlers
+// do: the caller may then release what the restore reads from, such as the client and the
+// backup files.
 func (h *sequentialRestoreHandler) Wait(ctx context.Context) error {
 	select {
 	case <-h.done:
-		return h.err
 	case <-ctx.Done():
-		return ctx.Err()
+		h.cancel()
+		<-h.done
 	}
+
+	return h.err
 }
 
 // GetStats returns the stats of every restore started so far, added up.

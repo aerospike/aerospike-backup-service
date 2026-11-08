@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -122,6 +123,43 @@ func TestRestoreExecutor_Run_CanceledChainStartsNoMore(t *testing.T) {
 	require.ErrorIs(t, waitChain(t, chain), context.Canceled)
 }
 
+// When the context given to Wait ends, Wait stops the running restore and returns only once that
+// restore has stopped, so the caller can release what it reads from.
+func TestRestoreExecutor_Run_CanceledWaitReturnsAfterRestoreStops(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	running := make(chan struct{})
+	var stopped atomic.Bool
+
+	operations := storage.NewMockOperations(ctrl)
+	reader := NewMockStreamingReader(ctrl)
+	handler := NewMockRestoreHandler(ctrl)
+	handler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+		close(running)
+		<-ctx.Done()
+		stopped.Store(true)
+
+		return ctx.Err()
+	})
+	client := aerospike.NewMockClient(ctrl)
+	operations.EXPECT().CreateDirReader(gomock.Any(), gomock.Any(), "full", gomock.Any()).Return(reader, nil)
+	client.EXPECT().Restore(gomock.Any(), gomock.Any(), reader).Return(handler, nil)
+
+	chain := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(), testChainRequest("full"))
+
+	select {
+	case <-running:
+	case <-time.After(5 * time.Second):
+		t.Fatal("restore did not start")
+	}
+
+	waitCtx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	require.ErrorIs(t, chain.Wait(waitCtx), context.Canceled)
+	assert.True(t, stopped.Load(), "Wait returned before the restore stopped")
+}
+
 func testChainRequest(path string) *model.RestoreRequest {
 	request := testRestoreRequest()
 	request.BackupDataPath = path
@@ -138,13 +176,20 @@ func restoreStatsInserted(n int) *models.RestoreStats {
 	return stats
 }
 
-// waitChain waits for the chain with a deadline: a failed expectation in its background
-// goroutine ends that goroutine without finishing the chain, which would otherwise hang Wait.
+// waitChain waits for the chain, failing the test after a deadline: a failed expectation in the
+// chain's background goroutine ends that goroutine without finishing the chain, so Wait itself
+// would never return.
 func waitChain(t *testing.T, chain RestoreHandler) error {
 	t.Helper()
 
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-	defer cancel()
+	result := make(chan error, 1)
+	go func() { result <- chain.Wait(t.Context()) }()
 
-	return chain.Wait(ctx)
+	select {
+	case err := <-result:
+		return err
+	case <-time.After(5 * time.Second):
+		t.Fatal("restore chain did not finish")
+		return nil
+	}
 }

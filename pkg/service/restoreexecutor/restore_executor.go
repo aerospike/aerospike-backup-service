@@ -14,8 +14,8 @@ import (
 type Restore interface {
 	// Run restores the backups of the requests one after another, in the order given, one
 	// request per backup, and returns a single handler for all of them. Every failure, including
-	// one to start, comes from the handler's Wait. The start of each restore is logged as a step
-	// of the sequence.
+	// one to start, comes from the handler's Wait, which stops the restores and waits for them
+	// when its context ends. The start of each restore is logged as a step of the sequence.
 	Run(
 		ctx context.Context,
 		client aerospike.Client,
@@ -40,17 +40,18 @@ func NewRestoreExecutor(operations storage.Operations) *RestoreExecutor {
 
 // Run restores the requests in the background, each after the previous one has finished. The
 // handler reports the stats of every restore started so far and, from Wait, the first failure.
-// ctx bounds the whole sequence: canceling it stops the running restore and starts no more.
-// The ctx given to Wait bounds only that wait.
+// Canceling ctx, or the one given to Wait, stops the running restore and starts no more.
 func (r *RestoreExecutor) Run(
 	ctx context.Context,
 	client aerospike.Client,
 	logger *slog.Logger,
 	requests ...*model.RestoreRequest,
 ) RestoreHandler {
-	chain := newSequentialRestoreHandler()
+	ctx, cancel := context.WithCancel(ctx)
+	chain := newSequentialRestoreHandler(cancel)
 
 	go func() {
+		defer cancel()
 		chain.finish(r.restoreAll(ctx, client, logger, requests, chain))
 	}()
 
