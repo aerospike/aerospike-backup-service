@@ -67,21 +67,18 @@ func (m restoreRequestPathMatcher) String() string {
 }
 
 // restoreRequestUniqueMatcher matches a restore request for the backup at expectedPath whose
-// policy is unique (CREATE_ONLY) or not, and which disables reordering or not, as expected.
+// policy is unique (CREATE_ONLY) or not, as expected.
 type restoreRequestUniqueMatcher struct {
-	expectedPath              string
-	expectedUnique            bool
-	expectedDisableReordering bool
+	expectedPath   string
+	expectedUnique bool
 }
 
 func (m restoreRequestUniqueMatcher) Matches(x any) bool {
 	req, ok := x.(*model.RestoreRequest)
 	return ok && req != nil && req.BackupDataPath == m.expectedPath &&
-		req.Policy.IsUniqueOrDefault() == m.expectedUnique &&
-		req.DisableReordering == m.expectedDisableReordering
+		req.Policy.IsUniqueOrDefault() == m.expectedUnique
 }
 
 func (m restoreRequestUniqueMatcher) String() string {
-	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q, unique=%t and disable-reordering=%t",
-		m.expectedPath, m.expectedUnique, m.expectedDisableReordering)
+	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q and unique=%t", m.expectedPath, m.expectedUnique)
 }

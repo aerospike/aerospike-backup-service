@@ -13,44 +13,15 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestRestoreExecutor_Run_ChainOldestFirst(t *testing.T) {
+func TestRestoreExecutor_Run_ChainInGivenOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	operations, client := expectRestoresInOrder(ctrl, "full", "incr1", "incr2")
 
 	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client,
-		testChainRequest("full", false), testChainRequest("incr1", false), testChainRequest("incr2", false))
+		testChainRequest("full"), testChainRequest("incr1"), testChainRequest("incr2"))
 	require.NoError(t, err)
 	require.NoError(t, chain.Wait(t.Context()))
 	assert.Equal(t, uint64(3), chain.GetStats().GetRecordsInserted())
-}
-
-// Under the unique (CREATE_ONLY) policy a record keeps the first version written, so the
-// newest backup goes first.
-func TestRestoreExecutor_Run_UniqueChainNewestFirst(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	operations, client := expectRestoresInOrder(ctrl, "incr2", "incr1", "full")
-
-	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client,
-		testChainRequest("full", true), testChainRequest("incr1", true), testChainRequest("incr2", true))
-	require.NoError(t, err)
-	require.NoError(t, chain.Wait(t.Context()))
-}
-
-// disable-reordering keeps a unique chain oldest first.
-func TestRestoreExecutor_Run_UniqueChainKeepsOrderWhenReorderingDisabled(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	operations, client := expectRestoresInOrder(ctrl, "full", "incr1", "incr2")
-
-	requests := []*model.RestoreRequest{
-		testChainRequest("full", true), testChainRequest("incr1", true), testChainRequest("incr2", true),
-	}
-	for _, request := range requests {
-		request.DisableReordering = true
-	}
-
-	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client, requests[0], requests[1:]...)
-	require.NoError(t, err)
-	require.NoError(t, chain.Wait(t.Context()))
 }
 
 // expectRestoresInOrder expects one successful restore of each backup at paths, in that order,
@@ -101,7 +72,7 @@ func TestRestoreExecutor_Run_ChainStopsAtFirstFailure(t *testing.T) {
 	client.EXPECT().Restore(gomock.Any(), gomock.Any(), reader).Return(handler, nil)
 
 	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client,
-		testChainRequest("full", false), testChainRequest("incr1", false))
+		testChainRequest("full"), testChainRequest("incr1"))
 	require.NoError(t, err)
 	require.ErrorIs(t, chain.Wait(t.Context()), wantErr)
 }
@@ -124,15 +95,14 @@ func TestRestoreExecutor_Run_LaterStartFailureFromWait(t *testing.T) {
 	)
 
 	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client,
-		testChainRequest("full", false), testChainRequest("incr1", false))
+		testChainRequest("full"), testChainRequest("incr1"))
 	require.NoError(t, err)
 	require.ErrorIs(t, chain.Wait(t.Context()), wantErr)
 }
 
-func testChainRequest(path string, unique bool) *model.RestoreRequest {
+func testChainRequest(path string) *model.RestoreRequest {
 	request := testRestoreRequest()
 	request.BackupDataPath = path
-	request.Policy.Unique = &unique
 
 	return request
 }

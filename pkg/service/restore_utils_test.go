@@ -48,15 +48,15 @@ type oneByOneRestore struct {
 func (o oneByOneRestore) Run(
 	ctx context.Context,
 	client aerospike.Client,
-	full *model.RestoreRequest,
-	incrementals ...*model.RestoreRequest,
+	first *model.RestoreRequest,
+	rest ...*model.RestoreRequest,
 ) (restoreexecutor.RestoreHandler, error) {
-	handler, err := o.restore.Run(ctx, client, full)
+	handler, err := o.restore.Run(ctx, client, first)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, request := range incrementals {
+	for _, request := range rest {
 		if err := handler.Wait(ctx); err != nil {
 			return handler, nil //nolint:nilerr // the failed restore reports it from Wait, as the executor does.
 		}

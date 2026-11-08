@@ -3,7 +3,6 @@ package restoreexecutor
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -12,15 +11,14 @@ import (
 
 // Restore starts a restore and returns a handle to observe it.
 type Restore interface {
-	// Run restores one backup, or a full backup and the incremental backups that follow it,
-	// oldest first, one request per backup, and returns a single handler for all of them. The
-	// policy and options of the full request stand for the whole chain. A chain whose first
-	// restore cannot start is the error of Run; a later one fails from the handler's Wait.
+	// Run restores one backup, or several one after another in the order given, one request
+	// per backup, and returns a single handler for all of them. A first restore that cannot
+	// start is the error of Run; a later one fails from the handler's Wait.
 	Run(
 		ctx context.Context,
 		client aerospike.Client,
-		full *model.RestoreRequest,
-		incrementals ...*model.RestoreRequest,
+		first *model.RestoreRequest,
+		rest ...*model.RestoreRequest,
 	) (RestoreHandler, error)
 }
 
@@ -38,32 +36,24 @@ func NewRestoreExecutor(operations storage.Operations) *RestoreExecutor {
 	}
 }
 
-// Run starts the first restore and returns; the rest of the chain runs in the background,
-// each restore after the previous one has finished. The handler reports the stats of every
-// restore started so far and, from Wait, the first failure. Under the unique (CREATE_ONLY)
-// policy a chain is applied newest first, so that a record keeps its latest version and the
-// older ones are skipped, unless the request disables reordering; otherwise oldest first, so
-// that later versions overwrite earlier ones.
+// Run starts the first restore and returns; the rest run in the background, each after the
+// previous one has finished. The handler reports the stats of every restore started so far
+// and, from Wait, the first failure.
 func (r *RestoreExecutor) Run(
 	ctx context.Context,
 	client aerospike.Client,
-	full *model.RestoreRequest,
-	incrementals ...*model.RestoreRequest,
+	first *model.RestoreRequest,
+	rest ...*model.RestoreRequest,
 ) (RestoreHandler, error) {
-	requests := append([]*model.RestoreRequest{full}, incrementals...)
-	if full.Policy.IsUniqueOrDefault() && !full.DisableReordering {
-		slices.Reverse(requests)
-	}
-
-	first, err := r.startRestore(ctx, client, requests[0])
+	handler, err := r.startRestore(ctx, client, first)
 	if err != nil {
 		return nil, err
 	}
 
-	chain := newSequentialRestoreHandler(first)
+	chain := newSequentialRestoreHandler(handler)
 
 	go func() {
-		chain.finish(r.runRest(ctx, client, first, requests[1:], chain))
+		chain.finish(r.runRest(ctx, client, handler, rest, chain))
 	}()
 
 	return chain, nil

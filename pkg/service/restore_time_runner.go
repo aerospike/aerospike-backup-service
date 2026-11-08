@@ -72,6 +72,18 @@ func (c restoreChain) backups() []model.BackupDetails {
 	return append([]model.BackupDetails{c.full}, c.incrementals...)
 }
 
+// inRestoreOrder returns the backups of the chain in the order they are applied: oldest first,
+// so that later versions overwrite earlier ones, or newest first, for the unique (CREATE_ONLY)
+// policy, which keeps the first version written.
+func (c restoreChain) inRestoreOrder(newestFirst bool) []model.BackupDetails {
+	backups := c.backups()
+	if newestFirst {
+		slices.Reverse(backups)
+	}
+
+	return backups
+}
+
 // findBackupsToRestore returns the restore chain of each namespace.
 func (r *timeRestoreRunner) findBackupsToRestore(
 	ctx context.Context, request *model.RestoreTimestampRequest,
@@ -370,9 +382,9 @@ func prepareNamespaceRestore(
 	return effectivePolicy, nil
 }
 
-// executeNamespaceRestore restores the namespace's chain of backups as one restore. Empty
-// backups are left out, so an empty full backup leaves the chain to its first incremental that
-// holds data; a chain of only empty backups restores nothing.
+// executeNamespaceRestore restores the namespace's chain of backups as one restore. Under the
+// unique (CREATE_ONLY) policy the chain is applied newest first, unless the request disables
+// reordering. Empty backups are left out; a chain of only empty backups restores nothing.
 func (r *timeRestoreRunner) executeNamespaceRestore(
 	ctx context.Context,
 	client aerospike.Client,
@@ -382,7 +394,7 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 	policy model.RestorePolicy,
 	logger *slog.Logger,
 ) error {
-	backups := chain.backups()
+	backups := chain.inRestoreOrder(policy.IsUniqueOrDefault() && !request.DisableReordering)
 	requests := make([]*model.RestoreRequest, 0, len(backups))
 	for _, b := range backups {
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
@@ -404,7 +416,6 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 			request.SecretAgent,
 			b.Key,
 		)
-		restoreRequest.DisableReordering = request.DisableReordering
 		requests = append(requests, restoreRequest)
 	}
 
