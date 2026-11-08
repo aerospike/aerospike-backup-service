@@ -340,11 +340,12 @@ func (mr *MockInfoGetterMockRecorder) StartBackup(ctx, request any) *gomock.Call
 }
 
 // StartRestore mocks base method.
-func (m *MockInfoGetter) StartRestore(ctx context.Context, request *models0.RequestRestore) error {
+func (m *MockInfoGetter) StartRestore(ctx context.Context, request *models0.RequestRestore) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartRestore", ctx, request)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // StartRestore indicates an expected call of StartRestore.

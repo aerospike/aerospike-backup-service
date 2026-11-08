@@ -520,3 +520,36 @@ func hostLANAddress(ctx context.Context) (string, error) {
 
 	return conn.LocalAddr().(*net.UDPAddr).IP.String(), nil
 }
+
+// assertCompleteJobs checks that jobs are the complete server jobs that wrote backups, one per
+// namespace in the routine's order, each having backed up at least the given number of records.
+// The server counts a record once per scan that reads it, and a strict backup's incremental scan
+// reads again the records written shortly before the backup started: a count is not exact.
+func (s *ServerBuildSuite) assertCompleteJobs(
+	jobs []dto.ServerBackupJob,
+	backups []dto.BackupDetails,
+	minRecords map[string]uint64,
+) {
+	s.T().Helper()
+
+	keys := make(map[string]string, len(backups))
+	for _, backup := range backups {
+		keys[backup.Namespace] = backup.Key
+	}
+
+	s.Require().Len(jobs, 2, "server jobs")
+	for i, namespace := range []string{serverNamespace, otherNamespace} {
+		job := jobs[i]
+		s.Equal(namespace, job.Namespace)
+		s.Equal(keys[namespace], job.JobID, "job of namespace %s wrote its backup", namespace)
+		s.Equal("COMPLETE", job.State, "job of namespace %s", namespace)
+		s.Empty(job.ErrorReason)
+		s.Empty(job.AbortOrigin)
+		s.GreaterOrEqual(job.RecordsBackedUp, minRecords[namespace], "records of namespace %s", namespace)
+		s.Positive(job.BytesBackedUp, "bytes of namespace %s", namespace)
+		s.Zero(job.RecordsReadFailed)
+		s.Require().NotNil(job.StartTime)
+		s.Require().NotNil(job.FinishTime)
+		s.False(job.FinishTime.Before(*job.StartTime), "job of namespace %s finished before it started", namespace)
+	}
+}

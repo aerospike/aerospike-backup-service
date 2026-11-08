@@ -19,6 +19,8 @@ const (
 	fullID  = "261020T090111-aaaa"
 	incr1ID = "261020T091111-bbbb"
 	incr2ID = "261020T092111-cccc"
+	// restoreJobID is the id the server restore job is started under.
+	restoreJobID = "261105T094929-k9s5"
 )
 
 func TestRestoreExecutor_Run_Cold(t *testing.T) {
@@ -38,17 +40,23 @@ func TestRestoreExecutor_Run_Cold(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)
 
-			// One command starts a cold restore: the server prepares the namespace itself.
+			// One command starts a cold restore: the server prepares the namespace itself. The
+			// restore then follows the job the start returned.
 			infoClient := aerospike.NewMockInfoGetter(ctrl)
-			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
-				func(_ context.Context, request *infomodels.RequestRestore) error {
-					assert.Equal(t, tt.wantBackupIDs, request.BackupIDs)
-					assert.Equal(t, "bar", request.Namespace)
-					assert.Equal(t, infomodels.RestorePolicyStrict, request.Policy)
-					assert.False(t, jobIDTime(request.JobID).IsZero(), "job id %q", request.JobID)
+			gomock.InOrder(
+				infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, request *infomodels.RequestRestore) (string, error) {
+						assert.Equal(t, tt.wantBackupIDs, request.BackupIDs)
+						assert.Equal(t, "bar", request.Namespace)
+						assert.Equal(t, infomodels.RestorePolicyStrict, request.Policy)
 
-					return nil
-				})
+						return restoreJobID, nil
+					}),
+				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", restoreJobID).Return(
+					&infomodels.ResponseRestoreState{
+						State: infomodels.RestoreStateComplete, NsState: infomodels.NamespaceStateNone,
+					}, nil),
+			)
 
 			requests := make([]*model.RestoreRequest, 0, len(tt.backupIDs))
 			for _, id := range tt.backupIDs {
@@ -58,7 +66,7 @@ func TestRestoreExecutor_Run_Cold(t *testing.T) {
 			handler, err := NewRestoreExecutor(namespaceReader(t, ctrl)).
 				Run(t.Context(), clientOf(ctrl, infoClient), requests[0], requests[1:]...)
 			require.NoError(t, err)
-			assert.NotNil(t, handler)
+			require.NoError(t, handler.Wait(t.Context()))
 		})
 	}
 }
@@ -92,7 +100,8 @@ func TestRestoreExecutor_Run_StartRefused(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
 			infoClient := aerospike.NewMockInfoGetter(ctrl)
-			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(errors.New(tt.refusal))
+			// The server may have accepted a start that failed, so it returns the job id anyway.
+			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, errors.New(tt.refusal))
 
 			handler, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
 				tt.request)
@@ -307,11 +316,11 @@ func TestRestoreExecutor_Run_Fuzzy(t *testing.T) {
 	// A fuzzy restore writes into the live namespace: no preparation.
 	infoClient := aerospike.NewMockInfoGetter(ctrl)
 	infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *infomodels.RequestRestore) error {
+		func(_ context.Context, request *infomodels.RequestRestore) (string, error) {
 			assert.Equal(t, infomodels.RestorePolicyFuzzy, request.Policy)
 			assert.Equal(t, fullID+","+incr1ID, request.BackupIDs)
 
-			return nil
+			return restoreJobID, nil
 		})
 
 	handler, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
@@ -326,11 +335,11 @@ func TestRestoreExecutor_Run_SkipsIndexesAndUDFs(t *testing.T) {
 
 	infoClient := aerospike.NewMockInfoGetter(ctrl)
 	infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *infomodels.RequestRestore) error {
+		func(_ context.Context, request *infomodels.RequestRestore) (string, error) {
 			assert.Equal(t, new(true), request.NoIndexes)
 			assert.Equal(t, new(true), request.NoUDFs)
 
-			return nil
+			return restoreJobID, nil
 		})
 	request := fuzzyRequest(fullID)
 	request.Policy.NoIndexes = new(true)

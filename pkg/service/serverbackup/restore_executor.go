@@ -82,15 +82,13 @@ func (r *restoreExecutor) start(
 	common.NoUDFs = request.Policy.NoUdfs
 
 	lane := laneOf(request.Policy.Mode)
-	jobID := newJobID(time.Now())
 	infoClient := client.InfoClient()
 
 	// A limit the policy leaves unset is zero, which the request omits: the server's default applies.
 	// A cold restore needs no other command to start: the server gates and prepares the namespace
 	// on every node, and starts once every node is ready. A refused start gates nothing.
-	err = infoClient.StartRestore(ctx, &infomodels.RequestRestore{
+	jobID, err := infoClient.StartRestore(ctx, &infomodels.RequestRestore{
 		RequestCommon:        common,
-		JobID:                jobID,
 		BackupIDs:            strings.Join(backupIDs, ","),
 		RestoreWorkerThreads: ptr.ValueOrZero(request.Policy.Parallel),
 		RestoreRPS:           ptr.ValueOrZero(request.Policy.Tps),

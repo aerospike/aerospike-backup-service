@@ -182,9 +182,12 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 		{
 			// Each namespace starts where its own last backup did; the run's lower bound, taken
 			// from the routine's last run, is not used. An unset limit is left to the server.
-			name:       "incremental of several namespaces",
-			routine:    &model.BackupRoutine{Name: "routine", Storage: storage, BackupPolicy: &model.BackupPolicy{}},
-			runSpec:    model.BackupRunSpec{Type: model.BackupTypeIncremental, TimeBounds: model.TimeBounds{FromTime: new(at(25))}},
+			name:    "incremental of several namespaces",
+			routine: &model.BackupRoutine{Name: "routine", Storage: storage, BackupPolicy: &model.BackupPolicy{}},
+			runSpec: model.BackupRunSpec{
+				Type:       model.BackupTypeIncremental,
+				TimeBounds: model.TimeBounds{FromTime: new(at(25))},
+			},
 			namespaces: []string{"bar", "baz"},
 			want: []infomodels.RequestBackup{
 				{RequestCommon: common("bar"), ModifiedAfter: unix(at(10))},
