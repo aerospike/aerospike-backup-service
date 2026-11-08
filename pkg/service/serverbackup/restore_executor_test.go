@@ -112,7 +112,8 @@ func TestRestoreExecutor_Run_StartRefused(t *testing.T) {
 	}
 }
 
-// expectRelease expects the job *jobID of namespace bar to be aborted, then its namespace opened.
+// expectRelease expects the job *jobID of namespace bar to be aborted, then, once the abort has
+// ended it, its namespace opened, and waits for the namespace to open.
 func expectRelease(t *testing.T, infoClient *aerospike.MockInfoGetter, jobID *string) {
 	t.Helper()
 
@@ -123,12 +124,21 @@ func expectRelease(t *testing.T, infoClient *aerospike.MockInfoGetter, jobID *st
 
 				return nil
 			}),
-		infoClient.EXPECT().OpenRestore(gomock.Any(), "bar", gomock.Any()).DoAndReturn(
-			func(_ context.Context, _, id string) error {
-				assert.Equal(t, *jobID, id)
-
-				return nil
-			}),
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
+			&infomodels.ResponseRestoreState{State: infomodels.RestoreStateAborting}, nil),
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
+			&infomodels.ResponseRestoreState{State: infomodels.RestoreStateAborted}, nil),
+		// A namespace has at most one restore job, so the namespace names it.
+		infoClient.EXPECT().OpenRestore(gomock.Any(), "bar").Return(nil),
+		// The namespace opens in the background.
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
+			&infomodels.ResponseRestoreState{
+				State: infomodels.RestoreStateAborted, NsState: infomodels.NamespaceStateOpening,
+			}, nil),
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
+			&infomodels.ResponseRestoreState{
+				State: infomodels.RestoreStateAborted, NsState: infomodels.NamespaceStateNone,
+			}, nil),
 	)
 }
 

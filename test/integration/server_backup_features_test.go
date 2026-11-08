@@ -229,6 +229,58 @@ func (s *ServerBackupSuite) TestServerRestoreOptions() {
 	})
 }
 
+// TestServerRestoreCancel cancels a strict restore through POST /v1/restore/cancel while the
+// server hydrates the destination namespace, and checks that ABS aborts the job and opens the
+// namespace to clients again. The restore is throttled to keep it running until the cancel.
+func (s *ServerBackupSuite) TestServerRestoreCancel() {
+	const records = 50
+
+	ages := make([]int, records)
+	for i := range ages {
+		ages[i] = i + 1
+	}
+	s.seedRecordsIn(s.client, serverNamespace, ages)
+
+	e := s.setupEnv(s.serverBackupConfig)
+	s.triggerFullBackup(e)
+	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
+
+	// Later tests restore into the namespace: open it, whatever this test leaves behind.
+	s.T().Cleanup(func() { s.info(s.destinationClient, "restore-open:namespace="+serverNamespace) })
+
+	before := s.restoreJobIDs()
+	request := defaultRestoreRequest(backup.Key)
+	request.DestinationClusterConfig.Name = destinationClusterName
+	request.Policy = &dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{
+		Mode: dto.RestoreModeStrict,
+		Tps:  new(5),
+	}}
+	jobID := s.startRestore(e, e.baseURL+"/v1/restore/full", request)
+
+	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
+		for id, fields := range statusRows(s.info(s.destinationClient, "restore-status")) {
+			if !before[id] && fields["ns-state"] == "RESTORING" {
+				return true
+			}
+		}
+
+		return false
+	})
+	s.Require().True(ok, "the server never started restoring: restore-status %s",
+		s.info(s.destinationClient, "restore-status"))
+
+	status, body := s.do(e, http.MethodPost, fmt.Sprintf("%s/v1/restore/cancel/%d", e.baseURL, jobID), nil)
+	s.Require().Equal(http.StatusAccepted, status, "cancel: %s", body)
+
+	job := s.waitForRestoreEnd(e, jobID, serverJobTimeout)
+	s.Equal(dto.RestoreCanceled, job.Status)
+	s.NotContains(job.Error, "failed to open namespace", "the canceled restore left the namespace closed")
+
+	key, err := as.NewKey(serverNamespace, setName, records)
+	s.Require().NoError(err)
+	s.NoError(s.destinationClient.Put(nil, key, as.BinMap{ageBin: 0}), "the namespace is not open to clients")
+}
+
 // TestServerMultipleNamespaces backs up a routine of two namespaces, a full and an incremental
 // server backup each, and restores both chains into the destination cluster by timestamp. Restore
 // by timestamp runs the namespaces at the same time, so the two cold restores overlap. The

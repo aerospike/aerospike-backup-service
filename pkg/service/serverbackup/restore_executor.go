@@ -145,8 +145,11 @@ func errTruncateState(namespace string) error {
 }
 
 // releaseNamespace aborts the cold restore jobID and opens namespace to clients with whatever the
-// restore wrote: an aborted cold restore keeps the namespace from clients until restore-open. It
-// runs even when ctx is canceled, since a canceled restore holds the namespace as well.
+// restore wrote: an aborted cold restore keeps the namespace from clients until restore-open. The
+// abort takes effect in the background, and a node whose abort lands after restore-open closes the
+// namespace again, so it opens the namespace only once the job has ended. The opening also takes
+// effect in the background: it returns once the namespace is open. It runs even when ctx is
+// canceled, since a canceled restore holds the namespace as well.
 func releaseNamespace(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
 	ctx = context.WithoutCancel(ctx)
 
@@ -154,11 +157,56 @@ func releaseNamespace(ctx context.Context, infoClient backup.ServerBackupInfo, n
 		return err
 	}
 
-	if err := infoClient.OpenRestore(ctx, namespace, jobID); err != nil {
+	err := awaitRestoreStatus(ctx, infoClient, namespace, jobID, "end", (*infomodels.ResponseRestoreState).IsFinished)
+	if err == nil {
+		err = infoClient.OpenRestore(ctx, namespace)
+	}
+	if err == nil {
+		err = awaitRestoreStatus(ctx, infoClient, namespace, jobID, "open the namespace",
+			func(status *infomodels.ResponseRestoreState) bool {
+				return status.NsState == infomodels.NamespaceStateNone
+			})
+	}
+	if err != nil {
 		return fmt.Errorf("failed to open namespace %s after server restore %s: %w", namespace, jobID, err)
 	}
 
 	return nil
+}
+
+// awaitRestoreStatus polls the restore jobID for up to abortTimeout, until its status is done.
+// what names the step the job is waited on for.
+func awaitRestoreStatus(
+	ctx context.Context,
+	infoClient backup.ServerBackupInfo,
+	namespace, jobID, what string,
+	done func(*infomodels.ResponseRestoreState) bool,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, abortTimeout)
+	defer cancel()
+
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("server restore %s did not %s: %w", jobID, what, ctx.Err())
+		case <-ticker.C:
+		}
+
+		status, err := infoClient.GetRestoreStatus(ctx, namespace, jobID)
+		if errors.Is(err, asinfo.ErrNotFound) {
+			continue // a node does not report the job yet.
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get server restore status: %w", err)
+		}
+
+		if done(status) {
+			return nil
+		}
+	}
 }
 
 // abortRestore aborts the restore jobID, even when ctx is canceled.
