@@ -82,6 +82,11 @@ func (r *RestoreExecutor) runRest(
 
 	steps := 1 + len(rest)
 	for i, request := range rest {
+		// A step can finish just as ctx is canceled; don't start the next one then.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
 		step, err := r.start(ctx, client, logger.With(stepAttr(i+2, steps)), request)
 		if err != nil {
 			return err

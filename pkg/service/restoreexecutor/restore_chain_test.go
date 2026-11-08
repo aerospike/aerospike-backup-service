@@ -105,6 +105,28 @@ func TestRestoreExecutor_Run_LaterStartFailureFromWait(t *testing.T) {
 	require.ErrorIs(t, waitChain(t, chain), wantErr)
 }
 
+// A step that finishes as the chain's context is canceled starts no further restore.
+func TestRestoreExecutor_Run_CanceledChainStartsNoMore(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ctx, cancel := context.WithCancel(t.Context())
+
+	operations := storage.NewMockOperations(ctrl)
+	reader := NewMockStreamingReader(ctrl)
+	handler := NewMockRestoreHandler(ctrl)
+	handler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(context.Context) error {
+		cancel()
+		return nil
+	})
+	client := aerospike.NewMockClient(ctrl)
+	operations.EXPECT().CreateDirReader(gomock.Any(), gomock.Any(), "full", gomock.Any()).Return(reader, nil)
+	client.EXPECT().Restore(gomock.Any(), gomock.Any(), reader).Return(handler, nil)
+
+	chain, err := NewRestoreExecutor(operations).Run(ctx, client, slog.Default(),
+		testChainRequest("full"), testChainRequest("incr1"))
+	require.NoError(t, err)
+	require.ErrorIs(t, waitChain(t, chain), context.Canceled)
+}
+
 func testChainRequest(path string) *model.RestoreRequest {
 	request := testRestoreRequest()
 	request.BackupDataPath = path
