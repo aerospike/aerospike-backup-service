@@ -39,6 +39,10 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # modules/schema embeds the schemas submodule; .dockerignore drops .gitmodules,
+          # so `make build` inside the image cannot fetch it and it must be in the context.
+          submodules: recursive
 
       - name: Build image
         run: DOCKER_BUILDKIT=1 docker build --progress=plain -t abs:ci .
