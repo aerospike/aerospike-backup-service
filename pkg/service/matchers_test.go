@@ -66,6 +66,23 @@ func (m restoreRequestPathMatcher) String() string {
 	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q", m.expectedPath)
 }
 
+// restoreRequestCompressionMatcher matches a restore request for the backup at expectedPath
+// whose policy carries the expected compression mode.
+type restoreRequestCompressionMatcher struct {
+	expectedPath string
+	expectedMode model.CompressionMode
+}
+
+func (m restoreRequestCompressionMatcher) Matches(x any) bool {
+	req, ok := x.(*model.RestoreRequest)
+	return ok && req != nil && req.BackupDataPath == m.expectedPath &&
+		req.Policy.CompressionPolicy != nil && req.Policy.CompressionPolicy.Mode == m.expectedMode
+}
+
+func (m restoreRequestCompressionMatcher) String() string {
+	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q and compression %s", m.expectedPath, m.expectedMode)
+}
+
 // restoreRequestUniqueMatcher matches a restore request for the backup at expectedPath whose
 // policy is unique (CREATE_ONLY) or not, as expected.
 type restoreRequestUniqueMatcher struct {

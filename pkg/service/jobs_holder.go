@@ -23,8 +23,8 @@ type restoreJob struct {
 
 	// Volatile fields, should only be accessed under lock:
 
-	// handlers contains the list of active restore handlers from the underlying backup library.
-	// Each handler corresponds to a specific backup being restored.
+	// handlers contains the restore handlers of the job. Each follows one restore: a single
+	// backup (restore by path) or a namespace's chain of backups (restore by time).
 	handlers []restoreexecutor.RestoreHandler
 
 	// status indicates the current state of the job (Running, Done, Failed, Canceled).
@@ -190,7 +190,7 @@ func (h *RestoreJobsHolder) newJob(label string) (model.RestoreJobID, context.Co
 	return id, ctx
 }
 
-// addHandler should be called for each backup (full or incremental) handler.
+// addHandler should be called for each restore handler returned by restoreexecutor.Restore.Run.
 func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler restoreexecutor.RestoreHandler) {
 	if job, ok := h.Load(id); ok {
 		job.addHandler(handler)

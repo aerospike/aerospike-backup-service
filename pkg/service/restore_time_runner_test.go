@@ -64,15 +64,12 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	)
 
 	client := env.expectSuccessfulClientInteraction(t)
-	// Restore runs executor once per backup in chain (full then incremental).
-	gomock.InOrder(
-		env.mockRestore.EXPECT().
-			Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: fullBackup.Key}).
-			Return(env.expectDefaultRestoreHandler()),
-		env.mockRestore.EXPECT().
-			Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: incrBackup.Key}).
-			Return(env.expectDefaultRestoreHandler()),
-	)
+	// The chain goes to a single restore, full backup first, then the incremental.
+	env.mockRestore.EXPECT().
+		Run(gomock.Any(), client, gomock.Any(),
+			restoreRequestPathMatcher{expectedPath: fullBackup.Key},
+			restoreRequestPathMatcher{expectedPath: incrBackup.Key}).
+		Return(env.expectDefaultRestoreHandler())
 
 	jobID := env.restoreManager.RestoreByTime(request)
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -124,9 +121,13 @@ func TestRestoreByTime_SkipsEmptyBackups(t *testing.T) {
 				Return([]model.BackupDetails{backup("incr", fullCreated.Add(time.Minute), tt.incrFiles)}, nil)
 
 			client := env.expectSuccessfulClientInteraction(t)
-			for _, path := range tt.expectRestore {
+			if len(tt.expectRestore) > 0 {
+				chain := make([]any, 0, len(tt.expectRestore))
+				for _, path := range tt.expectRestore {
+					chain = append(chain, restoreRequestPathMatcher{expectedPath: path})
+				}
 				env.mockRestore.EXPECT().
-					Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: path}).
+					Run(gomock.Any(), client, gomock.Any(), chain...).
 					Return(env.expectDefaultRestoreHandler())
 			}
 
@@ -135,6 +136,69 @@ func TestRestoreByTime_SkipsEmptyBackups(t *testing.T) {
 			assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
 		})
 	}
+}
+
+// Each backup of a chain is restored with its own compression, so a full and an incremental
+// backup compressed differently do not share one policy.
+func TestRestoreByTime_CompressionPerBackup(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+	full, incr, request := expectChainOfTwo(t, env)
+	full.Compression, incr.Compression = model.CompressionModeZSTD, model.CompressionModeNone
+	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{full}, nil)
+	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{incr}, nil)
+
+	env.mockRestore.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any(),
+			restoreRequestCompressionMatcher{full.Key, model.CompressionModeZSTD},
+			restoreRequestCompressionMatcher{incr.Key, model.CompressionModeNone}).
+		Return(env.expectDefaultRestoreHandler())
+
+	jobStatus, err := waitForRestore(t, env.restoreManager, env.restoreManager.RestoreByTime(request))
+	require.NoError(t, err)
+	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
+}
+
+// A chain that fails fails the job with the chain's error.
+func TestRestoreByTime_ChainFailureFailsJob(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+	full, incr, request := expectChainOfTwo(t, env)
+	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{full}, nil)
+	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{incr}, nil)
+
+	restoreErr := errors.New("failed to restore backup at incr")
+	env.mockRestore.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(failedRestore{err: restoreErr})
+
+	jobStatus, err := waitForRestore(t, env.restoreManager, env.restoreManager.RestoreByTime(request))
+	require.NoError(t, err)
+	assert.Equal(t, model.RestoreFailure, jobStatus.Status)
+	require.ErrorIs(t, jobStatus.Error, restoreErr)
+}
+
+// expectChainOfTwo returns a full and an incremental backup of one namespace and a request to
+// restore them with reordering disabled, and sets the expectations of a restore that passes
+// validation.
+func expectChainOfTwo(
+	t *testing.T, env *testRestoreEnv,
+) (model.BackupDetails, model.BackupDetails, *model.RestoreTimestampRequest) {
+	t.Helper()
+
+	now := time.Now()
+	backup := func(key string, created time.Time) model.BackupDetails {
+		return model.BackupDetails{
+			BackupMetadata: model.BackupMetadata{Created: created, Namespace: "ns1", FileCount: 1},
+			Key:            key,
+			Storage:        &model.LocalStorage{},
+		}
+	}
+
+	env.restoreValidator.EXPECT().
+		ValidateTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	env.expectSuccessfulClientInteraction(t)
+
+	return backup("full", now.Add(-2*time.Hour)), backup("incr", now.Add(-time.Hour)),
+		&model.RestoreTimestampRequest{RoutineName: "test-routine", Time: now, DisableReordering: true}
 }
 
 func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
@@ -381,16 +445,13 @@ func TestRestoreByTime_CumulativeIncrementals(t *testing.T) {
 	)
 
 	client := env.expectSuccessfulClientInteraction(t)
-	// Restore runs executor once per backup in chain.
-	// Since incr2 covers the same period as incr1, incr1 should be skipped.
-	gomock.InOrder(
-		env.mockRestore.EXPECT().
-			Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: fullBackup.Key}).
-			Return(env.expectDefaultRestoreHandler()),
-		env.mockRestore.EXPECT().
-			Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: incr2Backup.Key}).
-			Return(env.expectDefaultRestoreHandler()),
-	)
+	// The chain is restored full backup first, then the incremental. Since incr2 covers the
+	// same period as incr1, incr1 is skipped.
+	env.mockRestore.EXPECT().
+		Run(gomock.Any(), client, gomock.Any(),
+			restoreRequestPathMatcher{expectedPath: fullBackup.Key},
+			restoreRequestPathMatcher{expectedPath: incr2Backup.Key}).
+		Return(env.expectDefaultRestoreHandler())
 
 	jobID := env.restoreManager.RestoreByTime(request)
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -509,13 +570,13 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 					Return(uint64(tt.recordCount), nil)
 			}
 
-			calls := make([]any, 0, len(tt.expectOrder))
+			chain := make([]any, 0, len(tt.expectOrder))
 			for _, path := range tt.expectOrder {
-				calls = append(calls, env.mockRestore.EXPECT().
-					Run(gomock.Any(), client, gomock.Any(), restoreRequestUniqueMatcher{path, tt.expectUnique}).
-					Return(env.expectDefaultRestoreHandler()))
+				chain = append(chain, restoreRequestUniqueMatcher{path, tt.expectUnique})
 			}
-			gomock.InOrder(calls...)
+			env.mockRestore.EXPECT().
+				Run(gomock.Any(), client, gomock.Any(), chain...).
+				Return(env.expectDefaultRestoreHandler())
 
 			jobID := env.restoreManager.RestoreByTime(request)
 			jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
