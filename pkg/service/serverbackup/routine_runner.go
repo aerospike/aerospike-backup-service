@@ -27,9 +27,6 @@ const (
 	pollInterval = time.Second
 	// abortTimeout bounds the wait for an aborted server job to end.
 	abortTimeout = 30 * time.Second
-	// progressScale turns the server's progress percentage into the record counters
-	// the service reports progress from.
-	progressScale = 100
 )
 
 // routineRunner backs a routine up by asking the server to run one backup job per
@@ -286,20 +283,22 @@ type backupOperation struct {
 	done   chan struct{}
 	err    error
 
-	jobsMu sync.Mutex
+	mu sync.Mutex
 	// jobs are the server jobs of the run in the order they started, each as last reported.
 	jobs []model.ServerBackupJob
+	// progressPct is the progress of the running job in percent, as the server reports it.
+	progressPct float64
 }
 
 var (
 	_ service.CancelableBackupHandler = (*backupOperation)(nil)
 	_ service.ServerJobReporter       = (*backupOperation)(nil)
+	_ service.ProgressReporter        = (*backupOperation)(nil)
 )
 
 func newBackupOperation(cancel context.CancelFunc) *backupOperation {
 	stats := models.NewBackupStats()
 	stats.Start()
-	stats.TotalRecords.Store(progressScale)
 
 	return &backupOperation{
 		cancel: cancel,
@@ -310,12 +309,12 @@ func newBackupOperation(cancel context.CancelFunc) *backupOperation {
 
 // report records the latest status of a job, whose progress is the progress of the run.
 func (o *backupOperation) report(status *infomodels.ResponseBackupState) {
-	o.stats.ReadRecords.Store(uint64(status.ProgressPct))
-
 	job := newServerBackupJob(status)
 
-	o.jobsMu.Lock()
-	defer o.jobsMu.Unlock()
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	o.progressPct = status.ProgressPct
 
 	if last := len(o.jobs) - 1; last >= 0 && o.jobs[last].JobID == job.JobID {
 		o.jobs[last] = job
@@ -326,10 +325,19 @@ func (o *backupOperation) report(status *infomodels.ResponseBackupState) {
 
 // ServerJobs returns the server jobs of the run, each as last reported.
 func (o *backupOperation) ServerJobs() []model.ServerBackupJob {
-	o.jobsMu.Lock()
-	defer o.jobsMu.Unlock()
+	o.mu.Lock()
+	defer o.mu.Unlock()
 
 	return slices.Clone(o.jobs)
+}
+
+// Progress returns the fraction of the running job done. The server counts no records to
+// back up, so the run has no record counts to report progress from.
+func (o *backupOperation) Progress() float64 {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	return o.progressPct / 100
 }
 
 func newServerBackupJob(status *infomodels.ResponseBackupState) model.ServerBackupJob {
@@ -376,7 +384,7 @@ func (o *backupOperation) Cancel() {
 	o.cancel()
 }
 
-// GetStats returns the progress of the namespace being backed up.
+// GetStats returns when the run started; the server reports no record counts.
 func (o *backupOperation) GetStats() *models.BackupStats {
 	return o.stats
 }

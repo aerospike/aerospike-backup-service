@@ -65,6 +65,13 @@ type ServerJobReporter interface {
 	ServerJobs() []model.ServerBackupJob
 }
 
+// ProgressReporter is implemented by the handler of a server backup, which knows its progress
+// only as the fraction of the job done, not as a number of records.
+type ProgressReporter interface {
+	// Progress returns the fraction of the running job done, in the range [0, 1].
+	Progress() float64
+}
+
 // Run starts a retryable backup for one namespace via [backupexecutor.Backup.Run],
 // writing each attempt to a folder of its own in the routine's storage layout, and returns
 // once the pipeline is running. A run that gives up before starting one returns its error.

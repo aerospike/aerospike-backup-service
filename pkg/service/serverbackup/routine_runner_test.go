@@ -467,12 +467,12 @@ func TestBackupOperation_ReportsProgress(t *testing.T) {
 	t.Parallel()
 	operation := newBackupOperation(func() {})
 
-	// The server reports percent: the stats count it out of 100, rounded down.
+	// The server reports percent, the operation a fraction, and no records counted.
 	for _, percent := range []float64{0, 42.7, 95, 100} {
 		operation.report(&infomodels.ResponseBackupState{JobID: fullID, ProgressPct: percent})
 
-		stats := operation.GetStats()
-		assert.Equal(t, uint64(percent), stats.ReadRecords.Load(), "progress %v", percent)
-		assert.Equal(t, uint64(100), stats.TotalRecords.Load())
+		assert.InDelta(t, percent/100, operation.Progress(), 1e-9, "progress %v", percent)
+		assert.Zero(t, operation.GetStats().ReadRecords.Load())
+		assert.Zero(t, operation.GetStats().TotalRecords.Load())
 	}
 }

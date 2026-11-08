@@ -373,10 +373,10 @@ func (s *ServerBackupSuite) TestServerTwoRoutines() {
 }
 
 // TestServerProgress checks that a running full backup reports its progress through
-// GET /v1/backups/currentBackup.
+// GET /v1/backups/currentBackup as a percentage, and no record counts: the server counts no
+// records to back up, so any count would be made up (BKRS-504).
 func (s *ServerBackupSuite) TestServerProgress() {
-	ages := []int{1, 2, 3, 4, 5}
-	s.seedRecordsIn(s.client, serverNamespace, ages)
+	s.seedRecordsIn(s.client, serverNamespace, []int{1, 2, 3, 4, 5})
 
 	e := s.setupEnv(s.serverBackupConfig)
 	s.triggerFullBackup(e)
@@ -385,7 +385,7 @@ func (s *ServerBackupSuite) TestServerProgress() {
 
 	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
 		state := s.routineState(e)
-		if state.Full == nil || state.Full.DoneRecords == 0 {
+		if state.Full == nil || state.Full.PercentageDone == 0 {
 			return false
 		}
 
@@ -394,7 +394,9 @@ func (s *ServerBackupSuite) TestServerProgress() {
 		return true
 	})
 	s.Require().True(ok, "no progress reported for the running full backup")
-	s.gap("total_records", gapProgress, func() { s.Equal(uint64(len(ages)), running.TotalRecords) })
+	s.Less(running.PercentageDone, uint(100), "a running backup reports done")
+	s.Nil(running.TotalRecords, "a server backup reports a total record count")
+	s.Nil(running.DoneRecords, "a server backup reports a done record count")
 
 	s.waitForFinishedBackup(e, model.BackupTypeFull)
 }

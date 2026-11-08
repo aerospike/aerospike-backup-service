@@ -78,8 +78,6 @@ const (
 		"the server takes its zero partition manifests for a failed fetch"
 	gapNamespaceMapping = "server bug: a restore into another namespace reads the backup under the " +
 		"destination namespace, finds nothing there and fails"
-	gapProgress = "server-side backup gap: a running server backup reports its progress in percent, " +
-		"not in records"
 	gapRoutineGate = "server-side backup gap: a second routine on the same cluster is skipped while a backup " +
 		"of another routine runs"
 	gapSharedStorage = "server-side backup gap: server backups are not kept per routine, routines sharing " +

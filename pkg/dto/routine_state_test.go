@@ -19,8 +19,8 @@ func TestNewRoutineStateFromModel(t *testing.T) {
 
 	m := model.RoutineState{
 		Full: &model.RunningJob{
-			TotalRecords: 100,
-			DoneRecords:  50,
+			TotalRecords: new(uint64(100)),
+			DoneRecords:  new(uint64(50)),
 			StartTime:    lastFull,
 			Progress:     0.5,
 		},
@@ -31,7 +31,7 @@ func TestNewRoutineStateFromModel(t *testing.T) {
 	state := NewRoutineStateFromModel(m)
 	require.NotNil(t, state.Full)
 	assert.Nil(t, state.Incremental)
-	assert.Equal(t, uint64(100), state.Full.TotalRecords)
+	assert.Equal(t, new(uint64(100)), state.Full.TotalRecords)
 	assert.Equal(t, uint(50), state.Full.PercentageDone)
 	require.NotNil(t, state.LastFull)
 	assert.Equal(t, lastFull, *state.LastFull)
@@ -78,8 +78,8 @@ func TestNewRunningJobFromModel_Finished(t *testing.T) {
 	finish := time.Now()
 
 	job := NewRunningJobFromModel(&model.RunningJob{
-		TotalRecords: 10,
-		DoneRecords:  10,
+		TotalRecords: new(uint64(10)),
+		DoneRecords:  new(uint64(10)),
 		StartTime:    start,
 		FinishTime:   &finish,
 		Progress:     1,

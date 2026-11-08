@@ -72,9 +72,9 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		// Assert against the fields of the returned status object
 		assert.Equal(t, model.RestoreRunning, status.Status) // Job is still running until finishJob is called
 		assert.NotNil(t, status.CurrentRestore)
-		assert.Equal(t, uint64(numGoroutines)*recordsPerGoroutine, status.CurrentRestore.TotalRecords,
+		assert.Equal(t, new(uint64(numGoroutines)*recordsPerGoroutine), status.CurrentRestore.TotalRecords,
 			"TotalRecords should be %d", uint64(numGoroutines)*recordsPerGoroutine)
-		assert.Equal(t, uint64(numGoroutines), status.CurrentRestore.DoneRecords,
+		assert.Equal(t, new(uint64(numGoroutines)), status.CurrentRestore.DoneRecords,
 			"DoneRecords should be %d", uint64(numGoroutines)) // Each handler adds 1 record
 		assert.NotNil(t, status.Counters)
 		assert.Equal(t, uint64(numGoroutines), status.Counters.GetReadRecords(),

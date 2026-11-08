@@ -19,24 +19,32 @@ func currentBackupStatus(handlers backupexecutor.BackupHandler) *model.RunningJo
 		return nil
 	}
 
-	var done = stats.ReadRecords.Load()
-	var total = stats.TotalRecords.Load()
+	if reporter, ok := handlers.(ProgressReporter); ok {
+		return runningJob(stats.StartTime, nil, nil, reporter.Progress(), handlers.GetMetrics())
+	}
+
+	done := stats.ReadRecords.Load()
+	total := stats.TotalRecords.Load()
 
 	progress := 0.0
 	if total != 0 {
-		progress = min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
+		progress = float64(done) / float64(total)
 	}
 
-	endTime := calculateEstimatedEndTime(stats.StartTime, progress)
+	return runningJob(stats.StartTime, &done, &total, progress, handlers.GetMetrics())
+}
+
+// runningJob is the state of a backup still running, whose progress is capped at 99%.
+func runningJob(startTime time.Time, done, total *uint64, progress float64, metrics *models.Metrics) *model.RunningJob {
+	progress = min(progress, 0.99)
 
 	return &model.RunningJob{
-		StartTime:        stats.StartTime,
-		FinishTime:       nil,
+		StartTime:        startTime,
 		DoneRecords:      done,
 		TotalRecords:     total,
-		EstimatedEndTime: endTime,
+		EstimatedEndTime: calculateEstimatedEndTime(startTime, progress),
 		Progress:         progress,
-		Metrics:          handlers.GetMetrics(),
+		Metrics:          metrics,
 	}
 }
 
@@ -50,8 +58,10 @@ func NewRestoreRunningJob(
 ) *model.RunningJob {
 	if total == 0 { // edge case for empty restore
 		return &model.RunningJob{
-			StartTime:  startTime,
-			FinishTime: finishTime,
+			StartTime:    startTime,
+			FinishTime:   finishTime,
+			DoneRecords:  &done,
+			TotalRecords: &total,
 		}
 	}
 
@@ -74,8 +84,8 @@ func NewRestoreRunningJob(
 	return &model.RunningJob{
 		StartTime:        startTime,
 		FinishTime:       finishTime,
-		DoneRecords:      done,
-		TotalRecords:     total,
+		DoneRecords:      &done,
+		TotalRecords:     &total,
 		EstimatedEndTime: endTime,
 		Progress:         progress,
 		Metrics:          effectiveMetrics,

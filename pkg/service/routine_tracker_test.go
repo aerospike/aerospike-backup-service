@@ -86,8 +86,8 @@ func TestRegisterAndGetState(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, snapshot.full)
 	assert.NotNil(t, snapshot.incr)
-	assert.Equal(t, uint64(100), snapshot.full.TotalRecords)
-	assert.Equal(t, uint64(50), snapshot.incr.TotalRecords)
+	assert.Equal(t, new(uint64(100)), snapshot.full.TotalRecords)
+	assert.Equal(t, new(uint64(50)), snapshot.incr.TotalRecords)
 }
 
 func TestClearBackup(t *testing.T) {

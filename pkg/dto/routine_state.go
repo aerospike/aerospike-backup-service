@@ -48,9 +48,11 @@ func NewRoutineStateFromModel(m model.RoutineState) RoutineState {
 // @Description RunningJob tracks progress of currently running job.
 type RunningJob struct {
 	// The total number of records to be processed.
-	TotalRecords uint64 `json:"total-records" example:"100"`
+	// Absent for a server-side backup, whose progress the server reports only as a percentage.
+	TotalRecords *uint64 `json:"total-records,omitempty" example:"100"`
 	// The number of records that have been successfully done.
-	DoneRecords uint64 `json:"done-records" example:"50"`
+	// Absent for a server-side backup.
+	DoneRecords *uint64 `json:"done-records,omitempty" example:"50"`
 	// The time when the operation started.
 	StartTime time.Time `json:"start-time" example:"2006-01-02T15:04:05Z07:00"`
 	// The time when the operation finished.
