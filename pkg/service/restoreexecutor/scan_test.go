@@ -225,7 +225,7 @@ func TestRecordExistsAction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := recordExistsAction(tt.replace, tt.unique)
+			result := recordExistsAction(&model.RestorePolicy{Replace: tt.replace, Unique: tt.unique})
 			assert.Equal(t, tt.expected, result)
 		})
 	}

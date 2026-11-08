@@ -197,8 +197,8 @@ func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler restoreexe
 	}
 }
 
-// addTotalRecords should be called once for each namespace in the beginning
-// of the restore process.
+// addTotalRecords adds the record count of backups the job restores: once per backup for
+// restore by time, once for the backup of a restore by path.
 func (h *RestoreJobsHolder) addTotalRecords(id model.RestoreJobID, t uint64) {
 	if job, ok := h.Load(id); ok {
 		job.addTotalRecords(t)

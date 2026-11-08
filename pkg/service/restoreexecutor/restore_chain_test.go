@@ -176,9 +176,7 @@ func restoreStatsInserted(n int) *models.RestoreStats {
 	return stats
 }
 
-// waitChain waits for the chain, failing the test after a deadline: a failed expectation in the
-// chain's background goroutine ends that goroutine without finishing the chain, so Wait itself
-// would never return.
+// waitChain waits for the chain, failing the test after a deadline if it never finishes.
 func waitChain(t *testing.T, chain RestoreHandler) error {
 	t.Helper()
 

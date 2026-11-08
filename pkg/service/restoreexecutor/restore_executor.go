@@ -2,6 +2,7 @@ package restoreexecutor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -38,6 +39,9 @@ func NewRestoreExecutor(operations storage.Operations) *RestoreExecutor {
 	}
 }
 
+// errStoppedEarly is the outcome of a sequence whose goroutine ended before restoreAll returned.
+var errStoppedEarly = errors.New("restore sequence stopped before it finished")
+
 // Run restores the requests in the background, each after the previous one has finished. The
 // handler reports the stats of every restore started so far and, from Wait, the first failure.
 // Canceling ctx, or the one given to Wait, stops the running restore and starts no more.
@@ -51,8 +55,15 @@ func (r *RestoreExecutor) Run(
 	chain := newSequentialRestoreHandler(cancel)
 
 	go func() {
-		defer cancel()
-		chain.finish(r.restoreAll(ctx, client, logger, requests, chain))
+		// Deferred, so that Wait returns even if restoreAll leaves this goroutine early, as a
+		// failed test expectation does through runtime.Goexit.
+		err := errStoppedEarly
+		defer func() {
+			cancel()
+			chain.finish(err)
+		}()
+
+		err = r.restoreAll(ctx, client, logger, requests, chain)
 	}()
 
 	return chain
