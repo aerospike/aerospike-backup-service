@@ -99,13 +99,13 @@ func TestRestoreByTime_FinishedBoundaryIsInclusive(t *testing.T) {
 	chains, err := runner.findBackupsToRestore(t.Context(), &model.RestoreTimestampRequest{
 		RoutineName: "r", Storage: st, Time: ts2.Add(5 * time.Minute)})
 	require.NoError(t, err)
-	assert.Equal(t, ts1, chains["ns"][0].Created)
+	assert.Equal(t, ts1, chains["ns"].full.Created)
 
 	// T == Finished of the second full -> second full is chosen (inclusive).
 	chains, err = runner.findBackupsToRestore(t.Context(), &model.RestoreTimestampRequest{
 		RoutineName: "r", Storage: st, Time: ts2.Add(10 * time.Minute)})
 	require.NoError(t, err)
-	assert.Equal(t, ts2, chains["ns"][0].Created)
+	assert.Equal(t, ts2, chains["ns"].full.Created)
 }
 
 // filterIncrementals: differential chain keeps every incremental, cumulative chain
@@ -135,9 +135,8 @@ func TestRestoreByTime_IncrementalChainSelection(t *testing.T) {
 
 // --- 8. Restore-by-time "empty namespace" optimisation checks the SOURCE namespace ---
 
-// prepareNamespaceRestore reverses the chain and switches to CREATE_ONLY when the target
-// namespace is empty; with a namespace remap the record count has to come from the destination
-// namespace, not the source one.
+// prepareNamespaceRestore switches to CREATE_ONLY when the target namespace is empty; with a
+// namespace remap the record count has to come from the destination namespace, not the source one.
 func TestRestoreByTime_EmptyCheckUsesDestinationNamespace(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	info := aerospike.NewMockInfoGetter(ctrl)
@@ -154,9 +153,7 @@ func TestRestoreByTime_EmptyCheckUsesDestinationNamespace(t *testing.T) {
 			Namespace: &model.RestoreNamespace{Source: "source-ns", Destination: "dest-ns"},
 		},
 	}
-	backups := []model.BackupDetails{{BackupMetadata: model.BackupMetadata{Namespace: "source-ns"}}}
-
-	policy, err := prepareNamespaceRestore(t.Context(), info, "source-ns", req, backups, slog.Default())
+	policy, err := prepareNamespaceRestore(t.Context(), info, "source-ns", req, slog.Default())
 	require.NoError(t, err)
 	assert.Equal(t, "dest-ns", queried, "emptiness must be checked on the namespace the data is written to")
 	assert.True(t, *policy.Unique, "empty destination switches to CREATE_ONLY")

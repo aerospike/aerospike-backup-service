@@ -19,160 +19,40 @@ func (f fakeInfoGetter) GetNamespacesList(_ context.Context) ([]string, error) {
 	return []string{"ns1"}, nil
 }
 
-func TestRestoreValidator_BlocksPathRestoreOnSameClusterNamespace(t *testing.T) {
-	ctrl := gomock.NewController(t)
+// TestRestoreValidator_BlocksRestoreDuringBackup checks that both restore entry points refuse a
+// restore into a namespace a routine is backing up from the same cluster.
+func TestRestoreValidator_BlocksRestoreDuringBackup(t *testing.T) {
+	cluster := &model.AerospikeCluster{ClusterLabel: "cluster-a"}
+	backups := []model.BackupDetails{{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}}}
 
-	startController := NewMockStartController(ctrl)
-	config := NewmockRoutineProvider(ctrl)
-
-	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
-	routines := map[string]*model.BackupRoutine{
-		"routine-1": {
-			Name:          "routine-1",
-			SourceCluster: cluster,
-			Namespaces:    []string{"ns1"},
+	validate := map[string]func(v RestoreValidator, ctx context.Context) error{
+		"by path": func(v RestoreValidator, ctx context.Context) error {
+			return v.ValidatePath(ctx, &model.RestoreRequest{DestinationCluster: *cluster}, fakeInfoGetter{}, backups)
+		},
+		"by time": func(v RestoreValidator, ctx context.Context) error {
+			return v.ValidateTimestamp(ctx, &model.RestoreTimestampRequest{DestinationCluster: *cluster},
+				fakeInfoGetter{}, backups)
 		},
 	}
-	config.EXPECT().Routines().Return(routines)
-	startController.EXPECT().
-		HasBackupRunning(routines["routine-1"]).
-		Return(true)
 
-	validator := NewRestoreValidator(startController, config)
+	for name, validate := range validate {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			routines := map[string]*model.BackupRoutine{
+				"routine-1": {Name: "routine-1", SourceCluster: cluster, Namespaces: []string{"ns1"}},
+			}
+			config := NewmockRoutineProvider(ctrl)
+			config.EXPECT().Routines().Return(routines)
+			startController := NewMockStartController(ctrl)
+			startController.EXPECT().HasBackupRunning(routines["routine-1"]).Return(true)
 
-	infoGetter := fakeInfoGetter{}
+			err := validate(NewRestoreValidator(startController, config), t.Context())
 
-	err := validator.ValidatePath(
-		t.Context(),
-		&model.RestoreRequest{
-			DestinationCluster: *cluster,
-		},
-		infoGetter,
-		[]model.BackupDetails{
-			{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}},
-		},
-	)
-
-	require.ErrorContains(t, err,
-		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
-	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
-}
-
-func TestRestoreValidator_BlocksTimeRestoreOnSameClusterNamespace(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	startController := NewMockStartController(ctrl)
-	config := NewmockRoutineProvider(ctrl)
-
-	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
-	routines := map[string]*model.BackupRoutine{
-		"routine-1": {
-			Name:          "routine-1",
-			SourceCluster: cluster,
-			Namespaces:    []string{"ns1"},
-		},
+			require.ErrorContains(t, err,
+				"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
+			require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
+		})
 	}
-	config.EXPECT().Routines().Return(routines)
-	startController.EXPECT().
-		HasBackupRunning(routines["routine-1"]).
-		Return(true)
-
-	validator := NewRestoreValidator(startController, config)
-
-	infoGetter := fakeInfoGetter{}
-
-	err := validator.ValidateTimestamp(
-		t.Context(),
-		&model.RestoreTimestampRequest{
-			DestinationCluster: *cluster,
-		},
-		infoGetter,
-		map[string][]model.BackupDetails{
-			"ns1": {{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}}},
-		},
-	)
-
-	require.ErrorContains(t, err,
-		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
-	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
-}
-
-func TestRestoreValidator_BlocksPathRestoreOnPendingBackupStart(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	startController := NewMockStartController(ctrl)
-	config := NewmockRoutineProvider(ctrl)
-
-	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
-	routines := map[string]*model.BackupRoutine{
-		"routine-1": {
-			Name:          "routine-1",
-			SourceCluster: cluster,
-			Namespaces:    []string{"ns1"},
-		},
-	}
-	config.EXPECT().Routines().Return(routines)
-	startController.EXPECT().
-		HasBackupRunning(routines["routine-1"]).
-		Return(true)
-
-	validator := NewRestoreValidator(startController, config)
-
-	err := validator.ValidatePath(
-		t.Context(),
-		&model.RestoreRequest{
-			DestinationCluster: *cluster,
-		},
-		fakeInfoGetter{},
-		[]model.BackupDetails{
-			{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}},
-		},
-	)
-
-	require.ErrorContains(t, err,
-		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
-	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
-}
-
-func TestRestoreValidator_BlocksTimeRestoreOnPendingBackupStart(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	startController := NewMockStartController(ctrl)
-	config := NewmockRoutineProvider(ctrl)
-
-	clusterLabel := "cluster-a"
-	cluster := &model.AerospikeCluster{ClusterLabel: clusterLabel}
-	routines := map[string]*model.BackupRoutine{
-		"routine-1": {
-			Name:          "routine-1",
-			SourceCluster: cluster,
-			Namespaces:    []string{"ns1"},
-		},
-	}
-	config.EXPECT().Routines().Return(routines)
-	startController.EXPECT().
-		HasBackupRunning(routines["routine-1"]).
-		Return(true)
-
-	validator := NewRestoreValidator(startController, config)
-
-	err := validator.ValidateTimestamp(
-		t.Context(),
-		&model.RestoreTimestampRequest{
-			DestinationCluster: *cluster,
-		},
-		fakeInfoGetter{},
-		map[string][]model.BackupDetails{
-			"ns1": {{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}}},
-		},
-	)
-
-	require.ErrorContains(t, err,
-		"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
-	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
 }
 
 func TestDestinationNamespacesForRestore(t *testing.T) {
@@ -302,9 +182,9 @@ func TestRestoreValidator_BlocksTimeRestoreOnNamespaceRemapOutOfScope(t *testing
 			},
 		},
 		fakeInfoGetter{},
-		map[string][]model.BackupDetails{
-			"ns1": {{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}}},
-			"ns2": {{BackupMetadata: model.BackupMetadata{Namespace: "ns2", FileCount: 1}}},
+		[]model.BackupDetails{
+			{BackupMetadata: model.BackupMetadata{Namespace: "ns1", FileCount: 1}},
+			{BackupMetadata: model.BackupMetadata{Namespace: "ns2", FileCount: 1}},
 		},
 	)
 
