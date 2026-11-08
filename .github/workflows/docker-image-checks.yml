@@ -1,0 +1,47 @@
+name: Docker image checks
+
+# Builds the runtime image and asserts it ships no SSH server and has the expected file
+# ownership. See build/scripts/check-image.sh.
+on:
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - Dockerfile
+      - go.mod
+      - go.sum
+      - build/package/config/**
+      - build/scripts/check-image.sh
+      - .github/workflows/docker-image-checks.yml
+  pull_request:
+    paths:
+      - Dockerfile
+      - go.mod
+      - go.sum
+      - build/package/config/**
+      - build/scripts/check-image.sh
+      - .github/workflows/docker-image-checks.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image-checks:
+    name: Build and check image
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build image
+        run: DOCKER_BUILDKIT=1 docker build --progress=plain -t abs:ci .
+
+      - name: Check image
+        run: build/scripts/check-image.sh abs:ci

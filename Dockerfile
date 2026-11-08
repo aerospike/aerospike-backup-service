@@ -48,11 +48,11 @@ RUN addgroup -g 65532 -S abgroup && \
     adduser -S -u 65532 -G abgroup -h /home/absuser absuser && \
     install -d -o absuser -g abgroup -m 0750 /var/log/aerospike-backup-service
 
-COPY --chown=absuser:absgroup --chmod=0755 --from=builder \
+COPY --chown=absuser:abgroup --chmod=0755 --from=builder \
     /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH} \
     /usr/bin/aerospike-backup-service
 
-COPY --chown=absuser:absgroup --from=builder \
+COPY --chown=absuser:abgroup --from=builder \
     /app/aerospike-backup-service/build/package/config/aerospike-backup-service.yml \
     /etc/aerospike-backup-service/aerospike-backup-service.yml
 
