@@ -2,6 +2,7 @@ package restoreexecutor
 
 import (
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -17,7 +18,7 @@ func TestRestoreExecutor_Run_ChainInGivenOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	operations, client := expectRestoresInOrder(ctrl, "full", "incr1", "incr2")
 
-	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client,
+	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
 		testChainRequest("full"), testChainRequest("incr1"), testChainRequest("incr2"))
 	require.NoError(t, err)
 	require.NoError(t, chain.Wait(t.Context()))
@@ -71,10 +72,12 @@ func TestRestoreExecutor_Run_ChainStopsAtFirstFailure(t *testing.T) {
 	client := aerospike.NewMockClient(ctrl)
 	client.EXPECT().Restore(gomock.Any(), gomock.Any(), reader).Return(handler, nil)
 
-	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client,
+	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
 		testChainRequest("full"), testChainRequest("incr1"))
 	require.NoError(t, err)
-	require.ErrorIs(t, chain.Wait(t.Context()), wantErr)
+	err = chain.Wait(t.Context())
+	require.ErrorIs(t, err, wantErr)
+	assert.ErrorContains(t, err, "backup at full")
 }
 
 // The first restore of a chain starts in Run; a later one that cannot start fails the chain
@@ -94,7 +97,7 @@ func TestRestoreExecutor_Run_LaterStartFailureFromWait(t *testing.T) {
 		operations.EXPECT().CreateDirReader(gomock.Any(), gomock.Any(), "incr1", gomock.Any()).Return(nil, wantErr),
 	)
 
-	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client,
+	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
 		testChainRequest("full"), testChainRequest("incr1"))
 	require.NoError(t, err)
 	require.ErrorIs(t, chain.Wait(t.Context()), wantErr)

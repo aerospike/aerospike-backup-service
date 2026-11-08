@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -48,10 +49,11 @@ type oneByOneRestore struct {
 func (o oneByOneRestore) Run(
 	ctx context.Context,
 	client aerospike.Client,
+	logger *slog.Logger,
 	first *model.RestoreRequest,
 	rest ...*model.RestoreRequest,
 ) (restoreexecutor.RestoreHandler, error) {
-	handler, err := o.restore.Run(ctx, client, first)
+	handler, err := o.restore.Run(ctx, client, logger, first)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +63,7 @@ func (o oneByOneRestore) Run(
 			return handler, nil //nolint:nilerr // the failed restore reports it from Wait, as the executor does.
 		}
 
-		next, err := o.restore.Run(ctx, client, request)
+		next, err := o.restore.Run(ctx, client, logger, request)
 		if err != nil {
 			return failedRestore{err: err}, nil //nolint:nilerr // a later start failure comes from Wait.
 		}

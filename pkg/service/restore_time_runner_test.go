@@ -67,10 +67,10 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 	// Restore runs executor once per backup in chain (full then incremental).
 	gomock.InOrder(
 		env.mockRestore.EXPECT().
-			Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: fullBackup.Key}).
+			Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: fullBackup.Key}).
 			Return(env.expectDefaultRestoreHandler(), nil),
 		env.mockRestore.EXPECT().
-			Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: incrBackup.Key}).
+			Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: incrBackup.Key}).
 			Return(env.expectDefaultRestoreHandler(), nil),
 	)
 
@@ -140,11 +140,11 @@ func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
 
 	client := env.expectSuccessfulClientInteraction(t)
 	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: smallAt12.Key}).
+		Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: smallAt12.Key}).
 		Return(env.expectDefaultRestoreHandler(), nil).
 		Times(1)
 	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: largeAt11.Key}).
+		Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: largeAt11.Key}).
 		Return(env.expectDefaultRestoreHandler(), nil).
 		Times(1)
 
@@ -240,7 +240,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 					AnyTimes()
 				// Incrementals with the same timestamp as full are skipped, so only full runs.
 				env.mockRestore.EXPECT().
-					Run(gomock.Any(), client, gomock.Any()).
+					Run(gomock.Any(), client, gomock.Any(), gomock.Any()).
 					Return(env.expectDefaultRestoreHandler(), nil).Times(1)
 			} else {
 				env.restoreValidator.EXPECT().
@@ -328,10 +328,10 @@ func TestRestoreByTime_CumulativeIncrementals(t *testing.T) {
 	// Since incr2 covers the same period as incr1, incr1 should be skipped.
 	gomock.InOrder(
 		env.mockRestore.EXPECT().
-			Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: fullBackup.Key}).
+			Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: fullBackup.Key}).
 			Return(env.expectDefaultRestoreHandler(), nil),
 		env.mockRestore.EXPECT().
-			Run(gomock.Any(), client, restoreRequestPathMatcher{expectedPath: incr2Backup.Key}).
+			Run(gomock.Any(), client, gomock.Any(), restoreRequestPathMatcher{expectedPath: incr2Backup.Key}).
 			Return(env.expectDefaultRestoreHandler(), nil),
 	)
 
@@ -455,7 +455,7 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 			calls := make([]any, 0, len(tt.expectOrder))
 			for _, path := range tt.expectOrder {
 				calls = append(calls, env.mockRestore.EXPECT().
-					Run(gomock.Any(), client, restoreRequestUniqueMatcher{path, tt.expectUnique}).
+					Run(gomock.Any(), client, gomock.Any(), restoreRequestUniqueMatcher{path, tt.expectUnique}).
 					Return(env.expectDefaultRestoreHandler(), nil))
 			}
 			gomock.InOrder(calls...)

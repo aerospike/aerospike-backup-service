@@ -11,6 +11,7 @@ package restoreexecutor
 
 import (
 	context "context"
+	slog "log/slog"
 	reflect "reflect"
 
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -44,9 +45,9 @@ func (m *MockRestore) EXPECT() *MockRestoreMockRecorder {
 }
 
 // Run mocks base method.
-func (m *MockRestore) Run(ctx context.Context, client aerospike.Client, first *model.RestoreRequest, rest ...*model.RestoreRequest) (RestoreHandler, error) {
+func (m *MockRestore) Run(ctx context.Context, client aerospike.Client, logger *slog.Logger, first *model.RestoreRequest, rest ...*model.RestoreRequest) (RestoreHandler, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, client, first}
+	varargs := []any{ctx, client, logger, first}
 	for _, a := range rest {
 		varargs = append(varargs, a)
 	}
@@ -57,9 +58,9 @@ func (m *MockRestore) Run(ctx context.Context, client aerospike.Client, first *m
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockRestoreMockRecorder) Run(ctx, client, first any, rest ...any) *gomock.Call {
+func (mr *MockRestoreMockRecorder) Run(ctx, client, logger, first any, rest ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, client, first}, rest...)
+	varargs := append([]any{ctx, client, logger, first}, rest...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockRestore)(nil).Run), varargs...)
 }
 

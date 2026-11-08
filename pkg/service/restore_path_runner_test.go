@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -34,7 +35,7 @@ func TestRestoreOK(t *testing.T) {
 	mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
 	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, request).
+		Run(gomock.Any(), client, gomock.Any(), request).
 		Return(mockRestoreHandler, nil)
 
 	detailsDetails := model.BackupDetails{
@@ -89,7 +90,7 @@ func TestCancelRestoreOK(t *testing.T) {
 		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Expect Run to start the process
-	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(mockRestoreHandler, nil)
+	env.mockRestore.EXPECT().Run(gomock.Any(), client, gomock.Any(), request).Return(mockRestoreHandler, nil)
 
 	env.restoreValidator.EXPECT().
 		ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -234,7 +235,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 
 	restoreErr := errors.New("restore service error")
 	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, request).
+		Run(gomock.Any(), client, gomock.Any(), request).
 		Return(nil, restoreErr)
 
 	detailsDetails := model.BackupDetails{
@@ -285,10 +286,11 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 	// Mock the Run() call to simulate a long-running startup.
 	// It will block until its context is canceled.
 	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, request).
+		Run(gomock.Any(), client, gomock.Any(), request).
 		DoAndReturn(func(
 			ctx context.Context,
 			_ aerospike.Client,
+			_ *slog.Logger,
 			_ *model.RestoreRequest,
 			_ ...*model.RestoreRequest,
 		) (restoreexecutor.RestoreHandler, error) {

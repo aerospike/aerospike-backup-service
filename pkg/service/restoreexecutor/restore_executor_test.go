@@ -2,6 +2,7 @@ package restoreexecutor
 
 import (
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -33,7 +34,7 @@ func TestRestoreExecutor_Run_Success(t *testing.T) {
 
 	executor := NewRestoreExecutor(operations)
 
-	handler, err := executor.Run(t.Context(), client, testRestoreRequest())
+	handler, err := executor.Run(t.Context(), client, slog.Default(), testRestoreRequest())
 	require.NoError(t, err)
 	require.NoError(t, handler.Wait(t.Context()))
 	assert.Equal(t, uint64(2), handler.GetStats().GetRecordsInserted())
@@ -55,7 +56,7 @@ func TestRestoreExecutor_Run_RestoreStartError(t *testing.T) {
 
 	executor := NewRestoreExecutor(operations)
 
-	_, err := executor.Run(t.Context(), client, testRestoreRequest())
+	_, err := executor.Run(t.Context(), client, slog.Default(), testRestoreRequest())
 	assert.ErrorContains(t, err, "restore failed")
 }
 
@@ -71,7 +72,7 @@ func TestRestoreExecutor_Run_EmptyStorage(t *testing.T) {
 
 	client := aerospike.NewMockClient(ctrl)
 
-	_, err := executor.Run(t.Context(), client, testRestoreRequest())
+	_, err := executor.Run(t.Context(), client, slog.Default(), testRestoreRequest())
 	require.ErrorIs(t, err, common.ErrEmptyStorage)
 }
 
