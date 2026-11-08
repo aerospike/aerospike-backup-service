@@ -3,6 +3,8 @@ ARG GO_VERSION=1.26.10
 ARG REGISTRY="docker.io"
 
 # Build-time only (never shipped), so pin exactly; bump tag and digest together.
+# The golang builder is not digest-pinned: its tag comes from GO_VERSION, which release
+# builds resolve per run.
 FROM --platform=$BUILDPLATFORM ${REGISTRY}/tonistiigi/xx:1.10.0@sha256:40fe21f44bb8cddf1eb1226db190d0a984118f62ee02a91b77d99448d28264a6 AS xx
 FROM --platform=$BUILDPLATFORM ${REGISTRY}/golang:${GO_VERSION} AS builder
 
@@ -18,15 +20,17 @@ COPY . .
 RUN xx-go --wrap
 
 RUN --mount=type=secret,id=GOPROXY <<-EOF
+    set -e
     if [ -s /run/secrets/GOPROXY ]; then
-        export GOPROXY=$(cat /run/secrets/GOPROXY)
+        export GOPROXY="$(cat /run/secrets/GOPROXY)"
     fi
     go mod download
 EOF
 
 RUN --mount=type=secret,id=GOPROXY <<-EOF
+    set -e
     if [ -s /run/secrets/GOPROXY ]; then
-        export GOPROXY=$(cat /run/secrets/GOPROXY)
+        export GOPROXY="$(cat /run/secrets/GOPROXY)"
     fi
     OS="${TARGETOS}" ARCH="${TARGETARCH}" make build BUILD_MODE="${BUILD_MODE}"
     xx-verify /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH}
