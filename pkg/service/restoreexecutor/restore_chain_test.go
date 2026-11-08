@@ -20,9 +20,8 @@ func TestRestoreExecutor_Run_ChainInGivenOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	operations, client := expectRestoresInOrder(ctrl, "full", "incr1", "incr2")
 
-	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
+	chain := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
 		testChainRequest("full"), testChainRequest("incr1"), testChainRequest("incr2"))
-	require.NoError(t, err)
 	require.NoError(t, waitChain(t, chain))
 	assert.Equal(t, uint64(3), chain.GetStats().GetRecordsInserted())
 }
@@ -74,17 +73,15 @@ func TestRestoreExecutor_Run_ChainStopsAtFirstFailure(t *testing.T) {
 	client := aerospike.NewMockClient(ctrl)
 	client.EXPECT().Restore(gomock.Any(), gomock.Any(), reader).Return(handler, nil)
 
-	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
+	chain := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
 		testChainRequest("full"), testChainRequest("incr1"))
-	require.NoError(t, err)
-	err = waitChain(t, chain)
+	err := waitChain(t, chain)
 	require.ErrorIs(t, err, wantErr)
 	assert.ErrorContains(t, err, "backup at full")
 }
 
-// The first restore of a chain starts in Run; a later one that cannot start fails the chain
-// from Wait.
-func TestRestoreExecutor_Run_LaterStartFailureFromWait(t *testing.T) {
+// A later restore that cannot start fails the chain after the earlier ones have finished.
+func TestRestoreExecutor_Run_LaterStartFailure(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	wantErr := errors.New("no such backup")
 
@@ -99,9 +96,8 @@ func TestRestoreExecutor_Run_LaterStartFailureFromWait(t *testing.T) {
 		operations.EXPECT().CreateDirReader(gomock.Any(), gomock.Any(), "incr1", gomock.Any()).Return(nil, wantErr),
 	)
 
-	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
+	chain := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
 		testChainRequest("full"), testChainRequest("incr1"))
-	require.NoError(t, err)
 	require.ErrorIs(t, waitChain(t, chain), wantErr)
 }
 
@@ -121,9 +117,8 @@ func TestRestoreExecutor_Run_CanceledChainStartsNoMore(t *testing.T) {
 	operations.EXPECT().CreateDirReader(gomock.Any(), gomock.Any(), "full", gomock.Any()).Return(reader, nil)
 	client.EXPECT().Restore(gomock.Any(), gomock.Any(), reader).Return(handler, nil)
 
-	chain, err := NewRestoreExecutor(operations).Run(ctx, client, slog.Default(),
+	chain := NewRestoreExecutor(operations).Run(ctx, client, slog.Default(),
 		testChainRequest("full"), testChainRequest("incr1"))
-	require.NoError(t, err)
 	require.ErrorIs(t, waitChain(t, chain), context.Canceled)
 }
 

@@ -421,14 +421,10 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 	logger.Info("Restoring chain", slog.Int("backups", len(requests)),
 		slog.Bool("newestFirst", newestFirst), slog.Any("chain", backups))
 
-	handler, err := r.restoreService.Run(ctx, client, logger, requests[0], requests[1:]...)
-	if err != nil {
-		return err
-	}
-
+	handler := r.restoreService.Run(ctx, client, logger, requests...)
 	r.restoreJobs.addHandler(jobID, handler)
 
-	if err = handler.Wait(ctx); err != nil {
+	if err := handler.Wait(ctx); err != nil {
 		return err
 	}
 

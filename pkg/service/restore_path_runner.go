@@ -89,11 +89,7 @@ func (r *pathRestoreRunner) executeRestore(
 		return err
 	}
 
-	handler, err := r.restoreService.Run(ctx, client, logger, request)
-	if err != nil {
-		return err
-	}
-
+	handler := r.restoreService.Run(ctx, client, logger, request)
 	r.restoreJobs.addTotalRecords(jobID, recordsInBackup(backups))
 	r.restoreJobs.addHandler(jobID, handler)
 

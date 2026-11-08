@@ -43,37 +43,27 @@ type oneByOneRestore struct {
 	restore *restoreexecutor.MockRestore
 }
 
-// Run restores each request after the previous one has finished, as the executor does: a
-// first restore that cannot start is the error of Run, and the handler of the last restore
-// started reports a later failure from its Wait.
+// Run restores each request after the previous one has finished, as the executor does, and
+// returns the handler of the last restore started, which reports a failure from its Wait.
 func (o oneByOneRestore) Run(
 	ctx context.Context,
 	client aerospike.Client,
 	logger *slog.Logger,
-	first *model.RestoreRequest,
-	rest ...*model.RestoreRequest,
-) (restoreexecutor.RestoreHandler, error) {
-	handler, err := o.restore.Run(ctx, client, logger, first)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, request := range rest {
+	requests ...*model.RestoreRequest,
+) restoreexecutor.RestoreHandler {
+	handler := o.restore.Run(ctx, client, logger, requests[0])
+	for _, request := range requests[1:] {
 		if err := handler.Wait(ctx); err != nil {
-			return handler, nil //nolint:nilerr // the failed restore reports it from Wait, as the executor does.
+			return handler
 		}
 
-		next, err := o.restore.Run(ctx, client, logger, request)
-		if err != nil {
-			return failedRestore{err: err}, nil //nolint:nilerr // a later start failure comes from Wait.
-		}
-		handler = next
+		handler = o.restore.Run(ctx, client, logger, request)
 	}
 
-	return handler, nil
+	return handler
 }
 
-// failedRestore is the handler of a restore that could not start.
+// failedRestore is the handler of a restore that failed to start.
 type failedRestore struct {
 	err error
 }

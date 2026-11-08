@@ -45,22 +45,21 @@ func (m *MockRestore) EXPECT() *MockRestoreMockRecorder {
 }
 
 // Run mocks base method.
-func (m *MockRestore) Run(ctx context.Context, client aerospike.Client, logger *slog.Logger, first *model.RestoreRequest, rest ...*model.RestoreRequest) (RestoreHandler, error) {
+func (m *MockRestore) Run(ctx context.Context, client aerospike.Client, logger *slog.Logger, requests ...*model.RestoreRequest) RestoreHandler {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, client, logger, first}
-	for _, a := range rest {
+	varargs := []any{ctx, client, logger}
+	for _, a := range requests {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Run", varargs...)
 	ret0, _ := ret[0].(RestoreHandler)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockRestoreMockRecorder) Run(ctx, client, logger, first any, rest ...any) *gomock.Call {
+func (mr *MockRestoreMockRecorder) Run(ctx, client, logger any, requests ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, client, logger, first}, rest...)
+	varargs := append([]any{ctx, client, logger}, requests...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockRestore)(nil).Run), varargs...)
 }
 
