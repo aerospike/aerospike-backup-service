@@ -345,6 +345,7 @@ func prepareNamespaceRestore(
 	}
 
 	if effectivePolicy.IsUniqueOrDefault() {
+		logger.Info("Restoring the chain newest first: the unique policy keeps the first version written")
 		return effectivePolicy, nil
 	}
 
@@ -359,7 +360,7 @@ func prepareNamespaceRestore(
 	}
 
 	if counter == 0 {
-		logger.Info("Use optimized restore because database is empty")
+		logger.Info("Namespace is empty: restoring the chain newest first under the unique policy")
 
 		// old values are not important, because they qualify how to handle existing data in db.
 		effectivePolicy.Unique = new(true)

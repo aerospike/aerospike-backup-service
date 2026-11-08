@@ -13,7 +13,9 @@ import (
 // Restore starts a restore and returns a handle to observe it.
 type Restore interface {
 	// Run restores one backup, or a full backup and the incremental backups that follow it,
-	// oldest first, one request per backup, and returns a single handler for all of them.
+	// oldest first, one request per backup, and returns a single handler for all of them. The
+	// policy and options of the full request stand for the whole chain. A chain whose first
+	// restore cannot start is the error of Run; a later one fails from the handler's Wait.
 	Run(
 		ctx context.Context,
 		client aerospike.Client,
@@ -36,12 +38,12 @@ func NewRestoreExecutor(operations storage.Operations) *RestoreExecutor {
 	}
 }
 
-// Run restores the backups one after another and returns at once: the restores run in the
-// background, and the handler reports the stats of every restore started so far, and a
-// failure to start one from Wait. Under the unique (CREATE_ONLY) policy a chain is applied
-// newest first, so that a record keeps its latest version and the older ones are skipped,
-// unless the request disables reordering; otherwise oldest first, so that later versions
-// overwrite earlier ones.
+// Run starts the first restore and returns; the rest of the chain runs in the background,
+// each restore after the previous one has finished. The handler reports the stats of every
+// restore started so far and, from Wait, the first failure. Under the unique (CREATE_ONLY)
+// policy a chain is applied newest first, so that a record keeps its latest version and the
+// older ones are skipped, unless the request disables reordering; otherwise oldest first, so
+// that later versions overwrite earlier ones.
 func (r *RestoreExecutor) Run(
 	ctx context.Context,
 	client aerospike.Client,
@@ -53,27 +55,37 @@ func (r *RestoreExecutor) Run(
 		slices.Reverse(requests)
 	}
 
-	chain := newSequentialRestoreHandler()
+	first, err := r.startRestore(ctx, client, requests[0])
+	if err != nil {
+		return nil, err
+	}
+
+	chain := newSequentialRestoreHandler(first)
 
 	go func() {
-		chain.finish(r.runSequentially(ctx, client, requests, chain))
+		chain.finish(r.runRest(ctx, client, first, requests[1:], chain))
 	}()
 
 	return chain, nil
 }
 
-// runSequentially restores each request after the previous one has finished, and stops at
+// runRest waits for the first restore, then restores the rest one after another, stopping at
 // the first failure.
-func (r *RestoreExecutor) runSequentially(
+func (r *RestoreExecutor) runRest(
 	ctx context.Context,
 	client aerospike.Client,
-	requests []*model.RestoreRequest,
+	first RestoreHandler,
+	rest []*model.RestoreRequest,
 	chain *sequentialRestoreHandler,
 ) error {
-	for _, request := range requests {
-		handler, err := runScanRestore(ctx, client, request, r.operations)
+	if err := first.Wait(ctx); err != nil {
+		return err
+	}
+
+	for _, request := range rest {
+		handler, err := r.startRestore(ctx, client, request)
 		if err != nil {
-			return fmt.Errorf("failed to start restore from backup at %s: %w", request.BackupDataPath, err)
+			return err
 		}
 
 		chain.add(handler)
@@ -84,4 +96,17 @@ func (r *RestoreExecutor) runSequentially(
 	}
 
 	return nil
+}
+
+func (r *RestoreExecutor) startRestore(
+	ctx context.Context,
+	client aerospike.Client,
+	request *model.RestoreRequest,
+) (RestoreHandler, error) {
+	handler, err := runScanRestore(ctx, client, request, r.operations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start restore from backup at %s: %w", request.BackupDataPath, err)
+	}
+
+	return handler, nil
 }

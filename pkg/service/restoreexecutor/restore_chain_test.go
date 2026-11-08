@@ -106,11 +106,27 @@ func TestRestoreExecutor_Run_ChainStopsAtFirstFailure(t *testing.T) {
 	require.ErrorIs(t, chain.Wait(t.Context()), wantErr)
 }
 
-func TestSequentialRestoreHandler_BeforeFirstRestore(t *testing.T) {
-	handler := newSequentialRestoreHandler()
+// The first restore of a chain starts in Run; a later one that cannot start fails the chain
+// from Wait.
+func TestRestoreExecutor_Run_LaterStartFailureFromWait(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	wantErr := errors.New("no such backup")
 
-	assert.Zero(t, handler.GetStats().GetRecordsInserted())
-	assert.Equal(t, &models.Metrics{}, handler.GetMetrics())
+	operations := storage.NewMockOperations(ctrl)
+	reader := NewMockStreamingReader(ctrl)
+	handler := NewMockRestoreHandler(ctrl)
+	handler.EXPECT().Wait(gomock.Any()).Return(nil)
+	client := aerospike.NewMockClient(ctrl)
+	gomock.InOrder(
+		operations.EXPECT().CreateDirReader(gomock.Any(), gomock.Any(), "full", gomock.Any()).Return(reader, nil),
+		client.EXPECT().Restore(gomock.Any(), gomock.Any(), reader).Return(handler, nil),
+		operations.EXPECT().CreateDirReader(gomock.Any(), gomock.Any(), "incr1", gomock.Any()).Return(nil, wantErr),
+	)
+
+	chain, err := NewRestoreExecutor(operations).Run(t.Context(), client,
+		testChainRequest("full", false), testChainRequest("incr1", false))
+	require.NoError(t, err)
+	require.ErrorIs(t, chain.Wait(t.Context()), wantErr)
 }
 
 func testChainRequest(path string, unique bool) *model.RestoreRequest {

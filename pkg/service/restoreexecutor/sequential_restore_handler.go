@@ -7,8 +7,9 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// sequentialRestoreHandler follows restores that run one after another: it reports the stats
-// of all of them together, and its Wait ends when the last one ends or one fails.
+// sequentialRestoreHandler follows restores that run one after another, the first of which has
+// started: it reports the stats of all of them together, and its Wait ends when the last one
+// ends or one fails.
 type sequentialRestoreHandler struct {
 	mu       sync.Mutex
 	handlers []RestoreHandler
@@ -18,8 +19,8 @@ type sequentialRestoreHandler struct {
 
 var _ RestoreHandler = (*sequentialRestoreHandler)(nil)
 
-func newSequentialRestoreHandler() *sequentialRestoreHandler {
-	return &sequentialRestoreHandler{done: make(chan struct{})}
+func newSequentialRestoreHandler(first RestoreHandler) *sequentialRestoreHandler {
+	return &sequentialRestoreHandler{handlers: []RestoreHandler{first}, done: make(chan struct{})}
 }
 
 // add records a restore that has started.
@@ -59,15 +60,11 @@ func (h *sequentialRestoreHandler) GetStats() *models.RestoreStats {
 	return models.SumRestoreStats(stats...)
 }
 
-// GetMetrics returns the metrics of the restore running now, or empty metrics before the first
-// one has started.
+// GetMetrics returns the metrics of the restore running now: rates of finished restores would
+// not add up to anything.
 func (h *sequentialRestoreHandler) GetMetrics() *models.Metrics {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-
-	if len(h.handlers) == 0 {
-		return &models.Metrics{}
-	}
 
 	return h.handlers[len(h.handlers)-1].GetMetrics()
 }

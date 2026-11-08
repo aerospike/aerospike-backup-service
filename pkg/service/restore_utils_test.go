@@ -42,31 +42,43 @@ type oneByOneRestore struct {
 	restore *restoreexecutor.MockRestore
 }
 
-// Run restores each request after the previous one has finished. The handler of the last one
-// started is returned: it reports a failure that ended the chain early from its Wait.
+// Run restores each request after the previous one has finished, as the executor does: a
+// first restore that cannot start is the error of Run, and the handler of the last restore
+// started reports a later failure from its Wait.
 func (o oneByOneRestore) Run(
 	ctx context.Context,
 	client aerospike.Client,
 	full *model.RestoreRequest,
 	incrementals ...*model.RestoreRequest,
 ) (restoreexecutor.RestoreHandler, error) {
-	requests := append([]*model.RestoreRequest{full}, incrementals...)
-
-	var handler restoreexecutor.RestoreHandler
-	for i, request := range requests {
-		started, err := o.restore.Run(ctx, client, request)
-		if err != nil {
-			return nil, err
-		}
-
-		handler = started
-		if i < len(requests)-1 && handler.Wait(ctx) != nil {
-			break
-		}
+	handler, err := o.restore.Run(ctx, client, full)
+	if err != nil {
+		return nil, err
 	}
 
-	return handler, nil //nolint:nilerr // the handler of a failed restore reports it from Wait.
+	for _, request := range incrementals {
+		if err := handler.Wait(ctx); err != nil {
+			return handler, nil //nolint:nilerr // the failed restore reports it from Wait, as the executor does.
+		}
+
+		next, err := o.restore.Run(ctx, client, request)
+		if err != nil {
+			return failedRestore{err: err}, nil //nolint:nilerr // a later start failure comes from Wait.
+		}
+		handler = next
+	}
+
+	return handler, nil
 }
+
+// failedRestore is the handler of a restore that could not start.
+type failedRestore struct {
+	err error
+}
+
+func (f failedRestore) Wait(context.Context) error     { return f.err }
+func (f failedRestore) GetStats() *models.RestoreStats { return models.NewRestoreStats() }
+func (f failedRestore) GetMetrics() *models.Metrics    { return &models.Metrics{} }
 
 // testRestoreEnv holds the components needed for restore tests.
 type testRestoreEnv struct {
