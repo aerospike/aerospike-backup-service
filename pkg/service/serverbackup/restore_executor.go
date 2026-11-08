@@ -73,13 +73,15 @@ func (r *restoreExecutor) start(
 		return nil, err
 	}
 
-	common, err := newRequestCommon(request.SourceStorage, namespace)
+	common, err := withStorage(infomodels.RequestCommon{
+		Namespace: namespace,
+		SetList:   strings.Join(request.Policy.SetList, ","),
+		NoIndexes: request.Policy.NoIndexes,
+		NoUDFs:    request.Policy.NoUdfs,
+	}, request.SourceStorage)
 	if err != nil {
 		return nil, err
 	}
-	common.SetList = strings.Join(request.Policy.SetList, ",")
-	common.NoIndexes = request.Policy.NoIndexes
-	common.NoUDFs = request.Policy.NoUdfs
 
 	lane := laneOf(request.Policy.Mode)
 	infoClient := client.InfoClient()
@@ -148,30 +150,33 @@ func errTruncateState(namespace string) error {
 // restore wrote: an aborted cold restore keeps the namespace from clients until restore-open. The
 // abort takes effect in the background, and a node whose abort lands after restore-open closes the
 // namespace again, so it opens the namespace only once the job has ended. The opening also takes
-// effect in the background: it returns once the namespace is open. It runs even when ctx is
-// canceled, since a canceled restore holds the namespace as well.
+// effect in the background: it returns once the namespace is open.
 func releaseNamespace(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
-	ctx = context.WithoutCancel(ctx)
-
 	if err := abortRestore(ctx, infoClient, namespace, jobID); err != nil {
 		return err
 	}
 
-	err := awaitRestoreStatus(ctx, infoClient, namespace, jobID, "end", (*infomodels.ResponseRestoreState).IsFinished)
-	if err == nil {
-		err = infoClient.OpenRestore(ctx, namespace)
+	ended := (*infomodels.ResponseRestoreState).IsFinished
+	if err := awaitRestoreStatus(ctx, infoClient, namespace, jobID, "end", ended); err != nil {
+		return openFailure(namespace, jobID, err)
 	}
-	if err == nil {
-		err = awaitRestoreStatus(ctx, infoClient, namespace, jobID, "open the namespace",
-			func(status *infomodels.ResponseRestoreState) bool {
-				return status.NsState == infomodels.NamespaceStateNone
-			})
+
+	if err := infoClient.OpenRestore(ctx, namespace); err != nil {
+		return openFailure(namespace, jobID, err)
 	}
-	if err != nil {
-		return fmt.Errorf("failed to open namespace %s after server restore %s: %w", namespace, jobID, err)
+
+	open := func(status *infomodels.ResponseRestoreState) bool {
+		return status.NsState == infomodels.NamespaceStateNone
+	}
+	if err := awaitRestoreStatus(ctx, infoClient, namespace, jobID, "open the namespace", open); err != nil {
+		return openFailure(namespace, jobID, err)
 	}
 
 	return nil
+}
+
+func openFailure(namespace, jobID string, err error) error {
+	return fmt.Errorf("failed to open namespace %s after server restore %s: %w", namespace, jobID, err)
 }
 
 // awaitRestoreStatus polls the restore jobID for up to abortTimeout, until its status is done.
@@ -209,9 +214,9 @@ func awaitRestoreStatus(
 	}
 }
 
-// abortRestore aborts the restore jobID, even when ctx is canceled.
+// abortRestore aborts the restore jobID.
 func abortRestore(ctx context.Context, infoClient backup.ServerBackupInfo, namespace, jobID string) error {
-	if err := infoClient.AbortRestore(context.WithoutCancel(ctx), namespace, jobID); err != nil {
+	if err := infoClient.AbortRestore(ctx, namespace, jobID); err != nil {
 		return fmt.Errorf("failed to abort server restore %s: %w", jobID, err)
 	}
 
@@ -265,12 +270,13 @@ func newRestoreHandler(infoClient backup.ServerBackupInfo, namespace, jobID stri
 }
 
 // Wait polls the restore job until it ends and the namespace is open to clients again, or ctx
-// is canceled. A restore that does not complete is released as its lane releases it.
+// is canceled. A restore that does not complete is released as its lane releases it, even when
+// ctx is canceled: a canceled restore holds the namespace as well.
 func (h *restoreHandler) Wait(ctx context.Context) error {
 	defer h.stats.Stop()
 
 	if err := h.awaitComplete(ctx); err != nil {
-		return errors.Join(err, h.lane.release(ctx, h.infoClient, h.namespace, h.jobID))
+		return errors.Join(err, h.lane.release(context.WithoutCancel(ctx), h.infoClient, h.namespace, h.jobID))
 	}
 
 	return nil

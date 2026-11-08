@@ -112,14 +112,16 @@ func (r *routineRunner) backupNamespace(
 	operation *backupOperation,
 	logger *slog.Logger,
 ) error {
-	common, err := newRequestCommon(routine.Storage, namespace)
+	common, err := withStorage(infomodels.RequestCommon{
+		Namespace: namespace,
+		SetList:   strings.Join(routine.SetList, ","),
+		FilterExp: routine.FilterExpression,
+		NoIndexes: routine.BackupPolicy.NoIndexes,
+		NoUDFs:    routine.BackupPolicy.NoUdfs,
+	}, routine.Storage)
 	if err != nil {
 		return err
 	}
-	common.SetList = strings.Join(routine.SetList, ",")
-	common.FilterExp = routine.FilterExpression
-	common.NoIndexes = routine.BackupPolicy.NoIndexes
-	common.NoUDFs = routine.BackupPolicy.NoUdfs
 
 	modifiedAfter, err := r.modifiedAfter(ctx, routine, runSpec.Type, namespace)
 	if err != nil {

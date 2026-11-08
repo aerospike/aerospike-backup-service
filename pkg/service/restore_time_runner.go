@@ -149,11 +149,11 @@ func buildRestoreChainsByNamespace(
 	return chains
 }
 
-// backupsByNamespace returns the backups of each namespace's chain, the full backup first.
-func backupsByNamespace(chains map[string]restoreChain) map[string][]model.BackupDetails {
-	backups := make(map[string][]model.BackupDetails, len(chains))
-	for ns, chain := range chains {
-		backups[ns] = chain.backups()
+// allBackups returns the backups of every chain.
+func allBackups(chains map[string]restoreChain) []model.BackupDetails {
+	var backups []model.BackupDetails
+	for _, chain := range chains {
+		backups = append(backups, chain.backups()...)
 	}
 
 	return backups
@@ -240,7 +240,7 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 		ctx,
 		request,
 		client.InfoClient(),
-		backupsByNamespace(chains),
+		allBackups(chains),
 	); err != nil {
 		return err
 	}
@@ -250,12 +250,12 @@ func (r *timeRestoreRunner) restoreByTimeSync(
 
 // checkGaps checks that there are no gaps between full backups and incremental backups.
 func checkGaps(chains map[string]restoreChain, logger *slog.Logger) {
-	for ns, restoreChain := range chains {
-		chain := restoreChain.backups()
+	for ns, chain := range chains {
+		backups := chain.backups()
 
-		for i := 0; i < len(chain)-1; i++ {
-			prev := chain[i]
-			next := chain[i+1]
+		for i := 0; i < len(backups)-1; i++ {
+			prev := backups[i]
+			next := backups[i+1]
 
 			if prev.Created.Before(next.From) {
 				msg := "Gap detected in incremental backup chain"

@@ -31,9 +31,6 @@ func (m BackupMode) Validate() error {
 
 // ToModel converts the DTO backup mode to the model type.
 func (m BackupMode) ToModel() model.BackupMode {
-	if m == "" {
-		return ""
-	}
 	c, _ := canonicalEnum(m, backupModes)
 	return model.BackupMode(c)
 }
