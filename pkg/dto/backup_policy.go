@@ -61,12 +61,12 @@ type BackupPolicy struct {
 	Compact *bool `yaml:"compact,omitempty" json:"compact,omitempty" default:"false"`
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
-	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty" extensions:"x-nullable"`
+	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty" default:"false" extensions:"x-nullable"`
 	// The mode for incremental backups (optional, default is differential).
 	IncrMode IncrMode `yaml:"incr-mode,omitempty" json:"incr-mode,omitempty" example:"differential" extensions:"x-nullable"`
 	// Enables built-in compression during scan operation.
 	// Valid for Aerospike Server Enterprise Edition only.
-	UseCompression *bool `yaml:"use-scan-compression,omitempty" json:"use-scan-compression,omitempty" extensions:"x-nullable"`
+	UseCompression *bool `yaml:"use-scan-compression,omitempty" json:"use-scan-compression,omitempty" default:"false" extensions:"x-nullable"`
 	// Maximum number of concurrent requests to server nodes.
 	// Default is to issue requests to all server nodes in parallel.
 	MaxConcurrentNodes *int `yaml:"max-concurrent-nodes,omitempty" json:"max-concurrent-nodes,omitempty" extensions:"x-nullable"`

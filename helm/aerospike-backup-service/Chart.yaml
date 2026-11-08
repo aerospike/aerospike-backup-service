@@ -5,11 +5,12 @@ type: application
 icon: https://avatars0.githubusercontent.com/u/2214313?s=200&v=4
 keywords:
   - Aerospike
-  - Vector
+  - backup
+  - restore
 maintainers:
   - name: Aerospike
     email: developers@aerospike.com
 # The helm chart version
-version: "2.1.0"
+version: "3.0.1"
 # The default version of Aerospike Backup Service
-appVersion: "3.7.0"
+appVersion: "3.7.1"

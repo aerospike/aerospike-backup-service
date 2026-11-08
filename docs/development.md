@@ -162,8 +162,12 @@ app versions it ships. The rule, in force from `v3.7.0`:
 | Release | App version | Chart version |
 |---------|-------------|---------------|
 | New minor line | `v3.7.0` | `2.1.0` (chart **minor** advances) |
-| Hotfix on that line | `v3.7.1` | `2.1.1` (chart **patch** mirrors the app patch) |
-| Next minor line | `v3.8.0` | `2.2.0` |
+| Breaking chart change | `v3.7.1` | `3.0.1` (chart **major** advances; patch still mirrors the app patch) |
+| Hotfix on that line | `v3.7.2` | `3.0.2` (chart **patch** mirrors the app patch) |
+| Next minor line | `v3.8.0` | `3.1.0` |
+
+A chart change that can break an existing values file bumps the chart **major** and resets its minor,
+as `v3.7.1` did with chart `3.0.1`. The chart patch still mirrors the app patch.
 
 Because a hotfix stays on its own line's chart minor, a fix released for an older line can never
 overtake a newer release. This is what went wrong before the rule existed: `v3.5.1` was cut after
@@ -195,8 +199,8 @@ match the app patch.
 #### Hotfix
 1. Create a hotfix branch from `main` (e.g. `hotfix/v3.6.2`).
 2. Prepare the hotfix by updating the version files. Bump the **third digit** of both the version
-   (e.g. `v3.7.0` -> `v3.7.1`; `make release` rejects a version without the `v` prefix) and the Helm
-   chart version (e.g. `2.1.0` -> `2.1.1`), keeping the chart on the minor already assigned to that
+   (e.g. `v3.7.1` -> `v3.7.2`; `make release` rejects a version without the `v` prefix) and the Helm
+   chart version (e.g. `3.0.1` -> `3.0.2`), keeping the chart on the minor already assigned to that
    app minor line -- see [Chart versioning](#chart-versioning):
    ```bash
    NEXT_VERSION="<version>" NEXT_HELM_CHART_VERSION="<helm-chart-version>" make release
@@ -234,9 +238,10 @@ The following steps apply to both regular releases and hotfixes:
      ([strategy](https://aerospike.atlassian.net/wiki/spaces/DevOps/pages/4648566799)).
    - A dev or PM/EM manually runs [`release.yml`](https://github.com/aerospike/aerospike-backup-service/actions/workflows/release.yml)
      (`workflow_dispatch`, with the release version as input). It verifies the bundle was actually promoted to
-     `PROD`, then downloads the already-signed artifacts straight from JFrog's `PROD`-public repos and publishes
-     them as a new, immutable GitHub **pre-release** — nothing is rebuilt, re-signed, or re-checksummed at
-     this point.
+     `PROD`, then downloads the already-signed `.deb`/`.rpm` packages straight from JFrog's `PROD`-public repos
+     and publishes them as a new, immutable GitHub **pre-release** — nothing is rebuilt, re-signed, or
+     re-checksummed at this point. The Helm chart is not attached to the GitHub Release; it is distributed
+     only through the Helm repository.
 10. When ready to announce GA, a PM/EM edits that GitHub Release and clears **Set as a pre-release** only.
     The GitHub **Set as the latest release** checkbox is unrelated to any registry tag and can be left
     unchecked. Until the pre-release flag is cleared, the release does not appear as GA on GitHub.

@@ -129,7 +129,7 @@ recognised and are ignored; the rest of the sandbox applies.
 <!-- tag PackageInstall deb -->
 
 ```shell
-sudo dpkg -i aerospike-backup-service_3.7.0_<arch>_<distro>.deb
+sudo dpkg -i aerospike-backup-service_3.7.1_<arch>_<distro>.deb
 ```
 <!-- /tag -->
 
@@ -210,7 +210,7 @@ sudo rm -rf /var/lib/aerospike-backup-service
 <!-- tag PackageInstall rpm -->
 
 ```shell
-sudo rpm -i aerospike-backup-service-3.7.0-1.<distro>.<arch>.rpm
+sudo rpm -i aerospike-backup-service-3.7.1-1.<distro>.<arch>.rpm
 ```
 <!-- /tag -->
 

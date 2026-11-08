@@ -22,7 +22,7 @@ type BackupCommonConfig struct {
 	// Prefer canonical Area/Location names: legacy aliases such as EST resolve as
 	// fixed UTC-5 with no DST, which is rarely what "Eastern Time" is meant to be.
 	// Changing this service-level default requires a restart.
-	ScheduleTimezone ScheduleTimezone `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" example:"America/New_York" extensions:"x-nullable"` //nolint:lll
+	ScheduleTimezone ScheduleTimezone `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" default:"UTC" example:"America/New_York" extensions:"x-nullable"` //nolint:lll
 	// Backup mode for the whole service instance (optional).
 	// Allowed values:
 	// * scan (default): the service scans the cluster and writes the backup data itself.
@@ -45,10 +45,6 @@ func (b *BackupCommonConfig) Validate() error {
 		return err
 	}
 
-	if err := b.BackupMode.Validate(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -60,14 +56,12 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 	return &model.BackupCommonConfig{
 		TimestampFormat: b.TimestampFormat.ToModel(),
 		Timezone:        b.ScheduleTimezone.ToServiceLocation(),
-		BackupMode:      b.BackupMode.ToModel(),
 	}
 }
 
 func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
 	b.TimestampFormat = NewTimestampFormatFromModel(m.TimestampFormat)
 	b.ScheduleTimezone = ScheduleTimezone(m.Timezone.Configured)
-	b.BackupMode = NewBackupModeFromModel(m.BackupMode)
 }
 
 // Compare compares two BackupCommonConfig instances and returns detailed errors.
@@ -84,6 +78,5 @@ func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
 	return errors.Join(
 		compareValues("TimestampFormat", b.TimestampFormat, other.TimestampFormat),
 		compareValues("ScheduleTimezone", b.ScheduleTimezone, other.ScheduleTimezone),
-		compareValues("BackupMode", b.BackupMode, other.BackupMode),
 	)
 }
