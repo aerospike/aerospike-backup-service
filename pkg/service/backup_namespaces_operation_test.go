@@ -91,7 +91,6 @@ func TestBackupNamespacesOperation_Status_Aggregated(t *testing.T) {
 	// Not started yet: excluded from the counts.
 	h3 := NewMockCancelableBackupHandler(ctrl)
 	h3.EXPECT().GetStats().Return(nil)
-	h3.EXPECT().GetMetrics().Return(nil)
 
 	op := &BackupNamespacesOperation{
 		handlers: map[string]CancelableBackupHandler{"ns1": h1, "ns2": h2, "ns3": h3},
@@ -113,8 +112,9 @@ func TestBackupNamespacesOperation_Status_Progress(t *testing.T) {
 		total, read  uint64
 		wantProgress float64
 	}{
-		"part read":                   {total: 100, read: 25, wantProgress: 0.25},
-		"not estimated yet":           {total: 0, read: 0, wantProgress: 0},
+		"part read":         {total: 100, read: 25, wantProgress: 0.25},
+		"not estimated yet": {total: 0, read: 0, wantProgress: 0},
+		// Only the progress is capped; the counts stay as read.
 		"estimate fell short, capped": {total: 100, read: 107, wantProgress: 1},
 	}
 
@@ -131,7 +131,12 @@ func TestBackupNamespacesOperation_Status_Progress(t *testing.T) {
 
 			op := &BackupNamespacesOperation{handlers: map[string]CancelableBackupHandler{"ns1": h}}
 
-			assert.InDelta(t, tt.wantProgress, op.Status().Progress, 1e-9)
+			run := op.Status()
+
+			require.NotNil(t, run)
+			assert.InDelta(t, tt.wantProgress, run.Progress, 1e-9)
+			assert.Equal(t, tt.total, run.Scan.TotalRecords)
+			assert.Equal(t, tt.read, run.Scan.DoneRecords)
 		})
 	}
 }

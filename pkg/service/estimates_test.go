@@ -14,8 +14,6 @@ import (
 func TestCurrentBackupStatus(t *testing.T) {
 	t.Parallel()
 
-	// A minute in: the end time is start + elapsed/progress.
-	start := time.Now().Add(-time.Minute)
 	metrics := &models.Metrics{RecordsPerSecond: 7}
 	tests := map[string]struct {
 		run                 model.BackupRun
@@ -50,6 +48,9 @@ func TestCurrentBackupStatus(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			// A minute in: the end time is start + elapsed/progress. Taken here, not in the
+			// parent, so a wait for a parallel slot does not skew the estimate.
+			start := time.Now().Add(-time.Minute)
 			run := tt.run
 			run.StartTime = start
 			handler := NewMockRoutineBackupHandler(gomock.NewController(t))
@@ -63,6 +64,7 @@ func TestCurrentBackupStatus(t *testing.T) {
 			assert.InDelta(t, tt.wantProgress, job.Progress, 1e-9)
 			assert.Equal(t, start, job.StartTime)
 			assert.Same(t, tt.wantMetrics, job.Metrics)
+			assert.Nil(t, job.FinishTime)
 			require.NotNil(t, job.EstimatedEndTime)
 			// Tolerance well under the 0.6s an uncapped estimate would add.
 			assert.WithinDuration(t, start.Add(tt.wantDuration), *job.EstimatedEndTime, 100*time.Millisecond)
@@ -102,7 +104,9 @@ func TestCurrentBackupStatus_ScanOperation(t *testing.T) {
 	assert.Equal(t, stats.StartTime, job.StartTime)
 	require.NotNil(t, job.Metrics)
 	assert.Equal(t, uint64(7), job.Metrics.RecordsPerSecond)
-	assert.NotNil(t, job.EstimatedEndTime)
+	assert.Nil(t, job.FinishTime)
+	require.NotNil(t, job.EstimatedEndTime)
+	assert.WithinDuration(t, stats.StartTime.Add(150*time.Second), *job.EstimatedEndTime, 100*time.Millisecond)
 }
 
 func TestNewRunningJob(t *testing.T) {

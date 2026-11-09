@@ -36,69 +36,40 @@ func (op *BackupNamespacesOperation) Cancel() {
 	}
 }
 
-// Status sums the namespace handlers into one run, or nil while none of them has started.
-// Progress is the share of the records estimated for all namespaces that are read so far: zero
-// before the estimate is known, and capped at 1 because the estimate can fall short of the
-// records actually read.
+// Status sums the namespace handlers that have started into one run, or returns nil while none
+// has. A namespace waiting to retry has no stats, so it drops out until its next attempt starts.
+// Progress is the share of the estimated records that are read so far: zero before the estimate
+// is known, and capped at 1 because the estimate can fall short of the records actually read.
 func (op *BackupNamespacesOperation) Status() *model.BackupRun {
-	stats := op.aggregateStats()
-	if stats == nil {
-		return nil
-	}
-
-	total, done := stats.TotalRecords.Load(), stats.GetReadRecords()
-	progress := 0.0
-	if total != 0 {
-		progress = min(float64(done)/float64(total), 1)
-	}
-
-	return &model.BackupRun{
-		StartTime: stats.StartTime,
-		Progress:  progress,
-		Scan: &model.ScanProgress{
-			TotalRecords: total,
-			DoneRecords:  done,
-			Metrics:      op.sumMetrics(),
-		},
-	}
-}
-
-// sumMetrics sums backup-go metrics across all namespace handlers.
-func (op *BackupNamespacesOperation) sumMetrics() *models.Metrics {
+	var total, done uint64
+	run := model.BackupRun{}
 	metrics := make([]*models.Metrics, 0, len(op.handlers))
-
 	for _, handler := range op.handlers {
-		metrics = append(metrics, handler.GetMetrics())
-	}
-
-	return models.SumMetrics(metrics...)
-}
-
-// aggregateStats sums the statistics of the namespace handlers that have started, or returns
-// nil when none has.
-func (op *BackupNamespacesOperation) aggregateStats() *models.BackupStats {
-	activeHandlers := 0
-
-	res := models.NewBackupStats()
-	for _, handler := range op.handlers {
-		backupStats := handler.GetStats()
-		if backupStats == nil {
+		stats := handler.GetStats()
+		if stats == nil {
 			continue
 		}
 
-		activeHandlers++
-		res.TotalRecords.Add(backupStats.TotalRecords.Load())
-		res.ReadRecords.Add(backupStats.GetReadRecords())
-
-		// These are the backups of multiple namespaces in the same routine.
-		// Therefore, picking any of those is valid, since they started at
-		// the same time.
-		res.StartTime = backupStats.StartTime
+		total += stats.TotalRecords.Load()
+		done += stats.GetReadRecords()
+		metrics = append(metrics, handler.GetMetrics())
+		// The namespaces of a routine start together, so any one's start time is the run's.
+		run.StartTime = stats.StartTime
 	}
 
-	if activeHandlers == 0 {
+	if len(metrics) == 0 { // one entry per started handler
 		return nil
 	}
 
-	return res
+	if total != 0 {
+		run.Progress = min(float64(done)/float64(total), 1)
+	}
+
+	run.Scan = &model.ScanProgress{
+		TotalRecords: total,
+		DoneRecords:  done,
+		Metrics:      models.SumMetrics(metrics...),
+	}
+
+	return &run
 }
