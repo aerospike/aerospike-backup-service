@@ -113,8 +113,8 @@ func TestBackupNamespacesOperation_Status_Progress(t *testing.T) {
 		total, read  uint64
 		wantProgress float64
 	}{
-		"not estimated yet":           {total: 0, read: 0, wantProgress: 0},
 		"part read":                   {total: 100, read: 25, wantProgress: 0.25},
+		"not estimated yet":           {total: 0, read: 0, wantProgress: 0},
 		"estimate fell short, capped": {total: 100, read: 107, wantProgress: 1},
 	}
 
