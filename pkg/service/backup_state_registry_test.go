@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -20,12 +19,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	registry := newTestBackupStateRegistry(nil, nil)
-	backupStats := models.NewBackupStats()
-	backupStats.TotalRecords.Store(100)
-
-	handler := NewMockCancelableBackupHandler(ctrl)
-	handler.EXPECT().GetStats().Return(backupStats).AnyTimes()
-	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+	handler := newScanBackupHandler(ctrl, 100)
 
 	// Register a full backup handler
 	registry.BackupStarted(routineName, model.BackupTypeFull, handler)
@@ -50,12 +44,7 @@ func TestHistoryScan(t *testing.T) {
 	registry := newTestBackupStateRegistry(historyMgr, nil)
 	registry.synchroniseBackupHistory(t.Context(), []*model.BackupRoutine{{Name: routineName}})
 
-	backupStats := models.NewBackupStats()
-	backupStats.TotalRecords.Store(100)
-
-	handler := NewMockCancelableBackupHandler(ctrl)
-	handler.EXPECT().GetStats().Return(backupStats).AnyTimes()
-	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+	handler := newScanBackupHandler(ctrl, 100)
 
 	registry.BackupStarted(routineName, model.BackupTypeFull, handler)
 
@@ -159,8 +148,7 @@ func TestFinishFull(t *testing.T) {
 	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(backupTime, nil).Times(1)
 
 	registry := newTestBackupStateRegistry(historyMgr, nil)
-	handler := NewMockCancelableBackupHandler(ctrl)
-	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+	handler := NewMockRoutineBackupHandler(ctrl)
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,
@@ -189,8 +177,7 @@ func TestFinishIncremental(t *testing.T) {
 	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(backupTime, nil).Times(1)
 
 	registry := newTestBackupStateRegistry(historyMgr, nil)
-	handler := NewMockCancelableBackupHandler(ctrl)
-	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+	handler := NewMockRoutineBackupHandler(ctrl)
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,
@@ -253,12 +240,7 @@ func TestGetAllCurrentStats(t *testing.T) {
 	}).AnyTimes()
 
 	registry := newTestBackupStateRegistry(nil, mockReader)
-	backupStats := models.NewBackupStats()
-	backupStats.TotalRecords.Store(100)
-
-	handler := NewMockCancelableBackupHandler(ctrl)
-	handler.EXPECT().GetStats().Return(backupStats).AnyTimes()
-	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+	handler := newScanBackupHandler(ctrl, 100)
 
 	// Register handlers for multiple routines
 	registry.BackupStarted(routine1, model.BackupTypeFull, handler)
@@ -344,10 +326,10 @@ func TestCancel(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	registry := newTestBackupStateRegistry(nil, nil)
-	handlerFull := NewMockCancelableBackupHandler(ctrl)
+	handlerFull := NewMockRoutineBackupHandler(ctrl)
 	handlerFull.EXPECT().Cancel()
 
-	handlerIncr := NewMockCancelableBackupHandler(ctrl)
+	handlerIncr := NewMockRoutineBackupHandler(ctrl)
 	handlerIncr.EXPECT().Cancel()
 
 	registry.BackupStarted(routineName, model.BackupTypeFull, handlerFull)
