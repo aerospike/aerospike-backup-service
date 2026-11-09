@@ -89,8 +89,7 @@ func makeWritePolicy(restoreRequest *model.RestoreRequest) *as.WritePolicy {
 	}
 
 	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
-	writePolicy.RecordExistsAction = recordExistsAction(
-		restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
+	writePolicy.RecordExistsAction = recordExistsAction(&restoreRequest.Policy)
 
 	writePolicy.SocketTimeout = restoreRequest.Policy.GetSocketTimeoutOrDefault()
 
@@ -101,14 +100,17 @@ func makeWritePolicy(restoreRequest *model.RestoreRequest) *as.WritePolicy {
 	return writePolicy
 }
 
-func recordExistsAction(replace, unique *bool) as.RecordExistsAction {
+// recordExistsAction decides what a write does to an existing record. Unique is read through
+// IsUniqueOrDefault, as the time runner does when it orders a chain, so that the write mode and
+// the restore order follow the same default.
+func recordExistsAction(policy *model.RestorePolicy) as.RecordExistsAction {
 	switch {
 	// overwrite all bins of an existing record
-	case replace != nil && *replace:
+	case policy.Replace != nil && *policy.Replace:
 		return as.REPLACE
 
 	// only insert the record if it does not already exist in the database
-	case unique != nil && *unique:
+	case policy.IsUniqueOrDefault():
 		return as.CREATE_ONLY
 
 	// default behavior: merge bins with existing record, or create a new

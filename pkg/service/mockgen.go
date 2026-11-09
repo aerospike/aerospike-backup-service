@@ -718,17 +718,17 @@ func (mr *MockRestoreValidatorMockRecorder) ValidatePath(ctx, request, infoGette
 }
 
 // ValidateTimestamp mocks base method.
-func (m *MockRestoreValidator) ValidateTimestamp(ctx context.Context, request *model.RestoreTimestampRequest, infoGetter backup.InfoGetter, backupsByNamespace map[string][]model.BackupDetails) error {
+func (m *MockRestoreValidator) ValidateTimestamp(ctx context.Context, request *model.RestoreTimestampRequest, infoGetter backup.InfoGetter, backups []model.BackupDetails) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateTimestamp", ctx, request, infoGetter, backupsByNamespace)
+	ret := m.ctrl.Call(m, "ValidateTimestamp", ctx, request, infoGetter, backups)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateTimestamp indicates an expected call of ValidateTimestamp.
-func (mr *MockRestoreValidatorMockRecorder) ValidateTimestamp(ctx, request, infoGetter, backupsByNamespace any) *gomock.Call {
+func (mr *MockRestoreValidatorMockRecorder) ValidateTimestamp(ctx, request, infoGetter, backups any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateTimestamp", reflect.TypeOf((*MockRestoreValidator)(nil).ValidateTimestamp), ctx, request, infoGetter, backupsByNamespace)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateTimestamp", reflect.TypeOf((*MockRestoreValidator)(nil).ValidateTimestamp), ctx, request, infoGetter, backups)
 }
 
 // MockStartController is a mock of StartController interface.

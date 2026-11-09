@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -34,6 +35,15 @@ func waitForRestore(
 
 	return jobStatus, err
 }
+
+// failedRestore is the handler of a restore that failed to start.
+type failedRestore struct {
+	err error
+}
+
+func (f failedRestore) Wait(context.Context) error     { return f.err }
+func (f failedRestore) GetStats() *models.RestoreStats { return models.NewRestoreStats() }
+func (f failedRestore) GetMetrics() *models.Metrics    { return &models.Metrics{} }
 
 // testRestoreEnv holds the components needed for restore tests.
 type testRestoreEnv struct {
