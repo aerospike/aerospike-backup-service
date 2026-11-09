@@ -147,3 +147,33 @@ func (p *PathFilter) String() string {
 	return fmt.Sprintf("path: %v storage: %s timebounds: %s",
 		p.path, p.storage.String(), p.timeBounds().String())
 }
+
+// Storage returns the storage the routine writes its backups to.
+func (f *RoutineFilter) Storage() model.Storage {
+	return f.storage
+}
+
+// BackupType returns the type of backups the filter selects.
+func (f *RoutineFilter) BackupType() model.BackupType {
+	return f.backupType
+}
+
+// OnlyLast reports whether only the latest matching backup is selected.
+func (f *RoutineFilter) OnlyLast() bool {
+	return f.onlyLast
+}
+
+// TimeBounds returns the Created time bounds of the filter.
+func (f *RoutineFilter) TimeBounds() model.TimeBounds {
+	return f.timeBounds()
+}
+
+// Path returns the backup path the filter selects.
+func (p *PathFilter) Path() string {
+	return p.path
+}
+
+// Storage returns the storage the backup path is read from.
+func (p *PathFilter) Storage() model.Storage {
+	return p.storage
+}

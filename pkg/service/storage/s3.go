@@ -289,3 +289,8 @@ func deleteS3ProbeObject(ctx context.Context, client *awsS3.Client, bucket strin
 		)
 	}
 }
+
+// GetClient returns the cached S3 client for the given storage configuration.
+func (a *S3StorageAccessor) GetClient(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error) {
+	return a.clientMap.Get(ctx, s)
+}

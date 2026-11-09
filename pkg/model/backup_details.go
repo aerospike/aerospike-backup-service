@@ -31,6 +31,15 @@ func (bd BackupDetails) IsEmpty() bool {
 	return bd.FileCount == 0
 }
 
+// BackupType returns incremental for a backup with a lower time bound, full otherwise.
+func (m BackupMetadata) BackupType() BackupType {
+	if m.From.IsZero() {
+		return BackupTypeFull
+	}
+
+	return BackupTypeIncremental
+}
+
 // BackupMetadata is an internal container for storing backup metadata.
 // It is stored as a separate metadata file within each backup.
 type BackupMetadata struct {

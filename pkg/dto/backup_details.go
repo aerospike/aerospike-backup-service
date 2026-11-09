@@ -60,8 +60,7 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupCo
 	d.Created = m.Created
 	d.Timestamp = m.Created.UnixMilli()
 	d.Finished = m.Finished
-	d.FinishedTimestamp = m.Finished.UnixMilli()
-	d.Duration = uint(m.Finished.Sub(d.Created) / time.Second)
+	d.FinishedTimestamp, d.Duration = finishTimestampAndDuration(m.Created, m.Finished)
 	d.From = m.From
 	d.Namespace = m.Namespace
 	d.RecordCount = m.RecordCount
@@ -72,4 +71,14 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupCo
 	d.Encryption = m.Encryption.String()
 	d.Compression = m.Compression.String()
 	d.Storage = NewStorageFromModel(m.Storage, config)
+}
+
+// finishTimestampAndDuration returns the finish time in epoch millis and the duration in
+// seconds, both zero when the finish time is unknown.
+func finishTimestampAndDuration(created, finished time.Time) (int64, uint) {
+	if finished.IsZero() {
+		return 0, 0
+	}
+
+	return finished.UnixMilli(), uint(finished.Sub(created) / time.Second)
 }
