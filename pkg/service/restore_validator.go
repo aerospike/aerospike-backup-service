@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -28,12 +27,13 @@ type RestoreValidator interface {
 		infoGetter backup.InfoGetter,
 		backups []model.BackupDetails,
 	) error
-	// ValidateTimestamp validates point-in-time restore preconditions.
+	// ValidateTimestamp validates point-in-time restore preconditions over the backups the
+	// restore would apply.
 	ValidateTimestamp(
 		ctx context.Context,
 		request *model.RestoreTimestampRequest,
 		infoGetter backup.InfoGetter,
-		backupsByNamespace map[string][]model.BackupDetails,
+		backups []model.BackupDetails,
 	) error
 }
 
@@ -93,20 +93,28 @@ func (r *restoreValidator) ValidateTimestamp(
 	ctx context.Context,
 	request *model.RestoreTimestampRequest,
 	infoGetter backup.InfoGetter,
-	backupsByNamespace map[string][]model.BackupDetails,
+	backups []model.BackupDetails,
 ) error {
-	backups := coll.Flatten(backupsByNamespace)
 	if err := validateBackupsEncryption(backups, request.Policy.EncryptionPolicy); err != nil {
 		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
 	}
 
-	sourceNamespaces := coll.Unique(slices.Collect(maps.Keys(backupsByNamespace)))
 	if err := r.validateNamespaceScope(ctx, request.DestinationCluster, request.Policy.Namespace,
-		sourceNamespaces, infoGetter); err != nil {
+		namespacesOf(backups), infoGetter); err != nil {
 		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
 	}
 
 	return nil
+}
+
+// namespacesOf returns the distinct namespaces the backups were taken from.
+func namespacesOf(backups []model.BackupDetails) []string {
+	namespaces := make([]string, 0, len(backups))
+	for _, b := range backups {
+		namespaces = append(namespaces, b.Namespace)
+	}
+
+	return coll.Unique(namespaces)
 }
 
 // validateNamespaceScope validates a restore's namespace scope: a configured remap must apply

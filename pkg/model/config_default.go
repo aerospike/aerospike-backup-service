@@ -89,6 +89,7 @@ var defaultConfig = struct {
 		},
 		MaxAsyncBatches: new(128),
 		BatchSize:       new(128),
+		Unique:          new(false),
 	},
 	credentials: Credentials{
 		AuthMode: AuthModeInternal,
