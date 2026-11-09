@@ -89,7 +89,6 @@ func (op *BackupNamespacesOperation) aggregateStats() *models.BackupStats {
 		activeHandlers++
 		res.TotalRecords.Add(backupStats.TotalRecords.Load())
 		res.ReadRecords.Add(backupStats.GetReadRecords())
-		res.BytesWritten.Add(backupStats.BytesWritten.Load())
 
 		// These are the backups of multiple namespaces in the same routine.
 		// Therefore, picking any of those is valid, since they started at

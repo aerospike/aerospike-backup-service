@@ -17,7 +17,7 @@ func currentBackupStatus(handler RoutineBackupHandler) *model.RunningJob {
 
 	// A handler is registered while its backup runs, so having one means the backup is running.
 	run := handler.Status()
-	if run == nil { // no running jobs
+	if run == nil { // registered, not started yet
 		return nil
 	}
 

@@ -25,7 +25,7 @@ type ScanProgress struct {
 	TotalRecords uint64
 	// DoneRecords is the number of records read so far.
 	DoneRecords uint64
-	// Metrics is the client-side throughput summed across the namespaces; nil while none of
-	// them reports any.
+	// Metrics is the client-side throughput summed across the namespaces; zero-valued while
+	// none of them reports any.
 	Metrics *models.Metrics
 }

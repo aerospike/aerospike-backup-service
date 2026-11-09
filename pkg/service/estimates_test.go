@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -13,23 +14,35 @@ import (
 func TestCurrentBackupStatus(t *testing.T) {
 	t.Parallel()
 
-	start := time.Now()
+	// A minute in: the end time is start + elapsed/progress.
+	start := time.Now().Add(-time.Minute)
+	metrics := &models.Metrics{RecordsPerSecond: 7}
 	tests := map[string]struct {
 		run                 model.BackupRun
 		wantProgress        float64
 		wantDone, wantTotal uint64
+		wantMetrics         *models.Metrics
+		wantDuration        time.Duration
 	}{
 		"scan backup passes its counts through": {
-			run:          model.BackupRun{Progress: 0.4, Scan: &model.ScanProgress{TotalRecords: 100, DoneRecords: 40}},
-			wantProgress: 0.4, wantDone: 40, wantTotal: 100,
+			run: model.BackupRun{
+				Progress: 0.4,
+				Scan:     &model.ScanProgress{TotalRecords: 100, DoneRecords: 40, Metrics: metrics},
+			},
+			wantProgress: 0.4, wantDone: 40, wantTotal: 100, wantMetrics: metrics,
+			wantDuration: 150 * time.Second,
 		},
 		"a run with no scan counts no records": {
 			run:          model.BackupRun{Progress: 0.4},
-			wantProgress: 0.4,
+			wantProgress: 0.4, wantDuration: 150 * time.Second,
 		},
-		"progress is capped while running": {
-			run:          model.BackupRun{Progress: 1, Scan: &model.ScanProgress{TotalRecords: 10, DoneRecords: 10}},
-			wantProgress: 0.99, wantDone: 10, wantTotal: 10,
+		"progress and end time are capped while running": {
+			run: model.BackupRun{
+				Progress: 1,
+				Scan:     &model.ScanProgress{TotalRecords: 10, DoneRecords: 10, Metrics: metrics},
+			},
+			wantProgress: 0.99, wantDone: 10, wantTotal: 10, wantMetrics: metrics,
+			wantDuration: time.Minute * 100 / 99,
 		},
 	}
 
@@ -44,12 +57,52 @@ func TestCurrentBackupStatus(t *testing.T) {
 
 			job := currentBackupStatus(handler)
 
+			require.NotNil(t, job)
 			assert.Equal(t, tt.wantDone, job.DoneRecords)
 			assert.Equal(t, tt.wantTotal, job.TotalRecords)
 			assert.InDelta(t, tt.wantProgress, job.Progress, 1e-9)
 			assert.Equal(t, start, job.StartTime)
+			assert.Same(t, tt.wantMetrics, job.Metrics)
+			require.NotNil(t, job.EstimatedEndTime)
+			// Tolerance well under the 0.6s an uncapped estimate would add.
+			assert.WithinDuration(t, start.Add(tt.wantDuration), *job.EstimatedEndTime, 100*time.Millisecond)
 		})
 	}
+}
+
+func TestCurrentBackupStatus_NotStarted(t *testing.T) {
+	t.Parallel()
+
+	handler := NewMockRoutineBackupHandler(gomock.NewController(t))
+	handler.EXPECT().Status().Return(nil)
+
+	assert.Nil(t, currentBackupStatus(handler))
+}
+
+// TestCurrentBackupStatus_ScanOperation runs a real scan operation through currentBackupStatus,
+// so the REST job is checked against backup-go's stats rather than a hand-built BackupRun.
+func TestCurrentBackupStatus_ScanOperation(t *testing.T) {
+	t.Parallel()
+
+	stats := models.NewBackupStats()
+	stats.TotalRecords.Store(100)
+	stats.ReadRecords.Store(40)
+	stats.StartTime = time.Now().Add(-time.Minute)
+	h := NewMockCancelableBackupHandler(gomock.NewController(t))
+	h.EXPECT().GetStats().Return(stats)
+	h.EXPECT().GetMetrics().Return(&models.Metrics{RecordsPerSecond: 7})
+	op := &BackupNamespacesOperation{handlers: map[string]CancelableBackupHandler{"ns1": h}}
+
+	job := currentBackupStatus(op)
+
+	require.NotNil(t, job)
+	assert.Equal(t, uint64(40), job.DoneRecords)
+	assert.Equal(t, uint64(100), job.TotalRecords)
+	assert.InDelta(t, 0.4, job.Progress, 1e-9)
+	assert.Equal(t, stats.StartTime, job.StartTime)
+	require.NotNil(t, job.Metrics)
+	assert.Equal(t, uint64(7), job.Metrics.RecordsPerSecond)
+	assert.NotNil(t, job.EstimatedEndTime)
 }
 
 func TestNewRunningJob(t *testing.T) {
