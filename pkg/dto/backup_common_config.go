@@ -45,7 +45,7 @@ func (b *BackupCommonConfig) Validate() error {
 		return err
 	}
 
-	return nil
+	return b.BackupMode.Validate()
 }
 
 func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
@@ -56,12 +56,14 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 	return &model.BackupCommonConfig{
 		TimestampFormat: b.TimestampFormat.ToModel(),
 		Timezone:        b.ScheduleTimezone.ToServiceLocation(),
+		BackupMode:      b.BackupMode.ToModel(),
 	}
 }
 
 func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
 	b.TimestampFormat = NewTimestampFormatFromModel(m.TimestampFormat)
 	b.ScheduleTimezone = ScheduleTimezone(m.Timezone.Configured)
+	b.BackupMode = NewBackupModeFromModel(m.BackupMode)
 }
 
 // Compare compares two BackupCommonConfig instances and returns detailed errors.
@@ -78,5 +80,6 @@ func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
 	return errors.Join(
 		compareValues("TimestampFormat", b.TimestampFormat, other.TimestampFormat),
 		compareValues("ScheduleTimezone", b.ScheduleTimezone, other.ScheduleTimezone),
+		compareValues("BackupMode", b.BackupMode, other.BackupMode),
 	)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -14,6 +15,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
+
+var discardLogger = slog.New(slog.DiscardHandler)
+
+// completeStatus is the status of a restore job that completed and whose namespace is open.
+var completeStatus = &infomodels.ResponseRestoreState{
+	State: infomodels.RestoreStateComplete, NsState: infomodels.NamespaceStateNone,
+}
 
 const (
 	fullID  = "261020T090111-aaaa"
@@ -63,9 +71,8 @@ func TestRestoreExecutor_Run_Cold(t *testing.T) {
 				requests = append(requests, chainRequest(id))
 			}
 
-			handler, err := NewRestoreExecutor(namespaceReader(t, ctrl)).
-				Run(t.Context(), clientOf(ctrl, infoClient), requests[0], requests[1:]...)
-			require.NoError(t, err)
+			handler := NewRestoreExecutor(namespaceReader(t, ctrl)).
+				Run(t.Context(), clientOf(ctrl, infoClient), discardLogger, requests...)
 			require.NoError(t, handler.Wait(t.Context()))
 		})
 	}
@@ -103,11 +110,10 @@ func TestRestoreExecutor_Run_StartRefused(t *testing.T) {
 			// The server may have accepted a start that failed, so it returns the job id anyway.
 			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, errors.New(tt.refusal))
 
-			handler, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
-				tt.request)
+			err := NewRestoreExecutor(namespaceReader(t, ctrl)).
+				Run(t.Context(), clientOf(ctrl, infoClient), discardLogger, tt.request).Wait(t.Context())
 			require.ErrorContains(t, err, tt.wantErr)
 			require.ErrorContains(t, err, tt.refusal)
-			assert.Nil(t, handler)
 		})
 	}
 }
@@ -151,8 +157,8 @@ func TestRestoreExecutor_Run_ChainTooLong(t *testing.T) {
 		requests[i] = chainRequest(fmt.Sprintf("261020T09%04d-aaaa", i))
 	}
 
-	_, err := NewRestoreExecutor(service.NewMockBackupReader(ctrl)).
-		Run(t.Context(), aerospike.NewMockClient(ctrl), requests[0], requests[1:]...)
+	err := NewRestoreExecutor(service.NewMockBackupReader(ctrl)).
+		Run(t.Context(), aerospike.NewMockClient(ctrl), discardLogger, requests...).Wait(t.Context())
 	require.ErrorContains(t, err, "at most 32 backups")
 }
 
@@ -201,7 +207,7 @@ func TestRestoreHandler_Wait_UntilNamespaceOpen(t *testing.T) {
 		}, nil),
 	)
 
-	require.NoError(t, newRestoreHandler(infoClient, "bar", "job", laneOf(model.RestoreModeStrict)).Wait(t.Context()))
+	require.NoError(t, newRestoreJob(infoClient, "bar", "job", laneOf(model.RestoreModeStrict)).Wait(t.Context()))
 }
 
 // TestRestoreHandler_Wait_ClearsNamespace checks that a cold restore whose nodes hold data in the
@@ -228,7 +234,7 @@ func TestRestoreHandler_Wait_ClearsNamespace(t *testing.T) {
 		}, nil),
 	)
 
-	require.NoError(t, newRestoreHandler(infoClient, "bar", "job", laneOf(model.RestoreModeStrict)).Wait(t.Context()))
+	require.NoError(t, newRestoreJob(infoClient, "bar", "job", laneOf(model.RestoreModeStrict)).Wait(t.Context()))
 }
 
 func TestRestoreHandler_Wait_ReleasesNamespace(t *testing.T) {
@@ -297,7 +303,7 @@ func TestRestoreHandler_Wait_ReleasesNamespace(t *testing.T) {
 			tt.expect(infoClient)
 			expectRelease(t, infoClient, &jobID)
 
-			handler := newRestoreHandler(infoClient, "bar", jobID, laneOf(model.RestoreModeStrict))
+			handler := newRestoreJob(infoClient, "bar", jobID, laneOf(model.RestoreModeStrict))
 			require.ErrorContains(t, handler.Wait(t.Context()), tt.wantErr)
 		})
 	}
@@ -315,7 +321,7 @@ func TestRestoreHandler_Wait_Canceled(t *testing.T) {
 	infoClient := aerospike.NewMockInfoGetter(ctrl)
 	expectRelease(t, infoClient, &jobID)
 
-	handler := newRestoreHandler(infoClient, "bar", jobID, laneOf(model.RestoreModeStrict))
+	handler := newRestoreJob(infoClient, "bar", jobID, laneOf(model.RestoreModeStrict))
 	require.ErrorIs(t, handler.Wait(ctx), context.Canceled)
 }
 
@@ -332,11 +338,11 @@ func TestRestoreExecutor_Run_Fuzzy(t *testing.T) {
 
 			return restoreJobID, nil
 		})
+	infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", restoreJobID).Return(completeStatus, nil)
 
-	handler, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
-		fuzzyRequest(fullID), fuzzyRequest(incr1ID))
-	require.NoError(t, err)
-	assert.NotNil(t, handler)
+	handler := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
+		discardLogger, fuzzyRequest(fullID), fuzzyRequest(incr1ID))
+	require.NoError(t, handler.Wait(t.Context()))
 }
 
 func TestRestoreExecutor_Run_SkipsIndexesAndUDFs(t *testing.T) {
@@ -351,12 +357,14 @@ func TestRestoreExecutor_Run_SkipsIndexesAndUDFs(t *testing.T) {
 
 			return restoreJobID, nil
 		})
+	infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", restoreJobID).Return(completeStatus, nil)
 	request := fuzzyRequest(fullID)
 	request.Policy.NoIndexes = new(true)
 	request.Policy.NoUdfs = new(true)
 
-	_, err := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient), request)
-	require.NoError(t, err)
+	handler := NewRestoreExecutor(namespaceReader(t, ctrl)).Run(t.Context(), clientOf(ctrl, infoClient),
+		discardLogger, request)
+	require.NoError(t, handler.Wait(t.Context()))
 }
 
 // TestRestoreHandler_Wait_FuzzyAbortsOnly checks that a fuzzy restore that does not complete is
@@ -370,7 +378,7 @@ func TestRestoreHandler_Wait_FuzzyAbortsOnly(t *testing.T) {
 		&infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed}, nil)
 	infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(nil)
 
-	err := newRestoreHandler(infoClient, "bar", "job", laneOf(model.RestoreModeFuzzy)).Wait(t.Context())
+	err := newRestoreJob(infoClient, "bar", "job", laneOf(model.RestoreModeFuzzy)).Wait(t.Context())
 	require.ErrorContains(t, err, "server restore job failed")
 }
 

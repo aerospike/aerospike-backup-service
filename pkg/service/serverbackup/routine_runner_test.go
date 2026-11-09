@@ -218,7 +218,7 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, requests)
 			jobIDs := make([]string, 0, len(tt.namespaces))
-			for _, job := range operation.ServerJobs() {
+			for _, job := range operation.Status().Server.Jobs {
 				jobIDs = append(jobIDs, job.JobID)
 			}
 			assert.Len(t, jobIDs, len(tt.namespaces), "one server job per namespace")
@@ -262,7 +262,7 @@ func TestRoutineRunner_BackupNamespaces_Failures(t *testing.T) {
 	assert.Equal(t, []model.ServerBackupJob{
 		{JobID: "job-baz", Namespace: "baz", State: "FAILED", ErrorReason: "disk full"},
 		{JobID: "job-qux", Namespace: "qux", State: "COMPLETE"},
-	}, operation.ServerJobs())
+	}, operation.Status().Server.Jobs)
 }
 
 func TestRoutineRunner_BackupNamespaces_NotS3(t *testing.T) {
@@ -346,7 +346,7 @@ func TestWaitForBackup_RecordsServerJob(t *testing.T) {
 			} else {
 				require.ErrorContains(t, err, tt.wantErr)
 			}
-			assert.Equal(t, []model.ServerBackupJob{tt.wantJob}, operation.ServerJobs())
+			assert.Equal(t, []model.ServerBackupJob{tt.wantJob}, operation.Status().Server.Jobs)
 		})
 	}
 }
@@ -399,7 +399,7 @@ func TestWaitForBackup_StatusLookup(t *testing.T) {
 			} else {
 				require.EqualError(t, err, tt.wantErr)
 			}
-			assert.Equal(t, tt.wantJobs, operation.ServerJobs())
+			assert.Equal(t, tt.wantJobs, operation.Status().Server.Jobs)
 		})
 	}
 }
@@ -417,7 +417,7 @@ func TestWaitForBackup_Canceled_AbortRefused(t *testing.T) {
 	err := waitForBackup(ctx, infoClient, fullID, operation, slog.New(slog.DiscardHandler))
 
 	require.ErrorIs(t, err, context.Canceled)
-	assert.Empty(t, operation.ServerJobs())
+	assert.Empty(t, operation.Status().Server.Jobs)
 }
 
 func TestWaitForBackup_Canceled_RecordsAbortedJob(t *testing.T) {
@@ -442,7 +442,7 @@ func TestWaitForBackup_Canceled_RecordsAbortedJob(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Equal(t, []model.ServerBackupJob{
 		{JobID: fullID, Namespace: "test", State: "ABORTED", AbortOrigin: "operator"},
-	}, operation.ServerJobs())
+	}, operation.Status().Server.Jobs)
 }
 
 func TestBackupOperation_ServerJobs_OnePerJob(t *testing.T) {
@@ -460,19 +460,19 @@ func TestBackupOperation_ServerJobs_OnePerJob(t *testing.T) {
 	assert.Equal(t, []model.ServerBackupJob{
 		{JobID: fullID, Namespace: "bar", State: "COMPLETE"},
 		{JobID: incr1ID, Namespace: "baz", State: "FAILED"},
-	}, operation.ServerJobs())
+	}, operation.Status().Server.Jobs)
 }
 
 func TestBackupOperation_ReportsProgress(t *testing.T) {
 	t.Parallel()
 	operation := newBackupOperation(func() {})
 
-	// The server reports percent, the operation a fraction, and no records counted.
+	// The server reports percent, the operation a fraction, and no scan slot: it counts no records.
 	for _, percent := range []float64{0, 42.7, 95, 100} {
 		operation.report(&infomodels.ResponseBackupState{JobID: fullID, ProgressPct: percent})
 
-		assert.InDelta(t, percent/100, operation.Progress(), 1e-9, "progress %v", percent)
-		assert.Zero(t, operation.GetStats().ReadRecords.Load())
-		assert.Zero(t, operation.GetStats().TotalRecords.Load())
+		run := operation.Status()
+		assert.InDelta(t, percent/100, run.Progress, 1e-9, "progress %v", percent)
+		assert.Nil(t, run.Scan)
 	}
 }

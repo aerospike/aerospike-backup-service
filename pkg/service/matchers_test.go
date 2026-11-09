@@ -58,30 +58,52 @@ func (m incrementalFilterMatcher) String() string {
 type restoreRequestPathMatcher struct{ expectedPath string }
 
 func (m restoreRequestPathMatcher) Matches(x any) bool {
+	_, ok := matchRestoreRequest(x, m.expectedPath)
+	return ok
+}
+
+// matchRestoreRequest returns x as a restore request if it is one for the backup at path.
+func matchRestoreRequest(x any, path string) (*model.RestoreRequest, bool) {
 	req, ok := x.(*model.RestoreRequest)
-	return ok && req != nil && req.BackupDataPath == m.expectedPath
+	if !ok || req == nil || req.BackupDataPath != path {
+		return nil, false
+	}
+
+	return req, true
 }
 
 func (m restoreRequestPathMatcher) String() string {
 	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q", m.expectedPath)
 }
 
+// restoreRequestCompressionMatcher matches a restore request for the backup at expectedPath
+// whose policy carries the expected compression mode.
+type restoreRequestCompressionMatcher struct {
+	expectedPath string
+	expectedMode model.CompressionMode
+}
+
+func (m restoreRequestCompressionMatcher) Matches(x any) bool {
+	req, ok := matchRestoreRequest(x, m.expectedPath)
+	return ok && req.Policy.CompressionPolicy != nil && req.Policy.CompressionPolicy.Mode == m.expectedMode
+}
+
+func (m restoreRequestCompressionMatcher) String() string {
+	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q and compression %s", m.expectedPath, m.expectedMode)
+}
+
 // restoreRequestUniqueMatcher matches a restore request for the backup at expectedPath whose
-// policy is unique (CREATE_ONLY) or not, and which disables reordering or not, as expected.
+// policy is unique (CREATE_ONLY) or not, as expected.
 type restoreRequestUniqueMatcher struct {
-	expectedPath              string
-	expectedUnique            bool
-	expectedDisableReordering bool
+	expectedPath   string
+	expectedUnique bool
 }
 
 func (m restoreRequestUniqueMatcher) Matches(x any) bool {
-	req, ok := x.(*model.RestoreRequest)
-	return ok && req != nil && req.BackupDataPath == m.expectedPath &&
-		req.Policy.IsUniqueOrDefault() == m.expectedUnique &&
-		req.DisableReordering == m.expectedDisableReordering
+	req, ok := matchRestoreRequest(x, m.expectedPath)
+	return ok && req.Policy.IsUniqueOrDefault() == m.expectedUnique
 }
 
 func (m restoreRequestUniqueMatcher) String() string {
-	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q, unique=%t and disable-reordering=%t",
-		m.expectedPath, m.expectedUnique, m.expectedDisableReordering)
+	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q and unique=%t", m.expectedPath, m.expectedUnique)
 }

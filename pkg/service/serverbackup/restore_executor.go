@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -38,36 +39,61 @@ func NewRestoreExecutor(backupReader service.BackupReader) restoreexecutor.Resto
 	return &restoreExecutor{backupReader: backupReader}
 }
 
-// Run starts one server restore job that applies the full backup and then each incremental,
-// in that order; each request names one backup by its job id in BackupDataPath. The requests
-// share their policy and storage, so the full one stands for all.
+// Run starts, in the background, one server restore job that applies the backups of the requests
+// in the order given, the full backup first; each request names one backup by its job id in
+// BackupDataPath. The requests share their policy and storage, so the first one stands for all.
+// Every failure, including one to start, comes from the handler's Wait.
 func (r *restoreExecutor) Run(
 	ctx context.Context,
 	client aerospike.Client,
-	full *model.RestoreRequest,
-	incrementals ...*model.RestoreRequest,
-) (restoreexecutor.RestoreHandler, error) {
-	if len(incrementals)+1 > maxChainLength {
-		return nil, fmt.Errorf("the server restores at most %d backups at once, the chain has %d",
-			maxChainLength, len(incrementals)+1)
+	logger *slog.Logger,
+	requests ...*model.RestoreRequest,
+) restoreexecutor.RestoreHandler {
+	ctx, cancel := context.WithCancel(ctx)
+	handler := newRestoreHandler(cancel)
+
+	go func() {
+		handler.finish(r.restore(ctx, client, logger, requests))
+	}()
+
+	return handler
+}
+
+// restore starts the server restore job of the requests and waits for it to end.
+func (r *restoreExecutor) restore(
+	ctx context.Context,
+	client aerospike.Client,
+	logger *slog.Logger,
+	requests []*model.RestoreRequest,
+) error {
+	if len(requests) > maxChainLength {
+		return fmt.Errorf("the server restores at most %d backups at once, the chain has %d",
+			maxChainLength, len(requests))
 	}
 
-	backupIDs := []string{full.BackupDataPath}
-	for _, incremental := range incrementals {
-		backupIDs = append(backupIDs, incremental.BackupDataPath)
+	backupIDs := make([]string, 0, len(requests))
+	for _, request := range requests {
+		backupIDs = append(backupIDs, request.BackupDataPath)
 	}
 
-	return r.start(ctx, client, full, backupIDs)
+	job, err := r.start(ctx, client, requests[0], backupIDs)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("Server restore started", slog.String("namespace", job.namespace), slog.String("jobId", job.jobID))
+
+	return job.Wait(ctx)
 }
 
 // start starts a server restore job of backupIDs, oldest first, with the policy and storage of
-// request.
+// request, and returns the job to follow.
 func (r *restoreExecutor) start(
 	ctx context.Context,
 	client aerospike.Client,
 	request *model.RestoreRequest,
 	backupIDs []string,
-) (restoreexecutor.RestoreHandler, error) {
+) (*restoreJob, error) {
 	namespace, err := r.destinationNamespace(ctx, request, backupIDs[0])
 	if err != nil {
 		return nil, err
@@ -101,7 +127,7 @@ func (r *restoreExecutor) start(
 		return nil, fmt.Errorf("failed to start server restore: %w", explainRefusal(err, namespace))
 	}
 
-	return newRestoreHandler(infoClient, namespace, jobID, lane), nil
+	return newRestoreJob(infoClient, namespace, jobID, lane), nil
 }
 
 // restoreLane is how the server runs a restore job of one mode: the policy it starts with, and how
@@ -245,36 +271,71 @@ func (r *restoreExecutor) destinationNamespace(
 	return backups[0].Namespace, nil
 }
 
-// restoreHandler follows a server restore job.
+// restoreHandler is the handle of a server restore run. The run itself happens in the restore
+// executor; the handler reports its outcome and how long it has run.
 type restoreHandler struct {
-	infoClient backup.ServerBackupInfo
-	namespace  string
-	jobID      string
-	lane       restoreLane
-	stats      *models.RestoreStats
+	// cancel stops the run.
+	cancel context.CancelFunc
+	stats  *models.RestoreStats
+	done   chan struct{}
+	err    error
 }
 
 var _ restoreexecutor.RestoreHandler = (*restoreHandler)(nil)
 
-func newRestoreHandler(infoClient backup.ServerBackupInfo, namespace, jobID string, lane restoreLane) *restoreHandler {
+func newRestoreHandler(cancel context.CancelFunc) *restoreHandler {
 	stats := models.NewRestoreStats()
 	stats.Start()
 
-	return &restoreHandler{
-		infoClient: infoClient,
-		namespace:  namespace,
-		jobID:      jobID,
-		lane:       lane,
-		stats:      stats,
+	return &restoreHandler{cancel: cancel, stats: stats, done: make(chan struct{})}
+}
+
+// finish records the outcome of the run.
+func (h *restoreHandler) finish(err error) {
+	h.err = err
+	h.stats.Stop()
+	close(h.done)
+}
+
+// Wait waits for the run to end. If ctx ends first, Wait stops the run and returns once it has
+// stopped: the job is aborted and, for a cold restore, its namespace opened to clients again.
+func (h *restoreHandler) Wait(ctx context.Context) error {
+	select {
+	case <-h.done:
+	case <-ctx.Done():
+		h.cancel()
+		<-h.done
 	}
+
+	return h.err
+}
+
+// GetStats returns the restore statistics; the server reports no record counts.
+func (h *restoreHandler) GetStats() *models.RestoreStats {
+	return h.stats
+}
+
+// GetMetrics returns empty metrics: the server reports no client-side throughput.
+func (h *restoreHandler) GetMetrics() *models.Metrics {
+	return &models.Metrics{}
+}
+
+// restoreJob follows a server restore job.
+type restoreJob struct {
+	infoClient backup.ServerBackupInfo
+	namespace  string
+	jobID      string
+	lane       restoreLane
+}
+
+func newRestoreJob(infoClient backup.ServerBackupInfo, namespace, jobID string, lane restoreLane) *restoreJob {
+	return &restoreJob{infoClient: infoClient, namespace: namespace, jobID: jobID, lane: lane}
 }
 
 // Wait polls the restore job until it ends and the namespace is open to clients again, or ctx
 // is canceled. A restore that does not complete is released as its lane releases it, even when
 // ctx is canceled: a canceled restore holds the namespace as well.
-func (h *restoreHandler) Wait(ctx context.Context) error {
-	defer h.stats.Stop()
-
+func (h *restoreJob) Wait(ctx context.Context) error {
 	if err := h.awaitComplete(ctx); err != nil {
 		return errors.Join(err, h.lane.release(context.WithoutCancel(ctx), h.infoClient, h.namespace, h.jobID))
 	}
@@ -286,7 +347,7 @@ func (h *restoreHandler) Wait(ctx context.Context) error {
 // again, clearing the storage of the nodes that hold data in the namespace of a cold restore in
 // preparation. It fails when the job fails or is aborted, a truncate holds the namespace, or ctx is
 // canceled.
-func (h *restoreHandler) awaitComplete(ctx context.Context) error {
+func (h *restoreJob) awaitComplete(ctx context.Context) error {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
@@ -322,14 +383,4 @@ func (h *restoreHandler) awaitComplete(ctx context.Context) error {
 		default:
 		}
 	}
-}
-
-// GetStats returns the restore statistics; the server reports no record counts.
-func (h *restoreHandler) GetStats() *models.RestoreStats {
-	return h.stats
-}
-
-// GetMetrics returns empty metrics: the server reports no client-side throughput.
-func (h *restoreHandler) GetMetrics() *models.Metrics {
-	return &models.Metrics{}
 }

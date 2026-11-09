@@ -17,7 +17,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
@@ -59,7 +58,7 @@ func (r *routineRunner) Run(
 	routine *model.BackupRoutine,
 	runSpec model.BackupRunSpec,
 	logger *slog.Logger,
-) (service.CancelableBackupHandler, error) {
+) (service.RoutineBackupHandler, error) {
 	namespaces, err := r.namespaceResolver.ResolveNamespaces(ctx, routine, logger)
 	if err != nil {
 		return nil, err
@@ -280,10 +279,10 @@ func unixSeconds(t *time.Time) string {
 // backupOperation is the handle of a routine's server backup run. The run itself happens
 // in the routine runner; the operation only reports its progress, outcome and server jobs.
 type backupOperation struct {
-	cancel context.CancelFunc
-	stats  *models.BackupStats
-	done   chan struct{}
-	err    error
+	cancel    context.CancelFunc
+	startTime time.Time
+	done      chan struct{}
+	err       error
 
 	mu sync.Mutex
 	// jobs are the server jobs of the run in the order they started, each as last reported.
@@ -292,20 +291,13 @@ type backupOperation struct {
 	progressPct float64
 }
 
-var (
-	_ service.CancelableBackupHandler = (*backupOperation)(nil)
-	_ service.ServerJobReporter       = (*backupOperation)(nil)
-	_ service.ProgressReporter        = (*backupOperation)(nil)
-)
+var _ service.RoutineBackupHandler = (*backupOperation)(nil)
 
 func newBackupOperation(cancel context.CancelFunc) *backupOperation {
-	stats := models.NewBackupStats()
-	stats.Start()
-
 	return &backupOperation{
-		cancel: cancel,
-		stats:  stats,
-		done:   make(chan struct{}),
+		cancel:    cancel,
+		startTime: time.Now(),
+		done:      make(chan struct{}),
 	}
 }
 
@@ -325,21 +317,17 @@ func (o *backupOperation) report(status *infomodels.ResponseBackupState) {
 	o.jobs = append(o.jobs, job)
 }
 
-// ServerJobs returns the server jobs of the run, each as last reported.
-func (o *backupOperation) ServerJobs() []model.ServerBackupJob {
+// Status is a snapshot of the run: the progress of the job running now, as the server reports it,
+// and the server jobs of the run. The server counts no records to back up, so there is no scan slot.
+func (o *backupOperation) Status() *model.BackupRun {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
-	return slices.Clone(o.jobs)
-}
-
-// Progress returns the fraction of the running job done. The server counts no records to
-// back up, so the run has no record counts to report progress from.
-func (o *backupOperation) Progress() float64 {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-
-	return o.progressPct / 100
+	return &model.BackupRun{
+		StartTime: o.startTime,
+		Progress:  o.progressPct / 100,
+		Server:    &model.ServerProgress{Jobs: slices.Clone(o.jobs)},
+	}
 }
 
 func newServerBackupJob(status *infomodels.ResponseBackupState) model.ServerBackupJob {
@@ -367,7 +355,6 @@ func nonZeroTime(t time.Time) *time.Time {
 
 func (o *backupOperation) finish(err error) {
 	o.err = err
-	o.stats.Stop()
 	close(o.done)
 }
 
@@ -384,14 +371,4 @@ func (o *backupOperation) Wait(ctx context.Context) error {
 // Cancel aborts the running namespace job and skips the remaining ones.
 func (o *backupOperation) Cancel() {
 	o.cancel()
-}
-
-// GetStats returns when the run started; the server reports no record counts.
-func (o *backupOperation) GetStats() *models.BackupStats {
-	return o.stats
-}
-
-// GetMetrics returns empty metrics: the server reports no client-side throughput.
-func (o *backupOperation) GetMetrics() *models.Metrics {
-	return &models.Metrics{}
 }

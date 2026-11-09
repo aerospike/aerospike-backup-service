@@ -3,6 +3,8 @@ ARG GO_VERSION=1.26.10
 ARG REGISTRY="docker.io"
 
 # Build-time only (never shipped), so pin exactly; bump tag and digest together.
+# The golang builder is not digest-pinned: its tag comes from GO_VERSION, which release
+# builds resolve per run.
 FROM --platform=$BUILDPLATFORM ${REGISTRY}/tonistiigi/xx:1.10.0@sha256:40fe21f44bb8cddf1eb1226db190d0a984118f62ee02a91b77d99448d28264a6 AS xx
 FROM --platform=$BUILDPLATFORM ${REGISTRY}/golang:${GO_VERSION} AS builder
 
@@ -18,15 +20,17 @@ COPY . .
 RUN xx-go --wrap
 
 RUN --mount=type=secret,id=GOPROXY <<-EOF
+    set -e
     if [ -s /run/secrets/GOPROXY ]; then
-        export GOPROXY=$(cat /run/secrets/GOPROXY)
+        export GOPROXY="$(cat /run/secrets/GOPROXY)"
     fi
     go mod download
 EOF
 
 RUN --mount=type=secret,id=GOPROXY <<-EOF
+    set -e
     if [ -s /run/secrets/GOPROXY ]; then
-        export GOPROXY=$(cat /run/secrets/GOPROXY)
+        export GOPROXY="$(cat /run/secrets/GOPROXY)"
     fi
     OS="${TARGETOS}" ARCH="${TARGETARCH}" make build BUILD_MODE="${BUILD_MODE}"
     xx-verify /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH}
@@ -48,11 +52,15 @@ RUN addgroup -g 65532 -S abgroup && \
     adduser -S -u 65532 -G abgroup -h /home/absuser absuser && \
     install -d -o absuser -g abgroup -m 0750 /var/log/aerospike-backup-service
 
-COPY --chown=absuser:absgroup --chmod=0755 --from=builder \
+# Numeric IDs (absuser:abgroup above) avoid a name lookup that can drift from the
+# addgroup/adduser line. The binary stays root-owned so the service cannot overwrite
+# its own executable; only the config is owned by absuser, because the service
+# rewrites it when the configuration is updated through the API.
+COPY --chown=0:0 --chmod=0755 --from=builder \
     /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH} \
     /usr/bin/aerospike-backup-service
 
-COPY --chown=absuser:absgroup --from=builder \
+COPY --chown=65532:65532 --from=builder \
     /app/aerospike-backup-service/build/package/config/aerospike-backup-service.yml \
     /etc/aerospike-backup-service/aerospike-backup-service.yml
 

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -8,6 +9,9 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/google/uuid"
 )
+
+// ErrBackupSkipped is wrapped by every StartController denial: the backup was not started.
+var ErrBackupSkipped = errors.New("backup skipped")
 
 // StartController decides whether a backup may start and holds the reservation until the run ends.
 type StartController interface {

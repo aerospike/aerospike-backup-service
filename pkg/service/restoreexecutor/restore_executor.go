@@ -2,8 +2,9 @@ package restoreexecutor
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"slices"
+	"log/slog"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -12,14 +13,16 @@ import (
 
 // Restore starts a restore and returns a handle to observe it.
 type Restore interface {
-	// Run restores one backup, or a full backup and the incremental backups that follow it,
-	// oldest first, one request per backup, and returns a single handler for all of them.
+	// Run restores the backups of the requests one after another, in the order given, one
+	// request per backup, and returns a single handler for all of them. Every failure, including
+	// one to start, comes from the handler's Wait, which stops the restores and waits for them
+	// when its context ends. The start of each restore is logged as a step of the sequence.
 	Run(
 		ctx context.Context,
 		client aerospike.Client,
-		full *model.RestoreRequest,
-		incrementals ...*model.RestoreRequest,
-	) (RestoreHandler, error)
+		logger *slog.Logger,
+		requests ...*model.RestoreRequest,
+	) RestoreHandler
 }
 
 // RestoreExecutor runs scan restores with backup-go, reading the data through storage operations.
@@ -36,50 +39,65 @@ func NewRestoreExecutor(operations storage.Operations) *RestoreExecutor {
 	}
 }
 
-// Run restores the backups one after another and returns at once: the restores run in the
-// background, and the handler reports the stats of every restore started so far, and a
-// failure to start one from Wait. Under the unique (CREATE_ONLY) policy a chain is applied
-// newest first, so that a record keeps its latest version and the older ones are skipped,
-// unless the request disables reordering; otherwise oldest first, so that later versions
-// overwrite earlier ones.
+// errStoppedEarly is the outcome of a sequence whose goroutine ended before restoreAll returned.
+var errStoppedEarly = errors.New("restore sequence stopped before it finished")
+
+// Run restores the requests in the background, each after the previous one has finished. The
+// handler reports the stats of every restore started so far and, from Wait, the first failure.
+// Canceling ctx, or the one given to Wait, stops the running restore and starts no more.
 func (r *RestoreExecutor) Run(
 	ctx context.Context,
 	client aerospike.Client,
-	full *model.RestoreRequest,
-	incrementals ...*model.RestoreRequest,
-) (RestoreHandler, error) {
-	requests := append([]*model.RestoreRequest{full}, incrementals...)
-	if full.Policy.IsUniqueOrDefault() && !full.DisableReordering {
-		slices.Reverse(requests)
-	}
-
-	chain := newSequentialRestoreHandler()
+	logger *slog.Logger,
+	requests ...*model.RestoreRequest,
+) RestoreHandler {
+	ctx, cancel := context.WithCancel(ctx)
+	chain := newSequentialRestoreHandler(cancel)
 
 	go func() {
-		chain.finish(r.runSequentially(ctx, client, requests, chain))
+		// Deferred, so that Wait returns even if restoreAll leaves this goroutine early, as a
+		// failed test expectation does through runtime.Goexit.
+		err := errStoppedEarly
+		defer func() {
+			cancel()
+			chain.finish(err)
+		}()
+
+		err = r.restoreAll(ctx, client, logger, requests, chain)
 	}()
 
-	return chain, nil
+	return chain
 }
 
-// runSequentially restores each request after the previous one has finished, and stops at
-// the first failure.
-func (r *RestoreExecutor) runSequentially(
+// restoreAll restores the requests one after another, stopping at the first failure. Only the
+// start of each restore is logged: the caller logs the outcome of the whole sequence once. A
+// failure names the backup, which the restore's own error may not.
+func (r *RestoreExecutor) restoreAll(
 	ctx context.Context,
 	client aerospike.Client,
+	logger *slog.Logger,
 	requests []*model.RestoreRequest,
 	chain *sequentialRestoreHandler,
 ) error {
-	for _, request := range requests {
+	for i, request := range requests {
+		// A restore can finish just as ctx is canceled; don't start the next one then.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		path := request.BackupDataPath
+		logger.Info("Start restoring",
+			slog.String("step", fmt.Sprintf("%d/%d", i+1, len(requests))), slog.String("path", path))
+
 		handler, err := runScanRestore(ctx, client, request, r.operations)
 		if err != nil {
-			return fmt.Errorf("failed to start restore from backup at %s: %w", request.BackupDataPath, err)
+			return fmt.Errorf("failed to start restore from backup at %s: %w", path, err)
 		}
 
 		chain.add(handler)
 
 		if err := handler.Wait(ctx); err != nil {
-			return err
+			return fmt.Errorf("failed to restore backup at %s: %w", path, err)
 		}
 	}
 

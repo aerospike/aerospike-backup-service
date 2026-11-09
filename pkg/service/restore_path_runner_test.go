@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -34,8 +35,8 @@ func TestRestoreOK(t *testing.T) {
 	mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
 	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, request).
-		Return(mockRestoreHandler, nil)
+		Run(gomock.Any(), client, gomock.Any(), request).
+		Return(mockRestoreHandler)
 
 	detailsDetails := model.BackupDetails{
 		BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "test-ns", FileCount: 1},
@@ -89,7 +90,7 @@ func TestCancelRestoreOK(t *testing.T) {
 		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Expect Run to start the process
-	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(mockRestoreHandler, nil)
+	env.mockRestore.EXPECT().Run(gomock.Any(), client, gomock.Any(), request).Return(mockRestoreHandler)
 
 	env.restoreValidator.EXPECT().
 		ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -234,8 +235,8 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 
 	restoreErr := errors.New("restore service error")
 	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, request).
-		Return(nil, restoreErr)
+		Run(gomock.Any(), client, gomock.Any(), request).
+		Return(failedRestore{err: restoreErr})
 
 	detailsDetails := model.BackupDetails{
 		BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "test-ns", FileCount: 1},
@@ -251,7 +252,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.RestoreFailure, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error.Error(), "failed to start restore operation")
+	assert.ErrorIs(t, jobStatus.Error, restoreErr)
 }
 
 func TestCancelRestore_RaceCondition(t *testing.T) {
@@ -285,19 +286,19 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 	// Mock the Run() call to simulate a long-running startup.
 	// It will block until its context is canceled.
 	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, request).
+		Run(gomock.Any(), client, gomock.Any(), request).
 		DoAndReturn(func(
 			ctx context.Context,
 			_ aerospike.Client,
-			_ *model.RestoreRequest,
+			_ *slog.Logger,
 			_ ...*model.RestoreRequest,
-		) (restoreexecutor.RestoreHandler, error) {
+		) restoreexecutor.RestoreHandler {
 			// Signal that the Run method has started.
 			runStarted.Done()
 			// Now, wait until the context is canceled by the test.
 			<-ctx.Done()
-			// Return the cancellation error, as a real implementation would.
-			return nil, ctx.Err()
+			// Report the cancellation from Wait, as a real implementation would.
+			return failedRestore{err: ctx.Err()}
 		})
 
 	// 1. Start the restore. This will run in a goroutine.

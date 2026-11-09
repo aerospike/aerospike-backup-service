@@ -15,7 +15,7 @@ type routineTracker struct {
 	mu sync.RWMutex
 
 	// --- Live State ---
-	handlers map[model.BackupType]CancelableBackupHandler
+	handlers map[model.BackupType]RoutineBackupHandler
 
 	// --- History State ---
 	lastRun *model.BackupTime
@@ -36,7 +36,7 @@ type routineTracker struct {
 func newRoutineTracker() *routineTracker {
 	return &routineTracker{
 		scanDone: make(chan struct{}), // open = blocks until first scan completes
-		handlers: make(map[model.BackupType]CancelableBackupHandler),
+		handlers: make(map[model.BackupType]RoutineBackupHandler),
 		lastRun:  model.NewNoBackupTime(),
 		lastJobs: make(map[model.BackupType][]model.ServerBackupJob),
 	}
@@ -88,7 +88,7 @@ func (t *routineTracker) getState(timeout time.Duration) (*trackerSnapshot, erro
 }
 
 // register adds a new running backup handler.
-func (t *routineTracker) register(backupType model.BackupType, handler CancelableBackupHandler) {
+func (t *routineTracker) register(backupType model.BackupType, handler RoutineBackupHandler) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -102,8 +102,8 @@ func (t *routineTracker) clearBackup(backupType model.BackupType) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if reporter, ok := t.handlers[backupType].(ServerJobReporter); ok {
-		t.lastJobs[backupType] = reporter.ServerJobs()
+	if run := t.handlers[backupType].Status(); run != nil && run.Server != nil {
+		t.lastJobs[backupType] = run.Server.Jobs
 	}
 	delete(t.handlers, backupType)
 }

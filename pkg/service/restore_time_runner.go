@@ -72,6 +72,18 @@ func (c restoreChain) backups() []model.BackupDetails {
 	return append([]model.BackupDetails{c.full}, c.incrementals...)
 }
 
+// inRestoreOrder returns the backups of the chain in the order they are applied: oldest first,
+// so that later versions overwrite earlier ones, or newest first, for the unique (CREATE_ONLY)
+// policy, which keeps the first version written.
+func (c restoreChain) inRestoreOrder(newestFirst bool) []model.BackupDetails {
+	backups := c.backups()
+	if newestFirst {
+		slices.Reverse(backups)
+	}
+
+	return backups
+}
+
 // findBackupsToRestore returns the restore chain of each namespace.
 func (r *timeRestoreRunner) findBackupsToRestore(
 	ctx context.Context, request *model.RestoreTimestampRequest,
@@ -326,10 +338,9 @@ func (r *timeRestoreRunner) restoreNamespace(
 }
 
 // prepareNamespaceRestore determines the effective restore policy. Restoring into an empty
-// namespace switches to the unique (CREATE_ONLY) policy, under which a chain is applied newest
+// namespace switches to the unique (CREATE_ONLY) policy, so that the chain can be applied newest
 // first: missing records get their latest version, existing ones are skipped, and generations
-// are not bumped for nothing. disable-reordering turns off both the switch and the newest-first
-// order.
+// are not bumped for nothing. disable-reordering turns the switch off.
 func prepareNamespaceRestore(
 	ctx context.Context,
 	infoClient backup.InfoGetter,
@@ -340,11 +351,7 @@ func prepareNamespaceRestore(
 	// Policy is guaranteed non-nil by request validation in the API layer.
 	effectivePolicy := request.Policy // make a thread-safe copy.
 
-	if request.DisableReordering {
-		return effectivePolicy, nil
-	}
-
-	if effectivePolicy.IsUniqueOrDefault() {
+	if request.DisableReordering || effectivePolicy.IsUniqueOrDefault() {
 		return effectivePolicy, nil
 	}
 
@@ -359,7 +366,7 @@ func prepareNamespaceRestore(
 	}
 
 	if counter == 0 {
-		logger.Info("Use optimized restore because database is empty")
+		logger.Info("Namespace is empty: switching to the unique policy")
 
 		// old values are not important, because they qualify how to handle existing data in db.
 		effectivePolicy.Unique = new(true)
@@ -369,9 +376,9 @@ func prepareNamespaceRestore(
 	return effectivePolicy, nil
 }
 
-// executeNamespaceRestore restores the namespace's chain of backups as one restore. Empty
-// backups are left out, so an empty full backup leaves the chain to its first incremental that
-// holds data; a chain of only empty backups restores nothing.
+// executeNamespaceRestore restores the namespace's chain of backups as one restore. Under the
+// unique (CREATE_ONLY) policy the chain is applied newest first, unless the request disables
+// reordering. Empty backups are left out; a chain of only empty backups restores nothing.
 func (r *timeRestoreRunner) executeNamespaceRestore(
 	ctx context.Context,
 	client aerospike.Client,
@@ -381,12 +388,13 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 	policy model.RestorePolicy,
 	logger *slog.Logger,
 ) error {
-	backups := chain.backups()
+	newestFirst := policy.IsUniqueOrDefault() && !request.DisableReordering
+	backups := chain.inRestoreOrder(newestFirst)
 	requests := make([]*model.RestoreRequest, 0, len(backups))
 	for _, b := range backups {
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 
-		if b.FileCount == 0 { // skip empty namespaces
+		if b.FileCount == 0 { // an empty backup has nothing to restore
 			continue
 		}
 
@@ -403,7 +411,6 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 			request.SecretAgent,
 			b.Key,
 		)
-		restoreRequest.DisableReordering = request.DisableReordering
 		requests = append(requests, restoreRequest)
 	}
 
@@ -411,18 +418,16 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 		return nil
 	}
 
-	logger.Info("Start restoring", slog.Int("backups", len(requests)), slog.Any("chain", backups))
+	logger.Info("Restoring chain", slog.Int("backups", len(requests)),
+		slog.Bool("newestFirst", newestFirst), slog.Any("chain", backups))
 
-	handler, err := r.restoreService.Run(ctx, client, requests[0], requests[1:]...)
-	if err != nil {
-		return fmt.Errorf("failed to start restore of %d backups: %w", len(requests), err)
-	}
-
+	handler := r.restoreService.Run(ctx, client, logger, requests...)
 	r.restoreJobs.addHandler(jobID, handler)
 
-	if err = handler.Wait(ctx); err != nil {
+	if err := handler.Wait(ctx); err != nil {
 		return err
 	}
+
 	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
 
 	return nil
