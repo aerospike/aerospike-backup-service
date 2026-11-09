@@ -590,46 +590,32 @@ func (mr *MockRoutineBackupHandlerMockRecorder) Cancel() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cancel", reflect.TypeOf((*MockRoutineBackupHandler)(nil).Cancel))
 }
 
-// GetMetrics mocks base method.
-func (m *MockRoutineBackupHandler) GetMetrics() *models.Metrics {
+// Status mocks base method.
+func (m *MockRoutineBackupHandler) Status() *model.BackupRun {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMetrics")
-	ret0, _ := ret[0].(*models.Metrics)
+	ret := m.ctrl.Call(m, "Status")
+	ret0, _ := ret[0].(*model.BackupRun)
 	return ret0
 }
 
-// GetMetrics indicates an expected call of GetMetrics.
-func (mr *MockRoutineBackupHandlerMockRecorder) GetMetrics() *gomock.Call {
+// Status indicates an expected call of Status.
+func (mr *MockRoutineBackupHandlerMockRecorder) Status() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetrics", reflect.TypeOf((*MockRoutineBackupHandler)(nil).GetMetrics))
-}
-
-// GetStats mocks base method.
-func (m *MockRoutineBackupHandler) GetStats() *models.BackupStats {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetStats")
-	ret0, _ := ret[0].(*models.BackupStats)
-	return ret0
-}
-
-// GetStats indicates an expected call of GetStats.
-func (mr *MockRoutineBackupHandlerMockRecorder) GetStats() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStats", reflect.TypeOf((*MockRoutineBackupHandler)(nil).GetStats))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Status", reflect.TypeOf((*MockRoutineBackupHandler)(nil).Status))
 }
 
 // Wait mocks base method.
-func (m *MockRoutineBackupHandler) Wait(arg0 context.Context) error {
+func (m *MockRoutineBackupHandler) Wait(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Wait", arg0)
+	ret := m.ctrl.Call(m, "Wait", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Wait indicates an expected call of Wait.
-func (mr *MockRoutineBackupHandlerMockRecorder) Wait(arg0 any) *gomock.Call {
+func (mr *MockRoutineBackupHandlerMockRecorder) Wait(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockRoutineBackupHandler)(nil).Wait), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockRoutineBackupHandler)(nil).Wait), ctx)
 }
 
 // mockRoutineProvider is a mock of routineProvider interface.

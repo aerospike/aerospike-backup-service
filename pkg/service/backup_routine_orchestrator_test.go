@@ -53,6 +53,7 @@ func newBackupNamespacesOperation(
 	h.EXPECT().Wait(gomock.Any()).Return(nil).Times(len(namespaces))
 	if stats != nil {
 		h.EXPECT().GetStats().Return(stats).AnyTimes()
+		h.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 	}
 	handlers := make(map[string]CancelableBackupHandler, len(namespaces))
 	for _, ns := range namespaces {

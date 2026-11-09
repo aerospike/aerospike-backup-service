@@ -24,9 +24,16 @@ type RoutineBackupRunner interface {
 }
 
 // RoutineBackupHandler is the handle of a routine's backup run, which the registry tracks while the
-// run lasts and through which it can be canceled.
+// run lasts and through which it can be canceled. It speaks in the routine's terms only: what a
+// backup mode alone knows goes in its slot of the [model.BackupRun] it reports.
 type RoutineBackupHandler interface {
-	CancelableBackupHandler
+	// Wait waits for the run to end and returns the error it ended with, or ctx's error if ctx is
+	// done first.
+	Wait(ctx context.Context) error
+	// Cancel stops the run.
+	Cancel()
+	// Status is a snapshot of the run, or nil before it has started.
+	Status() *model.BackupRun
 }
 
 // routineBackupRunner resolves the namespaces and delegates each one to a [NamespaceBackupRunner].

@@ -20,6 +20,18 @@ func (t *routineTracker) markScanDone() {
 	t.endScan(t.beginScan())
 }
 
+// newScanBackupHandler returns a mock handler of a scan backup that has started and estimated
+// totalRecords, none of them read yet. Tests add the expectations they exercise.
+func newScanBackupHandler(ctrl *gomock.Controller, totalRecords uint64) *MockRoutineBackupHandler {
+	h := NewMockRoutineBackupHandler(ctrl)
+	h.EXPECT().Status().Return(&model.BackupRun{
+		StartTime: time.Now(),
+		Scan:      &model.ScanProgress{TotalRecords: totalRecords, Metrics: &models.Metrics{}},
+	}).AnyTimes()
+
+	return h
+}
+
 func TestNewRoutineTracker(t *testing.T) {
 	tracker := newRoutineTracker()
 	assert.NotNil(t, tracker)
@@ -66,18 +78,10 @@ func TestRegisterAndGetState(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	// mock full handler
-	fullBackupStats := models.NewBackupStats()
-	fullBackupStats.TotalRecords.Store(100)
-	fullHandler := NewMockCancelableBackupHandler(ctrl)
-	fullHandler.EXPECT().GetStats().Return(fullBackupStats).AnyTimes()
-	fullHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+	fullHandler := newScanBackupHandler(ctrl, 100)
 
 	// mock incremental handler
-	incrBackupStats := models.NewBackupStats()
-	incrBackupStats.TotalRecords.Store(50)
-	incrHandler := NewMockCancelableBackupHandler(ctrl)
-	incrHandler.EXPECT().GetStats().Return(incrBackupStats).AnyTimes()
-	incrHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+	incrHandler := newScanBackupHandler(ctrl, 50)
 
 	tracker.register(model.BackupTypeFull, fullHandler)
 	tracker.register(model.BackupTypeIncremental, incrHandler)
@@ -96,7 +100,7 @@ func TestClearBackup(t *testing.T) {
 	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
-	handler := NewMockCancelableBackupHandler(ctrl)
+	handler := newScanBackupHandler(ctrl, 0)
 	tracker.register(model.BackupTypeFull, handler)
 
 	tracker.clearBackup(model.BackupTypeFull)
@@ -119,7 +123,7 @@ func TestClearFailedBackup(t *testing.T) {
 	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
-	handler := NewMockCancelableBackupHandler(ctrl)
+	handler := newScanBackupHandler(ctrl, 0)
 	tracker.register(model.BackupTypeFull, handler)
 
 	// clear a failed backup

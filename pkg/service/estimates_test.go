@@ -7,7 +7,50 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
+
+func TestCurrentBackupStatus(t *testing.T) {
+	t.Parallel()
+
+	start := time.Now()
+	tests := map[string]struct {
+		run                 model.BackupRun
+		wantProgress        float64
+		wantDone, wantTotal uint64
+	}{
+		"scan backup passes its counts through": {
+			run:          model.BackupRun{Progress: 0.4, Scan: &model.ScanProgress{TotalRecords: 100, DoneRecords: 40}},
+			wantProgress: 0.4, wantDone: 40, wantTotal: 100,
+		},
+		"a run with no scan counts no records": {
+			run:          model.BackupRun{Progress: 0.4},
+			wantProgress: 0.4,
+		},
+		"progress is capped while running": {
+			run:          model.BackupRun{Progress: 1, Scan: &model.ScanProgress{TotalRecords: 10, DoneRecords: 10}},
+			wantProgress: 0.99, wantDone: 10, wantTotal: 10,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			run := tt.run
+			run.StartTime = start
+			handler := NewMockRoutineBackupHandler(gomock.NewController(t))
+			handler.EXPECT().Status().Return(&run)
+
+			job := currentBackupStatus(handler)
+
+			assert.Equal(t, tt.wantDone, job.DoneRecords)
+			assert.Equal(t, tt.wantTotal, job.TotalRecords)
+			assert.InDelta(t, tt.wantProgress, job.Progress, 1e-9)
+			assert.Equal(t, start, job.StartTime)
+		})
+	}
+}
 
 func TestNewRunningJob(t *testing.T) {
 	startTime := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)

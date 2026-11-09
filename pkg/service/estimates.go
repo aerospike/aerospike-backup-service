@@ -4,40 +4,36 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/backup-go/models"
 )
 
-func currentBackupStatus(handlers backupexecutor.BackupHandler) *model.RunningJob {
-	if handlers == nil {
+// currentBackupStatus is the state of the backup the handler runs, or nil when none is running or
+// it has not started. Progress is capped at 99% while the backup runs. The record counts and
+// metrics are those of a scan backup; a run without a scan slot has none.
+func currentBackupStatus(handler RoutineBackupHandler) *model.RunningJob {
+	if handler == nil {
 		return nil
 	}
 
-	// for backups, we don't store info on finished jobs; If we have a backup handler => it's running.
-	stats := handlers.GetStats()
-	if stats == nil { // no running jobs
+	// A handler is registered while its backup runs, so having one means the backup is running.
+	run := handler.Status()
+	if run == nil { // no running jobs
 		return nil
 	}
 
-	var done = stats.ReadRecords.Load()
-	var total = stats.TotalRecords.Load()
-
-	progress := 0.0
-	if total != 0 {
-		progress = min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
-	}
-
-	endTime := calculateEstimatedEndTime(stats.StartTime, progress)
-
-	return &model.RunningJob{
-		StartTime:        stats.StartTime,
-		FinishTime:       nil,
-		DoneRecords:      done,
-		TotalRecords:     total,
-		EstimatedEndTime: endTime,
+	progress := min(run.Progress, 0.99)
+	job := &model.RunningJob{
+		StartTime:        run.StartTime,
+		EstimatedEndTime: calculateEstimatedEndTime(run.StartTime, progress),
 		Progress:         progress,
-		Metrics:          handlers.GetMetrics(),
 	}
+	if run.Scan != nil {
+		job.DoneRecords = run.Scan.DoneRecords
+		job.TotalRecords = run.Scan.TotalRecords
+		job.Metrics = run.Scan.Metrics
+	}
+
+	return job
 }
 
 // NewRestoreRunningJob created new RunningJob for restore with calculated estimated time and percentage.

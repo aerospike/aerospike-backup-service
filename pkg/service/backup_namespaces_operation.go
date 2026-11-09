@@ -5,13 +5,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go/models"
 )
 
-// BackupNamespacesOperation aggregates backup operations across multiple namespaces.
-// It creates individual backup process instances for each namespace and
-// waits for their execution.
-// Implements RoutineBackupHandler, so it can be treated as a unified handler externally.
+// BackupNamespacesOperation is the handle of a scan backup run: one backup-go handler per
+// namespace, reported as a single run.
 type BackupNamespacesOperation struct {
 	handlers map[string]CancelableBackupHandler
 }
@@ -37,8 +36,35 @@ func (op *BackupNamespacesOperation) Cancel() {
 	}
 }
 
-// GetMetrics sums backup-go metrics across all namespace handlers.
-func (op *BackupNamespacesOperation) GetMetrics() *models.Metrics {
+// Status sums the namespace handlers into one run, or nil while none of them has started.
+// Progress is the share of the records estimated for all namespaces that are read so far: zero
+// before the estimate is known, and capped at 1 because the estimate can fall short of the
+// records actually read.
+func (op *BackupNamespacesOperation) Status() *model.BackupRun {
+	stats := op.aggregateStats()
+	if stats == nil {
+		return nil
+	}
+
+	total, done := stats.TotalRecords.Load(), stats.GetReadRecords()
+	progress := 0.0
+	if total != 0 {
+		progress = min(float64(done)/float64(total), 1)
+	}
+
+	return &model.BackupRun{
+		StartTime: stats.StartTime,
+		Progress:  progress,
+		Scan: &model.ScanProgress{
+			TotalRecords: total,
+			DoneRecords:  done,
+			Metrics:      op.sumMetrics(),
+		},
+	}
+}
+
+// sumMetrics sums backup-go metrics across all namespace handlers.
+func (op *BackupNamespacesOperation) sumMetrics() *models.Metrics {
 	metrics := make([]*models.Metrics, 0, len(op.handlers))
 
 	for _, handler := range op.handlers {
@@ -48,9 +74,9 @@ func (op *BackupNamespacesOperation) GetMetrics() *models.Metrics {
 	return models.SumMetrics(metrics...)
 }
 
-// GetStats returns aggregated statistics across all namespace handlers.
-// Returns nil when no namespace backup has started yet (all inner GetStats are nil).
-func (op *BackupNamespacesOperation) GetStats() *models.BackupStats {
+// aggregateStats sums the statistics of the namespace handlers that have started, or returns
+// nil when none has.
+func (op *BackupNamespacesOperation) aggregateStats() *models.BackupStats {
 	activeHandlers := 0
 
 	res := models.NewBackupStats()
