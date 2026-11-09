@@ -148,7 +148,7 @@ func TestFinishFull(t *testing.T) {
 	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(backupTime, nil).Times(1)
 
 	registry := newTestBackupStateRegistry(historyMgr, nil)
-	handler := newScanBackupHandler(ctrl, 0)
+	handler := NewMockRoutineBackupHandler(ctrl)
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,
@@ -177,7 +177,7 @@ func TestFinishIncremental(t *testing.T) {
 	historyMgr.EXPECT().FindLastRun(gomock.Any(), gomock.Any()).Return(backupTime, nil).Times(1)
 
 	registry := newTestBackupStateRegistry(historyMgr, nil)
-	handler := newScanBackupHandler(ctrl, 0)
+	handler := NewMockRoutineBackupHandler(ctrl)
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,
@@ -326,10 +326,10 @@ func TestCancel(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	registry := newTestBackupStateRegistry(nil, nil)
-	handlerFull := newScanBackupHandler(ctrl, 0)
+	handlerFull := NewMockRoutineBackupHandler(ctrl)
 	handlerFull.EXPECT().Cancel()
 
-	handlerIncr := newScanBackupHandler(ctrl, 0)
+	handlerIncr := NewMockRoutineBackupHandler(ctrl)
 	handlerIncr.EXPECT().Cancel()
 
 	registry.BackupStarted(routineName, model.BackupTypeFull, handlerFull)

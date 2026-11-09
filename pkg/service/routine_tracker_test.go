@@ -100,7 +100,7 @@ func TestClearBackup(t *testing.T) {
 	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
-	handler := newScanBackupHandler(ctrl, 0)
+	handler := NewMockRoutineBackupHandler(ctrl)
 	tracker.register(model.BackupTypeFull, handler)
 
 	tracker.clearBackup(model.BackupTypeFull)
@@ -123,7 +123,7 @@ func TestClearFailedBackup(t *testing.T) {
 	tracker.markScanDone()
 
 	ctrl := gomock.NewController(t)
-	handler := newScanBackupHandler(ctrl, 0)
+	handler := NewMockRoutineBackupHandler(ctrl)
 	tracker.register(model.BackupTypeFull, handler)
 
 	// clear a failed backup

@@ -42,6 +42,7 @@ func (op *BackupNamespacesOperation) Cancel() {
 // is known, and capped at 1 because the estimate can fall short of the records actually read.
 func (op *BackupNamespacesOperation) Status() *model.BackupRun {
 	var total, done uint64
+	started := false
 	run := model.BackupRun{}
 	metrics := make([]*models.Metrics, 0, len(op.handlers))
 	for _, handler := range op.handlers {
@@ -50,6 +51,7 @@ func (op *BackupNamespacesOperation) Status() *model.BackupRun {
 			continue
 		}
 
+		started = true
 		total += stats.TotalRecords.Load()
 		done += stats.GetReadRecords()
 		metrics = append(metrics, handler.GetMetrics())
@@ -57,7 +59,7 @@ func (op *BackupNamespacesOperation) Status() *model.BackupRun {
 		run.StartTime = stats.StartTime
 	}
 
-	if len(metrics) == 0 { // one entry per started handler
+	if !started {
 		return nil
 	}
 

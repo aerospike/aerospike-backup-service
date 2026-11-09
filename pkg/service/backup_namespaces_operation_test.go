@@ -105,6 +105,23 @@ func TestBackupNamespacesOperation_Status_Aggregated(t *testing.T) {
 	assert.Equal(t, uint64(30), run.Scan.Metrics.RecordsPerSecond)
 }
 
+// A started namespace with no metrics yet still yields zero-valued metrics, not nil: the REST
+// field is {} rather than null.
+func TestBackupNamespacesOperation_Status_NoMetricsYet(t *testing.T) {
+	t.Parallel()
+
+	h := NewMockCancelableBackupHandler(gomock.NewController(t))
+	h.EXPECT().GetStats().Return(models.NewBackupStats())
+	h.EXPECT().GetMetrics().Return(nil)
+	op := &BackupNamespacesOperation{handlers: map[string]CancelableBackupHandler{"ns1": h}}
+
+	run := op.Status()
+
+	require.NotNil(t, run)
+	require.NotNil(t, run.Scan.Metrics)
+	assert.Zero(t, run.Scan.Metrics.RecordsPerSecond)
+}
+
 func TestBackupNamespacesOperation_Status_Progress(t *testing.T) {
 	t.Parallel()
 
