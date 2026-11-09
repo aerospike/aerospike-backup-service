@@ -20,7 +20,13 @@ type RoutineBackupRunner interface {
 		routine *model.BackupRoutine,
 		runSpec model.BackupRunSpec,
 		logger *slog.Logger,
-	) (*BackupNamespacesOperation, error)
+	) (RoutineBackupHandler, error)
+}
+
+// RoutineBackupHandler is the handle of a routine's backup run, which the registry tracks while the
+// run lasts and through which it can be canceled.
+type RoutineBackupHandler interface {
+	CancelableBackupHandler
 }
 
 // routineBackupRunner resolves the namespaces and delegates each one to a [NamespaceBackupRunner].
@@ -49,7 +55,7 @@ func (r *routineBackupRunner) Run(
 	routine *model.BackupRoutine,
 	runSpec model.BackupRunSpec,
 	logger *slog.Logger,
-) (*BackupNamespacesOperation, error) {
+) (RoutineBackupHandler, error) {
 	namespaces, err := r.resolver.ResolveNamespaces(ctx, routine, logger)
 	if err != nil {
 		return nil, err

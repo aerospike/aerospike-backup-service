@@ -13,7 +13,7 @@ import (
 type StartController interface {
 	// TryStart asks permission to start a backup of the given type for the routine.
 	//
-	// If the start is denied, it returns an error wrapping errBackupSkipped.
+	// If the start is denied, it returns an error wrapping ErrBackupSkipped.
 	// If it is allowed, it returns a release callback that MUST be called exactly
 	// once to clear the reservation.
 	TryStart(
@@ -70,7 +70,7 @@ func (s *startController) TryStart(
 
 	facts := s.buildStartFacts(routine, now)
 	if err := s.startDecider.CanStart(backupType, routine.BackupPolicy, facts); err != nil {
-		return nil, fmt.Errorf("%w: %w", errBackupSkipped, err)
+		return nil, fmt.Errorf("%w: %w", ErrBackupSkipped, err)
 	}
 
 	tokenID := uuid.New()
