@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -11,8 +10,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 )
-
-var errBackupSkipped = errors.New("backup skipped")
 
 // BackupOrchestrator runs one full or incremental backup of a routine, from admission
 // through execution to completion handling and reporting.

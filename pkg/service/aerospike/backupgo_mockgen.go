@@ -311,31 +311,17 @@ func (mr *MockInfoGetterMockRecorder) GetVersion(ctx any) *gomock.Call {
 }
 
 // OpenRestore mocks base method.
-func (m *MockInfoGetter) OpenRestore(ctx context.Context, namespace, jobID string) error {
+func (m *MockInfoGetter) OpenRestore(ctx context.Context, namespace string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OpenRestore", ctx, namespace, jobID)
+	ret := m.ctrl.Call(m, "OpenRestore", ctx, namespace)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // OpenRestore indicates an expected call of OpenRestore.
-func (mr *MockInfoGetterMockRecorder) OpenRestore(ctx, namespace, jobID any) *gomock.Call {
+func (mr *MockInfoGetterMockRecorder) OpenRestore(ctx, namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenRestore", reflect.TypeOf((*MockInfoGetter)(nil).OpenRestore), ctx, namespace, jobID)
-}
-
-// PrepareRestore mocks base method.
-func (m *MockInfoGetter) PrepareRestore(ctx context.Context, request *models0.RequestPrepareRestore) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareRestore", ctx, request)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// PrepareRestore indicates an expected call of PrepareRestore.
-func (mr *MockInfoGetterMockRecorder) PrepareRestore(ctx, request any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareRestore", reflect.TypeOf((*MockInfoGetter)(nil).PrepareRestore), ctx, request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenRestore", reflect.TypeOf((*MockInfoGetter)(nil).OpenRestore), ctx, namespace)
 }
 
 // StartBackup mocks base method.
@@ -354,11 +340,12 @@ func (mr *MockInfoGetterMockRecorder) StartBackup(ctx, request any) *gomock.Call
 }
 
 // StartRestore mocks base method.
-func (m *MockInfoGetter) StartRestore(ctx context.Context, request *models0.RequestRestore) error {
+func (m *MockInfoGetter) StartRestore(ctx context.Context, request *models0.RequestRestore) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartRestore", ctx, request)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // StartRestore indicates an expected call of StartRestore.

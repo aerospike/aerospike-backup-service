@@ -313,7 +313,7 @@ func (mr *MockBackupStateRegistryMockRecorder) BackupFailed(routineName, backupT
 }
 
 // BackupStarted mocks base method.
-func (m *MockBackupStateRegistry) BackupStarted(routineName string, backupType model.BackupType, handler CancelableBackupHandler) {
+func (m *MockBackupStateRegistry) BackupStarted(routineName string, backupType model.BackupType, handler RoutineBackupHandler) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "BackupStarted", routineName, backupType, handler)
 }
@@ -809,10 +809,10 @@ func (m *MockRoutineBackupRunner) EXPECT() *MockRoutineBackupRunnerMockRecorder 
 }
 
 // Run mocks base method.
-func (m *MockRoutineBackupRunner) Run(ctx context.Context, routine *model.BackupRoutine, runSpec model.BackupRunSpec, logger *slog.Logger) (*BackupNamespacesOperation, error) {
+func (m *MockRoutineBackupRunner) Run(ctx context.Context, routine *model.BackupRoutine, runSpec model.BackupRunSpec, logger *slog.Logger) (RoutineBackupHandler, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run", ctx, routine, runSpec, logger)
-	ret0, _ := ret[0].(*BackupNamespacesOperation)
+	ret0, _ := ret[0].(RoutineBackupHandler)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

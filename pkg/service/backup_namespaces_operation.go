@@ -11,12 +11,12 @@ import (
 // BackupNamespacesOperation aggregates backup operations across multiple namespaces.
 // It creates individual backup process instances for each namespace and
 // waits for their execution.
-// Implements CancelableBackupHandler, so it can be treated as a unified handler externally.
+// Implements RoutineBackupHandler, so it can be treated as a unified handler externally.
 type BackupNamespacesOperation struct {
 	handlers map[string]CancelableBackupHandler
 }
 
-var _ CancelableBackupHandler = (*BackupNamespacesOperation)(nil)
+var _ RoutineBackupHandler = (*BackupNamespacesOperation)(nil)
 
 // Wait waits for all backup operations to complete and collects any errors
 // that occurred during the backup process.
