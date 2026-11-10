@@ -7,31 +7,17 @@ import (
 	"log/slog"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
-
-// Restore starts a restore and returns a handle to observe it.
-type Restore interface {
-	// Run restores the backups of the requests, one request per backup, given oldest first: a
-	// single backup, or a full backup and the incremental backups that follow it. The order the
-	// backups are applied in is the implementation's. Run returns a single handler for all of
-	// them. Every failure, including one to start, comes from the handler's Wait, which stops the
-	// restores and waits for them when its context ends.
-	Run(
-		ctx context.Context,
-		client aerospike.Client,
-		logger *slog.Logger,
-		requests ...*model.RestoreRequest,
-	) RestoreHandler
-}
 
 // RestoreExecutor runs scan restores with backup-go, reading the data through storage operations.
 type RestoreExecutor struct {
 	operations storage.Operations
 }
 
-var _ Restore = (*RestoreExecutor)(nil)
+var _ service.Restore = (*RestoreExecutor)(nil)
 
 // NewRestoreExecutor returns a RestoreExecutor.
 func NewRestoreExecutor(operations storage.Operations) *RestoreExecutor {
@@ -52,7 +38,7 @@ func (r *RestoreExecutor) Run(
 	client aerospike.Client,
 	logger *slog.Logger,
 	requests ...*model.RestoreRequest,
-) RestoreHandler {
+) service.RestoreHandler {
 	ctx, cancel := context.WithCancel(ctx)
 	chain := newSequentialRestoreHandler(cancel)
 

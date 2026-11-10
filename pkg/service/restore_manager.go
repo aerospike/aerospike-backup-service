@@ -6,7 +6,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/backup-go/models"
 )
@@ -58,7 +57,7 @@ var _ RestoreManager = (*restoreManager)(nil)
 
 // NewRestoreManager returns a RestoreManager.
 func NewRestoreManager(
-	restoreService restoreexecutor.Restore,
+	restoreService Restore,
 	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,
 	backupReader BackupReader,

@@ -1,4 +1,4 @@
-package service
+package scanbackup
 
 import (
 	"context"
@@ -8,16 +8,9 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
-
-// BackupRetentionManager deletes the backups that fall outside a routine's retention policy.
-type BackupRetentionManager interface {
-	// ApplyRetention deletes backups that exceed the routine's configured retention limits.
-	// It does nothing when the routine has no retention policy, or when the routine's
-	// storage is already locked by another delete or restore.
-	ApplyRetention(ctx context.Context, routine *model.BackupRoutine) error
-}
 
 type backupRetentionManager struct {
 	catalog BackupCatalog
@@ -28,12 +21,12 @@ type backupRetentionManager struct {
 	routineStorage *collections.LockMap
 }
 
-var _ BackupRetentionManager = (*backupRetentionManager)(nil)
+var _ service.BackupRetentionManager = (*backupRetentionManager)(nil)
 
 func NewBackupRetentionManager(
 	catalog BackupCatalog,
 	routineStorage *collections.LockMap,
-) BackupRetentionManager {
+) service.BackupRetentionManager {
 	return &backupRetentionManager{
 		catalog:        catalog,
 		routineStorage: routineStorage,
@@ -52,7 +45,7 @@ func (e *backupRetentionManager) ApplyRetention(ctx context.Context, routine *mo
 	}
 	defer mu.Unlock()
 
-	fullBackups, err := e.catalog.GetBackups(ctx, NewFullBackupFilter(routine))
+	fullBackups, err := e.catalog.GetBackups(ctx, service.NewFullBackupFilter(routine))
 	if err != nil {
 		return fmt.Errorf("failed to get full backups: %w", err)
 	}
@@ -109,7 +102,7 @@ func (e *backupRetentionManager) deleteIncrementalBackups(
 	if retainCount > 0 && len(timestamps) <= retainCount {
 		return nil
 	}
-	filter := NewIncrementalBackupFilter(routine)
+	filter := service.NewIncrementalBackupFilter(routine)
 	if retainCount > 0 {
 		filter = filter.WithToTime(timestamps[len(timestamps)-retainCount])
 	}

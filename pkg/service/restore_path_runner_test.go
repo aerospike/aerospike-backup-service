@@ -10,7 +10,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,7 +26,7 @@ func TestRestoreOK(t *testing.T) {
 
 	client := env.expectSuccessfulClientInteraction(t)
 
-	mockRestoreHandler := restoreexecutor.NewMockRestoreHandler(env.ctrl)
+	mockRestoreHandler := NewMockRestoreHandler(env.ctrl)
 	stats := models.NewRestoreStats()
 	stats.ReadRecords.Add(10)
 	mockRestoreHandler.EXPECT().GetStats().Return(stats).AnyTimes()
@@ -72,7 +71,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	client := env.expectSuccessfulClientInteraction(t)
 
 	waitReturned := make(chan struct{}) // To signal Wait has returned
-	mockRestoreHandler := restoreexecutor.NewMockRestoreHandler(env.ctrl)
+	mockRestoreHandler := NewMockRestoreHandler(env.ctrl)
 	mockRestoreHandler.EXPECT().GetStats().Return(models.NewRestoreStats()).AnyTimes()
 
 	// Wait should block until context is canceled, then return context.Canceled
@@ -292,7 +291,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 			_ aerospike.Client,
 			_ *slog.Logger,
 			_ ...*model.RestoreRequest,
-		) restoreexecutor.RestoreHandler {
+		) RestoreHandler {
 			// Signal that the Run method has started.
 			runStarted.Done()
 			// Now, wait until the context is canceled by the test.

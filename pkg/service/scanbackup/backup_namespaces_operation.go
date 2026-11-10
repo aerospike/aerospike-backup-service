@@ -1,4 +1,4 @@
-package service
+package scanbackup
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -15,7 +16,7 @@ type BackupNamespacesOperation struct {
 	handlers map[string]CancelableBackupHandler
 }
 
-var _ RoutineBackupHandler = (*BackupNamespacesOperation)(nil)
+var _ service.RoutineBackupHandler = (*BackupNamespacesOperation)(nil)
 
 // Wait waits for all backup operations to complete and collects any errors
 // that occurred during the backup process.

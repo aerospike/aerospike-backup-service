@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +18,7 @@ const (
 	byteWritten   = 100
 )
 
-// mockRestoreHandler implements the restoreexecutor.RestoreHandler for testing.
+// mockRestoreHandler implements the RestoreHandler for testing.
 type mockRestoreHandler struct{}
 
 func (m *mockRestoreHandler) GetStats() *models.RestoreStats {
@@ -37,7 +36,7 @@ func (m *mockRestoreHandler) GetMetrics() *models.Metrics {
 	return nil
 }
 
-var _ restoreexecutor.RestoreHandler = (*mockRestoreHandler)(nil)
+var _ RestoreHandler = (*mockRestoreHandler)(nil)
 
 func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	t.Run("concurrently modify job and succeed", func(t *testing.T) {

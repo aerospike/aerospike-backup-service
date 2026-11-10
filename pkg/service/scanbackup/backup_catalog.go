@@ -1,4 +1,4 @@
-package service
+package scanbackup
 
 import (
 	"cmp"
@@ -12,21 +12,15 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 // BackupCatalog lists backups, stores backup metadata, and deletes backup folders.
 type BackupCatalog interface {
-	BackupReader
+	service.BackupReader
 	BackupWriter
-}
-
-// BackupReader lists backups by reading the metadata files stored inside backup folders.
-type BackupReader interface {
-	// GetBackups retrieves backup details based on the provided filter.
-	// Returned backups are sorted by Created time in ascending order.
-	GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error)
 }
 
 // BackupWriter stores backup metadata and deletes backup folders.
@@ -58,14 +52,14 @@ func NewBackupCatalog(
 	}
 }
 
-func (c *backupCatalog) GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error) {
+func (c *backupCatalog) GetBackups(ctx context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
 	switch f := filter.(type) {
-	case *RoutineFilter:
-		lock := c.locks.Get(f.routineName)
+	case *service.RoutineFilter:
+		lock := c.locks.Get(f.RoutineName())
 		lock.RLock()
 		defer lock.RUnlock()
 		return c.getRoutineBackups(ctx, f)
-	case *PathFilter:
+	case *service.PathFilter:
 		return c.getPathBackups(ctx, f)
 	default:
 		return nil, fmt.Errorf("unsupported filter type: %T", f)
@@ -107,20 +101,23 @@ func (c *backupCatalog) Delete(ctx context.Context, routine *model.BackupRoutine
 	return err
 }
 
-func (c *backupCatalog) getRoutineBackups(ctx context.Context, filter *RoutineFilter) ([]model.BackupDetails, error) {
-	backupStorage := filter.storage
+func (c *backupCatalog) getRoutineBackups(
+	ctx context.Context,
+	filter *service.RoutineFilter,
+) ([]model.BackupDetails, error) {
+	backupStorage := filter.Storage()
 
-	files, err := c.operations.ReadFileNames(ctx, backupStorage, filter.getPath(), metadataFile, filter.FromTime)
+	files, err := c.operations.ReadFileNames(ctx, backupStorage, routineRootPath(filter), metadataFile, filter.FromTime)
 	if err != nil {
-		return nil, fmt.Errorf("read metadata files in %s: %w", filter.getPath(), err)
+		return nil, fmt.Errorf("read metadata files in %s: %w", routineRootPath(filter), err)
 	}
 
 	storagePrefix := filepath.Clean(backupStorage.GetPath())
 	files = pathsRelativeToStorage(files, storagePrefix)
-	maxPath := filter.getUpperBoundary(c.pathService)
+	maxPath := c.upperBoundary(filter)
 	eligibleFiles := c.filterEligibleFiles(files, maxPath)
 
-	if filter.onlyLast {
+	if filter.OnlyLast() {
 		return c.readLatestBackupDetails(ctx, backupStorage, filter, eligibleFiles)
 	}
 
@@ -129,7 +126,7 @@ func (c *backupCatalog) getRoutineBackups(ctx context.Context, filter *RoutineFi
 		return nil, err
 	}
 
-	backups = c.filterAndSortBackups(backups, filter.timeBounds())
+	backups = c.filterAndSortBackups(backups, filter.TimeBounds())
 
 	return backups, nil
 }
@@ -137,10 +134,10 @@ func (c *backupCatalog) getRoutineBackups(ctx context.Context, filter *RoutineFi
 func (c *backupCatalog) readLatestBackupDetails(
 	ctx context.Context,
 	st model.Storage,
-	filter *RoutineFilter,
+	filter *service.RoutineFilter,
 	files []string,
 ) ([]model.BackupDetails, error) {
-	bounds := filter.timeBounds()
+	bounds := filter.TimeBounds()
 	pathsByTimestamp := c.groupMetadataPathsByTimestamp(files)
 
 	for len(pathsByTimestamp) > 0 {
@@ -169,17 +166,17 @@ func (c *backupCatalog) readLatestBackupDetails(
 	return nil, nil
 }
 
-func (c *backupCatalog) getPathBackups(ctx context.Context, filter *PathFilter) ([]model.BackupDetails, error) {
-	files, err := c.operations.ReadFileNames(ctx, filter.storage, filter.path, metadataFile, nil)
+func (c *backupCatalog) getPathBackups(ctx context.Context, filter *service.PathFilter) ([]model.BackupDetails, error) {
+	files, err := c.operations.ReadFileNames(ctx, filter.Storage(), filter.Path(), metadataFile, nil)
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.String(), err)
 	}
-	files = pathsRelativeToStorage(files, filepath.Clean(filter.storage.GetPath()))
-	backups, err := c.readBackupDetails(ctx, filter.storage, files)
+	files = pathsRelativeToStorage(files, filepath.Clean(filter.Storage().GetPath()))
+	backups, err := c.readBackupDetails(ctx, filter.Storage(), files)
 	if err != nil {
 		return nil, err
 	}
-	return c.filterAndSortBackups(backups, filter.timeBounds()), nil
+	return c.filterAndSortBackups(backups, filter.TimeBounds()), nil
 }
 
 // pathsRelativeToStorage normalizes paths from ReadFileNames to be relative to storage root.
@@ -277,4 +274,19 @@ func (c *backupCatalog) filterAndSortBackups(
 	})
 
 	return out
+}
+
+// routineRootPath returns the storage root path of the backups the filter selects.
+func routineRootPath(filter *service.RoutineFilter) string {
+	return backupRootPath(filter.RoutineName(), filter.BackupType())
+}
+
+// upperBoundary returns the storage path prefix upper bound derived from the filter's ToTime.
+// If ToTime is unset, all timestamps are allowed.
+func (c *backupCatalog) upperBoundary(filter *service.RoutineFilter) string {
+	if filter.ToTime != nil {
+		return c.pathService.GetTimestampPath(filter.RoutineName(), *filter.ToTime, filter.BackupType())
+	}
+
+	return "\uffff"
 }

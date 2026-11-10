@@ -1,4 +1,4 @@
-package service
+package scanbackup
 
 import (
 	"context"
@@ -9,16 +9,10 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
-
-// ClusterConfigWriter saves the configuration of a routine's source cluster: one file per node,
-// at the path [PathService] returns for that routine and timestamp.
-type ClusterConfigWriter interface {
-	// Write writes the cluster configuration for the given routine and timestamp.
-	Write(ctx context.Context, routine *model.BackupRoutine, timestamp time.Time) error
-}
 
 type clusterConfigWriter struct {
 	pathService  PathService
@@ -26,14 +20,14 @@ type clusterConfigWriter struct {
 	configSource aerospike.ClusterConfigSource
 }
 
-var _ ClusterConfigWriter = (*clusterConfigWriter)(nil)
+var _ service.ClusterConfigWriter = (*clusterConfigWriter)(nil)
 
-// NewClusterConfigWriter returns a ClusterConfigWriter.
+// NewClusterConfigWriter returns a service.ClusterConfigWriter.
 func NewClusterConfigWriter(
 	pathService PathService,
 	operations storage.Operations,
 	configSource aerospike.ClusterConfigSource,
-) ClusterConfigWriter {
+) service.ClusterConfigWriter {
 	return &clusterConfigWriter{
 		pathService:  pathService,
 		operations:   operations,

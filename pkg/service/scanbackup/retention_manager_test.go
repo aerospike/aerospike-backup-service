@@ -1,10 +1,11 @@
-package service
+package scanbackup
 
 import (
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(4000)}}, // keep
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(5000)}}, // keep
 	}
-	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), service.NewFullBackupFilter(routine)).
 		Return(fullBackups, nil)
 
 	// Expect deletion of the first 3 full backups (keep last 2)
@@ -50,7 +51,7 @@ func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 
 	// Expect calls to get incremental backups.
 	catalog.EXPECT().GetBackups(t.Context(),
-		NewIncrementalBackupFilter(routine).WithToTime(time.UnixMilli(4000))).
+		service.NewIncrementalBackupFilter(routine).WithToTime(time.UnixMilli(4000))).
 		Return([]model.BackupDetails{}, nil)
 
 	err := retentionManager.ApplyRetention(t.Context(), routine)
@@ -78,7 +79,7 @@ func TestRetentionManager_FullAndIncremental(t *testing.T) {
 		}, // to be deleted
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(2000)}}, // keep
 	}
-	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), service.NewFullBackupFilter(routine)).
 		Return(fullBackups, nil)
 
 	// Expect deletion of the first full backup
@@ -96,7 +97,7 @@ func TestRetentionManager_FullAndIncremental(t *testing.T) {
 		}, // to be deleted
 	}
 	catalog.EXPECT().
-		GetBackups(t.Context(), NewIncrementalBackupFilter(routine).WithToTime(time.UnixMilli(2000))).
+		GetBackups(t.Context(), service.NewIncrementalBackupFilter(routine).WithToTime(time.UnixMilli(2000))).
 		Return(incrementals, nil)
 
 	// Expect deletion of the incrementals
@@ -124,7 +125,7 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(1000)}}, // keep
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(2000)}}, // keep
 	}
-	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), service.NewFullBackupFilter(routine)).
 		Return(fullBackups, nil)
 
 	// Expect a call to get incrementals for the retained full backups
@@ -140,7 +141,7 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 	}
 
 	catalog.EXPECT().
-		GetBackups(t.Context(), NewIncrementalBackupFilter(routine).WithToTime(time.UnixMilli(2000))).
+		GetBackups(t.Context(), service.NewIncrementalBackupFilter(routine).WithToTime(time.UnixMilli(2000))).
 		Return(incrementals, nil)
 
 	// Expect deletion of the older incrementals
@@ -183,7 +184,7 @@ func TestRetentionManager_NoneToDelete(t *testing.T) {
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(2000)}}, // keep
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(3000)}}, // keep
 	}
-	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), service.NewFullBackupFilter(routine)).
 		Return(fullBackups, nil)
 
 	// No Delete calls are expected
@@ -207,10 +208,10 @@ func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 	retentionManager := NewBackupRetentionManager(catalog, &collections.LockMap{})
 
 	// GetBackups is still called for full backups
-	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), service.NewFullBackupFilter(routine)).
 		Return([]model.BackupDetails{}, nil)
 
-	catalog.EXPECT().GetBackups(t.Context(), NewIncrementalBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), service.NewIncrementalBackupFilter(routine)).
 		Return([]model.BackupDetails{
 			{Key: "test-routine/incremental/1000/data/ns1"},
 			{Key: "test-routine/incremental/2000/data/ns1"},
@@ -236,9 +237,9 @@ func TestRetentionManager_RetainZeroIncrementalsKeepsTheIncrementalRoot(t *testi
 	catalog := NewMockBackupCatalog(ctrl)
 	retentionManager := NewBackupRetentionManager(catalog, &collections.LockMap{})
 
-	catalog.EXPECT().GetBackups(t.Context(), NewFullBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), service.NewFullBackupFilter(routine)).
 		Return([]model.BackupDetails{}, nil)
-	catalog.EXPECT().GetBackups(t.Context(), NewIncrementalBackupFilter(routine)).
+	catalog.EXPECT().GetBackups(t.Context(), service.NewIncrementalBackupFilter(routine)).
 		Return([]model.BackupDetails{}, nil)
 
 	// No Delete call at all: nothing has finished, and the root is never deleted as a whole.

@@ -11,7 +11,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
@@ -26,11 +25,11 @@ type restoreExecutor struct {
 	backupReader service.BackupReader
 }
 
-var _ restoreexecutor.Restore = (*restoreExecutor)(nil)
+var _ service.Restore = (*restoreExecutor)(nil)
 
 // NewRestoreExecutor returns a Restore that runs server-side restores. backupReader tells
 // which namespace a backup holds, to restore into.
-func NewRestoreExecutor(backupReader service.BackupReader) restoreexecutor.Restore {
+func NewRestoreExecutor(backupReader service.BackupReader) service.Restore {
 	return &restoreExecutor{backupReader: backupReader}
 }
 
@@ -43,7 +42,7 @@ func (r *restoreExecutor) Run(
 	client aerospike.Client,
 	logger *slog.Logger,
 	requests ...*model.RestoreRequest,
-) restoreexecutor.RestoreHandler {
+) service.RestoreHandler {
 	ctx, cancel := context.WithCancel(ctx)
 	handler := newRestoreHandler(cancel)
 
@@ -163,7 +162,7 @@ type restoreHandler struct {
 	err    error
 }
 
-var _ restoreexecutor.RestoreHandler = (*restoreHandler)(nil)
+var _ service.RestoreHandler = (*restoreHandler)(nil)
 
 func newRestoreHandler(cancel context.CancelFunc) *restoreHandler {
 	stats := models.NewRestoreStats()

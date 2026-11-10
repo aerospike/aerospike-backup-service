@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go/models"
@@ -39,7 +40,7 @@ func expectRestoresInOrder(
 	var calls []any
 	for _, path := range paths {
 		reader := NewMockStreamingReader(ctrl)
-		handler := NewMockRestoreHandler(ctrl)
+		handler := service.NewMockRestoreHandler(ctrl)
 		handler.EXPECT().Wait(gomock.Any()).Return(nil)
 		handler.EXPECT().GetStats().Return(restoreStatsInserted(1)).AnyTimes()
 
@@ -68,7 +69,7 @@ func TestRestoreExecutor_Run_ChainStopsAtFirstFailure(t *testing.T) {
 		CreateDirReader(gomock.Any(), gomock.Any(), "full", gomock.Any()).
 		Return(reader, nil)
 
-	handler := NewMockRestoreHandler(ctrl)
+	handler := service.NewMockRestoreHandler(ctrl)
 	handler.EXPECT().Wait(gomock.Any()).Return(wantErr)
 
 	client := aerospike.NewMockClient(ctrl)
@@ -88,7 +89,7 @@ func TestRestoreExecutor_Run_LaterStartFailure(t *testing.T) {
 
 	operations := storage.NewMockOperations(ctrl)
 	reader := NewMockStreamingReader(ctrl)
-	handler := NewMockRestoreHandler(ctrl)
+	handler := service.NewMockRestoreHandler(ctrl)
 	handler.EXPECT().Wait(gomock.Any()).Return(nil)
 	client := aerospike.NewMockClient(ctrl)
 	gomock.InOrder(
@@ -109,7 +110,7 @@ func TestRestoreExecutor_Run_CanceledChainStartsNoMore(t *testing.T) {
 
 	operations := storage.NewMockOperations(ctrl)
 	reader := NewMockStreamingReader(ctrl)
-	handler := NewMockRestoreHandler(ctrl)
+	handler := service.NewMockRestoreHandler(ctrl)
 	handler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(context.Context) error {
 		cancel()
 		return nil
@@ -133,7 +134,7 @@ func TestRestoreExecutor_Run_CanceledWaitReturnsAfterRestoreStops(t *testing.T) 
 
 	operations := storage.NewMockOperations(ctrl)
 	reader := NewMockStreamingReader(ctrl)
-	handler := NewMockRestoreHandler(ctrl)
+	handler := service.NewMockRestoreHandler(ctrl)
 	handler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 		close(running)
 		<-ctx.Done()
@@ -180,7 +181,7 @@ func restoreStatsInserted(n int) *models.RestoreStats {
 }
 
 // waitChain waits for the chain, failing the test after a deadline if it never finishes.
-func waitChain(t *testing.T, chain RestoreHandler) error {
+func waitChain(t *testing.T, chain service.RestoreHandler) error {
 	t.Helper()
 
 	result := make(chan error, 1)

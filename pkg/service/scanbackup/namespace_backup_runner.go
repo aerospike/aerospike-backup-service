@@ -1,4 +1,4 @@
-package service
+package scanbackup
 
 import (
 	"context"

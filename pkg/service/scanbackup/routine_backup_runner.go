@@ -1,4 +1,4 @@
-package service
+package scanbackup
 
 import (
 	"context"
@@ -7,34 +7,11 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 	"golang.org/x/sync/errgroup"
 )
-
-// RoutineBackupRunner resolves the namespaces of a routine and starts a backup for each of them.
-type RoutineBackupRunner interface {
-	// Run resolves target namespaces and starts one cancelable backup per namespace.
-	Run(
-		ctx context.Context,
-		routine *model.BackupRoutine,
-		runSpec model.BackupRunSpec,
-		logger *slog.Logger,
-	) (RoutineBackupHandler, error)
-}
-
-// RoutineBackupHandler is the handle of a routine's backup run, which the registry tracks while the
-// run lasts and through which it can be canceled. It speaks in the routine's terms only: what a
-// backup mode alone knows goes in its slot of the [model.BackupRun] it reports.
-type RoutineBackupHandler interface {
-	// Wait waits for the run to end and returns the error it ended with, or ctx's error if ctx is
-	// done first.
-	Wait(ctx context.Context) error
-	// Cancel stops the run.
-	Cancel()
-	// Status is a snapshot of the run, or nil before it has started.
-	Status() *model.BackupRun
-}
 
 // routineBackupRunner resolves the namespaces and delegates each one to a [NamespaceBackupRunner].
 type routineBackupRunner struct {
@@ -42,13 +19,13 @@ type routineBackupRunner struct {
 	nsRunner NamespaceBackupRunner
 }
 
-var _ RoutineBackupRunner = (*routineBackupRunner)(nil)
+var _ service.RoutineBackupRunner = (*routineBackupRunner)(nil)
 
-// NewRoutineBackupRunner returns a RoutineBackupRunner.
+// NewRoutineBackupRunner returns a service.RoutineBackupRunner.
 func NewRoutineBackupRunner(
 	nsRunner NamespaceBackupRunner,
 	namespaceResolver aerospike.NamespaceResolver,
-) RoutineBackupRunner {
+) service.RoutineBackupRunner {
 	return &routineBackupRunner{
 		resolver: namespaceResolver,
 		nsRunner: nsRunner,
@@ -62,7 +39,7 @@ func (r *routineBackupRunner) Run(
 	routine *model.BackupRoutine,
 	runSpec model.BackupRunSpec,
 	logger *slog.Logger,
-) (RoutineBackupHandler, error) {
+) (service.RoutineBackupHandler, error) {
 	namespaces, err := r.resolver.ResolveNamespaces(ctx, routine, logger)
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-package service
+package scanbackup
 
 import (
 	"archive/zip"
@@ -10,30 +10,24 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go/io/storage/common"
 )
 
-// ConfigRetriever returns the cluster configuration files saved with the last full backup
-// at or before a given time, packed into a zip archive.
-type ConfigRetriever interface {
-	// RetrieveConfiguration returns backed up Aerospike configuration.
-	RetrieveConfiguration(context.Context, *model.BackupRoutine, time.Time) ([]byte, error)
-}
-
 type configRetriever struct {
-	backupReader BackupReader
+	backupReader service.BackupReader
 	pathService  PathService
 	operations   storage.Operations
 }
 
-var _ ConfigRetriever = (*configRetriever)(nil)
+var _ service.ConfigRetriever = (*configRetriever)(nil)
 
 func NewConfigRetriever(
-	backupReader BackupReader,
+	backupReader service.BackupReader,
 	pathService PathService,
 	operations storage.Operations,
-) ConfigRetriever {
+) service.ConfigRetriever {
 	return &configRetriever{
 		backupReader: backupReader,
 		pathService:  pathService,
@@ -45,7 +39,7 @@ func NewConfigRetriever(
 func (cr *configRetriever) RetrieveConfiguration(
 	ctx context.Context, routine *model.BackupRoutine, toTime time.Time,
 ) ([]byte, error) {
-	backups, err := cr.backupReader.GetBackups(ctx, NewFullBackupFilter(routine).WithToTime(toTime).Last())
+	backups, err := cr.backupReader.GetBackups(ctx, service.NewFullBackupFilter(routine).WithToTime(toTime).Last())
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve backups for routine %s: %w", routine.Name, err)
 	}

@@ -1,4 +1,4 @@
-package service
+package scanbackup
 
 import (
 	"archive/zip"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +33,7 @@ func TestConfigRetriever_RetrieveConfiguration_Success(t *testing.T) {
 		require.NoError(t, operations.WriteDataFile(t.Context(), routine.Storage, filePath, []byte(content)))
 	}
 
-	backupReader := NewMockBackupReader(ctrl)
+	backupReader := service.NewMockBackupReader(ctrl)
 	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 		Return([]model.BackupDetails{{BackupMetadata: model.BackupMetadata{Created: backupCreated}}}, nil)
 
@@ -63,7 +64,7 @@ func TestConfigRetriever_RetrieveConfiguration_GetBackupsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
-	backupReader := NewMockBackupReader(ctrl)
+	backupReader := service.NewMockBackupReader(ctrl)
 	backupsErr := errors.New("backend unavailable")
 	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(nil, backupsErr)
 
@@ -78,7 +79,7 @@ func TestConfigRetriever_RetrieveConfiguration_NoFullBackups(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
-	backupReader := NewMockBackupReader(ctrl)
+	backupReader := service.NewMockBackupReader(ctrl)
 	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(nil, nil)
 
 	retriever := NewConfigRetriever(backupReader, NewPathService(nil), nil)
@@ -92,7 +93,7 @@ func TestConfigRetriever_RetrieveConfiguration_ReadFilesError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
-	backupReader := NewMockBackupReader(ctrl)
+	backupReader := service.NewMockBackupReader(ctrl)
 	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 		Return([]model.BackupDetails{{BackupMetadata: model.BackupMetadata{Created: time.Now()}}}, nil)
 
@@ -113,7 +114,7 @@ func TestConfigRetriever_RetrieveConfiguration_NoConfigFiles(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine := &model.BackupRoutine{Name: "routine-1", Storage: &model.LocalStorage{Path: "/data"}}
-	backupReader := NewMockBackupReader(ctrl)
+	backupReader := service.NewMockBackupReader(ctrl)
 	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 		Return([]model.BackupDetails{{BackupMetadata: model.BackupMetadata{Created: time.Now()}}}, nil)
 

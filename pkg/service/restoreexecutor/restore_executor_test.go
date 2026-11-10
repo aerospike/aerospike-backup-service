@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go/io/storage/common"
@@ -18,7 +19,7 @@ func TestRestoreExecutor_Run_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	reader := NewMockStreamingReader(ctrl)
-	restoreHandler := NewMockRestoreHandler(ctrl)
+	restoreHandler := service.NewMockRestoreHandler(ctrl)
 	restoreHandler.EXPECT().Wait(gomock.Any()).Return(nil)
 	restoreHandler.EXPECT().GetStats().Return(restoreStatsInserted(2)).AnyTimes()
 

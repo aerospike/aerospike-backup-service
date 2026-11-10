@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -11,21 +12,21 @@ import (
 // those started so far together, and its Wait ends when the last one ends or one fails.
 type sequentialRestoreHandler struct {
 	mu       sync.Mutex
-	handlers []RestoreHandler
+	handlers []service.RestoreHandler
 	// cancel stops the sequence.
 	cancel context.CancelFunc
 	done   chan struct{}
 	err    error
 }
 
-var _ RestoreHandler = (*sequentialRestoreHandler)(nil)
+var _ service.RestoreHandler = (*sequentialRestoreHandler)(nil)
 
 func newSequentialRestoreHandler(cancel context.CancelFunc) *sequentialRestoreHandler {
 	return &sequentialRestoreHandler{cancel: cancel, done: make(chan struct{})}
 }
 
 // add records a restore that has started.
-func (h *sequentialRestoreHandler) add(handler RestoreHandler) {
+func (h *sequentialRestoreHandler) add(handler service.RestoreHandler) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 

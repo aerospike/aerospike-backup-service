@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,9 +18,9 @@ func TestSequentialRestoreHandler_GetMetrics(t *testing.T) {
 	assert.Equal(t, &models.Metrics{}, h.GetMetrics(), "empty before the first restore")
 
 	latestMetrics := models.NewMetrics(1, 2, 3, 4)
-	latest := NewMockRestoreHandler(ctrl)
+	latest := service.NewMockRestoreHandler(ctrl)
 	latest.EXPECT().GetMetrics().Return(latestMetrics)
-	h.add(NewMockRestoreHandler(ctrl))
+	h.add(service.NewMockRestoreHandler(ctrl))
 	h.add(latest)
 
 	assert.Same(t, latestMetrics, h.GetMetrics(), "the latest restore's metrics")

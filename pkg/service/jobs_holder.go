@@ -11,7 +11,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/backup-go/models"
 )
@@ -25,7 +24,7 @@ type restoreJob struct {
 
 	// handlers contains the restore handlers of the job. Each follows one restore: a single
 	// backup (restore by path) or a namespace's chain of backups (restore by time).
-	handlers []restoreexecutor.RestoreHandler
+	handlers []RestoreHandler
 
 	// status indicates the current state of the job (Running, Done, Failed, Canceled).
 	status model.RestoreState
@@ -64,7 +63,7 @@ func newRestoreJob(label string, cancel context.CancelFunc) *restoreJob {
 }
 
 // addHandler adds a new restore handler to the job.
-func (j *restoreJob) addHandler(handler restoreexecutor.RestoreHandler) {
+func (j *restoreJob) addHandler(handler RestoreHandler) {
 	j.Lock()
 	defer j.Unlock()
 
@@ -190,8 +189,8 @@ func (h *RestoreJobsHolder) newJob(label string) (model.RestoreJobID, context.Co
 	return id, ctx
 }
 
-// addHandler should be called for each restore handler returned by restoreexecutor.Restore.Run.
-func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler restoreexecutor.RestoreHandler) {
+// addHandler should be called for each restore handler returned by Restore.Run.
+func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler RestoreHandler) {
 	if job, ok := h.Load(id); ok {
 		job.addHandler(handler)
 	}

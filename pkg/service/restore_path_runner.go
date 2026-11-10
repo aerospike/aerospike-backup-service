@@ -8,13 +8,12 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 type pathRestoreRunner struct {
 	restoreJobs    *RestoreJobsHolder
-	restoreService restoreexecutor.Restore
+	restoreService Restore
 	backupReader   BackupReader
 	clientManager  aerospike.ClientManager
 	routineStorage *collections.LockMap
@@ -23,7 +22,7 @@ type pathRestoreRunner struct {
 
 func newPathRestoreRunner(
 	restoreJobs *RestoreJobsHolder,
-	restoreService restoreexecutor.Restore,
+	restoreService Restore,
 	backupReader BackupReader,
 	clientManager aerospike.ClientManager,
 	routineStorage *collections.LockMap,

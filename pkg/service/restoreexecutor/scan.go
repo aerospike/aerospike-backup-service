@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
@@ -21,7 +22,7 @@ func runScanRestore(
 	client aerospike.Client,
 	request *model.RestoreRequest,
 	operations storage.Operations,
-) (RestoreHandler, error) {
+) (service.RestoreHandler, error) {
 	reader, err := operations.CreateDirReader(
 		ctx,
 		request.SourceStorage,

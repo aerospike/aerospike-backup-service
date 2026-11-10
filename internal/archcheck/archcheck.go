@@ -61,7 +61,7 @@ func (v Violation) String() string {
 
 // Result is the outcome of a Check.
 type Result struct {
-	// Components are the component types, sorted, named module-relative ("pkg/service.BackupCatalog").
+	// Components are the component types, sorted, named module-relative ("pkg/service/scanbackup.BackupCatalog").
 	Components []string
 	// Violations are sorted by Holder.
 	Violations []Violation
@@ -494,7 +494,7 @@ func (g *graph) inModule(named *types.TypeName) bool {
 	return pkg != nil && (pkg.Path() == g.module.Path || strings.HasPrefix(pkg.Path(), g.module.Path+"/"))
 }
 
-// name is the type's module-relative name, e.g. "pkg/service.BackupCatalog".
+// name is the type's module-relative name, e.g. "pkg/service/scanbackup.BackupCatalog".
 func (g *graph) name(named *types.TypeName) string {
 	if named.Pkg() == nil {
 		return named.Name()

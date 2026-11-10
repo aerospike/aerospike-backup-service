@@ -1,0 +1,93 @@
+package service
+
+import (
+	"context"
+	"log/slog"
+	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/backup-go/models"
+)
+
+// This file holds the interfaces a backup mode implements. The scan mode implements them in
+// pkg/service/scanbackup and the server mode in pkg/service/serverbackup. The rest of this
+// package works with a mode only through these interfaces and [StartController].
+
+// BackupReader lists backups by reading the metadata files stored inside backup folders.
+type BackupReader interface {
+	// GetBackups retrieves backup details based on the provided filter.
+	// Returned backups are sorted by Created time in ascending order.
+	GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error)
+}
+
+// RoutineBackupRunner resolves the namespaces of a routine and starts a backup for each of them.
+type RoutineBackupRunner interface {
+	// Run resolves target namespaces and starts one cancelable backup per namespace.
+	Run(
+		ctx context.Context,
+		routine *model.BackupRoutine,
+		runSpec model.BackupRunSpec,
+		logger *slog.Logger,
+	) (RoutineBackupHandler, error)
+}
+
+// RoutineBackupHandler is the handle of a routine's backup run, which the registry tracks while the
+// run lasts and through which it can be canceled. It speaks in the routine's terms only: what a
+// backup mode alone knows goes in its slot of the [model.BackupRun] it reports.
+type RoutineBackupHandler interface {
+	// Wait waits for the run to end and returns the error it ended with, or ctx's error if ctx is
+	// done first.
+	Wait(ctx context.Context) error
+	// Cancel stops the run.
+	Cancel()
+	// Status is a snapshot of the run, or nil before it has started.
+	Status() *model.BackupRun
+}
+
+// BackupRetentionManager deletes the backups that fall outside a routine's retention policy.
+type BackupRetentionManager interface {
+	// ApplyRetention deletes backups that exceed the routine's configured retention limits.
+	// It does nothing when the routine has no retention policy, or when the routine's
+	// storage is already locked by another delete or restore.
+	ApplyRetention(ctx context.Context, routine *model.BackupRoutine) error
+}
+
+// ClusterConfigWriter saves the configuration of a routine's source cluster next to the backup
+// taken at the given timestamp.
+type ClusterConfigWriter interface {
+	// Write writes the cluster configuration for the given routine and timestamp.
+	Write(ctx context.Context, routine *model.BackupRoutine, timestamp time.Time) error
+}
+
+// ConfigRetriever returns the cluster configuration files saved with the last full backup
+// at or before a given time, packed into a zip archive.
+type ConfigRetriever interface {
+	// RetrieveConfiguration returns backed up Aerospike configuration.
+	RetrieveConfiguration(context.Context, *model.BackupRoutine, time.Time) ([]byte, error)
+}
+
+// Restore starts a restore and returns a handle to observe it.
+type Restore interface {
+	// Run restores the backups of the requests, one request per backup, given oldest first: a
+	// single backup, or a full backup and the incremental backups that follow it. The order the
+	// backups are applied in is the implementation's. Run returns a single handler for all of
+	// them. Every failure, including one to start, comes from the handler's Wait, which stops the
+	// restores and waits for them when its context ends.
+	Run(
+		ctx context.Context,
+		client aerospike.Client,
+		logger *slog.Logger,
+		requests ...*model.RestoreRequest,
+	) RestoreHandler
+}
+
+// RestoreHandler observes a started restore: wait for it to finish and read its statistics.
+type RestoreHandler interface {
+	// GetStats returns the statistics of the restore job.
+	GetStats() *models.RestoreStats
+	// Wait waits for the restore job to complete and returns an error if the job failed.
+	Wait(context.Context) error
+	// GetMetrics returns the performance metrics of the restore job.
+	GetMetrics() *models.Metrics
+}

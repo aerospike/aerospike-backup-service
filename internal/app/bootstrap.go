@@ -19,6 +19,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/scanbackup"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/serverbackup"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
@@ -109,7 +110,7 @@ func InitComponents(
 		return nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
 
-	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
+	pathService := scanbackup.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
 	var routineStorage u.LockMap
 
 	// components that are specific to mode - server/scan backup
@@ -144,7 +145,7 @@ func InitComponents(
 
 	metricsCollector := prometheus.NewMetricsCollector(components.registry.GetRunningState, restoreJobs.StatusCounts)
 
-	configRetriever := service.NewConfigRetriever(components.backupReader, pathService, operations)
+	configRetriever := scanbackup.NewConfigRetriever(components.backupReader, pathService, operations)
 	srv := handlers.NewService(
 		config,
 		configApplier,
@@ -223,12 +224,12 @@ type backupMode struct {
 	retentionManager    service.BackupRetentionManager
 	clusterConfigWriter service.ClusterConfigWriter
 	routineRunner       service.RoutineBackupRunner
-	restoreExecutor     restoreexecutor.Restore
+	restoreExecutor     service.Restore
 }
 
 func newComponentsForMode(
 	config *model.Config,
-	pathService service.PathService,
+	pathService scanbackup.PathService,
 	operations storage.Operations,
 	s3Clients serverbackup.S3ClientProvider,
 	clientManager aerospike.ClientManager,
@@ -244,14 +245,14 @@ func newComponentsForMode(
 // newScanBackupMode wires backups that the service scans from the cluster and writes itself.
 func newScanBackupMode(
 	config *model.Config,
-	pathService service.PathService,
+	pathService scanbackup.PathService,
 	operations storage.Operations,
 	clientManager aerospike.ClientManager,
 	routineStorage *u.LockMap,
 ) backupMode {
-	catalog := service.NewBackupCatalog(pathService, operations)
+	catalog := scanbackup.NewBackupCatalog(pathService, operations)
 	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config)
-	namespaceRunner := service.NewNamespaceBackupRunner(
+	namespaceRunner := scanbackup.NewNamespaceBackupRunner(
 		backupexecutor.NewBackupExecutor(clientManager, operations),
 		catalog,
 		pathService,
@@ -261,13 +262,13 @@ func newScanBackupMode(
 		backupReader:     catalog,
 		registry:         registry,
 		startController:  service.NewStartController(registry, service.NewStartDecider()),
-		retentionManager: service.NewBackupRetentionManager(catalog, routineStorage),
-		clusterConfigWriter: service.NewClusterConfigWriter(
+		retentionManager: scanbackup.NewBackupRetentionManager(catalog, routineStorage),
+		clusterConfigWriter: scanbackup.NewClusterConfigWriter(
 			pathService,
 			operations,
 			aerospike.NewClusterConfigSource(clientManager),
 		),
-		routineRunner:   service.NewRoutineBackupRunner(namespaceRunner, aerospike.NewNamespaceResolver(clientManager)),
+		routineRunner:   scanbackup.NewRoutineBackupRunner(namespaceRunner, aerospike.NewNamespaceResolver(clientManager)),
 		restoreExecutor: restoreexecutor.NewRestoreExecutor(operations),
 	}
 }
