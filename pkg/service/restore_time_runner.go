@@ -324,7 +324,7 @@ func (r *timeRestoreRunner) restoreNamespace(
 	for _, b := range backups {
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 
-		if b.FileCount == 0 { // an empty backup has nothing to restore
+		if b.IsEmpty() { // an empty backup has nothing to restore
 			continue
 		}
 

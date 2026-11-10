@@ -121,7 +121,7 @@ func TestRestoreExecutor_Run_StartRefused(t *testing.T) {
 }
 
 // TestRestoreExecutor_Run_StartOutcomeUnknown checks that a start whose outcome is unknown
-// releases the job it may have started as its lane does: a strict one may hold the namespace.
+// releases the job it may have started as its mode does: a strict one may hold the namespace.
 func TestRestoreExecutor_Run_StartOutcomeUnknown(t *testing.T) {
 	t.Parallel()
 
@@ -262,7 +262,7 @@ func TestRestoreHandler_Wait_UntilNamespaceOpen(t *testing.T) {
 		}, nil),
 	)
 
-	require.NoError(t, newRestoreJob(infoClient, "bar", "job", laneOf(model.RestoreModeStrict)).Wait(t.Context()))
+	require.NoError(t, newRestoreJob(infoClient, "bar", "job", modeOf(model.RestoreModeStrict)).Wait(t.Context()))
 }
 
 // TestRestoreHandler_Wait_ClearsNamespace checks that a cold restore whose nodes hold data in the
@@ -289,7 +289,7 @@ func TestRestoreHandler_Wait_ClearsNamespace(t *testing.T) {
 		}, nil),
 	)
 
-	require.NoError(t, newRestoreJob(infoClient, "bar", "job", laneOf(model.RestoreModeStrict)).Wait(t.Context()))
+	require.NoError(t, newRestoreJob(infoClient, "bar", "job", modeOf(model.RestoreModeStrict)).Wait(t.Context()))
 }
 
 func TestRestoreHandler_Wait_ReleasesNamespace(t *testing.T) {
@@ -304,17 +304,20 @@ func TestRestoreHandler_Wait_ReleasesNamespace(t *testing.T) {
 			name: "failed",
 			expect: func(infoClient *aerospike.MockInfoGetter) {
 				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
-					&infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed}, nil)
+					&infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed, ErrorReason: "s3 GET 403"}, nil)
 			},
-			wantErr: "server restore job failed",
+			wantErr: "server restore job failed: s3 GET 403",
 		},
 		{
 			name: "aborted",
 			expect: func(infoClient *aerospike.MockInfoGetter) {
 				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
-					&infomodels.ResponseRestoreState{State: infomodels.RestoreStateAborted}, nil)
+					&infomodels.ResponseRestoreState{
+						State:       infomodels.RestoreStateAborted,
+						ErrorReason: "node left", AbortOrigin: infomodels.AbortOriginCluster,
+					}, nil)
 			},
-			wantErr: "server restore job was aborted",
+			wantErr: "server restore job was aborted (abort origin: cluster): node left",
 		},
 		{
 			name: "status unavailable",
@@ -358,7 +361,7 @@ func TestRestoreHandler_Wait_ReleasesNamespace(t *testing.T) {
 			tt.expect(infoClient)
 			expectRelease(t, infoClient, &jobID)
 
-			handler := newRestoreJob(infoClient, "bar", jobID, laneOf(model.RestoreModeStrict))
+			handler := newRestoreJob(infoClient, "bar", jobID, modeOf(model.RestoreModeStrict))
 			require.ErrorContains(t, handler.Wait(t.Context()), tt.wantErr)
 		})
 	}
@@ -376,7 +379,7 @@ func TestRestoreHandler_Wait_Canceled(t *testing.T) {
 	infoClient := aerospike.NewMockInfoGetter(ctrl)
 	expectRelease(t, infoClient, &jobID)
 
-	handler := newRestoreJob(infoClient, "bar", jobID, laneOf(model.RestoreModeStrict))
+	handler := newRestoreJob(infoClient, "bar", jobID, modeOf(model.RestoreModeStrict))
 	require.ErrorIs(t, handler.Wait(ctx), context.Canceled)
 }
 
@@ -433,7 +436,7 @@ func TestRestoreHandler_Wait_FuzzyAbortsOnly(t *testing.T) {
 		&infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed}, nil)
 	infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(nil)
 
-	err := newRestoreJob(infoClient, "bar", "job", laneOf(model.RestoreModeFuzzy)).Wait(t.Context())
+	err := newRestoreJob(infoClient, "bar", "job", modeOf(model.RestoreModeFuzzy)).Wait(t.Context())
 	require.ErrorContains(t, err, "server restore job failed")
 }
 
@@ -456,7 +459,7 @@ func TestRestoreJob_Wait_LostJob(t *testing.T) {
 		infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(asinfo.ErrNotFound),
 	)
 
-	err := newRestoreJob(infoClient, "bar", "job", laneOf(model.RestoreModeStrict)).Wait(t.Context())
+	err := newRestoreJob(infoClient, "bar", "job", modeOf(model.RestoreModeStrict)).Wait(t.Context())
 
 	require.ErrorContains(t, err, "server restore job not reported for 1.5s")
 	require.ErrorContains(t, err, "failed to abort server restore job")

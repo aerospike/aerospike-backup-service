@@ -359,7 +359,7 @@ func TestWaitForBackup_RecordsServerJob(t *testing.T) {
 				JobID: fullID, Namespace: "test", State: infomodels.BackupStateAborted,
 				ErrorReason: "node left", AbortOrigin: infomodels.AbortOriginCluster,
 			},
-			wantErr: "server backup " + fullID + " was aborted",
+			wantErr: "server backup " + fullID + " was aborted (abort origin: cluster): node left",
 			wantJob: model.ServerBackupJob{
 				JobID: fullID, Namespace: "test", State: "ABORTED", ErrorReason: "node left", AbortOrigin: "cluster",
 			},

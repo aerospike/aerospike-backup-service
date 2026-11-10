@@ -3786,7 +3786,7 @@ const docTemplate = `{
                 "job-id": {
                     "description": "The server's job id.",
                     "type": "string",
-                    "example": "20261103T101500-0a1b"
+                    "example": "261103T101500-0a1b"
                 },
                 "namespace": {
                     "description": "The namespace the job backed up.",

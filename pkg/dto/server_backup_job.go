@@ -10,7 +10,7 @@ import (
 // @Description ServerBackupJob is a server-side backup job of one namespace, as the server last reported it.
 type ServerBackupJob struct {
 	// The server's job id.
-	JobID string `json:"job-id" example:"20261103T101500-0a1b"`
+	JobID string `json:"job-id" example:"261103T101500-0a1b"`
 	// The namespace the job backed up.
 	Namespace string `json:"namespace" example:"test"`
 	// The server's job state, e.g. COMPLETE, FAILED or ABORTED.

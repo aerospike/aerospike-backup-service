@@ -21,18 +21,8 @@ import (
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
-const (
-	// pollInterval is how often a running server job is asked for its status.
-	pollInterval = time.Second
-	// abortTimeout bounds the wait for an aborted server job to end.
-	abortTimeout = 30 * time.Second
-)
-
-// lostJobTimeout is how long a started server job may go unreported before it is taken for lost.
-// A new job can be invisible for a poll or two, and one that dropped out of the cluster's view
-// may come back as the cluster settles; past this, waiting longer would hold the cluster for
-// nothing. A variable so that the tests can shorten it.
-var lostJobTimeout = 30 * time.Second
+// abortTimeout bounds the wait for an aborted server job to end.
+const abortTimeout = 30 * time.Second
 
 // routineRunner backs a routine up by asking the server to run one backup job per
 // namespace. The jobs run one after another: the server runs a single job at a time.
@@ -180,13 +170,16 @@ func waitForBackup(
 
 	switch status.State {
 	case infomodels.BackupStateFailed:
-		return fmt.Errorf("server backup %s failed: %s", jobID, status.ErrorReason)
+		return errJobEnded(backupJobName, jobID, "failed", status.AbortOrigin, status.ErrorReason)
 	case infomodels.BackupStateAborted:
-		return fmt.Errorf("server backup %s was aborted", jobID)
+		return errJobEnded(backupJobName, jobID, "was aborted", status.AbortOrigin, status.ErrorReason)
 	default:
 		return nil
 	}
 }
+
+// backupJobName names a server backup job in errors.
+const backupJobName = "server backup"
 
 // pollBackup polls the job, recording each status in operation, until the job ends, and
 // returns its final status.
@@ -196,37 +189,20 @@ func pollBackup(
 	jobID string,
 	operation *backupOperation,
 ) (*infomodels.ResponseBackupState, error) {
-	ticker := time.NewTicker(pollInterval)
-	defer ticker.Stop()
+	fetch := func(ctx context.Context) (*infomodels.ResponseBackupState, error) {
+		return infoClient.GetBackupStatus(ctx, jobID)
+	}
 
-	lastSeen := time.Now()
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-ticker.C:
-		}
-
-		status, err := infoClient.GetBackupStatus(ctx, jobID)
-		if errors.Is(err, asinfo.ErrNotFound) {
-			if time.Since(lastSeen) > lostJobTimeout {
-				return nil, fmt.Errorf("server backup %s not reported for %s: %w", jobID, lostJobTimeout, err)
-			}
-			continue // the job is not visible on the cluster yet.
-		}
-		if err != nil {
-			return nil, fmt.Errorf("failed to get server backup status: %w", err)
-		}
-		lastSeen = time.Now()
-
+	return pollJob(ctx, backupJobName, jobID, fetch, func(status *infomodels.ResponseBackupState) (bool, error) {
 		operation.report(status)
 
 		switch status.State {
 		case infomodels.BackupStateComplete, infomodels.BackupStateFailed, infomodels.BackupStateAborted:
-			return status, nil
+			return true, nil
 		default:
+			return false, nil
 		}
-	}
+	})
 }
 
 // abortJob aborts the job on the server and waits, up to abortTimeout, for the abort to end it,

@@ -39,15 +39,15 @@ func (m RestoreMode) ToModel() model.RestoreMode {
 	return model.RestoreMode(c)
 }
 
-// validateRestorePolicy checks policy against the service's backup mode: a server-side restore
-// must choose a mode and sets no option the server has no equivalent for, and a scan restore has
-// no mode.
 // remaps reports whether namespace maps the backup's namespace onto another one. The server reads
 // a backup under the namespace it restores into, so it finds no backup there.
 func remaps(namespace *model.RestoreNamespace) bool {
 	return namespace != nil && namespace.Destination != "" && namespace.Destination != namespace.Source
 }
 
+// validateRestorePolicy checks policy against the service's backup mode: a server-side restore
+// must choose a mode and sets no option the server has no equivalent for, and a scan restore has
+// no mode.
 func validateRestorePolicy(policy *model.RestorePolicy, config *model.Config) error {
 	server := config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == model.BackupModeServer
 
