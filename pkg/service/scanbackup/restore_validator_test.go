@@ -1,4 +1,4 @@
-package service
+package scanbackup
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/backup-go"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -41,16 +42,16 @@ func TestRestoreValidator_BlocksRestoreDuringBackup(t *testing.T) {
 			routines := map[string]*model.BackupRoutine{
 				"routine-1": {Name: "routine-1", SourceCluster: cluster, Namespaces: []string{"ns1"}},
 			}
-			config := NewmockRoutineProvider(ctrl)
+			config := service.NewmockRoutineProvider(ctrl)
 			config.EXPECT().Routines().Return(routines)
-			startController := NewMockStartController(ctrl)
+			startController := service.NewMockStartController(ctrl)
 			startController.EXPECT().HasBackupRunning(routines["routine-1"]).Return(true)
 
 			err := validate(NewRestoreValidator(startController, config), t.Context())
 
 			require.ErrorContains(t, err,
 				"restore not allowed during backups on routine routine-1 (cluster cluster-a, namespace \"ns1\")")
-			require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
+			require.ErrorIs(t, err, service.ErrRestorePrerequisitesFailed)
 		})
 	}
 }
@@ -138,8 +139,8 @@ func TestValidateNamespaceRemapScope(t *testing.T) {
 func TestRestoreValidator_BlocksPathRestoreOnNamespaceRemapOutOfScope(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	startController := NewMockStartController(ctrl)
-	config := NewmockRoutineProvider(ctrl)
+	startController := service.NewMockStartController(ctrl)
+	config := service.NewmockRoutineProvider(ctrl)
 
 	cluster := &model.AerospikeCluster{ClusterLabel: "cluster-a"}
 	validator := NewRestoreValidator(startController, config)
@@ -161,14 +162,14 @@ func TestRestoreValidator_BlocksPathRestoreOnNamespaceRemapOutOfScope(t *testing
 
 	require.ErrorContains(t, err,
 		`namespace remap from "ns1" requires the restore to be scoped to exactly that namespace`)
-	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
+	require.ErrorIs(t, err, service.ErrRestorePrerequisitesFailed)
 }
 
 func TestRestoreValidator_BlocksTimeRestoreOnNamespaceRemapOutOfScope(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	startController := NewMockStartController(ctrl)
-	config := NewmockRoutineProvider(ctrl)
+	startController := service.NewMockStartController(ctrl)
+	config := service.NewmockRoutineProvider(ctrl)
 
 	cluster := &model.AerospikeCluster{ClusterLabel: "cluster-a"}
 	validator := NewRestoreValidator(startController, config)
@@ -190,7 +191,7 @@ func TestRestoreValidator_BlocksTimeRestoreOnNamespaceRemapOutOfScope(t *testing
 
 	require.ErrorContains(t, err,
 		`namespace remap from "ns1" requires the restore to be scoped to exactly that namespace`)
-	require.ErrorIs(t, err, ErrRestorePrerequisitesFailed)
+	require.ErrorIs(t, err, service.ErrRestorePrerequisitesFailed)
 }
 
 func TestValidateNamespacesExist(t *testing.T) {

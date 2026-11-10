@@ -1,4 +1,4 @@
-package restoreexecutor
+package scanbackup
 
 import (
 	"errors"
@@ -90,18 +90,15 @@ func TestInRestoreOrder_RecordCountFails(t *testing.T) {
 	require.ErrorContains(t, err, "failed to determine if namespace dest-ns is empty: timeout")
 }
 
-// TestRestoreExecutor_Run_EmptyNamespaceNewestFirst runs a chain into an empty namespace through
-// Run: it is restored newest first, under the unique policy.
-func TestRestoreExecutor_Run_EmptyNamespaceNewestFirst(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	operations, client := expectRestoresInOrder(ctrl, "incr1", "full")
-	info := aerospike.NewMockInfoGetter(ctrl)
-	info.EXPECT().GetRecordCount(gomock.Any(), "dest-ns", gomock.Any()).Return(uint64(0), nil)
-	client.EXPECT().InfoClient().Return(info)
-
-	full, incr := testRestoreRequest(), testRestoreRequest()
-	full.BackupDataPath, incr.BackupDataPath = "full", "incr1"
-
-	chain := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(), full, incr)
-	require.NoError(t, waitChain(t, chain))
+// testRestoreRequest returns a restore request that maps namespace source-ns onto dest-ns.
+func testRestoreRequest() *model.RestoreRequest {
+	return &model.RestoreRequest{
+		Policy: model.RestorePolicy{
+			Namespace: &model.RestoreNamespace{
+				Source:      "source-ns",
+				Destination: "dest-ns",
+			},
+		},
+		SourceStorage: &model.LocalStorage{Path: "/tmp/backups"},
+	}
 }

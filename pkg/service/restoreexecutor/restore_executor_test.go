@@ -2,13 +2,13 @@ package restoreexecutor
 
 import (
 	"errors"
-	"log/slog"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go/io/storage/common"
+	models "github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -20,7 +20,10 @@ func TestRestoreExecutor_Run_Success(t *testing.T) {
 	reader := NewMockStreamingReader(ctrl)
 	restoreHandler := NewMockRestoreHandler(ctrl)
 	restoreHandler.EXPECT().Wait(gomock.Any()).Return(nil)
-	restoreHandler.EXPECT().GetStats().Return(restoreStatsInserted(2)).AnyTimes()
+	stats := models.NewRestoreStats()
+	stats.IncrRecordsInserted()
+	stats.IncrRecordsInserted()
+	restoreHandler.EXPECT().GetStats().Return(stats).AnyTimes()
 	restoreHandler.EXPECT().GetMetrics().Return(nil).AnyTimes()
 
 	client := aerospike.NewMockClient(ctrl)
@@ -35,8 +38,9 @@ func TestRestoreExecutor_Run_Success(t *testing.T) {
 
 	executor := NewRestoreExecutor(operations)
 
-	handler := executor.Run(t.Context(), client, slog.Default(), testRestoreRequest())
-	require.NoError(t, waitChain(t, handler))
+	handler, err := executor.Run(t.Context(), client, testRestoreRequest())
+	require.NoError(t, err)
+	require.NoError(t, handler.Wait(t.Context()))
 	assert.Equal(t, uint64(2), handler.Status().Counters.InsertedRecords)
 }
 
@@ -56,7 +60,7 @@ func TestRestoreExecutor_Run_RestoreStartError(t *testing.T) {
 
 	executor := NewRestoreExecutor(operations)
 
-	err := waitChain(t, executor.Run(t.Context(), client, slog.Default(), testRestoreRequest()))
+	_, err := executor.Run(t.Context(), client, testRestoreRequest())
 	assert.ErrorContains(t, err, "restore failed")
 }
 
@@ -72,7 +76,7 @@ func TestRestoreExecutor_Run_EmptyStorage(t *testing.T) {
 
 	client := aerospike.NewMockClient(ctrl)
 
-	err := waitChain(t, executor.Run(t.Context(), client, slog.Default(), testRestoreRequest()))
+	_, err := executor.Run(t.Context(), client, testRestoreRequest())
 	require.ErrorIs(t, err, common.ErrEmptyStorage)
 }
 

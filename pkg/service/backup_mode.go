@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
 // This file holds the interfaces a backup mode implements. The scan mode implements them in
@@ -64,21 +63,6 @@ type ClusterConfigWriter interface {
 type ConfigRetriever interface {
 	// RetrieveConfiguration returns backed up Aerospike configuration.
 	RetrieveConfiguration(context.Context, *model.BackupRoutine, time.Time) ([]byte, error)
-}
-
-// Restore starts a restore and returns a handle to observe it.
-type Restore interface {
-	// Run restores the backups of the requests, one request per backup, given oldest first: a
-	// single backup, or a full backup and the incremental backups that follow it. The order the
-	// backups are applied in is the implementation's. Run returns a single handler for all of
-	// them. Every failure, including one to start, comes from the handler's Wait, which stops the
-	// restores and waits for them when its context ends.
-	Run(
-		ctx context.Context,
-		client aerospike.Client,
-		logger *slog.Logger,
-		requests ...*model.RestoreRequest,
-	) RestoreHandler
 }
 
 // RestoreHandler is the handle of a started restore run. It speaks in terms every backup mode

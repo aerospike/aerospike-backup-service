@@ -1,4 +1,4 @@
-package service
+package scanbackup
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,7 @@ import (
 
 func waitForRestore(
 	t *testing.T,
-	restoreManager RestoreManager,
+	restoreManager service.RestoreManager,
 	jobID model.RestoreJobID,
 ) (*model.RestoreJobStatus, error) {
 	t.Helper()
@@ -45,13 +46,13 @@ func (f failedRestore) Status() model.RestoreRun   { return model.RestoreRun{} }
 // testRestoreEnv holds the components needed for restore tests.
 type testRestoreEnv struct {
 	ctrl              *gomock.Controller
-	mockRestore       *MockRestore
+	mockRestore       *MockRestoreExecutor
 	mockClientManager *aerospike.MockClientManager
 	infoGetter        *aerospike.MockInfoGetter
-	mockBackupReader  *MockBackupReader
-	jobsHolder        *RestoreJobsHolder
+	mockBackupReader  *service.MockBackupReader
+	jobsHolder        *service.RestoreJobsHolder
 	restoreValidator  *MockRestoreValidator
-	restoreManager    RestoreManager
+	restoreManager    service.RestoreManager
 }
 
 // setupTestRestoreEnv initializes the test environment.
@@ -60,10 +61,10 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	ctrl := gomock.NewController(t)
 	infoGetter := aerospike.NewMockInfoGetter(ctrl)
 
-	mockRestore := NewMockRestore(ctrl)
+	mockRestore := NewMockRestoreExecutor(ctrl)
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
-	mockBackupReader := NewMockBackupReader(ctrl)
-	restoreJobsHolder := NewRestoreJobsHolder()
+	mockBackupReader := service.NewMockBackupReader(ctrl)
+	restoreJobsHolder := service.NewRestoreJobsHolder()
 	restoreJobsHolder.Start(t.Context())
 	validator := NewMockRestoreValidator(ctrl)
 
@@ -75,6 +76,9 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 		&collections.LockMap{},
 		validator,
 	)
+
+	// The destination namespace holds records, so a chain keeps the order it is given in.
+	infoGetter.EXPECT().GetRecordCount(gomock.Any(), gomock.Any(), gomock.Any()).Return(uint64(1), nil).AnyTimes()
 
 	return &testRestoreEnv{
 		ctrl:              ctrl,
@@ -88,14 +92,26 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	}
 }
 
-// expectDefaultRestoreHandler creates a MockRestoreHandler with default EXPECTs:
+// expectDefaultRestoreHandler creates a service.MockRestoreHandler with default EXPECTs:
 // Wait returns nil and Status returns an empty run.
 // Returns the handler for use in mockRestore.EXPECT().Run(..., handler, ...).
-func (env *testRestoreEnv) expectDefaultRestoreHandler() *MockRestoreHandler {
-	mockRestoreHandler := NewMockRestoreHandler(env.ctrl)
+func (env *testRestoreEnv) expectDefaultRestoreHandler() *service.MockRestoreHandler {
+	mockRestoreHandler := service.NewMockRestoreHandler(env.ctrl)
 	mockRestoreHandler.EXPECT().Wait(gomock.Any()).Return(nil).AnyTimes()
 	mockRestoreHandler.EXPECT().Status().Return(model.RestoreRun{}).AnyTimes()
 	return mockRestoreHandler
+}
+
+// expectRestores expects one successful restore of each backup the matchers describe, in the
+// given order.
+func (env *testRestoreEnv) expectRestores(client any, backups ...any) {
+	calls := make([]any, 0, len(backups))
+	for _, backup := range backups {
+		calls = append(calls,
+			env.mockRestore.EXPECT().Run(gomock.Any(), client, backup).Return(env.expectDefaultRestoreHandler(), nil))
+	}
+
+	gomock.InOrder(calls...)
 }
 
 // expectSuccessfulClientInteraction sets up the common GetClient/Close mock expectations.

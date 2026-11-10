@@ -186,11 +186,11 @@ generate_external_mocks() {
 
 generate_mocks \
     "pkg/service" \
-    "RestoreManager,BackupReader,BackupStateRegistry,BackupRetentionManager,ClusterConfigWriter,RoutineBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController,RoutineBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler,ConfigApplier,ConfigRetriever,Restore,RestoreHandler"
+    "RestoreManager,BackupReader,BackupStateRegistry,BackupRetentionManager,ClusterConfigWriter,RoutineBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,StartController,RoutineBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler,ConfigApplier,ConfigRetriever,RestoreHandler"
 
 generate_mocks \
     "pkg/service/scanbackup" \
-    "BackupCatalog,BackupWriter,CancelableBackupHandler,NamespaceBackupRunner,PathService"
+    "BackupCatalog,BackupWriter,CancelableBackupHandler,NamespaceBackupRunner,PathService,RestoreExecutor,RestoreValidator,routineProvider"
 
 
 generate_mocks \

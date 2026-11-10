@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
@@ -16,8 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
-
-var discardLogger = slog.New(slog.DiscardHandler)
 
 const (
 	fullID  = "261020T090111-aaaa"
@@ -27,10 +23,7 @@ const (
 	restoreJobID = "261105T094929-k9s5"
 )
 
-// The restore tests call restore on the test goroutine: a mock call the test does not expect then
-// fails the test, where inside Run's goroutine it would leave Wait blocked.
-
-func TestRestoreExecutor_Restore(t *testing.T) {
+func TestStartRestore(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -64,21 +57,22 @@ func TestRestoreExecutor_Restore(t *testing.T) {
 					&infomodels.ResponseRestoreState{State: infomodels.RestoreStateComplete}, nil),
 			)
 
-			requests := make([]*model.RestoreRequest, 0, len(tt.backupIDs))
+			backups := make([]model.BackupDetails, 0, len(tt.backupIDs))
 			for _, id := range tt.backupIDs {
-				requests = append(requests, chainRequest(id))
+				backups = append(backups, chainBackup(id))
 			}
 
-			executor := &restoreExecutor{backupReader: namespaceReader(t, ctrl)}
-			require.NoError(t, executor.restore(t.Context(), clientOf(ctrl, infoClient), discardLogger, requests))
+			job, err := startRestore(t.Context(), infoClient, model.RestorePolicy{}, backups)
+			require.NoError(t, err)
+			require.NoError(t, job.Wait(t.Context()))
 		})
 	}
 }
 
-// TestRestoreExecutor_Restore_StartFails checks that a start the server refused aborts nothing, and
+// TestStartRestore_StartFails checks that a start the server refused aborts nothing, and
 // that a start whose outcome is unknown aborts the job it may have started, reporting a failed
 // abort: that job may still be writing into the namespace.
-func TestRestoreExecutor_Restore_StartFails(t *testing.T) {
+func TestStartRestore_StartFails(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -107,9 +101,8 @@ func TestRestoreExecutor_Restore_StartFails(t *testing.T) {
 				infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", restoreJobID).Return(tt.abortErr)
 			}
 
-			executor := &restoreExecutor{backupReader: namespaceReader(t, ctrl)}
-			err := executor.restore(t.Context(), clientOf(ctrl, infoClient), discardLogger,
-				[]*model.RestoreRequest{chainRequest(fullID)})
+			_, err := startRestore(t.Context(), infoClient, model.RestorePolicy{},
+				[]model.BackupDetails{chainBackup(fullID)})
 
 			require.ErrorIs(t, err, tt.startErr)
 			for _, want := range tt.wantErr {
@@ -119,9 +112,9 @@ func TestRestoreExecutor_Restore_StartFails(t *testing.T) {
 	}
 }
 
-// TestRestoreExecutor_Start_NamespaceRemap checks that a restore into another namespace is refused
+// TestStartRestore_NamespaceRemap checks that a restore into another namespace is refused
 // before anything is sent to the server, which can only write into the backup's own namespace.
-func TestRestoreExecutor_Start_NamespaceRemap(t *testing.T) {
+func TestStartRestore_NamespaceRemap(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -140,17 +133,13 @@ func TestRestoreExecutor_Start_NamespaceRemap(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)
 
-			client := aerospike.NewMockClient(ctrl)
+			infoClient := aerospike.NewMockInfoGetter(ctrl)
 			if tt.wantErr == "" {
-				infoClient := aerospike.NewMockInfoGetter(ctrl)
-				client.EXPECT().InfoClient().Return(infoClient)
 				infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, nil)
 			}
-			request := chainRequest(fullID)
-			request.Policy.Namespace = tt.namespace
 
-			executor := &restoreExecutor{backupReader: namespaceReader(t, ctrl)}
-			_, err := executor.start(t.Context(), client, []*model.RestoreRequest{request})
+			_, err := startRestore(t.Context(), infoClient, model.RestorePolicy{Namespace: tt.namespace},
+				[]model.BackupDetails{chainBackup(fullID)})
 
 			if tt.wantErr == "" {
 				require.NoError(t, err)
@@ -161,17 +150,17 @@ func TestRestoreExecutor_Start_NamespaceRemap(t *testing.T) {
 	}
 }
 
-// TestRestoreExecutor_Run_ReportsFailure checks that a run's failure comes from the handler's
-// Wait. The run fails on its key, before it reaches the server.
-func TestRestoreExecutor_Run_ReportsFailure(t *testing.T) {
+// TestStartRestore_InvalidBackupKey checks that a backup whose key names no routine is refused
+// before anything is sent to the server.
+func TestStartRestore_InvalidBackupKey(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 
-	request := chainRequest(fullID)
-	request.BackupDataPath = fullID // a bare job id names no routine.
+	backup := chainBackup(fullID)
+	backup.Key = fullID // a bare backup id names no routine.
 
-	err := NewRestoreExecutor(service.NewMockBackupReader(ctrl)).
-		Run(t.Context(), aerospike.NewMockClient(ctrl), discardLogger, request).Wait(t.Context())
+	_, err := startRestore(t.Context(), aerospike.NewMockInfoGetter(ctrl), model.RestorePolicy{},
+		[]model.BackupDetails{backup})
 	require.EqualError(t, err, `invalid server backup key "`+fullID+`": want <routine>/<job id>`)
 }
 
@@ -232,33 +221,12 @@ func TestRestoreJob_Wait_Canceled(t *testing.T) {
 	require.ErrorContains(t, err, "failed to abort server restore job: refused")
 }
 
-// namespaceReader returns a BackupReader that reports the full backup in namespace bar.
-func namespaceReader(t *testing.T, ctrl *gomock.Controller) service.BackupReader {
-	t.Helper()
-
-	backupReader := service.NewMockBackupReader(ctrl)
-	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
-			assert.Equal(t, backupKey("routine", fullID), filter.(*service.PathFilter).Path(),
-				"the namespace comes from the full backup")
-
-			return []model.BackupDetails{{BackupMetadata: model.BackupMetadata{Namespace: "bar"}}}, nil
-		})
-
-	return backupReader
-}
-
-func clientOf(ctrl *gomock.Controller, infoClient *aerospike.MockInfoGetter) aerospike.Client {
-	client := aerospike.NewMockClient(ctrl)
-	client.EXPECT().InfoClient().Return(infoClient)
-
-	return client
-}
-
-func chainRequest(backupID string) *model.RestoreRequest {
-	return &model.RestoreRequest{
-		SourceStorage:  &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1", Path: "backups"},
-		BackupDataPath: backupKey("routine", backupID),
+// chainBackup returns the details of a backup of namespace bar, as the catalog lists it.
+func chainBackup(backupID string) model.BackupDetails {
+	return model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{Namespace: "bar"},
+		Key:            backupKey("routine", backupID),
+		Storage:        &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1", Path: "backups"},
 	}
 }
 

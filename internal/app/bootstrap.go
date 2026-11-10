@@ -113,7 +113,8 @@ func InitComponents(
 	var routineStorage u.LockMap
 
 	// components that are specific to mode - server/scan backup
-	components := newComponentsForMode(config, operations, s3Accessor, clientManager, &routineStorage)
+	restoreJobs := service.NewRestoreJobsHolder()
+	components := newComponentsForMode(config, operations, s3Accessor, clientManager, &routineStorage, restoreJobs)
 
 	completionHandler := service.NewBackupCompletionHandler(
 		components.registry,
@@ -130,25 +131,13 @@ func InitComponents(
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
 	configApplier := service.NewConfigApplier(backupScheduler, components.registry, nsValidator, config)
 
-	restoreJobs := service.NewRestoreJobsHolder()
-	restoreValidator := service.NewRestoreValidator(components.startController, config)
-
-	restoreMgr := service.NewRestoreManager(
-		components.restoreExecutor,
-		clientManager,
-		restoreJobs,
-		components.backupReader,
-		&routineStorage,
-		restoreValidator,
-	)
-
 	metricsCollector := prometheus.NewMetricsCollector(components.registry.GetRunningState, restoreJobs.StatusCounts)
 
 	srv := handlers.NewService(
 		config,
 		configApplier,
 		backupScheduler,
-		restoreMgr,
+		components.restoreManager,
 		components.configRetriever,
 		components.backupReader,
 		components.registry,
@@ -222,7 +211,7 @@ type backupMode struct {
 	retentionManager    service.BackupRetentionManager
 	clusterConfigWriter service.ClusterConfigWriter
 	routineRunner       service.RoutineBackupRunner
-	restoreExecutor     service.Restore
+	restoreManager      service.RestoreManager
 	configRetriever     service.ConfigRetriever
 }
 
@@ -232,12 +221,13 @@ func newComponentsForMode(
 	s3Clients serverbackup.S3ClientProvider,
 	clientManager aerospike.ClientManager,
 	routineStorage *u.LockMap,
+	restoreJobs *service.RestoreJobsHolder,
 ) backupMode {
 	if config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == model.BackupModeServer {
-		return newServerBackupMode(config, s3Clients, clientManager)
+		return newServerBackupMode(config, s3Clients, clientManager, restoreJobs)
 	}
 
-	return newScanBackupMode(config, operations, clientManager, routineStorage)
+	return newScanBackupMode(config, operations, clientManager, routineStorage, restoreJobs)
 }
 
 // newScanBackupMode wires backups that the service scans from the cluster and writes itself.
@@ -246,6 +236,7 @@ func newScanBackupMode(
 	operations storage.Operations,
 	clientManager aerospike.ClientManager,
 	routineStorage *u.LockMap,
+	restoreJobs *service.RestoreJobsHolder,
 ) backupMode {
 	pathService := scanbackup.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
 	catalog := scanbackup.NewBackupCatalog(pathService, operations)
@@ -256,18 +247,27 @@ func newScanBackupMode(
 		pathService,
 	)
 
+	startController := service.NewStartController(registry, service.NewStartDecider())
+
 	return backupMode{
 		backupReader:     catalog,
 		registry:         registry,
-		startController:  service.NewStartController(registry, service.NewStartDecider()),
+		startController:  startController,
 		retentionManager: scanbackup.NewBackupRetentionManager(catalog, routineStorage),
 		clusterConfigWriter: scanbackup.NewClusterConfigWriter(
 			pathService,
 			operations,
 			aerospike.NewClusterConfigSource(clientManager),
 		),
-		routineRunner:   scanbackup.NewRoutineBackupRunner(namespaceRunner, aerospike.NewNamespaceResolver(clientManager)),
-		restoreExecutor: restoreexecutor.NewRestoreExecutor(operations),
+		routineRunner: scanbackup.NewRoutineBackupRunner(namespaceRunner, aerospike.NewNamespaceResolver(clientManager)),
+		restoreManager: scanbackup.NewRestoreManager(
+			restoreexecutor.NewRestoreExecutor(operations),
+			clientManager,
+			restoreJobs,
+			catalog,
+			routineStorage,
+			scanbackup.NewRestoreValidator(startController, config),
+		),
 		configRetriever: scanbackup.NewConfigRetriever(catalog, pathService, operations),
 	}
 }
@@ -279,6 +279,7 @@ func newServerBackupMode(
 	config *model.Config,
 	s3Clients serverbackup.S3ClientProvider,
 	clientManager aerospike.ClientManager,
+	restoreJobs *service.RestoreJobsHolder,
 ) backupMode {
 	catalog := serverbackup.NewCatalog(s3Clients)
 	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config)
@@ -294,7 +295,12 @@ func newServerBackupMode(
 			aerospike.NewNamespaceResolver(clientManager),
 			catalog,
 		),
-		restoreExecutor: serverbackup.NewRestoreExecutor(catalog),
+		restoreManager: serverbackup.NewRestoreManager(
+			clientManager,
+			restoreJobs,
+			catalog,
+			serverbackup.NopRestoreValidator(),
+		),
 		configRetriever: service.NoConfigRetriever(),
 	}
 }

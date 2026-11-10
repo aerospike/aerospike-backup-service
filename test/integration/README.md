@@ -66,7 +66,7 @@ first is listed first.
 
 | Gap | Effect | Fix in | Fix | Test |
 |---|---|---|---|---|
-| A backup's metadata records no record or byte count | `record-count` and `byte-count` are 0; `file-count` is 1, so that restore does not take the backup for an empty one | server, backup-go, ABS | The server writes the counts it already has (in the partition manifests) into `metadata.json`; the lister returns them; ABS lists them | `TestServerRestoreByPath`, `TestServerRestoreByTimestampWorkflow` |
+| A backup's metadata records no record or byte count | `record-count`, `byte-count` and `file-count` are 0 | server, backup-go, ABS | The server writes the counts it already has (in the partition manifests) into `metadata.json`; the lister returns them; ABS lists them | `TestServerRestoreByPath`, `TestServerRestoreByTimestampWorkflow` |
 | A backup's metadata records no finish time | `finished` is the zero time, `finished-timestamp` and `duration` are 0 | server, backup-go, ABS | The server writes the finish time into `metadata.json`; the lister returns it; ABS lists it | none |
 | The index and UDF counts of a backup are not read | `secondary-index-count` and `udf-count` are 0 | backup-go, ABS | The lister counts the definitions in `sindex.json` and `udf.json`; ABS lists them. Reliable only once the server writes those files before `metadata.json` | none |
 | A restore job reports no record or index counts | `inserted-records` and `index-count` of the restore status are 0 | ABS | The server reports them in `restore-status` and backup-go returns them (`Applied`, `Read`, …); ABS's restore handler does not read them | `TestServerRestoreByPath` |

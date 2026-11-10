@@ -1,14 +1,14 @@
-package service
+package scanbackup
 
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,14 +25,14 @@ func TestRestoreOK(t *testing.T) {
 
 	client := env.expectSuccessfulClientInteraction(t)
 
-	mockRestoreHandler := NewMockRestoreHandler(env.ctrl)
+	mockRestoreHandler := service.NewMockRestoreHandler(env.ctrl)
 	run := model.RestoreRun{Counters: model.RestoreCounters{ReadRecords: 10}}
 	mockRestoreHandler.EXPECT().Status().Return(run).AnyTimes()
 	mockRestoreHandler.EXPECT().Wait(gomock.Any()).Return(nil)
 
 	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, gomock.Any(), request).
-		Return(mockRestoreHandler)
+		Run(gomock.Any(), client, request).
+		Return(mockRestoreHandler, nil)
 
 	detailsDetails := model.BackupDetails{
 		BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "test-ns", FileCount: 1},
@@ -68,7 +68,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	client := env.expectSuccessfulClientInteraction(t)
 
 	waitReturned := make(chan struct{}) // To signal Wait has returned
-	mockRestoreHandler := NewMockRestoreHandler(env.ctrl)
+	mockRestoreHandler := service.NewMockRestoreHandler(env.ctrl)
 	mockRestoreHandler.EXPECT().Status().Return(model.RestoreRun{}).AnyTimes()
 
 	// Wait should block until context is canceled, then return context.Canceled
@@ -85,7 +85,7 @@ func TestCancelRestoreOK(t *testing.T) {
 		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Expect Run to start the process
-	env.mockRestore.EXPECT().Run(gomock.Any(), client, gomock.Any(), request).Return(mockRestoreHandler)
+	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(mockRestoreHandler, nil)
 
 	env.restoreValidator.EXPECT().
 		ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -230,8 +230,8 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 
 	restoreErr := errors.New("restore service error")
 	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, gomock.Any(), request).
-		Return(failedRestore{err: restoreErr})
+		Run(gomock.Any(), client, request).
+		Return(failedRestore{err: restoreErr}, nil)
 
 	detailsDetails := model.BackupDetails{
 		BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "test-ns", FileCount: 1},
@@ -281,19 +281,18 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 	// Mock the Run() call to simulate a long-running startup.
 	// It will block until its context is canceled.
 	env.mockRestore.EXPECT().
-		Run(gomock.Any(), client, gomock.Any(), request).
+		Run(gomock.Any(), client, request).
 		DoAndReturn(func(
 			ctx context.Context,
 			_ aerospike.Client,
-			_ *slog.Logger,
-			_ ...*model.RestoreRequest,
-		) RestoreHandler {
+			_ *model.RestoreRequest,
+		) (service.RestoreHandler, error) {
 			// Signal that the Run method has started.
 			runStarted.Done()
 			// Now, wait until the context is canceled by the test.
 			<-ctx.Done()
 			// Report the cancellation from Wait, as a real implementation would.
-			return failedRestore{err: ctx.Err()}
+			return failedRestore{err: ctx.Err()}, nil
 		})
 
 	// 1. Start the restore. This will run in a goroutine.

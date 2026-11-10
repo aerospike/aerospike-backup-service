@@ -133,9 +133,8 @@ func (c *catalog) newLister(ctx context.Context, storage model.Storage, routineN
 
 // toBackupDetails converts server metadata to the details of a backup of the routine, keyed by
 // its routine and job id. Its lower time bound, From, is what makes it incremental. The metadata
-// records no finish time and no record, byte, file, secondary index or UDF counts, so they are
-// left at zero, except the file count: it is one, so that restore does not take the backup for an
-// empty one.
+// records no finish time and no record, byte, file, secondary index or UDF counts, so those
+// fields stay zero.
 func toBackupDetails(metadata listermodels.Metadata, storage model.Storage, routineName string) model.BackupDetails {
 	var from time.Time
 	if metadata.ModifiedAfterUnixS != 0 {
@@ -147,7 +146,6 @@ func toBackupDetails(metadata listermodels.Metadata, storage model.Storage, rout
 			Created:     createdTime(metadata),
 			From:        from,
 			Namespace:   metadata.Namespace,
-			FileCount:   1,
 			Compression: model.CompressionModeNone,
 			Encryption:  model.EncryptionModeNone,
 		},

@@ -1,17 +1,15 @@
-package service
+package scanbackup
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	coll "github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/backup-go"
 )
-
-var ErrRestorePrerequisitesFailed = errors.New("restore pre-requisites failed")
 
 // RestoreValidator checks whether a restore request can run: the backup encryption must match
 // the request policy, a configured namespace remap must be scoped to exactly its source
@@ -37,8 +35,14 @@ type RestoreValidator interface {
 	) error
 }
 
+// routineProvider supplies the configured backup routines. It is the part of *model.Config the
+// validator reads.
+type routineProvider interface {
+	Routines() map[string]*model.BackupRoutine
+}
+
 type restoreValidator struct {
-	startController StartController
+	startController service.StartController
 	routines        routineProvider
 }
 
@@ -46,7 +50,7 @@ var _ RestoreValidator = (*restoreValidator)(nil)
 
 // NewRestoreValidator returns a RestoreValidator.
 func NewRestoreValidator(
-	startController StartController,
+	startController service.StartController,
 	routines routineProvider,
 ) RestoreValidator {
 	return &restoreValidator{
@@ -68,21 +72,21 @@ func (r *restoreValidator) ValidatePath(
 
 	if allBackupsEmpty(backups) {
 		return fmt.Errorf("%w: backup metadata indicates there is no data to restore (file count is zero)",
-			ErrRestorePrerequisitesFailed)
+			service.ErrRestorePrerequisitesFailed)
 	}
 
 	if err := validateBackupsCreatedAtTheSameTime(backups); err != nil {
-		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
+		return fmt.Errorf("%w: %w", service.ErrRestorePrerequisitesFailed, err)
 	}
 
 	if err := validateBackupsEncryption(backups, request.Policy.EncryptionPolicy); err != nil {
-		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
+		return fmt.Errorf("%w: %w", service.ErrRestorePrerequisitesFailed, err)
 	}
 
 	sourceNamespaces := sourceNamespacesFromBackups(backups)
 	if err := r.validateNamespaceScope(ctx, request.DestinationCluster, request.Policy.Namespace,
 		sourceNamespaces, infoGetter); err != nil {
-		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
+		return fmt.Errorf("%w: %w", service.ErrRestorePrerequisitesFailed, err)
 	}
 
 	return nil
@@ -96,12 +100,12 @@ func (r *restoreValidator) ValidateTimestamp(
 	backups []model.BackupDetails,
 ) error {
 	if err := validateBackupsEncryption(backups, request.Policy.EncryptionPolicy); err != nil {
-		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
+		return fmt.Errorf("%w: %w", service.ErrRestorePrerequisitesFailed, err)
 	}
 
 	if err := r.validateNamespaceScope(ctx, request.DestinationCluster, request.Policy.Namespace,
 		namespacesOf(backups), infoGetter); err != nil {
-		return fmt.Errorf("%w: %w", ErrRestorePrerequisitesFailed, err)
+		return fmt.Errorf("%w: %w", service.ErrRestorePrerequisitesFailed, err)
 	}
 
 	return nil
