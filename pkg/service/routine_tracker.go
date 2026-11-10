@@ -97,12 +97,17 @@ func (t *routineTracker) register(backupType model.BackupType, handler RoutineBa
 }
 
 // clearBackup removes the handler of a finished backup from the tracker, keeping the server jobs
-// it reports.
+// it reports. A type with no handler registered has nothing to clear.
 func (t *routineTracker) clearBackup(backupType model.BackupType) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if run := t.handlers[backupType].Status(); run != nil && run.Server != nil {
+	handler, ok := t.handlers[backupType]
+	if !ok {
+		return
+	}
+
+	if run := handler.Status(); run != nil && run.Server != nil {
 		t.lastJobs[backupType] = run.Server.Jobs
 	}
 	delete(t.handlers, backupType)

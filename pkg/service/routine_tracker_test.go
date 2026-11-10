@@ -158,6 +158,20 @@ func TestClearBackup_KeepsServerJobs(t *testing.T) {
 	assert.Empty(t, snapshot.lastIncrJobs)
 }
 
+// TestClearBackup_NotStarted clears a backup that failed before a handler was registered.
+func TestClearBackup_NotStarted(t *testing.T) {
+	t.Parallel()
+	tracker := newRoutineTracker()
+	tracker.markScanDone()
+
+	tracker.clearBackup(model.BackupTypeFull)
+
+	snapshot, err := tracker.getState(1 * time.Second)
+	require.NoError(t, err)
+	assert.Nil(t, snapshot.full)
+	assert.Empty(t, snapshot.lastFullJobs)
+}
+
 func TestClearBackup_ScanBackupHasNoServerJobs(t *testing.T) {
 	t.Parallel()
 	tracker := newRoutineTracker()
