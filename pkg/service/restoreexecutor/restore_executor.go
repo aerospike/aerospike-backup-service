@@ -13,10 +13,11 @@ import (
 
 // Restore starts a restore and returns a handle to observe it.
 type Restore interface {
-	// Run restores the backups of the requests one after another, in the order given, one
-	// request per backup, and returns a single handler for all of them. Every failure, including
-	// one to start, comes from the handler's Wait, which stops the restores and waits for them
-	// when its context ends. The start of each restore is logged as a step of the sequence.
+	// Run restores the backups of the requests, one request per backup, given oldest first: a
+	// single backup, or a full backup and the incremental backups that follow it. The order the
+	// backups are applied in is the implementation's. Run returns a single handler for all of
+	// them. Every failure, including one to start, comes from the handler's Wait, which stops the
+	// restores and waits for them when its context ends.
 	Run(
 		ctx context.Context,
 		client aerospike.Client,
@@ -42,9 +43,10 @@ func NewRestoreExecutor(operations storage.Operations) *RestoreExecutor {
 // errStoppedEarly is the outcome of a sequence whose goroutine ended before restoreAll returned.
 var errStoppedEarly = errors.New("restore sequence stopped before it finished")
 
-// Run restores the requests in the background, each after the previous one has finished. The
-// handler reports the stats of every restore started so far and, from Wait, the first failure.
-// Canceling ctx, or the one given to Wait, stops the running restore and starts no more.
+// Run restores the requests in the background, in the order inRestoreOrder gives, each after the
+// previous one has finished. The handler reports the stats of every restore started so far and,
+// from Wait, the first failure. Canceling ctx, or the one given to Wait, stops the running restore
+// and starts no more.
 func (r *RestoreExecutor) Run(
 	ctx context.Context,
 	client aerospike.Client,
@@ -63,10 +65,26 @@ func (r *RestoreExecutor) Run(
 			chain.finish(err)
 		}()
 
-		err = r.restoreAll(ctx, client, logger, requests, chain)
+		err = r.restoreChain(ctx, client, logger, requests, chain)
 	}()
 
 	return chain
+}
+
+// restoreChain restores the requests in the order inRestoreOrder gives.
+func (r *RestoreExecutor) restoreChain(
+	ctx context.Context,
+	client aerospike.Client,
+	logger *slog.Logger,
+	requests []*model.RestoreRequest,
+	chain *sequentialRestoreHandler,
+) error {
+	ordered, err := inRestoreOrder(ctx, client, logger, requests)
+	if err != nil {
+		return err
+	}
+
+	return r.restoreAll(ctx, client, logger, ordered, chain)
 }
 
 // restoreAll restores the requests one after another, stopping at the first failure. Only the

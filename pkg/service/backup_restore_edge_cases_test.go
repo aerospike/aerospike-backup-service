@@ -1,21 +1,17 @@
 package service
 
 import (
-	"context"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 var testLockMap collections.LockMap
@@ -131,30 +127,4 @@ func TestRestoreByTime_IncrementalChainSelection(t *testing.T) {
 	// incremental with Created == full.Created is not part of the chain
 	got = filterIncrementals(full, []model.BackupDetails{mk(1000, 500)})
 	assert.Empty(t, got)
-}
-
-// --- 8. Restore-by-time "empty namespace" optimisation checks the SOURCE namespace ---
-
-// prepareNamespaceRestore switches to CREATE_ONLY when the target namespace is empty; with a
-// namespace remap the record count has to come from the destination namespace, not the source one.
-func TestRestoreByTime_EmptyCheckUsesDestinationNamespace(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	info := aerospike.NewMockInfoGetter(ctrl)
-
-	var queried string
-	info.EXPECT().GetRecordCount(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, ns string, _ []string) (uint64, error) {
-			queried = ns
-			return 0, nil
-		})
-
-	req := &model.RestoreTimestampRequest{
-		Policy: model.RestorePolicy{
-			Namespace: &model.RestoreNamespace{Source: "source-ns", Destination: "dest-ns"},
-		},
-	}
-	policy, err := prepareNamespaceRestore(t.Context(), info, "source-ns", req, slog.Default())
-	require.NoError(t, err)
-	assert.Equal(t, "dest-ns", queried, "emptiness must be checked on the namespace the data is written to")
-	assert.True(t, *policy.Unique, "empty destination switches to CREATE_ONLY")
 }

@@ -384,6 +384,20 @@ func (s *ServerBuildSuite) recordBins(client *as.Client, set string, key int) as
 	return record.Bins
 }
 
+// emptyNamespace deletes every record of ns. Unlike a truncate it leaves no truncate state, for
+// which the server refuses a cold restore into ns.
+func (s *ServerBuildSuite) emptyNamespace(client *as.Client, ns string) {
+	recordset, err := client.ScanAll(nil, ns, "")
+	s.Require().NoError(err)
+
+	for result := range recordset.Results() {
+		s.Require().NoError(result.Err)
+
+		_, err := client.Delete(nil, result.Record.Key)
+		s.Require().NoError(err)
+	}
+}
+
 // info sends an info command to a node of the cluster client is connected to.
 func (s *ServerBuildSuite) info(client *as.Client, command string) string {
 	node, err := client.Cluster().GetRandomNode()

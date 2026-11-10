@@ -161,6 +161,36 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 	})
 }
 
+// TestServerRestoreByTimestampIntoEmptyNamespace restores a full and an incremental backup by
+// timestamp into a destination namespace that holds no records, in each restore mode. An empty
+// namespace is where restore by timestamp switches a scan restore to the unique policy, which
+// applies a chain newest first; the server takes a chain only full backup first.
+func (s *ServerBackupSuite) TestServerRestoreByTimestampIntoEmptyNamespace() {
+	e := s.setupEnv(s.serverBackupConfig)
+
+	s.seedRecordsIn(s.client, serverNamespace, []int{1})
+	s.triggerFullBackup(e)
+	fullBackup := s.waitForFinishedBackup(e, model.BackupTypeFull)
+	s.waitForLastBackup(e, model.BackupTypeFull, fullBackup.Created)
+
+	// Key 0 changes and key 1 is new: the incremental holds both, and must be applied last.
+	s.seedRecordsIn(s.client, serverNamespace, []int{2, 3})
+	s.triggerIncrementalBackup(e)
+	incrBackup := s.waitForFinishedBackup(e, model.BackupTypeIncremental)
+	s.waitForLastBackup(e, model.BackupTypeIncremental, incrBackup.Created)
+
+	for _, mode := range []dto.RestoreMode{dto.RestoreModeStrict, dto.RestoreModeFuzzy} {
+		s.Run(string(mode), func() {
+			s.emptyNamespace(s.destinationClient, serverNamespace)
+
+			status := s.restoreByTimestampInto(e, time.Now(), destinationClusterName, mode)
+
+			s.Empty(status.Error)
+			s.assertRecordsIn(s.destinationClient, serverNamespace, []int{2, 3})
+		})
+	}
+}
+
 // TestServerRestoreByTimestampCumulativeWorkflow mirrors TestRestoreByTimestampCumulativeWorkflow
 // with server-side backup: runs full backup, incremental backup, another incremental backup,
 // then restores the namespace into the destination cluster to a point in time. Since the mode

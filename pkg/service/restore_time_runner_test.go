@@ -464,47 +464,17 @@ func TestRestoreByTime_CumulativeIncrementals(t *testing.T) {
 	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
 }
 
-// TestRestoreByTime_OrderScenarios checks the chain the time runner hands to the restore: under
-// the unique (CREATE_ONLY) policy, set when the destination is empty or by the request, newest
-// first unless the request disables reordering; otherwise oldest first.
-func TestRestoreByTime_OrderScenarios(t *testing.T) {
+// TestRestoreByTime_HandsChainOldestFirst checks that the time runner hands the restore each
+// namespace's chain oldest first, as found, with its namespace and the request's
+// disable-reordering: the order the backups are applied in, and the policy that order depends on,
+// are the restore's to decide. The destination's record count is not asked for.
+func TestRestoreByTime_HandsChainOldestFirst(t *testing.T) {
 	tests := []struct {
 		name              string
-		recordCount       int64
-		unique            *bool
 		disableReordering bool
-		expectUnique      bool
-		expectOrder       []string
 	}{
-		{
-			name:         "Scenario 1: Empty namespace -> unique",
-			recordCount:  0,
-			unique:       nil, // unique will be set to true by the code
-			expectUnique: true,
-			expectOrder:  []string{"incr2", "incr1", "full"},
-		},
-		{
-			name:         "Scenario 2: Non-empty namespace, unique=false -> not unique",
-			recordCount:  100,
-			unique:       new(false),
-			expectUnique: false,
-			expectOrder:  []string{"full", "incr1", "incr2"},
-		},
-		{
-			name:         "Scenario 3: Non-empty namespace, unique=true -> unique",
-			recordCount:  100,
-			unique:       new(true),
-			expectUnique: true,
-			expectOrder:  []string{"incr2", "incr1", "full"},
-		},
-		{
-			name:              "Scenario 4: unique=true, disable-reordering -> unique, order kept",
-			recordCount:       100,
-			unique:            new(true),
-			disableReordering: true,
-			expectUnique:      true,
-			expectOrder:       []string{"full", "incr1", "incr2"},
-		},
+		{name: "reordering allowed"},
+		{name: "reordering disabled", disableReordering: true},
 	}
 
 	for _, tt := range tests {
@@ -519,12 +489,9 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 
 			request := &model.RestoreTimestampRequest{
 				DestinationCluster: model.AerospikeCluster{},
-				Policy: model.RestorePolicy{
-					Unique: tt.unique,
-				},
-				RoutineName:       "test-routine",
-				Time:              requestTime,
-				DisableReordering: tt.disableReordering,
+				RoutineName:        "test-routine",
+				Time:               requestTime,
+				DisableReordering:  tt.disableReordering,
 			}
 
 			fullBackup := model.BackupDetails{
@@ -569,15 +536,9 @@ func TestRestoreByTime_OrderScenarios(t *testing.T) {
 
 			client := env.expectSuccessfulClientInteraction(t)
 
-			if !tt.disableReordering && (tt.unique == nil || !*tt.unique) {
-				env.infoGetter.EXPECT().
-					GetRecordCount(gomock.Any(), "ns1", gomock.Any()).
-					Return(uint64(tt.recordCount), nil)
-			}
-
-			chain := make([]any, 0, len(tt.expectOrder))
-			for _, path := range tt.expectOrder {
-				chain = append(chain, restoreRequestUniqueMatcher{path, tt.expectUnique})
+			chain := make([]any, 0, 3)
+			for _, path := range []string{"full", "incr1", "incr2"} {
+				chain = append(chain, restoreRequestChainMatcher{path, "ns1", tt.disableReordering})
 			}
 			env.mockRestore.EXPECT().
 				Run(gomock.Any(), client, gomock.Any(), chain...).
