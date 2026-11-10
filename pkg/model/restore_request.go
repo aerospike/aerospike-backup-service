@@ -19,6 +19,13 @@ type RestoreRequest struct {
 	SecretAgent *SecretAgent
 	// Path to backup data in source storage.
 	BackupDataPath string
+	// Namespace is the namespace the backup was taken from. A restore by timestamp sets it on
+	// each backup of a namespace's chain; a restore by path leaves it empty.
+	Namespace string
+	// DisableReordering keeps a chain of backups oldest first under the unique (CREATE_ONLY)
+	// policy too, which otherwise applies it newest first, and keeps a chain into an empty
+	// namespace from switching to that policy.
+	DisableReordering bool
 }
 
 // RestoreTimestampRequest represents a restore by timestamp operation request.

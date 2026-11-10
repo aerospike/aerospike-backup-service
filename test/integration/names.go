@@ -12,4 +12,5 @@ const (
 	secretAgentName = "secretAgent"
 	namespace       = "test"
 	setName         = "filteredSet"
+	ageBin          = "age"
 )

@@ -2,7 +2,9 @@ package model
 
 import (
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,6 +26,27 @@ namespace: ns1
 			md, err := NewMetadataFromBytes([]byte(tt.yaml))
 			require.NoError(t, err)
 			require.Equal(t, tt.want, md.Compression)
+		})
+	}
+}
+
+func TestBackupMetadata_BackupType(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		from time.Time
+		want BackupType
+	}{
+		{name: "lower bound is incremental", from: time.Unix(1773669600, 0), want: BackupTypeIncremental},
+		{name: "no lower bound is full", want: BackupTypeFull},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.want, BackupMetadata{From: tt.from}.BackupType())
 		})
 	}
 }

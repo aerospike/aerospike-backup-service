@@ -40,7 +40,7 @@ func (s *BackupSuite) TestBackupRestoreWithIndexes() {
 
 	e := s.setupEnv()
 
-	task, err := s.client.CreateIndex(nil, namespace, setName, "age_sidx", "age", as.NUMERIC)
+	task, err := s.client.CreateIndex(nil, namespace, setName, "age_sidx", ageBin, as.NUMERIC)
 	s.Require().NoError(err)
 	s.Require().NoError(<-task.OnComplete())
 

@@ -53,6 +53,7 @@ var applied = map[string]appliedDefault{
 	"BaseRestorePolicy.SocketTimeout":     {applied: millis((&model.RestorePolicy{}).GetSocketTimeoutOrDefault())},
 	"Credentials.AuthMode":                {applied: value((&model.Credentials{}).AuthModeOrDefault())},
 	"BackupCommonConfig.ScheduleTimezone": {applied: value(model.DefaultScheduleTimezone)},
+	"BackupCommonConfig.BackupMode":       {applied: value((&model.BackupCommonConfig{}).GetBackupModeOrDefault())},
 	"ServerConfigHTTP.Port":               {applied: value((&model.ServerConfigHTTP{}).GetPortOrDefault())},
 	"ServerConfigHTTPS.Port":              {applied: value((&model.ServerConfigHTTPS{}).GetPortOrDefault())},
 	"ServerConfigHTTPS.MinVersion":        {applied: value((&model.ServerConfigHTTPS{}).GetMinVersionOrDefault())},
