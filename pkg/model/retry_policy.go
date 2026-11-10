@@ -57,3 +57,30 @@ func (policy *RetryPolicy) toLibraryModels(defaults *RetryPolicy) *models.RetryP
 
 	return models.NewRetryPolicy(timeout, multiplier, maxRetries)
 }
+
+// BaseTimeoutMsOrNil returns the base timeout in milliseconds, or nil if the policy sets none.
+func (policy *RetryPolicy) BaseTimeoutMsOrNil() *int {
+	if policy == nil || !policy.BaseTimeout.Present {
+		return nil
+	}
+
+	return new(int(policy.BaseTimeout.Value.Milliseconds()))
+}
+
+// MultiplierOrZero returns the multiplier, or zero if the policy sets none.
+func (policy *RetryPolicy) MultiplierOrZero() float64 {
+	if policy == nil || policy.Multiplier == nil {
+		return 0
+	}
+
+	return *policy.Multiplier
+}
+
+// MaxRetriesOrNil returns the maximum number of retries, or nil if the policy sets none.
+func (policy *RetryPolicy) MaxRetriesOrNil() *int {
+	if policy == nil {
+		return nil
+	}
+
+	return policy.MaxRetries.ToPtr()
+}

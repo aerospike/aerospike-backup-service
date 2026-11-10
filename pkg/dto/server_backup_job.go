@@ -27,25 +27,15 @@ type ServerBackupJob struct {
 	RecordsBackedUp uint64 `json:"records-backed-up" example:"1000"`
 	// The number of bytes backed up.
 	BytesBackedUp uint64 `json:"bytes-backed-up" example:"1048576"`
-	// The number of records the server could not read: a complete job that has any is missing them.
+	// The number of records the server could not read. When it is above zero the backup lacks
+	// those records, even if the job's state is COMPLETE.
 	RecordsReadFailed uint64 `json:"records-read-failed" example:"0"`
 }
 
 func newServerBackupJobsFromModel(jobs []model.ServerBackupJob) []ServerBackupJob {
 	result := make([]ServerBackupJob, 0, len(jobs))
 	for _, job := range jobs {
-		result = append(result, ServerBackupJob{
-			JobID:             job.JobID,
-			Namespace:         job.Namespace,
-			State:             job.State,
-			ErrorReason:       job.ErrorReason,
-			AbortOrigin:       job.AbortOrigin,
-			StartTime:         job.StartTime,
-			FinishTime:        job.FinishTime,
-			RecordsBackedUp:   job.RecordsBackedUp,
-			BytesBackedUp:     job.BytesBackedUp,
-			RecordsReadFailed: job.RecordsReadFailed,
-		})
+		result = append(result, ServerBackupJob(job))
 	}
 
 	return result

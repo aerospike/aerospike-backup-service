@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +34,7 @@ const (
 	restoreJobID = "261105T094929-k9s5"
 )
 
-func TestRestoreExecutor_Run_Cold(t *testing.T) {
+func TestRestoreExecutor_Run_Strict(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -49,8 +51,7 @@ func TestRestoreExecutor_Run_Cold(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)
 
-			// One command starts a cold restore: the server prepares the namespace itself. The
-			// restore then follows the job the start returned.
+			// The restore starts with one command and then follows the job that command returned.
 			infoClient := aerospike.NewMockInfoGetter(ctrl)
 			gomock.InOrder(
 				infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -62,15 +63,12 @@ func TestRestoreExecutor_Run_Cold(t *testing.T) {
 
 						return restoreJobID, nil
 					}),
-				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", restoreJobID).Return(
-					&infomodels.ResponseRestoreState{
-						State: infomodels.RestoreStateComplete, NsState: infomodels.NamespaceStateNone,
-					}, nil),
+				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", restoreJobID).Return(completeStatus, nil),
 			)
 
 			requests := make([]*model.RestoreRequest, 0, len(tt.backupIDs))
 			for _, id := range tt.backupIDs {
-				requests = append(requests, chainRequest(id))
+				requests = append(requests, strictRequest(id))
 			}
 
 			handler := NewRestoreExecutor(namespaceReader(t, ctrl)).
@@ -80,314 +78,10 @@ func TestRestoreExecutor_Run_Cold(t *testing.T) {
 	}
 }
 
-// TestRestoreExecutor_Run_StartRefused checks that a refused start fails the restore, explains a
-// refusal for truncate state, and releases nothing: the refused job gates nothing.
-func TestRestoreExecutor_Run_StartRefused(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		request *model.RestoreRequest
-		refusal string
-		wantErr string
-	}{
-		{name: "strict", request: chainRequest(fullID), refusal: "refused",
-			wantErr: "failed to start server restore: refused"},
-		{name: "fuzzy", request: fuzzyRequest(fullID), refusal: "refused",
-			wantErr: "failed to start server restore: refused"},
-		{
-			name:    "truncate state",
-			request: chainRequest(fullID),
-			refusal: "ERROR:22:restore: ns=bar holds truncate state - see the log to clear it",
-			wantErr: "clear it with the info command 'truncate-namespace-undo:namespace=bar'",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			ctrl := gomock.NewController(t)
-
-			infoClient := aerospike.NewMockInfoGetter(ctrl)
-			// The server may have accepted a start that failed, so it returns the job id anyway.
-			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, errors.New(tt.refusal))
-
-			err := NewRestoreExecutor(namespaceReader(t, ctrl)).
-				Run(t.Context(), clientOf(ctrl, infoClient), discardLogger, tt.request).Wait(t.Context())
-			require.ErrorContains(t, err, tt.wantErr)
-			require.ErrorContains(t, err, tt.refusal)
-		})
-	}
-}
-
-// TestRestoreExecutor_Run_StartOutcomeUnknown checks that a start whose outcome is unknown
-// releases the job it may have started as its mode does: a strict one may hold the namespace.
-func TestRestoreExecutor_Run_StartOutcomeUnknown(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		request *model.RestoreRequest
-		expect  func(t *testing.T, infoClient *aerospike.MockInfoGetter)
-	}{
-		{name: "strict", request: chainRequest(fullID), expect: func(t *testing.T, infoClient *aerospike.MockInfoGetter) {
-			t.Helper()
-			jobID := restoreJobID
-			expectRelease(t, infoClient, &jobID)
-		}},
-		{name: "fuzzy", request: fuzzyRequest(fullID), expect: func(t *testing.T, infoClient *aerospike.MockInfoGetter) {
-			t.Helper()
-			infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", restoreJobID).Return(nil)
-		}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			ctrl := gomock.NewController(t)
-
-			startErr := fmt.Errorf("%w: timeout", asinfo.ErrOutcomeUnknown)
-			infoClient := aerospike.NewMockInfoGetter(ctrl)
-			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, startErr)
-			tt.expect(t, infoClient)
-
-			err := NewRestoreExecutor(namespaceReader(t, ctrl)).
-				Run(t.Context(), clientOf(ctrl, infoClient), discardLogger, tt.request).Wait(t.Context())
-			require.ErrorIs(t, err, asinfo.ErrOutcomeUnknown)
-		})
-	}
-}
-
-// expectRelease expects the job *jobID of namespace bar to be aborted, then, once the abort has
-// ended it, its namespace opened, and waits for the namespace to open.
-func expectRelease(t *testing.T, infoClient *aerospike.MockInfoGetter, jobID *string) {
-	t.Helper()
-
-	gomock.InOrder(
-		infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", gomock.Any()).DoAndReturn(
-			func(_ context.Context, _, id string) error {
-				assert.Equal(t, *jobID, id)
-
-				return nil
-			}),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
-			&infomodels.ResponseRestoreState{State: infomodels.RestoreStateAborting}, nil),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
-			&infomodels.ResponseRestoreState{State: infomodels.RestoreStateAborted}, nil),
-		// A namespace has at most one restore job, so the namespace names it.
-		infoClient.EXPECT().OpenRestore(gomock.Any(), "bar").Return(nil),
-		// The namespace opens in the background.
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
-			&infomodels.ResponseRestoreState{
-				State: infomodels.RestoreStateAborted, NsState: infomodels.NamespaceStateOpening,
-			}, nil),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", gomock.Any()).Return(
-			&infomodels.ResponseRestoreState{
-				State: infomodels.RestoreStateAborted, NsState: infomodels.NamespaceStateNone,
-			}, nil),
-	)
-}
-
-// TestRestoreExecutor_Run_ReportsFailure checks that a run's failure comes from the handler's
-// Wait. The run fails on its key, before it reaches the server.
-func TestRestoreExecutor_Run_ReportsFailure(t *testing.T) {
-	t.Parallel()
-	ctrl := gomock.NewController(t)
-
-	request := chainRequest(fullID)
-	request.BackupDataPath = fullID // a bare job id names no routine.
-
-	err := NewRestoreExecutor(service.NewMockBackupReader(ctrl)).
-		Run(t.Context(), aerospike.NewMockClient(ctrl), discardLogger, request).Wait(t.Context())
-	require.EqualError(t, err, `invalid server backup key "`+fullID+`": want <routine>/<job id>`)
-}
-
-func TestRestoreExecutor_Run_ChainTooLong(t *testing.T) {
-	t.Parallel()
-	ctrl := gomock.NewController(t)
-
-	requests := make([]*model.RestoreRequest, maxChainLength+1)
-	for i := range requests {
-		requests[i] = chainRequest(fmt.Sprintf("261020T09%04d-aaaa", i))
-	}
-
-	err := NewRestoreExecutor(service.NewMockBackupReader(ctrl)).
-		Run(t.Context(), aerospike.NewMockClient(ctrl), discardLogger, requests...).Wait(t.Context())
-	require.ErrorContains(t, err, "at most 32 backups")
-}
-
-// namespaceReader returns a BackupReader that reports the full backup in namespace bar.
-func namespaceReader(t *testing.T, ctrl *gomock.Controller) service.BackupReader {
-	t.Helper()
-
-	backupReader := service.NewMockBackupReader(ctrl)
-	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
-			assert.Equal(t, backupKey("routine", fullID), filter.(*service.PathFilter).Path(),
-				"the namespace comes from the full backup")
-
-			return []model.BackupDetails{{BackupMetadata: model.BackupMetadata{Namespace: "bar"}}}, nil
-		})
-
-	return backupReader
-}
-
-func clientOf(ctrl *gomock.Controller, infoClient *aerospike.MockInfoGetter) aerospike.Client {
-	client := aerospike.NewMockClient(ctrl)
-	client.EXPECT().InfoClient().Return(infoClient)
-
-	return client
-}
-
-func chainRequest(backupID string) *model.RestoreRequest {
-	return &model.RestoreRequest{
-		SourceStorage:  &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1", Path: "backups"},
-		BackupDataPath: backupKey("routine", backupID),
-	}
-}
-
-func TestRestoreHandler_Wait_UntilNamespaceOpen(t *testing.T) {
-	t.Parallel()
-	ctrl := gomock.NewController(t)
-
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	gomock.InOrder(
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(&infomodels.ResponseRestoreState{
-			State:   infomodels.RestoreStateComplete,
-			NsState: infomodels.NamespaceStateOpening,
-		}, nil),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(&infomodels.ResponseRestoreState{
-			State:   infomodels.RestoreStateComplete,
-			NsState: infomodels.NamespaceStateNone,
-		}, nil),
-	)
-
-	require.NoError(t, newRestoreJob(infoClient, "bar", "job", modeOf(model.RestoreModeStrict)).Wait(t.Context()))
-}
-
-// TestRestoreHandler_Wait_ClearsNamespace checks that a cold restore whose nodes hold data in the
-// namespace clears their storage, as each preparing node asks, and then waits for the restore.
-func TestRestoreHandler_Wait_ClearsNamespace(t *testing.T) {
-	t.Parallel()
-	ctrl := gomock.NewController(t)
-
-	preparing := func(clearState infomodels.ClearState) *infomodels.ResponseRestoreState {
-		return &infomodels.ResponseRestoreState{
-			State: infomodels.RestoreStateActive, NsState: infomodels.NamespaceStatePreparing, Clear: clearState,
-		}
-	}
-
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	gomock.InOrder(
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
-			preparing(infomodels.ClearStateRequired), nil),
-		infoClient.EXPECT().ClearRestoreStorage(gomock.Any(), "bar", "job").Return(nil),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
-			preparing(infomodels.ClearStateClearing), nil),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(&infomodels.ResponseRestoreState{
-			State: infomodels.RestoreStateComplete, NsState: infomodels.NamespaceStateNone,
-		}, nil),
-	)
-
-	require.NoError(t, newRestoreJob(infoClient, "bar", "job", modeOf(model.RestoreModeStrict)).Wait(t.Context()))
-}
-
-func TestRestoreHandler_Wait_ReleasesNamespace(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		expect  func(infoClient *aerospike.MockInfoGetter)
-		wantErr string
-	}{
-		{
-			name: "failed",
-			expect: func(infoClient *aerospike.MockInfoGetter) {
-				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
-					&infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed, ErrorReason: "s3 GET 403"}, nil)
-			},
-			wantErr: "server restore job failed: s3 GET 403",
-		},
-		{
-			name: "aborted",
-			expect: func(infoClient *aerospike.MockInfoGetter) {
-				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
-					&infomodels.ResponseRestoreState{
-						State:       infomodels.RestoreStateAborted,
-						ErrorReason: "node left", AbortOrigin: infomodels.AbortOriginCluster,
-					}, nil)
-			},
-			wantErr: "server restore job was aborted (abort origin: cluster): node left",
-		},
-		{
-			name: "status unavailable",
-			expect: func(infoClient *aerospike.MockInfoGetter) {
-				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(nil, errors.New("timeout"))
-			},
-			wantErr: "failed to get server restore status: timeout",
-		},
-		{
-			name: "clear refused",
-			expect: func(infoClient *aerospike.MockInfoGetter) {
-				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
-					&infomodels.ResponseRestoreState{
-						NsState: infomodels.NamespaceStatePreparing,
-						Clear:   infomodels.ClearStateRequired,
-					}, nil)
-				infoClient.EXPECT().ClearRestoreStorage(gomock.Any(), "bar", "job").Return(errors.New("refused"))
-			},
-			wantErr: "failed to clear namespace bar for server restore job: refused",
-		},
-		{
-			name: "held by truncate state",
-			expect: func(infoClient *aerospike.MockInfoGetter) {
-				infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
-					&infomodels.ResponseRestoreState{
-						NsState:    infomodels.NamespaceStatePreparing,
-						HeldReason: heldByTruncateState,
-					}, nil)
-			},
-			wantErr: "clear it with the info command 'truncate-namespace-undo:namespace=bar'",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			ctrl := gomock.NewController(t)
-
-			jobID := "job"
-			infoClient := aerospike.NewMockInfoGetter(ctrl)
-			tt.expect(infoClient)
-			expectRelease(t, infoClient, &jobID)
-
-			handler := newRestoreJob(infoClient, "bar", jobID, modeOf(model.RestoreModeStrict))
-			require.ErrorContains(t, handler.Wait(t.Context()), tt.wantErr)
-		})
-	}
-}
-
-func TestRestoreHandler_Wait_Canceled(t *testing.T) {
-	t.Parallel()
-	ctrl := gomock.NewController(t)
-
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
-
-	// The release still runs: the canceled restore holds the namespace.
-	jobID := "job"
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	expectRelease(t, infoClient, &jobID)
-
-	handler := newRestoreJob(infoClient, "bar", jobID, modeOf(model.RestoreModeStrict))
-	require.ErrorIs(t, handler.Wait(ctx), context.Canceled)
-}
-
 func TestRestoreExecutor_Run_Fuzzy(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 
-	// A fuzzy restore writes into the live namespace: no preparation.
 	infoClient := aerospike.NewMockInfoGetter(ctrl)
 	infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, request *infomodels.RequestRestore) (string, error) {
@@ -425,42 +119,201 @@ func TestRestoreExecutor_Run_SkipsIndexesAndUDFs(t *testing.T) {
 	require.NoError(t, handler.Wait(t.Context()))
 }
 
-// TestRestoreHandler_Wait_FuzzyAbortsOnly checks that a fuzzy restore that does not complete is
-// aborted, and that its namespace, which it never held, is not opened.
-func TestRestoreHandler_Wait_FuzzyAbortsOnly(t *testing.T) {
+// TestRestoreExecutor_Run_Retry checks that the server gets the retry settings that the policy of
+// a fuzzy restore sets, and no others.
+func TestRestoreExecutor_Run_Retry(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		policy *model.RetryPolicy
+		want   infomodels.RequestRestore
+	}{
+		{
+			name: "every setting",
+			policy: &model.RetryPolicy{
+				BaseTimeout: optional.Of(1500 * time.Millisecond),
+				Multiplier:  new(2.0),
+				MaxRetries:  optional.Of(0),
+			},
+			want: infomodels.RequestRestore{
+				RetryBaseIntervalMs: new(1500), RetryMultiplier: 2, RetryMaxAttempts: new(0),
+			},
+		},
+		{
+			name:   "only a multiplier",
+			policy: &model.RetryPolicy{Multiplier: new(3.0)},
+			want:   infomodels.RequestRestore{RetryMultiplier: 3},
+		},
+		{name: "no policy"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+
+			infoClient := aerospike.NewMockInfoGetter(ctrl)
+			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, request *infomodels.RequestRestore) (string, error) {
+					assert.Equal(t, tt.want.RetryBaseIntervalMs, request.RetryBaseIntervalMs)
+					assert.InDelta(t, tt.want.RetryMultiplier, request.RetryMultiplier, 0)
+					assert.Equal(t, tt.want.RetryMaxAttempts, request.RetryMaxAttempts)
+
+					return restoreJobID, nil
+				})
+			infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", restoreJobID).Return(completeStatus, nil)
+
+			request := fuzzyRequest(fullID)
+			request.Policy.RetryPolicy = tt.policy
+			handler := NewRestoreExecutor(namespaceReader(t, ctrl)).
+				Run(t.Context(), clientOf(ctrl, infoClient), discardLogger, request)
+			require.NoError(t, handler.Wait(t.Context()))
+		})
+	}
+}
+
+// TestRestoreExecutor_Run_StartRefused checks that a refused start fails the restore, explains a
+// refusal for truncate state, and cleans nothing up, because a refused job never started.
+func TestRestoreExecutor_Run_StartRefused(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		request *model.RestoreRequest
+		refusal string
+		wantErr string
+	}{
+		{name: "strict", request: strictRequest(fullID), refusal: "refused",
+			wantErr: "failed to start server restore: refused"},
+		{name: "fuzzy", request: fuzzyRequest(fullID), refusal: "refused",
+			wantErr: "failed to start server restore: refused"},
+		{
+			name:    "truncate state",
+			request: strictRequest(fullID),
+			refusal: "ERROR:22:restore: ns=bar holds truncate state - see the log to clear it",
+			wantErr: "clear it with the info command 'truncate-namespace-undo:namespace=bar'",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+
+			infoClient := aerospike.NewMockInfoGetter(ctrl)
+			// The start returns the job id with every error. A refused job is not cleaned up.
+			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, errors.New(tt.refusal))
+
+			err := NewRestoreExecutor(namespaceReader(t, ctrl)).
+				Run(t.Context(), clientOf(ctrl, infoClient), discardLogger, tt.request).Wait(t.Context())
+			require.ErrorContains(t, err, tt.wantErr)
+			require.ErrorContains(t, err, tt.refusal)
+		})
+	}
+}
+
+// TestRestoreExecutor_Run_StartOutcomeUnknown checks that a start whose outcome is unknown
+// releases the job it may have started: a strict job is aborted and its namespace opened, a fuzzy
+// job is only aborted.
+func TestRestoreExecutor_Run_StartOutcomeUnknown(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		request *model.RestoreRequest
+		expect  func(infoClient *aerospike.MockInfoGetter)
+	}{
+		{name: "strict", request: strictRequest(fullID), expect: func(infoClient *aerospike.MockInfoGetter) {
+			expectRelease(infoClient, restoreJobID)
+		}},
+		{name: "fuzzy", request: fuzzyRequest(fullID), expect: func(infoClient *aerospike.MockInfoGetter) {
+			infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", restoreJobID).Return(nil)
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+
+			// The server may have started the job even though the start failed.
+			startErr := fmt.Errorf("%w: timeout", asinfo.ErrOutcomeUnknown)
+			infoClient := aerospike.NewMockInfoGetter(ctrl)
+			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, startErr)
+			tt.expect(infoClient)
+
+			err := NewRestoreExecutor(namespaceReader(t, ctrl)).
+				Run(t.Context(), clientOf(ctrl, infoClient), discardLogger, tt.request).Wait(t.Context())
+			require.ErrorIs(t, err, asinfo.ErrOutcomeUnknown)
+		})
+	}
+}
+
+// TestRestoreExecutor_Run_InvalidBackupKey checks that a run that fails before it reaches the
+// server returns its failure from the handler's Wait.
+func TestRestoreExecutor_Run_InvalidBackupKey(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
-		&infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed}, nil)
-	infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(nil)
+	request := strictRequest(fullID)
+	request.BackupDataPath = fullID // a bare backup id names no routine.
 
-	err := newRestoreJob(infoClient, "bar", "job", modeOf(model.RestoreModeFuzzy)).Wait(t.Context())
-	require.ErrorContains(t, err, "server restore job failed")
+	err := NewRestoreExecutor(service.NewMockBackupReader(ctrl)).
+		Run(t.Context(), aerospike.NewMockClient(ctrl), discardLogger, request).Wait(t.Context())
+	require.EqualError(t, err, `invalid server backup key "`+fullID+`": want <routine>/<job id>`)
 }
 
+func TestRestoreExecutor_Run_ChainTooLong(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+
+	requests := make([]*model.RestoreRequest, maxChainLength+1)
+	for i := range requests {
+		requests[i] = strictRequest(fmt.Sprintf("261020T09%04d-aaaa", i))
+	}
+
+	err := NewRestoreExecutor(service.NewMockBackupReader(ctrl)).
+		Run(t.Context(), aerospike.NewMockClient(ctrl), discardLogger, requests...).Wait(t.Context())
+	require.EqualError(t, err, "restore chain has 33 backups, the server restores at most 32 in one job")
+}
+
+// namespaceReader returns a BackupReader that reports the full backup in namespace bar.
+func namespaceReader(t *testing.T, ctrl *gomock.Controller) service.BackupReader {
+	t.Helper()
+
+	backupReader := service.NewMockBackupReader(ctrl)
+	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
+			assert.Equal(t, backupKey("routine", fullID), filter.(*service.PathFilter).Path(),
+				"the namespace comes from the full backup")
+
+			return []model.BackupDetails{{BackupMetadata: model.BackupMetadata{Namespace: "bar"}}}, nil
+		})
+
+	return backupReader
+}
+
+func clientOf(ctrl *gomock.Controller, infoClient *aerospike.MockInfoGetter) aerospike.Client {
+	client := aerospike.NewMockClient(ctrl)
+	client.EXPECT().InfoClient().Return(infoClient)
+
+	return client
+}
+
+// strictRequest returns a strict restore request for one backup of the routine.
+func strictRequest(backupID string) *model.RestoreRequest {
+	return &model.RestoreRequest{
+		Policy:         model.RestorePolicy{Mode: model.RestoreModeStrict},
+		SourceStorage:  &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1", Path: "backups"},
+		BackupDataPath: backupKey("routine", backupID),
+	}
+}
+
+// fuzzyRequest returns a fuzzy restore request for one backup of the routine.
 func fuzzyRequest(backupID string) *model.RestoreRequest {
-	request := chainRequest(backupID)
+	request := strictRequest(backupID)
 	request.Policy.Mode = model.RestoreModeFuzzy
 
 	return request
-}
-
-//nolint:paralleltest // shortens lostJobTimeout, which the parallel tests read.
-func TestRestoreJob_Wait_LostJob(t *testing.T) {
-	shortenLostJobTimeout(t)
-	ctrl := gomock.NewController(t)
-
-	// The job is released as any job that does not complete; a lost job refuses the abort.
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	gomock.InOrder(
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(nil, asinfo.ErrNotFound).Times(2),
-		infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(asinfo.ErrNotFound),
-	)
-
-	err := newRestoreJob(infoClient, "bar", "job", modeOf(model.RestoreModeStrict)).Wait(t.Context())
-
-	require.ErrorContains(t, err, "server restore job not reported for 1.5s")
-	require.ErrorContains(t, err, "failed to abort server restore job")
 }

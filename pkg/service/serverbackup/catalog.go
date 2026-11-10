@@ -26,15 +26,13 @@ type S3ClientProvider interface {
 // catalog lists server backups from the metadata the server writes next to each of them.
 type catalog struct {
 	s3Clients S3ClientProvider
-	logger    *slog.Logger
 }
 
 var _ service.BackupReader = (*catalog)(nil)
 
-// NewCatalog returns a BackupReader over the server backups in S3 storage. logger gets the
-// backups the listing skips because their metadata cannot be read.
-func NewCatalog(s3Clients S3ClientProvider, logger *slog.Logger) service.BackupReader {
-	return &catalog{s3Clients: s3Clients, logger: logger}
+// NewCatalog returns a BackupReader over the server backups in S3 storage.
+func NewCatalog(s3Clients S3ClientProvider) service.BackupReader {
+	return &catalog{s3Clients: s3Clients}
 }
 
 // GetBackups returns the completed server backups that match the filter, oldest first.
@@ -129,14 +127,14 @@ func (c *catalog) newLister(ctx context.Context, storage model.Storage, routineN
 	}
 
 	return lister.NewLister(
-		client, s3Storage.Bucket, routinePath(s3Storage, routineName), lister.WithLogger(c.logger),
+		client, s3Storage.Bucket, routinePath(s3Storage, routineName), lister.WithLogger(slog.Default()),
 	), nil
 }
 
 // toBackupDetails converts server metadata to the details of a backup of the routine, keyed by
-// its routine and job id. Its lower time bound, From, is what makes it incremental. The metadata
-// records no finish time and no record, byte, file, secondary index or UDF counts, so they are
-// left at zero and the backup is marked uncounted: restore does not take it for an empty one.
+// its routine and job id. A backup with a lower time bound, From, is incremental. The metadata
+// records no finish time and no record, byte, file, secondary index or UDF counts, so those
+// fields stay zero. The backup is marked Uncounted so that a restore does not treat it as empty.
 func toBackupDetails(metadata listermodels.Metadata, storage model.Storage, routineName string) model.BackupDetails {
 	var from time.Time
 	if metadata.ModifiedAfterUnixS != 0 {

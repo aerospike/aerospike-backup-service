@@ -2,6 +2,7 @@ package dto
 
 import (
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -65,21 +66,34 @@ func TestValidateRestorePolicy(t *testing.T) {
 		{name: "server mode without a mode", backupMode: model.BackupModeServer, wantErr: `"mode" required`},
 		{name: "scan mode with a mode", backupMode: model.BackupModeScan,
 			policy:  model.RestorePolicy{Mode: model.RestoreModeStrict},
-			wantErr: `"mode" applies only to backup-mode "server"`},
+			wantErr: `restore policy sets mode, which only backup-mode "server" supports`},
 		{name: "server mode with options it lacks", backupMode: model.BackupModeServer,
 			policy: model.RestorePolicy{
-				Mode:              model.RestoreModeStrict,
-				BinList:           []string{"bin"},
-				Replace:           new(true),
-				Unique:            new(true),
-				NoGeneration:      new(true),
-				Bandwidth:         new(int64(1)),
-				EncryptionPolicy:  &model.EncryptionPolicy{Mode: model.EncryptionModeAES128},
-				CompressionPolicy: &model.CompressionPolicy{Mode: model.CompressionModeZSTD},
-				Namespace:         &model.RestoreNamespace{Source: "bar", Destination: "baz"},
+				Mode:               model.RestoreModeStrict,
+				BinList:            []string{"bin"},
+				Replace:            new(true),
+				Unique:             new(true),
+				NoGeneration:       new(true),
+				Bandwidth:          new(int64(1)),
+				EncryptionPolicy:   &model.EncryptionPolicy{Mode: model.EncryptionModeAES128},
+				CompressionPolicy:  &model.CompressionPolicy{Mode: model.CompressionModeZSTD},
+				Namespace:          &model.RestoreNamespace{Source: "bar", Destination: "baz"},
+				NoRecords:          new(true),
+				DisableBatchWrites: new(true),
+				BatchSize:          new(1),
+				MaxAsyncBatches:    new(1),
+				SocketTimeout:      new(time.Second),
+				TotalTimeout:       new(time.Second),
 			},
 			wantErr: "restore policy sets bin-list, replace, unique, no-generation, bandwidth, encryption, " +
-				`compression, namespace into another namespace, which backup-mode "server" does not support`},
+				"compression, a namespace destination other than its source, no-records, disable-batch-writes, batch-size, " +
+				"max-async-batches, socket-timeout, total-timeout, " +
+				`which backup-mode "server" does not support`},
+		{name: "server mode strict with a retry policy", backupMode: model.BackupModeServer,
+			policy:  model.RestorePolicy{Mode: model.RestoreModeStrict, RetryPolicy: &model.RetryPolicy{}},
+			wantErr: `restore policy sets retry-policy, which mode "strict" does not support`},
+		{name: "server mode fuzzy with a retry policy", backupMode: model.BackupModeServer,
+			policy: model.RestorePolicy{Mode: model.RestoreModeFuzzy, RetryPolicy: &model.RetryPolicy{}}},
 	}
 
 	for _, tt := range tests {

@@ -158,9 +158,24 @@ func TestConfigValidate_ServerMode(t *testing.T) {
 				policy.Bandwidth = new(int64(1))
 				policy.EncryptionPolicy = &EncryptionPolicy{Mode: EncryptionModeAES256, KeyFile: "key"}
 				policy.CompressionPolicy = &CompressionPolicy{Mode: CompressionModeZSTD, Level: new(int32(1))}
+				policy.NoRecords = new(true)
+				policy.Compact = new(true)
+				policy.FileLimit = new(1)
+				policy.MaxConcurrentNodes = new(1)
+				policy.RetryPolicy = &RetryPolicy{}
+				policy.RetentionPolicy = &RetentionPolicy{FullBackups: new(1)}
+				policy.SocketTimeout = new(int64(1))
+				policy.TotalTimeout = new(int64(1))
 			},
 			wantErr: `invalid value validation error: policy 'policy1' sets bandwidth, encryption, compression, ` +
-				`which backup-mode "server" does not support`,
+				`no-records, compact, file-limit, max-concurrent-nodes, retry-policy, retention, socket-timeout, ` +
+				`total-timeout, which backup-mode "server" does not support`,
+		},
+		{
+			name:    "server mode with an empty policy",
+			mode:    BackupModeServer,
+			storage: s3,
+			change:  func(c *Config) { c.BackupPolicies["empty"] = nil },
 		},
 	}
 

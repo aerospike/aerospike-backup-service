@@ -19,8 +19,8 @@ func TestNewRoutineStateFromModel(t *testing.T) {
 
 	m := model.RoutineState{
 		Full: &model.RunningJob{
-			TotalRecords: uint64(100),
-			DoneRecords:  uint64(50),
+			TotalRecords: 100,
+			DoneRecords:  50,
 			StartTime:    lastFull,
 			Progress:     0.5,
 		},
@@ -78,8 +78,8 @@ func TestNewRunningJobFromModel_Finished(t *testing.T) {
 	finish := time.Now()
 
 	job := NewRunningJobFromModel(&model.RunningJob{
-		TotalRecords: uint64(10),
-		DoneRecords:  uint64(10),
+		TotalRecords: 10,
+		DoneRecords:  10,
 		StartTime:    start,
 		FinishTime:   &finish,
 		Progress:     1,

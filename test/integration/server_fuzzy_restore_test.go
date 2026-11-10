@@ -14,7 +14,8 @@ import (
 // TestServerFuzzyRestoreIntoSource backs up the source cluster, then updates one record, deletes
 // another and adds a third, and restores the backup in fuzzy mode into the source cluster
 // itself, which stays live. The updated and deleted records get their backed-up values back;
-// the added record, which the backup does not hold, stays.
+// the added record, which the backup does not hold, stays. The restore sets a retry policy, which
+// the server accepts for a fuzzy restore, and its status counts the records of the backup.
 func (s *ServerBackupSuite) TestServerFuzzyRestoreIntoSource() {
 	e := s.setupEnv(s.serverBackupConfig)
 	s.seedRecordsIn(s.client, serverNamespace, []int{10, 20, 30})
@@ -27,9 +28,14 @@ func (s *ServerBackupSuite) TestServerFuzzyRestoreIntoSource() {
 	s.putRecordIn(s.client, serverNamespace, 3, 40)
 
 	status := s.restoreByPathInto(e, fullBackup.Key, clusterName,
-		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Mode: dto.RestoreModeFuzzy}})
+		&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{
+			Mode:        dto.RestoreModeFuzzy,
+			RetryPolicy: &dto.RetryPolicy{BaseTimeout: new(int64(200)), Multiplier: new(1.5), MaxRetries: new(2)},
+		}})
 
 	s.Equal(dto.RestoreSuccess, status.Status)
+	// The server counts a record once per lane it reads it from (SERVER-1972): three or more.
+	s.GreaterOrEqual(status.ReadRecords, uint64(3))
 	s.assertRecordsIn(s.client, serverNamespace, []int{10, 20, 30, 40})
 }
 
@@ -113,7 +119,7 @@ func (s *ServerBackupSuite) TestServerRestoreRequestRejected() {
 				Mode:      dto.RestoreModeStrict,
 				Namespace: &dto.RestoreNamespace{Source: serverNamespace, Destination: otherNamespace},
 			}),
-			wantErr: `restore policy sets namespace into another namespace, which backup-mode "server" does not support`,
+			wantErr: `restore policy sets a namespace destination other than its source, which backup-mode "server" does not support`,
 		},
 	}
 

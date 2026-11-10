@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"fmt"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
@@ -12,8 +10,8 @@ import (
 type RestoreMode string
 
 const (
-	// RestoreModeStrict restores cold: the namespace is taken from clients, cleared and
-	// hydrated from the backups.
+	// RestoreModeStrict takes the namespace from clients, clears it and loads it from the
+	// backups.
 	RestoreModeStrict RestoreMode = "strict"
 	// RestoreModeFuzzy writes the backed-up records into the live namespace.
 	RestoreModeFuzzy RestoreMode = "fuzzy"
@@ -45,29 +43,40 @@ func remaps(namespace *model.RestoreNamespace) bool {
 	return namespace != nil && namespace.Destination != "" && namespace.Destination != namespace.Source
 }
 
-// validateRestorePolicy checks policy against the service's backup mode: a server-side restore
-// must choose a mode and sets no option the server has no equivalent for, and a scan restore has
-// no mode.
+// validateRestorePolicy checks policy against the service's backup mode. A scan restore has no
+// mode. A server-side restore must choose a mode, sets no option that the server has no
+// equivalent for, and sets no option that its mode does not support.
 func validateRestorePolicy(policy *model.RestorePolicy, config *model.Config) error {
 	server := config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == model.BackupModeServer
-
-	switch {
-	case server && policy.Mode == "":
-		return errValidationEmptyField("mode")
-	case server:
-		return rejectServerUnsupported("restore policy",
-			serverOption{"bin-list", len(policy.BinList) > 0},
-			serverOption{"replace", ptr.ValueOrZero(policy.Replace)},
-			serverOption{"unique", ptr.ValueOrZero(policy.Unique)},
-			serverOption{"no-generation", ptr.ValueOrZero(policy.NoGeneration)},
-			serverOption{"bandwidth", policy.Bandwidth != nil},
-			serverOption{"encryption", encrypts(policy.EncryptionPolicy)},
-			serverOption{"compression", compresses(policy.CompressionPolicy)},
-			serverOption{"namespace into another namespace", remaps(policy.Namespace)},
-		)
-	case policy.Mode != "":
-		return fmt.Errorf("%w: \"mode\" applies only to backup-mode %q", errInvalidValue, model.BackupModeServer)
-	default:
-		return nil
+	if !server {
+		return rejectOptions("restore policy", onlyInServerMode, option{"mode", policy.Mode != ""})
 	}
+
+	if policy.Mode == "" {
+		return errValidationEmptyField("mode")
+	}
+
+	err := rejectOptions("restore policy", unsupportedInServerMode,
+		option{"bin-list", len(policy.BinList) > 0},
+		option{"replace", ptr.ValueOrZero(policy.Replace)},
+		option{"unique", ptr.ValueOrZero(policy.Unique)},
+		option{"no-generation", ptr.ValueOrZero(policy.NoGeneration)},
+		option{"bandwidth", policy.Bandwidth != nil},
+		option{"encryption", encrypts(policy.EncryptionPolicy)},
+		option{"compression", compresses(policy.CompressionPolicy)},
+		option{"a namespace destination other than its source", remaps(policy.Namespace)},
+		option{"no-records", ptr.ValueOrZero(policy.NoRecords)},
+		option{"disable-batch-writes", ptr.ValueOrZero(policy.DisableBatchWrites)},
+		option{"batch-size", policy.BatchSize != nil},
+		option{"max-async-batches", policy.MaxAsyncBatches != nil},
+		option{"socket-timeout", policy.SocketTimeout != nil},
+		option{"total-timeout", policy.TotalTimeout != nil},
+	)
+	if err != nil || policy.Mode != model.RestoreModeStrict {
+		return err
+	}
+
+	// The server retries the writes of a fuzzy restore. A strict restore writes no record through
+	// the write path, so it has nothing to retry.
+	return rejectOptions("restore policy", unsupportedInStrictMode, option{"retry-policy", policy.RetryPolicy != nil})
 }

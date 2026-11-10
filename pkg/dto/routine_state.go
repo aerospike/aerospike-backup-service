@@ -23,11 +23,11 @@ type RoutineState struct {
 	NextFull *time.Time `json:"next-full,omitempty"`
 	// NextIncremental: the time of the next scheduled incremental backup.
 	NextIncremental *time.Time `json:"next-incremental,omitempty"`
-	// LastFullJobs: the server jobs of the last finished full backup, one per namespace, whatever
-	// its outcome. Only reported in the server backup mode, and kept in memory: empty until the
-	// first full backup since the service started has ended.
+	// LastFullJobs: the server jobs of the last finished full backup, one per namespace, whether it
+	// succeeded or not. Reported only in the server backup mode. The list is kept in memory, so it
+	// is empty after a restart until a full backup finishes.
 	LastFullJobs []ServerBackupJob `json:"last-full-jobs,omitempty"`
-	// LastIncrementalJobs: the server jobs of the last finished incremental backup, as LastFullJobs.
+	// LastIncrementalJobs: the same for the last finished incremental backup.
 	LastIncrementalJobs []ServerBackupJob `json:"last-incremental-jobs,omitempty"`
 }
 

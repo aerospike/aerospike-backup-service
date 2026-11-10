@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"testing"
 	"time"
@@ -215,7 +214,7 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 			operation := newBackupOperation(func() {})
 
 			err := (&routineRunner{backupReader: backupReader}).backupNamespaces(t.Context(), infoClient,
-				tt.routine, tt.runSpec, tt.namespaces, operation, slog.New(slog.DiscardHandler))
+				tt.routine, tt.runSpec, tt.namespaces, operation, discardLogger)
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, requests)
@@ -257,7 +256,7 @@ func TestRoutineRunner_BackupNamespaces_Failures(t *testing.T) {
 
 	err := (&routineRunner{}).backupNamespaces(t.Context(), infoClient, routine,
 		model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar", "baz", "qux"}, operation,
-		slog.New(slog.DiscardHandler))
+		discardLogger)
 
 	require.EqualError(t, err, "namespace bar: failed to start server backup: refused\n"+
 		"namespace baz: server backup job-baz failed: disk full")
@@ -265,6 +264,27 @@ func TestRoutineRunner_BackupNamespaces_Failures(t *testing.T) {
 		{JobID: "job-baz", Namespace: "baz", State: "FAILED", ErrorReason: "disk full"},
 		{JobID: "job-qux", Namespace: "qux", State: "COMPLETE"},
 	}, operation.Status().Server.Jobs)
+}
+
+// TestRoutineRunner_BackupNamespaces_Canceled checks that a canceled run starts no server job: the
+// start of a job reaches the server even on a canceled context.
+func TestRoutineRunner_BackupNamespaces_Canceled(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t)) // expects no call.
+	routine := &model.BackupRoutine{
+		Storage:      &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1"},
+		BackupPolicy: &model.BackupPolicy{},
+	}
+
+	err := (&routineRunner{}).backupNamespaces(ctx, infoClient, routine,
+		model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar", "baz"}, newBackupOperation(func() {}),
+		discardLogger)
+
+	require.ErrorIs(t, err, context.Canceled)
 }
 
 // TestRoutineRunner_BackupNamespaces_StartOutcomeUnknown checks that a start whose outcome is
@@ -295,7 +315,7 @@ func TestRoutineRunner_BackupNamespaces_StartOutcomeUnknown(t *testing.T) {
 
 			err := (&routineRunner{}).backupNamespaces(t.Context(), infoClient, routine,
 				model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar"}, newBackupOperation(func() {}),
-				slog.New(slog.DiscardHandler))
+				discardLogger)
 
 			require.ErrorIs(t, err, tt.startErr)
 		})
@@ -311,12 +331,12 @@ func TestRoutineRunner_BackupNamespaces_NotS3(t *testing.T) {
 
 	err := (&routineRunner{}).backupNamespaces(t.Context(), infoClient, routine,
 		model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar"}, newBackupOperation(func() {}),
-		slog.New(slog.DiscardHandler))
+		discardLogger)
 
 	require.EqualError(t, err, "namespace bar: server backup requires S3 storage, got *model.LocalStorage")
 }
 
-func TestWaitForBackup_RecordsServerJob(t *testing.T) {
+func TestBackupJob_Wait_RecordsServerJob(t *testing.T) {
 	t.Parallel()
 
 	jobStart := time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
@@ -376,7 +396,7 @@ func TestWaitForBackup_RecordsServerJob(t *testing.T) {
 			)
 			operation := newBackupOperation(func() {})
 
-			err := waitForBackup(t.Context(), infoClient, fullID, operation, slog.New(slog.DiscardHandler))
+			err := newTestBackupJob(infoClient, operation).Wait(t.Context())
 
 			if tt.wantErr == "" {
 				require.NoError(t, err)
@@ -388,7 +408,7 @@ func TestWaitForBackup_RecordsServerJob(t *testing.T) {
 	}
 }
 
-func TestWaitForBackup_StatusLookup(t *testing.T) {
+func TestBackupJob_Wait_StatusLookup(t *testing.T) {
 	t.Parallel()
 
 	complete := &infomodels.ResponseBackupState{JobID: fullID, Namespace: "test", State: infomodels.BackupStateComplete}
@@ -415,7 +435,7 @@ func TestWaitForBackup_StatusLookup(t *testing.T) {
 				func() (*infomodels.ResponseBackupState, error) { return nil, errors.New("timeout") },
 			},
 			wantAbort: true,
-			wantErr:   "failed to get server backup status: timeout",
+			wantErr:   "failed to get status of server backup " + fullID + ": timeout",
 		},
 	}
 
@@ -435,7 +455,7 @@ func TestWaitForBackup_StatusLookup(t *testing.T) {
 			gomock.InOrder(calls...)
 			operation := newBackupOperation(func() {})
 
-			err := waitForBackup(t.Context(), infoClient, fullID, operation, slog.New(slog.DiscardHandler))
+			err := newTestBackupJob(infoClient, operation).Wait(t.Context())
 
 			if tt.wantErr == "" {
 				require.NoError(t, err)
@@ -447,7 +467,7 @@ func TestWaitForBackup_StatusLookup(t *testing.T) {
 	}
 }
 
-func TestWaitForBackup_Canceled_AbortRefused(t *testing.T) {
+func TestBackupJob_Wait_Canceled_AbortRefused(t *testing.T) {
 	t.Parallel()
 
 	// The job's status is not looked up: the abort did not reach it.
@@ -457,13 +477,13 @@ func TestWaitForBackup_Canceled_AbortRefused(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	err := waitForBackup(ctx, infoClient, fullID, operation, slog.New(slog.DiscardHandler))
+	err := newTestBackupJob(infoClient, operation).Wait(ctx)
 
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Empty(t, operation.Status().Server.Jobs)
 }
 
-func TestWaitForBackup_Canceled_RecordsAbortedJob(t *testing.T) {
+func TestBackupJob_Wait_Canceled_RecordsAbortedJob(t *testing.T) {
 	t.Parallel()
 	infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
 	// The server reports the abort origin once the abort has ended the job.
@@ -480,7 +500,7 @@ func TestWaitForBackup_Canceled_RecordsAbortedJob(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	err := waitForBackup(ctx, infoClient, fullID, operation, slog.New(slog.DiscardHandler))
+	err := newTestBackupJob(infoClient, operation).Wait(ctx)
 
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Equal(t, []model.ServerBackupJob{
@@ -496,9 +516,9 @@ func TestBackupOperation_ServerJobs_OnePerJob(t *testing.T) {
 		return &infomodels.ResponseBackupState{JobID: jobID, Namespace: namespace, State: state}
 	}
 
-	operation.report(status(fullID, "bar", infomodels.BackupStateInit))
-	operation.report(status(fullID, "bar", infomodels.BackupStateComplete))
-	operation.report(status(incr1ID, "baz", infomodels.BackupStateFailed))
+	operation.record(status(fullID, "bar", infomodels.BackupStateInit))
+	operation.record(status(fullID, "bar", infomodels.BackupStateComplete))
+	operation.record(status(incr1ID, "baz", infomodels.BackupStateFailed))
 
 	assert.Equal(t, []model.ServerBackupJob{
 		{JobID: fullID, Namespace: "bar", State: "COMPLETE"},
@@ -512,7 +532,7 @@ func TestBackupOperation_ReportsProgress(t *testing.T) {
 
 	// The server reports percent, the operation a fraction, and no scan slot: it counts no records.
 	for _, percent := range []float64{0, 42.7, 95, 100} {
-		operation.report(&infomodels.ResponseBackupState{JobID: fullID, ProgressPct: percent})
+		operation.record(&infomodels.ResponseBackupState{JobID: fullID, ProgressPct: percent})
 
 		run := operation.Status()
 		assert.InDelta(t, percent/100, run.Progress, 1e-9, "progress %v", percent)
@@ -520,18 +540,8 @@ func TestBackupOperation_ReportsProgress(t *testing.T) {
 	}
 }
 
-// shortenLostJobTimeout shortens lostJobTimeout for the test. The test must not be parallel:
-// parallel tests start only once the sequential ones have ended, so none reads it meanwhile.
-func shortenLostJobTimeout(t *testing.T) {
-	t.Helper()
-
-	previous := lostJobTimeout
-	lostJobTimeout = 1500 * time.Millisecond
-	t.Cleanup(func() { lostJobTimeout = previous })
-}
-
 //nolint:paralleltest // shortens lostJobTimeout, which the parallel tests read.
-func TestWaitForBackup_LostJob(t *testing.T) {
+func TestBackupJob_Wait_LostJob(t *testing.T) {
 	shortenLostJobTimeout(t)
 
 	tests := []struct {
@@ -573,8 +583,7 @@ func TestWaitForBackup_LostJob(t *testing.T) {
 			}
 			gomock.InOrder(calls...)
 
-			err := waitForBackup(t.Context(), infoClient, fullID, newBackupOperation(func() {}),
-				slog.New(slog.DiscardHandler))
+			err := newTestBackupJob(infoClient, newBackupOperation(func() {})).Wait(t.Context())
 
 			if tt.wantErr == "" {
 				require.NoError(t, err)
@@ -583,4 +592,9 @@ func TestWaitForBackup_LostJob(t *testing.T) {
 			require.EqualError(t, err, tt.wantErr)
 		})
 	}
+}
+
+// newTestBackupJob returns the backup job fullID, which records its statuses in operation.
+func newTestBackupJob(infoClient *aerospike.MockInfoGetter, operation *backupOperation) *backupJob {
+	return &backupJob{infoClient: infoClient, jobID: fullID, operation: operation, logger: discardLogger}
 }

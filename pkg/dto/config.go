@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // Config represents the service configuration file.
@@ -151,20 +152,31 @@ func (c *Config) validateServerMode() error {
 			return fmt.Errorf("backup routine '%s' validation error: %w: storage %q is not S3 storage, "+
 				"which backup-mode %q requires", name, errInvalidValue, routine.Storage, model.BackupModeServer)
 		}
-		if err := rejectServerUnsupported(fmt.Sprintf("backup routine '%s'", name),
-			serverOption{"rack-list", len(routine.RackList) > 0},
-			serverOption{"partition-list", routine.PartitionList != ""},
-			serverOption{"node-list", len(routine.NodeList) > 0},
+		if err := rejectOptions(fmt.Sprintf("backup routine '%s'", name), unsupportedInServerMode,
+			option{"rack-list", len(routine.RackList) > 0},
+			option{"partition-list", routine.PartitionList != ""},
+			option{"node-list", len(routine.NodeList) > 0},
 		); err != nil {
 			return err
 		}
 	}
 
 	for name, policy := range c.BackupPolicies {
-		if err := rejectServerUnsupported(fmt.Sprintf("policy '%s'", name),
-			serverOption{"bandwidth", policy.Bandwidth != nil},
-			serverOption{"encryption", encrypts(policy.EncryptionPolicy.ToModel())},
-			serverOption{"compression", compresses(policy.CompressionPolicy.ToModel())},
+		if policy == nil { // an empty policy sets nothing.
+			continue
+		}
+		if err := rejectOptions(fmt.Sprintf("policy '%s'", name), unsupportedInServerMode,
+			option{"bandwidth", policy.Bandwidth != nil},
+			option{"encryption", encrypts(policy.EncryptionPolicy.ToModel())},
+			option{"compression", compresses(policy.CompressionPolicy.ToModel())},
+			option{"no-records", ptr.ValueOrZero(policy.NoRecords)},
+			option{"compact", ptr.ValueOrZero(policy.Compact)},
+			option{"file-limit", policy.FileLimit != nil},
+			option{"max-concurrent-nodes", policy.MaxConcurrentNodes != nil},
+			option{"retry-policy", policy.RetryPolicy != nil},
+			option{"retention", policy.RetentionPolicy != nil},
+			option{"socket-timeout", policy.SocketTimeout != nil},
+			option{"total-timeout", policy.TotalTimeout != nil},
 		); err != nil {
 			return err
 		}

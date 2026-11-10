@@ -113,9 +113,7 @@ func InitComponents(
 	var routineStorage u.LockMap
 
 	// components that are specific to mode - server/scan backup
-	components := newComponentsForMode(
-		config, pathService, operations, s3Accessor, clientManager, &routineStorage, appLogger,
-	)
+	components := newComponentsForMode(config, pathService, operations, s3Accessor, clientManager, &routineStorage)
 
 	completionHandler := service.NewBackupCompletionHandler(
 		components.registry,
@@ -235,10 +233,9 @@ func newComponentsForMode(
 	s3Clients serverbackup.S3ClientProvider,
 	clientManager aerospike.ClientManager,
 	routineStorage *u.LockMap,
-	logger *slog.Logger,
 ) backupMode {
 	if config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == model.BackupModeServer {
-		return newServerBackupMode(config, s3Clients, clientManager, logger)
+		return newServerBackupMode(config, s3Clients, clientManager)
 	}
 
 	return newScanBackupMode(config, pathService, operations, clientManager, routineStorage)
@@ -282,9 +279,8 @@ func newServerBackupMode(
 	config *model.Config,
 	s3Clients serverbackup.S3ClientProvider,
 	clientManager aerospike.ClientManager,
-	logger *slog.Logger,
 ) backupMode {
-	catalog := serverbackup.NewCatalog(s3Clients, logger)
+	catalog := serverbackup.NewCatalog(s3Clients)
 	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config)
 
 	return backupMode{

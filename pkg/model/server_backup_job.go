@@ -18,7 +18,7 @@ type ServerBackupJob struct {
 	FinishTime      *time.Time
 	RecordsBackedUp uint64
 	BytesBackedUp   uint64
-	// RecordsReadFailed counts records the server could not read: a complete job that has any
-	// is missing them.
+	// RecordsReadFailed counts the records the server could not read. When it is above zero the
+	// backup lacks those records, even if the job's state is COMPLETE.
 	RecordsReadFailed uint64
 }

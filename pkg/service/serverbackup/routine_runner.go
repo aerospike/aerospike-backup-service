@@ -21,11 +21,8 @@ import (
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
-// abortTimeout bounds the wait for an aborted server job to end.
-const abortTimeout = 30 * time.Second
-
-// routineRunner backs a routine up by asking the server to run one backup job per
-// namespace. The jobs run one after another: the server runs a single job at a time.
+// routineRunner backs a routine up by asking the server to run one backup job per namespace.
+// The jobs run one after another, because the server runs one backup job at a time.
 type routineRunner struct {
 	clientManager     aerospike.ClientManager
 	namespaceResolver aerospike.NamespaceResolver
@@ -95,6 +92,12 @@ func (r *routineRunner) backupNamespaces(
 
 	var errs error
 	for _, namespace := range namespaces {
+		// StartBackup is sent even when ctx is already canceled, so stop here instead of starting
+		// another job.
+		if err := ctx.Err(); err != nil {
+			return errors.Join(errs, err)
+		}
+
 		modifiedAfter := lowerBound(bounds, namespace)
 		err := r.backupNamespace(ctx, infoClient, routine, runSpec, modifiedAfter, namespace, operation, logger)
 		if err != nil {
@@ -126,7 +129,8 @@ func (r *routineRunner) backupNamespace(
 		return err
 	}
 
-	// A limit the policy leaves unset is zero, which the request omits: the server's default applies.
+	// An unset limit is sent as zero. The info client leaves zero fields out of the command, so
+	// the server uses its own default.
 	policy := routine.BackupPolicy
 	jobID, err := infoClient.StartBackup(ctx, &infomodels.RequestBackup{
 		RequestCommon:       common,
@@ -137,10 +141,12 @@ func (r *routineRunner) backupNamespace(
 		BackupWorkerThreads: ptr.ValueOrZero(policy.Parallel),
 		BackupUploadThreads: ptr.ValueOrZero(policy.ParallelWrite),
 	})
+
+	job := &backupJob{infoClient: infoClient, jobID: jobID, operation: operation, logger: logger}
 	if err != nil {
 		if errors.Is(err, asinfo.ErrOutcomeUnknown) {
-			// The server may have started the job though the start failed.
-			abortJob(context.WithoutCancel(ctx), infoClient, jobID, operation, logger)
+			// The server may have started the job even though the start failed.
+			job.abort(context.WithoutCancel(ctx))
 		}
 
 		return fmt.Errorf("failed to start server backup: %w", err)
@@ -148,53 +154,48 @@ func (r *routineRunner) backupNamespace(
 
 	logger.Info("Server backup started", slog.String("namespace", namespace), slog.String("jobId", jobID))
 
-	return waitForBackup(ctx, infoClient, jobID, operation, logger)
+	return job.Wait(ctx)
 }
 
-// waitForBackup waits for the job to end. A wait that fails, a canceled ctx included, aborts the
-// job on the server.
-func waitForBackup(
-	ctx context.Context,
-	infoClient backup.ServerBackupInfo,
-	jobID string,
-	operation *backupOperation,
-	logger *slog.Logger,
-) error {
-	status, err := pollBackup(ctx, infoClient, jobID, operation)
+// backupJob follows one server backup job from its start to its end.
+type backupJob struct {
+	infoClient backup.ServerBackupInfo
+	jobID      string
+	// operation receives each status of the job.
+	operation *backupOperation
+	logger    *slog.Logger
+}
+
+// Wait waits for the job to end. If the wait fails, or ctx is canceled, Wait aborts the job
+// before it returns.
+func (j *backupJob) Wait(ctx context.Context) error {
+	status, err := j.poll(ctx)
 	if err != nil {
-		// The job may still run on the server: abort it, even when ctx is canceled, so it does not
-		// hold the cluster's backup slot after the run has given up on it.
-		abortJob(context.WithoutCancel(ctx), infoClient, jobID, operation, logger)
+		// The job may still be running on the server. The abort does not use ctx, because a
+		// canceled job would otherwise keep the cluster's backup slot.
+		j.abort(context.WithoutCancel(ctx))
 		return err
 	}
 
 	switch status.State {
 	case infomodels.BackupStateFailed:
-		return errJobEnded(backupJobName, jobID, "failed", status.AbortOrigin, status.ErrorReason)
+		return errJobEnded(backupJobKind, j.jobID, "failed", status.AbortOrigin, status.ErrorReason)
 	case infomodels.BackupStateAborted:
-		return errJobEnded(backupJobName, jobID, "was aborted", status.AbortOrigin, status.ErrorReason)
+		return errJobEnded(backupJobKind, j.jobID, "was aborted", status.AbortOrigin, status.ErrorReason)
 	default:
 		return nil
 	}
 }
 
-// backupJobName names a server backup job in errors.
-const backupJobName = "server backup"
-
-// pollBackup polls the job, recording each status in operation, until the job ends, and
-// returns its final status.
-func pollBackup(
-	ctx context.Context,
-	infoClient backup.ServerBackupInfo,
-	jobID string,
-	operation *backupOperation,
-) (*infomodels.ResponseBackupState, error) {
+// poll polls the job until it ends and returns its final status. Each status is recorded in the
+// operation.
+func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, error) {
 	fetch := func(ctx context.Context) (*infomodels.ResponseBackupState, error) {
-		return infoClient.GetBackupStatus(ctx, jobID)
+		return j.infoClient.GetBackupStatus(ctx, j.jobID)
 	}
 
-	return pollJob(ctx, backupJobName, jobID, fetch, func(status *infomodels.ResponseBackupState) (bool, error) {
-		operation.report(status)
+	return pollJob(ctx, backupJobKind, j.jobID, fetch, func(status *infomodels.ResponseBackupState) (bool, error) {
+		j.operation.record(status)
 
 		switch status.State {
 		case infomodels.BackupStateComplete, infomodels.BackupStateFailed, infomodels.BackupStateAborted:
@@ -205,32 +206,26 @@ func pollBackup(
 	})
 }
 
-// abortJob aborts the job on the server and waits, up to abortTimeout, for the abort to end it,
-// so the job is recorded as the server ends it.
-func abortJob(
-	ctx context.Context,
-	infoClient backup.ServerBackupInfo,
-	jobID string,
-	operation *backupOperation,
-	logger *slog.Logger,
-) {
-	if err := infoClient.AbortBackup(ctx, jobID); err != nil {
-		logger.Warn("Failed to abort server backup", slog.String("jobId", jobID), attr.Error(err))
+// abort aborts the job on the server and waits up to cleanupTimeout for it to end, so that the
+// operation holds the job's final status and abort origin.
+func (j *backupJob) abort(ctx context.Context) {
+	if err := j.infoClient.AbortBackup(ctx, j.jobID); err != nil {
+		j.logger.Warn("Failed to abort server backup", slog.String("jobId", j.jobID), attr.Error(err))
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, abortTimeout)
+	ctx, cancel := context.WithTimeout(ctx, cleanupTimeout)
 	defer cancel()
 
-	if _, err := pollBackup(ctx, infoClient, jobID, operation); err != nil {
-		logger.Warn("Aborted server backup did not end", slog.String("jobId", jobID), attr.Error(err))
+	if _, err := j.poll(ctx); err != nil {
+		j.logger.Warn("Aborted server backup did not end", slog.String("jobId", j.jobID), attr.Error(err))
 	}
 }
 
-// lowerBounds returns, per namespace, where an incremental backup of it starts: where the
-// namespace's own last backup it builds on ends, its last full backup in the cumulative mode,
-// else its last backup of either type. A full backup has no lower bound. The storage is read
-// once per run: a namespace's backup in this run never moves another namespace's bound.
+// lowerBounds returns, per namespace, the time an incremental backup of it starts from: the time
+// of the namespace's last full backup in the cumulative mode, otherwise of its last backup of
+// either type. A namespace with no backup has no entry. A full backup has no lower bound, so the
+// map is nil. The storage is listed once for all namespaces of the run.
 func (r *routineRunner) lowerBounds(
 	ctx context.Context,
 	routine *model.BackupRoutine,
@@ -280,8 +275,8 @@ func unixSeconds(t *time.Time) string {
 	return strconv.FormatInt(t.Unix(), 10)
 }
 
-// backupOperation is the handle of a routine's server backup run. The run itself happens
-// in the routine runner; the operation only reports its progress, outcome and server jobs.
+// backupOperation is the handle of a routine's server backup run. The routine runner does the
+// run. The operation reports the run's progress, outcome and server jobs.
 type backupOperation struct {
 	cancel    context.CancelFunc
 	startTime time.Time
@@ -305,8 +300,14 @@ func newBackupOperation(cancel context.CancelFunc) *backupOperation {
 	}
 }
 
-// report records the latest status of a job, whose progress is the progress of the run.
-func (o *backupOperation) report(status *infomodels.ResponseBackupState) {
+// finish records the outcome of the run.
+func (o *backupOperation) finish(err error) {
+	o.err = err
+	close(o.done)
+}
+
+// record stores the latest status of a job. The progress of that job is the progress of the run.
+func (o *backupOperation) record(status *infomodels.ResponseBackupState) {
 	job := newServerBackupJob(status)
 
 	o.mu.Lock()
@@ -321,8 +322,8 @@ func (o *backupOperation) report(status *infomodels.ResponseBackupState) {
 	o.jobs = append(o.jobs, job)
 }
 
-// Status is a snapshot of the run: the progress of the job running now, as the server reports it,
-// and the server jobs of the run. The server counts no records to back up, so there is no scan slot.
+// Status returns a snapshot of the run: the progress the server reports for the job running now,
+// and the server jobs of the run. The server counts no records to back up, so Scan stays nil.
 func (o *backupOperation) Status() *model.BackupRun {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -332,6 +333,21 @@ func (o *backupOperation) Status() *model.BackupRun {
 		Progress:  o.progressPct / 100,
 		Server:    &model.ServerProgress{Jobs: slices.Clone(o.jobs)},
 	}
+}
+
+// Wait waits for every namespace job of the run to end.
+func (o *backupOperation) Wait(ctx context.Context) error {
+	select {
+	case <-o.done:
+		return o.err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// Cancel aborts the running namespace job and skips the remaining ones.
+func (o *backupOperation) Cancel() {
+	o.cancel()
 }
 
 func newServerBackupJob(status *infomodels.ResponseBackupState) model.ServerBackupJob {
@@ -355,24 +371,4 @@ func nonZeroTime(t time.Time) *time.Time {
 	}
 
 	return &t
-}
-
-func (o *backupOperation) finish(err error) {
-	o.err = err
-	close(o.done)
-}
-
-// Wait waits for every namespace job of the run to end.
-func (o *backupOperation) Wait(ctx context.Context) error {
-	select {
-	case <-o.done:
-		return o.err
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-// Cancel aborts the running namespace job and skips the remaining ones.
-func (o *backupOperation) Cancel() {
-	o.cancel()
 }

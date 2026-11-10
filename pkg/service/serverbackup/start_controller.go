@@ -11,8 +11,8 @@ import (
 
 var errClusterBusy = fmt.Errorf("%w: a server backup is already running on the cluster", service.ErrBackupSkipped)
 
-// startController adds a per-cluster gate to the routine's own start rules: the server runs a
-// single backup job at a time, whatever routine asks for it.
+// startController adds a per-cluster gate to the routine's own start rules, because the server
+// runs one backup job at a time, whichever routine asks for it.
 type startController struct {
 	routineGate service.StartController
 
@@ -54,17 +54,17 @@ func (c *startController) TryStart(
 	}
 	c.active[key] = struct{}{}
 
-	return sync.OnceFunc(func() {
+	return func() {
 		c.mu.Lock()
 		delete(c.active, key)
 		c.mu.Unlock()
 
 		releaseRoutine()
-	}), nil
+	}, nil
 }
 
-// HasBackupRunning reports whether the routine itself runs a backup: the cluster gate holds no
-// routine's backup but its own.
+// HasBackupRunning reports whether the routine itself runs a backup. Another routine's backup on
+// the same cluster does not count.
 func (c *startController) HasBackupRunning(routine *model.BackupRoutine) bool {
 	return c.routineGate.HasBackupRunning(routine)
 }

@@ -71,13 +71,14 @@ const (
 const (
 	gapRecordCount  = "server-side backup gap: a server backup's metadata records no record count"
 	gapIndexCount   = "server-side backup gap: ABS does not read the index count of a server backup"
-	gapRestoreStats = "server-side backup gap: a server restore job reports no record or index counts"
-	gapEmptyIncr    = "server-side backup gap: an incremental backup with no changes is written, listed " +
+	gapRestoreStats = "server-side backup gap: ABS reports the read and skipped record counts of a server " +
+		"restore, not the inserted or index counts"
+	gapEmptyIncr = "server-side backup gap: an incremental backup with no changes is written, listed " +
 		"and counted as the last incremental"
 	gapEmptyRestore = "server bug: a restore of a backup with no records fails, " +
 		"the server takes its zero partition manifests for a failed fetch"
-	gapNamespaceMapping = "server bug: a restore into another namespace reads the backup under the " +
-		"destination namespace, finds nothing there and fails"
+	gapNamespaceMapping = "server-side backup gap: ABS rejects a restore into another namespace, because " +
+		"the server reads the backup under the destination namespace and finds nothing"
 	gapRoutineGate = "server-side backup gap: a second routine on the same cluster is skipped while a backup " +
 		"of another routine runs"
 )
@@ -161,6 +162,8 @@ func (s *ServerBuildSuite) serverBackupConfig(c *dto.Config) {
 		Path: dto.Path(strings.ReplaceAll(s.T().Name(), "/", "-")),
 	}}
 	c.BackupRoutines[routineName].Namespaces = new([]dto.NamespaceName{serverNamespace})
+	// The server keeps every backup: server mode rejects a retention policy.
+	c.BackupPolicies[policyName].RetentionPolicy = nil
 }
 
 // startServerBuild starts a single-node cluster from the asd binary and feature key file on
@@ -473,14 +476,7 @@ func statusRows(response string) map[string]map[string]string {
 // destinationIndexes returns the info response describing the secondary indexes of
 // serverNamespace on the destination cluster.
 func (s *ServerBuildSuite) destinationIndexes() string {
-	node, err := s.destinationClient.Cluster().GetRandomNode()
-	s.Require().NoError(err)
-
-	command := "sindex-list:ns=" + serverNamespace
-	response, err := node.RequestInfo(as.NewInfoPolicy(), command)
-	s.Require().NoError(err)
-
-	return response[command]
+	return s.info(s.destinationClient, "sindex-list:ns="+serverNamespace)
 }
 
 // assertServerBackupDetails checks the fields a full server backup of serverNamespace reports

@@ -3437,7 +3437,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "last-full-jobs": {
-                    "description": "LastFullJobs: the server jobs of the last finished full backup, one per namespace, whatever\nits outcome. Only reported in the server backup mode, and kept in memory: empty until the\nfirst full backup since the service started has ended.",
+                    "description": "LastFullJobs: the server jobs of the last finished full backup, one per namespace, whether it\nsucceeded or not. Reported only in the server backup mode. The list is kept in memory, so it\nis empty after a restart until a full backup finishes.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/dto.ServerBackupJob"
@@ -3448,7 +3448,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "last-incremental-jobs": {
-                    "description": "LastIncrementalJobs: the server jobs of the last finished incremental backup, as LastFullJobs.",
+                    "description": "LastIncrementalJobs: the same for the last finished incremental backup.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/dto.ServerBackupJob"
@@ -3799,7 +3799,7 @@ const docTemplate = `{
                     "example": 1000
                 },
                 "records-read-failed": {
-                    "description": "The number of records the server could not read: a complete job that has any is missing them.",
+                    "description": "The number of records the server could not read. When it is above zero the backup lacks\nthose records, even if the job's state is COMPLETE.",
                     "type": "integer",
                     "example": 0
                 },

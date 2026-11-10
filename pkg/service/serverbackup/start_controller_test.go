@@ -65,7 +65,7 @@ func TestStartController_TryStart(t *testing.T) {
 		require.NoError(t, err, "a denied start holds no cluster")
 	})
 
-	t.Run("release frees the cluster and the routine once", func(t *testing.T) {
+	t.Run("release frees the cluster and the routine", func(t *testing.T) {
 		t.Parallel()
 		routineGate := service.NewMockStartController(gomock.NewController(t))
 		released := 0
@@ -75,7 +75,6 @@ func TestStartController_TryStart(t *testing.T) {
 		c := NewStartController(routineGate)
 		release, err := c.TryStart(first, now, model.BackupTypeFull)
 		require.NoError(t, err)
-		release()
 		release()
 		assert.Equal(t, 1, released)
 
