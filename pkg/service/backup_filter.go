@@ -148,6 +148,11 @@ func (p *PathFilter) String() string {
 		p.path, p.storage.String(), p.timeBounds().String())
 }
 
+// RoutineName returns the name of the routine whose backups the filter selects.
+func (f *RoutineFilter) RoutineName() string {
+	return f.routineName
+}
+
 // Storage returns the storage the routine writes its backups to.
 func (f *RoutineFilter) Storage() model.Storage {
 	return f.storage

@@ -83,9 +83,15 @@ func (r *routineRunner) backupNamespaces(
 	namespaces []string,
 	logger *slog.Logger,
 ) error {
+	bounds, err := r.lowerBounds(ctx, routine, runSpec.Type)
+	if err != nil {
+		return err
+	}
+
 	var errs error
 	for _, namespace := range namespaces {
-		if err := r.backupNamespace(ctx, infoClient, routine, runSpec, namespace, logger); err != nil {
+		modifiedAfter := lowerBound(bounds, namespace)
+		if err := r.backupNamespace(ctx, infoClient, routine, runSpec, modifiedAfter, namespace, logger); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("namespace %s: %w", namespace, err))
 		}
 	}
@@ -98,15 +104,11 @@ func (r *routineRunner) backupNamespace(
 	infoClient backup.ServerBackupInfo,
 	routine *model.BackupRoutine,
 	runSpec model.BackupRunSpec,
+	modifiedAfter *time.Time,
 	namespace string,
 	logger *slog.Logger,
 ) error {
-	common, err := withStorage(infomodels.RequestCommon{Namespace: namespace}, routine.Storage)
-	if err != nil {
-		return err
-	}
-
-	modifiedAfter, err := r.modifiedAfter(ctx, routine, runSpec.Type, namespace)
+	common, err := withStorage(infomodels.RequestCommon{Namespace: namespace}, routine.Storage, routine.Name)
 	if err != nil {
 		return err
 	}
@@ -117,6 +119,11 @@ func (r *routineRunner) backupNamespace(
 		ModifiedBefore: unixSeconds(runSpec.TimeBounds.ToTime),
 	})
 	if err != nil {
+		if errors.Is(err, asinfo.ErrOutcomeUnknown) {
+			// The server may have started the job though the start failed.
+			abortBackup(ctx, infoClient, jobID, logger)
+		}
+
 		return fmt.Errorf("failed to start server backup: %w", err)
 	}
 
@@ -130,11 +137,7 @@ func (r *routineRunner) backupNamespace(
 func waitForBackup(ctx context.Context, infoClient backup.ServerBackupInfo, jobID string, logger *slog.Logger) error {
 	status, err := pollBackup(ctx, infoClient, jobID)
 	if err != nil {
-		// The job may still run on the server: abort it, even when ctx is canceled, so it does not
-		// hold the cluster's backup slot after the run has given up on it.
-		if abortErr := infoClient.AbortBackup(context.WithoutCancel(ctx), jobID); abortErr != nil {
-			logger.Warn("Failed to abort server backup", slog.String("jobId", jobID), attr.Error(abortErr))
-		}
+		abortBackup(ctx, infoClient, jobID, logger)
 
 		return err
 	}
@@ -149,6 +152,15 @@ func waitForBackup(ctx context.Context, infoClient backup.ServerBackupInfo, jobI
 	}
 }
 
+// abortBackup aborts a job the run has given up on, which may still run on the server. It aborts
+// even when ctx is canceled, so that the job does not hold the cluster's backup slot. A failed
+// abort is only logged: the run fails anyway.
+func abortBackup(ctx context.Context, infoClient backup.ServerBackupInfo, jobID string, logger *slog.Logger) {
+	if err := infoClient.AbortBackup(context.WithoutCancel(ctx), jobID); err != nil {
+		logger.Warn("Failed to abort server backup", slog.String("jobId", jobID), attr.Error(err))
+	}
+}
+
 // pollBackup polls the job until it ends, and returns its final status.
 func pollBackup(
 	ctx context.Context,
@@ -158,6 +170,7 @@ func pollBackup(
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
+	seen := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -166,12 +179,15 @@ func pollBackup(
 		}
 
 		status, err := infoClient.GetBackupStatus(ctx, jobID)
-		if errors.Is(err, asinfo.ErrNotFound) {
-			continue // the job is not visible on the cluster yet.
+		if errors.Is(err, asinfo.ErrNotFound) && !seen {
+			// The job is not visible on every node yet. Once it has been, a node that does not
+			// know it (one that joined or restarted) means the job can no longer be followed.
+			continue
 		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to get server backup status: %w", err)
 		}
+		seen = true
 
 		switch status.State {
 		case infomodels.BackupStateComplete, infomodels.BackupStateFailed, infomodels.BackupStateAborted:
@@ -181,16 +197,15 @@ func pollBackup(
 	}
 }
 
-// modifiedAfter returns the lower bound of a backup of namespace: none for a full backup. An
-// incremental backup starts where the namespace's own last backup it builds on started: its last
-// full backup in the cumulative mode, else its last backup of either type. The namespaces of a
-// routine are backed up one after another, so each has a bound of its own.
-func (r *routineRunner) modifiedAfter(
+// lowerBounds returns, per namespace, where an incremental backup of it starts: where the
+// namespace's own last backup it builds on ends, its last full backup in the cumulative mode,
+// else its last backup of either type. A full backup has no lower bound. The storage is read
+// once per run: a namespace's backup in this run never moves another namespace's bound.
+func (r *routineRunner) lowerBounds(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	backupType model.BackupType,
-	namespace string,
-) (*time.Time, error) {
+) (map[string]time.Time, error) {
 	if backupType == model.BackupTypeFull {
 		return nil, nil
 	}
@@ -200,21 +215,31 @@ func (r *routineRunner) modifiedAfter(
 		filters = append(filters, service.NewIncrementalBackupFilter(routine))
 	}
 
-	var last *time.Time
+	bounds := make(map[string]time.Time)
 	for _, filter := range filters {
 		backups, err := r.backupReader.GetBackups(ctx, filter)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read the last backup of namespace %s: %w", namespace, err)
+			return nil, fmt.Errorf("failed to read the last backups of routine %s: %w", routine.Name, err)
 		}
 
 		for _, b := range backups {
-			if b.Namespace == namespace && (last == nil || b.Created.After(*last)) {
-				last = &b.Created
+			if last, ok := bounds[b.Namespace]; !ok || b.Created.After(last) {
+				bounds[b.Namespace] = b.Created
 			}
 		}
 	}
 
-	return last, nil
+	return bounds, nil
+}
+
+// lowerBound returns the namespace's bound in bounds, or none if it has no backup to build on.
+func lowerBound(bounds map[string]time.Time, namespace string) *time.Time {
+	bound, ok := bounds[namespace]
+	if !ok {
+		return nil
+	}
+
+	return &bound
 }
 
 func unixSeconds(t *time.Time) string {

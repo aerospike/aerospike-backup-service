@@ -35,9 +35,9 @@ func NewRestoreExecutor(backupReader service.BackupReader) restoreexecutor.Resto
 }
 
 // Run starts, in the background, one server restore job that applies the backups of the requests
-// in the order given, the full backup first; each request names one backup by its job id in
-// BackupDataPath. The requests share their storage, so the first one stands for all.
-// Every failure, including one to start, comes from the handler's Wait.
+// in the order given, the full backup first; each request names one backup by its key in
+// BackupDataPath. The requests share their storage, routine and policy, so the first one stands
+// for all. Every failure, including one to start, comes from the handler's Wait.
 func (r *restoreExecutor) Run(
 	ctx context.Context,
 	client aerospike.Client,
@@ -61,12 +61,7 @@ func (r *restoreExecutor) restore(
 	logger *slog.Logger,
 	requests []*model.RestoreRequest,
 ) error {
-	backupIDs := make([]string, 0, len(requests))
-	for _, request := range requests {
-		backupIDs = append(backupIDs, request.BackupDataPath)
-	}
-
-	job, err := r.start(ctx, client, requests[0].SourceStorage, backupIDs)
+	job, err := r.start(ctx, client, requests)
 	if err != nil {
 		return err
 	}
@@ -76,20 +71,31 @@ func (r *restoreExecutor) restore(
 	return job.Wait(ctx)
 }
 
-// start starts a server restore job of backupIDs, oldest first, from storage, and returns the job
+// start starts a server restore job of the requests' backups, oldest first, and returns the job
 // to follow.
 func (r *restoreExecutor) start(
 	ctx context.Context,
 	client aerospike.Client,
-	storage model.Storage,
-	backupIDs []string,
+	requests []*model.RestoreRequest,
 ) (*restoreJob, error) {
-	namespace, err := r.namespaceOf(ctx, storage, backupIDs[0])
+	first := requests[0]
+	routineName, backupIDs, err := jobIDsOf(requests)
 	if err != nil {
 		return nil, err
 	}
 
-	common, err := withStorage(infomodels.RequestCommon{Namespace: namespace}, storage)
+	namespace, err := r.namespaceOf(ctx, first.SourceStorage, first.BackupDataPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// The server writes into the namespace the backup was taken from: refuse a remap rather than
+	// write into a namespace the request left out.
+	if destination := first.Policy.Namespace.DestinationOr(namespace); destination != namespace {
+		return nil, fmt.Errorf("server restore cannot restore namespace %s into %s", namespace, destination)
+	}
+
+	common, err := withStorage(infomodels.RequestCommon{Namespace: namespace}, first.SourceStorage, routineName)
 	if err != nil {
 		return nil, err
 	}
@@ -100,21 +106,48 @@ func (r *restoreExecutor) start(
 		BackupIDs:     strings.Join(backupIDs, ","),
 		Policy:        infomodels.RestorePolicyFuzzy,
 	})
+	job := &restoreJob{infoClient: infoClient, namespace: namespace, jobID: jobID}
 	if err != nil {
-		return nil, fmt.Errorf("failed to start server restore: %w", err)
+		startErr := fmt.Errorf("failed to start server restore: %w", err)
+		if !errors.Is(err, asinfo.ErrOutcomeUnknown) {
+			return nil, startErr
+		}
+
+		// The server may have started the job though the start failed.
+		return nil, errors.Join(startErr, job.abort(ctx))
 	}
 
-	return &restoreJob{infoClient: infoClient, namespace: namespace, jobID: jobID}, nil
+	return job, nil
 }
 
-// namespaceOf returns the namespace backupID was taken from, which the restore writes into.
-func (r *restoreExecutor) namespaceOf(ctx context.Context, storage model.Storage, backupID string) (string, error) {
-	backups, err := r.backupReader.GetBackups(ctx, service.NewPathFilter(backupID, storage))
+// jobIDsOf returns the routine whose folder holds the requests' backups, and their job ids in the
+// requests' order. A chain is backed up by one routine, so the first key names the routine.
+func jobIDsOf(requests []*model.RestoreRequest) (string, []string, error) {
+	routineName, _, err := parseBackupKey(requests[0].BackupDataPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to read server backup %s: %w", backupID, err)
+		return "", nil, err
+	}
+
+	jobIDs := make([]string, 0, len(requests))
+	for _, request := range requests {
+		_, jobID, err := parseBackupKey(request.BackupDataPath)
+		if err != nil {
+			return "", nil, err
+		}
+		jobIDs = append(jobIDs, jobID)
+	}
+
+	return routineName, jobIDs, nil
+}
+
+// namespaceOf returns the namespace the backup at key was taken from.
+func (r *restoreExecutor) namespaceOf(ctx context.Context, storage model.Storage, key string) (string, error) {
+	backups, err := r.backupReader.GetBackups(ctx, service.NewPathFilter(key, storage))
+	if err != nil {
+		return "", fmt.Errorf("failed to read server backup %s: %w", key, err)
 	}
 	if len(backups) == 0 {
-		return "", fmt.Errorf("server backup %s not found", backupID)
+		return "", fmt.Errorf("server backup %s not found", key)
 	}
 
 	return backups[0].Namespace, nil
@@ -184,11 +217,17 @@ func (h *restoreJob) Wait(ctx context.Context) error {
 		return nil
 	}
 
-	if abortErr := h.infoClient.AbortRestore(context.WithoutCancel(ctx), h.namespace, h.jobID); abortErr != nil {
-		return errors.Join(err, fmt.Errorf("failed to abort server restore %s: %w", h.jobID, abortErr))
+	return errors.Join(err, h.abort(ctx))
+}
+
+// abort aborts the job, even when ctx is canceled, so that it stops writing into the namespace.
+// A failed abort is returned: the job may still be writing.
+func (h *restoreJob) abort(ctx context.Context) error {
+	if err := h.infoClient.AbortRestore(context.WithoutCancel(ctx), h.namespace, h.jobID); err != nil {
+		return fmt.Errorf("failed to abort server restore %s: %w", h.jobID, err)
 	}
 
-	return err
+	return nil
 }
 
 // awaitComplete polls the restore job until it completes. It fails when the job fails or is
@@ -197,6 +236,7 @@ func (h *restoreJob) awaitComplete(ctx context.Context) error {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
+	seen := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -205,12 +245,15 @@ func (h *restoreJob) awaitComplete(ctx context.Context) error {
 		}
 
 		status, err := h.infoClient.GetRestoreStatus(ctx, h.namespace, h.jobID)
-		if errors.Is(err, asinfo.ErrNotFound) {
-			continue // the job is not visible on the cluster yet.
+		if errors.Is(err, asinfo.ErrNotFound) && !seen {
+			// The job is not visible on every node yet. Once it has been, a node that does not
+			// know it (one that joined or restarted) means the job can no longer be followed.
+			continue
 		}
 		if err != nil {
 			return fmt.Errorf("failed to get server restore status: %w", err)
 		}
+		seen = true
 
 		switch status.State {
 		case infomodels.RestoreStateComplete:

@@ -48,7 +48,7 @@ func (c *catalog) GetBackups(ctx context.Context, filter service.BackupFilter) (
 }
 
 func (c *catalog) getRoutineBackups(ctx context.Context, filter *service.RoutineFilter) ([]model.BackupDetails, error) {
-	backups, err := c.listBackups(ctx, filter.Storage())
+	backups, err := c.listBackups(ctx, filter.Storage(), filter.RoutineName())
 	if err != nil {
 		return nil, err
 	}
@@ -68,24 +68,33 @@ func (c *catalog) getRoutineBackups(ctx context.Context, filter *service.Routine
 	return matching, nil
 }
 
-// getPathBackup reads the backup whose job id is the filter's path.
+// getPathBackup reads the backup whose key is the filter's path.
 func (c *catalog) getPathBackup(ctx context.Context, filter *service.PathFilter) ([]model.BackupDetails, error) {
-	backupLister, err := c.newLister(ctx, filter.Storage())
+	routineName, jobID, err := parseBackupKey(filter.Path())
 	if err != nil {
 		return nil, err
 	}
 
-	metadata, err := backupLister.GetMetadata(ctx, filter.Path())
+	backupLister, err := c.newLister(ctx, filter.Storage(), routineName)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata, err := backupLister.GetMetadata(ctx, jobID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read server backup metadata: %w", err)
 	}
 
-	return []model.BackupDetails{toBackupDetails(metadata, filter.Storage())}, nil
+	return []model.BackupDetails{toBackupDetails(metadata, filter.Storage(), routineName)}, nil
 }
 
-// listBackups returns the completed server backups of the storage, oldest first.
-func (c *catalog) listBackups(ctx context.Context, storage model.Storage) ([]model.BackupDetails, error) {
-	backupLister, err := c.newLister(ctx, storage)
+// listBackups returns the routine's completed server backups in storage, oldest first.
+func (c *catalog) listBackups(
+	ctx context.Context,
+	storage model.Storage,
+	routineName string,
+) ([]model.BackupDetails, error) {
+	backupLister, err := c.newLister(ctx, storage, routineName)
 	if err != nil {
 		return nil, err
 	}
@@ -98,14 +107,15 @@ func (c *catalog) listBackups(ctx context.Context, storage model.Storage) ([]mod
 	backups := make([]model.BackupDetails, 0, len(all))
 	for _, metadata := range all {
 		if metadata.Status == listermodels.BackupStatusComplete {
-			backups = append(backups, toBackupDetails(metadata, storage))
+			backups = append(backups, toBackupDetails(metadata, storage, routineName))
 		}
 	}
 
 	return backups, nil
 }
 
-func (c *catalog) newLister(ctx context.Context, storage model.Storage) (*lister.Lister, error) {
+// newLister returns a lister of the routine's server backups in storage.
+func (c *catalog) newLister(ctx context.Context, storage model.Storage, routineName string) (*lister.Lister, error) {
 	s3Storage, err := toS3Storage(storage)
 	if err != nil {
 		return nil, err
@@ -116,15 +126,17 @@ func (c *catalog) newLister(ctx context.Context, storage model.Storage) (*lister
 		return nil, fmt.Errorf("failed to get S3 client: %w", err)
 	}
 
-	return lister.NewLister(client, s3Storage.Bucket, s3Storage.Path, lister.WithLogger(slog.Default())), nil
+	prefix := routinePath(s3Storage, routineName)
+
+	return lister.NewLister(client, s3Storage.Bucket, prefix, lister.WithLogger(slog.Default())), nil
 }
 
-// toBackupDetails converts server metadata to the details of a backup keyed by its job id. It
-// was created when its job started, at the time in the job id. Its lower time bound, From, is
-// what makes it incremental. The metadata records no finish time and no record, byte, file,
-// secondary index or UDF counts, so they are left at zero, except the file count: it is one,
-// so that restore does not take the backup for an empty one.
-func toBackupDetails(metadata listermodels.Metadata, storage model.Storage) model.BackupDetails {
+// toBackupDetails converts server metadata to the details of a backup of the routine, keyed by
+// its routine and job id. Its lower time bound, From, is what makes it incremental. The metadata
+// records no finish time and no record, byte, file, secondary index or UDF counts, so they are
+// left at zero, except the file count: it is one, so that restore does not take the backup for an
+// empty one.
+func toBackupDetails(metadata listermodels.Metadata, storage model.Storage, routineName string) model.BackupDetails {
 	var from time.Time
 	if metadata.ModifiedAfterUnixS != 0 {
 		from = time.Unix(metadata.ModifiedAfterUnixS, 0).UTC()
@@ -132,16 +144,28 @@ func toBackupDetails(metadata listermodels.Metadata, storage model.Storage) mode
 
 	return model.NewBackupDetails(
 		model.BackupMetadata{
-			Created:     jobIDTime(metadata.BackupID),
+			Created:     createdTime(metadata),
 			From:        from,
 			Namespace:   metadata.Namespace,
 			FileCount:   1,
 			Compression: model.CompressionModeNone,
 			Encryption:  model.EncryptionModeNone,
 		},
-		metadata.BackupID,
+		backupKey(routineName, metadata.BackupID),
 		storage,
 	)
+}
+
+// createdTime returns the time the backup's data is as of. A sealed backup holds the records
+// modified before its upper bound, which is the run's start, shared by every namespace of the
+// run; the next incremental starts there, so that no record falls between the two. An unsealed
+// backup has no upper bound and holds what its job saw, so it is as of the time in its job id.
+func createdTime(metadata listermodels.Metadata) time.Time {
+	if metadata.ModifiedBeforeUnixS != 0 {
+		return time.Unix(metadata.ModifiedBeforeUnixS, 0).UTC()
+	}
+
+	return jobIDTime(metadata.BackupID)
 }
 
 // jobIDTime returns the UTC time a server job id was generated at, or zero for a malformed id.

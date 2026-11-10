@@ -3,6 +3,7 @@ package serverbackup
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"testing"
@@ -18,7 +19,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestRoutineRunner_ModifiedAfter(t *testing.T) {
+func TestRoutineRunner_LowerBounds(t *testing.T) {
 	t.Parallel()
 
 	start := time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
@@ -74,15 +75,15 @@ func TestRoutineRunner_ModifiedAfter(t *testing.T) {
 				BackupPolicy: &model.BackupPolicy{IncrMode: tt.incrMode},
 			}
 
-			got, err := (&routineRunner{backupReader: backupReader}).
-				modifiedAfter(t.Context(), routine, tt.backupType, tt.namespace)
+			bounds, err := (&routineRunner{backupReader: backupReader}).
+				lowerBounds(t.Context(), routine, tt.backupType)
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want, lowerBound(bounds, tt.namespace))
 		})
 	}
 }
 
-func TestRoutineRunner_ModifiedAfter_ReadFails(t *testing.T) {
+func TestRoutineRunner_LowerBounds_ReadFails(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 
@@ -91,9 +92,9 @@ func TestRoutineRunner_ModifiedAfter_ReadFails(t *testing.T) {
 	routine := &model.BackupRoutine{Name: "routine", BackupPolicy: &model.BackupPolicy{}}
 
 	got, err := (&routineRunner{backupReader: backupReader}).
-		modifiedAfter(t.Context(), routine, model.BackupTypeIncremental, "bar")
+		lowerBounds(t.Context(), routine, model.BackupTypeIncremental)
 
-	require.EqualError(t, err, "failed to read the last backup of namespace bar: storage down")
+	require.EqualError(t, err, "failed to read the last backups of routine routine: storage down")
 	assert.Nil(t, got)
 }
 
@@ -122,7 +123,7 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 	storage := &model.S3Storage{Bucket: "bucket", S3Region: "eu-central-1", Path: "backups", S3Profile: "backup"}
 	common := func(namespace string) infomodels.RequestCommon {
 		return infomodels.RequestCommon{
-			Namespace: namespace, Storage: "aws-s3", Path: "backups", Bucket: "bucket",
+			Namespace: namespace, Storage: "aws-s3", Path: "backups/routine", Bucket: "bucket",
 			Region: "eu-central-1", Profile: "backup",
 		}
 	}
@@ -175,7 +176,7 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 			backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).DoAndReturn(
 				func(_ context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
 					return backups[filter.(*service.RoutineFilter).BackupType()], nil
-				}).AnyTimes()
+				}).MaxTimes(2) // once per backup type in the run, not once per namespace.
 
 			var requests []infomodels.RequestBackup
 			infoClient := aerospike.NewMockInfoGetter(ctrl)
@@ -219,6 +220,39 @@ func TestRoutineRunner_BackupNamespaces_Failures(t *testing.T) {
 
 	require.EqualError(t, err, "namespace bar: failed to start server backup: refused\n"+
 		"namespace baz: server backup job-baz failed: disk full")
+}
+
+// TestRoutineRunner_BackupNamespaces_StartOutcomeUnknown checks that a start whose outcome is
+// unknown aborts the job it may have started, and that a start the server refused aborts nothing.
+func TestRoutineRunner_BackupNamespaces_StartOutcomeUnknown(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		startErr  error
+		wantAbort bool
+	}{
+		{name: "outcome unknown", startErr: fmt.Errorf("%w: timeout", asinfo.ErrOutcomeUnknown), wantAbort: true},
+		{name: "refused", startErr: errors.New("refused")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
+			infoClient.EXPECT().StartBackup(gomock.Any(), gomock.Any()).Return(fullID, tt.startErr)
+			if tt.wantAbort {
+				infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).Return(nil)
+			}
+			routine := &model.BackupRoutine{Storage: &model.S3Storage{Bucket: "bucket"}, BackupPolicy: &model.BackupPolicy{}}
+
+			err := (&routineRunner{}).backupNamespaces(t.Context(), infoClient, routine,
+				model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar"}, slog.New(slog.DiscardHandler))
+
+			require.ErrorIs(t, err, tt.startErr)
+		})
+	}
 }
 
 func TestRoutineRunner_BackupNamespaces_NotS3(t *testing.T) {
@@ -293,6 +327,19 @@ func TestWaitForBackup_StatusLookup(t *testing.T) {
 				func() (*infomodels.ResponseBackupState, error) { return nil, asinfo.ErrNotFound },
 				func() (*infomodels.ResponseBackupState, error) { return complete, nil },
 			},
+		},
+		{
+			// A node that does not know a job already seen (one that joined or restarted) leaves
+			// the job's state unknown for good.
+			name: "job lost after it was seen",
+			statuses: []func() (*infomodels.ResponseBackupState, error){
+				func() (*infomodels.ResponseBackupState, error) {
+					return &infomodels.ResponseBackupState{State: infomodels.BackupStateBaseScanActive}, nil
+				},
+				func() (*infomodels.ResponseBackupState, error) { return nil, asinfo.ErrNotFound },
+			},
+			wantAbort: true,
+			wantErr:   "failed to get server backup status: " + asinfo.ErrNotFound.Error(),
 		},
 		{
 			// The run gives up on the job, so it aborts it: the job may still hold the cluster.
