@@ -126,7 +126,9 @@ func (c *catalog) newLister(ctx context.Context, storage model.Storage, routineN
 		return nil, fmt.Errorf("failed to get S3 client: %w", err)
 	}
 
-	return lister.NewLister(client, s3Storage.Bucket, routinePath(s3Storage, routineName), lister.WithLogger(slog.Default())), nil
+	return lister.NewLister(
+		client, s3Storage.Bucket, routinePath(s3Storage, routineName), lister.WithLogger(slog.Default()),
+	), nil
 }
 
 // toBackupDetails converts server metadata to the details of a backup of the routine, keyed by
