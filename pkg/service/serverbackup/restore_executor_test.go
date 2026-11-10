@@ -27,7 +27,10 @@ const (
 	restoreJobID = "261105T094929-k9s5"
 )
 
-func TestRestoreExecutor_Run(t *testing.T) {
+// The restore tests call restore on the test goroutine: a mock call the test does not expect then
+// fails the test, where inside Run's goroutine it would leave Wait blocked.
+
+func TestRestoreExecutor_Restore(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -66,17 +69,16 @@ func TestRestoreExecutor_Run(t *testing.T) {
 				requests = append(requests, chainRequest(id))
 			}
 
-			handler := NewRestoreExecutor(namespaceReader(t, ctrl)).
-				Run(t.Context(), clientOf(ctrl, infoClient), discardLogger, requests...)
-			require.NoError(t, handler.Wait(t.Context()))
+			executor := &restoreExecutor{backupReader: namespaceReader(t, ctrl)}
+			require.NoError(t, executor.restore(t.Context(), clientOf(ctrl, infoClient), discardLogger, requests))
 		})
 	}
 }
 
-// TestRestoreExecutor_Run_StartFails checks that a start the server refused aborts nothing, and
+// TestRestoreExecutor_Restore_StartFails checks that a start the server refused aborts nothing, and
 // that a start whose outcome is unknown aborts the job it may have started, reporting a failed
 // abort: that job may still be writing into the namespace.
-func TestRestoreExecutor_Run_StartFails(t *testing.T) {
+func TestRestoreExecutor_Restore_StartFails(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -105,8 +107,9 @@ func TestRestoreExecutor_Run_StartFails(t *testing.T) {
 				infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", restoreJobID).Return(tt.abortErr)
 			}
 
-			err := NewRestoreExecutor(namespaceReader(t, ctrl)).
-				Run(t.Context(), clientOf(ctrl, infoClient), discardLogger, chainRequest(fullID)).Wait(t.Context())
+			executor := &restoreExecutor{backupReader: namespaceReader(t, ctrl)}
+			err := executor.restore(t.Context(), clientOf(ctrl, infoClient), discardLogger,
+				[]*model.RestoreRequest{chainRequest(fullID)})
 
 			require.ErrorIs(t, err, tt.startErr)
 			for _, want := range tt.wantErr {
@@ -137,8 +140,6 @@ func TestRestoreExecutor_Start_NamespaceRemap(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)
 
-			// start runs on the test goroutine, so a start the refusal should have prevented fails
-			// the test rather than leaving a restore run blocked.
 			client := aerospike.NewMockClient(ctrl)
 			if tt.wantErr == "" {
 				infoClient := aerospike.NewMockInfoGetter(ctrl)
@@ -160,7 +161,9 @@ func TestRestoreExecutor_Start_NamespaceRemap(t *testing.T) {
 	}
 }
 
-func TestRestoreExecutor_Run_InvalidKey(t *testing.T) {
+// TestRestoreExecutor_Run_ReportsFailure checks that a run's failure comes from the handler's
+// Wait. The run fails on its key, before it reaches the server.
+func TestRestoreExecutor_Run_ReportsFailure(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 

@@ -81,6 +81,38 @@ func TestValidateEntityName(t *testing.T) {
 	}
 }
 
+// A routine's name also goes into the info commands of server-side backup, so it is rejected in
+// either backup mode when an info command cannot carry it.
+func TestValidateRoutineName(t *testing.T) {
+	tests := []struct {
+		name        string
+		value       string
+		expectError string
+	}{
+		{name: "plain", value: "daily-backup"},
+		{name: "semicolon", value: "a;b", expectError: `must not contain ";", "|" or a line break`},
+		{name: "pipe", value: "daily|eu", expectError: `must not contain ";", "|" or a line break`},
+		{name: "newline", value: "a\nb", expectError: `must not contain ";", "|" or a line break`},
+		{name: "carriage return", value: "a\rb", expectError: `must not contain ";", "|" or a line break`},
+		{name: "path segment rules apply", value: "a/b", expectError: "path separator"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateRoutineName(tt.value)
+			if tt.expectError == "" {
+				require.NoError(t, err)
+				return
+			}
+
+			require.ErrorContains(t, err, tt.expectError)
+		})
+	}
+
+	require.ErrorContains(t, validNameConfig("daily|eu", []NamespaceName{"ns"}).Validate(), "routine name",
+		"Config.Validate checks routine names in scan mode too")
+}
+
 func TestNamespaceName_Validate(t *testing.T) {
 	tests := []struct {
 		name        string

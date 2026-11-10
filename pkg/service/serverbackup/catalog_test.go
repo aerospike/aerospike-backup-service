@@ -1,14 +1,106 @@
 package serverbackup
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/backup-go/pkg/server/lister"
 	listermodels "github.com/aerospike/backup-go/pkg/server/lister/models"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TestCatalog_RoutineFolder checks that a routine's backups are listed and read under its own
+// folder of the storage, so that routines sharing a storage never see each other's backups.
+func TestCatalog_RoutineFolder(t *testing.T) {
+	t.Parallel()
+
+	storage := &model.S3Storage{Bucket: "bucket", Path: "backups"}
+	bucket := fakeBucket{
+		"backups/routine/" + fullID + "/metadata.json": metadataJSON(t, fullID, "bar"),
+		"backups/other/" + incr1ID + "/metadata.json":  metadataJSON(t, incr1ID, "bar"),
+	}
+	c := &catalog{s3Client: func(context.Context, *model.S3Storage) (lister.S3API, error) { return bucket, nil }}
+
+	t.Run("routine", func(t *testing.T) {
+		t.Parallel()
+
+		routine := &model.BackupRoutine{Name: "routine", Storage: storage}
+		backups, err := c.GetBackups(t.Context(), service.NewFullBackupFilter(routine))
+		require.NoError(t, err)
+		require.Len(t, backups, 1, "only the routine's own backup")
+		assert.Equal(t, "routine/"+fullID, backups[0].Key)
+	})
+
+	t.Run("path", func(t *testing.T) {
+		t.Parallel()
+
+		backups, err := c.GetBackups(t.Context(), service.NewPathFilter("routine/"+fullID, storage))
+		require.NoError(t, err)
+		require.Len(t, backups, 1)
+		assert.Equal(t, "routine/"+fullID, backups[0].Key)
+
+		// Another routine's job id is not found in this routine's folder.
+		_, err = c.GetBackups(t.Context(), service.NewPathFilter("routine/"+incr1ID, storage))
+		require.Error(t, err)
+	})
+}
+
+// fakeBucket is an S3 bucket of objects by key, listed by folder as the lister lists it.
+type fakeBucket map[string][]byte
+
+func (b fakeBucket) ListObjectsV2(
+	_ context.Context, in *s3.ListObjectsV2Input, _ ...func(*s3.Options),
+) (*s3.ListObjectsV2Output, error) {
+	prefix := aws.ToString(in.Prefix)
+	seen := map[string]bool{}
+	out := &s3.ListObjectsV2Output{}
+	for key := range b {
+		rest, ok := strings.CutPrefix(key, prefix)
+		if !ok {
+			continue
+		}
+		folder, _, _ := strings.Cut(rest, "/")
+		if !seen[folder] {
+			seen[folder] = true
+			out.CommonPrefixes = append(out.CommonPrefixes, types.CommonPrefix{Prefix: aws.String(prefix + folder + "/")})
+		}
+	}
+
+	return out, nil
+}
+
+func (b fakeBucket) GetObject(
+	_ context.Context, in *s3.GetObjectInput, _ ...func(*s3.Options),
+) (*s3.GetObjectOutput, error) {
+	data, ok := b[aws.ToString(in.Key)]
+	if !ok {
+		return nil, &types.NoSuchKey{}
+	}
+
+	return &s3.GetObjectOutput{Body: io.NopCloser(bytes.NewReader(data))}, nil
+}
+
+func metadataJSON(t *testing.T, jobID, namespace string) []byte {
+	t.Helper()
+
+	data, err := json.Marshal(listermodels.Metadata{
+		BackupID: jobID, Namespace: namespace, Status: listermodels.BackupStatusComplete,
+	})
+	require.NoError(t, err)
+
+	return data
+}
 
 func TestToBackupDetails(t *testing.T) {
 	t.Parallel()

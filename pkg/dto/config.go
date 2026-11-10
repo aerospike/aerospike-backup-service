@@ -11,7 +11,8 @@ import (
 // Every entity name - the key of a cluster, storage, policy, secret agent or routine - must be
 // a single path segment: a routine's name is the folder its backups live in under the storage
 // root, so a name may not be "." or "..", may not contain "/" or "\\" or a NUL byte, and may
-// not start with "~".
+// not start with "~". A routine's name may also not contain ";", "|" or a line break, which the
+// info commands of server-side backup cannot carry.
 //
 // @Description Config represents the service configuration file.
 //
@@ -85,7 +86,7 @@ func (c *Config) Validate() error {
 	}
 
 	for name, routine := range c.BackupRoutines {
-		if err := validateEntityName("routine name", name); err != nil {
+		if err := validateRoutineName(name); err != nil {
 			return err
 		}
 		if err := routine.Validate(); err != nil {

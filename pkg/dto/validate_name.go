@@ -87,6 +87,20 @@ func validateEntityName(field, name string) error {
 	return errValidationInvalidName(field, name, checkPathSegment(name))
 }
 
+// validateRoutineName checks that a routine's name is a single path segment that an Aerospike
+// info command can carry: server-side backup sends the routine's folder in its commands, where
+// ";" separates parameters, "|" separates values and a line break ends the command.
+func validateRoutineName(name string) error {
+	if err := validateEntityName("routine name", name); err != nil {
+		return err
+	}
+	if strings.ContainsAny(name, ";|\r\n") {
+		return errValidationInvalidName("routine name", name, errors.New(`must not contain ";", "|" or a line break`))
+	}
+
+	return nil
+}
+
 // checkPathSegment reports why name cannot be used as one element of a path.
 func checkPathSegment(name string) error {
 	switch {
