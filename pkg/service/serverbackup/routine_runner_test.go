@@ -357,10 +357,11 @@ func TestWaitForBackup_StatusLookup(t *testing.T) {
 	complete := &infomodels.ResponseBackupState{JobID: fullID, Namespace: "test", State: infomodels.BackupStateComplete}
 
 	tests := []struct {
-		name     string
-		statuses []func() (*infomodels.ResponseBackupState, error)
-		wantErr  string
-		wantJobs []model.ServerBackupJob
+		name      string
+		statuses  []func() (*infomodels.ResponseBackupState, error)
+		wantAbort bool
+		wantErr   string
+		wantJobs  []model.ServerBackupJob
 	}{
 		{
 			name: "job not visible yet",
@@ -371,12 +372,13 @@ func TestWaitForBackup_StatusLookup(t *testing.T) {
 			wantJobs: []model.ServerBackupJob{{JobID: fullID, Namespace: "test", State: "COMPLETE"}},
 		},
 		{
-			// The job is left as it is: its status is unknown, not its end.
+			// The run gives up on the job, so it aborts it: the job may still hold the cluster.
 			name: "status unavailable",
 			statuses: []func() (*infomodels.ResponseBackupState, error){
 				func() (*infomodels.ResponseBackupState, error) { return nil, errors.New("timeout") },
 			},
-			wantErr: "failed to get server backup status: timeout",
+			wantAbort: true,
+			wantErr:   "failed to get server backup status: timeout",
 		},
 	}
 
@@ -385,9 +387,13 @@ func TestWaitForBackup_StatusLookup(t *testing.T) {
 			t.Parallel()
 
 			infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
-			calls := make([]any, 0, len(tt.statuses))
+			calls := make([]any, 0, len(tt.statuses)+1)
 			for _, status := range tt.statuses {
 				calls = append(calls, infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(status()))
+			}
+			if tt.wantAbort {
+				// A refused abort is not followed: there is nothing to wait for.
+				calls = append(calls, infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).Return(errors.New("timeout")))
 			}
 			gomock.InOrder(calls...)
 			operation := newBackupOperation(func() {})
@@ -474,5 +480,70 @@ func TestBackupOperation_ReportsProgress(t *testing.T) {
 		run := operation.Status()
 		assert.InDelta(t, percent/100, run.Progress, 1e-9, "progress %v", percent)
 		assert.Nil(t, run.Scan)
+	}
+}
+
+// shortenLostJobTimeout shortens lostJobTimeout for the test. The test must not be parallel:
+// parallel tests start only once the sequential ones have ended, so none reads it meanwhile.
+func shortenLostJobTimeout(t *testing.T) {
+	t.Helper()
+
+	previous := lostJobTimeout
+	lostJobTimeout = 1500 * time.Millisecond
+	t.Cleanup(func() { lostJobTimeout = previous })
+}
+
+//nolint:paralleltest // shortens lostJobTimeout, which the parallel tests read.
+func TestWaitForBackup_LostJob(t *testing.T) {
+	shortenLostJobTimeout(t)
+
+	tests := []struct {
+		name     string
+		statuses []*infomodels.ResponseBackupState
+		wantErr  string
+	}{
+		{
+			// Each status resets the clock: two not-found answers a status apart are within it.
+			name: "seen again in time",
+			statuses: []*infomodels.ResponseBackupState{
+				nil,
+				{JobID: fullID, State: infomodels.BackupStateBaseScanActive},
+				nil,
+				{JobID: fullID, State: infomodels.BackupStateComplete},
+			},
+		},
+		{
+			// The run aborts the job it gave up on; a lost job refuses the abort.
+			name:     "never reported",
+			statuses: []*infomodels.ResponseBackupState{nil, nil},
+			wantErr:  "server backup " + fullID + " not reported for 1.5s: " + asinfo.ErrNotFound.Error(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
+			calls := make([]any, 0, len(tt.statuses)+1)
+			for _, status := range tt.statuses {
+				var err error
+				if status == nil {
+					err = asinfo.ErrNotFound
+				}
+				calls = append(calls, infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(status, err))
+			}
+			if tt.wantErr != "" {
+				calls = append(calls, infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).Return(asinfo.ErrNotFound))
+			}
+			gomock.InOrder(calls...)
+
+			err := waitForBackup(t.Context(), infoClient, fullID, newBackupOperation(func() {}),
+				slog.New(slog.DiscardHandler))
+
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.EqualError(t, err, tt.wantErr)
+		})
 	}
 }

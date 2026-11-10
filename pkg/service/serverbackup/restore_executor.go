@@ -351,6 +351,7 @@ func (h *restoreJob) awaitComplete(ctx context.Context) error {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
+	lastSeen := time.Now()
 	for {
 		select {
 		case <-ctx.Done():
@@ -360,11 +361,15 @@ func (h *restoreJob) awaitComplete(ctx context.Context) error {
 
 		status, err := h.infoClient.GetRestoreStatus(ctx, h.namespace, h.jobID)
 		if errors.Is(err, asinfo.ErrNotFound) {
+			if time.Since(lastSeen) > lostJobTimeout {
+				return fmt.Errorf("server restore %s not reported for %s: %w", h.jobID, lostJobTimeout, err)
+			}
 			continue // the job is not visible on the cluster yet.
 		}
 		if err != nil {
 			return fmt.Errorf("failed to get server restore status: %w", err)
 		}
+		lastSeen = time.Now()
 
 		switch {
 		case status.HeldReason == heldByTruncateState:

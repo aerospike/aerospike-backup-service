@@ -10,6 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/backup-go/pkg/asinfo"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -387,4 +388,22 @@ func fuzzyRequest(backupID string) *model.RestoreRequest {
 	request.Policy.Mode = model.RestoreModeFuzzy
 
 	return request
+}
+
+//nolint:paralleltest // shortens lostJobTimeout, which the parallel tests read.
+func TestRestoreJob_Wait_LostJob(t *testing.T) {
+	shortenLostJobTimeout(t)
+	ctrl := gomock.NewController(t)
+
+	// The job is released as any job that does not complete; a lost job refuses the abort.
+	infoClient := aerospike.NewMockInfoGetter(ctrl)
+	gomock.InOrder(
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(nil, asinfo.ErrNotFound).Times(2),
+		infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(asinfo.ErrNotFound),
+	)
+
+	err := newRestoreJob(infoClient, "bar", "job", laneOf(model.RestoreModeStrict)).Wait(t.Context())
+
+	require.ErrorContains(t, err, "server restore job not reported for 1.5s")
+	require.ErrorContains(t, err, "failed to abort server restore job")
 }

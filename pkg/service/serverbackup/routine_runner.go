@@ -28,6 +28,12 @@ const (
 	abortTimeout = 30 * time.Second
 )
 
+// lostJobTimeout is how long a started server job may go unreported before it is taken for lost.
+// A new job can be invisible for a poll or two, and one that dropped out of the cluster's view
+// may come back as the cluster settles; past this, waiting longer would hold the cluster for
+// nothing. A variable so that the tests can shorten it.
+var lostJobTimeout = 30 * time.Second
+
 // routineRunner backs a routine up by asking the server to run one backup job per
 // namespace. The jobs run one after another: the server runs a single job at a time.
 type routineRunner struct {
@@ -147,7 +153,8 @@ func (r *routineRunner) backupNamespace(
 	return waitForBackup(ctx, infoClient, jobID, operation, logger)
 }
 
-// waitForBackup waits for the job to end. A canceled ctx aborts the job on the server.
+// waitForBackup waits for the job to end. A wait that fails, a canceled ctx included, aborts the
+// job on the server.
 func waitForBackup(
 	ctx context.Context,
 	infoClient backup.ServerBackupInfo,
@@ -156,11 +163,10 @@ func waitForBackup(
 	logger *slog.Logger,
 ) error {
 	status, err := pollBackup(ctx, infoClient, jobID, operation)
-	if ctx.Err() != nil {
-		abortJob(context.WithoutCancel(ctx), infoClient, jobID, operation, logger)
-		return ctx.Err()
-	}
 	if err != nil {
+		// The job may still run on the server: abort it, even when ctx is canceled, so it does not
+		// hold the cluster's backup slot after the run has given up on it.
+		abortJob(context.WithoutCancel(ctx), infoClient, jobID, operation, logger)
 		return err
 	}
 
@@ -185,6 +191,7 @@ func pollBackup(
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
+	lastSeen := time.Now()
 	for {
 		select {
 		case <-ctx.Done():
@@ -194,11 +201,15 @@ func pollBackup(
 
 		status, err := infoClient.GetBackupStatus(ctx, jobID)
 		if errors.Is(err, asinfo.ErrNotFound) {
+			if time.Since(lastSeen) > lostJobTimeout {
+				return nil, fmt.Errorf("server backup %s not reported for %s: %w", jobID, lostJobTimeout, err)
+			}
 			continue // the job is not visible on the cluster yet.
 		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to get server backup status: %w", err)
 		}
+		lastSeen = time.Now()
 
 		operation.report(status)
 
