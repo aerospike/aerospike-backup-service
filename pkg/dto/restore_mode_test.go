@@ -54,6 +54,7 @@ func TestValidateRestorePolicy(t *testing.T) {
 			policy: model.RestorePolicy{
 				Mode:              model.RestoreModeStrict,
 				Replace:           new(false),
+				Namespace:         &model.RestoreNamespace{Source: "bar", Destination: "bar"},
 				EncryptionPolicy:  &model.EncryptionPolicy{Mode: model.EncryptionModeNone},
 				CompressionPolicy: &model.CompressionPolicy{Mode: model.CompressionModeNone},
 			}},
@@ -75,9 +76,10 @@ func TestValidateRestorePolicy(t *testing.T) {
 				Bandwidth:         new(int64(1)),
 				EncryptionPolicy:  &model.EncryptionPolicy{Mode: model.EncryptionModeAES128},
 				CompressionPolicy: &model.CompressionPolicy{Mode: model.CompressionModeZSTD},
+				Namespace:         &model.RestoreNamespace{Source: "bar", Destination: "baz"},
 			},
 			wantErr: "restore policy sets bin-list, replace, unique, no-generation, bandwidth, encryption, " +
-				`compression, which backup-mode "server" does not support`},
+				`compression, namespace into another namespace, which backup-mode "server" does not support`},
 	}
 
 	for _, tt := range tests {

@@ -281,11 +281,14 @@ func newServerBackupMode(
 	clientManager aerospike.ClientManager,
 ) backupMode {
 	catalog := serverbackup.NewCatalog(s3Clients)
+	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config)
 
 	return backupMode{
-		backupReader:        catalog,
-		registry:            service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config),
-		startController:     serverbackup.NewStartController(),
+		backupReader: catalog,
+		registry:     registry,
+		startController: serverbackup.NewStartController(
+			service.NewStartController(registry, service.NewStartDecider()),
+		),
 		retentionManager:    service.NopRetentionManager(),
 		clusterConfigWriter: service.NopClusterConfigWriter(),
 		routineRunner: serverbackup.NewRoutineRunner(

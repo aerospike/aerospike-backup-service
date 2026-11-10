@@ -57,7 +57,7 @@ published image, so the suite starts two single-node clusters from a locally bui
 - `ABS_IT_FEATURES_CONF`: the Enterprise feature key file.
   Default: `~/work/aerospike-server-enterprise/etc/features.conf`.
 
-Unlike the scan tests, every restore goes into the second cluster. Each check a scan backup
+Unlike the scan tests, restores go into the second cluster unless a test restores into the source. Each check a scan backup
 passes and server-side backup cannot pass yet is kept as a subtest skipped with the gap as its
 reason (`gap*` in `serverbuild.go`).
 
@@ -74,12 +74,11 @@ first is listed first.
 | A restore job reports no record or index counts | `inserted-records` and `index-count` of the restore status are 0 | ABS | The server reports them in `restore-status` and backup-go returns them (`Applied`, `Read`, …); ABS's restore handler does not read them | `TestServerRestoreByPath` |
 | An incremental backup with no changes is written and listed | It is listed, and becomes the last incremental; a scan backup skips it | server, then ABS | Once the metadata records counts, ABS skips an incremental with none, as it does for a scan backup. Alternatively the server does not commit an empty incremental | `TestServerRestoreByTimestampWorkflow` |
 | A restore of a backup with no records fails | The server finds no partition manifests in the backup, fails the fetch and aborts the restore: a backup of only indexes and UDFs, or a chain whose full backup has no records, cannot be restored | server | Treat a backup with zero partition manifests as an empty backup and finish | `TestServerBackupRestoreWithIndexes`, `TestServerRestoreByTimestampCumulativeWorkflow` |
-| A restore into another namespace fails | A restore with a namespace mapping is aborted | server, ABS | The server reads the backup under the destination namespace instead of the backup's own and finds no manifests; it should read the backup's namespace, or refuse the mapping. Until it does, ABS should reject a mapping in server mode | `TestServerRestoreNamespaceMapping` |
+| A restore into another namespace fails | ABS rejects a restore whose namespace mapping names another namespace: the server reads the backup under the destination namespace instead of the backup's own and finds no manifests | server, then ABS | The server reads the backup's own namespace; ABS then accepts the mapping | `TestServerRestoreNamespaceMapping` |
 | `metadata.json` is committed before `sindex.json`, `udf.json` and the final manifests are written | A backup is listed a few seconds before it can be fully restored | server | Write `metadata.json` last: it is the commit record | none |
 | No retention is applied | Every backup is kept | ABS | Delete the oldest server backups under the storage path, as the scan retention manager does for its folders | none |
 | No cluster configuration is saved | `GET /v1/retrieve/configuration` finds none | ABS | Write the cluster configuration next to each server backup, under a key the configuration retriever can find | none |
 | Only one backup runs per cluster at a time | A routine triggered while another routine backs up the same cluster is skipped | ABS | Queue the second routine's backup until the cluster is free, instead of skipping it | `TestServerTwoRoutines` |
-| Backups are not kept per routine | Routines sharing a storage list each other's backups | ABS | Put each routine's server backups under a path of its own, such as `<storage path>/<routine>` | `TestServerTwoRoutines` |
 
 ## Tests
 
@@ -138,7 +137,7 @@ ServerBackupSuite backs up with server-side backup from one cluster running a lo
 | [`TestServerRestoreCancel`](server_backup_features_test.go) | Cancels a strict restore through POST /v1/restore/cancel while the server hydrates the destination namespace, and checks that ABS aborts the job and opens the namespace to clients again. The restore is throttled to keep it running until the cancel. |  |
 | [`TestServerMultipleNamespaces`](server_backup_features_test.go) | Backs up a routine of two namespaces, a full and an incremental server backup each, and restores both chains into the destination cluster by timestamp. Restore by timestamp runs the namespaces at the same time, so the two cold restores overlap. The namespaces hold different numbers of records, and the routine state reports the server job of each namespace, matched to the backup it wrote. |  |
 | [`TestServerNonS3Storage`](server_backup_features_test.go) | Configures server backup mode with local storage, which the server cannot write to, and expects the configuration to be rejected when it loads. |  |
-| [`TestServerTwoRoutines`](server_backup_features_test.go) | Triggers full backups of two routines on the same cluster and storage at once, and checks that each runs and lists its own backup only. |  |
+| [`TestServerTwoRoutines`](server_backup_features_test.go) | Triggers full backups of two routines on the same cluster and storage at once, and checks that each runs and lists its own backups only. |  |
 | [`TestServerProgress`](server_backup_features_test.go) | Checks that a running full backup reports its progress through GET /v1/backups/currentBackup as a percentage, with zero record counts: the server counts no records to back up, so any count would be made up (BKRS-504). |  |
 | [`TestServerBackupCancel`](server_backup_features_test.go) | Cancels a running full backup through POST /v1/backups/cancel and checks that the server aborts the job, the routine state reports the abort and nothing is listed. |  |
 | [`TestServerBackupFailure`](server_backup_features_test.go) | Backs up to a bucket that does not exist. The backup fails: the failure is counted, nothing shows as running, no last full backup time is set, and the routine state reports the server's record of the job with its reason. The server aborts a job that fails on a node, so the job is ABORTED by the server, unlike a canceled one (operator). |  |
@@ -149,6 +148,6 @@ ServerBackupSuite backs up with server-side backup from one cluster running a lo
 | [`TestServerRestoreByTimestampCumulativeWorkflow`](server_backup_test.go) | Mirrors TestRestoreByTimestampCumulativeWorkflow with server-side backup: runs full backup, incremental backup, another incremental backup, then restores the namespace into the destination cluster to a point in time. Since the mode is cumulative, the second incremental should cover the first one. | `full`<br>`incremental_1`<br>`incremental_2` |
 | [`TestServerFuzzyRestoreIntoSource`](server_fuzzy_restore_test.go) | Backs up the source cluster, then updates one record, deletes another and adds a third, and restores the backup in fuzzy mode into the source cluster itself, which stays live. The updated and deleted records get their backed-up values back; the added record, which the backup does not hold, stays. |  |
 | [`TestServerFuzzyRestoreByTimestamp`](server_fuzzy_restore_test.go) | Backs up a full and an incremental backup of the source cluster, updates the record again, and restores the chain by timestamp in fuzzy mode into the source cluster: the record ends with its value from the incremental backup. |  |
-| [`TestServerRestoreRequestRejected`](server_fuzzy_restore_test.go) | Sends restore requests that server mode does not accept: one by path and one by timestamp without a mode, which server mode requires, one with a mode that does not exist, and one with an option the server has no equivalent for. Each is rejected before any job starts. |  |
+| [`TestServerRestoreRequestRejected`](server_fuzzy_restore_test.go) | Sends restore requests that server mode does not accept: one by path and one by timestamp without a mode, which server mode requires, one with a mode that does not exist, one with an option the server has no equivalent for, and one that maps the backup's namespace onto another. Each is rejected before any job starts. |  |
 
 <!-- /tag -->

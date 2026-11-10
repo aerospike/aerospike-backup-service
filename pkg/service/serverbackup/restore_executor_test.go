@@ -57,6 +57,7 @@ func TestRestoreExecutor_Run_Cold(t *testing.T) {
 					func(_ context.Context, request *infomodels.RequestRestore) (string, error) {
 						assert.Equal(t, tt.wantBackupIDs, request.BackupIDs)
 						assert.Equal(t, "bar", request.Namespace)
+						assert.Equal(t, "backups/routine", request.Path, "the routine's folder in the storage")
 						assert.Equal(t, infomodels.RestorePolicyStrict, request.Policy)
 
 						return restoreJobID, nil
@@ -119,6 +120,44 @@ func TestRestoreExecutor_Run_StartRefused(t *testing.T) {
 	}
 }
 
+// TestRestoreExecutor_Run_StartOutcomeUnknown checks that a start whose outcome is unknown
+// releases the job it may have started as its lane does: a strict one may hold the namespace.
+func TestRestoreExecutor_Run_StartOutcomeUnknown(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		request *model.RestoreRequest
+		expect  func(t *testing.T, infoClient *aerospike.MockInfoGetter)
+	}{
+		{name: "strict", request: chainRequest(fullID), expect: func(t *testing.T, infoClient *aerospike.MockInfoGetter) {
+			t.Helper()
+			jobID := restoreJobID
+			expectRelease(t, infoClient, &jobID)
+		}},
+		{name: "fuzzy", request: fuzzyRequest(fullID), expect: func(t *testing.T, infoClient *aerospike.MockInfoGetter) {
+			t.Helper()
+			infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", restoreJobID).Return(nil)
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+
+			startErr := fmt.Errorf("%w: timeout", asinfo.ErrOutcomeUnknown)
+			infoClient := aerospike.NewMockInfoGetter(ctrl)
+			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, startErr)
+			tt.expect(t, infoClient)
+
+			err := NewRestoreExecutor(namespaceReader(t, ctrl)).
+				Run(t.Context(), clientOf(ctrl, infoClient), discardLogger, tt.request).Wait(t.Context())
+			require.ErrorIs(t, err, asinfo.ErrOutcomeUnknown)
+		})
+	}
+}
+
 // expectRelease expects the job *jobID of namespace bar to be aborted, then, once the abort has
 // ended it, its namespace opened, and waits for the namespace to open.
 func expectRelease(t *testing.T, infoClient *aerospike.MockInfoGetter, jobID *string) {
@@ -149,6 +188,20 @@ func expectRelease(t *testing.T, infoClient *aerospike.MockInfoGetter, jobID *st
 	)
 }
 
+// TestRestoreExecutor_Run_ReportsFailure checks that a run's failure comes from the handler's
+// Wait. The run fails on its key, before it reaches the server.
+func TestRestoreExecutor_Run_ReportsFailure(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+
+	request := chainRequest(fullID)
+	request.BackupDataPath = fullID // a bare job id names no routine.
+
+	err := NewRestoreExecutor(service.NewMockBackupReader(ctrl)).
+		Run(t.Context(), aerospike.NewMockClient(ctrl), discardLogger, request).Wait(t.Context())
+	require.EqualError(t, err, `invalid server backup key "`+fullID+`": want <routine>/<job id>`)
+}
+
 func TestRestoreExecutor_Run_ChainTooLong(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
@@ -170,7 +223,8 @@ func namespaceReader(t *testing.T, ctrl *gomock.Controller) service.BackupReader
 	backupReader := service.NewMockBackupReader(ctrl)
 	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
-			assert.Equal(t, fullID, filter.(*service.PathFilter).Path(), "the namespace comes from the full backup")
+			assert.Equal(t, backupKey("routine", fullID), filter.(*service.PathFilter).Path(),
+				"the namespace comes from the full backup")
 
 			return []model.BackupDetails{{BackupMetadata: model.BackupMetadata{Namespace: "bar"}}}, nil
 		})
@@ -187,8 +241,8 @@ func clientOf(ctrl *gomock.Controller, infoClient *aerospike.MockInfoGetter) aer
 
 func chainRequest(backupID string) *model.RestoreRequest {
 	return &model.RestoreRequest{
-		SourceStorage:  &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1"},
-		BackupDataPath: backupID,
+		SourceStorage:  &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1", Path: "backups"},
+		BackupDataPath: backupKey("routine", backupID),
 	}
 }
 

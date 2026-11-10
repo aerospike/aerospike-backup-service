@@ -22,7 +22,7 @@ import (
 // maxChainLength is the most backups the server restores in one job (AS_RESTORE_CHAIN_MAX_LINKS).
 const maxChainLength = 32
 
-// restoreExecutor asks the server to restore server backups, identified by their job ids: a
+// restoreExecutor asks the server to restore server backups, identified by their keys: a
 // single backup, or a full backup and the incremental backups that follow it. The policy's mode
 // picks the lane: a strict restore is cold, a fuzzy one writes into the live namespace. A
 // restore that does not complete is aborted, and a cold one's namespace released to clients with
@@ -40,9 +40,9 @@ func NewRestoreExecutor(backupReader service.BackupReader) restoreexecutor.Resto
 }
 
 // Run starts, in the background, one server restore job that applies the backups of the requests
-// in the order given, the full backup first; each request names one backup by its job id in
-// BackupDataPath. The requests share their policy and storage, so the first one stands for all.
-// Every failure, including one to start, comes from the handler's Wait.
+// in the order given, the full backup first; each request names one backup by its key in
+// BackupDataPath. The requests share their storage, routine and policy, so the first one stands
+// for all. Every failure, including one to start, comes from the handler's Wait.
 func (r *restoreExecutor) Run(
 	ctx context.Context,
 	client aerospike.Client,
@@ -71,12 +71,12 @@ func (r *restoreExecutor) restore(
 			maxChainLength, len(requests))
 	}
 
-	backupIDs := make([]string, 0, len(requests))
-	for _, request := range requests {
-		backupIDs = append(backupIDs, request.BackupDataPath)
+	routineName, backupIDs, err := jobIDsOf(requests)
+	if err != nil {
+		return err
 	}
 
-	job, err := r.start(ctx, client, requests[0], backupIDs)
+	job, err := r.start(ctx, client, requests[0], routineName, backupIDs)
 	if err != nil {
 		return err
 	}
@@ -86,15 +86,17 @@ func (r *restoreExecutor) restore(
 	return job.Wait(ctx)
 }
 
-// start starts a server restore job of backupIDs, oldest first, with the policy and storage of
-// request, and returns the job to follow.
+// start starts a server restore job of backupIDs, oldest first, from the routine's folder, with
+// the policy and storage of request, and returns the job to follow. request names the first
+// backup.
 func (r *restoreExecutor) start(
 	ctx context.Context,
 	client aerospike.Client,
 	request *model.RestoreRequest,
+	routineName string,
 	backupIDs []string,
 ) (*restoreJob, error) {
-	namespace, err := r.destinationNamespace(ctx, request, backupIDs[0])
+	namespace, err := r.destinationNamespace(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +106,7 @@ func (r *restoreExecutor) start(
 		SetList:   strings.Join(request.Policy.SetList, ","),
 		NoIndexes: request.Policy.NoIndexes,
 		NoUDFs:    request.Policy.NoUdfs,
-	}, request.SourceStorage)
+	}, request.SourceStorage, routineName)
 	if err != nil {
 		return nil, err
 	}
@@ -124,10 +126,36 @@ func (r *restoreExecutor) start(
 		Policy:               lane.policy,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to start server restore: %w", explainRefusal(err, namespace))
+		startErr := fmt.Errorf("failed to start server restore: %w", explainRefusal(err, namespace))
+		if !errors.Is(err, asinfo.ErrOutcomeUnknown) {
+			return nil, startErr
+		}
+
+		// The server may have started the job though the start failed.
+		return nil, errors.Join(startErr, lane.release(context.WithoutCancel(ctx), infoClient, namespace, jobID))
 	}
 
 	return newRestoreJob(infoClient, namespace, jobID, lane), nil
+}
+
+// jobIDsOf returns the routine whose folder holds the requests' backups, and their job ids in the
+// requests' order. A chain is backed up by one routine, so the first key names the routine.
+func jobIDsOf(requests []*model.RestoreRequest) (string, []string, error) {
+	routineName, _, err := parseBackupKey(requests[0].BackupDataPath)
+	if err != nil {
+		return "", nil, err
+	}
+
+	jobIDs := make([]string, 0, len(requests))
+	for _, request := range requests {
+		_, jobID, err := parseBackupKey(request.BackupDataPath)
+		if err != nil {
+			return "", nil, err
+		}
+		jobIDs = append(jobIDs, jobID)
+	}
+
+	return routineName, jobIDs, nil
 }
 
 // restoreLane is how the server runs a restore job of one mode: the policy it starts with, and how
@@ -250,22 +278,19 @@ func abortRestore(ctx context.Context, infoClient backup.ServerBackupInfo, names
 }
 
 // destinationNamespace returns the namespace to restore into: the mapped destination, or
-// else the namespace backupID was taken from.
-func (r *restoreExecutor) destinationNamespace(
-	ctx context.Context,
-	request *model.RestoreRequest,
-	backupID string,
-) (string, error) {
+// else the namespace the request's backup was taken from.
+func (r *restoreExecutor) destinationNamespace(ctx context.Context, request *model.RestoreRequest) (string, error) {
+	backupKey := request.BackupDataPath
 	if request.Policy.Namespace != nil && request.Policy.Namespace.Destination != "" {
 		return request.Policy.Namespace.Destination, nil
 	}
 
-	backups, err := r.backupReader.GetBackups(ctx, service.NewPathFilter(backupID, request.SourceStorage))
+	backups, err := r.backupReader.GetBackups(ctx, service.NewPathFilter(backupKey, request.SourceStorage))
 	if err != nil {
-		return "", fmt.Errorf("failed to read server backup %s: %w", backupID, err)
+		return "", fmt.Errorf("failed to read server backup %s: %w", backupKey, err)
 	}
 	if len(backups) == 0 {
-		return "", fmt.Errorf("server backup %s not found", backupID)
+		return "", fmt.Errorf("server backup %s not found", backupKey)
 	}
 
 	return backups[0].Namespace, nil

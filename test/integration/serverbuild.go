@@ -80,8 +80,6 @@ const (
 		"destination namespace, finds nothing there and fails"
 	gapRoutineGate = "server-side backup gap: a second routine on the same cluster is skipped while a backup " +
 		"of another routine runs"
-	gapSharedStorage = "server-side backup gap: server backups are not kept per routine, routines sharing " +
-		"storage list each other's backups"
 )
 
 // serverConf is the configuration of every node ServerBuildSuite starts.
@@ -418,6 +416,14 @@ func (s *ServerBuildSuite) backupJobFields(jobID string) map[string]string {
 	return rows[jobID]
 }
 
+// jobIDOf returns the server job id a backup key ends with: the key is the routine's folder, then
+// the job id.
+func jobIDOf(key string) string {
+	_, jobID, _ := strings.Cut(key, "/")
+
+	return jobID
+}
+
 // restoreJobIDs returns the ids of the restore jobs the destination cluster knows, finished
 // ones included.
 func (s *ServerBuildSuite) restoreJobIDs() map[string]bool {
@@ -478,12 +484,15 @@ func (s *ServerBuildSuite) destinationIndexes() string {
 }
 
 // assertServerBackupDetails checks the fields a full server backup of serverNamespace reports
-// from the server's metadata: it was created at or after createdAfter, is keyed by its job id,
+// from the server's metadata: it was created at or after createdAfter, is keyed by its routine and
+// job id,
 // is not incremental, and is stored uncompressed and unencrypted in the MinIO bucket.
 func (s *ServerBuildSuite) assertServerBackupDetails(backup dto.BackupDetails, createdAfter time.Time) {
 	s.T().Helper()
 
-	s.True(asinfo.IsJobID(backup.Key), "key %q is not a server job id", backup.Key)
+	routine, jobID, _ := strings.Cut(backup.Key, "/")
+	s.Equal(routineName, routine, "key %q is not in the routine's folder", backup.Key)
+	s.True(asinfo.IsJobID(jobID), "key %q does not end with a server job id", backup.Key)
 	s.Equal(serverNamespace, backup.Namespace)
 
 	// The job id holds whole seconds.
@@ -546,7 +555,7 @@ func (s *ServerBuildSuite) assertCompleteJobs(
 
 	keys := make(map[string]string, len(backups))
 	for _, backup := range backups {
-		keys[backup.Namespace] = backup.Key
+		keys[backup.Namespace] = jobIDOf(backup.Key)
 	}
 
 	s.Require().Len(jobs, 2, "server jobs")

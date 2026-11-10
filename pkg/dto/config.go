@@ -85,7 +85,7 @@ func (c *Config) Validate() error {
 	}
 
 	for name, routine := range c.BackupRoutines {
-		if err := validateEntityName("routine name", name); err != nil {
+		if err := validateRoutineName(name); err != nil {
 			return err
 		}
 		if err := routine.Validate(); err != nil {

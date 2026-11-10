@@ -141,7 +141,7 @@ func (s *ServerBackupSuite) TestServerBackupLimits() {
 	s.triggerFullBackup(e)
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
 
-	fields := s.backupJobFields(backup.Key)
+	fields := s.backupJobFields(jobIDOf(backup.Key))
 	s.Equal("100", fields["backup-rps"])
 	s.Equal("2", fields["backup-worker-threads"])
 	s.Equal("3", fields["backup-upload-threads"])
@@ -335,7 +335,7 @@ func (s *ServerBackupSuite) TestServerNonS3Storage() {
 }
 
 // TestServerTwoRoutines triggers full backups of two routines on the same cluster and storage at
-// once, and checks that each runs and lists its own backup only.
+// once, and checks that each runs and lists its own backups only.
 func (s *ServerBackupSuite) TestServerTwoRoutines() {
 	const secondRoutine = "secondRoutine"
 
@@ -364,12 +364,12 @@ func (s *ServerBackupSuite) TestServerTwoRoutines() {
 		s.True(ok, "only one of the two routines backed up")
 	})
 
-	s.gap("own_backups", gapSharedStorage, func() {
-		first, second := s.routineBackups(e, routineName), s.routineBackups(e, secondRoutine)
-		s.Require().Len(first, 1)
-		s.Require().Len(second, 1)
-		s.NotEqual(first[0].Key, second[0].Key, "both routines list the same backup")
-	})
+	// Each routine lists only the backups in its own folder, whether or not the other one ran.
+	for _, routine := range []string{routineName, secondRoutine} {
+		for _, backup := range s.routineBackups(e, routine) {
+			s.True(strings.HasPrefix(backup.Key, routine+"/"), "routine %s lists backup %s", routine, backup.Key)
+		}
+	}
 }
 
 // TestServerProgress checks that a running full backup reports its progress through

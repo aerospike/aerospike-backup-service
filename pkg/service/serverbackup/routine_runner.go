@@ -98,9 +98,16 @@ func (r *routineRunner) backupNamespaces(
 	operation *backupOperation,
 	logger *slog.Logger,
 ) error {
+	bounds, err := r.lowerBounds(ctx, routine, runSpec.Type)
+	if err != nil {
+		return err
+	}
+
 	var errs error
 	for _, namespace := range namespaces {
-		if err := r.backupNamespace(ctx, infoClient, routine, runSpec, namespace, operation, logger); err != nil {
+		modifiedAfter := lowerBound(bounds, namespace)
+		err := r.backupNamespace(ctx, infoClient, routine, runSpec, modifiedAfter, namespace, operation, logger)
+		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("namespace %s: %w", namespace, err))
 		}
 	}
@@ -113,6 +120,7 @@ func (r *routineRunner) backupNamespace(
 	infoClient backup.ServerBackupInfo,
 	routine *model.BackupRoutine,
 	runSpec model.BackupRunSpec,
+	modifiedAfter *time.Time,
 	namespace string,
 	operation *backupOperation,
 	logger *slog.Logger,
@@ -123,12 +131,7 @@ func (r *routineRunner) backupNamespace(
 		FilterExp: routine.FilterExpression,
 		NoIndexes: routine.BackupPolicy.NoIndexes,
 		NoUDFs:    routine.BackupPolicy.NoUdfs,
-	}, routine.Storage)
-	if err != nil {
-		return err
-	}
-
-	modifiedAfter, err := r.modifiedAfter(ctx, routine, runSpec.Type, namespace)
+	}, routine.Storage, routine.Name)
 	if err != nil {
 		return err
 	}
@@ -145,6 +148,11 @@ func (r *routineRunner) backupNamespace(
 		BackupUploadThreads: ptr.ValueOrZero(policy.ParallelWrite),
 	})
 	if err != nil {
+		if errors.Is(err, asinfo.ErrOutcomeUnknown) {
+			// The server may have started the job though the start failed.
+			abortJob(context.WithoutCancel(ctx), infoClient, jobID, operation, logger)
+		}
+
 		return fmt.Errorf("failed to start server backup: %w", err)
 	}
 
@@ -243,16 +251,15 @@ func abortJob(
 	}
 }
 
-// modifiedAfter returns the lower bound of a backup of namespace: none for a full backup. An
-// incremental backup starts where the namespace's own last backup it builds on started: its last
-// full backup in the cumulative mode, else its last backup of either type. The namespaces of a
-// routine are backed up one after another, so each has a bound of its own.
-func (r *routineRunner) modifiedAfter(
+// lowerBounds returns, per namespace, where an incremental backup of it starts: where the
+// namespace's own last backup it builds on ends, its last full backup in the cumulative mode,
+// else its last backup of either type. A full backup has no lower bound. The storage is read
+// once per run: a namespace's backup in this run never moves another namespace's bound.
+func (r *routineRunner) lowerBounds(
 	ctx context.Context,
 	routine *model.BackupRoutine,
 	backupType model.BackupType,
-	namespace string,
-) (*time.Time, error) {
+) (map[string]time.Time, error) {
 	if backupType == model.BackupTypeFull {
 		return nil, nil
 	}
@@ -262,21 +269,31 @@ func (r *routineRunner) modifiedAfter(
 		filters = append(filters, service.NewIncrementalBackupFilter(routine))
 	}
 
-	var last *time.Time
+	bounds := make(map[string]time.Time)
 	for _, filter := range filters {
 		backups, err := r.backupReader.GetBackups(ctx, filter)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read the last backup of namespace %s: %w", namespace, err)
+			return nil, fmt.Errorf("failed to read the last backups of routine %s: %w", routine.Name, err)
 		}
 
 		for _, b := range backups {
-			if b.Namespace == namespace && (last == nil || b.Created.After(*last)) {
-				last = &b.Created
+			if last, ok := bounds[b.Namespace]; !ok || b.Created.After(last) {
+				bounds[b.Namespace] = b.Created
 			}
 		}
 	}
 
-	return last, nil
+	return bounds, nil
+}
+
+// lowerBound returns the namespace's bound in bounds, or none if it has no backup to build on.
+func lowerBound(bounds map[string]time.Time, namespace string) *time.Time {
+	bound, ok := bounds[namespace]
+	if !ok {
+		return nil
+	}
+
+	return &bound
 }
 
 func unixSeconds(t *time.Time) string {
