@@ -23,6 +23,12 @@ type BackupCommonConfig struct {
 	// fixed UTC-5 with no DST, which is rarely what "Eastern Time" is meant to be.
 	// Changing this service-level default requires a restart.
 	ScheduleTimezone ScheduleTimezone `yaml:"schedule-timezone,omitempty" json:"schedule-timezone,omitempty" default:"UTC" example:"America/New_York" extensions:"x-nullable"` //nolint:lll
+	// Backup mode for the whole service instance (optional).
+	// Allowed values:
+	// * scan (default): the service scans the cluster and writes the backup data itself.
+	// * server: the Aerospike server writes the backup to S3 storage itself.
+	// Changing the mode requires a restart.
+	BackupMode BackupMode `yaml:"backup-mode,omitempty" json:"backup-mode,omitempty" enums:"scan,server" default:"scan" extensions:"x-nullable"` //nolint:lll
 }
 
 // Validate validates the backup subsection configuration.
@@ -39,7 +45,7 @@ func (b *BackupCommonConfig) Validate() error {
 		return err
 	}
 
-	return nil
+	return b.BackupMode.Validate()
 }
 
 func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
@@ -50,12 +56,14 @@ func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 	return &model.BackupCommonConfig{
 		TimestampFormat: b.TimestampFormat.ToModel(),
 		Timezone:        b.ScheduleTimezone.ToServiceLocation(),
+		BackupMode:      b.BackupMode.ToModel(),
 	}
 }
 
 func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
 	b.TimestampFormat = NewTimestampFormatFromModel(m.TimestampFormat)
 	b.ScheduleTimezone = ScheduleTimezone(m.Timezone.Configured)
+	b.BackupMode = NewBackupModeFromModel(m.BackupMode)
 }
 
 // Compare compares two BackupCommonConfig instances and returns detailed errors.
@@ -72,5 +80,6 @@ func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
 	return errors.Join(
 		compareValues("TimestampFormat", b.TimestampFormat, other.TimestampFormat),
 		compareValues("ScheduleTimezone", b.ScheduleTimezone, other.ScheduleTimezone),
+		compareValues("BackupMode", b.BackupMode, other.BackupMode),
 	)
 }

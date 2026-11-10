@@ -92,18 +92,21 @@ func (m restoreRequestCompressionMatcher) String() string {
 	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q and compression %s", m.expectedPath, m.expectedMode)
 }
 
-// restoreRequestUniqueMatcher matches a restore request for the backup at expectedPath whose
-// policy is unique (CREATE_ONLY) or not, as expected.
-type restoreRequestUniqueMatcher struct {
-	expectedPath   string
-	expectedUnique bool
+// restoreRequestChainMatcher matches a restore request for the backup at expectedPath of a chain
+// of expectedNamespace, which disables reordering or not, as expected, and has its policy as given.
+type restoreRequestChainMatcher struct {
+	expectedPath              string
+	expectedNamespace         string
+	expectedDisableReordering bool
 }
 
-func (m restoreRequestUniqueMatcher) Matches(x any) bool {
+func (m restoreRequestChainMatcher) Matches(x any) bool {
 	req, ok := matchRestoreRequest(x, m.expectedPath)
-	return ok && req.Policy.IsUniqueOrDefault() == m.expectedUnique
+	return ok && req.Namespace == m.expectedNamespace &&
+		req.DisableReordering == m.expectedDisableReordering && req.Policy.Unique == nil
 }
 
-func (m restoreRequestUniqueMatcher) String() string {
-	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q and unique=%t", m.expectedPath, m.expectedUnique)
+func (m restoreRequestChainMatcher) String() string {
+	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q, namespace %q, disable-reordering=%t and no unique",
+		m.expectedPath, m.expectedNamespace, m.expectedDisableReordering)
 }

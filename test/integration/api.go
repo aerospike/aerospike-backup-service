@@ -90,6 +90,8 @@ func (s *Suite) restoreByTimestamp(e *env, timestamp time.Time) dto.RestoreJobSt
 // listed does.
 func (s *Suite) triggerBackup(e *env, backupType model.BackupType) {
 	e.newestBeforeTrigger[backupType] = s.newestBackupCreated(e, backupType)
+	e.successesBeforeTrigger[backupType] = s.metricBackupSuccessEventCount(e, backupType)
+	e.failuresBeforeTrigger[backupType] = int(s.metricBackupEventCount(e, backupType, outcomeFailure))
 
 	status, body := s.do(e, http.MethodPost, e.backupsURL(backupType), nil)
 	s.Require().Equal(http.StatusAccepted, status, "trigger %s backup: %s", backupType, body)
@@ -143,6 +145,16 @@ func (s *Suite) newestBackupCreated(e *env, backupType model.BackupType) time.Ti
 
 // restore posts request to url and waits for the job it starts to succeed.
 func (s *Suite) restore(e *env, url string, request any) dto.RestoreJobStatus {
+	return s.restoreWithin(e, url, request, backupTimeout)
+}
+
+// restoreWithin is restore for a job that may take up to timeout.
+func (s *Suite) restoreWithin(e *env, url string, request any, timeout time.Duration) dto.RestoreJobStatus {
+	return s.waitForRestore(e, s.startRestore(e, url, request), timeout)
+}
+
+// startRestore posts request to the restore endpoint url and returns the id of the job it starts.
+func (s *Suite) startRestore(e *env, url string, request any) int64 {
 	requestBody, err := decoder.Marshal(request, decoder.JSON, false)
 	s.Require().NoError(err)
 
@@ -152,24 +164,31 @@ func (s *Suite) restore(e *env, url string, request any) dto.RestoreJobStatus {
 	jobID, err := strconv.ParseInt(string(body), 10, 64)
 	s.Require().NoError(err)
 
-	return s.waitForRestore(e, jobID)
+	return jobID
 }
 
-// waitForRestore polls the job until it stops running, and fails unless it succeeded.
-func (s *Suite) waitForRestore(e *env, jobID int64) dto.RestoreJobStatus {
+// waitForRestore polls the job for up to timeout until it stops running, and fails unless it succeeded.
+func (s *Suite) waitForRestore(e *env, jobID int64, timeout time.Duration) dto.RestoreJobStatus {
+	job := s.waitForRestoreEnd(e, jobID, timeout)
+	s.Require().Equal(dto.RestoreSuccess, job.Status, "restore job failed with error: %s", job.Error)
+
+	return job
+}
+
+// waitForRestoreEnd polls the job for up to timeout until it stops running, whatever its outcome.
+func (s *Suite) waitForRestoreEnd(e *env, jobID int64, timeout time.Duration) dto.RestoreJobStatus {
 	url := fmt.Sprintf("%s/v1/restore/status/%d", e.baseURL, jobID)
 
 	var job dto.RestoreJobStatus
 
-	ok := s.eventually(backupTimeout, pollInterval, func() bool {
+	ok := s.eventually(timeout, pollInterval, func() bool {
 		status, body := s.do(e, http.MethodGet, url, nil)
 		s.Require().Equal(http.StatusOK, status, "restore status: %s", body)
 		s.Require().NoError(decoder.Deserialize(&job, bytes.NewReader(body), decoder.JSON))
 
 		return job.Status != dto.RestoreRunning
 	})
-	s.Require().True(ok, "restore job %d was still running after %s", jobID, backupTimeout)
-	s.Require().Equal(dto.RestoreSuccess, job.Status, "restore job failed with error: %s", job.Error)
+	s.Require().True(ok, "restore job %d was still running after %s", jobID, timeout)
 
 	return job
 }

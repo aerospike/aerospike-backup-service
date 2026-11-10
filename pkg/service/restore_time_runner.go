@@ -14,7 +14,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/backup-go"
 )
 
 type timeRestoreRunner struct {
@@ -70,18 +69,6 @@ type restoreChain struct {
 // backups returns the backups of the chain, the full backup first.
 func (c restoreChain) backups() []model.BackupDetails {
 	return append([]model.BackupDetails{c.full}, c.incrementals...)
-}
-
-// inRestoreOrder returns the backups of the chain in the order they are applied: oldest first,
-// so that later versions overwrite earlier ones, or newest first, for the unique (CREATE_ONLY)
-// policy, which keeps the first version written.
-func (c restoreChain) inRestoreOrder(newestFirst bool) []model.BackupDetails {
-	backups := c.backups()
-	if newestFirst {
-		slices.Reverse(backups)
-	}
-
-	return backups
 }
 
 // findBackupsToRestore returns the restore chain of each namespace.
@@ -320,6 +307,9 @@ func (r *timeRestoreRunner) restoreAllNamespaces(
 	return multiError
 }
 
+// restoreNamespace restores the namespace's chain of backups as one restore, handed to the
+// restore oldest first: the restore decides the order it applies them in. Empty backups are left
+// out; a chain of only empty backups restores nothing.
 func (r *timeRestoreRunner) restoreNamespace(
 	ctx context.Context,
 	client aerospike.Client,
@@ -329,67 +319,7 @@ func (r *timeRestoreRunner) restoreNamespace(
 	chain restoreChain,
 	logger *slog.Logger,
 ) error {
-	policy, err := prepareNamespaceRestore(ctx, client.InfoClient(), namespace, request, logger)
-	if err != nil {
-		return err
-	}
-
-	return r.executeNamespaceRestore(ctx, client, request, jobID, chain, policy, logger)
-}
-
-// prepareNamespaceRestore determines the effective restore policy. Restoring into an empty
-// namespace switches to the unique (CREATE_ONLY) policy, so that the chain can be applied newest
-// first: missing records get their latest version, existing ones are skipped, and generations
-// are not bumped for nothing. disable-reordering turns the switch off.
-func prepareNamespaceRestore(
-	ctx context.Context,
-	infoClient backup.InfoGetter,
-	namespace string,
-	request *model.RestoreTimestampRequest,
-	logger *slog.Logger,
-) (model.RestorePolicy, error) {
-	// Policy is guaranteed non-nil by request validation in the API layer.
-	effectivePolicy := request.Policy // make a thread-safe copy.
-
-	if request.DisableReordering || effectivePolicy.IsUniqueOrDefault() {
-		return effectivePolicy, nil
-	}
-
-	// The emptiness check decides how existing records are treated, so it must look at the
-	// namespace the records are written to, not the one they were backed up from.
-	target := effectivePolicy.Namespace.DestinationOr(namespace)
-	counter, err := infoClient.GetRecordCount(ctx, target, effectivePolicy.SetList)
-	if err != nil {
-		return model.RestorePolicy{}, fmt.Errorf(
-			"failed to determine if namespace %s is empty: %w", target, err,
-		)
-	}
-
-	if counter == 0 {
-		logger.Info("Namespace is empty: switching to the unique policy")
-
-		// old values are not important, because they qualify how to handle existing data in db.
-		effectivePolicy.Unique = new(true)
-		effectivePolicy.Replace = nil
-	}
-
-	return effectivePolicy, nil
-}
-
-// executeNamespaceRestore restores the namespace's chain of backups as one restore. Under the
-// unique (CREATE_ONLY) policy the chain is applied newest first, unless the request disables
-// reordering. Empty backups are left out; a chain of only empty backups restores nothing.
-func (r *timeRestoreRunner) executeNamespaceRestore(
-	ctx context.Context,
-	client aerospike.Client,
-	request *model.RestoreTimestampRequest,
-	jobID model.RestoreJobID,
-	chain restoreChain,
-	policy model.RestorePolicy,
-	logger *slog.Logger,
-) error {
-	newestFirst := policy.IsUniqueOrDefault() && !request.DisableReordering
-	backups := chain.inRestoreOrder(newestFirst)
+	backups := chain.backups()
 	requests := make([]*model.RestoreRequest, 0, len(backups))
 	for _, b := range backups {
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
@@ -399,7 +329,7 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 		}
 
 		// For restore-by-time we can extract compression from metadata.
-		backupPolicy := policy
+		backupPolicy := request.Policy
 		backupPolicy.CompressionPolicy = &model.CompressionPolicy{
 			Mode: b.Compression,
 		}
@@ -411,6 +341,8 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 			request.SecretAgent,
 			b.Key,
 		)
+		restoreRequest.Namespace = namespace
+		restoreRequest.DisableReordering = request.DisableReordering
 		requests = append(requests, restoreRequest)
 	}
 
@@ -418,8 +350,7 @@ func (r *timeRestoreRunner) executeNamespaceRestore(
 		return nil
 	}
 
-	logger.Info("Restoring chain", slog.Int("backups", len(requests)),
-		slog.Bool("newestFirst", newestFirst), slog.Any("chain", backups))
+	logger.Info("Restoring chain", slog.Int("backups", len(requests)), slog.Any("chain", backups))
 
 	handler := r.restoreService.Run(ctx, client, logger, requests...)
 	r.restoreJobs.addHandler(jobID, handler)

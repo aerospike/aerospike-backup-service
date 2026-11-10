@@ -160,9 +160,12 @@ func TestRestoreExecutor_Run_CanceledWaitReturnsAfterRestoreStops(t *testing.T) 
 	assert.True(t, stopped.Load(), "Wait returned before the restore stopped")
 }
 
+// testChainRequest is a request for the backup at path of a chain restored in the order given,
+// so that a test of the sequence needs no destination record count.
 func testChainRequest(path string) *model.RestoreRequest {
 	request := testRestoreRequest()
 	request.BackupDataPath = path
+	request.DisableReordering = true
 
 	return request
 }
