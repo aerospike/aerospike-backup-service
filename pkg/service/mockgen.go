@@ -18,7 +18,6 @@ import (
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	aerospike "github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	backup "github.com/aerospike/backup-go"
-	models "github.com/aerospike/backup-go/models"
 	quartz "github.com/reugn/go-quartz/quartz"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -956,44 +955,30 @@ func (m *MockRestoreHandler) EXPECT() *MockRestoreHandlerMockRecorder {
 	return m.recorder
 }
 
-// GetMetrics mocks base method.
-func (m *MockRestoreHandler) GetMetrics() *models.Metrics {
+// Status mocks base method.
+func (m *MockRestoreHandler) Status() model.RestoreRun {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMetrics")
-	ret0, _ := ret[0].(*models.Metrics)
+	ret := m.ctrl.Call(m, "Status")
+	ret0, _ := ret[0].(model.RestoreRun)
 	return ret0
 }
 
-// GetMetrics indicates an expected call of GetMetrics.
-func (mr *MockRestoreHandlerMockRecorder) GetMetrics() *gomock.Call {
+// Status indicates an expected call of Status.
+func (mr *MockRestoreHandlerMockRecorder) Status() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetrics", reflect.TypeOf((*MockRestoreHandler)(nil).GetMetrics))
-}
-
-// GetStats mocks base method.
-func (m *MockRestoreHandler) GetStats() *models.RestoreStats {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetStats")
-	ret0, _ := ret[0].(*models.RestoreStats)
-	return ret0
-}
-
-// GetStats indicates an expected call of GetStats.
-func (mr *MockRestoreHandlerMockRecorder) GetStats() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStats", reflect.TypeOf((*MockRestoreHandler)(nil).GetStats))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Status", reflect.TypeOf((*MockRestoreHandler)(nil).Status))
 }
 
 // Wait mocks base method.
-func (m *MockRestoreHandler) Wait(arg0 context.Context) error {
+func (m *MockRestoreHandler) Wait(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Wait", arg0)
+	ret := m.ctrl.Call(m, "Wait", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Wait indicates an expected call of Wait.
-func (mr *MockRestoreHandlerMockRecorder) Wait(arg0 any) *gomock.Call {
+func (mr *MockRestoreHandlerMockRecorder) Wait(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockRestoreHandler)(nil).Wait), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockRestoreHandler)(nil).Wait), ctx)
 }

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,18 +20,11 @@ const (
 // mockRestoreHandler implements the RestoreHandler for testing.
 type mockRestoreHandler struct{}
 
-func (m *mockRestoreHandler) GetStats() *models.RestoreStats {
-	stats := models.NewRestoreStats()
-	stats.ReadRecords.Add(1)
-	stats.BytesWritten.Add(byteWritten)
-	return stats
+func (m *mockRestoreHandler) Status() model.RestoreRun {
+	return model.RestoreRun{Counters: model.RestoreCounters{ReadRecords: 1, BytesWritten: byteWritten}}
 }
 
 func (m *mockRestoreHandler) Wait(_ context.Context) error {
-	return nil
-}
-
-func (m *mockRestoreHandler) GetMetrics() *models.Metrics {
 	return nil
 }
 
@@ -75,10 +67,9 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 			"TotalRecords should be %d", uint64(numGoroutines)*recordsPerGoroutine)
 		assert.Equal(t, uint64(numGoroutines), status.CurrentRestore.DoneRecords,
 			"DoneRecords should be %d", uint64(numGoroutines)) // Each handler adds 1 record
-		assert.NotNil(t, status.Counters)
-		assert.Equal(t, uint64(numGoroutines), status.Counters.GetReadRecords(),
+		assert.Equal(t, uint64(numGoroutines), status.Counters.ReadRecords,
 			"Counters.Records should be %d", uint64(numGoroutines))
-		assert.Equal(t, uint64(numGoroutines)*byteWritten, status.Counters.GetBytesWritten(),
+		assert.Equal(t, uint64(numGoroutines)*byteWritten, status.Counters.BytesWritten,
 			"Counters.Bytes should be %d", uint64(numGoroutines)*byteWritten)
 
 		// finish job

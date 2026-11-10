@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
@@ -11,19 +12,31 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestSequentialRestoreHandler_GetMetrics(t *testing.T) {
+// TestSequentialRestoreHandler_Status checks that the handler adds up the counters of the
+// restores started so far and reports the metrics of the latest one.
+func TestSequentialRestoreHandler_Status(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	h := newSequentialRestoreHandler(func() {})
 
-	assert.Equal(t, &models.Metrics{}, h.GetMetrics(), "empty before the first restore")
+	assert.Equal(t, model.RestoreRun{}, h.Status(), "empty before the first restore")
 
+	first := service.NewMockRestoreHandler(ctrl)
+	first.EXPECT().Status().Return(model.RestoreRun{
+		Counters: model.RestoreCounters{InsertedRecords: 1},
+		Metrics:  models.NewMetrics(9, 9, 9, 9),
+	})
 	latestMetrics := models.NewMetrics(1, 2, 3, 4)
 	latest := service.NewMockRestoreHandler(ctrl)
-	latest.EXPECT().GetMetrics().Return(latestMetrics)
-	h.add(service.NewMockRestoreHandler(ctrl))
+	latest.EXPECT().Status().Return(model.RestoreRun{
+		Counters: model.RestoreCounters{InsertedRecords: 2},
+		Metrics:  latestMetrics,
+	})
+	h.add(first)
 	h.add(latest)
 
-	assert.Same(t, latestMetrics, h.GetMetrics(), "the latest restore's metrics")
+	run := h.Status()
+	assert.Equal(t, uint64(3), run.Counters.InsertedRecords)
+	assert.Same(t, latestMetrics, run.Metrics, "the latest restore's metrics")
 }
 
 func TestSequentialRestoreHandler_Wait(t *testing.T) {

@@ -4,12 +4,12 @@ import (
 	"context"
 	"sync"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/backup-go/models"
 )
 
-// sequentialRestoreHandler follows restores that run one after another: it reports the stats of
-// those started so far together, and its Wait ends when the last one ends or one fails.
+// sequentialRestoreHandler follows restores that run one after another: it reports the counters
+// of those started so far together, and its Wait ends when the last one ends or one fails.
 type sequentialRestoreHandler struct {
 	mu       sync.Mutex
 	handlers []service.RestoreHandler
@@ -54,28 +54,18 @@ func (h *sequentialRestoreHandler) Wait(ctx context.Context) error {
 	return h.err
 }
 
-// GetStats returns the stats of every restore started so far, added up.
-func (h *sequentialRestoreHandler) GetStats() *models.RestoreStats {
+// Status returns the counters of every restore started so far, added up, with the metrics of the
+// latest one: the rates of finished restores would not add up to anything.
+func (h *sequentialRestoreHandler) Status() model.RestoreRun {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	stats := make([]*models.RestoreStats, 0, len(h.handlers))
+	var run model.RestoreRun
 	for _, handler := range h.handlers {
-		stats = append(stats, handler.GetStats())
+		status := handler.Status()
+		run.Counters = run.Counters.Plus(status.Counters)
+		run.Metrics = status.Metrics
 	}
 
-	return models.SumRestoreStats(stats...)
-}
-
-// GetMetrics returns the metrics of the latest restore started, empty before the first one:
-// rates of finished restores would not add up to anything.
-func (h *sequentialRestoreHandler) GetMetrics() *models.Metrics {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if len(h.handlers) == 0 {
-		return &models.Metrics{}
-	}
-
-	return h.handlers[len(h.handlers)-1].GetMetrics()
+	return run
 }

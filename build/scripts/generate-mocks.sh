@@ -221,7 +221,7 @@ generate_external_mocks \
     "github.com/aerospike/backup-go" \
     "pkg/service/restoreexecutor" \
     "backupgo_mockgen.go" \
-    "StreamingReader"
+    "StreamingReader,RestoreHandler"
 
 generate_mocks \
     "internal/server/configuration" \

@@ -36,15 +36,19 @@ func currentBackupStatus(handler RoutineBackupHandler) *model.RunningJob {
 	return job
 }
 
-// NewRestoreRunningJob created new RunningJob for restore with calculated estimated time and percentage.
+// NewRestoreRunningJob creates a RunningJob for a restore, with its percentage and estimated end
+// time. reported is the progress the restore run reports itself, as a fraction. When it is nil,
+// the progress is done out of total.
 func NewRestoreRunningJob(
 	startTime time.Time,
 	finishTime *time.Time,
 	done, total uint64,
+	reported *float64,
 	metrics *models.Metrics,
 	jobStatus model.RestoreState,
 ) *model.RunningJob {
-	if total == 0 { // edge case for empty restore
+	fraction, known := restoreProgress(done, total, reported)
+	if !known { // an empty restore, with nothing to measure the progress against.
 		return &model.RunningJob{
 			StartTime:  startTime,
 			FinishTime: finishTime,
@@ -59,7 +63,7 @@ func NewRestoreRunningJob(
 
 	switch jobStatus {
 	case model.RestoreRunning:
-		progress = min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
+		progress = min(fraction, 0.99) // percentage should not exceed 99%.
 		endTime = calculateEstimatedEndTime(startTime, progress)
 		effectiveMetrics = metrics
 	case model.RestoreSuccess:
@@ -76,6 +80,19 @@ func NewRestoreRunningJob(
 		Progress:         progress,
 		Metrics:          effectiveMetrics,
 	}
+}
+
+// restoreProgress returns the fraction of a restore done, and false when it cannot be told: the
+// run reports none and there is no total to measure done against.
+func restoreProgress(done, total uint64, reported *float64) (float64, bool) {
+	if reported != nil {
+		return *reported, true
+	}
+	if total == 0 {
+		return 0, false
+	}
+
+	return float64(done) / float64(total), true
 }
 
 func calculateEstimatedEndTime(startTime time.Time, percentDone float64) *time.Time {

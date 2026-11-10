@@ -25,7 +25,7 @@ func TestRestoreExecutor_Run_ChainInGivenOrder(t *testing.T) {
 	chain := NewRestoreExecutor(operations).Run(t.Context(), client, slog.Default(),
 		testChainRequest("full"), testChainRequest("incr1"), testChainRequest("incr2"))
 	require.NoError(t, waitChain(t, chain))
-	assert.Equal(t, uint64(3), chain.GetStats().GetRecordsInserted())
+	assert.Equal(t, uint64(3), chain.Status().Counters.InsertedRecords)
 }
 
 // expectRestoresInOrder expects one successful restore of each backup at paths, in that order,
@@ -40,9 +40,10 @@ func expectRestoresInOrder(
 	var calls []any
 	for _, path := range paths {
 		reader := NewMockStreamingReader(ctrl)
-		handler := service.NewMockRestoreHandler(ctrl)
+		handler := NewMockRestoreHandler(ctrl)
 		handler.EXPECT().Wait(gomock.Any()).Return(nil)
 		handler.EXPECT().GetStats().Return(restoreStatsInserted(1)).AnyTimes()
+		handler.EXPECT().GetMetrics().Return(nil).AnyTimes()
 
 		calls = append(calls,
 			operations.EXPECT().
@@ -69,7 +70,7 @@ func TestRestoreExecutor_Run_ChainStopsAtFirstFailure(t *testing.T) {
 		CreateDirReader(gomock.Any(), gomock.Any(), "full", gomock.Any()).
 		Return(reader, nil)
 
-	handler := service.NewMockRestoreHandler(ctrl)
+	handler := NewMockRestoreHandler(ctrl)
 	handler.EXPECT().Wait(gomock.Any()).Return(wantErr)
 
 	client := aerospike.NewMockClient(ctrl)
@@ -89,7 +90,7 @@ func TestRestoreExecutor_Run_LaterStartFailure(t *testing.T) {
 
 	operations := storage.NewMockOperations(ctrl)
 	reader := NewMockStreamingReader(ctrl)
-	handler := service.NewMockRestoreHandler(ctrl)
+	handler := NewMockRestoreHandler(ctrl)
 	handler.EXPECT().Wait(gomock.Any()).Return(nil)
 	client := aerospike.NewMockClient(ctrl)
 	gomock.InOrder(
@@ -110,7 +111,7 @@ func TestRestoreExecutor_Run_CanceledChainStartsNoMore(t *testing.T) {
 
 	operations := storage.NewMockOperations(ctrl)
 	reader := NewMockStreamingReader(ctrl)
-	handler := service.NewMockRestoreHandler(ctrl)
+	handler := NewMockRestoreHandler(ctrl)
 	handler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(context.Context) error {
 		cancel()
 		return nil
@@ -134,7 +135,7 @@ func TestRestoreExecutor_Run_CanceledWaitReturnsAfterRestoreStops(t *testing.T) 
 
 	operations := storage.NewMockOperations(ctrl)
 	reader := NewMockStreamingReader(ctrl)
-	handler := service.NewMockRestoreHandler(ctrl)
+	handler := NewMockRestoreHandler(ctrl)
 	handler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 		close(running)
 		<-ctx.Done()

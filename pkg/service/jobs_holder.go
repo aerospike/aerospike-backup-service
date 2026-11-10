@@ -111,25 +111,45 @@ func (j *restoreJob) buildStatus() *model.RestoreJobStatus {
 	j.RLock()
 	defer j.RUnlock()
 
-	metrics := make([]*models.Metrics, 0, len(j.handlers))
-	stats := make([]*models.RestoreStats, 0, len(j.handlers))
-	for _, handler := range j.handlers {
-		metrics = append(metrics, handler.GetMetrics())
-		stats = append(stats, handler.GetStats())
-	}
-
-	sumMetrics := models.SumMetrics(metrics...)
-	restoreStats := models.SumRestoreStats(stats...)
-	doneRecords := restoreStats.GetReadRecords()
+	run := sumRestoreRuns(j.handlers)
 	runningJob := NewRestoreRunningJob(
-		j.started, j.finished, doneRecords, j.totalRecords, sumMetrics, j.status)
+		j.started, j.finished, run.Counters.ReadRecords, j.totalRecords, run.Progress, run.Metrics, j.status)
 
 	return &model.RestoreJobStatus{
 		Status:         j.status,
 		Error:          j.err,
-		Counters:       restoreStats,
+		Counters:       run.Counters,
 		CurrentRestore: runningJob,
 	}
+}
+
+// sumRestoreRuns adds up the runs of a job's handlers. The progress of the sum is the mean of
+// the handlers' progress. It is nil unless every handler reports a progress.
+func sumRestoreRuns(handlers []RestoreHandler) model.RestoreRun {
+	var (
+		sum          model.RestoreRun
+		progress     float64
+		withProgress int
+	)
+
+	metrics := make([]*models.Metrics, 0, len(handlers))
+	for _, handler := range handlers {
+		run := handler.Status()
+		sum.Counters = sum.Counters.Plus(run.Counters)
+		metrics = append(metrics, run.Metrics)
+
+		if run.Progress != nil {
+			progress += *run.Progress
+			withProgress++
+		}
+	}
+
+	sum.Metrics = models.SumMetrics(metrics...)
+	if withProgress > 0 && withProgress == len(handlers) {
+		sum.Progress = new(progress / float64(withProgress))
+	}
+
+	return sum
 }
 
 func (j *restoreJob) getStatus() model.RestoreState {

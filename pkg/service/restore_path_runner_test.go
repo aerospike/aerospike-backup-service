@@ -10,7 +10,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -27,11 +26,9 @@ func TestRestoreOK(t *testing.T) {
 	client := env.expectSuccessfulClientInteraction(t)
 
 	mockRestoreHandler := NewMockRestoreHandler(env.ctrl)
-	stats := models.NewRestoreStats()
-	stats.ReadRecords.Add(10)
-	mockRestoreHandler.EXPECT().GetStats().Return(stats).AnyTimes()
+	run := model.RestoreRun{Counters: model.RestoreCounters{ReadRecords: 10}}
+	mockRestoreHandler.EXPECT().Status().Return(run).AnyTimes()
 	mockRestoreHandler.EXPECT().Wait(gomock.Any()).Return(nil)
-	mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
 	env.mockRestore.EXPECT().
 		Run(gomock.Any(), client, gomock.Any(), request).
@@ -56,7 +53,7 @@ func TestRestoreOK(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
-	assert.Equal(t, uint64(10), jobStatus.Counters.GetReadRecords(), "Read records count mismatch")
+	assert.Equal(t, uint64(10), jobStatus.Counters.ReadRecords, "Read records count mismatch")
 	require.NoError(t, jobStatus.Error, "Expected no error in final job status")
 }
 
@@ -72,7 +69,7 @@ func TestCancelRestoreOK(t *testing.T) {
 
 	waitReturned := make(chan struct{}) // To signal Wait has returned
 	mockRestoreHandler := NewMockRestoreHandler(env.ctrl)
-	mockRestoreHandler.EXPECT().GetStats().Return(models.NewRestoreStats()).AnyTimes()
+	mockRestoreHandler.EXPECT().Status().Return(model.RestoreRun{}).AnyTimes()
 
 	// Wait should block until context is canceled, then return context.Canceled
 	mockRestoreHandler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
@@ -80,7 +77,6 @@ func TestCancelRestoreOK(t *testing.T) {
 		close(waitReturned) // Signal return
 		return ctx.Err()    // Return cancellation error
 	})
-	mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
 	detailsDetails := model.BackupDetails{
 		BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "test-ns", FileCount: 1},

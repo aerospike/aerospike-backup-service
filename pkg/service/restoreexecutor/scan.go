@@ -40,7 +40,7 @@ func runScanRestore(
 		return nil, fmt.Errorf("failed to start restore: %w", err)
 	}
 
-	return handler, nil
+	return scanRestoreHandler{handler: handler}, nil
 }
 
 func makeRestoreConfig(restoreRequest *model.RestoreRequest,

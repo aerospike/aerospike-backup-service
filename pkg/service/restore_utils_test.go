@@ -8,7 +8,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -40,9 +39,8 @@ type failedRestore struct {
 	err error
 }
 
-func (f failedRestore) Wait(context.Context) error     { return f.err }
-func (f failedRestore) GetStats() *models.RestoreStats { return models.NewRestoreStats() }
-func (f failedRestore) GetMetrics() *models.Metrics    { return &models.Metrics{} }
+func (f failedRestore) Wait(context.Context) error { return f.err }
+func (f failedRestore) Status() model.RestoreRun   { return model.RestoreRun{} }
 
 // testRestoreEnv holds the components needed for restore tests.
 type testRestoreEnv struct {
@@ -91,13 +89,12 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 }
 
 // expectDefaultRestoreHandler creates a MockRestoreHandler with default EXPECTs:
-// Wait returns nil, GetStats returns empty stats, GetMetrics returns empty metrics.
+// Wait returns nil and Status returns an empty run.
 // Returns the handler for use in mockRestore.EXPECT().Run(..., handler, ...).
 func (env *testRestoreEnv) expectDefaultRestoreHandler() *MockRestoreHandler {
 	mockRestoreHandler := NewMockRestoreHandler(env.ctrl)
 	mockRestoreHandler.EXPECT().Wait(gomock.Any()).Return(nil).AnyTimes()
-	mockRestoreHandler.EXPECT().GetStats().Return(models.NewRestoreStats()).AnyTimes()
-	mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+	mockRestoreHandler.EXPECT().Status().Return(model.RestoreRun{}).AnyTimes()
 	return mockRestoreHandler
 }
 

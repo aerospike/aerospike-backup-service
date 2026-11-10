@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,13 +18,8 @@ func TestNewResultFromModel_Nil(t *testing.T) {
 func TestNewResultFromModel(t *testing.T) {
 	t.Parallel()
 
-	stats := models.NewRestoreStats()
-	stats.ReadRecords.Add(5)
-	stats.IncrRecordsInserted()
-	stats.IncrRecordsInserted()
-
 	m := &model.RestoreJobStatus{
-		Counters: stats,
+		Counters: model.RestoreCounters{ReadRecords: 5, InsertedRecords: 2},
 		Status:   model.RestoreFailure,
 		Error:    errors.New("boom"),
 	}

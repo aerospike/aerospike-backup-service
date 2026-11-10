@@ -351,6 +351,7 @@ func (r *timeRestoreRunner) restoreNamespace(
 
 	logger.Info("Restoring chain", slog.Int("backups", len(requests)), slog.Any("chain", backups))
 
+	started := time.Now()
 	handler := r.restoreService.Run(ctx, client, logger, requests...)
 	r.restoreJobs.addHandler(jobID, handler)
 
@@ -358,7 +359,7 @@ func (r *timeRestoreRunner) restoreNamespace(
 		return err
 	}
 
-	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
+	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.Status().Counters, time.Since(started))...)
 
 	return nil
 }

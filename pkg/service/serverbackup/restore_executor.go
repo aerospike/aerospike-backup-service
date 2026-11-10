@@ -12,7 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
@@ -153,11 +152,10 @@ func (r *restoreExecutor) namespaceOf(ctx context.Context, storage model.Storage
 }
 
 // restoreHandler is the handle of a server restore run. The run itself happens in the restore
-// executor; the handler reports its outcome and how long it has run.
+// executor; the handler reports its outcome.
 type restoreHandler struct {
 	// cancel stops the run.
 	cancel context.CancelFunc
-	stats  *models.RestoreStats
 	done   chan struct{}
 	err    error
 }
@@ -165,16 +163,12 @@ type restoreHandler struct {
 var _ service.RestoreHandler = (*restoreHandler)(nil)
 
 func newRestoreHandler(cancel context.CancelFunc) *restoreHandler {
-	stats := models.NewRestoreStats()
-	stats.Start()
-
-	return &restoreHandler{cancel: cancel, stats: stats, done: make(chan struct{})}
+	return &restoreHandler{cancel: cancel, done: make(chan struct{})}
 }
 
 // finish records the outcome of the run.
 func (h *restoreHandler) finish(err error) {
 	h.err = err
-	h.stats.Stop()
 	close(h.done)
 }
 
@@ -191,14 +185,10 @@ func (h *restoreHandler) Wait(ctx context.Context) error {
 	return h.err
 }
 
-// GetStats returns the restore statistics; the server reports no record counts.
-func (h *restoreHandler) GetStats() *models.RestoreStats {
-	return h.stats
-}
-
-// GetMetrics returns empty metrics: the server reports no client-side throughput.
-func (h *restoreHandler) GetMetrics() *models.Metrics {
-	return &models.Metrics{}
+// Status returns an empty run: this handler does not read the counts or the progress the server
+// reports for its job.
+func (h *restoreHandler) Status() model.RestoreRun {
+	return model.RestoreRun{}
 }
 
 // restoreJob follows a server restore job.

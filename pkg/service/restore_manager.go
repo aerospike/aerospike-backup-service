@@ -3,11 +3,11 @@ package service
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/backup-go/models"
 )
 
 // RestoreManager starts restore jobs and keeps their status in memory, so a job can be
@@ -143,20 +143,21 @@ func (r *restoreManager) GetFilteredJobs(
 	return results
 }
 
-func logAttrs(s *models.RestoreStats) []slog.Attr {
+// logAttrs returns the counters of a finished restore and how long it took, as log attributes.
+func logAttrs(c model.RestoreCounters, duration time.Duration) []slog.Attr {
 	return []slog.Attr{
-		slog.Int64("recordsInserted", int64(s.GetRecordsInserted())),
-		slog.Int64("recordsExpired", int64(s.GetRecordsExpired())),
-		slog.Int64("recordsSkipped", int64(s.GetRecordsSkipped())),
-		slog.Int64("recordsIgnored", int64(s.GetRecordsIgnored())),
-		slog.Int64("recordsFresher", int64(s.GetRecordsFresher())),
-		slog.Int64("recordsExisted", int64(s.GetRecordsExisted())),
-		slog.Int64("totalBytesRead", int64(s.TotalBytesRead.Load())),
-		slog.Int64("errorsInDoubt", int64(s.GetErrorsInDoubt())),
-		slog.Int64("readRecords", int64(s.ReadRecords.Load())),
-		slog.Int("secondaryIndexes", int(s.GetSIndexes())),
-		slog.Int("udFs", int(s.GetUDFs())),
-		slog.Int64("bytesWritten", int64(s.BytesWritten.Load())),
-		slog.Duration("duration", s.GetDuration()),
+		slog.Uint64("recordsInserted", c.InsertedRecords),
+		slog.Uint64("recordsExpired", c.ExpiredRecords),
+		slog.Uint64("recordsSkipped", c.SkippedRecords),
+		slog.Uint64("recordsIgnored", c.IgnoredRecords),
+		slog.Uint64("recordsFresher", c.FresherRecords),
+		slog.Uint64("recordsExisted", c.ExistedRecords),
+		slog.Uint64("totalBytesRead", c.TotalBytesRead),
+		slog.Uint64("errorsInDoubt", c.ErrorsInDoubt),
+		slog.Uint64("readRecords", c.ReadRecords),
+		slog.Uint64("secondaryIndexes", c.SecondaryIndexes),
+		slog.Uint64("udFs", c.UDFs),
+		slog.Uint64("bytesWritten", c.BytesWritten),
+		slog.Duration("duration", duration),
 	}
 }

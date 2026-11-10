@@ -7,7 +7,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/backup-go/models"
 )
 
 // This file holds the interfaces a backup mode implements. The scan mode implements them in
@@ -82,12 +81,11 @@ type Restore interface {
 	) RestoreHandler
 }
 
-// RestoreHandler observes a started restore: wait for it to finish and read its statistics.
+// RestoreHandler is the handle of a started restore run. It speaks in terms every backup mode
+// has: what a mode cannot report stays zero or nil in the [model.RestoreRun] it returns.
 type RestoreHandler interface {
-	// GetStats returns the statistics of the restore job.
-	GetStats() *models.RestoreStats
-	// Wait waits for the restore job to complete and returns an error if the job failed.
-	Wait(context.Context) error
-	// GetMetrics returns the performance metrics of the restore job.
-	GetMetrics() *models.Metrics
+	// Wait waits for the run to end and returns the error it ended with.
+	Wait(ctx context.Context) error
+	// Status is a snapshot of the run.
+	Status() model.RestoreRun
 }

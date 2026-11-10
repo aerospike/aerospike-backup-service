@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -88,6 +89,7 @@ func (r *pathRestoreRunner) executeRestore(
 		return err
 	}
 
+	started := time.Now()
 	handler := r.restoreService.Run(ctx, client, logger, request)
 	r.restoreJobs.addTotalRecords(jobID, recordsInBackup(backups))
 	r.restoreJobs.addHandler(jobID, handler)
@@ -96,7 +98,7 @@ func (r *pathRestoreRunner) executeRestore(
 		return err
 	}
 
-	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
+	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.Status().Counters, time.Since(started))...)
 
 	return nil
 }
