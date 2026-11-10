@@ -25,20 +25,14 @@ type S3ClientProvider interface {
 
 // catalog lists server backups from the metadata the server writes next to each of them.
 type catalog struct {
-	// s3Client returns the client the lister reads storage through: only the calls the lister
-	// makes, so that a test can stand in for S3.
-	s3Client func(ctx context.Context, storage *model.S3Storage) (lister.S3API, error)
+	s3Clients S3ClientProvider
 }
 
 var _ service.BackupReader = (*catalog)(nil)
 
 // NewCatalog returns a BackupReader over the server backups in S3 storage.
 func NewCatalog(s3Clients S3ClientProvider) service.BackupReader {
-	return &catalog{
-		s3Client: func(ctx context.Context, storage *model.S3Storage) (lister.S3API, error) {
-			return s3Clients.GetClient(ctx, storage)
-		},
-	}
+	return &catalog{s3Clients: s3Clients}
 }
 
 // GetBackups returns the completed server backups that match the filter, oldest first.
@@ -127,14 +121,12 @@ func (c *catalog) newLister(ctx context.Context, storage model.Storage, routineN
 		return nil, err
 	}
 
-	client, err := c.s3Client(ctx, s3Storage)
+	client, err := c.s3Clients.GetClient(ctx, s3Storage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 client: %w", err)
 	}
 
-	prefix := routinePath(s3Storage, routineName)
-
-	return lister.NewLister(client, s3Storage.Bucket, prefix, lister.WithLogger(slog.Default())), nil
+	return lister.NewLister(client, s3Storage.Bucket, routinePath(s3Storage, routineName), lister.WithLogger(slog.Default())), nil
 }
 
 // toBackupDetails converts server metadata to the details of a backup of the routine, keyed by

@@ -336,7 +336,8 @@ func (s *ServerBuildSuite) info(client *as.Client, command string) string {
 
 // assertServerBackupDetails checks the fields a full server backup of serverNamespace reports
 // from the server's metadata: it was created at or after createdAfter, is keyed by its routine and
-// job id, is not incremental, and is stored uncompressed and unencrypted in the MinIO bucket.
+// job id,
+// is not incremental, and is stored uncompressed and unencrypted in the MinIO bucket.
 func (s *ServerBuildSuite) assertServerBackupDetails(backup dto.BackupDetails, createdAfter time.Time) {
 	s.T().Helper()
 
