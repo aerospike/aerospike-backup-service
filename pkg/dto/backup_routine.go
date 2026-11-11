@@ -53,7 +53,7 @@ type BackupRoutine struct {
 	// If the list is empty or omitted, no rack filtering is applied.
 	// Mutually exclusive with partition-list and node-list in this routine,
 	// and also mutually exclusive with the cluster's prefer-racks setting.
-	RackList []int `yaml:"rack-list,omitempty" json:"rack-list,omitempty" extensions:"x-nullable"`
+	RackList []int `yaml:"rack-list,omitempty" json:"rack-list,omitempty" extensions:"x-nullable,x-backup-mode=scan"`
 
 	// PartitionList defines the list of partitions to include in the backup.
 	// The format supports individual partitions or ranges.
@@ -63,7 +63,7 @@ type BackupRoutine struct {
 	// By default, all partitions (0 to 4095) are backed up.
 	// Mutually exclusive with node-list and rack-list in this routine,
 	// and also mutually exclusive with the cluster's prefer-racks setting.
-	PartitionList string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" extensions:"x-nullable"`
+	PartitionList string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" extensions:"x-nullable,x-backup-mode=scan"`
 
 	// NodeList specifies which Aerospike nodes to include in the backup.
 	// Only the listed nodes will be backed up.
@@ -76,7 +76,7 @@ type BackupRoutine struct {
 	// Mutually exclusive with partition-list and rack-list in this routine,
 	// and also mutually exclusive with the cluster's prefer-racks setting.
 	// Parallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.
-	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty" extensions:"x-nullable"`
+	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty" extensions:"x-nullable,x-backup-mode=scan"`
 
 	// Base64 encoded filter expression. Use the encoded filter expression in each scan call,
 	// which can be used to do a partial backup. The expression to be used can be Base64

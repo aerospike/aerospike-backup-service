@@ -121,6 +121,7 @@ func finalizeOpenAPI(openAPIPath, configSchemaPath string) error {
 		return fmt.Errorf("parse OpenAPI: %w", err)
 	}
 	FlattenEnumRefs(openAPIDoc)
+	ScopeModeDefaults(openAPIDoc)
 
 	if err := writeJSONObject(openAPIPath, openAPIDoc, "    "); err != nil {
 		return fmt.Errorf("write OpenAPI: %w", err)
