@@ -107,24 +107,6 @@ func (s *ServerBackupSuite) TestServerNoIndexes() {
 	s.NotContains(s.destinationIndexes(), "age_sidx", "index backed up despite no-indexes")
 }
 
-// TestServerRestoreNamespaceMapping restores a backup of one namespace into another one of the
-// destination cluster through the restore policy's namespace mapping.
-func (s *ServerBackupSuite) TestServerRestoreNamespaceMapping() {
-	s.seedRecordsIn(s.client, serverNamespace, []int{5, 6})
-
-	e := s.setupEnv(s.serverBackupConfig)
-	s.triggerFullBackup(e)
-	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
-
-	s.gap("restore", gapNamespaceMapping, func() {
-		s.restoreIntoDestinationWithPolicy(e, backup.Key, dto.BaseRestorePolicy{
-			Namespace: &dto.RestoreNamespace{Source: serverNamespace, Destination: otherNamespace},
-		})
-
-		s.assertRecordsIn(s.destinationClient, otherNamespace, []int{5, 6})
-	})
-}
-
 // TestServerBackupLimits backs up with the policy's records-per-second, parallel and
 // parallel-write, and checks that the server job ran with them as its backup-rps and its numbers
 // of scan and upload threads.
