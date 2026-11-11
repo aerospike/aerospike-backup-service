@@ -113,3 +113,39 @@ func TestValidateRestorePolicy(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateRestoreStorage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		backupMode model.BackupMode
+		storage    model.Storage
+		wantErr    string
+	}{
+		{name: "server mode S3", backupMode: model.BackupModeServer, storage: &model.S3Storage{}},
+		{name: "scan mode S3", backupMode: model.BackupModeScan, storage: &model.S3Storage{}},
+		{name: "scan mode local", backupMode: model.BackupModeScan, storage: &model.LocalStorage{}},
+		{name: "server mode local", backupMode: model.BackupModeServer, storage: &model.LocalStorage{},
+			wantErr: `the restore storage is not S3 storage, which backup-mode "server" requires`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			config := &model.Config{ServiceConfig: model.ServiceConfig{
+				Backup: &model.BackupCommonConfig{BackupMode: tt.backupMode},
+			}}
+
+			err := validateRestoreStorage(tt.storage, config)
+			if tt.wantErr != "" {
+				require.ErrorIs(t, err, errInvalidValue)
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+
+			require.NoError(t, err)
+		})
+	}
+}

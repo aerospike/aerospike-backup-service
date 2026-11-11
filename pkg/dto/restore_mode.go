@@ -1,6 +1,8 @@
 package dto
 
 import (
+	"fmt"
+
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
@@ -37,15 +39,26 @@ func (m RestoreMode) ToModel() model.RestoreMode {
 	return model.RestoreMode(c)
 }
 
+// validateRestoreStorage checks that a server-side restore reads from S3 storage, the only
+// storage the server writes backups to. A scan restore reads from any storage. A routine's storage
+// is checked when the configuration loads, but a restore may name other storage.
+func validateRestoreStorage(storage model.Storage, config *model.Config) error {
+	if !config.IsServerBackupMode() {
+		return nil
+	}
+	if _, ok := storage.(*model.S3Storage); ok {
+		return nil
+	}
+
+	return fmt.Errorf("%w: the restore storage is not S3 storage, which backup-mode %q requires",
+		errInvalidValue, model.BackupModeServer)
+}
+
 // validateRestorePolicy checks policy against the service's backup mode. A scan restore has no
 // mode. A server-side restore must choose a mode, sets no option that the server has no
 // equivalent for, and sets no option that its mode does not support.
-//
-// The restore's storage is not checked for S3: a routine's storage is checked when the
-// configuration loads, and a restore by path from other storage fails when it reads the backup.
 func validateRestorePolicy(policy *model.RestorePolicy, config *model.Config) error {
-	server := config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == model.BackupModeServer
-	if !server {
+	if !config.IsServerBackupMode() {
 		return rejectOptions("restore policy", onlyInServerMode, option{"mode", policy.Mode != ""})
 	}
 
