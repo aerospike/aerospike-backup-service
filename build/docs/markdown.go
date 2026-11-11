@@ -18,6 +18,14 @@ const (
 	password       = "password"
 )
 
+// modeMarkers mark a field that only one backup-mode accepts, keyed by the mode.
+//
+//nolint:gochecknoglobals // a lookup table.
+var modeMarkers = map[string]string{
+	"scan":   "🔍",
+	"server": "🖥️",
+}
+
 var schemas map[string]Schema
 
 func generateMarkdownFiles() {
@@ -46,6 +54,7 @@ type Row struct {
 	Default        string // New field for default value
 	PossibleValues string // New field for possible enum values
 	Redacted       bool   // True when the field is redacted in API responses.
+	BackupMode     string // The only backup-mode that accepts the field, if any.
 }
 
 func generateMarkdownTable(dtoName string) string {
@@ -65,20 +74,23 @@ func generateMarkdownTable(dtoName string) string {
 		sb.WriteString(writeRows(rows))
 	}
 
-	var legend strings.Builder
+	var legend []string
 	if len(schema.Required) > 0 {
-		_, _ = fmt.Fprintf(&legend, "\n%s = Required field", requiredMarker)
+		legend = append(legend, requiredMarker+" = Required field")
 	}
 	if hasRedactedField(rows) {
-		if legend.Len() > 0 {
-			legend.WriteString("\n")
-		}
-		_, _ = fmt.Fprintf(&legend, "%s = Redacted in API responses", redactedMarker)
+		legend = append(legend, redactedMarker+" = Redacted in API responses")
 	}
-	sb.WriteString(legend.String())
+	for _, mode := range backupModes(rows) {
+		legend = append(legend, fmt.Sprintf("%s = Only backup-mode `%s` accepts this field", modeMarkers[mode], mode))
+	}
+	if len(legend) > 0 {
+		// The blank line ends the table, so the legend is not read as one more row.
+		sb.WriteString("\n" + strings.Join(legend, "\n"))
+	}
 
 	if len(schema.Enum) > 0 {
-		if legend.Len() > 0 {
+		if len(legend) > 0 {
 			sb.WriteString("\n")
 		}
 		_, _ = fmt.Fprintf(&sb, "Possible values: %s.\n", joinEnumValues(schema.Enum))
@@ -153,6 +165,19 @@ func hasRedactedField(rows []Row) bool {
 		}
 	}
 	return false
+}
+
+// backupModes returns the backup-modes that rows are restricted to, sorted for a stable legend.
+func backupModes(rows []Row) []string {
+	var modes []string
+	for _, r := range rows {
+		if r.BackupMode != "" && !slices.Contains(modes, r.BackupMode) {
+			modes = append(modes, r.BackupMode)
+		}
+	}
+	slices.Sort(modes)
+
+	return modes
 }
 
 func determineColumsWidth(rows []Row) (int, int, int, int) {
@@ -303,7 +328,6 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 	defaultValue = formatValue(prop.Default)
 	if prop.BackupMode != "" {
 		defaultValue = formatValue(prop.ModeDefault)
-		description = fmt.Sprintf("%s<br>Only backup-mode `%s` accepts this field.", description, prop.BackupMode)
 	}
 
 	// Handle enum values
@@ -314,6 +338,13 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 	printName := "`" + fieldName + "`"
 	if prop.Format == password {
 		printName = fmt.Sprintf("%s %s", redactedMarker, printName)
+	}
+	if prop.BackupMode != "" {
+		marker, ok := modeMarkers[prop.BackupMode]
+		if !ok {
+			panic(fmt.Errorf("field %q: no marker for backup-mode %q", fieldName, prop.BackupMode))
+		}
+		printName = fmt.Sprintf("%s %s", marker, printName)
 	}
 	// Add a required field marker
 	if requiredFields[fieldName] {
@@ -326,6 +357,7 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 		Default:        defaultValue,
 		PossibleValues: possibleValues,
 		Redacted:       prop.Format == password,
+		BackupMode:     prop.BackupMode,
 	}
 
 	return row

@@ -9,4 +9,5 @@ Credentials represents authentication details to the Aerospike cluster.
 | `secret-agent`      | Secret Agent configuration (optional).<br>Mutually exclusive with 'secret-agent-name'.<br>See: [dto.SecretAgent](dto.secretagent.md)                                                                                                        |               |                               |
 | `secret-agent-name` | Secret Agent configuration (optional). Link to one of preconfigured agents.<br>Mutually exclusive with 'secret-agent'.                                                                                                                      |               |                               |
 | `user`              | The username for the cluster authentication.                                                                                                                                                                                                |               |                               |
+
 🔒 = Redacted in API responses
