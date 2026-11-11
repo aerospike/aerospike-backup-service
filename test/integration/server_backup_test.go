@@ -39,10 +39,13 @@ func (s *ServerBackupSuite) TestServerRestoreByPath() {
 }
 
 // TestServerBackupRestoreWithIndexes mirrors TestBackupRestoreWithIndexes with server-side
-// backup: backs up a secondary index and a set index and checks that restoring the backup into
-// the destination cluster creates them there.
+// backup: backs up a secondary index and a set index next to a record and checks that restoring
+// the backup into the destination cluster creates the indexes there. The record keeps the backup
+// from being empty, which the server cannot restore.
 func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 	const wantIndexes = 2 // age_sidx + set_sidx
+
+	s.seedRecordsIn(s.client, serverNamespace, []int{1})
 
 	e := s.setupEnv(s.serverBackupConfig)
 
@@ -62,21 +65,19 @@ func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 		}
 	})
 
-	// No records: the indexes are backed up and restored on their own.
 	s.triggerFullBackup(e)
 	fullBackup := s.waitForFinishedBackup(e, model.BackupTypeFull)
 	s.gap("index_count", gapIndexCount, func() {
 		s.Equal(uint64(wantIndexes), fullBackup.SecondaryIndexCount)
 	})
 
-	s.gap("restore", gapEmptyRestore, func() {
-		restoreStatus := s.restoreIntoDestination(e, fullBackup.Key)
+	restoreStatus := s.restoreIntoDestination(e, fullBackup.Key)
+	s.gap("index_count", gapRestoreStats, func() { s.Equal(uint64(wantIndexes), restoreStatus.IndexCount) })
 
-		s.gap("index_count", gapRestoreStats, func() { s.Equal(uint64(wantIndexes), restoreStatus.IndexCount) })
-		indexes := s.destinationIndexes()
-		s.Contains(indexes, "age_sidx")
-		s.Contains(indexes, "set_sidx")
-	})
+	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
+	indexes := s.destinationIndexes()
+	s.Contains(indexes, "age_sidx", "secondary index not backed up or not restored")
+	s.Contains(indexes, "set_sidx", "set index not backed up or not restored")
 }
 
 // TestServerRestoreByTimestampWorkflow mirrors TestRestoreByTimestampWorkflow with server-side
