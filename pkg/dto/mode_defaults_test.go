@@ -16,6 +16,8 @@ import (
 // the schema's `default`.
 
 func TestRestorePolicy_PublishedDefaultsPassEveryMode(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		backupMode model.BackupMode
@@ -27,6 +29,8 @@ func TestRestorePolicy_PublishedDefaultsPassEveryMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			policy := &RestorePolicy{}
 			fillPublishedDefaults(t, reflect.ValueOf(policy).Elem())
 			policy.Mode = tt.mode
