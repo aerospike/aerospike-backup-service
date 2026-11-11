@@ -51,6 +51,8 @@ func newTestLogger(t *testing.T) (*slog.Logger, *logBuffer) {
 	return logger, buf
 }
 
+const routineName = "test-routine"
+
 var testLocation = func() model.Location {
 	var configured = "America/New_York"
 	location, _ := time.LoadLocation(configured)

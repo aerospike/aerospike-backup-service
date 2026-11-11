@@ -9,7 +9,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
-	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -33,32 +32,12 @@ func testRoutine() *model.BackupRoutine {
 	}
 }
 
-func newTestBackupStats(total uint64) *models.BackupStats {
-	stats := models.NewBackupStats()
-	stats.Start()
-	stats.TotalRecords.Store(total)
-	stats.IncFiles()
-	stats.ReadRecords.Add(total)
-	return stats
-}
+// newBackupHandler returns the handle of a backup run that succeeds.
+func newBackupHandler(ctrl *gomock.Controller) *MockRoutineBackupHandler {
+	handler := NewMockRoutineBackupHandler(ctrl)
+	handler.EXPECT().Wait(gomock.Any()).Return(nil)
 
-// newBackupNamespacesOperation returns an aggregate op backed by one mock handler shared
-// across namespaces (same pattern as production: one Wait per namespace).
-func newBackupNamespacesOperation(
-	ctrl *gomock.Controller,
-	namespaces []string,
-	stats *models.BackupStats,
-) *BackupNamespacesOperation {
-	h := NewMockCancelableBackupHandler(ctrl)
-	h.EXPECT().Wait(gomock.Any()).Return(nil).Times(len(namespaces))
-	if stats != nil {
-		h.EXPECT().GetStats().Return(stats).AnyTimes()
-	}
-	handlers := make(map[string]CancelableBackupHandler, len(namespaces))
-	for _, ns := range namespaces {
-		handlers[ns] = h
-	}
-	return &BackupNamespacesOperation{handlers: handlers}
+	return handler
 }
 
 func TestRunFullBackupInternal_Success(t *testing.T) {
@@ -72,8 +51,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockReporter := NewMockBackupReporter(ctrl)
 	mockRunner := NewMockRoutineBackupRunner(ctrl)
 
-	stats := newTestBackupStats(10)
-	op := newBackupNamespacesOperation(ctrl, routine.Namespaces, stats)
+	op := newBackupHandler(ctrl)
 
 	mockRunner.EXPECT().Run(gomock.Any(), routine, gomock.Any(), gomock.Any()).Return(op, nil)
 	mockRegistry.EXPECT().BackupStarted(routineName, model.BackupTypeFull, gomock.Any())
@@ -88,8 +66,6 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, mockStartController, mockRunner)
 
 	p.Backup(t.Context(), routine, now, model.BackupTypeFull)
-
-	assert.Equal(t, uint64(10), stats.TotalRecords.Load(), "Backup stats should be correct")
 }
 
 func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
@@ -269,8 +245,7 @@ func TestRunIncrementalBackup_CumulativeMode(t *testing.T) {
 	mockReporter := NewMockBackupReporter(ctrl)
 	mockRunner := NewMockRoutineBackupRunner(ctrl)
 
-	stats := newTestBackupStats(5)
-	op := newBackupNamespacesOperation(ctrl, routine.Namespaces, stats)
+	op := newBackupHandler(ctrl)
 
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(routineState).Times(1)
 	mockRunner.EXPECT().Run(
@@ -302,8 +277,6 @@ func TestRunIncrementalBackup_CumulativeMode(t *testing.T) {
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, startController, mockRunner)
 
 	p.Backup(t.Context(), routine, now, model.BackupTypeIncremental)
-
-	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")
 }
 
 func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine *model.BackupRoutine) {
@@ -318,8 +291,7 @@ func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine
 	mockReporter := NewMockBackupReporter(ctrl)
 	mockRunner := NewMockRoutineBackupRunner(ctrl)
 
-	stats := newTestBackupStats(5)
-	op := newBackupNamespacesOperation(ctrl, routine.Namespaces, stats)
+	op := newBackupHandler(ctrl)
 
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(state).Times(1)
 	mockRunner.EXPECT().Run(
@@ -350,6 +322,4 @@ func runIncrementalBackupSuccess(t *testing.T, state model.RoutineState, routine
 	p := NewBackupOrchestrator(mockRegistry, mockCompletionHandler, mockReporter, startController, mockRunner)
 
 	p.Backup(t.Context(), routine, now, model.BackupTypeIncremental)
-
-	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")
 }

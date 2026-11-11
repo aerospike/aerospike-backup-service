@@ -23,28 +23,34 @@ type S3ClientProvider interface {
 	GetClient(ctx context.Context, storage *model.S3Storage) (*awsS3.Client, error)
 }
 
-// catalog lists server backups from the metadata the server writes next to each of them.
+// Catalog reads server backups from the metadata the server writes next to each of them.
+type Catalog interface {
+	service.BackupReader
+
+	// GetBackup returns the backup with the key in the storage. A key names one backup, because
+	// a server job backs up one namespace.
+	GetBackup(ctx context.Context, storage model.Storage, key string) (model.BackupDetails, error)
+}
+
 type catalog struct {
 	s3Clients S3ClientProvider
 }
 
-var _ service.BackupReader = (*catalog)(nil)
+var _ Catalog = (*catalog)(nil)
 
-// NewCatalog returns a BackupReader over the server backups in S3 storage.
-func NewCatalog(s3Clients S3ClientProvider) service.BackupReader {
+// NewCatalog returns a Catalog over the server backups in S3 storage.
+func NewCatalog(s3Clients S3ClientProvider) Catalog {
 	return &catalog{s3Clients: s3Clients}
 }
 
-// GetBackups returns the completed server backups that match the filter, oldest first.
+// GetBackups returns the routine's completed server backups that match the filter, oldest first.
 func (c *catalog) GetBackups(ctx context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
-	switch f := filter.(type) {
-	case *service.RoutineFilter:
-		return c.getRoutineBackups(ctx, f)
-	case *service.PathFilter:
-		return c.getPathBackup(ctx, f)
-	default:
+	routineFilter, ok := filter.(*service.RoutineFilter)
+	if !ok {
 		return nil, fmt.Errorf("unsupported backup filter type %T", filter)
 	}
+
+	return c.getRoutineBackups(ctx, routineFilter)
 }
 
 func (c *catalog) getRoutineBackups(ctx context.Context, filter *service.RoutineFilter) ([]model.BackupDetails, error) {
@@ -68,24 +74,23 @@ func (c *catalog) getRoutineBackups(ctx context.Context, filter *service.Routine
 	return matching, nil
 }
 
-// getPathBackup reads the backup whose key is the filter's path.
-func (c *catalog) getPathBackup(ctx context.Context, filter *service.PathFilter) ([]model.BackupDetails, error) {
-	routineName, jobID, err := parseBackupKey(filter.Path())
+func (c *catalog) GetBackup(ctx context.Context, storage model.Storage, key string) (model.BackupDetails, error) {
+	routineName, jobID, err := parseBackupKey(key)
 	if err != nil {
-		return nil, err
+		return model.BackupDetails{}, err
 	}
 
-	backupLister, err := c.newLister(ctx, filter.Storage(), routineName)
+	backupLister, err := c.newLister(ctx, storage, routineName)
 	if err != nil {
-		return nil, err
+		return model.BackupDetails{}, err
 	}
 
 	metadata, err := backupLister.GetMetadata(ctx, jobID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read server backup metadata: %w", err)
+		return model.BackupDetails{}, fmt.Errorf("failed to read server backup metadata: %w", err)
 	}
 
-	return []model.BackupDetails{toBackupDetails(metadata, filter.Storage(), routineName)}, nil
+	return toBackupDetails(metadata, storage, routineName), nil
 }
 
 // listBackups returns the routine's completed server backups in storage, oldest first.
@@ -132,27 +137,26 @@ func (c *catalog) newLister(ctx context.Context, storage model.Storage, routineN
 }
 
 // toBackupDetails converts server metadata to the details of a backup of the routine, keyed by
-// its routine and job id. A backup with a lower time bound, From, is incremental. The metadata
+// its routine and job id. Its lower time bound, From, is what makes it incremental. The metadata
 // records no finish time and no record, byte, file, secondary index or UDF counts, so those
-// fields stay zero. The backup is marked Uncounted so that a restore does not treat it as empty.
+// fields stay zero.
 func toBackupDetails(metadata listermodels.Metadata, storage model.Storage, routineName string) model.BackupDetails {
 	var from time.Time
 	if metadata.ModifiedAfterUnixS != 0 {
 		from = time.Unix(metadata.ModifiedAfterUnixS, 0).UTC()
 	}
 
-	return model.BackupDetails{
-		BackupMetadata: model.BackupMetadata{
+	return model.NewBackupDetails(
+		model.BackupMetadata{
 			Created:     createdTime(metadata),
 			From:        from,
 			Namespace:   metadata.Namespace,
 			Compression: model.CompressionModeNone,
 			Encryption:  model.EncryptionModeNone,
 		},
-		Key:       backupKey(routineName, metadata.BackupID),
-		Storage:   storage,
-		Uncounted: true,
-	}
+		backupKey(routineName, metadata.BackupID),
+		storage,
+	)
 }
 
 // createdTime returns the time the backup's data is as of. A sealed backup holds the records

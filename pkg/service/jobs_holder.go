@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math/rand/v2"
 	"sync"
@@ -11,7 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/backup-go/models"
 )
@@ -23,9 +23,9 @@ type restoreJob struct {
 
 	// Volatile fields, should only be accessed under lock:
 
-	// handlers contains the restore handlers of the job. Each follows one restore: a single
-	// backup (restore by path) or a namespace's chain of backups (restore by time).
-	handlers []restoreexecutor.RestoreHandler
+	// handlers contains the restore handlers of the job. Each follows one restore that the
+	// job's backup mode has started.
+	handlers []RestoreHandler
 
 	// status indicates the current state of the job (Running, Done, Failed, Canceled).
 	status model.RestoreState
@@ -63,15 +63,15 @@ func newRestoreJob(label string, cancel context.CancelFunc) *restoreJob {
 	}
 }
 
-// addHandler adds a new restore handler to the job.
-func (j *restoreJob) addHandler(handler restoreexecutor.RestoreHandler) {
+// addHandler adds a restore handler to the job.
+func (j *restoreJob) addHandler(handler RestoreHandler) {
 	j.Lock()
 	defer j.Unlock()
 
 	j.handlers = append(j.handlers, handler)
 }
 
-// addTotalRecords adds to the total records count for the job.
+// addTotalRecords adds to the job's total record count.
 func (j *restoreJob) addTotalRecords(t uint64) {
 	j.Lock()
 	defer j.Unlock()
@@ -112,25 +112,30 @@ func (j *restoreJob) buildStatus() *model.RestoreJobStatus {
 	j.RLock()
 	defer j.RUnlock()
 
-	metrics := make([]*models.Metrics, 0, len(j.handlers))
-	stats := make([]*models.RestoreStats, 0, len(j.handlers))
-	for _, handler := range j.handlers {
-		metrics = append(metrics, handler.GetMetrics())
-		stats = append(stats, handler.GetStats())
-	}
-
-	sumMetrics := models.SumMetrics(metrics...)
-	restoreStats := models.SumRestoreStats(stats...)
-	doneRecords := restoreStats.GetReadRecords()
+	run := sumRestoreRuns(j.handlers)
 	runningJob := NewRestoreRunningJob(
-		j.started, j.finished, doneRecords, j.totalRecords, sumMetrics, j.status)
+		j.started, j.finished, run.Counters.ReadRecords, j.totalRecords, run.Metrics, j.status)
 
 	return &model.RestoreJobStatus{
 		Status:         j.status,
 		Error:          j.err,
-		Counters:       restoreStats,
+		Counters:       run.Counters,
 		CurrentRestore: runningJob,
 	}
+}
+
+// sumRestoreRuns adds up the counters and the throughput of the runs of a job's handlers.
+func sumRestoreRuns(handlers []RestoreHandler) model.RestoreRun {
+	var counters model.RestoreCounters
+
+	metrics := make([]*models.Metrics, 0, len(handlers))
+	for _, handler := range handlers {
+		run := handler.Status()
+		counters = counters.Plus(run.Counters)
+		metrics = append(metrics, run.Metrics)
+	}
+
+	return model.RestoreRun{Counters: counters, Metrics: models.SumMetrics(metrics...)}
 }
 
 func (j *restoreJob) getStatus() model.RestoreState {
@@ -139,9 +144,11 @@ func (j *restoreJob) getStatus() model.RestoreState {
 	return j.status
 }
 
-// RestoreJobsHolder is a thread-safe map of restore jobs and the owner of their lifetime:
-// Start hands it the service context and every job runs in a child of that context, so
-// canceling the service cancels the jobs with it.
+// RestoreJobsHolder is a thread-safe map of restore jobs. A backup mode's restore manager
+// registers its jobs here and embeds the holder for the status, cancel and listing methods, which
+// are the same in every mode. The holder also owns the lifetime of the jobs. Start hands it the
+// service context and every job runs in a child of that context, so canceling the service cancels
+// the jobs with it.
 type RestoreJobsHolder struct {
 	*collections.SafeMap[model.RestoreJobID, *restoreJob]
 
@@ -152,6 +159,22 @@ type RestoreJobsHolder struct {
 	// it while requests read it, not because a request could arrive first.
 	lifetime context.Context //nolint:containedctx // the holder's purpose is job lifetimes; see above.
 }
+
+type JobNotFoundError struct {
+	JobID model.RestoreJobID
+}
+
+func (e *JobNotFoundError) Error() string {
+	return fmt.Sprintf("restore job with ID %d not found", e.JobID)
+}
+
+func NewJobNotFoundError(id model.RestoreJobID) *JobNotFoundError {
+	return &JobNotFoundError{JobID: id}
+}
+
+// ErrRestorePrerequisitesFailed is wrapped by a restore that was refused before it started. The
+// job is then logged as a warning, not as an error.
+var ErrRestorePrerequisitesFailed = errors.New("restore pre-requisites failed")
 
 // maxJSONSafeJobID bounds restore job ids to 2^53-1, the largest integer an IEEE-754 double
 // holds exactly. Ids are written as bare JSON numbers, and clients that decode numbers as
@@ -176,9 +199,9 @@ func (h *RestoreJobsHolder) Start(ctx context.Context) {
 	h.lifetime = ctx
 }
 
-// newJob registers a new restore job and returns its id together with the context the job
-// must run in. The job is finished, and its context released, by finishJob.
-func (h *RestoreJobsHolder) newJob(label string) (model.RestoreJobID, context.Context) {
+// NewJob registers a new restore job and returns its id together with the context the job
+// must run in. The job is finished, and its context released, by FinishJob.
+func (h *RestoreJobsHolder) NewJob(label string) (model.RestoreJobID, context.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -190,24 +213,24 @@ func (h *RestoreJobsHolder) newJob(label string) (model.RestoreJobID, context.Co
 	return id, ctx
 }
 
-// addHandler should be called for each restore handler returned by restoreexecutor.Restore.Run.
-func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler restoreexecutor.RestoreHandler) {
+// AddHandler adds the handler of a restore the job has started, so that the job's status includes it.
+func (h *RestoreJobsHolder) AddHandler(id model.RestoreJobID, handler RestoreHandler) {
 	if job, ok := h.Load(id); ok {
 		job.addHandler(handler)
 	}
 }
 
-// addTotalRecords adds the record count of backups the job restores: once per backup for
-// restore by time, once for the backup of a restore by path.
-func (h *RestoreJobsHolder) addTotalRecords(id model.RestoreJobID, t uint64) {
+// AddTotalRecords adds t to the number of records the job is expected to restore, which its
+// progress is measured against. A mode that does not know the count does not call it.
+func (h *RestoreJobsHolder) AddTotalRecords(id model.RestoreJobID, t uint64) {
 	if job, ok := h.Load(id); ok {
 		job.addTotalRecords(t)
 	}
 }
 
-// finishJob records the outcome of a job started by newJob and releases its context, which
+// FinishJob records the outcome of a job started by NewJob and releases its context, which
 // also stops any of its sub-operations that are still running.
-func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error, logger *slog.Logger) {
+func (h *RestoreJobsHolder) FinishJob(id model.RestoreJobID, err error, logger *slog.Logger) {
 	if job, ok := h.Load(id); ok {
 		job.cancel()
 		job.finish(err, logger)
@@ -223,6 +246,56 @@ func (h *RestoreJobsHolder) StatusCounts() map[model.RestoreState]int {
 	})
 
 	return counts
+}
+
+// JobStatus returns the status of the job with the given id.
+func (h *RestoreJobsHolder) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
+	job, err := h.getJob(jobID)
+	if err != nil {
+		return nil, err
+	}
+
+	return job.buildStatus(), nil
+}
+
+// CancelRestore cancels an ongoing restore.
+func (h *RestoreJobsHolder) CancelRestore(jobID model.RestoreJobID) error {
+	job, err := h.getJob(jobID)
+	if err != nil {
+		return err
+	}
+
+	job.cancel()
+
+	return nil
+}
+
+// GetFilteredJobs returns all jobs matching the given filters as a map of jobId -> RestoreJobStatus.
+func (h *RestoreJobsHolder) GetFilteredJobs(
+	timeBounds model.TimeBounds,
+	statusFilter model.StatusFilter,
+) map[model.RestoreJobID]*model.RestoreJobStatus {
+	results := make(map[model.RestoreJobID]*model.RestoreJobStatus)
+
+	h.Iterate(func(id model.RestoreJobID, job *restoreJob) {
+		if !timeBounds.Contains(job.started) {
+			return
+		}
+
+		// Build the status first to get a consistent snapshot of the job.
+		// This prevents a race condition where the job's status changes
+		// between filtering and building the result.
+		status := job.buildStatus()
+
+		// Now, filter based on the consistent snapshot.
+		if !statusFilter.Matches(status.Status) {
+			return
+		}
+
+		results[id] = status
+	})
+
+	return results
 }
 
 func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*restoreJob, error) {

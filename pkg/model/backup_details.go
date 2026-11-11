@@ -16,9 +16,6 @@ type BackupDetails struct {
 
 	Key     string
 	Storage Storage
-	// Uncounted marks a backup whose metadata counts no files, records or bytes: a server-side
-	// backup. Its zero counts tell nothing about what it holds.
-	Uncounted bool
 }
 
 func NewBackupDetails(md BackupMetadata, key string, storage Storage) BackupDetails {
@@ -27,11 +24,6 @@ func NewBackupDetails(md BackupMetadata, key string, storage Storage) BackupDeta
 		Key:            key,
 		Storage:        storage,
 	}
-}
-
-// IsEmpty reports whether this backup is known to have no data: it counts its files, and has none.
-func (bd BackupDetails) IsEmpty() bool {
-	return !bd.Uncounted && bd.FileCount == 0
 }
 
 // BackupType returns incremental for a backup with a lower time bound, full otherwise.

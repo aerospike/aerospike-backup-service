@@ -1,9 +1,12 @@
 package serverbackup
 
 import (
+	"log/slog"
 	"testing"
 	"time"
 )
+
+var discardLogger = slog.New(slog.DiscardHandler)
 
 // shortenLostJobTimeout shortens lostJobTimeout for the test. The test must not be parallel.
 // Parallel tests start only after the sequential ones have ended, so none of them reads the

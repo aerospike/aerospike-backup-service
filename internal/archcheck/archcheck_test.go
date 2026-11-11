@@ -18,7 +18,7 @@ import (
 var allowed = map[string]string{
 	"pkg/service.backupJob.orchestrator": "Quartz calls Execute(ctx) and nothing else; " +
 		"the job is what binds the orchestrator to one routine.",
-	"pkg/service/backupexecutor.closeOnWaitBackupHandler.clientManager": "the handler is a client lease " +
+	"pkg/service/scanbackup/backupexecutor.closeOnWaitBackupHandler.clientManager": "the handler is a client lease " +
 		"returned to callers that only know BackupHandler.Wait(ctx), which returns the client to the manager.",
 }
 

@@ -35,8 +35,8 @@ func TestPathFilter_WithFromTimeAndToTime(t *testing.T) {
 	require.NotNil(t, filter.ToTime)
 	assert.Equal(t, from, *filter.FromTime)
 	assert.Equal(t, to, *filter.ToTime)
-	assert.Equal(t, from, *filter.timeBounds().FromTime)
-	assert.Equal(t, to, *filter.timeBounds().ToTime)
+	assert.Equal(t, from, *filter.TimeBounds().FromTime)
+	assert.Equal(t, to, *filter.TimeBounds().ToTime)
 }
 
 func TestPathFilter_WithTimeBounds(t *testing.T) {
