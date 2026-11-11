@@ -7,6 +7,8 @@ import (
 )
 
 // BaseRestorePolicy represents the common policy for restore operations.
+//
+//nolint:lll // the struct tags carry each field's API metadata.
 type BaseRestorePolicy struct {
 	// The number of concurrent record readers from backup files.
 	// This value controls the level of parallelism used by the backup service when
@@ -15,7 +17,7 @@ type BaseRestorePolicy struct {
 	Parallel *int `json:"parallel,omitempty" example:"8" default:"8"`
 	// Do not restore any record data (metadata or bin data).
 	// By default, record data, secondary index definitions, and UDF modules will be restored.
-	NoRecords *bool `json:"no-records,omitempty" default:"false"`
+	NoRecords *bool `json:"no-records,omitempty" default:"false" extensions:"x-backup-mode=scan"`
 	// Do not restore any secondary index definitions.
 	NoIndexes *bool `json:"no-indexes,omitempty" default:"false"`
 	// Do not restore any UDF modules.
@@ -23,17 +25,17 @@ type BaseRestorePolicy struct {
 	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
 	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000" default:"600000"`
+	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000" default:"600000" extensions:"x-backup-mode=scan"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
-	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000" default:"0"`
+	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000" default:"0" extensions:"x-backup-mode=scan"`
 	// Disables the use of batch writes when restoring records to the Aerospike cluster.
 	// By default, the cluster is checked for batch write support.
-	DisableBatchWrites *bool `json:"disable-batch-writes,omitempty" default:"false"`
+	DisableBatchWrites *bool `json:"disable-batch-writes,omitempty" default:"false" extensions:"x-backup-mode=scan"`
 	// The max number of outstanding async record batch write calls at a time.
-	MaxAsyncBatches *int `json:"max-async-batches,omitempty" example:"32" default:"128"`
+	MaxAsyncBatches *int `json:"max-async-batches,omitempty" example:"32" default:"128" extensions:"x-backup-mode=scan"`
 	// The max allowed number of records per an async batch write call.
 	// Only applicable when using batch writes.
-	BatchSize *int `json:"batch-size,omitempty" example:"32" default:"128"`
+	BatchSize *int `json:"batch-size,omitempty" example:"32" default:"128" extensions:"x-backup-mode=scan"`
 	// Namespace optionally specifies an alternative namespace name for the restore operation.
 	// By default, the data is restored to the namespace from which it was taken.
 	// Only a single namespace can be remapped: the restore must contain exactly one namespace,
@@ -44,27 +46,27 @@ type BaseRestorePolicy struct {
 	// The sets to restore (optional, an empty list implies restoring all sets).
 	SetList []string `json:"set-list,omitempty" example:"set1,set2" extensions:"x-nullable"`
 	// The bins to restore (optional, an empty list implies restoring all bins).
-	BinList []string `json:"bin-list,omitempty" example:"bin1,bin2"  extensions:"x-nullable"`
+	BinList []string `json:"bin-list,omitempty" example:"bin1,bin2"  extensions:"x-nullable,x-backup-mode=scan"`
 	// Replace records. This controls how records from the backup overwrite existing records in
 	// the namespace. By default, restoring a record from a backup only replaces the bins
 	// contained in the backup; all other bins of an existing record remain untouched.
-	Replace *bool `json:"replace,omitempty" default:"false"`
+	Replace *bool `json:"replace,omitempty" default:"false" extensions:"x-backup-mode=scan"`
 	// Existing records take precedence. With this option, only records that do not exist in
 	// the namespace are restored, regardless of generation numbers. If a record exists in
 	// the namespace, the record from the backup is ignored.
-	Unique *bool `json:"unique,omitempty" default:"false"`
+	Unique *bool `json:"unique,omitempty" default:"false" extensions:"x-backup-mode=scan"`
 	// Records from backups take precedence. This option disables the generation check.
 	// With this option, records from the backup always overwrite records that already exist in
 	// the namespace, regardless of generation numbers.
-	NoGeneration *bool `json:"no-generation,omitempty" default:"false"`
+	NoGeneration *bool `json:"no-generation,omitempty" default:"false" extensions:"x-backup-mode=scan"`
 	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in MiB/s.
 	// Default: no limit.
-	Bandwidth *int64 `json:"bandwidth,omitempty" example:"50000" extensions:"x-nullable"`
+	Bandwidth *int64 `json:"bandwidth,omitempty" example:"50000" extensions:"x-nullable,x-backup-mode=scan"`
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.
 	// Default: no limit.
 	Tps *int `json:"tps,omitempty" example:"4000" extensions:"x-nullable"`
 	// Encryption details (algorithm and key). Default is no encryption.
-	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
+	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty" extensions:"x-backup-mode=scan"`
 	// Configuration of retries for each restore write operation.
 	// If nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
@@ -75,10 +77,12 @@ type BaseRestorePolicy struct {
 
 // RestorePolicy represents a policy for the restore operation.
 // @Description RestorePolicy represents a policy for the restore operation.
+//
+//nolint:lll // the struct tags carry each field's API metadata.
 type RestorePolicy struct {
 	BaseRestorePolicy
 	// Compression details (algorithm). Default is no compression.
-	CompressionPolicy *RestoreCompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
+	CompressionPolicy *RestoreCompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty" extensions:"x-backup-mode=scan"`
 }
 
 // TimestampRestorePolicy represents a policy for the point-in-time restore operation.
