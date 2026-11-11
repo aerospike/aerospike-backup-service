@@ -36,7 +36,8 @@ func currentBackupStatus(handler RoutineBackupHandler) *model.RunningJob {
 	return job
 }
 
-// NewRestoreRunningJob created new RunningJob for restore with calculated estimated time and percentage.
+// NewRestoreRunningJob creates a RunningJob for a restore, with its percentage and estimated end
+// time.
 func NewRestoreRunningJob(
 	startTime time.Time,
 	finishTime *time.Time,
@@ -44,7 +45,7 @@ func NewRestoreRunningJob(
 	metrics *models.Metrics,
 	jobStatus model.RestoreState,
 ) *model.RunningJob {
-	if total == 0 { // edge case for empty restore
+	if total == 0 { // an empty restore, with nothing to measure the progress against.
 		return &model.RunningJob{
 			StartTime:  startTime,
 			FinishTime: finishTime,

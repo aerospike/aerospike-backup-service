@@ -10,8 +10,8 @@ import (
 // BackupFilter selects which backups GetBackups returns. Only the filter types of this package
 // are accepted, because GetBackups switches on the concrete type.
 type BackupFilter interface {
-	// timeBounds returns time bounds specified for current filter.
-	timeBounds() model.TimeBounds
+	// TimeBounds returns time bounds specified for current filter.
+	TimeBounds() model.TimeBounds
 }
 
 // BaseFilter contains common filter attributes.
@@ -82,22 +82,7 @@ func (f *RoutineFilter) WithTimeBounds(bounds model.TimeBounds) *RoutineFilter {
 // String returns a readable filter representation for logging/debugging.
 func (f *RoutineFilter) String() string {
 	return fmt.Sprintf("routine: %s storage: %s type: %v last: %v timebounds: %s",
-		f.routineName, f.storage.String(), f.backupType, f.onlyLast, f.timeBounds().String())
-}
-
-// getPath returns the storage root path for this routine and job type.
-func (f *RoutineFilter) getPath() string {
-	return backupRootPath(f.routineName, f.backupType)
-}
-
-// getUpperBoundary returns the storage path prefix upper bound derived from ToTime.
-// If ToTime is unset, all timestamps are allowed.
-func (f *RoutineFilter) getUpperBoundary(pathService PathService) string {
-	if f.ToTime != nil {
-		return pathService.GetTimestampPath(f.routineName, *f.ToTime, f.backupType)
-	}
-
-	return "\uffff"
+		f.routineName, f.storage.String(), f.backupType, f.onlyLast, f.TimeBounds().String())
 }
 
 // PathFilter for filtering by explicit path.
@@ -116,7 +101,7 @@ func NewPathFilter(path string, storage model.Storage) *PathFilter {
 }
 
 // TimeBounds returns time bounds for a base filter.
-func (b *BaseFilter) timeBounds() model.TimeBounds {
+func (b *BaseFilter) TimeBounds() model.TimeBounds {
 	return model.TimeBounds{
 		FromTime: b.FromTime,
 		ToTime:   b.ToTime,
@@ -145,7 +130,7 @@ func (p *PathFilter) WithTimeBounds(bounds model.TimeBounds) *PathFilter {
 
 func (p *PathFilter) String() string {
 	return fmt.Sprintf("path: %v storage: %s timebounds: %s",
-		p.path, p.storage.String(), p.timeBounds().String())
+		p.path, p.storage.String(), p.TimeBounds().String())
 }
 
 // RoutineName returns the name of the routine whose backups the filter selects.
@@ -166,11 +151,6 @@ func (f *RoutineFilter) BackupType() model.BackupType {
 // OnlyLast reports whether only the latest matching backup is selected.
 func (f *RoutineFilter) OnlyLast() bool {
 	return f.onlyLast
-}
-
-// TimeBounds returns the Created time bounds of the filter.
-func (f *RoutineFilter) TimeBounds() model.TimeBounds {
-	return f.timeBounds()
 }
 
 // Path returns the backup path the filter selects.

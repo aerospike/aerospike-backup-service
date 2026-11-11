@@ -1,9 +1,5 @@
 package model
 
-import (
-	"github.com/aerospike/backup-go/models"
-)
-
 // RestoreState represents possible states of restore jobs.
 type RestoreState string
 
@@ -25,7 +21,7 @@ func (s RestoreState) String() string {
 //   - RestoreSuccess -> statistics.
 //   - RestoreFailure -> error.
 type RestoreJobStatus struct {
-	Counters       *models.RestoreStats
+	Counters       RestoreCounters
 	CurrentRestore *RunningJob
 	Status         RestoreState
 	Error          error

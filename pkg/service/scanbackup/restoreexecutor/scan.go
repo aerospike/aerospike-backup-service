@@ -1,0 +1,88 @@
+package restoreexecutor
+
+import (
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	"github.com/aerospike/backup-go"
+)
+
+const megabyte = 1_048_576
+
+func makeRestoreConfig(restoreRequest *model.RestoreRequest,
+) *backup.ConfigRestore {
+	config := backup.NewDefaultRestoreConfig()
+	config.BinList = restoreRequest.Policy.BinList
+	config.SetList = restoreRequest.Policy.SetList
+
+	config.RetryPolicy = restoreRequest.Policy.RetryPolicy.Restore()
+
+	config.WritePolicy = makeWritePolicy(restoreRequest)
+	config.NoRecords = ptr.ValueOrZero(restoreRequest.Policy.NoRecords)
+	config.NoIndexes = ptr.ValueOrZero(restoreRequest.Policy.NoIndexes)
+	config.NoUDFs = ptr.ValueOrZero(restoreRequest.Policy.NoUdfs)
+
+	if restoreRequest.Policy.Namespace != nil {
+		config.Namespace = &backup.RestoreNamespaceConfig{
+			Source:      ptr.StringOrNil(restoreRequest.Policy.Namespace.Source),
+			Destination: ptr.StringOrNil(restoreRequest.Policy.Namespace.Destination),
+		}
+	}
+
+	config.RecordsPerSecond = ptr.ValueOrZero(restoreRequest.Policy.Tps)
+	config.Bandwidth = ptr.ValueOrZero(restoreRequest.Policy.Bandwidth) * megabyte
+	config.Parallel = restoreRequest.Policy.GetParallelOrDefault()
+	config.MaxAsyncBatches = restoreRequest.Policy.GetMaxAsyncBatchesOrDefault()
+	config.BatchSize = restoreRequest.Policy.GetBatchSizeOrDefault()
+	config.DisableBatchWrites = ptr.ValueOrZero(restoreRequest.Policy.DisableBatchWrites)
+
+	config.CompressionPolicy = restoreRequest.Policy.CompressionPolicy.ToLibraryPolicy()
+	config.EncryptionPolicy = restoreRequest.Policy.EncryptionPolicy.ToLibraryPolicy()
+
+	config.ExtraTTL = ptr.ValueOrZero(restoreRequest.Policy.ExtraTTL)
+
+	config.SecretAgentConfig = restoreRequest.SecretAgent.ToSecretAgentConfig()
+	config.MetricsEnabled = true
+
+	return config
+}
+
+func makeWritePolicy(restoreRequest *model.RestoreRequest) *as.WritePolicy {
+	writePolicy := as.NewWritePolicy(0, 0)
+	writePolicy.GenerationPolicy = as.EXPECT_GEN_GT
+	writePolicy.SendKey = true
+	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
+		writePolicy.GenerationPolicy = as.NONE
+	}
+
+	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
+	writePolicy.RecordExistsAction = recordExistsAction(&restoreRequest.Policy)
+
+	writePolicy.SocketTimeout = restoreRequest.Policy.GetSocketTimeoutOrDefault()
+
+	if restoreRequest.Policy.TotalTimeout != nil {
+		writePolicy.TotalTimeout = *restoreRequest.Policy.TotalTimeout
+	}
+
+	return writePolicy
+}
+
+// recordExistsAction decides what a write does to an existing record. Unique is read through
+// IsUniqueOrDefault, as the restore manager does when it orders a chain, so that the write mode and
+// the restore order follow the same default.
+func recordExistsAction(policy *model.RestorePolicy) as.RecordExistsAction {
+	switch {
+	// overwrite all bins of an existing record
+	case policy.Replace != nil && *policy.Replace:
+		return as.REPLACE
+
+	// only insert the record if it does not already exist in the database
+	case policy.IsUniqueOrDefault():
+		return as.CREATE_ONLY
+
+	// default behavior: merge bins with existing record, or create a new
+	// record if it does not exist
+	default:
+		return as.UPDATE
+	}
+}

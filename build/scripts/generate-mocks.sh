@@ -186,14 +186,19 @@ generate_external_mocks() {
 
 generate_mocks \
     "pkg/service" \
-    "RestoreManager,BackupCatalog,BackupReader,BackupWriter,BackupStateRegistry,BackupRetentionManager,ClusterConfigWriter,CancelableBackupHandler,RoutineBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,RestoreValidator,StartController,RoutineBackupRunner,NamespaceBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler,ConfigApplier,ConfigRetriever"
+    "RestoreManager,BackupReader,BackupStateRegistry,BackupRetentionManager,ClusterConfigWriter,RoutineBackupHandler,routineProvider,HistoryManager,BackupCompletionHandler,StartController,RoutineBackupRunner,BackupReporter,BackupOrchestrator,JobScheduler,ConfigApplier,ConfigRetriever,RestoreHandler"
 
 generate_mocks \
-    "pkg/service/restoreexecutor" \
-    "Restore,RestoreHandler"
+    "pkg/service/scanbackup" \
+    "BackupCatalog,BackupWriter,CancelableBackupHandler,NamespaceBackupRunner,PathService,RestoreExecutor,RestoreValidator,routineProvider"
+
 
 generate_mocks \
-    "pkg/service/backupexecutor" \
+    "pkg/service/serverbackup" \
+    "Catalog"
+
+generate_mocks \
+    "pkg/service/scanbackup/backupexecutor" \
     "Backup,BackupHandler"
 
 generate_mocks \
@@ -212,15 +217,15 @@ generate_external_mocks \
 
 generate_external_mocks \
     "github.com/aerospike/backup-go" \
-    "pkg/service/backupexecutor" \
+    "pkg/service/scanbackup/backupexecutor" \
     "backupgo_mockgen.go" \
     "Writer"
 
 generate_external_mocks \
     "github.com/aerospike/backup-go" \
-    "pkg/service/restoreexecutor" \
+    "pkg/service/scanbackup/restoreexecutor" \
     "backupgo_mockgen.go" \
-    "StreamingReader"
+    "StreamingReader,RestoreHandler"
 
 generate_mocks \
     "internal/server/configuration" \

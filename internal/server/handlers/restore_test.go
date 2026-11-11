@@ -12,7 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -266,8 +265,7 @@ func TestService_RestoreStatusHandler(t *testing.T) {
 			jobIDParam: "5",
 			setupMock: func(m *service.MockRestoreManager) {
 				status := &model.RestoreJobStatus{
-					Status:   model.RestoreSuccess,
-					Counters: models.NewRestoreStats(),
+					Status: model.RestoreSuccess,
 				}
 				m.EXPECT().JobStatus(model.RestoreJobID(5)).Return(status, nil)
 			},
@@ -336,7 +334,7 @@ func TestService_RetrieveRestoreJobs(t *testing.T) {
 			},
 			setupMock: func(m *service.MockRestoreManager) {
 				m.EXPECT().GetFilteredJobs(gomock.Any(), gomock.Any()).Return(map[model.RestoreJobID]*model.RestoreJobStatus{
-					1: {Status: model.RestoreSuccess, Counters: models.NewRestoreStats()},
+					1: {Status: model.RestoreSuccess},
 				})
 			},
 			expectedStatus: http.StatusOK,

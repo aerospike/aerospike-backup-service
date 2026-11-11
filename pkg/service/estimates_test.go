@@ -81,34 +81,6 @@ func TestCurrentBackupStatus_NotStarted(t *testing.T) {
 	assert.Nil(t, currentBackupStatus(handler))
 }
 
-// TestCurrentBackupStatus_ScanOperation runs a real scan operation through currentBackupStatus,
-// so the REST job is checked against backup-go's stats rather than a hand-built BackupRun.
-func TestCurrentBackupStatus_ScanOperation(t *testing.T) {
-	t.Parallel()
-
-	stats := models.NewBackupStats()
-	stats.TotalRecords.Store(100)
-	stats.ReadRecords.Store(40)
-	stats.StartTime = time.Now().Add(-time.Minute)
-	h := NewMockCancelableBackupHandler(gomock.NewController(t))
-	h.EXPECT().GetStats().Return(stats)
-	h.EXPECT().GetMetrics().Return(&models.Metrics{RecordsPerSecond: 7})
-	op := &BackupNamespacesOperation{handlers: map[string]CancelableBackupHandler{"ns1": h}}
-
-	job := currentBackupStatus(op)
-
-	require.NotNil(t, job)
-	assert.Equal(t, uint64(40), job.DoneRecords)
-	assert.Equal(t, uint64(100), job.TotalRecords)
-	assert.InDelta(t, 0.4, job.Progress, 1e-9)
-	assert.Equal(t, stats.StartTime, job.StartTime)
-	require.NotNil(t, job.Metrics)
-	assert.Equal(t, uint64(7), job.Metrics.RecordsPerSecond)
-	assert.Nil(t, job.FinishTime)
-	require.NotNil(t, job.EstimatedEndTime)
-	assert.WithinDuration(t, stats.StartTime.Add(150*time.Second), *job.EstimatedEndTime, 100*time.Millisecond)
-}
-
 func TestNewRunningJob(t *testing.T) {
 	startTime := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	finishTime := startTime.Add(time.Hour)
