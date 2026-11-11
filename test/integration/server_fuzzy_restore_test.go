@@ -69,17 +69,14 @@ func (s *ServerBackupSuite) TestServerFuzzyRestoreByTimestamp() {
 
 // TestServerRestoreRequestRejected sends restore requests that server mode does not accept: one
 // by path and one by timestamp without a mode, which server mode requires, one with a mode that
-// does not exist, one with an option the server has no equivalent for, and one that maps the
-// backup's namespace onto another. Each is rejected before any job starts.
+// does not exist, one with an option the server has no equivalent for, and one with a namespace
+// mapping. Each is rejected before any job starts.
 func (s *ServerBackupSuite) TestServerRestoreRequestRejected() {
 	e := s.setupEnv(s.serverBackupConfig)
 
 	byPath := func(policy dto.BaseRestorePolicy) dto.RestoreRequest {
-		request := defaultRestoreRequest("261101T120000-aaaa")
-		request.DestinationClusterConfig.Name = destinationClusterName
-		request.Policy = &dto.RestorePolicy{BaseRestorePolicy: policy}
-
-		return request
+		return pathRestoreRequest("261101T120000-aaaa", destinationClusterName,
+			&dto.RestorePolicy{BaseRestorePolicy: policy})
 	}
 
 	tests := []struct {
@@ -119,7 +116,7 @@ func (s *ServerBackupSuite) TestServerRestoreRequestRejected() {
 				Mode:      dto.RestoreModeStrict,
 				Namespace: &dto.RestoreNamespace{Source: serverNamespace, Destination: otherNamespace},
 			}),
-			wantErr: `restore policy sets a namespace destination other than its source, which backup-mode "server" does not support`,
+			wantErr: `restore policy sets namespace, which backup-mode "server" does not support`,
 		},
 	}
 

@@ -110,17 +110,12 @@ func (s *Suite) getBackups(e *env, backupType model.BackupType) []dto.BackupDeta
 // waitForNewBackup polls until a backup of backupType created after the newest one
 // listed at the last trigger appears, and returns it.
 func (s *Suite) waitForNewBackup(e *env, backupType model.BackupType) dto.BackupDetails {
-	return s.waitForNewBackupWithin(e, backupType, backupTimeout)
-}
-
-// waitForNewBackupWithin is waitForNewBackup for a backup that may take up to timeout.
-func (s *Suite) waitForNewBackupWithin(e *env, backupType model.BackupType, timeout time.Duration) dto.BackupDetails {
 	after := e.newestBeforeTrigger[backupType]
 	previousFailures := e.failuresBeforeTrigger[backupType]
 
 	var newest dto.BackupDetails
 
-	ok := s.eventually(timeout, pollInterval, func() bool {
+	ok := s.eventually(backupTimeout, pollInterval, func() bool {
 		s.Require().Equal(previousFailures, int(s.metricBackupEventCount(e, backupType, outcomeFailure)),
 			"%s backup failed", backupType)
 
@@ -134,7 +129,7 @@ func (s *Suite) waitForNewBackupWithin(e *env, backupType model.BackupType, time
 		return newest.Created.After(after)
 	})
 	s.Require().True(ok, "routine %q listed no %s backup created after %s within %s",
-		routineName, backupType, after, timeout)
+		routineName, backupType, after, backupTimeout)
 
 	return newest
 }

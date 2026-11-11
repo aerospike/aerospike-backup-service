@@ -63,7 +63,7 @@ func (r *routineRunner) Run(
 	}
 
 	runCtx, cancel := context.WithCancel(ctx)
-	operation := newBackupOperation(cancel)
+	operation := newBackupOperation(cancel, len(namespaces))
 
 	go func() {
 		defer r.clientManager.Close(client)
@@ -91,13 +91,14 @@ func (r *routineRunner) backupNamespaces(
 	}
 
 	var errs error
-	for _, namespace := range namespaces {
+	for i, namespace := range namespaces {
 		// StartBackup is sent even when ctx is already canceled, so stop here instead of starting
 		// another job.
 		if err := ctx.Err(); err != nil {
 			return errors.Join(errs, err)
 		}
 
+		operation.startNamespace(i)
 		modifiedAfter := lowerBound(bounds, namespace)
 		err := r.backupNamespace(ctx, infoClient, routine, runSpec, modifiedAfter, namespace, operation, logger)
 		if err != nil {
@@ -283,20 +284,26 @@ type backupOperation struct {
 	done      chan struct{}
 	err       error
 
+	// namespaces is the number of namespaces the run backs up, one server job each.
+	namespaces int
+
 	mu sync.Mutex
 	// jobs are the server jobs of the run in the order they started, each as last reported.
 	jobs []model.ServerBackupJob
+	// finished is the number of namespaces before the running one, whatever their outcome.
+	finished int
 	// progressPct is the progress of the running job in percent, as the server reports it.
 	progressPct float64
 }
 
 var _ service.RoutineBackupHandler = (*backupOperation)(nil)
 
-func newBackupOperation(cancel context.CancelFunc) *backupOperation {
+func newBackupOperation(cancel context.CancelFunc, namespaces int) *backupOperation {
 	return &backupOperation{
-		cancel:    cancel,
-		startTime: time.Now(),
-		done:      make(chan struct{}),
+		cancel:     cancel,
+		startTime:  time.Now(),
+		done:       make(chan struct{}),
+		namespaces: namespaces,
 	}
 }
 
@@ -306,7 +313,17 @@ func (o *backupOperation) finish(err error) {
 	close(o.done)
 }
 
-// record stores the latest status of a job. The progress of that job is the progress of the run.
+// startNamespace counts the namespaces before index i as finished and drops the previous job's
+// progress, which would otherwise count namespace i as done until its job reports.
+func (o *backupOperation) startNamespace(i int) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	o.finished = i
+	o.progressPct = 0
+}
+
+// record stores the latest status of a job and its progress.
 func (o *backupOperation) record(status *infomodels.ResponseBackupState) {
 	job := newServerBackupJob(status)
 
@@ -322,15 +339,18 @@ func (o *backupOperation) record(status *infomodels.ResponseBackupState) {
 	o.jobs = append(o.jobs, job)
 }
 
-// Status returns a snapshot of the run: the progress the server reports for the job running now,
-// and the server jobs of the run. The server counts no records to back up, so Scan stays nil.
+// Status returns a snapshot of the run: its progress and its server jobs. The server reports each
+// namespace job's progress on its own, and the jobs run one after another, so each finished
+// namespace counts whole and the running one by its job's progress. Progress that fell back to 0
+// at each namespace would make the estimated end time swing. Every namespace weighs the same: the
+// server counts no records to back up, so Scan stays nil.
 func (o *backupOperation) Status() *model.BackupRun {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
 	return &model.BackupRun{
 		StartTime: o.startTime,
-		Progress:  o.progressPct / 100,
+		Progress:  (float64(o.finished) + o.progressPct/100) / float64(o.namespaces),
 		Server:    &model.ServerProgress{Jobs: slices.Clone(o.jobs)},
 	}
 }

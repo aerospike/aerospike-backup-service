@@ -211,7 +211,7 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 			var requests []infomodels.RequestBackup
 			infoClient := aerospike.NewMockInfoGetter(ctrl)
 			expectCompleteJobs(infoClient, &requests)
-			operation := newBackupOperation(func() {})
+			operation := newBackupOperation(func() {}, 1)
 
 			err := (&routineRunner{backupReader: backupReader}).backupNamespaces(t.Context(), infoClient,
 				tt.routine, tt.runSpec, tt.namespaces, operation, discardLogger)
@@ -252,7 +252,7 @@ func TestRoutineRunner_BackupNamespaces_Failures(t *testing.T) {
 		Storage:      &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1"},
 		BackupPolicy: &model.BackupPolicy{},
 	}
-	operation := newBackupOperation(func() {})
+	operation := newBackupOperation(func() {}, 1)
 
 	err := (&routineRunner{}).backupNamespaces(t.Context(), infoClient, routine,
 		model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar", "baz", "qux"}, operation,
@@ -281,7 +281,7 @@ func TestRoutineRunner_BackupNamespaces_Canceled(t *testing.T) {
 	}
 
 	err := (&routineRunner{}).backupNamespaces(ctx, infoClient, routine,
-		model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar", "baz"}, newBackupOperation(func() {}),
+		model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar", "baz"}, newBackupOperation(func() {}, 2),
 		discardLogger)
 
 	require.ErrorIs(t, err, context.Canceled)
@@ -314,7 +314,7 @@ func TestRoutineRunner_BackupNamespaces_StartOutcomeUnknown(t *testing.T) {
 			routine := &model.BackupRoutine{Storage: &model.S3Storage{Bucket: "bucket"}, BackupPolicy: &model.BackupPolicy{}}
 
 			err := (&routineRunner{}).backupNamespaces(t.Context(), infoClient, routine,
-				model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar"}, newBackupOperation(func() {}),
+				model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar"}, newBackupOperation(func() {}, 1),
 				discardLogger)
 
 			require.ErrorIs(t, err, tt.startErr)
@@ -330,7 +330,7 @@ func TestRoutineRunner_BackupNamespaces_NotS3(t *testing.T) {
 	routine := &model.BackupRoutine{Storage: &model.LocalStorage{Path: "/backups"}, BackupPolicy: &model.BackupPolicy{}}
 
 	err := (&routineRunner{}).backupNamespaces(t.Context(), infoClient, routine,
-		model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar"}, newBackupOperation(func() {}),
+		model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar"}, newBackupOperation(func() {}, 1),
 		discardLogger)
 
 	require.EqualError(t, err, "namespace bar: server backup requires S3 storage, got *model.LocalStorage")
@@ -394,7 +394,7 @@ func TestBackupJob_Wait_RecordsServerJob(t *testing.T) {
 				infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(running, nil),
 				infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(tt.final, nil),
 			)
-			operation := newBackupOperation(func() {})
+			operation := newBackupOperation(func() {}, 1)
 
 			err := newTestBackupJob(infoClient, operation).Wait(t.Context())
 
@@ -453,7 +453,7 @@ func TestBackupJob_Wait_StatusLookup(t *testing.T) {
 				calls = append(calls, infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).Return(errors.New("timeout")))
 			}
 			gomock.InOrder(calls...)
-			operation := newBackupOperation(func() {})
+			operation := newBackupOperation(func() {}, 1)
 
 			err := newTestBackupJob(infoClient, operation).Wait(t.Context())
 
@@ -473,7 +473,7 @@ func TestBackupJob_Wait_Canceled_AbortRefused(t *testing.T) {
 	// The job's status is not looked up: the abort did not reach it.
 	infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
 	infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).Return(errors.New("not principal"))
-	operation := newBackupOperation(func() {})
+	operation := newBackupOperation(func() {}, 1)
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
@@ -496,7 +496,7 @@ func TestBackupJob_Wait_Canceled_RecordsAbortedJob(t *testing.T) {
 			JobID: fullID, Namespace: "test", State: infomodels.BackupStateAborted, AbortOrigin: infomodels.AbortOriginOperator,
 		}, nil),
 	)
-	operation := newBackupOperation(func() {})
+	operation := newBackupOperation(func() {}, 1)
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
@@ -510,7 +510,7 @@ func TestBackupJob_Wait_Canceled_RecordsAbortedJob(t *testing.T) {
 
 func TestBackupOperation_ServerJobs_OnePerJob(t *testing.T) {
 	t.Parallel()
-	operation := newBackupOperation(func() {})
+	operation := newBackupOperation(func() {}, 1)
 
 	status := func(jobID, namespace string, state infomodels.BackupState) *infomodels.ResponseBackupState {
 		return &infomodels.ResponseBackupState{JobID: jobID, Namespace: namespace, State: state}
@@ -528,7 +528,7 @@ func TestBackupOperation_ServerJobs_OnePerJob(t *testing.T) {
 
 func TestBackupOperation_ReportsProgress(t *testing.T) {
 	t.Parallel()
-	operation := newBackupOperation(func() {})
+	operation := newBackupOperation(func() {}, 1)
 
 	// The server reports percent, the operation a fraction, and no scan slot: it counts no records.
 	for _, percent := range []float64{0, 42.7, 95, 100} {
@@ -538,6 +538,27 @@ func TestBackupOperation_ReportsProgress(t *testing.T) {
 		assert.InDelta(t, percent/100, run.Progress, 1e-9, "progress %v", percent)
 		assert.Nil(t, run.Scan)
 	}
+}
+
+// TestBackupOperation_ProgressAcrossNamespaces checks that the progress of a run of two
+// namespaces counts the finished one as a whole, and does not count the next one as done before
+// its job reports.
+func TestBackupOperation_ProgressAcrossNamespaces(t *testing.T) {
+	t.Parallel()
+	operation := newBackupOperation(func() {}, 2)
+
+	operation.startNamespace(0)
+	operation.record(&infomodels.ResponseBackupState{JobID: fullID, ProgressPct: 50})
+	assert.InDelta(t, 0.25, operation.Status().Progress, 1e-9, "half of the first namespace")
+
+	operation.record(&infomodels.ResponseBackupState{JobID: fullID, ProgressPct: 100})
+	assert.InDelta(t, 0.5, operation.Status().Progress, 1e-9, "the first namespace done")
+
+	operation.startNamespace(1)
+	assert.InDelta(t, 0.5, operation.Status().Progress, 1e-9, "the second job has not reported")
+
+	operation.record(&infomodels.ResponseBackupState{JobID: incr1ID, ProgressPct: 40})
+	assert.InDelta(t, 0.7, operation.Status().Progress, 1e-9, "40% of the second namespace")
 }
 
 //nolint:paralleltest // shortens lostJobTimeout, which the parallel tests read.
@@ -583,7 +604,7 @@ func TestBackupJob_Wait_LostJob(t *testing.T) {
 			}
 			gomock.InOrder(calls...)
 
-			err := newTestBackupJob(infoClient, newBackupOperation(func() {})).Wait(t.Context())
+			err := newTestBackupJob(infoClient, newBackupOperation(func() {}, 1)).Wait(t.Context())
 
 			if tt.wantErr == "" {
 				require.NoError(t, err)

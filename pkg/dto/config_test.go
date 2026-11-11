@@ -166,10 +166,48 @@ func TestConfigValidate_ServerMode(t *testing.T) {
 				policy.RetentionPolicy = &RetentionPolicy{FullBackups: new(1)}
 				policy.SocketTimeout = new(int64(1))
 				policy.TotalTimeout = new(int64(1))
+				policy.UseCompression = new(true)
 			},
 			wantErr: `invalid value validation error: policy 'policy1' sets bandwidth, encryption, compression, ` +
 				`no-records, compact, file-limit, max-concurrent-nodes, retry-policy, retention, socket-timeout, ` +
-				`total-timeout, which backup-mode "server" does not support`,
+				`total-timeout, use-scan-compression, which backup-mode "server" does not support`,
+		},
+		{
+			name:    "server mode with a rate the server takes",
+			mode:    BackupModeServer,
+			storage: s3,
+			change: func(c *Config) {
+				c.BackupPolicies["policy1"].Parallel = new(2)
+				c.BackupPolicies["policy1"].RecordsPerSecond = new(10)
+			},
+		},
+		{
+			name:    "server mode with a rate and no parallel",
+			mode:    BackupModeServer,
+			storage: s3,
+			change:  func(c *Config) { c.BackupPolicies["policy1"].RecordsPerSecond = new(1) },
+		},
+		{
+			name:    "server mode with a rate below the server's lowest",
+			mode:    BackupModeServer,
+			storage: s3,
+			change: func(c *Config) {
+				c.BackupPolicies["policy1"].Parallel = new(2)
+				c.BackupPolicies["policy1"].RecordsPerSecond = new(9)
+			},
+			wantErr: `policy 'policy1' validation error: invalid value validation error: records-per-second 9 is ` +
+				`below 10, the lowest rate the server takes for parallel 2`,
+		},
+		{
+			name: "server mode with S3 options it lacks",
+			mode: BackupModeServer,
+			storage: &Storage{S3Storage: &S3Storage{
+				Bucket: "bucket", S3Region: "eu-central-1", Path: "backups",
+				StorageClass: &S3StorageClass{DataClass: StorageClassStandardIa}, MinPartSize: new(5242880),
+			}},
+			change: none,
+			wantErr: `invalid value validation error: storage 'storage1' sets storage-class, min-part-size, ` +
+				`which backup-mode "server" does not support`,
 		},
 		{
 			name:    "server mode with an empty policy",

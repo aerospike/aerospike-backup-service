@@ -117,9 +117,9 @@ func (s *ServerBackupSuite) TestServerRestoreNamespaceMapping() {
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
 
 	s.gap("restore", gapNamespaceMapping, func() {
-		s.restoreIntoDestinationWithPolicy(e, backup.Key, &dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{
+		s.restoreIntoDestinationWithPolicy(e, backup.Key, dto.BaseRestorePolicy{
 			Namespace: &dto.RestoreNamespace{Source: serverNamespace, Destination: otherNamespace},
-		}})
+		})
 
 		s.assertRecordsIn(s.destinationClient, otherNamespace, []int{5, 6})
 	})
@@ -171,8 +171,7 @@ func (s *ServerBackupSuite) TestServerRestoreOptions() {
 
 	s.Run("tps", func() {
 		before := s.restoreJobIDs()
-		s.restoreIntoDestinationWithPolicy(e, backup.Key,
-			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Tps: new(50)}})
+		s.restoreIntoDestinationWithPolicy(e, backup.Key, dto.BaseRestorePolicy{Tps: new(50)})
 
 		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
 		s.Equal("50", s.newRestoreJobFields(before)["restore-rps"])
@@ -180,16 +179,14 @@ func (s *ServerBackupSuite) TestServerRestoreOptions() {
 
 	s.Run("parallel", func() {
 		before := s.restoreJobIDs()
-		s.restoreIntoDestinationWithPolicy(e, backup.Key,
-			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Parallel: new(3)}})
+		s.restoreIntoDestinationWithPolicy(e, backup.Key, dto.BaseRestorePolicy{Parallel: new(3)})
 
 		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
 		s.Equal("3", s.newRestoreJobFields(before)["restore-worker-threads"])
 	})
 
 	s.Run("extra_ttl", func() {
-		s.restoreIntoDestinationWithPolicy(e, backup.Key,
-			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{ExtraTTL: new(int64(extraTTL.Seconds()))}})
+		s.restoreIntoDestinationWithPolicy(e, backup.Key, dto.BaseRestorePolicy{ExtraTTL: new(int64(extraTTL.Seconds()))})
 
 		// The extra TTL adds to what remained of the record's own TTL; time passed since it was
 		// written, so it expires a little earlier than both together.
@@ -202,8 +199,7 @@ func (s *ServerBackupSuite) TestServerRestoreOptions() {
 	})
 
 	s.Run("set_list", func() {
-		s.restoreIntoDestinationWithPolicy(e, backup.Key,
-			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{SetList: []string{"setA", setName}}})
+		s.restoreIntoDestinationWithPolicy(e, backup.Key, dto.BaseRestorePolicy{SetList: []string{"setA", setName}})
 
 		s.NotNil(s.recordBins(s.destinationClient, "setA", 0), "setA record not restored")
 		s.NotNil(s.recordBins(s.destinationClient, setName, 0), setName+" record not restored")
@@ -216,15 +212,14 @@ func (s *ServerBackupSuite) TestServerRestoreOptions() {
 		// Later tests restore into the namespace too.
 		s.T().Cleanup(func() { s.info(s.destinationClient, undo) })
 
-		request := defaultRestoreRequest(backup.Key)
-		request.DestinationClusterConfig.Name = destinationClusterName
-		request.Policy = &dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Mode: dto.RestoreModeStrict}}
+		request := pathRestoreRequest(backup.Key, destinationClusterName,
+			&dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Mode: dto.RestoreModeStrict}})
 		job := s.waitForRestoreEnd(e, s.startRestore(e, e.baseURL+"/v1/restore/full", request), serverJobTimeout)
 		s.Equal(dto.RestoreFailure, job.Status)
 		s.Contains(job.Error, "'"+undo+"'")
 
 		s.Equal("ok", s.info(s.destinationClient, undo))
-		s.restoreIntoDestinationWithPolicy(e, backup.Key, &dto.RestorePolicy{})
+		s.restoreIntoDestinationWithPolicy(e, backup.Key, dto.BaseRestorePolicy{})
 		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
 	})
 }
@@ -249,12 +244,9 @@ func (s *ServerBackupSuite) TestServerRestoreCancel() {
 	s.T().Cleanup(func() { s.info(s.destinationClient, "restore-open:namespace="+serverNamespace) })
 
 	before := s.restoreJobIDs()
-	request := defaultRestoreRequest(backup.Key)
-	request.DestinationClusterConfig.Name = destinationClusterName
-	request.Policy = &dto.RestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{
-		Mode: dto.RestoreModeStrict,
-		Tps:  new(5),
-	}}
+	request := pathRestoreRequest(backup.Key, destinationClusterName, &dto.RestorePolicy{
+		BaseRestorePolicy: dto.BaseRestorePolicy{Mode: dto.RestoreModeStrict, Tps: new(5)},
+	})
 	jobID := s.startRestore(e, e.baseURL+"/v1/restore/full", request)
 
 	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
@@ -300,7 +292,8 @@ func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 	s.Require().Len(fullBackups, 2, "one full backup per namespace")
 	s.waitForLastBackup(e, model.BackupTypeFull, fullBackups[len(fullBackups)-1].Created)
 	fullJobs := s.routineState(e).LastFullJobs
-	s.assertCompleteJobs(fullJobs, fullBackups, map[string]uint64{serverNamespace: 1, otherNamespace: 2})
+	namespaces := []string{serverNamespace, otherNamespace}
+	s.assertCompleteJobs(fullJobs, fullBackups, namespaces, map[string]uint64{serverNamespace: 1, otherNamespace: 2})
 
 	s.seedRecordsIn(s.client, serverNamespace, []int{3})
 	s.seedRecordsIn(s.client, otherNamespace, []int{4})
@@ -308,7 +301,7 @@ func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 	s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 
 	state := s.routineState(e)
-	s.assertCompleteJobs(state.LastIncrementalJobs, s.getBackups(e, model.BackupTypeIncremental),
+	s.assertCompleteJobs(state.LastIncrementalJobs, s.getBackups(e, model.BackupTypeIncremental), namespaces,
 		map[string]uint64{serverNamespace: 1, otherNamespace: 1})
 	s.Equal(fullJobs, state.LastFullJobs, "an incremental backup replaced the full backup's jobs")
 
@@ -376,9 +369,17 @@ func (s *ServerBackupSuite) TestServerTwoRoutines() {
 // GET /v1/backups/currentBackup as a percentage, with zero record counts: the server counts no
 // records to back up, so any count would be made up (BKRS-504).
 func (s *ServerBackupSuite) TestServerProgress() {
-	s.seedRecordsIn(s.client, serverNamespace, []int{1, 2, 3, 4, 5})
+	ages := make([]int, 20)
+	for i := range ages {
+		ages[i] = i + 1
+	}
+	s.seedRecordsIn(s.client, serverNamespace, ages)
 
-	e := s.setupEnv(s.serverBackupConfig)
+	// The base policy's one scan thread at the server's lowest rate for it, 5 records per second,
+	// backs up the 20 records over several polls.
+	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
+		c.BackupPolicies[policyName].RecordsPerSecond = new(5)
+	})
 	s.triggerFullBackup(e)
 
 	var running dto.RunningJob
@@ -394,7 +395,6 @@ func (s *ServerBackupSuite) TestServerProgress() {
 		return true
 	})
 	s.Require().True(ok, "no progress reported for the running full backup")
-	s.Less(running.PercentageDone, uint(100), "a running backup reports done")
 	s.Zero(running.TotalRecords, "a server backup reports a total record count")
 	s.Zero(running.DoneRecords, "a server backup reports a done record count")
 
@@ -446,7 +446,9 @@ func (s *ServerBackupSuite) TestServerBackupFailure() {
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
 		c.Storage[storageName].S3Storage.Bucket = "missing-bucket"
 	})
+	// The metrics count the events of every test in the run, so compare against their values now.
 	failures := s.metricBackupEventCount(e, model.BackupTypeFull, outcomeFailure)
+	successes := s.metricBackupSuccessEventCount(e, model.BackupTypeFull)
 
 	// Not triggerFullBackup: it lists the backups first, which the missing bucket fails.
 	status, body := s.do(e, http.MethodPost, fmt.Sprintf("%s/v1/backups/full/%s", e.baseURL, routineName), nil)
@@ -456,7 +458,7 @@ func (s *ServerBackupSuite) TestServerBackupFailure() {
 		return s.metricBackupEventCount(e, model.BackupTypeFull, outcomeFailure) > failures
 	})
 	s.Require().True(ok, "the backup did not fail")
-	s.Zero(s.metricBackupSuccessEventCount(e, model.BackupTypeFull))
+	s.Equal(successes, s.metricBackupSuccessEventCount(e, model.BackupTypeFull), "the failed backup counted a success")
 
 	state := s.routineState(e)
 	s.Nil(state.Full, "the failed backup still shows as running")

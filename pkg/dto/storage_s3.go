@@ -28,7 +28,7 @@ type S3Storage struct {
 	// The log level of the AWS S3 SDK (AWS S3 optional).
 	S3LogLevel S3LogLevel `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL"`
 	// The minimum size in bytes of individual S3 UploadParts.
-	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" extensions:"x-nullable" minimum:"5242880"`
+	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" extensions:"x-nullable,x-backup-mode=scan" minimum:"5242880"`
 	// The maximum number of simultaneous requests from S3.
 	MaxConnsPerHost *int `yaml:"max-async-connections,omitempty" json:"max-async-connections,omitempty" example:"16" extensions:"x-nullable"`
 	// Access Key ID for authentication with S3 StaticCredentialsProvider.
@@ -40,7 +40,7 @@ type S3Storage struct {
 	// Literal values are redacted as "[secret]" in API responses; secret agent references are returned as-is.
 	SecretAccessKey Secret `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty" format:"password" extensions:"x-nullable"`
 	// StorageClass defines the storage class for data and metadata objects.
-	StorageClass *S3StorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
+	StorageClass *S3StorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty" extensions:"x-backup-mode=scan"`
 }
 
 // s3MinUploadPartSize is the AWS-enforced minimum size of a multipart upload part (except the last one).

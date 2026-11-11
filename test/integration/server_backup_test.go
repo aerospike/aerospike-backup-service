@@ -72,7 +72,7 @@ func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 	s.gap("restore", gapEmptyRestore, func() {
 		restoreStatus := s.restoreIntoDestination(e, fullBackup.Key)
 
-		s.Equal(uint64(wantIndexes), restoreStatus.IndexCount)
+		s.gap("index_count", gapRestoreStats, func() { s.Equal(uint64(wantIndexes), restoreStatus.IndexCount) })
 		indexes := s.destinationIndexes()
 		s.Contains(indexes, "age_sidx")
 		s.Contains(indexes, "set_sidx")
@@ -222,7 +222,8 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampCumulativeWorkflow() {
 	s.Run("incremental_2", func() {
 		s.seedRecordsIn(s.client, serverNamespace, []int{1, 2})
 		s.triggerIncrementalBackup(e)
-		// The second incremental should have 2 records (1 and 2) because it's cumulative.
+		// Both records changed after the first incremental, so the second holds 2 in either mode;
+		// its From time shows that it is cumulative.
 		incrBackup2 = s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 		s.gap("record_count", gapRecordCount, func() { s.Equal(uint64(2), incrBackup2.RecordCount) })
 		s.assertServerBackupListed(e, model.BackupTypeIncremental, incrBackup2)
@@ -235,9 +236,8 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampCumulativeWorkflow() {
 	s.gap("restore_by_timestamp", gapEmptyRestore, func() {
 		status := s.restoreIntoDestinationByTimestamp(e, time.Now())
 		s.Equal(dto.RestoreSuccess, status.Status)
-		// Total inserted should be 2 from the second incremental.
-		// The first incremental should be skipped.
-		s.Equal(uint64(2), status.InsertedRecords)
+		// The chain is the full backup and the second incremental: the first incremental is skipped.
+		s.gap("inserted_records", gapRestoreStats, func() { s.Equal(uint64(2), status.InsertedRecords) })
 		s.Empty(status.Error)
 		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1, 2})
 	})

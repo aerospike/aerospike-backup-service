@@ -55,7 +55,6 @@ func TestValidateRestorePolicy(t *testing.T) {
 			policy: model.RestorePolicy{
 				Mode:              model.RestoreModeStrict,
 				Replace:           new(false),
-				Namespace:         &model.RestoreNamespace{Source: "bar", Destination: "bar"},
 				EncryptionPolicy:  &model.EncryptionPolicy{Mode: model.EncryptionModeNone},
 				CompressionPolicy: &model.CompressionPolicy{Mode: model.CompressionModeNone},
 			}},
@@ -77,7 +76,7 @@ func TestValidateRestorePolicy(t *testing.T) {
 				Bandwidth:          new(int64(1)),
 				EncryptionPolicy:   &model.EncryptionPolicy{Mode: model.EncryptionModeAES128},
 				CompressionPolicy:  &model.CompressionPolicy{Mode: model.CompressionModeZSTD},
-				Namespace:          &model.RestoreNamespace{Source: "bar", Destination: "baz"},
+				Namespace:          &model.RestoreNamespace{Source: "bar", Destination: "bar"},
 				NoRecords:          new(true),
 				DisableBatchWrites: new(true),
 				BatchSize:          new(1),
@@ -86,7 +85,7 @@ func TestValidateRestorePolicy(t *testing.T) {
 				TotalTimeout:       new(time.Second),
 			},
 			wantErr: "restore policy sets bin-list, replace, unique, no-generation, bandwidth, encryption, " +
-				"compression, a namespace destination other than its source, no-records, disable-batch-writes, batch-size, " +
+				"compression, namespace, no-records, disable-batch-writes, batch-size, " +
 				"max-async-batches, socket-timeout, total-timeout, " +
 				`which backup-mode "server" does not support`},
 		{name: "server mode strict with a retry policy", backupMode: model.BackupModeServer,

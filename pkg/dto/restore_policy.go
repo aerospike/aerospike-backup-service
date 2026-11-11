@@ -49,7 +49,7 @@ type BaseRestorePolicy struct {
 	// equal to `source`, otherwise it is rejected. For a restore by path, point
 	// `backup-data-path` at a single namespace's backup. For a point-in-time restore, the
 	// routine must back up a single namespace.
-	Namespace *RestoreNamespace `json:"namespace,omitempty"`
+	Namespace *RestoreNamespace `json:"namespace,omitempty" extensions:"x-backup-mode=scan"`
 	// The sets to restore (optional, an empty list implies restoring all sets).
 	SetList []string `json:"set-list,omitempty" example:"set1,set2" extensions:"x-nullable"`
 	// The bins to restore (optional, an empty list implies restoring all bins).

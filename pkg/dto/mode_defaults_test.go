@@ -56,6 +56,7 @@ func TestConfig_PublishedDefaultsPassEveryMode(t *testing.T) {
 			config.ServiceConfig.Backup = &BackupCommonConfig{BackupMode: mode}
 			fillPublishedDefaults(t, reflect.ValueOf(config.BackupPolicies["policy1"]).Elem())
 			fillPublishedDefaults(t, reflect.ValueOf(config.BackupRoutines["routine1"]).Elem())
+			fillPublishedDefaults(t, reflect.ValueOf(config.Storage["storage1"].S3Storage).Elem())
 
 			require.NoError(t, config.Validate())
 		})

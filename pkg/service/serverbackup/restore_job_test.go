@@ -83,37 +83,6 @@ func TestStartRestore(t *testing.T) {
 	}
 }
 
-// TestStartRestore_Namespace checks that the server restores into the destination the policy
-// names, or else into the backup's own namespace.
-func TestStartRestore_Namespace(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name      string
-		namespace *model.RestoreNamespace
-		want      string
-	}{
-		{name: "destination", namespace: &model.RestoreNamespace{Source: "bar", Destination: "baz"}, want: "baz"},
-		{name: "no destination", namespace: &model.RestoreNamespace{Source: "bar"}, want: "bar"},
-		{name: "no mapping", want: "bar"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			ctrl := gomock.NewController(t)
-
-			infoClient := aerospike.NewMockInfoGetter(ctrl)
-			infoClient.EXPECT().StartRestore(gomock.Any(), requestInNamespace(tt.want)).Return(restoreJobID, nil)
-
-			policy := fuzzyPolicy
-			policy.Namespace = tt.namespace
-			_, err := startRestore(t.Context(), infoClient, policy, []model.BackupDetails{chainBackup(fullID)})
-			require.NoError(t, err)
-		})
-	}
-}
-
 func TestStartRestore_SkipsIndexesAndUDFs(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)

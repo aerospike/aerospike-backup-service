@@ -2365,6 +2365,7 @@ const docTemplate = `{
                     "description": "Enables built-in compression during scan operation.\nValid for Aerospike Server Enterprise Edition only.",
                     "type": "boolean",
                     "default": false,
+                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "with-cluster-configuration": {
@@ -3184,7 +3185,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.RestoreNamespace"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 },
                 "no-generation": {
                     "description": "Records from backups take precedence. This option disables the generation check.\nWith this option, records from the backup always overwrite records that already exist in\nthe namespace, regardless of generation numbers.",
@@ -3591,6 +3593,7 @@ const docTemplate = `{
                     "type": "integer",
                     "default": 52428800,
                     "minimum": 5242880,
+                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "path": {
@@ -3650,7 +3653,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.S3StorageClass"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 }
             }
         },
@@ -4273,7 +4277,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.RestoreNamespace"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 },
                 "no-generation": {
                     "description": "Records from backups take precedence. This option disables the generation check.\nWith this option, records from the backup always overwrite records that already exist in\nthe namespace, regardless of generation numbers.",

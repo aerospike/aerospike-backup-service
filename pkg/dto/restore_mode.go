@@ -37,15 +37,12 @@ func (m RestoreMode) ToModel() model.RestoreMode {
 	return model.RestoreMode(c)
 }
 
-// remaps reports whether namespace maps the backup's namespace onto another one. The server reads
-// a backup under the namespace it restores into, so it finds no backup there.
-func remaps(namespace *model.RestoreNamespace) bool {
-	return namespace != nil && namespace.Destination != "" && namespace.Destination != namespace.Source
-}
-
 // validateRestorePolicy checks policy against the service's backup mode. A scan restore has no
 // mode. A server-side restore must choose a mode, sets no option that the server has no
 // equivalent for, and sets no option that its mode does not support.
+//
+// The restore's storage is not checked for S3: a routine's storage is checked when the
+// configuration loads, and a restore by path from other storage fails when it reads the backup.
 func validateRestorePolicy(policy *model.RestorePolicy, config *model.Config) error {
 	server := config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == model.BackupModeServer
 	if !server {
@@ -64,7 +61,9 @@ func validateRestorePolicy(policy *model.RestorePolicy, config *model.Config) er
 		option{"bandwidth", policy.Bandwidth != nil},
 		option{"encryption", encrypts(policy.EncryptionPolicy)},
 		option{"compression", compresses(policy.CompressionPolicy)},
-		option{"a namespace destination other than its source", remaps(policy.Namespace)},
+		// The server restores only into the namespace a backup was taken from, so a mapping is
+		// rejected, even one onto the same namespace. Waiting for SERVER-1784 and SERVER-1041.
+		option{"namespace", policy.Namespace != nil},
 		option{"no-records", ptr.ValueOrZero(policy.NoRecords)},
 		option{"disable-batch-writes", ptr.ValueOrZero(policy.DisableBatchWrites)},
 		option{"batch-size", policy.BatchSize != nil},

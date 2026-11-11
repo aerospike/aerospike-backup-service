@@ -77,8 +77,8 @@ const (
 		"and counted as the last incremental"
 	gapEmptyRestore = "server bug: a restore of a backup with no records fails, " +
 		"the server takes its zero partition manifests for a failed fetch"
-	gapNamespaceMapping = "server-side backup gap: ABS rejects a restore into another namespace, because " +
-		"the server reads the backup under the destination namespace and finds nothing"
+	gapNamespaceMapping = "server-side backup gap: ABS rejects any namespace mapping, because the server " +
+		"restores only into the namespace a backup was taken from"
 	gapRoutineGate = "server-side backup gap: a second routine on the same cluster is skipped while a backup " +
 		"of another routine runs"
 )
@@ -303,7 +303,7 @@ func (s *ServerBuildSuite) assertServerBackupListed(e *env, backupType model.Bac
 // restoreIntoDestination restores the backup at key into the destination cluster, strict, via
 // POST /v1/restore/full, and waits for the job to succeed.
 func (s *ServerBuildSuite) restoreIntoDestination(e *env, key string) dto.RestoreJobStatus {
-	return s.restoreIntoDestinationWithPolicy(e, key, &dto.RestorePolicy{})
+	return s.restoreIntoDestinationWithPolicy(e, key, dto.BaseRestorePolicy{})
 }
 
 // restoreIntoDestinationWithPolicy restores the backup at key into the destination cluster with
@@ -311,11 +311,11 @@ func (s *ServerBuildSuite) restoreIntoDestination(e *env, key string) dto.Restor
 func (s *ServerBuildSuite) restoreIntoDestinationWithPolicy(
 	e *env,
 	key string,
-	policy *dto.RestorePolicy,
+	policy dto.BaseRestorePolicy,
 ) dto.RestoreJobStatus {
 	policy.Mode = dto.RestoreModeStrict
 
-	return s.restoreByPathInto(e, key, destinationClusterName, policy)
+	return s.restoreByPathInto(e, key, destinationClusterName, &dto.RestorePolicy{BaseRestorePolicy: policy})
 }
 
 // restoreByPathInto restores the backup at key into cluster with policy via POST
@@ -325,11 +325,16 @@ func (s *ServerBuildSuite) restoreByPathInto(
 	key, cluster string,
 	policy *dto.RestorePolicy,
 ) dto.RestoreJobStatus {
+	return s.restoreWithin(e, e.baseURL+"/v1/restore/full", pathRestoreRequest(key, cluster, policy), serverJobTimeout)
+}
+
+// pathRestoreRequest is a request to restore the backup at key into cluster with policy.
+func pathRestoreRequest(key, cluster string, policy *dto.RestorePolicy) dto.RestoreRequest {
 	request := defaultRestoreRequest(key)
 	request.DestinationClusterConfig.Name = cluster
 	request.Policy = policy
 
-	return s.restoreWithin(e, e.baseURL+"/v1/restore/full", request, serverJobTimeout)
+	return request
 }
 
 // restoreIntoDestinationByTimestamp restores the routine's backups up to timestamp into the
@@ -481,8 +486,7 @@ func (s *ServerBuildSuite) destinationIndexes() string {
 
 // assertServerBackupDetails checks the fields a full server backup of serverNamespace reports
 // from the server's metadata: it was created at or after createdAfter, is keyed by its routine and
-// job id,
-// is not incremental, and is stored uncompressed and unencrypted in the MinIO bucket.
+// job id, is not incremental, and is stored uncompressed and unencrypted in the MinIO bucket.
 func (s *ServerBuildSuite) assertServerBackupDetails(backup dto.BackupDetails, createdAfter time.Time) {
 	s.T().Helper()
 
@@ -539,12 +543,14 @@ func hostLANAddress(ctx context.Context) (string, error) {
 }
 
 // assertCompleteJobs checks that jobs are the complete server jobs that wrote backups, one per
-// namespace in the routine's order, each having backed up at least the given number of records.
+// namespace in the order of namespaces, each having backed up at least minRecords of its
+// namespace.
 // The server counts a record once per scan that reads it, and a strict backup's incremental scan
 // reads again the records written shortly before the backup started: a count is not exact.
 func (s *ServerBuildSuite) assertCompleteJobs(
 	jobs []dto.ServerBackupJob,
 	backups []dto.BackupDetails,
+	namespaces []string,
 	minRecords map[string]uint64,
 ) {
 	s.T().Helper()
@@ -554,8 +560,8 @@ func (s *ServerBuildSuite) assertCompleteJobs(
 		keys[backup.Namespace] = jobIDOf(backup.Key)
 	}
 
-	s.Require().Len(jobs, 2, "server jobs")
-	for i, namespace := range []string{serverNamespace, otherNamespace} {
+	s.Require().Len(jobs, len(namespaces), "server jobs")
+	for i, namespace := range namespaces {
 		job := jobs[i]
 		s.Equal(namespace, job.Namespace)
 		s.Equal(keys[namespace], job.JobID, "job of namespace %s wrote its backup", namespace)

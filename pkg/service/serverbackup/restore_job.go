@@ -38,7 +38,8 @@ func startRestore(
 		return nil, err
 	}
 
-	namespace := policy.Namespace.DestinationOr(first.Namespace)
+	// The DTO layer rejects a namespace mapping, so the job restores into the backup's namespace.
+	namespace := first.Namespace
 	common, err := withStorage(infomodels.RequestCommon{
 		Namespace: namespace,
 		SetList:   strings.Join(policy.SetList, ","),
