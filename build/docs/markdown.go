@@ -218,6 +218,9 @@ type Property struct {
 	Items       Reference   `json:"items"`
 	Enum        []string    `json:"enum"`
 	Default     any         `json:"default,omitempty"`
+	// ModeDefault is the default of a field that only BackupMode accepts.
+	ModeDefault any    `json:"x-default,omitempty"`
+	BackupMode  string `json:"x-backup-mode,omitempty"`
 }
 
 type Reference struct {
@@ -298,6 +301,10 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 	}
 
 	defaultValue = formatValue(prop.Default)
+	if prop.BackupMode != "" {
+		defaultValue = formatValue(prop.ModeDefault)
+		description = fmt.Sprintf("%s<br>Only backup-mode `%s` accepts this field.", description, prop.BackupMode)
+	}
 
 	// Handle enum values
 	if len(prop.Enum) > 0 {
