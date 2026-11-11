@@ -109,9 +109,10 @@ func assertAllPropertiesValid(t *testing.T, schema map[string]any, schemaName st
 		// Check for required or default
 		_, isRequired := requiredSet[propName]
 		_, hasDefault := prop[defaultTag]
-		_, isNullable := prop[nullableTag] // nullable fields means that default value is nil
+		_, hasModeDefault := prop["x-default"] // the default of a field only one backup-mode accepts
+		_, isNullable := prop[nullableTag]     // nullable fields means that default value is nil
 
-		assert.True(t, isRequired || hasDefault || isNullable,
+		assert.True(t, isRequired || hasDefault || hasModeDefault || isNullable,
 			"Property '%s.%s' is neither required nor has a default value", schemaName, propName)
 	}
 }

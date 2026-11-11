@@ -2234,13 +2234,15 @@ const docTemplate = `{
                 "bandwidth": {
                     "description": "Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.\nDefault is no limit.",
                     "type": "integer",
+                    "x-backup-mode": "scan",
                     "x-nullable": true,
                     "example": 10000
                 },
                 "compact": {
                     "description": "If set to true, base-64 encoding is not applied to BLOBs (Bytes, HLL, RawMap, RawList), resulting in smaller backup files.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 },
                 "compression": {
                     "description": "Compression details (algorithm and mode). Default is no compression.\nEnabling compression reduces storage and network usage, but increases CPU usage during the backup.\nDepending on the system configuration, compression may improve or degrade overall performance.",
@@ -2248,7 +2250,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.CompressionPolicy"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 },
                 "concurrent-incremental": {
                     "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
@@ -2262,12 +2265,14 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.EncryptionPolicy"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 },
                 "file-limit": {
                     "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created.",
                     "type": "integer",
-                    "default": 250
+                    "default": 250,
+                    "x-backup-mode": "scan"
                 },
                 "incr-mode": {
                     "description": "The mode for incremental backups (optional, default is differential).",
@@ -2282,6 +2287,7 @@ const docTemplate = `{
                 "max-concurrent-nodes": {
                     "description": "Maximum number of concurrent requests to server nodes.\nDefault is to issue requests to all server nodes in parallel.",
                     "type": "integer",
+                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "no-indexes": {
@@ -2292,7 +2298,8 @@ const docTemplate = `{
                 "no-records": {
                     "description": "Do not back up any record data (metadata or bin data).",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 },
                 "no-udfs": {
                     "description": "Do not back up any UDF modules.",
@@ -2325,7 +2332,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.RetentionPolicy"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 },
                 "retry-policy": {
                     "description": "RetryPolicy defines the configuration for database scan retry attempts in case of failures.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
@@ -2333,7 +2341,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 },
                 "sealed": {
                     "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.",
@@ -2343,12 +2352,14 @@ const docTemplate = `{
                 "socket-timeout": {
                     "description": "Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "default": 600000
+                    "default": 600000,
+                    "x-backup-mode": "scan"
                 },
                 "total-timeout": {
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
                     "type": "integer",
-                    "default": 0
+                    "default": 0,
+                    "x-backup-mode": "scan"
                 },
                 "use-scan-compression": {
                     "description": "Enables built-in compression during scan operation.\nValid for Aerospike Server Enterprise Edition only.",
@@ -2426,11 +2437,13 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     },
+                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "partition-list": {
                     "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"\u003cstart\u003e-\u003ccount\u003e\" (e.g., \"100-50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nMutually exclusive with node-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.",
                     "type": "string",
+                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "rack-list": {
@@ -2439,6 +2452,7 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     },
+                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "schedule-timezone": {
@@ -3076,6 +3090,7 @@ const docTemplate = `{
                 "bandwidth": {
                     "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in MiB/s.\nDefault: no limit.",
                     "type": "integer",
+                    "x-backup-mode": "scan",
                     "x-nullable": true,
                     "example": 50000
                 },
@@ -3083,6 +3098,7 @@ const docTemplate = `{
                     "description": "The max allowed number of records per an async batch write call.\nOnly applicable when using batch writes.",
                     "type": "integer",
                     "default": 128,
+                    "x-backup-mode": "scan",
                     "example": 32
                 },
                 "bin-list": {
@@ -3091,6 +3107,7 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     },
+                    "x-backup-mode": "scan",
                     "x-nullable": true,
                     "example": [
                         "bin1",
@@ -3103,12 +3120,14 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.RestoreCompressionPolicy"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 },
                 "disable-batch-writes": {
                     "description": "Disables the use of batch writes when restoring records to the Aerospike cluster.\nBy default, the cluster is checked for batch write support.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 },
                 "encryption": {
                     "description": "Encryption details (algorithm and key). Default is no encryption.",
@@ -3116,7 +3135,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.EncryptionPolicy"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 },
                 "extra-ttl": {
                     "description": "Amount of extra time-to-live to add to records that have expirable void-times.\nMust be set in seconds.",
@@ -3128,6 +3148,7 @@ const docTemplate = `{
                     "description": "The max number of outstanding async record batch write calls at a time.",
                     "type": "integer",
                     "default": 128,
+                    "x-backup-mode": "scan",
                     "example": 32
                 },
                 "namespace": {
@@ -3141,7 +3162,8 @@ const docTemplate = `{
                 "no-generation": {
                     "description": "Records from backups take precedence. This option disables the generation check.\nWith this option, records from the backup always overwrite records that already exist in\nthe namespace, regardless of generation numbers.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 },
                 "no-indexes": {
                     "description": "Do not restore any secondary index definitions.",
@@ -3151,7 +3173,8 @@ const docTemplate = `{
                 "no-records": {
                     "description": "Do not restore any record data (metadata or bin data).\nBy default, record data, secondary index definitions, and UDF modules will be restored.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 },
                 "no-udfs": {
                     "description": "Do not restore any UDF modules.",
@@ -3167,7 +3190,8 @@ const docTemplate = `{
                 "replace": {
                     "description": "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 },
                 "retry-policy": {
                     "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).",
@@ -3193,12 +3217,14 @@ const docTemplate = `{
                     "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "default": 600000,
+                    "x-backup-mode": "scan",
                     "example": 1000
                 },
                 "total-timeout": {
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
                     "type": "integer",
                     "default": 0,
+                    "x-backup-mode": "scan",
                     "example": 2000
                 },
                 "tps": {
@@ -3210,7 +3236,8 @@ const docTemplate = `{
                 "unique": {
                     "description": "Existing records take precedence. With this option, only records that do not exist in\nthe namespace are restored, regardless of generation numbers. If a record exists in\nthe namespace, the record from the backup is ignored.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 }
             }
         },
@@ -4071,6 +4098,7 @@ const docTemplate = `{
                 "bandwidth": {
                     "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in MiB/s.\nDefault: no limit.",
                     "type": "integer",
+                    "x-backup-mode": "scan",
                     "x-nullable": true,
                     "example": 50000
                 },
@@ -4078,6 +4106,7 @@ const docTemplate = `{
                     "description": "The max allowed number of records per an async batch write call.\nOnly applicable when using batch writes.",
                     "type": "integer",
                     "default": 128,
+                    "x-backup-mode": "scan",
                     "example": 32
                 },
                 "bin-list": {
@@ -4086,6 +4115,7 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     },
+                    "x-backup-mode": "scan",
                     "x-nullable": true,
                     "example": [
                         "bin1",
@@ -4095,7 +4125,8 @@ const docTemplate = `{
                 "disable-batch-writes": {
                     "description": "Disables the use of batch writes when restoring records to the Aerospike cluster.\nBy default, the cluster is checked for batch write support.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 },
                 "encryption": {
                     "description": "Encryption details (algorithm and key). Default is no encryption.",
@@ -4103,7 +4134,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.EncryptionPolicy"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 },
                 "extra-ttl": {
                     "description": "Amount of extra time-to-live to add to records that have expirable void-times.\nMust be set in seconds.",
@@ -4115,6 +4147,7 @@ const docTemplate = `{
                     "description": "The max number of outstanding async record batch write calls at a time.",
                     "type": "integer",
                     "default": 128,
+                    "x-backup-mode": "scan",
                     "example": 32
                 },
                 "namespace": {
@@ -4128,7 +4161,8 @@ const docTemplate = `{
                 "no-generation": {
                     "description": "Records from backups take precedence. This option disables the generation check.\nWith this option, records from the backup always overwrite records that already exist in\nthe namespace, regardless of generation numbers.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 },
                 "no-indexes": {
                     "description": "Do not restore any secondary index definitions.",
@@ -4138,7 +4172,8 @@ const docTemplate = `{
                 "no-records": {
                     "description": "Do not restore any record data (metadata or bin data).\nBy default, record data, secondary index definitions, and UDF modules will be restored.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 },
                 "no-udfs": {
                     "description": "Do not restore any UDF modules.",
@@ -4154,7 +4189,8 @@ const docTemplate = `{
                 "replace": {
                     "description": "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 },
                 "retry-policy": {
                     "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).",
@@ -4180,12 +4216,14 @@ const docTemplate = `{
                     "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "default": 600000,
+                    "x-backup-mode": "scan",
                     "example": 1000
                 },
                 "total-timeout": {
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
                     "type": "integer",
                     "default": 0,
+                    "x-backup-mode": "scan",
                     "example": 2000
                 },
                 "tps": {
@@ -4197,7 +4235,8 @@ const docTemplate = `{
                 "unique": {
                     "description": "Existing records take precedence. With this option, only records that do not exist in\nthe namespace are restored, regardless of generation numbers. If a record exists in\nthe namespace, the record from the backup is ignored.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 }
             }
         },

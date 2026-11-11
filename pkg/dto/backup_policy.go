@@ -20,18 +20,18 @@ type BackupPolicy struct {
 	ParallelWrite *int `yaml:"parallel-write,omitempty" json:"parallel-write,omitempty" example:"1" default:"8" minimum:"1"`
 	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" default:"600000"`
+	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" default:"600000" extensions:"x-backup-mode=scan"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
-	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" default:"0"`
+	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" default:"0" extensions:"x-backup-mode=scan"`
 	// RetryPolicy defines the configuration for database scan retry attempts in case of failures.
 	// If nil, the default policy is used (5 retries with a one-minute delay between attempts).
-	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
+	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty" extensions:"x-backup-mode=scan"`
 	// Specifies how long to retain full and incremental backups.
 	// Cleanup runs asynchronously after each successful full backup, never deleting backups preemptively.
 	// Ensure storage capacity for at least one extra full backup beyond the retention configuration.
-	RetentionPolicy *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty"`
+	RetentionPolicy *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty" extensions:"x-backup-mode=scan"`
 	// Do not back up any record data (metadata or bin data).
-	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty" default:"false"`
+	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty" default:"false" extensions:"x-backup-mode=scan"`
 	// Do not back up any secondary index definitions.
 	NoIndexes *bool `yaml:"no-indexes,omitempty" json:"no-indexes,omitempty" default:"false"`
 	// Do not back up any UDF modules.
@@ -40,25 +40,25 @@ type BackupPolicy struct {
 	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty" default:"false"`
 	// Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.
 	// Default is no limit.
-	Bandwidth *int64 `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" extensions:"x-nullable"`
+	Bandwidth *int64 `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" extensions:"x-nullable,x-backup-mode=scan"`
 	// Limits the number of records returned per second (RPS).
 	// Default is no limit.
 	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000" extensions:"x-nullable"`
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created.
-	FileLimit *int `yaml:"file-limit,omitempty" json:"file-limit,omitempty" default:"250"`
+	FileLimit *int `yaml:"file-limit,omitempty" json:"file-limit,omitempty" default:"250" extensions:"x-backup-mode=scan"`
 	// Encryption details (algorithm and key). Default is no encryption.
-	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
+	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty" extensions:"x-backup-mode=scan"`
 	// Compression details (algorithm and mode). Default is no compression.
 	// Enabling compression reduces storage and network usage, but increases CPU usage during the backup.
 	// Depending on the system configuration, compression may improve or degrade overall performance.
-	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
+	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty" extensions:"x-backup-mode=scan"`
 	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty" default:"false"`
 	// If set to true, base-64 encoding is not applied to BLOBs (Bytes, HLL, RawMap, RawList), resulting in smaller backup files.
-	Compact *bool `yaml:"compact,omitempty" json:"compact,omitempty" default:"false"`
+	Compact *bool `yaml:"compact,omitempty" json:"compact,omitempty" default:"false" extensions:"x-backup-mode=scan"`
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
 	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty" default:"false" extensions:"x-nullable"`
@@ -69,7 +69,7 @@ type BackupPolicy struct {
 	UseCompression *bool `yaml:"use-scan-compression,omitempty" json:"use-scan-compression,omitempty" default:"false" extensions:"x-nullable"`
 	// Maximum number of concurrent requests to server nodes.
 	// Default is to issue requests to all server nodes in parallel.
-	MaxConcurrentNodes *int `yaml:"max-concurrent-nodes,omitempty" json:"max-concurrent-nodes,omitempty" extensions:"x-nullable"`
+	MaxConcurrentNodes *int `yaml:"max-concurrent-nodes,omitempty" json:"max-concurrent-nodes,omitempty" extensions:"x-nullable,x-backup-mode=scan"`
 }
 
 // Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
