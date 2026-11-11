@@ -17,7 +17,7 @@ const servicePackage = "github.com/aerospike/aerospike-backup-service/v3/pkg/ser
 
 // The packages of each backup mode, relative to pkg/service.
 var (
-	scanPackages   = []string{"scanbackup", "backupexecutor", "restoreexecutor"}
+	scanPackages   = []string{"scanbackup", "scanbackup/backupexecutor", "scanbackup/restoreexecutor"}
 	serverPackages = []string{"serverbackup"}
 )
 

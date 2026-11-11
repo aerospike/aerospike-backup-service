@@ -7,8 +7,8 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/prometheus"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/scanbackup/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/syncutil"
 	"github.com/aerospike/backup-go/models"

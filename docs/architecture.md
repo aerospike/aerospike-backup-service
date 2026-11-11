@@ -50,8 +50,8 @@ flowchart TB
   Quartz and run immediately as background goroutines.
 - **backup-go engine** ([`aerospike/backup-go`](https://github.com/aerospike/backup-go)) — the library that actually
   scans/writes Aerospike records and restores them; ABS's `backupexecutor` and `restoreexecutor` packages
-  ([`pkg/service/backupexecutor`](../pkg/service/backupexecutor),
-  [`pkg/service/restoreexecutor`](../pkg/service/restoreexecutor)) adapt it to ABS's job model.
+  ([`pkg/service/scanbackup/backupexecutor`](../pkg/service/scanbackup/backupexecutor),
+  [`pkg/service/scanbackup/restoreexecutor`](../pkg/service/scanbackup/restoreexecutor)) adapt it to ABS's job model.
 - **Storage backends** ([`pkg/service/storage`](../pkg/service/storage)) — a common `Operations` interface
   implemented for S3-compatible object storage, Azure Blob Storage, Google Cloud Storage, and local disk, so the rest
   of the service is storage-agnostic.

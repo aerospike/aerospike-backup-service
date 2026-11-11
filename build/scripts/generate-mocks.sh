@@ -194,7 +194,7 @@ generate_mocks \
 
 
 generate_mocks \
-    "pkg/service/backupexecutor" \
+    "pkg/service/scanbackup/backupexecutor" \
     "Backup,BackupHandler"
 
 generate_mocks \
@@ -213,13 +213,13 @@ generate_external_mocks \
 
 generate_external_mocks \
     "github.com/aerospike/backup-go" \
-    "pkg/service/backupexecutor" \
+    "pkg/service/scanbackup/backupexecutor" \
     "backupgo_mockgen.go" \
     "Writer"
 
 generate_external_mocks \
     "github.com/aerospike/backup-go" \
-    "pkg/service/restoreexecutor" \
+    "pkg/service/scanbackup/restoreexecutor" \
     "backupgo_mockgen.go" \
     "StreamingReader,RestoreHandler"
 

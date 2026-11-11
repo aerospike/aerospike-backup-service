@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/scanbackup/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/try"
 	"github.com/aerospike/backup-go/models"
 )
