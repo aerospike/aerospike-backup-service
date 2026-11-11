@@ -35,7 +35,7 @@ func waitForRestore(
 	return jobStatus, err
 }
 
-// failedRestore is the handler of a restore that failed to start.
+// failedRestore is the handler of a restore that ends with err.
 type failedRestore struct {
 	err error
 }
@@ -76,9 +76,6 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 		&collections.LockMap{},
 		validator,
 	)
-
-	// The destination namespace holds records, so a chain keeps the order it is given in.
-	infoGetter.EXPECT().GetRecordCount(gomock.Any(), gomock.Any(), gomock.Any()).Return(uint64(1), nil).AnyTimes()
 
 	return &testRestoreEnv{
 		ctrl:              ctrl,

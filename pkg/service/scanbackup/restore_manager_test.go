@@ -84,8 +84,12 @@ func TestCancelRestoreOK(t *testing.T) {
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
 		[]model.BackupDetails{detailsDetails}, nil)
 
-	// Expect Run to start the process
-	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(mockRestoreHandler, nil)
+	runStarted := make(chan struct{})
+	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).DoAndReturn(
+		func(context.Context, aerospike.Client, *model.RestoreRequest) (service.RestoreHandler, error) {
+			close(runStarted)
+			return mockRestoreHandler, nil
+		})
 
 	env.restoreValidator.EXPECT().
 		ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -95,10 +99,12 @@ func TestCancelRestoreOK(t *testing.T) {
 	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
-	// Give the restore goroutine a moment to start and register the handler
-	assert.Eventually(t, func() bool {
-		return env.jobsHolder.Size() > 0
-	}, time.Second, 10*time.Millisecond)
+	// A job that is canceled before its restore starts does not start it, so wait for the start.
+	select {
+	case <-runStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("The restore did not start")
+	}
 
 	// Cancel the job
 	err := env.restoreManager.CancelRestore(jobID)
@@ -247,7 +253,29 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.RestoreFailure, jobStatus.Status)
-	assert.ErrorIs(t, jobStatus.Error, restoreErr)
+	require.ErrorIs(t, jobStatus.Error, restoreErr)
+	assert.EqualError(t, jobStatus.Error, "failed to restore backup at /backup/path/data: restore service error")
+}
+
+func TestRestoreFailsToStart(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+
+	request := model.NewRestoreRequest(
+		model.AerospikeCluster{}, model.RestorePolicy{}, &model.LocalStorage{Path: "/backup/path"}, nil,
+		"/backup/path/data")
+
+	client := env.expectSuccessfulClientInteraction(t)
+	env.restoreValidator.EXPECT().
+		ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
+		[]model.BackupDetails{testBackup("data", time.Now(), 1)}, nil)
+	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(nil, errors.New("no such folder"))
+
+	jobStatus, err := waitForRestore(t, env.restoreManager, env.restoreManager.Restore(request))
+
+	require.NoError(t, err)
+	assert.Equal(t, model.RestoreFailure, jobStatus.Status)
+	assert.EqualError(t, jobStatus.Error, "failed to start restore from backup at /backup/path/data: no such folder")
 }
 
 func TestCancelRestore_RaceCondition(t *testing.T) {

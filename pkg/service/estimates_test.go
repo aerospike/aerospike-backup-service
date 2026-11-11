@@ -87,7 +87,7 @@ func TestNewRunningJob(t *testing.T) {
 	jobRunning := model.RestoreRunning
 
 	t.Run("zero total returns minimal job", func(t *testing.T) {
-		result := NewRestoreRunningJob(startTime, &finishTime, 0, 0, nil, nil, jobRunning)
+		result := NewRestoreRunningJob(startTime, &finishTime, 0, 0, nil, jobRunning)
 
 		assert.Equal(t, startTime, result.StartTime)
 		assert.Equal(t, &finishTime, result.FinishTime)
@@ -97,21 +97,8 @@ func TestNewRunningJob(t *testing.T) {
 		assert.Zero(t, result.Progress)
 	})
 
-	t.Run("progress the run reports, with no total", func(t *testing.T) {
-		result := NewRestoreRunningJob(startTime, nil, 0, 0, new(0.5), nil, jobRunning)
-
-		assert.InDelta(t, 0.5, result.Progress, 1e-9)
-		assert.NotNil(t, result.EstimatedEndTime)
-	})
-
-	t.Run("progress the run reports wins over the record counts", func(t *testing.T) {
-		result := NewRestoreRunningJob(startTime, nil, 10, 100, new(0.5), nil, jobRunning)
-
-		assert.InDelta(t, 0.5, result.Progress, 1e-9)
-	})
-
 	t.Run("zero progress", func(t *testing.T) {
-		result := NewRestoreRunningJob(startTime, nil, 0, 100, nil, nil, jobRunning)
+		result := NewRestoreRunningJob(startTime, nil, 0, 100, nil, jobRunning)
 
 		assert.Zero(t, result.DoneRecords)
 		assert.Zero(t, result.Progress)
@@ -120,7 +107,7 @@ func TestNewRunningJob(t *testing.T) {
 	})
 
 	t.Run("50 percent completion", func(t *testing.T) {
-		result := NewRestoreRunningJob(startTime, nil, 50, 100, nil, nil, jobRunning)
+		result := NewRestoreRunningJob(startTime, nil, 50, 100, nil, jobRunning)
 
 		assert.Equal(t, uint64(50), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
@@ -129,7 +116,7 @@ func TestNewRunningJob(t *testing.T) {
 	})
 
 	t.Run("completed job", func(t *testing.T) {
-		result := NewRestoreRunningJob(startTime, &finishTime, 100, 100, nil, nil, jobRunning)
+		result := NewRestoreRunningJob(startTime, &finishTime, 100, 100, nil, jobRunning)
 
 		assert.Equal(t, uint64(100), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
@@ -138,7 +125,7 @@ func TestNewRunningJob(t *testing.T) {
 	})
 
 	t.Run("exceed 100%", func(t *testing.T) {
-		result := NewRestoreRunningJob(startTime, nil, 110, 100, nil, nil, jobRunning)
+		result := NewRestoreRunningJob(startTime, nil, 110, 100, nil, jobRunning)
 
 		assert.Equal(t, uint64(110), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)

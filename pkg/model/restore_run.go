@@ -6,11 +6,9 @@ import "github.com/aerospike/backup-go/models"
 type RestoreRun struct {
 	// Counters are the counts of the run so far.
 	Counters RestoreCounters
-	// Metrics is the client-side throughput. It is nil when the backup mode measures none.
+	// Metrics is the client-side throughput of a run in progress. It is nil when the backup mode
+	// measures none, and when the run has finished.
 	Metrics *models.Metrics
-	// Progress is the fraction of the run done, in the range [0, 1], for a run whose handler
-	// learns it directly. It is nil when the progress follows from the record counts.
-	Progress *float64
 }
 
 // RestoreCounters counts what a restore has read and written.

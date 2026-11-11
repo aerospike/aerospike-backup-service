@@ -89,7 +89,7 @@ func TestRunRestore_CreateReaderError(t *testing.T) {
 		CreateDirReader(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("reader failed"))
 
-	_, err := runScanRestore(t.Context(), client, testRestoreRequest(), operations)
+	_, err := NewRestoreExecutor(operations).Run(t.Context(), client, testRestoreRequest())
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "failed to create backup reader")
 }
@@ -108,7 +108,7 @@ func TestRunRestore_RestoreStartError(t *testing.T) {
 		CreateDirReader(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(reader, nil)
 
-	_, err := runScanRestore(t.Context(), client, testRestoreRequest(), operations)
+	_, err := NewRestoreExecutor(operations).Run(t.Context(), client, testRestoreRequest())
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "failed to start restore")
 }

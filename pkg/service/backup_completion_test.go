@@ -144,10 +144,3 @@ func TestBackupCompletionHandler_OnSuccess_LogsRetentionFailure(t *testing.T) {
 		return strings.Contains(logBuf.String(), "Failed to clean up old backups")
 	}, asyncWaitTimeout, 10*time.Millisecond)
 }
-
-func TestNoConfigRetriever(t *testing.T) {
-	t.Parallel()
-
-	_, err := NoConfigRetriever().RetrieveConfiguration(t.Context(), &model.BackupRoutine{}, time.Now())
-	require.ErrorIs(t, err, model.ErrNotFound)
-}

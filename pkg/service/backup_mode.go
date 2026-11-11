@@ -10,9 +10,9 @@ import (
 
 // This file holds the interfaces a backup mode implements. The scan mode implements them in
 // pkg/service/scanbackup and the server mode in pkg/service/serverbackup. The rest of this
-// package works with a mode only through these interfaces and [StartController].
+// package uses a mode only through these interfaces.
 
-// BackupReader lists backups by reading the metadata files stored inside backup folders.
+// BackupReader lists the backups in a storage.
 type BackupReader interface {
 	// GetBackups retrieves backup details based on the provided filter.
 	// Returned backups are sorted by Created time in ascending order.
@@ -65,11 +65,36 @@ type ConfigRetriever interface {
 	RetrieveConfiguration(context.Context, *model.BackupRoutine, time.Time) ([]byte, error)
 }
 
-// RestoreHandler is the handle of a started restore run. It speaks in terms every backup mode
-// has: what a mode cannot report stays zero or nil in the [model.RestoreRun] it returns.
+// RestoreHandler is the handle of a started restore run. Its status holds only what every backup
+// mode can report. A value that a mode cannot report stays zero or nil.
 type RestoreHandler interface {
 	// Wait waits for the run to end and returns the error it ended with.
 	Wait(ctx context.Context) error
 	// Status is a snapshot of the run.
 	Status() model.RestoreRun
+}
+
+// RestoreManager starts restore jobs and keeps their status in memory, so a job can be
+// queried or canceled by its id. Statuses live as long as the process. Each backup mode has its
+// own RestoreManager, built on a [RestoreJobsHolder].
+type RestoreManager interface {
+	// Restore starts a restore process using the given request and returns the job id.
+	// The job runs in the background for the lifetime of the service.
+	Restore(request *model.RestoreRequest) model.RestoreJobID
+
+	// RestoreByTime starts a restore by time process using the given request and returns
+	// the job id. The job runs in the background for the lifetime of the service.
+	RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID
+
+	// JobStatus returns status for the given job id.
+	JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error)
+
+	// CancelRestore cancels an ongoing restore.
+	CancelRestore(jobID model.RestoreJobID) error
+
+	// GetFilteredJobs returns all jobs matching the given filters as a map of jobId -> RestoreJobStatus.
+	GetFilteredJobs(
+		timeBounds model.TimeBounds,
+		statusFilter model.StatusFilter,
+	) map[model.RestoreJobID]*model.RestoreJobStatus
 }

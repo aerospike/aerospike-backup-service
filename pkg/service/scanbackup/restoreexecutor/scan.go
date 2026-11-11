@@ -1,47 +1,13 @@
 package restoreexecutor
 
 import (
-	"context"
-	"fmt"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/io/encoding/asb"
-	"github.com/aerospike/backup-go/io/storage/options"
 )
 
 const megabyte = 1_048_576
-
-func runScanRestore(
-	ctx context.Context,
-	client aerospike.Client,
-	request *model.RestoreRequest,
-	operations storage.Operations,
-) (service.RestoreHandler, error) {
-	reader, err := operations.CreateDirReader(
-		ctx,
-		request.SourceStorage,
-		request.BackupDataPath,
-		options.WithValidator(asb.NewValidator()),
-		options.WithCalculateTotalSize(),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create backup reader: %w", err)
-	}
-
-	config := makeRestoreConfig(request)
-	handler, err := client.Restore(ctx, config, reader)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start restore: %w", err)
-	}
-
-	return scanRestoreHandler{handler: handler}, nil
-}
 
 func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 ) *backup.ConfigRestore {
@@ -102,7 +68,7 @@ func makeWritePolicy(restoreRequest *model.RestoreRequest) *as.WritePolicy {
 }
 
 // recordExistsAction decides what a write does to an existing record. Unique is read through
-// IsUniqueOrDefault, as the time runner does when it orders a chain, so that the write mode and
+// IsUniqueOrDefault, as the restore manager does when it orders a chain, so that the write mode and
 // the restore order follow the same default.
 func recordExistsAction(policy *model.RestorePolicy) as.RecordExistsAction {
 	switch {

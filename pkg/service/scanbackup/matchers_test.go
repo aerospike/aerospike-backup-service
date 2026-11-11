@@ -74,20 +74,28 @@ func (m restoreRequestCompressionMatcher) String() string {
 }
 
 // restoreRequestChainMatcher matches a restore request for the backup at expectedPath of a chain
-// of expectedNamespace, which disables reordering or not, as expected, and has its policy as given.
+// of expectedNamespace, which disables reordering and restores under the unique policy or not, as
+// expected.
 type restoreRequestChainMatcher struct {
 	expectedPath              string
 	expectedNamespace         string
 	expectedDisableReordering bool
+	expectedUnique            bool
 }
 
 func (m restoreRequestChainMatcher) Matches(x any) bool {
 	req, ok := matchRestoreRequest(x, m.expectedPath)
-	return ok && req.Namespace == m.expectedNamespace &&
-		req.DisableReordering == m.expectedDisableReordering && req.Policy.Unique == nil
+	if !ok {
+		return false
+	}
+
+	unique := req.Policy.Unique != nil && *req.Policy.Unique
+
+	return req.Namespace == m.expectedNamespace &&
+		req.DisableReordering == m.expectedDisableReordering && unique == m.expectedUnique
 }
 
 func (m restoreRequestChainMatcher) String() string {
-	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q, namespace %q, disable-reordering=%t and no unique",
-		m.expectedPath, m.expectedNamespace, m.expectedDisableReordering)
+	return fmt.Sprintf("RestoreRequest with BackupDataPath=%q, namespace %q, disable-reordering=%t and unique=%t",
+		m.expectedPath, m.expectedNamespace, m.expectedDisableReordering, m.expectedUnique)
 }

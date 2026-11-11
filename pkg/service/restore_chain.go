@@ -24,8 +24,9 @@ func (c RestoreChain) Backups() []model.BackupDetails {
 	return append([]model.BackupDetails{c.Full}, c.Incrementals...)
 }
 
-// FindRestoreChains returns the restore chain of each namespace of the request's routine, from
-// the backups reader lists.
+// FindRestoreChains returns the restore chain of each namespace of the request's routine, keyed
+// by namespace, from the backups reader lists. A namespace with no full backup up to the request's
+// time has no chain, and it is an error when no namespace has one.
 func FindRestoreChains(
 	ctx context.Context, reader BackupReader, request *model.RestoreTimestampRequest,
 ) (map[string]RestoreChain, error) {

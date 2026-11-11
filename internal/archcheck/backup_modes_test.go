@@ -3,7 +3,9 @@ package archcheck_test
 import (
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,39 +17,73 @@ import (
 
 const servicePackage = "github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 
-// The packages of each backup mode, relative to pkg/service.
-var (
-	scanPackages   = []string{"scanbackup", "scanbackup/backupexecutor", "scanbackup/restoreexecutor"}
-	serverPackages = []string{"serverbackup"}
-)
+// backupModes are the directories under pkg/service that hold a backup mode each. A package in
+// one of them, at any depth, belongs to that mode. Every other package under pkg/service is
+// shared by the modes.
+var backupModes = []string{"scanbackup", "serverbackup"}
 
-// TestBackupModesAreSeparate enforces the split between the backup modes. pkg/service holds the
-// code both modes share and works with a mode only through interfaces, so it imports no mode
-// package. The two modes do not import each other. Only the composition root picks a mode.
+// TestBackupModesAreSeparate enforces the split between the backup modes: a package of a mode is
+// imported only from that mode. So the shared packages use a mode only through interfaces, and
+// the two modes do not import each other. Only the composition root, which is outside
+// pkg/service, picks a mode.
 func TestBackupModesAreSeparate(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name      string
-		packages  []string
-		forbidden []string
-	}{
-		{name: "shared code imports no mode", packages: []string{""}, forbidden: append(scanPackages, serverPackages...)},
-		{name: "scan mode does not import server mode", packages: scanPackages, forbidden: serverPackages},
-		{name: "server mode does not import scan mode", packages: serverPackages, forbidden: scanPackages},
+	packages := servicePackages(t)
+	for _, mode := range backupModes {
+		require.Contains(t, packages, mode, "the backup mode has no package; did it move?")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			for _, pkg := range tt.packages {
-				for _, imported := range serviceImports(t, pkg) {
-					assert.NotContainsf(t, tt.forbidden, imported, "pkg/service/%s imports pkg/service/%s", pkg, imported)
-				}
+	for _, pkg := range packages {
+		for _, imported := range serviceImports(t, pkg) {
+			mode := modeOf(imported)
+			if mode == "" {
+				continue
 			}
-		})
+
+			assert.Equalf(t, mode, modeOf(pkg), "pkg/service/%s imports pkg/service/%s", pkg, imported)
+		}
 	}
+}
+
+// modeOf returns the backup mode the package pkg of pkg/service belongs to, and "" for a shared
+// package.
+func modeOf(pkg string) string {
+	top, _, _ := strings.Cut(pkg, "/")
+	if slices.Contains(backupModes, top) {
+		return top
+	}
+
+	return ""
+}
+
+// servicePackages returns the packages under pkg/service, each relative to it. pkg/service
+// itself is ".".
+func servicePackages(t *testing.T) []string {
+	t.Helper()
+
+	root := filepath.Join(doccheck.Root(t), "pkg", "service")
+
+	var packages []string
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || filepath.Ext(path) != ".go" {
+			return err
+		}
+
+		pkg, err := filepath.Rel(root, filepath.Dir(path))
+		if err != nil {
+			return err
+		}
+
+		if pkg = filepath.ToSlash(pkg); !slices.Contains(packages, pkg) {
+			packages = append(packages, pkg)
+		}
+
+		return nil
+	})
+	require.NoError(t, err)
+
+	return packages
 }
 
 // serviceImports returns the packages under pkg/service that the package pkg of pkg/service
@@ -55,10 +91,8 @@ func TestBackupModesAreSeparate(t *testing.T) {
 func serviceImports(t *testing.T, pkg string) []string {
 	t.Helper()
 
-	dir := filepath.Join(doccheck.Root(t), "pkg", "service", pkg)
-	files, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	files, err := filepath.Glob(filepath.Join(doccheck.Root(t), "pkg", "service", pkg, "*.go"))
 	require.NoError(t, err)
-	require.NotEmpty(t, files, "no Go files in %s; did the package move?", dir)
 
 	var imports []string
 	for _, file := range files {

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math/rand/v2"
 	"sync"
@@ -22,8 +23,8 @@ type restoreJob struct {
 
 	// Volatile fields, should only be accessed under lock:
 
-	// handlers contains the restore handlers of the job. Each follows one restore: a single
-	// backup (restore by path) or a namespace's chain of backups (restore by time).
+	// handlers contains the restore handlers of the job. Each follows one restore that the
+	// job's backup mode has started.
 	handlers []RestoreHandler
 
 	// status indicates the current state of the job (Running, Done, Failed, Canceled).
@@ -62,7 +63,7 @@ func newRestoreJob(label string, cancel context.CancelFunc) *restoreJob {
 	}
 }
 
-// AddHandler adds a new restore handler to the job.
+// addHandler adds a restore handler to the job.
 func (j *restoreJob) addHandler(handler RestoreHandler) {
 	j.Lock()
 	defer j.Unlock()
@@ -70,7 +71,7 @@ func (j *restoreJob) addHandler(handler RestoreHandler) {
 	j.handlers = append(j.handlers, handler)
 }
 
-// AddTotalRecords adds to the total records count for the job.
+// addTotalRecords adds to the job's total record count.
 func (j *restoreJob) addTotalRecords(t uint64) {
 	j.Lock()
 	defer j.Unlock()
@@ -113,7 +114,7 @@ func (j *restoreJob) buildStatus() *model.RestoreJobStatus {
 
 	run := sumRestoreRuns(j.handlers)
 	runningJob := NewRestoreRunningJob(
-		j.started, j.finished, run.Counters.ReadRecords, j.totalRecords, run.Progress, run.Metrics, j.status)
+		j.started, j.finished, run.Counters.ReadRecords, j.totalRecords, run.Metrics, j.status)
 
 	return &model.RestoreJobStatus{
 		Status:         j.status,
@@ -123,33 +124,18 @@ func (j *restoreJob) buildStatus() *model.RestoreJobStatus {
 	}
 }
 
-// sumRestoreRuns adds up the runs of a job's handlers. The progress of the sum is the mean of
-// the handlers' progress. It is nil unless every handler reports a progress.
+// sumRestoreRuns adds up the counters and the throughput of the runs of a job's handlers.
 func sumRestoreRuns(handlers []RestoreHandler) model.RestoreRun {
-	var (
-		sum          model.RestoreRun
-		progress     float64
-		withProgress int
-	)
+	var counters model.RestoreCounters
 
 	metrics := make([]*models.Metrics, 0, len(handlers))
 	for _, handler := range handlers {
 		run := handler.Status()
-		sum.Counters = sum.Counters.Plus(run.Counters)
+		counters = counters.Plus(run.Counters)
 		metrics = append(metrics, run.Metrics)
-
-		if run.Progress != nil {
-			progress += *run.Progress
-			withProgress++
-		}
 	}
 
-	sum.Metrics = models.SumMetrics(metrics...)
-	if withProgress > 0 && withProgress == len(handlers) {
-		sum.Progress = new(progress / float64(withProgress))
-	}
-
-	return sum
+	return model.RestoreRun{Counters: counters, Metrics: models.SumMetrics(metrics...)}
 }
 
 func (j *restoreJob) getStatus() model.RestoreState {
@@ -158,12 +144,11 @@ func (j *restoreJob) getStatus() model.RestoreState {
 	return j.status
 }
 
-// RestoreJobsHolder is a thread-safe map of restore jobs and the owner of their lifetime. A backup
-// mode's restore manager registers its jobs here and embeds the holder for the status, cancel and
-// listing methods, which are the same in every mode.
-// It owns the lifetime of the jobs:
-// Start hands it the service context and every job runs in a child of that context, so
-// canceling the service cancels the jobs with it.
+// RestoreJobsHolder is a thread-safe map of restore jobs. A backup mode's restore manager
+// registers its jobs here and embeds the holder for the status, cancel and listing methods, which
+// are the same in every mode. The holder also owns the lifetime of the jobs. Start hands it the
+// service context and every job runs in a child of that context, so canceling the service cancels
+// the jobs with it.
 type RestoreJobsHolder struct {
 	*collections.SafeMap[model.RestoreJobID, *restoreJob]
 
@@ -173,6 +158,18 @@ type RestoreJobsHolder struct {
 	// this holder is the one owner of that lifetime. The mutex is here because Start writes
 	// it while requests read it, not because a request could arrive first.
 	lifetime context.Context //nolint:containedctx // the holder's purpose is job lifetimes; see above.
+}
+
+type JobNotFoundError struct {
+	JobID model.RestoreJobID
+}
+
+func (e *JobNotFoundError) Error() string {
+	return fmt.Sprintf("restore job with ID %d not found", e.JobID)
+}
+
+func NewJobNotFoundError(id model.RestoreJobID) *JobNotFoundError {
+	return &JobNotFoundError{JobID: id}
 }
 
 // ErrRestorePrerequisitesFailed is wrapped by a restore that was refused before it started. The
@@ -216,7 +213,7 @@ func (h *RestoreJobsHolder) NewJob(label string) (model.RestoreJobID, context.Co
 	return id, ctx
 }
 
-// AddHandler should be called for each restore handler returned by Restore.Run.
+// AddHandler adds the handler of a restore the job has started, so that the job's status includes it.
 func (h *RestoreJobsHolder) AddHandler(id model.RestoreJobID, handler RestoreHandler) {
 	if job, ok := h.Load(id); ok {
 		job.addHandler(handler)

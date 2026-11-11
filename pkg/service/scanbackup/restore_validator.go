@@ -303,10 +303,15 @@ func allNamespacesEqual(namespaces []string, target string) bool {
 
 func allBackupsEmpty(backups []model.BackupDetails) bool {
 	for _, b := range backups {
-		if !b.IsEmpty() { // found one not empty backup
+		if !isEmpty(b) { // found one not empty backup
 			return false
 		}
 	}
 
 	return true
+}
+
+// isEmpty reports whether a scan backup holds no data: it wrote no files.
+func isEmpty(b model.BackupDetails) bool {
+	return b.FileCount == 0
 }

@@ -26,11 +26,6 @@ func NewBackupDetails(md BackupMetadata, key string, storage Storage) BackupDeta
 	}
 }
 
-// IsEmpty reports whether this backup has no data (zero file count).
-func (bd BackupDetails) IsEmpty() bool {
-	return bd.FileCount == 0
-}
-
 // BackupType returns incremental for a backup with a lower time bound, full otherwise.
 func (m BackupMetadata) BackupType() BackupType {
 	if m.From.IsZero() {

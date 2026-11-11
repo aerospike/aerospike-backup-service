@@ -42,7 +42,7 @@ func TestRestoreValidator_BlocksRestoreDuringBackup(t *testing.T) {
 			routines := map[string]*model.BackupRoutine{
 				"routine-1": {Name: "routine-1", SourceCluster: cluster, Namespaces: []string{"ns1"}},
 			}
-			config := service.NewmockRoutineProvider(ctrl)
+			config := NewmockRoutineProvider(ctrl)
 			config.EXPECT().Routines().Return(routines)
 			startController := service.NewMockStartController(ctrl)
 			startController.EXPECT().HasBackupRunning(routines["routine-1"]).Return(true)
@@ -140,7 +140,7 @@ func TestRestoreValidator_BlocksPathRestoreOnNamespaceRemapOutOfScope(t *testing
 	ctrl := gomock.NewController(t)
 
 	startController := service.NewMockStartController(ctrl)
-	config := service.NewmockRoutineProvider(ctrl)
+	config := NewmockRoutineProvider(ctrl)
 
 	cluster := &model.AerospikeCluster{ClusterLabel: "cluster-a"}
 	validator := NewRestoreValidator(startController, config)
@@ -169,7 +169,7 @@ func TestRestoreValidator_BlocksTimeRestoreOnNamespaceRemapOutOfScope(t *testing
 	ctrl := gomock.NewController(t)
 
 	startController := service.NewMockStartController(ctrl)
-	config := service.NewmockRoutineProvider(ctrl)
+	config := NewmockRoutineProvider(ctrl)
 
 	cluster := &model.AerospikeCluster{ClusterLabel: "cluster-a"}
 	validator := NewRestoreValidator(startController, config)

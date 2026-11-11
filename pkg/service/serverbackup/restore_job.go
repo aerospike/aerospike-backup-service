@@ -29,8 +29,8 @@ func startRestore(
 		return nil, err
 	}
 
-	// The server writes into the namespace the backup was taken from: refuse a remap rather than
-	// write into a namespace the request left out.
+	// The server writes into the namespace the backup was taken from. A remap is refused, so
+	// that nothing is written into a namespace the request did not ask for.
 	namespace := first.Namespace
 	if destination := policy.Namespace.DestinationOr(namespace); destination != namespace {
 		return nil, fmt.Errorf("server restore cannot restore namespace %s into %s", namespace, destination)
@@ -91,8 +91,8 @@ type restoreJob struct {
 
 var _ service.RestoreHandler = (*restoreJob)(nil)
 
-// Status returns an empty run: the job does not read the counts or the progress the server
-// reports.
+// Status returns an empty run, because the job does not read the counts or the progress the
+// server reports.
 func (h *restoreJob) Status() model.RestoreRun {
 	return model.RestoreRun{}
 }

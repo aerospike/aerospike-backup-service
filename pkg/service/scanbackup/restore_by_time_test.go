@@ -1,11 +1,13 @@
 package scanbackup
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -147,22 +149,73 @@ func TestRestoreByTime_CompressionPerBackup(t *testing.T) {
 	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
 }
 
-// A chain that fails fails the job with the chain's error.
-func TestRestoreByTime_ChainFailureFailsJob(t *testing.T) {
-	env := setupTestRestoreEnv(t)
-	now := time.Now()
-	request := expectChainOfTwo(t, env,
-		testBackup("full", now.Add(-2*time.Hour), 1), testBackup("incr", now.Add(-time.Hour), 1))
+// TestRestoreByTime_ChainFailure checks that a chain stops at the backup that fails, and that
+// the job's error names that backup.
+func TestRestoreByTime_ChainFailure(t *testing.T) {
+	restoreErr := errors.New("restore service error")
 
-	restoreErr := errors.New("failed to restore backup at incr")
-	env.mockRestore.EXPECT().
-		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(failedRestore{err: restoreErr}, nil)
+	tests := []struct {
+		name string
+		// expect sets what the executor is asked to run. jobID yields the id of the restore job.
+		expect    func(env *testRestoreEnv, jobID <-chan model.RestoreJobID)
+		wantState model.RestoreState
+		wantErr   string
+	}{
+		{
+			name: "a restore fails",
+			expect: func(env *testRestoreEnv, _ <-chan model.RestoreJobID) {
+				env.mockRestore.EXPECT().Run(gomock.Any(), gomock.Any(), restoreRequestPathMatcher{"full"}).
+					Return(failedRestore{err: restoreErr}, nil)
+			},
+			wantState: model.RestoreFailure,
+			wantErr:   "failed to restore backup at full: restore service error",
+		},
+		{
+			name: "a later restore fails to start",
+			expect: func(env *testRestoreEnv, _ <-chan model.RestoreJobID) {
+				env.expectRestores(gomock.Any(), restoreRequestPathMatcher{"full"})
+				env.mockRestore.EXPECT().Run(gomock.Any(), gomock.Any(), restoreRequestPathMatcher{"incr"}).
+					Return(nil, restoreErr)
+			},
+			wantState: model.RestoreFailure,
+			wantErr:   "failed to start restore from backup at incr: restore service error",
+		},
+		{
+			name: "canceled between two restores",
+			expect: func(env *testRestoreEnv, jobID <-chan model.RestoreJobID) {
+				// The job is canceled while the first restore runs, and that restore still succeeds.
+				handler := service.NewMockRestoreHandler(env.ctrl)
+				handler.EXPECT().Status().Return(model.RestoreRun{}).AnyTimes()
+				handler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(context.Context) error {
+					return env.restoreManager.CancelRestore(<-jobID)
+				})
+				env.mockRestore.EXPECT().Run(gomock.Any(), gomock.Any(), restoreRequestPathMatcher{"full"}).
+					Return(handler, nil)
+			},
+			wantState: model.RestoreCanceled,
+			wantErr:   "context canceled",
+		},
+	}
 
-	jobStatus, err := waitForRestore(t, env.restoreManager, env.restoreManager.RestoreByTime(request))
-	require.NoError(t, err)
-	assert.Equal(t, model.RestoreFailure, jobStatus.Status)
-	require.ErrorIs(t, jobStatus.Error, restoreErr)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := setupTestRestoreEnv(t)
+			now := time.Now()
+			request := expectChainOfTwo(t, env,
+				testBackup("full", now.Add(-2*time.Hour), 1), testBackup("incr", now.Add(-time.Hour), 1))
+
+			jobIDs := make(chan model.RestoreJobID, 1)
+			tt.expect(env, jobIDs)
+
+			jobID := env.restoreManager.RestoreByTime(request)
+			jobIDs <- jobID
+
+			jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantState, jobStatus.Status)
+			require.ErrorContains(t, jobStatus.Error, tt.wantErr)
+		})
+	}
 }
 
 // expectChainOfTwo returns a request to restore, with reordering disabled, the chain of a full and
@@ -455,22 +508,44 @@ func TestRestoreByTime_CumulativeIncrementals(t *testing.T) {
 	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
 }
 
-// TestRestoreByTime_HandsChainOldestFirst checks that the time runner hands the restore each
-// namespace's chain oldest first, as found, with its namespace and the request's
-// disable-reordering: the order the backups are applied in, and the policy that order depends on,
-// are the restore's to decide. The destination's record count is not asked for.
-func TestRestoreByTime_HandsChainOldestFirst(t *testing.T) {
+// TestRestoreByTime_ChainOrder checks the order a namespace's chain is restored in, and the
+// policy that order depends on. The destination's record count is asked for only when it decides
+// the order.
+func TestRestoreByTime_ChainOrder(t *testing.T) {
 	tests := []struct {
 		name              string
 		disableReordering bool
+		// destinationRecords is the record count of the destination namespace. It is nil when
+		// the count must not be asked for.
+		destinationRecords *uint64
+		wantOrder          []string
+		wantUnique         bool
 	}{
-		{name: "reordering allowed"},
-		{name: "reordering disabled", disableReordering: true},
+		{
+			name:               "a namespace with records is restored oldest first",
+			destinationRecords: new(uint64(1)),
+			wantOrder:          []string{"full", "incr1", "incr2"},
+		},
+		{
+			name:               "an empty namespace is restored newest first, under the unique policy",
+			destinationRecords: new(uint64(0)),
+			wantOrder:          []string{"incr2", "incr1", "full"},
+			wantUnique:         true,
+		},
+		{
+			name:              "reordering disabled",
+			disableReordering: true,
+			wantOrder:         []string{"full", "incr1", "incr2"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			env := setupTestRestoreEnv(t)
+			if tt.destinationRecords != nil {
+				env.infoGetter.EXPECT().GetRecordCount(gomock.Any(), "ns1", gomock.Any()).
+					Return(*tt.destinationRecords, nil)
+			}
 
 			now := time.Now()
 			fullCreated := now.Add(-3 * time.Hour)
@@ -527,9 +602,9 @@ func TestRestoreByTime_HandsChainOldestFirst(t *testing.T) {
 
 			client := env.expectSuccessfulClientInteraction(t)
 
-			chain := make([]any, 0, 3)
-			for _, path := range []string{"full", "incr1", "incr2"} {
-				chain = append(chain, restoreRequestChainMatcher{path, "ns1", tt.disableReordering})
+			chain := make([]any, 0, len(tt.wantOrder))
+			for _, path := range tt.wantOrder {
+				chain = append(chain, restoreRequestChainMatcher{path, "ns1", tt.disableReordering, tt.wantUnique})
 			}
 			env.expectRestores(client, chain...)
 

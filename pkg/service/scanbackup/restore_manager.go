@@ -52,31 +52,32 @@ func NewRestoreManager(
 	}
 }
 
-func (r *restoreManager) Restore(request *model.RestoreRequest) model.RestoreJobID {
-	jobID, ctx := r.NewJob(request.BackupDataPath)
+// Restore starts, in the background, the restore of the backup at the request's path.
+func (m *restoreManager) Restore(request *model.RestoreRequest) model.RestoreJobID {
+	jobID, ctx := m.NewJob(request.BackupDataPath)
 
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore job", slog.Any("path", request.BackupDataPath))
 	go func() {
-		// finishJob releases the job context, which stops any sub-operation still running.
-		err := r.executeRestore(ctx, request, jobID, logger)
-		r.FinishJob(jobID, err, logger)
+		// FinishJob releases the job context, which stops any sub-operation still running.
+		err := m.restoreBackup(ctx, request, jobID, logger)
+		m.FinishJob(jobID, err, logger)
 	}()
 
 	return jobID
 }
 
-func (r *restoreManager) executeRestore(
+func (m *restoreManager) restoreBackup(
 	ctx context.Context,
 	request *model.RestoreRequest,
 	jobID model.RestoreJobID,
 	logger *slog.Logger,
 ) error {
-	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
+	client, err := m.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
 	if err != nil {
 		return err
 	}
-	defer r.clientManager.Close(client)
+	defer m.clientManager.Close(client)
 
 	// Lock the routine storage from retention manager for the duration of restore.
 	// Restore holds RLock to allow concurrent restores for the same routine.
@@ -84,16 +85,16 @@ func (r *restoreManager) executeRestore(
 	if routineName == "" {
 		routineName = request.BackupDataPath // fallback to full path
 	}
-	routineStorageLock := r.routineStorage.Get(routineName)
+	routineStorageLock := m.routineStorage.Get(routineName)
 	routineStorageLock.RLock()
 	defer routineStorageLock.RUnlock()
 
-	backups, err := r.backupReader.GetBackups(ctx, service.NewPathFilter(request.BackupDataPath, request.SourceStorage))
+	backups, err := m.backupReader.GetBackups(ctx, service.NewPathFilter(request.BackupDataPath, request.SourceStorage))
 	if err != nil {
 		return fmt.Errorf("failed to read backups: %w", err)
 	}
 
-	if err := r.validator.ValidatePath(
+	if err := m.validator.ValidatePath(
 		ctx,
 		request,
 		client.InfoClient(),
@@ -102,21 +103,15 @@ func (r *restoreManager) executeRestore(
 		return err
 	}
 
+	m.AddTotalRecords(jobID, recordsInBackup(backups))
+
 	started := time.Now()
-	handler, err := r.executor.Run(ctx, client, request)
+	counters, err := m.restoreInOrder(ctx, client, jobID, []*model.RestoreRequest{request}, logger)
 	if err != nil {
 		return err
 	}
 
-	r.AddTotalRecords(jobID, recordsInBackup(backups))
-	r.AddHandler(jobID, handler)
-
-	if err = handler.Wait(ctx); err != nil {
-		return err
-	}
-
-	attrs := service.RestoreLogAttrs(handler.Status().Counters, time.Since(started))
-	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", attrs...)
+	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", restoreLogAttrs(counters, time.Since(started))...)
 
 	return nil
 }
@@ -127,4 +122,23 @@ func recordsInBackup(backups []model.BackupDetails) uint64 {
 		records += b.RecordCount
 	}
 	return records
+}
+
+// restoreLogAttrs returns the counters of a finished restore and how long it took, as log attributes.
+func restoreLogAttrs(c model.RestoreCounters, duration time.Duration) []slog.Attr {
+	return []slog.Attr{
+		slog.Uint64("recordsInserted", c.InsertedRecords),
+		slog.Uint64("recordsExpired", c.ExpiredRecords),
+		slog.Uint64("recordsSkipped", c.SkippedRecords),
+		slog.Uint64("recordsIgnored", c.IgnoredRecords),
+		slog.Uint64("recordsFresher", c.FresherRecords),
+		slog.Uint64("recordsExisted", c.ExistedRecords),
+		slog.Uint64("totalBytesRead", c.TotalBytesRead),
+		slog.Uint64("errorsInDoubt", c.ErrorsInDoubt),
+		slog.Uint64("readRecords", c.ReadRecords),
+		slog.Uint64("secondaryIndexes", c.SecondaryIndexes),
+		slog.Uint64("udFs", c.UDFs),
+		slog.Uint64("bytesWritten", c.BytesWritten),
+		slog.Duration("duration", duration),
+	}
 }

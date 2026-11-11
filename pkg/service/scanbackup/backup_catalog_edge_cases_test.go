@@ -104,4 +104,16 @@ func TestGetBackups_FinishedBoundaryIsInclusive(t *testing.T) {
 	assert.Equal(t, []time.Time{ts1}, created(ts2.Add(5*time.Minute)))
 	// T == Finished of the second full: both are listed.
 	assert.Equal(t, []time.Time{ts1, ts2}, created(ts2.Add(10*time.Minute)))
+
+	// A restore to T therefore starts from the latest full backup that had finished by T.
+	restoresFrom := func(upTo time.Time) time.Time {
+		chains, err := service.FindRestoreChains(t.Context(), catalog,
+			&model.RestoreTimestampRequest{RoutineName: "r", Storage: st, Time: upTo})
+		require.NoError(t, err)
+
+		return chains["ns"].Full.Created
+	}
+
+	assert.Equal(t, ts1, restoresFrom(ts2.Add(5*time.Minute)))
+	assert.Equal(t, ts2, restoresFrom(ts2.Add(10*time.Minute)))
 }

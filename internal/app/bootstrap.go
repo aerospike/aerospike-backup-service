@@ -110,11 +110,9 @@ func InitComponents(
 		return nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
 
-	var routineStorage u.LockMap
-
 	// components that are specific to mode - server/scan backup
 	restoreJobs := service.NewRestoreJobsHolder()
-	components := newComponentsForMode(config, operations, s3Accessor, clientManager, &routineStorage, restoreJobs)
+	components := newComponentsForMode(config, operations, s3Accessor, clientManager, restoreJobs)
 
 	completionHandler := service.NewBackupCompletionHandler(
 		components.registry,
@@ -220,14 +218,13 @@ func newComponentsForMode(
 	operations storage.Operations,
 	s3Clients serverbackup.S3ClientProvider,
 	clientManager aerospike.ClientManager,
-	routineStorage *u.LockMap,
 	restoreJobs *service.RestoreJobsHolder,
 ) backupMode {
 	if config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == model.BackupModeServer {
 		return newServerBackupMode(config, s3Clients, clientManager, restoreJobs)
 	}
 
-	return newScanBackupMode(config, operations, clientManager, routineStorage, restoreJobs)
+	return newScanBackupMode(config, operations, clientManager, restoreJobs)
 }
 
 // newScanBackupMode wires backups that the service scans from the cluster and writes itself.
@@ -235,9 +232,11 @@ func newScanBackupMode(
 	config *model.Config,
 	operations storage.Operations,
 	clientManager aerospike.ClientManager,
-	routineStorage *u.LockMap,
 	restoreJobs *service.RestoreJobsHolder,
 ) backupMode {
+	// routineStorage keeps retention from deleting the backups of a routine while a restore reads them.
+	var routineStorage u.LockMap
+
 	pathService := scanbackup.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
 	catalog := scanbackup.NewBackupCatalog(pathService, operations)
 	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config)
@@ -253,7 +252,7 @@ func newScanBackupMode(
 		backupReader:     catalog,
 		registry:         registry,
 		startController:  startController,
-		retentionManager: scanbackup.NewBackupRetentionManager(catalog, routineStorage),
+		retentionManager: scanbackup.NewBackupRetentionManager(catalog, &routineStorage),
 		clusterConfigWriter: scanbackup.NewClusterConfigWriter(
 			pathService,
 			operations,
@@ -265,7 +264,7 @@ func newScanBackupMode(
 			clientManager,
 			restoreJobs,
 			catalog,
-			routineStorage,
+			&routineStorage,
 			scanbackup.NewRestoreValidator(startController, config),
 		),
 		configRetriever: scanbackup.NewConfigRetriever(catalog, pathService, operations),
@@ -273,8 +272,8 @@ func newScanBackupMode(
 }
 
 // newServerBackupMode wires backups that the Aerospike server writes to S3 itself.
-// The server owns the backup layout, so the service neither applies retention nor
-// stores or retrieves the cluster configuration of a backup.
+// Its retention manager, cluster configuration writer and restore validator are placeholders
+// for now, so server backups are not cleaned up and hold no cluster configuration.
 func newServerBackupMode(
 	config *model.Config,
 	s3Clients serverbackup.S3ClientProvider,
@@ -288,8 +287,8 @@ func newServerBackupMode(
 		backupReader:        catalog,
 		registry:            registry,
 		startController:     service.NewStartController(registry, service.NewStartDecider()),
-		retentionManager:    service.NopRetentionManager(),
-		clusterConfigWriter: service.NopClusterConfigWriter(),
+		retentionManager:    serverbackup.NewRetentionManager(),
+		clusterConfigWriter: serverbackup.NewClusterConfigWriter(),
 		routineRunner: serverbackup.NewRoutineRunner(
 			clientManager,
 			aerospike.NewNamespaceResolver(clientManager),
@@ -299,9 +298,9 @@ func newServerBackupMode(
 			clientManager,
 			restoreJobs,
 			catalog,
-			serverbackup.NopRestoreValidator(),
+			serverbackup.NewRestoreValidator(),
 		),
-		configRetriever: service.NoConfigRetriever(),
+		configRetriever: serverbackup.NewConfigRetriever(),
 	}
 }
 

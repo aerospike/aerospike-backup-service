@@ -25,23 +25,28 @@ type RestoreValidator interface {
 	) error
 }
 
-type nopRestoreValidator struct{}
+// It is a placeholder. The checks of the scan mode do not carry over, because most of them are
+// about options a server restore does not have, such as compression. The one implementation
+// accepts every restore. The checks a server restore needs, at least refusing it while a backup
+// of the same namespace runs, will be written against this interface.
+type restoreValidator struct{}
 
-var _ RestoreValidator = nopRestoreValidator{}
+var _ RestoreValidator = restoreValidator{}
 
-// NopRestoreValidator returns a RestoreValidator that accepts every restore. The server refuses
-// a restore it cannot run, and that refusal fails the restore job.
-func NopRestoreValidator() RestoreValidator {
-	return nopRestoreValidator{}
+// NewRestoreValidator returns the RestoreValidator of the server backup mode. For now it accepts
+// every restore. The server refuses a restore it cannot run, and that refusal fails the restore
+// job.
+func NewRestoreValidator() RestoreValidator {
+	return restoreValidator{}
 }
 
-func (nopRestoreValidator) ValidatePath(
+func (restoreValidator) ValidatePath(
 	context.Context, *model.RestoreRequest, backup.InfoGetter, []model.BackupDetails,
 ) error {
 	return nil
 }
 
-func (nopRestoreValidator) ValidateTimestamp(
+func (restoreValidator) ValidateTimestamp(
 	context.Context, *model.RestoreTimestampRequest, backup.InfoGetter, []model.BackupDetails,
 ) error {
 	return nil

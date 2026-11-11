@@ -13,7 +13,7 @@ import (
 	"github.com/aerospike/backup-go"
 )
 
-// restoreManager restores server backups: it asks the server to run one restore job for each
+// restoreManager restores server backups. It asks the server to run one restore job for each
 // namespace. The embedded holder keeps the jobs and answers the status, cancel and listing calls.
 type restoreManager struct {
 	*service.RestoreJobsHolder
@@ -66,9 +66,6 @@ func (m *restoreManager) restoreBackup(
 	if err != nil {
 		return fmt.Errorf("failed to read server backup %s: %w", key, err)
 	}
-	if len(backups) == 0 {
-		return fmt.Errorf("server backup %s not found", key)
-	}
 
 	client, err := m.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
 	if err != nil {
@@ -80,11 +77,13 @@ func (m *restoreManager) restoreBackup(
 		return err
 	}
 
-	return m.restoreChain(ctx, client.InfoClient(), jobID, request.Policy, backups, logger)
+	nsLogger := logger.With(slog.String("namespace", backups[0].Namespace))
+
+	return m.restoreChain(ctx, client.InfoClient(), jobID, request.Policy, backups, nsLogger)
 }
 
 // RestoreByTime starts, in the background, the restore of the routine's namespaces to the
-// request's time: one server restore job for the chain of each namespace.
+// request's time. The chain of each namespace is restored by one server restore job.
 func (m *restoreManager) RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID {
 	jobID, ctx := m.NewJob(request.RoutineName)
 
@@ -168,7 +167,7 @@ func (m *restoreManager) restoreChain(
 		return err
 	}
 
-	logger.Info("Server restore started", slog.String("namespace", job.namespace), slog.String("serverJobId", job.jobID))
+	logger.Info("Server restore started", slog.String("serverJobId", job.jobID))
 	m.AddHandler(jobID, job)
 
 	return job.Wait(ctx)

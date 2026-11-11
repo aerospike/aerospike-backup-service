@@ -13,8 +13,11 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
-func (r *restoreManager) RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID {
-	jobID, ctx := r.NewJob(request.RoutineName)
+// RestoreByTime starts, in the background, the restore of the routine's namespaces to the
+// request's time. The namespaces are restored concurrently, the backups of one namespace one
+// after another.
+func (m *restoreManager) RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID {
+	jobID, ctx := m.NewJob(request.RoutineName)
 
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore by time job",
@@ -22,14 +25,14 @@ func (r *restoreManager) RestoreByTime(request *model.RestoreTimestampRequest) m
 		slog.Any("timestamp", request.Time))
 
 	go func() {
-		err := r.restoreByTimeSync(ctx, request, jobID, logger)
-		r.FinishJob(jobID, err, logger)
+		err := m.restoreToTime(ctx, request, jobID, logger)
+		m.FinishJob(jobID, err, logger)
 	}()
 
 	return jobID
 }
 
-func (r *restoreManager) restoreByTimeSync(
+func (m *restoreManager) restoreToTime(
 	ctx context.Context,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
@@ -37,25 +40,25 @@ func (r *restoreManager) restoreByTimeSync(
 ) error {
 	// Lock the routine storage from retention manager for the duration of restore.
 	// Restore holds RLock to allow concurrent restores for the same routine.
-	routineStorageLock := r.routineStorage.Get(request.RoutineName)
+	routineStorageLock := m.routineStorage.Get(request.RoutineName)
 	routineStorageLock.RLock()
 	defer routineStorageLock.RUnlock()
 
-	chains, err := service.FindRestoreChains(ctx, r.backupReader, request)
+	chains, err := service.FindRestoreChains(ctx, m.backupReader, request)
 	if err != nil {
 		return err
 	}
 
 	service.LogChainGaps(chains, logger)
 
-	client, err := r.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
+	client, err := m.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
 			request.DestinationCluster.Label(), err)
 	}
-	defer r.clientManager.Close(client)
+	defer m.clientManager.Close(client)
 
-	if err := r.validator.ValidateTimestamp(
+	if err := m.validator.ValidateTimestamp(
 		ctx,
 		request,
 		client.InfoClient(),
@@ -64,10 +67,10 @@ func (r *restoreManager) restoreByTimeSync(
 		return err
 	}
 
-	return r.restoreAllNamespaces(ctx, client, request, jobID, chains, logger)
+	return m.restoreAllNamespaces(ctx, client, request, jobID, chains, logger)
 }
 
-func (r *restoreManager) restoreAllNamespaces(
+func (m *restoreManager) restoreAllNamespaces(
 	ctx context.Context,
 	client aerospike.Client,
 	request *model.RestoreTimestampRequest,
@@ -87,7 +90,7 @@ func (r *restoreManager) restoreAllNamespaces(
 	for namespace, chain := range chains {
 		wg.Go(func() {
 			nsLogger := logger.With(slog.String("namespace", namespace))
-			err := r.restoreNamespace(ctx, client, request, jobID, namespace, chain, nsLogger)
+			err := m.restoreNamespace(ctx, client, request, jobID, namespace, chain, nsLogger)
 			if err != nil {
 				errMu.Lock()
 				multiError = errors.Join(multiError,
@@ -106,7 +109,7 @@ func (r *restoreManager) restoreAllNamespaces(
 // restoreNamespace restores the namespace's chain of backups one after another, in the order
 // inRestoreOrder gives. Empty backups are left out, and a chain of only empty backups restores
 // nothing.
-func (r *restoreManager) restoreNamespace(
+func (m *restoreManager) restoreNamespace(
 	ctx context.Context,
 	client aerospike.Client,
 	request *model.RestoreTimestampRequest,
@@ -118,9 +121,9 @@ func (r *restoreManager) restoreNamespace(
 	backups := chain.Backups()
 	requests := make([]*model.RestoreRequest, 0, len(backups))
 	for _, b := range backups {
-		r.AddTotalRecords(jobID, b.RecordCount)
+		m.AddTotalRecords(jobID, b.RecordCount)
 
-		if b.FileCount == 0 { // an empty backup has nothing to restore
+		if isEmpty(b) { // an empty backup has nothing to restore
 			continue
 		}
 
@@ -154,13 +157,12 @@ func (r *restoreManager) restoreNamespace(
 	}
 
 	started := time.Now()
-	counters, err := r.restoreInOrder(ctx, client, jobID, ordered, logger)
+	counters, err := m.restoreInOrder(ctx, client, jobID, ordered, logger)
 	if err != nil {
 		return err
 	}
 
-	attrs := service.RestoreLogAttrs(counters, time.Since(started))
-	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", attrs...)
+	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", restoreLogAttrs(counters, time.Since(started))...)
 
 	return nil
 }
@@ -168,7 +170,7 @@ func (r *restoreManager) restoreNamespace(
 // restoreInOrder restores the backups of the requests one after another and stops at the first
 // failure. It returns the counters of the restores added up. A failure names the backup, which
 // the restore's own error may not.
-func (r *restoreManager) restoreInOrder(
+func (m *restoreManager) restoreInOrder(
 	ctx context.Context,
 	client aerospike.Client,
 	jobID model.RestoreJobID,
@@ -186,12 +188,12 @@ func (r *restoreManager) restoreInOrder(
 		logger.Info("Start restoring",
 			slog.String("step", fmt.Sprintf("%d/%d", i+1, len(requests))), slog.String("path", path))
 
-		handler, err := r.executor.Run(ctx, client, request)
+		handler, err := m.executor.Run(ctx, client, request)
 		if err != nil {
 			return counters, fmt.Errorf("failed to start restore from backup at %s: %w", path, err)
 		}
 
-		r.AddHandler(jobID, handler)
+		m.AddHandler(jobID, handler)
 
 		if err := handler.Wait(ctx); err != nil {
 			return counters, fmt.Errorf("failed to restore backup at %s: %w", path, err)
