@@ -9,7 +9,7 @@ import (
 )
 
 // clusterConfigWriter is a placeholder. It writes nothing, so a server backup holds no cluster
-// configuration, and [NewConfigRetriever] finds none.
+// configuration.
 type clusterConfigWriter struct{}
 
 var _ service.ClusterConfigWriter = clusterConfigWriter{}

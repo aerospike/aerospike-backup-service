@@ -156,32 +156,26 @@ func (m *restoreManager) restoreNamespace(
 		return err
 	}
 
-	started := time.Now()
-	counters, err := m.restoreInOrder(ctx, client, jobID, ordered, logger)
-	if err != nil {
-		return err
-	}
-
-	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", restoreLogAttrs(counters, time.Since(started))...)
-
-	return nil
+	return m.restoreInOrder(ctx, client, jobID, ordered, logger)
 }
 
 // restoreInOrder restores the backups of the requests one after another and stops at the first
-// failure. It returns the counters of the restores added up. A failure names the backup, which
-// the restore's own error may not.
+// failure. It logs the counters of the restores added up. A failure names the backup, which the
+// restore's own error may not.
 func (m *restoreManager) restoreInOrder(
 	ctx context.Context,
 	client aerospike.Client,
 	jobID model.RestoreJobID,
 	requests []*model.RestoreRequest,
 	logger *slog.Logger,
-) (model.RestoreCounters, error) {
+) error {
+	started := time.Now()
+
 	var counters model.RestoreCounters
 	for i, request := range requests {
 		// A restore can finish just as ctx is canceled. The next one must not start then.
 		if err := ctx.Err(); err != nil {
-			return counters, err
+			return err
 		}
 
 		path := request.BackupDataPath
@@ -190,17 +184,19 @@ func (m *restoreManager) restoreInOrder(
 
 		handler, err := m.executor.Run(ctx, client, request)
 		if err != nil {
-			return counters, fmt.Errorf("failed to start restore from backup at %s: %w", path, err)
+			return fmt.Errorf("failed to start restore from backup at %s: %w", path, err)
 		}
 
 		m.AddHandler(jobID, handler)
 
 		if err := handler.Wait(ctx); err != nil {
-			return counters, fmt.Errorf("failed to restore backup at %s: %w", path, err)
+			return fmt.Errorf("failed to restore backup at %s: %w", path, err)
 		}
 
 		counters = counters.Plus(handler.Status().Counters)
 	}
 
-	return counters, nil
+	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", restoreLogAttrs(counters, time.Since(started))...)
+
+	return nil
 }

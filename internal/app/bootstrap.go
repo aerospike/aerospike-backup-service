@@ -272,8 +272,9 @@ func newScanBackupMode(
 }
 
 // newServerBackupMode wires backups that the Aerospike server writes to S3 itself.
-// Its retention manager, cluster configuration writer and restore validator are placeholders
-// for now, so server backups are not cleaned up and hold no cluster configuration.
+// Its retention manager, cluster configuration writer, config retriever and restore validator
+// are placeholders for now, so server backups are not cleaned up and hold no cluster
+// configuration.
 func newServerBackupMode(
 	config *model.Config,
 	s3Clients serverbackup.S3ClientProvider,

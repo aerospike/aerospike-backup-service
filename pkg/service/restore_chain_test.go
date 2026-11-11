@@ -11,8 +11,9 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-// chainBackup returns a backup of the namespace. A zero from makes it a full backup.
-func chainBackup(namespace string, created, from int64) model.BackupDetails {
+// backupAt returns a backup of the namespace created at the given time, in milliseconds. A zero
+// from makes it a full backup.
+func backupAt(namespace string, created, from int64) model.BackupDetails {
 	metadata := model.BackupMetadata{Namespace: namespace, Created: time.UnixMilli(created)}
 	if from != 0 {
 		metadata.From = time.UnixMilli(from)
@@ -30,13 +31,13 @@ func TestFindRestoreChains(t *testing.T) {
 
 	request := &model.RestoreTimestampRequest{RoutineName: "routine", Time: time.UnixMilli(5000)}
 
-	oldFull1 := chainBackup("ns1", 1000, 0)
-	full1 := chainBackup("ns1", 3000, 0)
-	full2 := chainBackup("ns2", 1000, 0)
-	staleIncr1 := chainBackup("ns1", 2000, 1000) // older than the full backup ns1 restores from
-	incr1 := chainBackup("ns1", 4000, 3000)
-	incr2a := chainBackup("ns2", 2000, 1000)
-	incr2b := chainBackup("ns2", 4000, 2000)
+	oldFull1 := backupAt("ns1", 1000, 0)
+	full1 := backupAt("ns1", 3000, 0)
+	full2 := backupAt("ns2", 1000, 0)
+	staleIncr1 := backupAt("ns1", 2000, 1000) // older than the full backup ns1 restores from
+	incr1 := backupAt("ns1", 4000, 3000)
+	incr2a := backupAt("ns2", 2000, 1000)
+	incr2b := backupAt("ns2", 4000, 2000)
 
 	reader := NewMockBackupReader(ctrl)
 	gomock.InOrder(
@@ -76,7 +77,7 @@ func TestFindRestoreChains_Fails(t *testing.T) {
 	t.Parallel()
 
 	readErr := errors.New("storage is down")
-	full := []model.BackupDetails{chainBackup("ns1", 1000, 0)}
+	full := []model.BackupDetails{backupAt("ns1", 1000, 0)}
 
 	tests := []struct {
 		name            string
@@ -117,7 +118,7 @@ func TestFindRestoreChains_Fails(t *testing.T) {
 func TestFilterIncrementals(t *testing.T) {
 	t.Parallel()
 
-	full := chainBackup("ns", 1000, 0)
+	full := backupAt("ns", 1000, 0)
 
 	tests := []struct {
 		name         string
@@ -127,18 +128,18 @@ func TestFilterIncrementals(t *testing.T) {
 		{
 			name: "differential",
 			incrementals: []model.BackupDetails{
-				chainBackup("ns", 3000, 2000), chainBackup("ns", 2000, 1000), chainBackup("ns", 900, 500),
+				backupAt("ns", 3000, 2000), backupAt("ns", 2000, 1000), backupAt("ns", 900, 500),
 			},
 			wantCreated: []int64{2000, 3000},
 		},
 		{
 			name:         "cumulative",
-			incrementals: []model.BackupDetails{chainBackup("ns", 3000, 1000), chainBackup("ns", 2000, 1000)},
+			incrementals: []model.BackupDetails{backupAt("ns", 3000, 1000), backupAt("ns", 2000, 1000)},
 			wantCreated:  []int64{3000},
 		},
 		{
 			name:         "created with the full backup",
-			incrementals: []model.BackupDetails{chainBackup("ns", 1000, 500)},
+			incrementals: []model.BackupDetails{backupAt("ns", 1000, 500)},
 			wantCreated:  []int64{},
 		},
 	}

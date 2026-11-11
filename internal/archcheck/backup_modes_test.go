@@ -4,6 +4,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -22,27 +23,61 @@ const servicePackage = "github.com/aerospike/aerospike-backup-service/v3/pkg/ser
 // shared by the modes.
 var backupModes = []string{"scanbackup", "serverbackup"}
 
-// TestBackupModesAreSeparate enforces the split between the backup modes: a package of a mode is
-// imported only from that mode. So the shared packages use a mode only through interfaces, and
-// the two modes do not import each other. Only the composition root, which is outside
-// pkg/service, picks a mode.
+// TestBackupModesAreSeparate enforces the split between the backup modes inside pkg/service:
+// there, a package of a mode is imported only from that mode. So the shared packages use a mode
+// only through interfaces, and the two modes do not import each other. Packages outside
+// pkg/service are not checked.
 func TestBackupModesAreSeparate(t *testing.T) {
 	t.Parallel()
 
-	packages := servicePackages(t)
+	root := filepath.Join(doccheck.Root(t), "pkg", "service")
+	seenModes := make(map[string]bool)
+
+	err := filepath.WalkDir(root, func(file string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() || filepath.Ext(file) != ".go" {
+			return nil
+		}
+
+		dir, err := filepath.Rel(root, filepath.Dir(file))
+		if err != nil {
+			return err
+		}
+
+		pkg := filepath.ToSlash(dir)
+		seenModes[modeOf(pkg)] = true
+
+		for _, imported := range serviceImports(t, file) {
+			if mode := modeOf(imported); mode != "" {
+				assert.Equalf(t, mode, modeOf(pkg), "%s imports %s",
+					path.Join("pkg/service", pkg), path.Join("pkg/service", imported))
+			}
+		}
+
+		return nil
+	})
+	require.NoError(t, err)
+
 	for _, mode := range backupModes {
-		require.Contains(t, packages, mode, "the backup mode has no package; did it move?")
+		require.Truef(t, seenModes[mode], "backup mode %s has no package; did it move?", mode)
+	}
+}
+
+func TestModeOf(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]string{
+		"scanbackup":                 "scanbackup",
+		"scanbackup/restoreexecutor": "scanbackup",
+		"serverbackup":               "serverbackup",
+		".":                          "",
+		"storage":                    "",
 	}
 
-	for _, pkg := range packages {
-		for _, imported := range serviceImports(t, pkg) {
-			mode := modeOf(imported)
-			if mode == "" {
-				continue
-			}
-
-			assert.Equalf(t, mode, modeOf(pkg), "pkg/service/%s imports pkg/service/%s", pkg, imported)
-		}
+	for pkg, want := range tests {
+		assert.Equal(t, want, modeOf(pkg), pkg)
 	}
 }
 
@@ -57,55 +92,21 @@ func modeOf(pkg string) string {
 	return ""
 }
 
-// servicePackages returns the packages under pkg/service, each relative to it. pkg/service
-// itself is ".".
-func servicePackages(t *testing.T) []string {
+// serviceImports returns the packages under pkg/service that the Go file imports, each relative
+// to pkg/service.
+func serviceImports(t *testing.T, file string) []string {
 	t.Helper()
 
-	root := filepath.Join(doccheck.Root(t), "pkg", "service")
-
-	var packages []string
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil || entry.IsDir() || filepath.Ext(path) != ".go" {
-			return err
-		}
-
-		pkg, err := filepath.Rel(root, filepath.Dir(path))
-		if err != nil {
-			return err
-		}
-
-		if pkg = filepath.ToSlash(pkg); !slices.Contains(packages, pkg) {
-			packages = append(packages, pkg)
-		}
-
-		return nil
-	})
-	require.NoError(t, err)
-
-	return packages
-}
-
-// serviceImports returns the packages under pkg/service that the package pkg of pkg/service
-// imports, tests included, each relative to pkg/service.
-func serviceImports(t *testing.T, pkg string) []string {
-	t.Helper()
-
-	files, err := filepath.Glob(filepath.Join(doccheck.Root(t), "pkg", "service", pkg, "*.go"))
+	parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
 	require.NoError(t, err)
 
 	var imports []string
-	for _, file := range files {
-		parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
+	for _, spec := range parsed.Imports {
+		imported, err := strconv.Unquote(spec.Path.Value)
 		require.NoError(t, err)
 
-		for _, spec := range parsed.Imports {
-			path, err := strconv.Unquote(spec.Path.Value)
-			require.NoError(t, err)
-
-			if sub, ok := strings.CutPrefix(path, servicePackage+"/"); ok {
-				imports = append(imports, sub)
-			}
+		if sub, ok := strings.CutPrefix(imported, servicePackage+"/"); ok {
+			imports = append(imports, sub)
 		}
 	}
 

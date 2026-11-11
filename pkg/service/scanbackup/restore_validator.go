@@ -311,7 +311,7 @@ func allBackupsEmpty(backups []model.BackupDetails) bool {
 	return true
 }
 
-// isEmpty reports whether a scan backup holds no data: it wrote no files.
+// isEmpty reports whether a scan backup has no files, and so no data.
 func isEmpty(b model.BackupDetails) bool {
 	return b.FileCount == 0
 }

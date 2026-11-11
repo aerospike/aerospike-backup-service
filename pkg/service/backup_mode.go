@@ -65,8 +65,8 @@ type ConfigRetriever interface {
 	RetrieveConfiguration(context.Context, *model.BackupRoutine, time.Time) ([]byte, error)
 }
 
-// RestoreHandler is the handle of a started restore run. Its status holds only what every backup
-// mode can report. A value that a mode cannot report stays zero or nil.
+// RestoreHandler is the handle of a started restore run. A value of its status that a backup
+// mode cannot report stays zero or nil.
 type RestoreHandler interface {
 	// Wait waits for the run to end and returns the error it ended with.
 	Wait(ctx context.Context) error

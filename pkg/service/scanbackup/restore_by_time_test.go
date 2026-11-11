@@ -156,8 +156,8 @@ func TestRestoreByTime_ChainFailure(t *testing.T) {
 
 	tests := []struct {
 		name string
-		// expect sets what the executor is asked to run. jobID yields the id of the restore job.
-		expect    func(env *testRestoreEnv, jobID <-chan model.RestoreJobID)
+		// expect sets what the executor is asked to run. jobIDs yields the id of the restore job.
+		expect    func(env *testRestoreEnv, jobIDs <-chan model.RestoreJobID)
 		wantState model.RestoreState
 		wantErr   string
 	}{
@@ -181,13 +181,13 @@ func TestRestoreByTime_ChainFailure(t *testing.T) {
 			wantErr:   "failed to start restore from backup at incr: restore service error",
 		},
 		{
-			name: "canceled between two restores",
-			expect: func(env *testRestoreEnv, jobID <-chan model.RestoreJobID) {
+			name: "canceled while the first restore runs",
+			expect: func(env *testRestoreEnv, jobIDs <-chan model.RestoreJobID) {
 				// The job is canceled while the first restore runs, and that restore still succeeds.
 				handler := service.NewMockRestoreHandler(env.ctrl)
 				handler.EXPECT().Status().Return(model.RestoreRun{}).AnyTimes()
 				handler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(context.Context) error {
-					return env.restoreManager.CancelRestore(<-jobID)
+					return env.restoreManager.CancelRestore(<-jobIDs)
 				})
 				env.mockRestore.EXPECT().Run(gomock.Any(), gomock.Any(), restoreRequestPathMatcher{"full"}).
 					Return(handler, nil)
@@ -614,4 +614,21 @@ func TestRestoreByTime_ChainOrder(t *testing.T) {
 			assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
 		})
 	}
+}
+
+// TestRestoreChain_StartsFromLatestFinishedFull checks, over a real catalog, that a restore to a
+// time starts from the latest full backup that had finished by that time. The bound is inclusive.
+func TestRestoreChain_StartsFromLatestFinishedFull(t *testing.T) {
+	catalog, routine, ts1, ts2 := writeTwoFullBackups(t)
+
+	fullCreatedFor := func(restoreTime time.Time) time.Time {
+		chains, err := service.FindRestoreChains(t.Context(), catalog,
+			&model.RestoreTimestampRequest{RoutineName: routine.Name, Storage: routine.Storage, Time: restoreTime})
+		require.NoError(t, err)
+
+		return chains["ns"].Full.Created
+	}
+
+	assert.Equal(t, ts1, fullCreatedFor(ts2.Add(5*time.Minute)), "the second full backup is still running")
+	assert.Equal(t, ts2, fullCreatedFor(ts2.Add(10*time.Minute)), "the second full backup has just finished")
 }

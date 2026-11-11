@@ -19,7 +19,7 @@ type restoreManager struct {
 	*service.RestoreJobsHolder
 
 	clientManager aerospike.ClientManager
-	catalog       service.BackupReader
+	catalog       Catalog
 	validator     RestoreValidator
 }
 
@@ -30,7 +30,7 @@ var _ service.RestoreManager = (*restoreManager)(nil)
 func NewRestoreManager(
 	clientManager aerospike.ClientManager,
 	restoreJobs *service.RestoreJobsHolder,
-	catalog service.BackupReader,
+	catalog Catalog,
 	validator RestoreValidator,
 ) service.RestoreManager {
 	return &restoreManager{
@@ -62,10 +62,12 @@ func (m *restoreManager) restoreBackup(
 	logger *slog.Logger,
 ) error {
 	key := request.BackupDataPath
-	backups, err := m.catalog.GetBackups(ctx, service.NewPathFilter(key, request.SourceStorage))
+	details, err := m.catalog.GetBackup(ctx, request.SourceStorage, key)
 	if err != nil {
 		return fmt.Errorf("failed to read server backup %s: %w", key, err)
 	}
+
+	backups := []model.BackupDetails{details}
 
 	client, err := m.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
 	if err != nil {
@@ -77,7 +79,7 @@ func (m *restoreManager) restoreBackup(
 		return err
 	}
 
-	nsLogger := logger.With(slog.String("namespace", backups[0].Namespace))
+	nsLogger := logger.With(slog.String("namespace", details.Namespace))
 
 	return m.restoreChain(ctx, client.InfoClient(), jobID, request.Policy, backups, nsLogger)
 }

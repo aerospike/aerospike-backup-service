@@ -72,21 +72,7 @@ func TestRetention_DuplicateTimestampDeleteIsIdempotentOnLocal(t *testing.T) {
 // A full backup that started before T but finished after T is not listed up to T. A backup that
 // finished exactly at T is listed: the upper bound is inclusive.
 func TestGetBackups_FinishedBoundaryIsInclusive(t *testing.T) {
-	catalog, st, root := newLocalTestCatalog(t)
-	ps := NewPathService(nil)
-	ts1 := time.UnixMilli(1_700_000_000_000).UTC()
-	ts2 := ts1.Add(time.Hour)
-	r := &model.BackupRoutine{Name: "r", Storage: st}
-
-	write := func(ts, finished time.Time) {
-		p := ps.GetBackupPath("r", model.BackupTypeFull, "ns", ts)
-		require.NoError(t, os.MkdirAll(filepath.Join(root, p), 0o750))
-		require.NoError(t, catalog.WriteBackupMetadata(t.Context(), r, p, model.BackupMetadata{
-			Created: ts, Finished: finished, Namespace: "ns", FileCount: 1,
-		}))
-	}
-	write(ts1, ts1.Add(time.Minute))
-	write(ts2, ts2.Add(10*time.Minute)) // long-running full
+	catalog, r, ts1, ts2 := writeTwoFullBackups(t)
 
 	created := func(upTo time.Time) []time.Time {
 		backups, err := catalog.GetBackups(t.Context(), service.NewFullBackupFilter(r).WithToTime(upTo))
@@ -104,16 +90,29 @@ func TestGetBackups_FinishedBoundaryIsInclusive(t *testing.T) {
 	assert.Equal(t, []time.Time{ts1}, created(ts2.Add(5*time.Minute)))
 	// T == Finished of the second full: both are listed.
 	assert.Equal(t, []time.Time{ts1, ts2}, created(ts2.Add(10*time.Minute)))
+}
 
-	// A restore to T therefore starts from the latest full backup that had finished by T.
-	restoresFrom := func(upTo time.Time) time.Time {
-		chains, err := service.FindRestoreChains(t.Context(), catalog,
-			&model.RestoreTimestampRequest{RoutineName: "r", Storage: st, Time: upTo})
-		require.NoError(t, err)
+// writeTwoFullBackups writes two full backups of namespace ns of routine r to a local catalog.
+// The first is created at ts1 and takes a minute. The second is created at ts2, an hour later,
+// and takes ten minutes.
+func writeTwoFullBackups(t *testing.T) (catalog BackupCatalog, r *model.BackupRoutine, ts1, ts2 time.Time) {
+	t.Helper()
 
-		return chains["ns"].Full.Created
+	catalog, st, root := newLocalTestCatalog(t)
+	ps := NewPathService(nil)
+	ts1 = time.UnixMilli(1_700_000_000_000).UTC()
+	ts2 = ts1.Add(time.Hour)
+	r = &model.BackupRoutine{Name: "r", Storage: st}
+
+	write := func(ts, finished time.Time) {
+		p := ps.GetBackupPath("r", model.BackupTypeFull, "ns", ts)
+		require.NoError(t, os.MkdirAll(filepath.Join(root, p), 0o750))
+		require.NoError(t, catalog.WriteBackupMetadata(t.Context(), r, p, model.BackupMetadata{
+			Created: ts, Finished: finished, Namespace: "ns", FileCount: 1,
+		}))
 	}
+	write(ts1, ts1.Add(time.Minute))
+	write(ts2, ts2.Add(10*time.Minute))
 
-	assert.Equal(t, ts1, restoresFrom(ts2.Add(5*time.Minute)))
-	assert.Equal(t, ts2, restoresFrom(ts2.Add(10*time.Minute)))
+	return catalog, r, ts1, ts2
 }

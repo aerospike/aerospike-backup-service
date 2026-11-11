@@ -19,7 +19,7 @@ import (
 // restoreManagerEnv is a restore manager over mocks of the catalog and the destination cluster.
 type restoreManagerEnv struct {
 	manager       service.RestoreManager
-	catalog       *service.MockBackupReader
+	catalog       *MockCatalog
 	clientManager *aerospike.MockClientManager
 	client        *aerospike.MockClient
 	infoClient    *aerospike.MockInfoGetter
@@ -37,7 +37,7 @@ func newRestoreManagerEnv(t *testing.T) *restoreManagerEnv {
 	jobs.Start(t.Context())
 
 	clientManager := aerospike.NewMockClientManager(ctrl)
-	catalog := service.NewMockBackupReader(ctrl)
+	catalog := NewMockCatalog(ctrl)
 
 	return &restoreManagerEnv{
 		manager:       NewRestoreManager(clientManager, jobs, catalog, NewRestoreValidator()),
@@ -55,15 +55,15 @@ func (e *restoreManagerEnv) expectClient() {
 }
 
 // expectStart expects one restore job to start in the namespace for the backups with
-// wantBackupIDs. The server answers the start with the id and the error given.
-func (e *restoreManagerEnv) expectStart(t *testing.T, namespace, wantBackupIDs, jobID string, err error) {
+// wantBackupIDs. The server answers the start with jobID and startErr.
+func (e *restoreManagerEnv) expectStart(t *testing.T, namespace, wantBackupIDs, jobID string, startErr error) {
 	t.Helper()
 
 	e.infoClient.EXPECT().StartRestore(gomock.Any(), requestInNamespace(namespace)).DoAndReturn(
 		func(_ context.Context, request *infomodels.RequestRestore) (string, error) {
 			assert.Equal(t, wantBackupIDs, request.BackupIDs)
 
-			return jobID, err
+			return jobID, startErr
 		})
 }
 
@@ -98,18 +98,8 @@ func requestInNamespace(namespace string) gomock.Matcher {
 	return gomock.Cond(func(request *infomodels.RequestRestore) bool { return request.Namespace == namespace })
 }
 
-// pathFilter matches the filter that selects the backup with the key.
-func pathFilter(key string) gomock.Matcher {
-	return gomock.Cond(func(filter service.BackupFilter) bool {
-		pathFilter, ok := filter.(*service.PathFilter)
-
-		return ok && pathFilter.Path() == key
-	})
-}
-
-// chainOf returns the chain of a full and an incremental backup of the namespace, and a request
-// to restore the routine to a time after both.
-func chainOf(namespace string) (full, incremental model.BackupDetails, request *model.RestoreTimestampRequest) {
+// chainOf returns the chain of a full and an incremental backup of the namespace.
+func chainOf(namespace string) (full, incremental model.BackupDetails) {
 	fullTime := time.Date(2026, 10, 20, 9, 1, 11, 0, time.UTC)
 
 	full = chainBackup(fullID)
@@ -121,13 +111,16 @@ func chainOf(namespace string) (full, incremental model.BackupDetails, request *
 	incremental.Created = fullTime.Add(10 * time.Minute)
 	incremental.From = fullTime
 
-	request = &model.RestoreTimestampRequest{
-		RoutineName: "routine",
-		Storage:     full.Storage,
-		Time:        fullTime.Add(time.Hour),
-	}
+	return full, incremental
+}
 
-	return full, incremental, request
+// restoreAfter returns a request to restore the routine to a time after the backup.
+func restoreAfter(backup model.BackupDetails) *model.RestoreTimestampRequest {
+	return &model.RestoreTimestampRequest{
+		RoutineName: "routine",
+		Storage:     backup.Storage,
+		Time:        backup.Created.Add(time.Hour),
+	}
 }
 
 func TestRestoreManager_Restore(t *testing.T) {
@@ -135,7 +128,7 @@ func TestRestoreManager_Restore(t *testing.T) {
 	env := newRestoreManagerEnv(t)
 
 	backup := chainBackup(fullID)
-	env.catalog.EXPECT().GetBackups(gomock.Any(), pathFilter(backup.Key)).Return([]model.BackupDetails{backup}, nil)
+	env.catalog.EXPECT().GetBackup(gomock.Any(), backup.Storage, backup.Key).Return(backup, nil)
 	env.expectClient()
 	env.expectRestore(t, "bar", fullID)
 
@@ -158,14 +151,14 @@ func TestRestoreManager_Restore_Fails(t *testing.T) {
 		{
 			name: "backup cannot be read",
 			expect: func(_ *testing.T, env *restoreManagerEnv) {
-				env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(nil, failure)
+				env.catalog.EXPECT().GetBackup(gomock.Any(), gomock.Any(), gomock.Any()).Return(model.BackupDetails{}, failure)
 			},
 			wantErr: fmt.Sprintf("failed to read server backup %s: refused", backup.Key),
 		},
 		{
 			name: "cluster cannot be connected to",
 			expect: func(_ *testing.T, env *restoreManagerEnv) {
-				env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{backup}, nil)
+				env.catalog.EXPECT().GetBackup(gomock.Any(), gomock.Any(), gomock.Any()).Return(backup, nil)
 				env.clientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, failure)
 			},
@@ -176,7 +169,7 @@ func TestRestoreManager_Restore_Fails(t *testing.T) {
 			expect: func(t *testing.T, env *restoreManagerEnv) {
 				t.Helper()
 
-				env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{backup}, nil)
+				env.catalog.EXPECT().GetBackup(gomock.Any(), gomock.Any(), gomock.Any()).Return(backup, nil)
 				env.expectClient()
 				env.expectStart(t, "bar", fullID, "", failure)
 			},
@@ -205,7 +198,7 @@ func TestRestoreManager_RestoreByTime(t *testing.T) {
 	t.Parallel()
 	env := newRestoreManagerEnv(t)
 
-	full, incremental, request := chainOf("bar")
+	full, incremental := chainOf("bar")
 	gomock.InOrder(
 		env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{full}, nil),
 		env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{incremental}, nil),
@@ -213,7 +206,7 @@ func TestRestoreManager_RestoreByTime(t *testing.T) {
 	env.expectClient()
 	env.expectRestore(t, "bar", fullID+","+incr1ID)
 
-	jobID := env.manager.RestoreByTime(request)
+	jobID := env.manager.RestoreByTime(restoreAfter(incremental))
 
 	assert.Equal(t, model.RestoreSuccess, env.waitForJob(t, jobID).Status)
 }
@@ -224,8 +217,8 @@ func TestRestoreManager_RestoreByTime_NamespaceFails(t *testing.T) {
 	t.Parallel()
 	env := newRestoreManagerEnv(t)
 
-	barFull, barIncremental, request := chainOf("bar")
-	bazFull, bazIncremental, _ := chainOf("baz")
+	barFull, barIncremental := chainOf("bar")
+	bazFull, bazIncremental := chainOf("baz")
 	gomock.InOrder(
 		env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
 			Return([]model.BackupDetails{barFull, bazFull}, nil),
@@ -236,7 +229,7 @@ func TestRestoreManager_RestoreByTime_NamespaceFails(t *testing.T) {
 	env.expectStart(t, "bar", fullID+","+incr1ID, "", errors.New("refused"))
 	env.expectRestore(t, "baz", fullID+","+incr1ID)
 
-	jobID := env.manager.RestoreByTime(request)
+	jobID := env.manager.RestoreByTime(restoreAfter(barIncremental))
 
 	status := env.waitForJob(t, jobID)
 	assert.Equal(t, model.RestoreFailure, status.Status)
@@ -251,7 +244,7 @@ func TestRestoreManager_CancelRestore(t *testing.T) {
 	env := newRestoreManagerEnv(t)
 
 	backup := chainBackup(fullID)
-	env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{backup}, nil)
+	env.catalog.EXPECT().GetBackup(gomock.Any(), gomock.Any(), gomock.Any()).Return(backup, nil)
 	env.expectClient()
 
 	started := make(chan struct{})

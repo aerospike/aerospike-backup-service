@@ -74,8 +74,8 @@ func (m restoreRequestCompressionMatcher) String() string {
 }
 
 // restoreRequestChainMatcher matches a restore request for the backup at expectedPath of a chain
-// of expectedNamespace, which disables reordering and restores under the unique policy or not, as
-// expected.
+// of expectedNamespace. Its disable-reordering flag and its unique policy must equal the expected
+// values.
 type restoreRequestChainMatcher struct {
 	expectedPath              string
 	expectedNamespace         string

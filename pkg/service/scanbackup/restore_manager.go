@@ -105,15 +105,7 @@ func (m *restoreManager) restoreBackup(
 
 	m.AddTotalRecords(jobID, recordsInBackup(backups))
 
-	started := time.Now()
-	counters, err := m.restoreInOrder(ctx, client, jobID, []*model.RestoreRequest{request}, logger)
-	if err != nil {
-		return err
-	}
-
-	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", restoreLogAttrs(counters, time.Since(started))...)
-
-	return nil
+	return m.restoreInOrder(ctx, client, jobID, []*model.RestoreRequest{request}, logger)
 }
 
 func recordsInBackup(backups []model.BackupDetails) uint64 {

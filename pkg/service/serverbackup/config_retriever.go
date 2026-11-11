@@ -9,12 +9,14 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 )
 
+// configRetriever is a placeholder. It finds no cluster configuration, because
+// [NewClusterConfigWriter] writes none.
 type configRetriever struct{}
 
 var _ service.ConfigRetriever = configRetriever{}
 
-// NewConfigRetriever returns the ConfigRetriever of the server backup mode. A server backup holds
-// no cluster configuration, so every retrieval fails with [model.ErrNotFound].
+// NewConfigRetriever returns the ConfigRetriever of the server backup mode. Every retrieval fails
+// with [model.ErrNotFound].
 func NewConfigRetriever() service.ConfigRetriever {
 	return configRetriever{}
 }
