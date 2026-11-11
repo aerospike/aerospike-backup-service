@@ -77,8 +77,6 @@ const (
 		"and counted as the last incremental"
 	gapEmptyRestore = "server bug: a restore of a backup with no records fails, " +
 		"the server takes its zero partition manifests for a failed fetch"
-	gapNamespaceMapping = "server-side backup gap: ABS rejects any namespace mapping, because the server " +
-		"restores only into the namespace a backup was taken from"
 	gapRoutineGate = "server-side backup gap: a second routine on the same cluster is skipped while a backup " +
 		"of another routine runs"
 )
