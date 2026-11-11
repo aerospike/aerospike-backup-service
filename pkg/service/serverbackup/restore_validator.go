@@ -8,7 +8,6 @@ import (
 )
 
 // RestoreValidator checks whether a server restore can run, before the server is asked to run it.
-// The checks a server restore needs will be written against this interface.
 type RestoreValidator interface {
 	// ValidatePath validates the restore of the one backup a request names by its key.
 	ValidatePath(
@@ -26,16 +25,16 @@ type RestoreValidator interface {
 	) error
 }
 
-// restoreValidator is a placeholder. It accepts every restore. The checks of the scan mode do
-// not carry over, because most of them are about options a server restore does not have, such
-// as compression. A server restore needs at least to be refused while a backup of the same
-// namespace runs.
+// restoreValidator is a temporary placeholder. It accepts every restore, so the only refusal a
+// restore can meet is the server's own, which fails the restore job. The checks of the scan mode
+// do not carry over, because most of them are about options a server restore does not have, such
+// as compression. A server restore needs its own checks, the first being that no backup of the
+// same namespace is running.
 type restoreValidator struct{}
 
 var _ RestoreValidator = restoreValidator{}
 
-// NewRestoreValidator returns the RestoreValidator of the server backup mode. The server refuses
-// a restore it cannot run, and that refusal fails the restore job.
+// NewRestoreValidator returns the RestoreValidator of the server backup mode.
 func NewRestoreValidator() RestoreValidator {
 	return restoreValidator{}
 }

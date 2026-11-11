@@ -169,7 +169,7 @@ func (m *restoreManager) restoreChain(
 		return err
 	}
 
-	logger.Info("Server restore started", slog.String("serverJobId", job.jobID))
+	logger.Info("Server restore started", slog.String("serverJobId", job.serverJobID))
 	m.AddHandler(jobID, job)
 
 	return job.Wait(ctx)

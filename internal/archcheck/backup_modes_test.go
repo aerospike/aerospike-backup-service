@@ -16,49 +16,59 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const servicePackage = "github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+const (
+	modulePath = "github.com/aerospike/aerospike-backup-service/v3"
+	serviceDir = "pkg/service"
+	// compositionRoot is the one package that picks a backup mode.
+	compositionRoot = "internal/app"
+)
 
 // backupModes are the directories under pkg/service that hold a backup mode each. A package in
-// one of them, at any depth, belongs to that mode. Every other package under pkg/service is
-// shared by the modes.
+// one of them, at any depth, belongs to that mode.
 var backupModes = []string{"scanbackup", "serverbackup"}
 
-// TestBackupModesAreSeparate enforces the split between the backup modes inside pkg/service:
-// there, a package of a mode is imported only from that mode. So the shared packages use a mode
-// only through interfaces, and the two modes do not import each other. Packages outside
-// pkg/service are not checked.
+// sourceDirs are the directories of the module that hold its Go code.
+var sourceDirs = []string{"cmd", "internal", "pkg", "test"}
+
+// TestBackupModesAreSeparate enforces the split between the backup modes: a package of a mode is
+// imported only from that mode and from the composition root. So the rest of the service uses a
+// mode only through interfaces, and the two modes do not import each other.
 func TestBackupModesAreSeparate(t *testing.T) {
 	t.Parallel()
 
-	root := filepath.Join(doccheck.Root(t), "pkg", "service")
+	root := doccheck.Root(t)
 	seenModes := make(map[string]bool)
 
-	err := filepath.WalkDir(root, func(file string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() || filepath.Ext(file) != ".go" {
-			return nil
-		}
-
-		dir, err := filepath.Rel(root, filepath.Dir(file))
-		if err != nil {
-			return err
-		}
-
-		pkg := filepath.ToSlash(dir)
-		seenModes[modeOf(pkg)] = true
-
-		for _, imported := range serviceImports(t, file) {
-			if mode := modeOf(imported); mode != "" {
-				assert.Equalf(t, mode, modeOf(pkg), "%s imports %s",
-					path.Join("pkg/service", pkg), path.Join("pkg/service", imported))
+	for _, sourceDir := range sourceDirs {
+		err := filepath.WalkDir(filepath.Join(root, sourceDir), func(file string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
 			}
-		}
+			if entry.IsDir() || filepath.Ext(file) != ".go" {
+				return nil
+			}
 
-		return nil
-	})
-	require.NoError(t, err)
+			dir, err := filepath.Rel(root, filepath.Dir(file))
+			if err != nil {
+				return err
+			}
+
+			pkg := filepath.ToSlash(dir)
+			seenModes[modeOf(pkg)] = true
+
+			for _, imported := range moduleImports(t, file) {
+				mode := modeOf(imported)
+				if mode == "" || pkg == compositionRoot {
+					continue
+				}
+
+				assert.Equalf(t, mode, modeOf(pkg), "%s imports %s", pkg, imported)
+			}
+
+			return nil
+		})
+		require.NoError(t, err)
+	}
 
 	for _, mode := range backupModes {
 		require.Truef(t, seenModes[mode], "backup mode %s has no package; did it move?", mode)
@@ -69,11 +79,13 @@ func TestModeOf(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]string{
-		"scanbackup":                 "scanbackup",
-		"scanbackup/restoreexecutor": "scanbackup",
-		"serverbackup":               "serverbackup",
-		".":                          "",
-		"storage":                    "",
+		"pkg/service/scanbackup":                 "scanbackup",
+		"pkg/service/scanbackup/restoreexecutor": "scanbackup",
+		"pkg/service/serverbackup":               "serverbackup",
+		"pkg/service":                            "",
+		"pkg/service/storage":                    "",
+		"internal/app":                           "",
+		"pkg/scanbackup":                         "",
 	}
 
 	for pkg, want := range tests {
@@ -81,10 +93,15 @@ func TestModeOf(t *testing.T) {
 	}
 }
 
-// modeOf returns the backup mode the package pkg of pkg/service belongs to, and "" for a shared
-// package.
+// modeOf returns the backup mode the package belongs to, and "" for a package of no mode. pkg is
+// relative to the module root.
 func modeOf(pkg string) string {
-	top, _, _ := strings.Cut(pkg, "/")
+	inService, ok := strings.CutPrefix(pkg, serviceDir+"/")
+	if !ok {
+		return ""
+	}
+
+	top, _, _ := strings.Cut(inService, "/")
 	if slices.Contains(backupModes, top) {
 		return top
 	}
@@ -92,9 +109,9 @@ func modeOf(pkg string) string {
 	return ""
 }
 
-// serviceImports returns the packages under pkg/service that the Go file imports, each relative
-// to pkg/service.
-func serviceImports(t *testing.T, file string) []string {
+// moduleImports returns the packages of this module that the Go file imports, each relative to
+// the module root.
+func moduleImports(t *testing.T, file string) []string {
 	t.Helper()
 
 	parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
@@ -105,8 +122,8 @@ func serviceImports(t *testing.T, file string) []string {
 		imported, err := strconv.Unquote(spec.Path.Value)
 		require.NoError(t, err)
 
-		if sub, ok := strings.CutPrefix(imported, servicePackage+"/"); ok {
-			imports = append(imports, sub)
+		if pkg, ok := strings.CutPrefix(imported, modulePath+"/"); ok {
+			imports = append(imports, path.Clean(pkg))
 		}
 	}
 

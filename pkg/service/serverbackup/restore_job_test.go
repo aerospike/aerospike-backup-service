@@ -193,7 +193,7 @@ func TestRestoreJob_Wait_AbortsUnfinished(t *testing.T) {
 				infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(nil),
 			)
 
-			job := &restoreJob{infoClient: infoClient, namespace: "bar", jobID: "job"}
+			job := &restoreJob{infoClient: infoClient, namespace: "bar", serverJobID: "job"}
 			require.ErrorContains(t, job.Wait(t.Context()), tt.wantErr)
 		})
 	}
@@ -216,7 +216,7 @@ func TestRestoreJob_Wait_Canceled(t *testing.T) {
 			return errors.New("refused")
 		})
 
-	err := (&restoreJob{infoClient: infoClient, namespace: "bar", jobID: "job"}).Wait(ctx)
+	err := (&restoreJob{infoClient: infoClient, namespace: "bar", serverJobID: "job"}).Wait(ctx)
 	require.ErrorIs(t, err, context.Canceled)
 	require.ErrorContains(t, err, "failed to abort server restore job: refused")
 }
@@ -245,6 +245,6 @@ func TestRestoreJob_Wait_LostAfterSeen(t *testing.T) {
 		infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(nil),
 	)
 
-	err := (&restoreJob{infoClient: infoClient, namespace: "bar", jobID: "job"}).Wait(t.Context())
+	err := (&restoreJob{infoClient: infoClient, namespace: "bar", serverJobID: "job"}).Wait(t.Context())
 	require.ErrorIs(t, err, asinfo.ErrNotFound)
 }

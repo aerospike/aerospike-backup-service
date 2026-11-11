@@ -220,8 +220,8 @@ func (h *RestoreJobsHolder) AddHandler(id model.RestoreJobID, handler RestoreHan
 	}
 }
 
-// AddTotalRecords adds the record count of backups the job restores: once per backup for
-// restore by time, once for the backup of a restore by path.
+// AddTotalRecords adds t to the number of records the job is expected to restore, which its
+// progress is measured against. A mode that does not know the count does not call it.
 func (h *RestoreJobsHolder) AddTotalRecords(id model.RestoreJobID, t uint64) {
 	if job, ok := h.Load(id); ok {
 		job.addTotalRecords(t)

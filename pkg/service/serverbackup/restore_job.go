@@ -46,7 +46,7 @@ func startRestore(
 		BackupIDs:     strings.Join(backupIDs, ","),
 		Policy:        infomodels.RestorePolicyFuzzy,
 	})
-	job := &restoreJob{infoClient: infoClient, namespace: namespace, jobID: jobID}
+	job := &restoreJob{infoClient: infoClient, namespace: namespace, serverJobID: jobID}
 	if err != nil {
 		startErr := fmt.Errorf("failed to start server restore: %w", err)
 		if !errors.Is(err, asinfo.ErrOutcomeUnknown) {
@@ -84,9 +84,9 @@ func backupIDsOf(backups []model.BackupDetails) (string, []string, error) {
 // restoreJob follows a server restore job. The restore manager registers it as the handler of
 // the restore job it belongs to.
 type restoreJob struct {
-	infoClient backup.ServerBackupInfo
-	namespace  string
-	jobID      string
+	infoClient  backup.ServerBackupInfo
+	namespace   string
+	serverJobID string
 }
 
 var _ service.RestoreHandler = (*restoreJob)(nil)
@@ -111,8 +111,8 @@ func (h *restoreJob) Wait(ctx context.Context) error {
 // abort aborts the job, even when ctx is canceled, so that it stops writing into the namespace.
 // A failed abort is returned: the job may still be writing.
 func (h *restoreJob) abort(ctx context.Context) error {
-	if err := h.infoClient.AbortRestore(context.WithoutCancel(ctx), h.namespace, h.jobID); err != nil {
-		return fmt.Errorf("failed to abort server restore %s: %w", h.jobID, err)
+	if err := h.infoClient.AbortRestore(context.WithoutCancel(ctx), h.namespace, h.serverJobID); err != nil {
+		return fmt.Errorf("failed to abort server restore %s: %w", h.serverJobID, err)
 	}
 
 	return nil
@@ -132,7 +132,7 @@ func (h *restoreJob) awaitComplete(ctx context.Context) error {
 		case <-ticker.C:
 		}
 
-		status, err := h.infoClient.GetRestoreStatus(ctx, h.namespace, h.jobID)
+		status, err := h.infoClient.GetRestoreStatus(ctx, h.namespace, h.serverJobID)
 		if errors.Is(err, asinfo.ErrNotFound) && !seen {
 			// The job is not visible on every node yet. Once it has been, a node that does not
 			// know it (one that joined or restarted) means the job can no longer be followed.
@@ -147,9 +147,9 @@ func (h *restoreJob) awaitComplete(ctx context.Context) error {
 		case infomodels.RestoreStateComplete:
 			return nil
 		case infomodels.RestoreStateFailed:
-			return fmt.Errorf("server restore %s failed", h.jobID)
+			return fmt.Errorf("server restore %s failed", h.serverJobID)
 		case infomodels.RestoreStateAborted:
-			return fmt.Errorf("server restore %s was aborted", h.jobID)
+			return fmt.Errorf("server restore %s was aborted", h.serverJobID)
 		default:
 		}
 	}
