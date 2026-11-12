@@ -75,6 +75,12 @@ func (bc *BackupConfig) Cluster(name string) (*AerospikeCluster, error) {
 	return cluster, nil
 }
 
+// IsServerBackupMode reports whether the Aerospike server writes the backups, instead of the
+// service scanning the cluster.
+func (c *Config) IsServerBackupMode() bool {
+	return c.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == BackupModeServer
+}
+
 func (c *Config) BackupConfigCopy() *BackupConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

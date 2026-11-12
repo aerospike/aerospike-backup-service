@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // Config represents the service configuration file.
@@ -136,7 +137,93 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("service validation error: %w", err)
 	}
 
+	return c.validateServerMode()
+}
+
+// validateServerMode checks that in the server backup mode every routine backs up to S3 storage,
+// the only storage the server writes to, and that no routine, policy or S3 storage sets an option
+// the server has no equivalent for.
+func (c *Config) validateServerMode() error {
+	if c.ServiceConfig.Backup == nil || c.ServiceConfig.Backup.BackupMode.ToModel() != model.BackupModeServer {
+		return nil
+	}
+
+	for name, routine := range c.BackupRoutines {
+		if storage, ok := c.Storage[routine.Storage]; ok && storage.S3Storage == nil {
+			return fmt.Errorf("backup routine '%s' validation error: %w: storage %q is not S3 storage, "+
+				"which backup-mode %q requires", name, errInvalidValue, routine.Storage, model.BackupModeServer)
+		}
+		if err := rejectOptions(fmt.Sprintf("backup routine '%s'", name), unsupportedInServerMode,
+			option{"rack-list", len(routine.RackList) > 0},
+			option{"partition-list", routine.PartitionList != ""},
+			option{"node-list", len(routine.NodeList) > 0},
+		); err != nil {
+			return err
+		}
+	}
+
+	// The server writes the backups, so only the S3 options it receives apply. ABS's own S3 client
+	// still uses the credentials and max-async-connections to list and read backup metadata.
+	for name, storage := range c.Storage {
+		if storage.S3Storage == nil {
+			continue
+		}
+		if err := rejectOptions(fmt.Sprintf("storage '%s'", name), unsupportedInServerMode,
+			option{"storage-class", storage.S3Storage.StorageClass != nil},
+			option{"min-part-size", storage.S3Storage.MinPartSize != nil},
+		); err != nil {
+			return err
+		}
+	}
+
+	for name, policy := range c.BackupPolicies {
+		if policy == nil { // an empty policy sets nothing.
+			continue
+		}
+		if err := rejectOptions(fmt.Sprintf("policy '%s'", name), unsupportedInServerMode,
+			option{"bandwidth", policy.Bandwidth != nil},
+			option{"encryption", encrypts(policy.EncryptionPolicy.ToModel())},
+			option{"compression", compresses(policy.CompressionPolicy.ToModel())},
+			option{"no-records", ptr.ValueOrZero(policy.NoRecords)},
+			option{"compact", ptr.ValueOrZero(policy.Compact)},
+			option{"file-limit", policy.FileLimit != nil},
+			option{"max-concurrent-nodes", policy.MaxConcurrentNodes != nil},
+			option{"retry-policy", policy.RetryPolicy != nil},
+			option{"retention", policy.RetentionPolicy != nil},
+			option{"socket-timeout", policy.SocketTimeout != nil},
+			option{"total-timeout", policy.TotalTimeout != nil},
+			option{"use-scan-compression", ptr.ValueOrZero(policy.UseCompression)},
+			// The server runs one backup per cluster, so an incremental cannot run next to a full.
+			option{"concurrent-incremental", ptr.ValueOrZero(policy.ConcurrentIncremental)},
+			// Server mode writes no cluster configuration next to its backups.
+			option{"with-cluster-configuration", ptr.ValueOrZero(policy.WithClusterConfig)},
+		); err != nil {
+			return err
+		}
+		if err := validateServerRate(policy); err != nil {
+			return fmt.Errorf("policy '%s' validation error: %w", name, err)
+		}
+	}
+
 	return nil
+}
+
+// serverMinRecordsPerSecondPerThread is the lowest backup rate the server takes per scan thread.
+const serverMinRecordsPerSecondPerThread = 5
+
+// validateServerRate checks that a server backup's rate limit is one the server takes: none, or
+// at least serverMinRecordsPerSecondPerThread per scan thread. The server refuses any other rate
+// when the job starts. When parallel is not set, the server chooses the number of scan threads,
+// so the rate cannot be checked.
+func validateServerRate(policy *BackupPolicy) error {
+	rate := ptr.ValueOrZero(policy.RecordsPerSecond)
+	minRate := serverMinRecordsPerSecondPerThread * ptr.ValueOrZero(policy.Parallel)
+	if rate == 0 || rate >= minRate {
+		return nil
+	}
+
+	return fmt.Errorf("%w: records-per-second %d is below %d, the lowest rate the server takes for parallel %d",
+		errInvalidValue, rate, minRate, ptr.ValueOrZero(policy.Parallel))
 }
 
 func (c *Config) ToModel() (*model.Config, error) {

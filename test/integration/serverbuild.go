@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -55,6 +56,8 @@ const (
 	destinationClusterName = "destinationCluster"
 	// serverNamespace is the namespace backed up and restored, defined in serverConf.
 	serverNamespace = "bar"
+	// otherNamespace is the second namespace serverConf defines.
+	otherNamespace = "baz"
 	// serverJobTimeout bounds how long a server backup or restore job may take.
 	serverJobTimeout = 2 * time.Minute
 	// s3Profile names the MinIO credentials in the shared AWS credentials file. The server
@@ -67,9 +70,15 @@ const (
 // the scan tests make. README.md lists them.
 const (
 	gapRecordCount  = "server-side backup gap: a server backup's metadata records no record count"
-	gapRestoreStats = "server-side backup gap: a server restore job reports no record or index counts"
-	gapEmptyIncr    = "server-side backup gap: an incremental backup with no changes is written, listed " +
+	gapIndexCount   = "server-side backup gap: ABS does not read the index count of a server backup"
+	gapRestoreStats = "server-side backup gap: ABS reports the read and skipped record counts of a server " +
+		"restore, not the inserted or index counts"
+	gapEmptyIncr = "server-side backup gap: an incremental backup with no changes is written, listed " +
 		"and counted as the last incremental"
+	gapEmptyRestore = "server bug: a restore of a backup with no records fails, " +
+		"the server takes its zero partition manifests for a failed fetch"
+	gapRoutineGate = "server-side backup gap: a second routine on the same cluster is skipped while a backup " +
+		"of another routine runs"
 )
 
 // serverConf is the configuration of every node ServerBuildSuite starts.
@@ -103,15 +112,17 @@ func (s *ServerBuildSuite) SetupSuite() {
 	s.s3Endpoint = s.startSharedMinIO()
 }
 
-// SetupTest empties serverNamespace of the source cluster and gives ABS the s3Profile credentials.
-// The destination is left as it is: a truncate would filter out the restored records, which keep
-// their backup times, and a test that needs it empty deletes its records.
+// SetupTest empties the namespaces of the source cluster and gives ABS the s3Profile credentials.
+// The destination is left as it is: a cold restore clears the namespace itself, and refuses one
+// that holds truncate state, which would filter out the restored records.
 func (s *ServerBuildSuite) SetupTest() {
 	credentialsFile := filepath.Join(s.T().TempDir(), "credentials")
 	s.Require().NoError(os.WriteFile(credentialsFile, []byte(awsCredentials()), 0o600))
 	s.T().Setenv("AWS_SHARED_CREDENTIALS_FILE", credentialsFile)
 
-	s.Require().NoError(s.client.Truncate(nil, serverNamespace, "", nil))
+	for _, ns := range []string{serverNamespace, otherNamespace} {
+		s.Require().NoError(s.client.Truncate(nil, ns, "", nil))
+	}
 }
 
 // serverBuildFile returns the path in env, or else defaultPath under the home directory. It
@@ -149,6 +160,8 @@ func (s *ServerBuildSuite) serverBackupConfig(c *dto.Config) {
 		Path: dto.Path(strings.ReplaceAll(s.T().Name(), "/", "-")),
 	}}
 	c.BackupRoutines[routineName].Namespaces = new([]dto.NamespaceName{serverNamespace})
+	// The server keeps every backup: server mode rejects a retention policy.
+	c.BackupPolicies[policyName].RetentionPolicy = nil
 }
 
 // startServerBuild starts a single-node cluster from the asd binary and feature key file on
@@ -260,6 +273,17 @@ func (s *ServerBuildSuite) routineState(e *env) dto.RoutineState {
 	return state
 }
 
+// routineBackups lists the full backups of routine.
+func (s *ServerBuildSuite) routineBackups(e *env, routine string) []dto.BackupDetails {
+	status, body := s.do(e, http.MethodGet, fmt.Sprintf("%s/v1/backups/full/%s", e.baseURL, routine), nil)
+	s.Require().Equal(http.StatusOK, status, "list %s: %s", routine, body)
+
+	var backups []dto.BackupDetails
+	s.Require().NoError(decoder.Deserialize(&backups, bytes.NewReader(body), decoder.JSON))
+
+	return backups
+}
+
 // assertServerBackupListed checks that the listing of backupType holds want unchanged.
 func (s *ServerBuildSuite) assertServerBackupListed(e *env, backupType model.BackupType, want dto.BackupDetails) {
 	s.T().Helper()
@@ -274,43 +298,98 @@ func (s *ServerBuildSuite) assertServerBackupListed(e *env, backupType model.Bac
 	s.Failf("backup not listed", "%s backup %s is not listed", backupType, want.Key)
 }
 
-// restoreIntoDestination restores the backup at key into the destination cluster via
+// restoreIntoDestination restores the backup at key into the destination cluster, strict, via
 // POST /v1/restore/full, and waits for the job to succeed.
 func (s *ServerBuildSuite) restoreIntoDestination(e *env, key string) dto.RestoreJobStatus {
-	return s.restoreByPathInto(e, key, destinationClusterName)
+	return s.restoreIntoDestinationWithPolicy(e, key, dto.BaseRestorePolicy{})
 }
 
-// restoreByPathInto restores the backup at key into cluster via POST /v1/restore/full, and waits
-// for the job to succeed.
-func (s *ServerBuildSuite) restoreByPathInto(e *env, key, cluster string) dto.RestoreJobStatus {
+// restoreIntoDestinationWithPolicy restores the backup at key into the destination cluster with
+// policy, strict, via POST /v1/restore/full, and waits for the job to succeed.
+func (s *ServerBuildSuite) restoreIntoDestinationWithPolicy(
+	e *env,
+	key string,
+	policy dto.BaseRestorePolicy,
+) dto.RestoreJobStatus {
+	policy.Mode = dto.RestoreModeStrict
+
+	return s.restoreByPathInto(e, key, destinationClusterName, &dto.RestorePolicy{BaseRestorePolicy: policy})
+}
+
+// restoreByPathInto restores the backup at key into cluster with policy via POST
+// /v1/restore/full, and waits for the job to succeed.
+func (s *ServerBuildSuite) restoreByPathInto(
+	e *env,
+	key, cluster string,
+	policy *dto.RestorePolicy,
+) dto.RestoreJobStatus {
+	return s.restoreWithin(e, e.baseURL+"/v1/restore/full", pathRestoreRequest(key, cluster, policy), serverJobTimeout)
+}
+
+// pathRestoreRequest is a request to restore the backup at key into cluster with policy.
+func pathRestoreRequest(key, cluster string, policy *dto.RestorePolicy) dto.RestoreRequest {
 	request := defaultRestoreRequest(key)
 	request.DestinationClusterConfig.Name = cluster
+	request.Policy = policy
 
-	return s.restoreWithin(e, e.baseURL+"/v1/restore/full", request, serverJobTimeout)
+	return request
 }
 
 // restoreIntoDestinationByTimestamp restores the routine's backups up to timestamp into the
-// destination cluster via POST /v1/restore/timestamp, and waits for the job to succeed.
+// destination cluster, strict, via POST /v1/restore/timestamp, and waits for the job to succeed.
 func (s *ServerBuildSuite) restoreIntoDestinationByTimestamp(e *env, timestamp time.Time) dto.RestoreJobStatus {
-	return s.restoreWithin(e, e.baseURL+"/v1/restore/timestamp",
-		timestampRestoreRequest(timestamp, destinationClusterName), serverJobTimeout)
+	return s.restoreByTimestampInto(e, timestamp, destinationClusterName, dto.RestoreModeStrict)
+}
+
+// restoreByTimestampInto restores the routine's backups up to timestamp into cluster with mode
+// via POST /v1/restore/timestamp, and waits for the job to succeed.
+func (s *ServerBuildSuite) restoreByTimestampInto(
+	e *env,
+	timestamp time.Time,
+	cluster string,
+	mode dto.RestoreMode,
+) dto.RestoreJobStatus {
+	return s.restoreWithin(e, e.baseURL+"/v1/restore/timestamp", timestampRestoreRequest(timestamp, cluster, mode),
+		serverJobTimeout)
 }
 
 // timestampRestoreRequest is a request to restore the routine's backups up to timestamp into
-// cluster.
-func timestampRestoreRequest(timestamp time.Time, cluster string) dto.RestoreTimestampRequest {
+// cluster with mode.
+func timestampRestoreRequest(timestamp time.Time, cluster string, mode dto.RestoreMode) dto.RestoreTimestampRequest {
 	return dto.RestoreTimestampRequest{
 		DestinationClusterConfig: dto.DestinationClusterConfig{
 			Name: cluster,
 		},
-		Policy:  &dto.TimestampRestorePolicy{},
+		Policy:  &dto.TimestampRestorePolicy{BaseRestorePolicy: dto.BaseRestorePolicy{Mode: mode}},
 		Time:    timestamp.UnixMilli(),
 		Routine: routineName,
 	}
 }
 
-// emptyNamespace deletes every record of ns. Unlike a truncate it leaves no truncate state, which
-// would filter out the records restored into ns.
+// putRecord writes bins under key 0 into set of serverNamespace.
+func (s *ServerBuildSuite) putRecord(client *as.Client, set string, bins as.BinMap) {
+	asKey, err := as.NewKey(serverNamespace, set, 0)
+	s.Require().NoError(err)
+	s.Require().NoError(client.Put(as.NewWritePolicy(0, 0), asKey, bins))
+}
+
+// recordBins returns the bins of the record under key in set of serverNamespace, or nil when
+// there is none.
+func (s *ServerBuildSuite) recordBins(client *as.Client, set string, key int) as.BinMap {
+	asKey, err := as.NewKey(serverNamespace, set, key)
+	s.Require().NoError(err)
+
+	record, err := client.Get(nil, asKey)
+	if errors.Is(err, as.ErrKeyNotFound) {
+		return nil
+	}
+	s.Require().NoError(err)
+
+	return record.Bins
+}
+
+// emptyNamespace deletes every record of ns. Unlike a truncate it leaves no truncate state, for
+// which the server refuses a cold restore into ns.
 func (s *ServerBuildSuite) emptyNamespace(client *as.Client, ns string) {
 	recordset, err := client.ScanAll(nil, ns, "")
 	s.Require().NoError(err)
@@ -334,10 +413,78 @@ func (s *ServerBuildSuite) info(client *as.Client, command string) string {
 	return response[command]
 }
 
+// backupJobFields returns the fields of the backup-status row of the server backup jobID on
+// the source cluster, which keeps finished jobs.
+func (s *ServerBuildSuite) backupJobFields(jobID string) map[string]string {
+	rows := statusRows(s.info(s.client, "backup-status:job-id="+jobID))
+	s.Require().Len(rows, 1, "backup-status of job %s", jobID)
+
+	return rows[jobID]
+}
+
+// jobIDOf returns the server job id a backup key ends with: the key is the routine's folder, then
+// the job id.
+func jobIDOf(key string) string {
+	_, jobID, _ := strings.Cut(key, "/")
+
+	return jobID
+}
+
+// restoreJobIDs returns the ids of the restore jobs the destination cluster knows, finished
+// ones included.
+func (s *ServerBuildSuite) restoreJobIDs() map[string]bool {
+	ids := make(map[string]bool)
+	for id := range statusRows(s.info(s.destinationClient, "restore-status")) {
+		ids[id] = true
+	}
+
+	return ids
+}
+
+// newRestoreJobFields returns the fields of the one restore-status row of the destination
+// cluster whose job is not in before: the job of the restore run since before was read.
+func (s *ServerBuildSuite) newRestoreJobFields(before map[string]bool) map[string]string {
+	var found []map[string]string
+	for id, fields := range statusRows(s.info(s.destinationClient, "restore-status")) {
+		if !before[id] {
+			found = append(found, fields)
+		}
+	}
+	s.Require().Len(found, 1, "new restore jobs on the destination cluster")
+
+	return found[0]
+}
+
+// statusRows parses a backup-status or restore-status response, one ';'-separated row per job of
+// ':'-separated key=value fields, into the fields of each row by job id. Time fields hold ':' of
+// their own, so they come out cut; no caller reads them.
+func statusRows(response string) map[string]map[string]string {
+	rows := make(map[string]map[string]string)
+	for row := range strings.SplitSeq(response, ";") {
+		fields := make(map[string]string)
+		for field := range strings.SplitSeq(row, ":") {
+			if key, value, ok := strings.Cut(field, "="); ok {
+				fields[key] = value
+			}
+		}
+
+		if id, ok := fields["job-id"]; ok {
+			rows[id] = fields
+		}
+	}
+
+	return rows
+}
+
+// destinationIndexes returns the info response describing the secondary indexes of
+// serverNamespace on the destination cluster.
+func (s *ServerBuildSuite) destinationIndexes() string {
+	return s.info(s.destinationClient, "sindex-list:ns="+serverNamespace)
+}
+
 // assertServerBackupDetails checks the fields a full server backup of serverNamespace reports
 // from the server's metadata: it was created at or after createdAfter, is keyed by its routine and
-// job id,
-// is not incremental, and is stored uncompressed and unencrypted in the MinIO bucket.
+// job id, is not incremental, and is stored uncompressed and unencrypted in the MinIO bucket.
 func (s *ServerBuildSuite) assertServerBackupDetails(backup dto.BackupDetails, createdAfter time.Time) {
 	s.T().Helper()
 
@@ -391,4 +538,39 @@ func hostLANAddress(ctx context.Context) (string, error) {
 	defer func() { _ = conn.Close() }()
 
 	return conn.LocalAddr().(*net.UDPAddr).IP.String(), nil
+}
+
+// assertCompleteJobs checks that jobs are the complete server jobs that wrote backups, one per
+// namespace in the order of namespaces, each having backed up at least minRecords of its
+// namespace.
+// The server counts a record once per scan that reads it, and a strict backup's incremental scan
+// reads again the records written shortly before the backup started: a count is not exact.
+func (s *ServerBuildSuite) assertCompleteJobs(
+	jobs []dto.ServerBackupJob,
+	backups []dto.BackupDetails,
+	namespaces []string,
+	minRecords map[string]uint64,
+) {
+	s.T().Helper()
+
+	keys := make(map[string]string, len(backups))
+	for _, backup := range backups {
+		keys[backup.Namespace] = jobIDOf(backup.Key)
+	}
+
+	s.Require().Len(jobs, len(namespaces), "server jobs")
+	for i, namespace := range namespaces {
+		job := jobs[i]
+		s.Equal(namespace, job.Namespace)
+		s.Equal(keys[namespace], job.JobID, "job of namespace %s wrote its backup", namespace)
+		s.Equal("COMPLETE", job.State, "job of namespace %s", namespace)
+		s.Empty(job.ErrorReason)
+		s.Empty(job.AbortOrigin)
+		s.GreaterOrEqual(job.RecordsBackedUp, minRecords[namespace], "records of namespace %s", namespace)
+		s.Positive(job.BytesBackedUp, "bytes of namespace %s", namespace)
+		s.Zero(job.RecordsReadFailed)
+		s.Require().NotNil(job.StartTime)
+		s.Require().NotNil(job.FinishTime)
+		s.False(job.FinishTime.Before(*job.StartTime), "job of namespace %s finished before it started", namespace)
+	}
 }

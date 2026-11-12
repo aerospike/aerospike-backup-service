@@ -16,6 +16,12 @@ type RoutineState struct {
 	LastRunTime *BackupTime
 	// NextRunTime specifies the scheduled next execution time for the routine's backup operations.
 	NextRunTime *BackupTime
+	// LastFullJobs are the server jobs of the last finished full backup, whatever its outcome.
+	// Empty in the scan backup mode.
+	LastFullJobs []ServerBackupJob
+	// LastIncrementalJobs are the server jobs of the last finished incremental backup.
+	// Empty in the scan backup mode.
+	LastIncrementalJobs []ServerBackupJob
 }
 
 // IsRunning reports whether a full or incremental backup is active for this routine.
@@ -27,8 +33,10 @@ func (rs RoutineState) IsRunning() bool {
 type RunningJob struct {
 	// TotalRecords: the total number of records to be processed.
 	// For backup jobs, this value is only an estimate, not exact.
+	// Zero for a server-side backup, which counts no records.
 	TotalRecords uint64
 	// DoneRecords: the number of records that have been successfully done.
+	// Zero for a server-side backup.
 	DoneRecords uint64
 	// StartTime: the time when the operation started.
 	StartTime time.Time

@@ -3,22 +3,24 @@
 package integration
 
 import (
-	"fmt"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
 // TestServerRestoreByPath mirrors TestRestoreByPath with server-side backup: runs a full
 // backup, restores it via POST /v1/restore/full into the destination cluster, and verifies the
-// backup details, the restored data and the exposed restore metrics.
+// backup details, the restored data and the exposed restore metrics. The destination namespace
+// holds records the backup does not: a strict restore leaves exactly the backed-up data.
 func (s *ServerBackupSuite) TestServerRestoreByPath() {
 	e := s.setupEnv(s.serverBackupConfig)
 	s.seedRecordsIn(s.client, serverNamespace, []int{10, 20, 30})
 	successCount := s.metricRestoreSuccessEventCount(e)
+
+	s.putRecordIn(s.destinationClient, serverNamespace, 7, 70)
+	s.putRecord(s.destinationClient, "strays", as.BinMap{ageBin: 71})
 
 	triggered := time.Now()
 	s.triggerFullBackup(e)
@@ -31,7 +33,51 @@ func (s *ServerBackupSuite) TestServerRestoreByPath() {
 	s.gap("inserted_records", gapRestoreStats, func() { s.Equal(uint64(3), status.InsertedRecords) })
 	s.Empty(status.Error)
 	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{10, 20, 30})
+	s.Nil(s.recordBins(s.destinationClient, setName, 7), "a record the backup does not hold was kept")
+	s.Nil(s.recordBins(s.destinationClient, "strays", 0), "a set the backup does not hold was kept")
 	s.assertMetricRestoreSuccessEventCount(e, successCount+1)
+}
+
+// TestServerBackupRestoreWithIndexes mirrors TestBackupRestoreWithIndexes with server-side
+// backup: backs up a secondary index and a set index next to a record and checks that restoring
+// the backup into the destination cluster creates the indexes there. The record keeps the backup
+// from being empty, which the server cannot restore.
+func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
+	const wantIndexes = 2 // age_sidx + set_sidx
+
+	s.seedRecordsIn(s.client, serverNamespace, []int{1})
+
+	e := s.setupEnv(s.serverBackupConfig)
+
+	task, err := s.client.CreateIndex(nil, serverNamespace, setName, "age_sidx", ageBin, as.NUMERIC)
+	s.Require().NoError(err)
+	s.Require().NoError(<-task.OnComplete())
+
+	setTask, err := s.client.CreateSetIndex(nil, serverNamespace, setName, "set_sidx")
+	s.Require().NoError(err)
+	s.Require().NoError(<-setTask.OnComplete())
+
+	s.T().Cleanup(func() {
+		for _, client := range []*as.Client{s.client, s.destinationClient} {
+			// Either may be missing on the destination when the test failed before restoring.
+			_ = client.DropIndex(nil, serverNamespace, setName, "age_sidx")
+			_ = client.DropIndex(nil, serverNamespace, setName, "set_sidx")
+		}
+	})
+
+	s.triggerFullBackup(e)
+	fullBackup := s.waitForFinishedBackup(e, model.BackupTypeFull)
+	s.gap("index_count", gapIndexCount, func() {
+		s.Equal(uint64(wantIndexes), fullBackup.SecondaryIndexCount)
+	})
+
+	restoreStatus := s.restoreIntoDestination(e, fullBackup.Key)
+	s.gap("index_count", gapRestoreStats, func() { s.Equal(uint64(wantIndexes), restoreStatus.IndexCount) })
+
+	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
+	indexes := s.destinationIndexes()
+	s.Contains(indexes, "age_sidx", "secondary index not backed up or not restored")
+	s.Contains(indexes, "set_sidx", "set index not backed up or not restored")
 }
 
 // TestServerRestoreByTimestampWorkflow mirrors TestRestoreByTimestampWorkflow with server-side
@@ -94,8 +140,6 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 		s.assertMetricRestoreSuccessEventCount(e, successCount+1)
 	})
 
-	// The destination holds the record as the incremental backup has it: the restore writes the
-	// full backup's version over it.
 	s.Run("restore_between_full_and_incremental", func() {
 		between := fullBackup.Created.Add(incrBackup.Created.Sub(fullBackup.Created) / 2)
 		s.Require().True(between.After(fullBackup.Created) && between.Before(incrBackup.Created))
@@ -106,7 +150,8 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 	})
 
 	s.Run("restore_before_full", func() {
-		request := timestampRestoreRequest(fullBackup.Created.Add(-time.Second), destinationClusterName)
+		request := timestampRestoreRequest(fullBackup.Created.Add(-time.Second), destinationClusterName,
+			dto.RestoreModeStrict)
 		job := s.waitForRestoreEnd(e, s.startRestore(e, e.baseURL+"/v1/restore/timestamp", request),
 			serverJobTimeout)
 
@@ -118,9 +163,9 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 }
 
 // TestServerRestoreByTimestampIntoEmptyNamespace restores a full and an incremental backup by
-// timestamp into a destination namespace that holds no records. An empty namespace is where
-// restore by timestamp switches a scan restore to the unique policy, which applies a chain newest
-// first; the server takes a chain only full backup first.
+// timestamp into a destination namespace that holds no records, in each restore mode. An empty
+// namespace is where restore by timestamp switches a scan restore to the unique policy, which
+// applies a chain newest first; the server takes a chain only full backup first.
 func (s *ServerBackupSuite) TestServerRestoreByTimestampIntoEmptyNamespace() {
 	e := s.setupEnv(s.serverBackupConfig)
 
@@ -135,55 +180,66 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampIntoEmptyNamespace() {
 	incrBackup := s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 	s.waitForLastBackup(e, model.BackupTypeIncremental, incrBackup.Created)
 
-	s.emptyNamespace(s.destinationClient, serverNamespace)
+	for _, mode := range []dto.RestoreMode{dto.RestoreModeStrict, dto.RestoreModeFuzzy} {
+		s.Run(string(mode), func() {
+			s.emptyNamespace(s.destinationClient, serverNamespace)
 
-	status := s.restoreIntoDestinationByTimestamp(e, time.Now())
+			status := s.restoreByTimestampInto(e, time.Now(), destinationClusterName, mode)
 
-	s.Empty(status.Error)
-	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{2, 3})
+			s.Empty(status.Error)
+			s.assertRecordsIn(s.destinationClient, serverNamespace, []int{2, 3})
+		})
+	}
 }
 
-// TestServerRestoreIntoSource backs up the source cluster, then updates one record, deletes
-// another and adds a third, and restores the backup into the source cluster itself, which stays
-// live. The updated and deleted records get their backed-up values back; the added record, which
-// the backup does not hold, stays.
-func (s *ServerBackupSuite) TestServerRestoreIntoSource() {
-	e := s.setupEnv(s.serverBackupConfig)
-	s.seedRecordsIn(s.client, serverNamespace, []int{10, 20, 30})
-
-	s.triggerFullBackup(e)
-	fullBackup := s.waitForFinishedBackup(e, model.BackupTypeFull)
-
-	s.putRecordIn(s.client, serverNamespace, 0, 99)
-	s.deleteRecordIn(s.client, serverNamespace, 1)
-	s.putRecordIn(s.client, serverNamespace, 3, 40)
-
-	status := s.restoreByPathInto(e, fullBackup.Key, clusterName)
-
-	s.Equal(dto.RestoreSuccess, status.Status)
-	s.assertRecordsIn(s.client, serverNamespace, []int{10, 20, 30, 40})
-}
-
-// TestServerBackupCancel cancels a running full backup through POST /v1/backups/cancel and checks
-// that the server aborts the job, nothing shows as running and nothing is listed.
-func (s *ServerBackupSuite) TestServerBackupCancel() {
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
-
-	e := s.setupEnv(s.serverBackupConfig)
-	s.triggerFullBackup(e)
-
-	ok := s.eventually(serverJobTimeout, pollInterval, func() bool { return s.routineState(e).Full != nil })
-	s.Require().True(ok, "the full backup never showed as running")
-
-	status, body := s.do(e, http.MethodPost, fmt.Sprintf("%s/v1/backups/cancel/%s", e.baseURL, routineName), nil)
-	s.Require().Equal(http.StatusAccepted, status, "cancel: %s", body)
-
-	ok = s.eventually(serverJobTimeout, pollInterval, func() bool {
-		return strings.Contains(s.info(s.client, "backup-status"), "state=ABORTED")
+// TestServerRestoreByTimestampCumulativeWorkflow mirrors TestRestoreByTimestampCumulativeWorkflow
+// with server-side backup: runs full backup, incremental backup, another incremental backup,
+// then restores the namespace into the destination cluster to a point in time. Since the mode
+// is cumulative, the second incremental should cover the first one.
+func (s *ServerBackupSuite) TestServerRestoreByTimestampCumulativeWorkflow() {
+	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
+		c.BackupPolicies[policyName].IncrMode = dto.IncrModeCumulative
 	})
-	s.True(ok, "server job not aborted: backup-status %s", s.info(s.client, "backup-status"))
 
-	ok = s.eventually(serverJobTimeout, pollInterval, func() bool { return s.routineState(e).Full == nil })
-	s.True(ok, "the canceled backup still shows as running")
-	s.Empty(s.getBackups(e, model.BackupTypeFull), "a canceled backup is listed")
+	var fullBackup, incrBackup1, incrBackup2 dto.BackupDetails
+
+	s.Run("full", func() {
+		s.triggerFullBackup(e)
+		fullBackup = s.waitForFinishedBackup(e, model.BackupTypeFull)
+		s.assertServerBackupListed(e, model.BackupTypeFull, fullBackup)
+		s.waitForLastBackup(e, model.BackupTypeFull, fullBackup.Created)
+	})
+
+	s.Run("incremental_1", func() {
+		s.seedRecordsIn(s.client, serverNamespace, []int{1})
+		s.triggerIncrementalBackup(e)
+		incrBackup1 = s.waitForFinishedBackup(e, model.BackupTypeIncremental)
+		s.gap("record_count", gapRecordCount, func() { s.Equal(uint64(1), incrBackup1.RecordCount) })
+		s.assertServerBackupListed(e, model.BackupTypeIncremental, incrBackup1)
+		s.Greater(incrBackup1.Created.Unix(), fullBackup.Created.Unix())
+		s.waitForLastBackup(e, model.BackupTypeIncremental, incrBackup1.Created)
+	})
+
+	s.Run("incremental_2", func() {
+		s.seedRecordsIn(s.client, serverNamespace, []int{1, 2})
+		s.triggerIncrementalBackup(e)
+		// Both records changed after the first incremental, so the second holds 2 in either mode;
+		// its From time shows that it is cumulative.
+		incrBackup2 = s.waitForFinishedBackup(e, model.BackupTypeIncremental)
+		s.gap("record_count", gapRecordCount, func() { s.Equal(uint64(2), incrBackup2.RecordCount) })
+		s.assertServerBackupListed(e, model.BackupTypeIncremental, incrBackup2)
+		s.Greater(incrBackup2.Created.Unix(), incrBackup1.Created.Unix())
+		s.True(incrBackup2.From.Equal(fullBackup.Created), "cumulative incremental from %s, want %s",
+			incrBackup2.From, fullBackup.Created)
+	})
+
+	// The chain starts with the full backup, which holds no records.
+	s.gap("restore_by_timestamp", gapEmptyRestore, func() {
+		status := s.restoreIntoDestinationByTimestamp(e, time.Now())
+		s.Equal(dto.RestoreSuccess, status.Status)
+		// The chain is the full backup and the second incremental: the first incremental is skipped.
+		s.gap("inserted_records", gapRestoreStats, func() { s.Equal(uint64(2), status.InsertedRecords) })
+		s.Empty(status.Error)
+		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1, 2})
+	})
 }

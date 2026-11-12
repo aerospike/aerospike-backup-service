@@ -73,8 +73,7 @@ func (e *restoreManagerEnv) expectRestore(t *testing.T, namespace, wantBackupIDs
 	t.Helper()
 
 	e.expectStart(t, namespace, wantBackupIDs, restoreJobID, nil)
-	e.infoClient.EXPECT().GetRestoreStatus(gomock.Any(), namespace, restoreJobID).Return(
-		&infomodels.ResponseRestoreState{State: infomodels.RestoreStateComplete}, nil)
+	e.infoClient.EXPECT().GetRestoreStatus(gomock.Any(), namespace, restoreJobID).Return(completeStatus, nil)
 }
 
 // waitForJob waits for the restore job to end and returns its status.
@@ -120,6 +119,7 @@ func restoreAfter(backup model.BackupDetails) *model.RestoreTimestampRequest {
 		RoutineName: "routine",
 		Storage:     backup.Storage,
 		Time:        backup.Created.Add(time.Hour),
+		Policy:      fuzzyPolicy,
 	}
 }
 
@@ -132,7 +132,7 @@ func TestRestoreManager_Restore(t *testing.T) {
 	env.expectClient()
 	env.expectRestore(t, "bar", fullID)
 
-	jobID := env.manager.Restore(&model.RestoreRequest{SourceStorage: backup.Storage, BackupDataPath: backup.Key})
+	jobID := env.manager.Restore(restoreRequestOf(backup))
 
 	assert.Equal(t, model.RestoreSuccess, env.waitForJob(t, jobID).Status)
 }
@@ -183,7 +183,7 @@ func TestRestoreManager_Restore_Fails(t *testing.T) {
 			env := newRestoreManagerEnv(t)
 			tt.expect(t, env)
 
-			jobID := env.manager.Restore(&model.RestoreRequest{SourceStorage: backup.Storage, BackupDataPath: backup.Key})
+			jobID := env.manager.Restore(restoreRequestOf(backup))
 
 			status := env.waitForJob(t, jobID)
 			assert.Equal(t, model.RestoreFailure, status.Status)
@@ -258,9 +258,14 @@ func TestRestoreManager_CancelRestore(t *testing.T) {
 		&infomodels.ResponseRestoreState{State: infomodels.RestoreStateActive}, nil).AnyTimes()
 	env.infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", restoreJobID).Return(nil)
 
-	jobID := env.manager.Restore(&model.RestoreRequest{SourceStorage: backup.Storage, BackupDataPath: backup.Key})
+	jobID := env.manager.Restore(restoreRequestOf(backup))
 	<-started
 	require.NoError(t, env.manager.CancelRestore(jobID))
 
 	assert.Equal(t, model.RestoreCanceled, env.waitForJob(t, jobID).Status)
+}
+
+// restoreRequestOf returns a request for a fuzzy restore of the backup.
+func restoreRequestOf(backup model.BackupDetails) *model.RestoreRequest {
+	return &model.RestoreRequest{SourceStorage: backup.Storage, BackupDataPath: backup.Key, Policy: fuzzyPolicy}
 }

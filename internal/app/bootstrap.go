@@ -220,7 +220,7 @@ func newComponentsForMode(
 	clientManager aerospike.ClientManager,
 	restoreJobs *service.RestoreJobsHolder,
 ) backupMode {
-	if config.ServiceConfig.GetBackupCommonOrDefault().GetBackupModeOrDefault() == model.BackupModeServer {
+	if config.IsServerBackupMode() {
 		return newServerBackupMode(config, s3Clients, clientManager, restoreJobs)
 	}
 
@@ -285,9 +285,11 @@ func newServerBackupMode(
 	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config)
 
 	return backupMode{
-		backupReader:        catalog,
-		registry:            registry,
-		startController:     service.NewStartController(registry, service.NewStartDecider()),
+		backupReader: catalog,
+		registry:     registry,
+		startController: serverbackup.NewStartController(
+			service.NewStartController(registry, service.NewStartDecider()),
+		),
 		retentionManager:    serverbackup.NewRetentionManager(),
 		clusterConfigWriter: serverbackup.NewClusterConfigWriter(),
 		routineRunner: serverbackup.NewRoutineRunner(

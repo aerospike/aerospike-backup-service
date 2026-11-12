@@ -37,7 +37,7 @@ type BackupPolicy struct {
 	// Do not back up any UDF modules.
 	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty" default:"false"`
 	// Back up Aerospike cluster configuration.
-	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty" default:"false"`
+	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty" default:"false" extensions:"x-backup-mode=scan"`
 	// Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.
 	// Default is no limit.
 	Bandwidth *int64 `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" extensions:"x-nullable,x-backup-mode=scan"`
@@ -61,12 +61,12 @@ type BackupPolicy struct {
 	Compact *bool `yaml:"compact,omitempty" json:"compact,omitempty" default:"false" extensions:"x-backup-mode=scan"`
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
-	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty" default:"false" extensions:"x-nullable"`
+	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty" default:"false" extensions:"x-nullable,x-backup-mode=scan"`
 	// The mode for incremental backups (optional, default is differential).
 	IncrMode IncrMode `yaml:"incr-mode,omitempty" json:"incr-mode,omitempty" example:"differential" extensions:"x-nullable"`
 	// Enables built-in compression during scan operation.
 	// Valid for Aerospike Server Enterprise Edition only.
-	UseCompression *bool `yaml:"use-scan-compression,omitempty" json:"use-scan-compression,omitempty" default:"false" extensions:"x-nullable"`
+	UseCompression *bool `yaml:"use-scan-compression,omitempty" json:"use-scan-compression,omitempty" default:"false" extensions:"x-nullable,x-backup-mode=scan"`
 	// Maximum number of concurrent requests to server nodes.
 	// Default is to issue requests to all server nodes in parallel.
 	MaxConcurrentNodes *int `yaml:"max-concurrent-nodes,omitempty" json:"max-concurrent-nodes,omitempty" extensions:"x-nullable,x-backup-mode=scan"`

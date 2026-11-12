@@ -111,11 +111,13 @@ func (s *Suite) getBackups(e *env, backupType model.BackupType) []dto.BackupDeta
 // listed at the last trigger appears, and returns it.
 func (s *Suite) waitForNewBackup(e *env, backupType model.BackupType) dto.BackupDetails {
 	after := e.newestBeforeTrigger[backupType]
+	previousFailures := e.failuresBeforeTrigger[backupType]
 
 	var newest dto.BackupDetails
 
 	ok := s.eventually(backupTimeout, pollInterval, func() bool {
-		s.Require().Zero(s.metricBackupEventCount(e, backupType, outcomeFailure), "%s backup failed", backupType)
+		s.Require().Equal(previousFailures, int(s.metricBackupEventCount(e, backupType, outcomeFailure)),
+			"%s backup failed", backupType)
 
 		backups := s.getBackups(e, backupType)
 		if len(backups) == 0 {

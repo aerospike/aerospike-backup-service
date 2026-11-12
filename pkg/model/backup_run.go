@@ -16,6 +16,14 @@ type BackupRun struct {
 	Progress float64
 	// Scan is set by a scan backup, which reads the records itself.
 	Scan *ScanProgress
+	// Server is set by a server backup, which the server runs as one job per namespace.
+	Server *ServerProgress
+}
+
+// ServerProgress is what a server backup knows about its run: the server jobs it asked for.
+type ServerProgress struct {
+	// Jobs are the server jobs of the run in the order they started, each as last reported.
+	Jobs []ServerBackupJob
 }
 
 // ScanProgress is what a scan backup knows about its run: the records it counts and the

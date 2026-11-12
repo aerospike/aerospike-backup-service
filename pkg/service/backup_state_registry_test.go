@@ -149,6 +149,7 @@ func TestFinishFull(t *testing.T) {
 
 	registry := newTestBackupStateRegistry(historyMgr, nil)
 	handler := NewMockRoutineBackupHandler(ctrl)
+	handler.EXPECT().Status().Return(nil).AnyTimes() // finished: nothing runs
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,
@@ -178,6 +179,7 @@ func TestFinishIncremental(t *testing.T) {
 
 	registry := newTestBackupStateRegistry(historyMgr, nil)
 	handler := NewMockRoutineBackupHandler(ctrl)
+	handler.EXPECT().Status().Return(nil).AnyTimes() // finished: nothing runs
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,

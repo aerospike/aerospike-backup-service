@@ -65,6 +65,7 @@ var skipValidation = map[string]bool{
 	"dto.Metrics":          true,
 	"dto.BackupDetails":    true,
 	"dto.RunningJob":       true,
+	"dto.ServerBackupJob":  true,
 	"dto.VersionResponse":  true,
 }
 

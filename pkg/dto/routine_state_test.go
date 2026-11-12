@@ -43,6 +43,28 @@ func TestNewRoutineStateFromModel(t *testing.T) {
 	assert.Equal(t, nextIncr, *state.NextIncremental)
 }
 
+func TestNewRoutineStateFromModel_ServerJobs(t *testing.T) {
+	t.Parallel()
+
+	start := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	job := model.ServerBackupJob{
+		JobID: "job", Namespace: "test", State: "ABORTED", ErrorReason: "node left", AbortOrigin: "cluster",
+		StartTime: &start, RecordsBackedUp: 10, BytesBackedUp: 100, RecordsReadFailed: 1,
+	}
+
+	state := NewRoutineStateFromModel(model.RoutineState{
+		LastRunTime:  model.NewNoBackupTime(),
+		NextRunTime:  model.NewNoBackupTime(),
+		LastFullJobs: []model.ServerBackupJob{job},
+	})
+
+	assert.Equal(t, []ServerBackupJob{{
+		JobID: "job", Namespace: "test", State: "ABORTED", ErrorReason: "node left", AbortOrigin: "cluster",
+		StartTime: &start, RecordsBackedUp: 10, BytesBackedUp: 100, RecordsReadFailed: 1,
+	}}, state.LastFullJobs)
+	assert.Empty(t, state.LastIncrementalJobs)
+}
+
 func TestNewRunningJobFromModel_Nil(t *testing.T) {
 	t.Parallel()
 

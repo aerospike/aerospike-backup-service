@@ -6,6 +6,8 @@ import (
 
 // RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
+	// Mode is how the server restores a server-side backup; empty for a scan restore.
+	Mode RestoreMode
 	// The number of concurrent record readers from backup files. Default: 20
 	Parallel *int
 	// Do not restore any record data (metadata or bin data).

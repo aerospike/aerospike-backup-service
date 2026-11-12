@@ -93,6 +93,154 @@ func TestInvalidStorageReference(t *testing.T) {
 	require.ErrorContains(t, err, "nonExistentStorage")
 }
 
+func TestConfigValidate_ServerMode(t *testing.T) {
+	s3 := &Storage{S3Storage: &S3Storage{Bucket: "bucket", S3Region: "eu-central-1", Path: "backups"}}
+	local := &Storage{LocalStorage: &LocalStorage{Path: "/"}}
+
+	none := func(*Config) {}
+
+	tests := []struct {
+		name    string
+		mode    BackupMode
+		storage *Storage
+		change  func(*Config)
+		wantErr string
+	}{
+		{name: "server mode with S3", mode: BackupModeServer, storage: s3, change: none},
+		{name: "scan mode with local", mode: BackupModeScan, storage: local, change: none},
+		{
+			name:    "scan mode with options the server lacks",
+			mode:    BackupModeScan,
+			storage: local,
+			change: func(c *Config) {
+				c.BackupRoutines["routine1"].NodeList = []string{"node"}
+				c.BackupPolicies["policy1"].Bandwidth = new(int64(1))
+			},
+		},
+		{
+			name:    "server mode with local",
+			mode:    BackupModeServer,
+			storage: local,
+			change:  none,
+			wantErr: `backup routine 'routine1' validation error: invalid value validation error: storage "storage1" ` +
+				`is not S3 storage, which backup-mode "server" requires`,
+		},
+		{
+			name:    "server mode with a rack list",
+			mode:    BackupModeServer,
+			storage: s3,
+			change:  func(c *Config) { c.BackupRoutines["routine1"].RackList = []int{1} },
+			wantErr: `invalid value validation error: backup routine 'routine1' sets rack-list, ` +
+				`which backup-mode "server" does not support`,
+		},
+		{
+			name:    "server mode with a partition list",
+			mode:    BackupModeServer,
+			storage: s3,
+			change:  func(c *Config) { c.BackupRoutines["routine1"].PartitionList = "0-100" },
+			wantErr: `invalid value validation error: backup routine 'routine1' sets partition-list, ` +
+				`which backup-mode "server" does not support`,
+		},
+		{
+			name:    "server mode with a node list",
+			mode:    BackupModeServer,
+			storage: s3,
+			change:  func(c *Config) { c.BackupRoutines["routine1"].NodeList = []string{"node"} },
+			wantErr: `invalid value validation error: backup routine 'routine1' sets node-list, ` +
+				`which backup-mode "server" does not support`,
+		},
+		{
+			name:    "server mode with policy options it lacks",
+			mode:    BackupModeServer,
+			storage: s3,
+			change: func(c *Config) {
+				policy := c.BackupPolicies["policy1"]
+				policy.Bandwidth = new(int64(1))
+				policy.EncryptionPolicy = &EncryptionPolicy{Mode: EncryptionModeAES256, KeyFile: "key"}
+				policy.CompressionPolicy = &CompressionPolicy{Mode: CompressionModeZSTD, Level: new(int32(1))}
+				policy.NoRecords = new(true)
+				policy.Compact = new(true)
+				policy.FileLimit = new(1)
+				policy.MaxConcurrentNodes = new(1)
+				policy.RetryPolicy = &RetryPolicy{}
+				policy.RetentionPolicy = &RetentionPolicy{FullBackups: new(1)}
+				policy.SocketTimeout = new(int64(1))
+				policy.TotalTimeout = new(int64(1))
+				policy.UseCompression = new(true)
+				policy.ConcurrentIncremental = new(true)
+				policy.WithClusterConfig = new(true)
+			},
+			wantErr: `invalid value validation error: policy 'policy1' sets bandwidth, encryption, compression, ` +
+				`no-records, compact, file-limit, max-concurrent-nodes, retry-policy, retention, socket-timeout, ` +
+				`total-timeout, use-scan-compression, concurrent-incremental, with-cluster-configuration, ` +
+				`which backup-mode "server" does not support`,
+		},
+		{
+			name:    "server mode with a rate the server takes",
+			mode:    BackupModeServer,
+			storage: s3,
+			change: func(c *Config) {
+				c.BackupPolicies["policy1"].Parallel = new(2)
+				c.BackupPolicies["policy1"].RecordsPerSecond = new(10)
+			},
+		},
+		{
+			name:    "server mode with a rate and no parallel",
+			mode:    BackupModeServer,
+			storage: s3,
+			change:  func(c *Config) { c.BackupPolicies["policy1"].RecordsPerSecond = new(1) },
+		},
+		{
+			name:    "server mode with a rate below the server's lowest",
+			mode:    BackupModeServer,
+			storage: s3,
+			change: func(c *Config) {
+				c.BackupPolicies["policy1"].Parallel = new(2)
+				c.BackupPolicies["policy1"].RecordsPerSecond = new(9)
+			},
+			wantErr: `policy 'policy1' validation error: invalid value validation error: records-per-second 9 is ` +
+				`below 10, the lowest rate the server takes for parallel 2`,
+		},
+		{
+			name: "server mode with S3 options it lacks",
+			mode: BackupModeServer,
+			storage: &Storage{S3Storage: &S3Storage{
+				Bucket: "bucket", S3Region: "eu-central-1", Path: "backups",
+				StorageClass: &S3StorageClass{DataClass: StorageClassStandardIa}, MinPartSize: new(5242880),
+			}},
+			change: none,
+			wantErr: `invalid value validation error: storage 'storage1' sets storage-class, min-part-size, ` +
+				`which backup-mode "server" does not support`,
+		},
+		{
+			name:    "server mode with an empty policy",
+			mode:    BackupModeServer,
+			storage: s3,
+			change:  func(c *Config) { c.BackupPolicies["empty"] = nil },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := validConfig()
+			delete(config.BackupRoutines, "routine2")
+			delete(config.BackupPolicies, "policy2")
+			config.Storage["storage1"] = tt.storage
+			config.ServiceConfig.Backup = &BackupCommonConfig{BackupMode: tt.mode}
+			tt.change(config)
+
+			err := config.Validate()
+
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, errInvalidValue)
+			require.EqualError(t, err, tt.wantErr)
+		})
+	}
+}
+
 func TestTLSFilesAreNotReadDuringValidation(t *testing.T) {
 	config := validConfig()
 

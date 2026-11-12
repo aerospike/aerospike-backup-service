@@ -140,6 +140,9 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 		}
 		storage = routine.Storage
 	}
+	if err := validateRestoreStorage(storage, config); err != nil {
+		return nil, err
+	}
 
 	if secretAgent == nil && routineErr == nil {
 		secretAgent = routine.SecretAgent // use routine's secret agent if not specified.
@@ -147,6 +150,9 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 
 	policy := r.Policy.ToModel()
 	if err := validateEncryptionKeyAgent(policy.EncryptionPolicy, secretAgent); err != nil {
+		return nil, err
+	}
+	if err := validateRestorePolicy(policy, config); err != nil {
 		return nil, err
 	}
 
@@ -171,6 +177,9 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage: %w", err)
 	}
+	if err := validateRestoreStorage(storage, config); err != nil {
+		return nil, err
+	}
 
 	secretAgent, err := r.SecretAgentConfig.ToModel(config)
 	if err != nil {
@@ -179,6 +188,9 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 
 	policy := r.Policy.ToModel()
 	if err := validateEncryptionKeyAgent(policy.EncryptionPolicy, secretAgent); err != nil {
+		return nil, err
+	}
+	if err := validateRestorePolicy(policy, config); err != nil {
 		return nil, err
 	}
 

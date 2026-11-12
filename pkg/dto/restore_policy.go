@@ -10,6 +10,13 @@ import (
 //
 //nolint:lll // the struct tags carry each field's API metadata.
 type BaseRestorePolicy struct {
+	// How the server restores a server-side backup. Required when the service's backup-mode is
+	// server, and not allowed otherwise.
+	// * strict: the namespace is taken from clients, cleared and loaded from the backups, so it
+	//   holds exactly the backed-up data.
+	// * fuzzy: the backed-up records are written into the live namespace, which clients keep
+	//   using. Records only the namespace holds stay; on a record both hold, the backup wins.
+	Mode RestoreMode `json:"mode,omitempty" enums:"strict,fuzzy" example:"strict" extensions:"x-nullable,x-backup-mode=server"`
 	// The number of concurrent record readers from backup files.
 	// This value controls the level of parallelism used by the backup service when
 	// reading backup files.
@@ -42,7 +49,7 @@ type BaseRestorePolicy struct {
 	// equal to `source`, otherwise it is rejected. For a restore by path, point
 	// `backup-data-path` at a single namespace's backup. For a point-in-time restore, the
 	// routine must back up a single namespace.
-	Namespace *RestoreNamespace `json:"namespace,omitempty"`
+	Namespace *RestoreNamespace `json:"namespace,omitempty" extensions:"x-backup-mode=scan"`
 	// The sets to restore (optional, an empty list implies restoring all sets).
 	SetList []string `json:"set-list,omitempty" example:"set1,set2" extensions:"x-nullable"`
 	// The bins to restore (optional, an empty list implies restoring all bins).
@@ -97,6 +104,9 @@ type TimestampRestorePolicy struct {
 func (p *BaseRestorePolicy) Validate() error {
 	if p == nil {
 		return nil
+	}
+	if err := p.Mode.Validate(); err != nil {
+		return err
 	}
 	if err := validateBandwidth(p.Bandwidth); err != nil {
 		return err
@@ -189,6 +199,7 @@ func (p *BaseRestorePolicy) ToModel() *model.RestorePolicy {
 	}
 
 	return &model.RestorePolicy{
+		Mode:               p.Mode.ToModel(),
 		Parallel:           p.Parallel,
 		NoRecords:          p.NoRecords,
 		NoIndexes:          p.NoIndexes,

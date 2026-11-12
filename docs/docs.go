@@ -2257,6 +2257,7 @@ const docTemplate = `{
                     "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
                     "type": "boolean",
                     "default": false,
+                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "encryption": {
@@ -2365,12 +2366,14 @@ const docTemplate = `{
                     "description": "Enables built-in compression during scan operation.\nValid for Aerospike Server Enterprise Edition only.",
                     "type": "boolean",
                     "default": false,
+                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "with-cluster-configuration": {
                     "description": "Back up Aerospike cluster configuration.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 }
             }
         },
@@ -3063,6 +3066,18 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.RestoreMode": {
+            "description": "RestoreMode selects how the server restores a server-side backup.",
+            "type": "string",
+            "enum": [
+                "strict",
+                "fuzzy"
+            ],
+            "x-enum-varnames": [
+                "RestoreModeStrict",
+                "RestoreModeFuzzy"
+            ]
+        },
         "dto.RestoreNamespace": {
             "description": "RestoreNamespace specifies an alternative namespace name for the restore operation. Only a single namespace can be remapped per restore.",
             "type": "object",
@@ -3151,13 +3166,29 @@ const docTemplate = `{
                     "x-backup-mode": "scan",
                     "example": 32
                 },
+                "mode": {
+                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
+                    "enum": [
+                        "strict",
+                        "fuzzy"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RestoreMode"
+                        }
+                    ],
+                    "x-backup-mode": "server",
+                    "x-nullable": true,
+                    "example": "strict"
+                },
                 "namespace": {
                     "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to ` + "`" + `source` + "`" + `, otherwise it is rejected. For a restore by path, point\n` + "`" + `backup-data-path` + "`" + ` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RestoreNamespace"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 },
                 "no-generation": {
                     "description": "Records from backups take precedence. This option disables the generation check.\nWith this option, records from the backup always overwrite records that already exist in\nthe namespace, regardless of generation numbers.",
@@ -3437,9 +3468,23 @@ const docTemplate = `{
                     "description": "LastFull: the time of the last successful full backup.\nA nil value indicates that there has never been a full backup.",
                     "type": "string"
                 },
+                "last-full-jobs": {
+                    "description": "LastFullJobs: the server jobs of the last finished full backup, one per namespace, whether it\nsucceeded or not. Reported only in the server backup mode. The list is kept in memory, so it\nis empty after a restart until a full backup finishes.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ServerBackupJob"
+                    }
+                },
                 "last-incremental": {
                     "description": "LastIncremental: the time of the last successful incremental backup.\nA nil value indicates that there has never been an incremental backup.",
                     "type": "string"
+                },
+                "last-incremental-jobs": {
+                    "description": "LastIncrementalJobs: the same for the last finished incremental backup.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ServerBackupJob"
+                    }
                 },
                 "next-full": {
                     "description": "NextFull: the time of the next scheduled full backup.",
@@ -3456,7 +3501,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "done-records": {
-                    "description": "The number of records that have been successfully done.",
+                    "description": "The number of records that have been successfully done.\nZero for a server-side backup.",
                     "type": "integer",
                     "example": 50
                 },
@@ -3493,7 +3538,7 @@ const docTemplate = `{
                     "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "total-records": {
-                    "description": "The total number of records to be processed.",
+                    "description": "The total number of records to be processed.\nZero for a server-side backup, whose progress the server reports only as a percentage.",
                     "type": "integer",
                     "example": 100
                 }
@@ -3550,6 +3595,7 @@ const docTemplate = `{
                     "type": "integer",
                     "default": 52428800,
                     "minimum": 5242880,
+                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "path": {
@@ -3609,7 +3655,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.S3StorageClass"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 }
             }
         },
@@ -3738,6 +3785,67 @@ const docTemplate = `{
                     "type": "string",
                     "x-nullable": true,
                     "example": "certName"
+                }
+            }
+        },
+        "dto.ServerBackupJob": {
+            "description": "ServerBackupJob is a server-side backup job of one namespace, as the server last reported it.",
+            "type": "object",
+            "properties": {
+                "abort-origin": {
+                    "description": "What aborted the job: an operator request, a failure on a node or a cluster event.",
+                    "type": "string",
+                    "enum": [
+                        "operator",
+                        "server",
+                        "cluster"
+                    ],
+                    "example": "operator"
+                },
+                "bytes-backed-up": {
+                    "description": "The number of bytes backed up.",
+                    "type": "integer",
+                    "example": 1048576
+                },
+                "error-reason": {
+                    "description": "Why the job failed or was aborted, as the server reports it.",
+                    "type": "string",
+                    "example": "S3 PUT failed: 403 Forbidden"
+                },
+                "finish-time": {
+                    "description": "The time the job finished.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "job-id": {
+                    "description": "The server's job id.",
+                    "type": "string",
+                    "example": "261103T101500-0a1b"
+                },
+                "namespace": {
+                    "description": "The namespace the job backed up.",
+                    "type": "string",
+                    "example": "test"
+                },
+                "records-backed-up": {
+                    "description": "The number of records backed up.",
+                    "type": "integer",
+                    "example": 1000
+                },
+                "records-read-failed": {
+                    "description": "The number of records the server could not read. When it is above zero the backup lacks\nthose records, even if the job's state is COMPLETE.",
+                    "type": "integer",
+                    "example": 0
+                },
+                "start-time": {
+                    "description": "The time the job started.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "state": {
+                    "description": "The server's job state, e.g. COMPLETE, FAILED or ABORTED.",
+                    "type": "string",
+                    "example": "COMPLETE"
                 }
             }
         },
@@ -4150,13 +4258,29 @@ const docTemplate = `{
                     "x-backup-mode": "scan",
                     "example": 32
                 },
+                "mode": {
+                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
+                    "enum": [
+                        "strict",
+                        "fuzzy"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RestoreMode"
+                        }
+                    ],
+                    "x-backup-mode": "server",
+                    "x-nullable": true,
+                    "example": "strict"
+                },
                 "namespace": {
                     "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to ` + "`" + `source` + "`" + `, otherwise it is rejected. For a restore by path, point\n` + "`" + `backup-data-path` + "`" + ` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RestoreNamespace"
                         }
-                    ]
+                    ],
+                    "x-backup-mode": "scan"
                 },
                 "no-generation": {
                     "description": "Records from backups take precedence. This option disables the generation check.\nWith this option, records from the backup always overwrite records that already exist in\nthe namespace, regardless of generation numbers.",

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,13 +15,33 @@ import (
 // a field only one mode accepts must be tagged with x-backup-mode, which moves its default out of
 // the schema's `default`.
 
-func TestRestorePolicy_PublishedDefaultsPass(t *testing.T) {
+func TestRestorePolicy_PublishedDefaultsPassEveryMode(t *testing.T) {
 	t.Parallel()
 
-	policy := &RestorePolicy{}
-	fillPublishedDefaults(t, reflect.ValueOf(policy).Elem())
+	tests := []struct {
+		name       string
+		backupMode model.BackupMode
+		mode       RestoreMode
+	}{
+		{name: "scan", backupMode: model.BackupModeScan},
+		{name: "server", backupMode: model.BackupModeServer, mode: RestoreModeStrict},
+	}
 
-	require.NoError(t, policy.Validate())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			policy := &RestorePolicy{}
+			fillPublishedDefaults(t, reflect.ValueOf(policy).Elem())
+			policy.Mode = tt.mode
+			config := &model.Config{ServiceConfig: model.ServiceConfig{
+				Backup: &model.BackupCommonConfig{BackupMode: tt.backupMode},
+			}}
+
+			require.NoError(t, policy.Validate())
+			require.NoError(t, validateRestorePolicy(policy.ToModel(), config))
+		})
+	}
 }
 
 func TestConfig_PublishedDefaultsPassEveryMode(t *testing.T) {
@@ -35,6 +56,7 @@ func TestConfig_PublishedDefaultsPassEveryMode(t *testing.T) {
 			config.ServiceConfig.Backup = &BackupCommonConfig{BackupMode: mode}
 			fillPublishedDefaults(t, reflect.ValueOf(config.BackupPolicies["policy1"]).Elem())
 			fillPublishedDefaults(t, reflect.ValueOf(config.BackupRoutines["routine1"]).Elem())
+			fillPublishedDefaults(t, reflect.ValueOf(config.Storage["storage1"].S3Storage).Elem())
 
 			require.NoError(t, config.Validate())
 		})

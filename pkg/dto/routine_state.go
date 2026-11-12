@@ -23,16 +23,24 @@ type RoutineState struct {
 	NextFull *time.Time `json:"next-full,omitempty"`
 	// NextIncremental: the time of the next scheduled incremental backup.
 	NextIncremental *time.Time `json:"next-incremental,omitempty"`
+	// LastFullJobs: the server jobs of the last finished full backup, one per namespace, whether it
+	// succeeded or not. Reported only in the server backup mode. The list is kept in memory, so it
+	// is empty after a restart until a full backup finishes.
+	LastFullJobs []ServerBackupJob `json:"last-full-jobs,omitempty"`
+	// LastIncrementalJobs: the same for the last finished incremental backup.
+	LastIncrementalJobs []ServerBackupJob `json:"last-incremental-jobs,omitempty"`
 }
 
 func NewRoutineStateFromModel(m model.RoutineState) RoutineState {
 	return RoutineState{
-		Full:            NewRunningJobFromModel(m.Full),
-		Incremental:     NewRunningJobFromModel(m.Incremental),
-		LastFull:        m.LastRunTime.FullBackupTime(),
-		LastIncremental: m.LastRunTime.IncrementalBackupTime(),
-		NextFull:        m.NextRunTime.FullBackupTime(),
-		NextIncremental: m.NextRunTime.IncrementalBackupTime(),
+		Full:                NewRunningJobFromModel(m.Full),
+		Incremental:         NewRunningJobFromModel(m.Incremental),
+		LastFull:            m.LastRunTime.FullBackupTime(),
+		LastIncremental:     m.LastRunTime.IncrementalBackupTime(),
+		NextFull:            m.NextRunTime.FullBackupTime(),
+		NextIncremental:     m.NextRunTime.IncrementalBackupTime(),
+		LastFullJobs:        newServerBackupJobsFromModel(m.LastFullJobs),
+		LastIncrementalJobs: newServerBackupJobsFromModel(m.LastIncrementalJobs),
 	}
 }
 
@@ -40,8 +48,10 @@ func NewRoutineStateFromModel(m model.RoutineState) RoutineState {
 // @Description RunningJob tracks progress of currently running job.
 type RunningJob struct {
 	// The total number of records to be processed.
+	// Zero for a server-side backup, whose progress the server reports only as a percentage.
 	TotalRecords uint64 `json:"total-records" example:"100"`
 	// The number of records that have been successfully done.
+	// Zero for a server-side backup.
 	DoneRecords uint64 `json:"done-records" example:"50"`
 	// The time when the operation started.
 	StartTime time.Time `json:"start-time" example:"2006-01-02T15:04:05Z07:00"`
