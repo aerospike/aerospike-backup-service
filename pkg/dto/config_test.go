@@ -167,10 +167,13 @@ func TestConfigValidate_ServerMode(t *testing.T) {
 				policy.SocketTimeout = new(int64(1))
 				policy.TotalTimeout = new(int64(1))
 				policy.UseCompression = new(true)
+				policy.ConcurrentIncremental = new(true)
+				policy.WithClusterConfig = new(true)
 			},
 			wantErr: `invalid value validation error: policy 'policy1' sets bandwidth, encryption, compression, ` +
 				`no-records, compact, file-limit, max-concurrent-nodes, retry-policy, retention, socket-timeout, ` +
-				`total-timeout, use-scan-compression, which backup-mode "server" does not support`,
+				`total-timeout, use-scan-compression, concurrent-incremental, with-cluster-configuration, ` +
+				`which backup-mode "server" does not support`,
 		},
 		{
 			name:    "server mode with a rate the server takes",

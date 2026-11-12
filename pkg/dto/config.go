@@ -193,6 +193,10 @@ func (c *Config) validateServerMode() error {
 			option{"socket-timeout", policy.SocketTimeout != nil},
 			option{"total-timeout", policy.TotalTimeout != nil},
 			option{"use-scan-compression", ptr.ValueOrZero(policy.UseCompression)},
+			// The server runs one backup per cluster, so an incremental cannot run next to a full.
+			option{"concurrent-incremental", ptr.ValueOrZero(policy.ConcurrentIncremental)},
+			// Server mode writes no cluster configuration next to its backups.
+			option{"with-cluster-configuration", ptr.ValueOrZero(policy.WithClusterConfig)},
 		); err != nil {
 			return err
 		}
