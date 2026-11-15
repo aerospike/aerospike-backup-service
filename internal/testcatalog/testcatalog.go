@@ -1,8 +1,7 @@
 // Package testcatalog reads the integration tests in test/integration from source:
-// which suite each Test* method belongs to, the doc comment that says what it
-// checks, and the cases it runs. The docs generator renders the catalog into
-// test/integration/README.md, and internal/doccheck holds the directory to the
-// rules the catalog makes checkable.
+// which suite each Test* method belongs to and the doc comment that says what it
+// checks. internal/doccheck holds the directory to the rules the catalog makes
+// checkable.
 package testcatalog
 
 import (
@@ -12,7 +11,6 @@ import (
 	"go/token"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 )
 
@@ -34,8 +32,6 @@ type Catalog struct {
 type Suite struct {
 	// Type is the suite struct, e.g. "BackupSuite".
 	Type string
-	// Runner is the top-level test that runs it, e.g. "TestBackup".
-	Runner string
 	// Doc is the doc comment on Type.
 	Doc string
 	// Tests are ordered by file, then by position in the file.
@@ -50,22 +46,6 @@ type Test struct {
 	File string
 	// Doc is the method's doc comment, empty when it has none.
 	Doc string
-	// Cases are the literal names of the s.Run subtests in its body, in order.
-	Cases []string
-}
-
-// Summary is the first paragraph of the doc comment on one line, with a leading
-// "TestName " dropped so it reads as a description of what the test does.
-func (t Test) Summary() string {
-	paragraph, _, _ := strings.Cut(strings.TrimSpace(t.Doc), "\n\n")
-	summary := strings.Join(strings.Fields(paragraph), " ")
-
-	rest, found := strings.CutPrefix(summary, t.Name+" ")
-	if !found || rest == "" {
-		return summary
-	}
-
-	return strings.ToUpper(rest[:1]) + rest[1:]
 }
 
 // Decl is a declaration found where only tests belong.
@@ -148,7 +128,6 @@ func (r *reader) funcDecl(file string, decl *ast.FuncDecl) {
 		Name:  name,
 		File:  file,
 		Doc:   decl.Doc.Text(),
-		Cases: subtestNames(decl.Body),
 	})
 }
 
@@ -216,36 +195,13 @@ func (r *reader) catalog() Catalog {
 	suites := make([]Suite, 0, len(r.suiteOrder))
 	for _, suiteType := range r.suiteOrder {
 		suites = append(suites, Suite{
-			Type:   suiteType,
-			Runner: r.runners[suiteType],
-			Doc:    r.suiteDocs[suiteType],
-			Tests:  bySuite[suiteType],
+			Type:  suiteType,
+			Doc:   r.suiteDocs[suiteType],
+			Tests: bySuite[suiteType],
 		})
 	}
 
 	return Catalog{Suites: suites, Orphans: orphans, Strays: r.strays}
-}
-
-// subtestNames returns the literal first argument of every s.Run(…) call in body.
-func subtestNames(body *ast.BlockStmt) []string {
-	var names []string
-
-	ast.Inspect(body, func(node ast.Node) bool {
-		call, ok := node.(*ast.CallExpr)
-		if !ok || !isSelector(call.Fun, "s", "Run") || len(call.Args) == 0 {
-			return true
-		}
-
-		if lit, isLit := call.Args[0].(*ast.BasicLit); isLit && lit.Kind == token.STRING {
-			if name, err := strconv.Unquote(lit.Value); err == nil {
-				names = append(names, name)
-			}
-		}
-
-		return true
-	})
-
-	return names
 }
 
 func receiverType(recv *ast.FieldList) string {

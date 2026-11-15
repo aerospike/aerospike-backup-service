@@ -9,7 +9,7 @@ import (
 )
 
 func TestRead(t *testing.T) {
-	t.Run("suites, tests and cases", func(t *testing.T) {
+	t.Run("suites and tests", func(t *testing.T) {
 		catalog, err := testcatalog.Read("testdata/valid")
 		require.NoError(t, err)
 
@@ -17,22 +17,19 @@ func TestRead(t *testing.T) {
 		assert.Empty(t, catalog.Orphans)
 		assert.Equal(t, []testcatalog.Suite{
 			{
-				Type:   "SecondSuite",
-				Runner: "TestSecond",
-				Doc:    "SecondSuite is run second.\n",
-				Tests:  []testcatalog.Test{{Suite: "SecondSuite", Name: "TestBeta", File: "a_test.go"}},
+				Type:  "SecondSuite",
+				Doc:   "SecondSuite is run second.\n",
+				Tests: []testcatalog.Test{{Suite: "SecondSuite", Name: "TestBeta", File: "a_test.go"}},
 			},
 			{
-				Type:   "FirstSuite",
-				Runner: "TestFirst",
-				Doc:    "FirstSuite is run first.\n",
+				Type: "FirstSuite",
+				Doc:  "FirstSuite is run first.\n",
 				Tests: []testcatalog.Test{
 					{
 						Suite: "FirstSuite",
 						Name:  "TestAlpha",
 						File:  "a_test.go",
 						Doc:   "TestAlpha checks the first thing.\n\nA second paragraph the summary leaves out.\n",
-						Cases: []string{"one", "two"},
 					},
 					{
 						Suite: "FirstSuite",
@@ -68,34 +65,4 @@ func TestRead(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, catalog.Suites)
 	})
-}
-
-func TestTestSummary(t *testing.T) {
-	tests := []struct {
-		name string
-		test testcatalog.Test
-		want string
-	}{
-		{
-			name: "drops the leading name and keeps the first paragraph",
-			test: testcatalog.Test{Name: "TestAlpha", Doc: "TestAlpha checks\nthe thing.\n\nMore.\n"},
-			want: "Checks the thing.",
-		},
-		{
-			name: "keeps a doc that does not start with the name",
-			test: testcatalog.Test{Name: "TestAlpha", Doc: "Checks the thing.\n"},
-			want: "Checks the thing.",
-		},
-		{
-			name: "empty doc",
-			test: testcatalog.Test{Name: "TestAlpha"},
-			want: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, tt.test.Summary())
-		})
-	}
 }

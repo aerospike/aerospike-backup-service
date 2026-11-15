@@ -332,7 +332,8 @@ func (s *ServerBackupSuite) TestServerTwoRoutines() {
 	})
 	s.Require().True(ok, "no full backup succeeded")
 
-	s.gap("both_run", gapRoutineGate, func() {
+	s.Run("both_run", func() {
+		s.T().Skip("BKRS-565: a second routine on the same cluster is skipped, not queued")
 		ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
 			return s.routinesBackupSuccessEventCount(e, model.BackupTypeFull, routineName, secondRoutine) >= before+2
 		})

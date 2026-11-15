@@ -14,9 +14,9 @@ import (
 //
 // A reader opens a *_test.go file there to find out what is tested. A helper or a
 // container setup in that file is infrastructure they have to read past, so it
-// belongs in a non-test file next to it. A Test* method with no doc comment is a
-// blank row in the README table the generator builds from those comments. And a
-// Test* method on a suite no runner starts compiles, looks tested, and never runs.
+// belongs in a non-test file next to it. A Test* method with no doc comment leaves
+// the reader to work out the scenario from the code. And a Test* method on a suite
+// no runner starts compiles, looks tested, and never runs.
 func TestIntegrationTestsAreCatalogued(t *testing.T) {
 	catalog, err := testcatalog.Read(filepath.Join(doccheck.Root(t), "test", "integration"))
 	require.NoError(t, err)
@@ -39,8 +39,7 @@ func TestIntegrationTestsAreCatalogued(t *testing.T) {
 
 		for _, test := range suite.Tests {
 			if test.Doc == "" {
-				t.Errorf("%s: %s has no doc comment; its first paragraph is the README row "+
-					"saying what it checks", test.File, test.Name)
+				t.Errorf("%s: %s has no doc comment saying what it checks", test.File, test.Name)
 			}
 		}
 	}
