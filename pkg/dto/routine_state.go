@@ -49,9 +49,9 @@ func NewRoutineStateFromModel(m model.RoutineState) RoutineState {
 type RunningJob struct {
 	// The total number of records to be processed.
 	// Zero for a server-side backup, whose progress the server reports only as a percentage.
-	TotalRecords uint64 `json:"total-records" example:"100"`
-	// The number of records that have been successfully done.
-	// Zero for a server-side backup.
+	TotalRecords uint64 `json:"total-records,omitempty" example:"100" extensions:"x-backup-mode=scan"`
+	// The number of records that have been successfully backed up so far.
+	// For a server-side backup, the count can exceed the number of distinct records.
 	DoneRecords uint64 `json:"done-records" example:"50"`
 	// The time when the operation started.
 	StartTime time.Time `json:"start-time" example:"2006-01-02T15:04:05Z07:00"`

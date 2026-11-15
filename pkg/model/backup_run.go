@@ -26,6 +26,17 @@ type ServerProgress struct {
 	Jobs []ServerBackupJob
 }
 
+// RecordsBackedUp is the number of records the server's jobs report as backed up so far, as the
+// server counts them: the jobs of finished namespaces and the running one's latest figure.
+func (p ServerProgress) RecordsBackedUp() uint64 {
+	var sum uint64
+	for _, job := range p.Jobs {
+		sum += job.RecordsBackedUp
+	}
+
+	return sum
+}
+
 // ScanProgress is what a scan backup knows about its run: the records it counts and the
 // client-side throughput.
 type ScanProgress struct {
