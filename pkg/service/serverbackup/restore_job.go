@@ -27,8 +27,7 @@ func startRestore(
 	policy model.RestorePolicy,
 	backups []model.BackupDetails,
 ) (*restoreJob, error) {
-	// StartRestore is sent even when ctx is already canceled, and a strict start closes and clears
-	// the namespace, so stop here instead of starting a job only to abort it.
+	// StartRestore is sent even when ctx is already canceled.
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
