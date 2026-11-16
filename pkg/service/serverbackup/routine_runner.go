@@ -172,8 +172,8 @@ type backupJob struct {
 func (j *backupJob) Wait(ctx context.Context) error {
 	status, err := j.poll(ctx)
 	if err != nil {
-		// The job may still be running on the server. The abort does not use ctx, because a
-		// canceled job would otherwise keep the cluster's backup slot.
+		// The job may still be running on the server. The abort does not use ctx, because an
+		// abort sent on a canceled ctx would fail and leave the job running.
 		j.abort(context.WithoutCancel(ctx))
 		return err
 	}
