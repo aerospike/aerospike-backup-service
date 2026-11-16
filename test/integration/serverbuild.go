@@ -66,21 +66,6 @@ const (
 	s3Profile = "abs-minio"
 )
 
-// The gaps between server-side and scan backups, as the reasons the server tests skip the checks
-// the scan tests make. README.md lists them.
-const (
-	gapRecordCount  = "server-side backup gap: a server backup's metadata records no record count"
-	gapIndexCount   = "server-side backup gap: ABS does not read the index count of a server backup"
-	gapRestoreStats = "server-side backup gap: ABS reports the read and skipped record counts of a server " +
-		"restore, not the inserted or index counts"
-	gapEmptyIncr = "server-side backup gap: an incremental backup with no changes is written, listed " +
-		"and counted as the last incremental"
-	gapEmptyRestore = "server bug: a restore of a backup with no records fails, " +
-		"the server takes its zero partition manifests for a failed fetch"
-	gapRoutineGate = "server-side backup gap: a second routine on the same cluster is skipped while a backup " +
-		"of another routine runs"
-)
-
 // serverConf is the configuration of every node ServerBuildSuite starts.
 //
 //go:embed testdata/server_backup_aerospike.conf
@@ -212,15 +197,6 @@ func (s *ServerBuildSuite) startServerBuild(name, binary, featuresConf string) (
 	return dto.SeedNode{HostName: host, Port: dto.Port(port.Num())}, client
 }
 
-// gap runs check as a subtest named name that is skipped for reason: what the scan tests check
-// and server-side backup does not do yet.
-func (s *ServerBuildSuite) gap(name, reason string, check func()) {
-	s.Run(name, func() {
-		s.T().Skip(reason)
-		check()
-	})
-}
-
 // waitForFinishedBackup waits until ABS reports the backup of backupType triggered last as
 // succeeded, and returns the newest backup of that type listed. A server backup is listed as
 // soon as the server commits its metadata.json, a few seconds before its job ends.
@@ -271,17 +247,6 @@ func (s *ServerBuildSuite) routineState(e *env) dto.RoutineState {
 	s.Require().NoError(decoder.Deserialize(&state, bytes.NewReader(body), decoder.JSON))
 
 	return state
-}
-
-// routineBackups lists the full backups of routine.
-func (s *ServerBuildSuite) routineBackups(e *env, routine string) []dto.BackupDetails {
-	status, body := s.do(e, http.MethodGet, fmt.Sprintf("%s/v1/backups/full/%s", e.baseURL, routine), nil)
-	s.Require().Equal(http.StatusOK, status, "list %s: %s", routine, body)
-
-	var backups []dto.BackupDetails
-	s.Require().NoError(decoder.Deserialize(&backups, bytes.NewReader(body), decoder.JSON))
-
-	return backups
 }
 
 // assertServerBackupListed checks that the listing of backupType holds want unchanged.
