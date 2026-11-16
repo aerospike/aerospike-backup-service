@@ -22,7 +22,7 @@ import (
 )
 
 // routineRunner backs a routine up by asking the server to run one backup job per namespace.
-// The jobs run one after another, because the server runs one backup job at a time.
+// The jobs run one after another, so a routine loads the cluster with one job at a time.
 type routineRunner struct {
 	clientManager     aerospike.ClientManager
 	namespaceResolver aerospike.NamespaceResolver

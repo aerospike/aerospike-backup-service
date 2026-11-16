@@ -2257,7 +2257,6 @@ const docTemplate = `{
                     "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
                     "type": "boolean",
                     "default": false,
-                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "encryption": {
@@ -2366,7 +2365,6 @@ const docTemplate = `{
                     "description": "Enables built-in compression during scan operation.\nValid for Aerospike Server Enterprise Edition only.",
                     "type": "boolean",
                     "default": false,
-                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "with-cluster-configuration": {
