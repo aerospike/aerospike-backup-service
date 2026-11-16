@@ -20,7 +20,7 @@ go test -tags=integration -count=1 -v ./test/integration/ -run 'TestStorage/Test
 
 - **`*_test.go` files are the tests.** `suite_test.go` declares the suites and their
   runners; every other `*_test.go` file declares only `Test*` methods, each with a
-  doc comment saying what it checks. `internal/doccheck` enforces both rules.
+  doc comment saying what it checks.
 - **The other `.go` files are the infrastructure**: the suite bases, the ABS
   instance (`setupEnv`), the API client (`triggerFullBackup`, `restoreByPath`, …),
   the assertions, and one file per container. The package comment in
