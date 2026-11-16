@@ -321,9 +321,10 @@ livenessProbe:
 readinessProbe:
   initialDelaySeconds: 15
   periodSeconds: 10
-# ABS stops accepting requests and drains the HTTP server for up to 30 seconds on shutdown;
-# this leaves headroom before the kubelet sends SIGKILL.
-terminationGracePeriodSeconds: 45
+# On shutdown ABS drains the HTTP server for up to 30 seconds and, in parallel, waits for running
+# restores to stop. A strict server restore takes up to about 60 seconds to abort and reopen its
+# namespace; this leaves headroom before the kubelet sends SIGKILL.
+terminationGracePeriodSeconds: 75
 # Additional volumes on the output Deployment definition.
 volumes: []
 # - name: foo

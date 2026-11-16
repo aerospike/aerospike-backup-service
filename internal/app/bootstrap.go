@@ -37,7 +37,7 @@ type Components struct {
 	TLSProvider      servertls.TLSProvider
 
 	registry      service.BackupStateRegistry
-	restoreJobs   component
+	restoreJobs   jobRunner
 	configApplier service.ConfigApplier
 }
 
@@ -48,13 +48,30 @@ type component interface {
 	Start(ctx context.Context)
 }
 
+// jobRunner is a component whose jobs must end before the service exits. Its jobs stop when
+// the run context is canceled, and Wait blocks until they have.
+type jobRunner interface {
+	component
+	Wait()
+}
+
 // Run starts every component and serves until ctx is canceled or a listener stops. It
 // blocks for as long as the service runs: a caller that wants the service up without
 // giving up its goroutine - a test serving the handler itself - uses Start instead.
+// Once serving stops, Run cancels the components and waits for the running restores to
+// stop, so that none is cut off mid-cleanup; their cleanup overlaps the HTTP drain.
 func (c *Components) Run(ctx context.Context) error {
-	c.Start(ctx)
+	// runCtx is canceled here too, because serving also stops when a listener does.
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	return server.Run(ctx, c.Servers)
+	c.Start(runCtx)
+	err := server.Run(runCtx, c.Servers)
+
+	cancel()
+	c.restoreJobs.Wait()
+
+	return err
 }
 
 // Start brings up every background component, applies the loaded configuration to the

@@ -52,14 +52,18 @@ type restoreJob struct {
 	// cancel is a function that cancels the context of the restore job,
 	// effectively stopping the operation.
 	cancel context.CancelFunc
+
+	// done tells the holder the job has ended, so that RestoreJobsHolder.Wait stops waiting for it.
+	done func()
 }
 
-func newRestoreJob(label string, cancel context.CancelFunc) *restoreJob {
+func newRestoreJob(label string, cancel context.CancelFunc, done func()) *restoreJob {
 	return &restoreJob{
 		status:  model.RestoreRunning,
 		started: time.Now().Truncate(time.Millisecond),
 		label:   label,
 		cancel:  cancel,
+		done:    done,
 	}
 }
 
@@ -148,7 +152,7 @@ func (j *restoreJob) getStatus() model.RestoreState {
 // registers its jobs here and embeds the holder for the status, cancel and listing methods, which
 // are the same in every mode. The holder also owns the lifetime of the jobs. Start hands it the
 // service context and every job runs in a child of that context, so canceling the service cancels
-// the jobs with it.
+// the jobs with it, and Wait lets the service stay up until the canceled jobs have cleaned up.
 type RestoreJobsHolder struct {
 	*collections.SafeMap[model.RestoreJobID, *restoreJob]
 
@@ -158,6 +162,11 @@ type RestoreJobsHolder struct {
 	// this holder is the one owner of that lifetime. The mutex is here because Start writes
 	// it while requests read it, not because a request could arrive first.
 	lifetime context.Context //nolint:containedctx // the holder's purpose is job lifetimes; see above.
+
+	// running counts the jobs started while the lifetime was live. NewJob adds to it under mu
+	// only when the lifetime is not canceled, so once it is, the count can only fall and Wait
+	// never races an Add from zero.
+	running sync.WaitGroup
 }
 
 type JobNotFoundError struct {
@@ -201,6 +210,8 @@ func (h *RestoreJobsHolder) Start(ctx context.Context) {
 
 // NewJob registers a new restore job and returns its id together with the context the job
 // must run in. The job is finished, and its context released, by FinishJob.
+// A job started after the lifetime is canceled gets a canceled context, so it ends by itself
+// and Wait does not wait for it.
 func (h *RestoreJobsHolder) NewJob(label string) (model.RestoreJobID, context.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -208,9 +219,33 @@ func (h *RestoreJobsHolder) NewJob(label string) (model.RestoreJobID, context.Co
 	ctx, cancel := context.WithCancel(h.lifetime)
 	// #nosec G404
 	id := model.RestoreJobID(rand.Int64N(maxJSONSafeJobID) + 1)
-	h.Store(id, newRestoreJob(label, cancel))
+	h.Store(id, newRestoreJob(label, cancel, h.track()))
 
 	return id, ctx
+}
+
+// track counts a job started while the lifetime is live and returns what marks it done.
+// The caller holds mu.
+func (h *RestoreJobsHolder) track() func() {
+	if h.lifetime.Err() != nil {
+		return func() {}
+	}
+
+	h.running.Add(1)
+
+	return h.running.Done
+}
+
+// Wait blocks until every job started before the lifetime was canceled has finished. It is
+// called after that cancel, so the service does not exit while a canceled job still cleans up,
+// such as a server restore reopening its namespace to clients.
+func (h *RestoreJobsHolder) Wait() {
+	// Passing through mu orders Wait after any NewJob that saw the lifetime live, so its Add
+	// has happened; every later NewJob sees the lifetime canceled and adds nothing.
+	h.mu.Lock()
+	h.mu.Unlock() //nolint:staticcheck // the empty critical section is the point; see above.
+
+	h.running.Wait()
 }
 
 // AddHandler adds the handler of a restore the job has started, so that the job's status includes it.
@@ -234,6 +269,7 @@ func (h *RestoreJobsHolder) FinishJob(id model.RestoreJobID, err error, logger *
 	if job, ok := h.Load(id); ok {
 		job.cancel()
 		job.finish(err, logger)
+		job.done()
 	}
 }
 

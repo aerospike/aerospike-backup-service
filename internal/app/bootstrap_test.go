@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
@@ -126,6 +128,66 @@ func TestComponents_RunServesUntilCanceled(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return !components.Scheduler.IsStarted()
 	}, time.Second, 10*time.Millisecond, "canceling the run context did not stop the scheduler")
+}
+
+// Run stays up while a restore is still running after serving stops, and it cancels the
+// restore when a listener stops on its own, so the restore does not run to its natural end.
+func TestComponents_RunWaitsForRestores(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte("service:\n"), 0o600))
+
+	components, err := InitComponents(t.Context(), configPath, false)
+	require.NoError(t, err)
+
+	restoreJobs := service.NewRestoreJobsHolder()
+	components.restoreJobs = restoreJobs
+	listening, stop := make(chan struct{}), make(chan struct{})
+	components.Servers = []server.HTTP{stoppingServer{listening: listening, stop: stop}}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- components.Run(t.Context())
+	}()
+
+	<-listening // the components are started once a listener runs.
+	jobID, jobCtx := restoreJobs.NewJob("running")
+	close(stop)
+
+	select {
+	case <-jobCtx.Done():
+	case <-time.After(5 * time.Second):
+		t.Fatal("a stopped listener did not cancel the running restore")
+	}
+	require.Never(t, func() bool { return len(done) > 0 }, 100*time.Millisecond, 10*time.Millisecond,
+		"Run returned while a restore was running")
+
+	restoreJobs.FinishJob(jobID, context.Canceled, slog.New(slog.DiscardHandler))
+
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run did not return after the restore finished")
+	}
+}
+
+// stoppingServer is a listener that reports it runs and stops on its own when stop is closed.
+type stoppingServer struct {
+	http.Handler
+
+	listening chan<- struct{}
+	stop      <-chan struct{}
+}
+
+func (s stoppingServer) Start() error {
+	close(s.listening)
+	<-s.stop
+
+	return nil
+}
+
+func (s stoppingServer) Shutdown(context.Context) error {
+	return nil
 }
 
 // freePort returns a port that is free at the moment of the call.
