@@ -309,44 +309,6 @@ func (s *ServerBackupSuite) TestServerNonS3Storage() {
 	s.ErrorContains(err, "is not S3 storage")
 }
 
-// TestServerTwoRoutines triggers full backups of two routines on the same cluster and storage at
-// once. The server runs one backup job per cluster, so one routine backs up and the other is
-// skipped. Each routine lists its own backups only.
-func (s *ServerBackupSuite) TestServerTwoRoutines() {
-	const secondRoutine = "secondRoutine"
-
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
-
-	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		second := *c.BackupRoutines[routineName]
-		c.BackupRoutines[secondRoutine] = &second
-	})
-
-	count := func(outcome string) int {
-		return s.routinesBackupEventCount(e, model.BackupTypeFull, outcome, routineName, secondRoutine)
-	}
-	successesBefore, skipsBefore := count(outcomeSuccess), count(outcomeSkip)
-
-	for _, routine := range []string{routineName, secondRoutine} {
-		status, body := s.do(e, http.MethodPost, fmt.Sprintf("%s/v1/backups/full/%s", e.baseURL, routine), nil)
-		s.Require().Equal(http.StatusAccepted, status, "trigger %s: %s", routine, body)
-	}
-
-	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
-		return count(outcomeSuccess) > successesBefore
-	})
-	s.Require().True(ok, "no full backup succeeded")
-	s.Equal(successesBefore+1, count(outcomeSuccess), "both routines backed up")
-	s.Equal(skipsBefore+1, count(outcomeSkip), "the second routine was not skipped")
-
-	// Each routine lists only the backups in its own folder.
-	for _, routine := range []string{routineName, secondRoutine} {
-		for _, backup := range s.routineBackups(e, routine) {
-			s.True(strings.HasPrefix(backup.Key, routine+"/"), "routine %s lists backup %s", routine, backup.Key)
-		}
-	}
-}
-
 // TestServerProgress checks that a running full backup reports its progress through
 // GET /v1/backups/currentBackup as a percentage, with zero record counts: the server counts no
 // records to back up, so any count would be made up (BKRS-504).

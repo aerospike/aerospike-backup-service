@@ -249,17 +249,6 @@ func (s *ServerBuildSuite) routineState(e *env) dto.RoutineState {
 	return state
 }
 
-// routineBackups lists the full backups of routine.
-func (s *ServerBuildSuite) routineBackups(e *env, routine string) []dto.BackupDetails {
-	status, body := s.do(e, http.MethodGet, fmt.Sprintf("%s/v1/backups/full/%s", e.baseURL, routine), nil)
-	s.Require().Equal(http.StatusOK, status, "list %s: %s", routine, body)
-
-	var backups []dto.BackupDetails
-	s.Require().NoError(decoder.Deserialize(&backups, bytes.NewReader(body), decoder.JSON))
-
-	return backups
-}
-
 // assertServerBackupListed checks that the listing of backupType holds want unchanged.
 func (s *ServerBuildSuite) assertServerBackupListed(e *env, backupType model.BackupType, want dto.BackupDetails) {
 	s.T().Helper()

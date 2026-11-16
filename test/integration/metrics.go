@@ -23,7 +23,6 @@ const (
 
 	outcomeSuccess = "success"
 	outcomeFailure = "failure"
-	outcomeSkip    = "skip"
 )
 
 // metricBackupSuccessEventCount returns backup_events_total{outcome="success"} for
@@ -39,27 +38,6 @@ func (s *Suite) metricRestoreSuccessEventCount(e *env) int {
 	value, _ := s.restoreSuccessEventCount(e)
 
 	return int(value)
-}
-
-// routinesBackupEventCount returns backup_events_total for backupType and outcome summed over
-// routines, a missing series counting as zero.
-func (s *Suite) routinesBackupEventCount(
-	e *env,
-	backupType model.BackupType,
-	outcome string,
-	routines ...string,
-) int {
-	var total float64
-	for _, routine := range routines {
-		value, _ := s.metricValue(e, backupEventsTotalMetric, prommodel.LabelSet{
-			labelRoutine: prommodel.LabelValue(routine),
-			labelType:    prommodel.LabelValue(backupType),
-			labelOutcome: prommodel.LabelValue(outcome),
-		})
-		total += value
-	}
-
-	return int(total)
 }
 
 func (s *Suite) metricBackupEventCount(e *env, backupType model.BackupType, outcome string) float64 {
