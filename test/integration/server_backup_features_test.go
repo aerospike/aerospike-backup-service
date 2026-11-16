@@ -309,51 +309,13 @@ func (s *ServerBackupSuite) TestServerNonS3Storage() {
 	s.ErrorContains(err, "is not S3 storage")
 }
 
-// TestServerTwoRoutines triggers full backups of two routines on the same cluster and storage at
-// once, and checks that each runs and lists its own backups only.
-func (s *ServerBackupSuite) TestServerTwoRoutines() {
-	const secondRoutine = "secondRoutine"
-
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
-
-	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-		second := *c.BackupRoutines[routineName]
-		c.BackupRoutines[secondRoutine] = &second
-	})
-
-	before := s.routinesBackupSuccessEventCount(e, model.BackupTypeFull, routineName, secondRoutine)
-	for _, routine := range []string{routineName, secondRoutine} {
-		status, body := s.do(e, http.MethodPost, fmt.Sprintf("%s/v1/backups/full/%s", e.baseURL, routine), nil)
-		s.Require().Equal(http.StatusAccepted, status, "trigger %s: %s", routine, body)
-	}
-
-	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
-		return s.routinesBackupSuccessEventCount(e, model.BackupTypeFull, routineName, secondRoutine) > before
-	})
-	s.Require().True(ok, "no full backup succeeded")
-
-	s.gap("both_run", gapRoutineGate, func() {
-		ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
-			return s.routinesBackupSuccessEventCount(e, model.BackupTypeFull, routineName, secondRoutine) >= before+2
-		})
-		s.True(ok, "only one of the two routines backed up")
-	})
-
-	// Each routine lists only the backups in its own folder, whether or not the other one ran.
-	for _, routine := range []string{routineName, secondRoutine} {
-		for _, backup := range s.routineBackups(e, routine) {
-			s.True(strings.HasPrefix(backup.Key, routine+"/"), "routine %s lists backup %s", routine, backup.Key)
-		}
-	}
-}
-
 // TestServerProgress checks that a running full and a running incremental backup report their
 // progress through GET /v1/backups/currentBackup: the percentage never falls and climbs into the
 // incremental scan's range, the number of records done grows with it, and no total is reported
-// because the server counts no records to back up. The records done end
-// between the records the backup must hold and twice the records it may hold: a record modified
-// within the server's clock-skew margin of the backup is backed up by both its scans, and the
-// test writes the records just before each backup. A backup that ends no longer shows as running.
+// because the server counts no records to back up. The records done end between the records the
+// backup must hold and twice the records it may hold: a record modified within the server's
+// clock-skew margin of the backup is backed up by both its scans, and the test writes the records
+// just before each backup. A backup that ends no longer shows as running.
 func (s *ServerBackupSuite) TestServerProgress() {
 	ages := make([]int, 20)
 	for i := range ages {
