@@ -2365,6 +2365,7 @@ const docTemplate = `{
                     "description": "Enables built-in compression during scan operation.\nValid for Aerospike Server Enterprise Edition only.",
                     "type": "boolean",
                     "default": false,
+                    "x-backup-mode": "scan",
                     "x-nullable": true
                 },
                 "with-cluster-configuration": {

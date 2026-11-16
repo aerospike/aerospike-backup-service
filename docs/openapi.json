@@ -2798,7 +2798,8 @@
                     "use-scan-compression": {
                         "description": "Enables built-in compression during scan operation.\nValid for Aerospike Server Enterprise Edition only.",
                         "type": "boolean",
-                        "default": false,
+                        "x-default": false,
+                        "x-backup-mode": "scan",
                         "nullable": true
                     },
                     "with-cluster-configuration": {
