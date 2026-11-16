@@ -33,10 +33,9 @@ func (rs RoutineState) IsRunning() bool {
 type RunningJob struct {
 	// TotalRecords: the total number of records to be processed.
 	// For backup jobs, this value is only an estimate, not exact.
-	// Zero for a server-side backup, which counts no records.
-	TotalRecords uint64
-	// DoneRecords: the number of records that have been successfully done.
 	// Zero for a server-side backup.
+	TotalRecords uint64
+	// DoneRecords: the number of records that have been successfully backed up so far.
 	DoneRecords uint64
 	// StartTime: the time when the operation started.
 	StartTime time.Time

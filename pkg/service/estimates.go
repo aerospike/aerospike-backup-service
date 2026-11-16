@@ -8,8 +8,9 @@ import (
 )
 
 // currentBackupStatus is the state of the backup the handler runs, or nil when none is running or
-// it has not started. Progress is capped at 99% while the backup runs. The record counts and
-// metrics are those of a scan backup; a run without a scan slot has none.
+// it has not started. Progress is capped at 99% while the backup runs.
+// A server backup reports only the records the server has backed up so
+// far: the server counts no records to back up, so there is no total.
 func currentBackupStatus(handler RoutineBackupHandler) *model.RunningJob {
 	if handler == nil {
 		return nil
@@ -31,6 +32,9 @@ func currentBackupStatus(handler RoutineBackupHandler) *model.RunningJob {
 		job.DoneRecords = run.Scan.DoneRecords
 		job.TotalRecords = run.Scan.TotalRecords
 		job.Metrics = run.Scan.Metrics
+	}
+	if run.Server != nil {
+		job.DoneRecords = run.Server.RecordsBackedUp()
 	}
 
 	return job

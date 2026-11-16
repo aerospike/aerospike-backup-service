@@ -249,6 +249,45 @@ func (s *ServerBuildSuite) routineState(e *env) dto.RoutineState {
 	return state
 }
 
+// assertProgressClimbs polls the running backup of backupType until it ends, and checks what the
+// polls saw: a percentage that never fell and passed the server's base scan range (the first
+// half), records done that never fell, and no total. The server holds a job at 95%
+// while it drains, so that is as far as a running backup shows. The records done stay at most
+// maxDone and, once the polls saw the backup past 90%, are at least minDone.
+func (s *ServerBuildSuite) assertProgressClimbs(e *env, backupType model.BackupType, minDone, maxDone uint64) {
+	s.T().Helper()
+
+	var percentage uint
+	var done uint64
+
+	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
+		running := getRunningJob(s.routineState(e), backupType)
+		if running == nil { // not started yet, or ended: the metric tells which
+			return s.metricBackupSuccessEventCount(e, backupType) > e.successesBeforeTrigger[backupType]
+		}
+
+		s.GreaterOrEqual(running.PercentageDone, percentage, "%s progress fell", backupType)
+		s.LessOrEqual(running.PercentageDone, uint(99), "%s progress passed the cap", backupType)
+		s.GreaterOrEqual(running.DoneRecords, done, "%s records done fell", backupType)
+		s.LessOrEqual(running.DoneRecords, maxDone, "%s records done", backupType)
+		s.Zero(running.TotalRecords, "a server backup reports a total record count")
+		percentage, done = running.PercentageDone, running.DoneRecords
+
+		return false
+	})
+	s.Require().True(ok, "%s backup did not finish within %s", backupType, serverJobTimeout)
+	s.Greater(percentage, uint(90), "%s progress stopped short of the end", backupType)
+	s.GreaterOrEqual(done, minDone, "%s records done", backupType)
+}
+
+func getRunningJob(state dto.RoutineState, backupType model.BackupType) *dto.RunningJob {
+	running := state.Full
+	if backupType == model.BackupTypeIncremental {
+		running = state.Incremental
+	}
+	return running
+}
+
 // assertServerBackupListed checks that the listing of backupType holds want unchanged.
 func (s *ServerBuildSuite) assertServerBackupListed(e *env, backupType model.BackupType, want dto.BackupDetails) {
 	s.T().Helper()

@@ -30,6 +30,16 @@ func TestCurrentBackupStatus(t *testing.T) {
 			wantProgress: 0.4, wantDone: 40, wantTotal: 100, wantMetrics: metrics,
 			wantDuration: 150 * time.Second,
 		},
+		"a server backup sums the records its jobs backed up and knows no total": {
+			run: model.BackupRun{
+				Progress: 0.4,
+				Server: &model.ServerProgress{Jobs: []model.ServerBackupJob{
+					{RecordsBackedUp: 30}, {RecordsBackedUp: 12},
+				}},
+			},
+			wantProgress: 0.4, wantDone: 42,
+			wantDuration: 150 * time.Second,
+		},
 		"a run with no scan counts no records": {
 			run:          model.BackupRun{Progress: 0.4},
 			wantProgress: 0.4, wantDuration: 150 * time.Second,

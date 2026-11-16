@@ -3501,7 +3501,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "done-records": {
-                    "description": "The number of records that have been successfully done.\nZero for a server-side backup.",
+                    "description": "The number of records that have been successfully backed up so far.\nFor a server-side backup, the count can exceed the number of distinct records.",
                     "type": "integer",
                     "example": 50
                 },
@@ -3540,6 +3540,7 @@ const docTemplate = `{
                 "total-records": {
                     "description": "The total number of records to be processed.\nZero for a server-side backup, whose progress the server reports only as a percentage.",
                     "type": "integer",
+                    "x-backup-mode": "scan",
                     "example": 100
                 }
             }

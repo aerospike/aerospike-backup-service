@@ -309,9 +309,13 @@ func (s *ServerBackupSuite) TestServerNonS3Storage() {
 	s.ErrorContains(err, "is not S3 storage")
 }
 
-// TestServerProgress checks that a running full backup reports its progress through
-// GET /v1/backups/currentBackup as a percentage, with zero record counts: the server counts no
-// records to back up, so any count would be made up (BKRS-504).
+// TestServerProgress checks that a running full and a running incremental backup report their
+// progress through GET /v1/backups/currentBackup: the percentage never falls and climbs into the
+// incremental scan's range, the number of records done grows with it, and no total is reported
+// because the server counts no records to back up. The records done end between the records the
+// backup must hold and twice the records it may hold: a record modified within the server's
+// clock-skew margin of the backup is backed up by both its scans, and the test writes the records
+// just before each backup. A backup that ends no longer shows as running.
 func (s *ServerBackupSuite) TestServerProgress() {
 	ages := make([]int, 20)
 	for i := range ages {
@@ -320,29 +324,23 @@ func (s *ServerBackupSuite) TestServerProgress() {
 	s.seedRecordsIn(s.client, serverNamespace, ages)
 
 	// The base policy's one scan thread at the server's lowest rate for it, 5 records per second,
-	// backs up the 20 records over several polls.
+	// backs up the records over several polls.
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
 		c.BackupPolicies[policyName].RecordsPerSecond = new(5)
 	})
+
 	s.triggerFullBackup(e)
+	// Each of the server's two scans backs up a record at most once.
+	s.assertProgressClimbs(e, model.BackupTypeFull, uint64(len(ages)), 2*uint64(len(ages)))
 
-	var running dto.RunningJob
+	s.waitForLastBackup(e, model.BackupTypeFull, s.getBackups(e, model.BackupTypeFull)[0].Created)
+	newAges := []int{21, 22, 23, 24, 25, 26, 27, 28, 29, 30}
+	s.seedRecordsIn(s.client, serverNamespace, newAges)
 
-	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
-		state := s.routineState(e)
-		if state.Full == nil || state.Full.PercentageDone == 0 {
-			return false
-		}
-
-		running = *state.Full
-
-		return true
-	})
-	s.Require().True(ok, "no progress reported for the running full backup")
-	s.Zero(running.TotalRecords, "a server backup reports a total record count")
-	s.Zero(running.DoneRecords, "a server backup reports a done record count")
-
-	s.waitForFinishedBackup(e, model.BackupTypeFull)
+	// The full backup's records were written within the margin of its start, which bounds the
+	// incremental backup from below, so the incremental backup may count them too.
+	s.triggerIncrementalBackup(e)
+	s.assertProgressClimbs(e, model.BackupTypeIncremental, uint64(len(newAges)), 2*uint64(len(ages)+len(newAges)))
 }
 
 // TestServerBackupCancel cancels a running full backup through POST /v1/backups/cancel and checks
