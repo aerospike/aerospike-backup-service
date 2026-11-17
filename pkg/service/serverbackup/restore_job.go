@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync/atomic"
 
@@ -26,6 +27,7 @@ func startRestore(
 	infoClient backup.ServerBackupInfo,
 	policy model.RestorePolicy,
 	backups []model.BackupDetails,
+	logger *slog.Logger,
 ) (*restoreJob, error) {
 	if len(backups) > maxChainLength {
 		return nil, fmt.Errorf("restore chain has %d backups, the server restores at most %d in one job",
@@ -67,7 +69,9 @@ func startRestore(
 		RetryMaxAttempts:    retry.MaxRetriesOrNil(),
 	})
 
-	job := &restoreJob{infoClient: infoClient, namespace: namespace, serverJobID: jobID, mode: policy.Mode}
+	job := &restoreJob{
+		infoClient: infoClient, namespace: namespace, serverJobID: jobID, mode: policy.Mode, logger: logger,
+	}
 	if err != nil {
 		startErr := fmt.Errorf("failed to start server restore: %w", explainRefusal(err, namespace))
 		if !errors.Is(err, asinfo.ErrOutcomeUnknown) {
@@ -109,6 +113,7 @@ type restoreJob struct {
 	namespace   string
 	serverJobID string
 	mode        model.RestoreMode
+	logger      *slog.Logger
 	// readRecords and skippedRecords are the record counts of the last status the server
 	// reported. Status reads them while Wait polls.
 	readRecords    atomic.Uint64
@@ -259,7 +264,7 @@ func (j *restoreJob) poll(
 		return j.infoClient.GetRestoreStatus(ctx, j.namespace, j.serverJobID)
 	}
 
-	return pollJob(ctx, restoreJobKind, j.serverJobID, fetch, settled)
+	return pollJob(ctx, j.logger, restoreJobKind, j.serverJobID, fetch, settled)
 }
 
 // truncateStateRefusal is the text in the server's error when it refuses a strict restore because

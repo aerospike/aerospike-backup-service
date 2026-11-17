@@ -189,7 +189,7 @@ func TestStartRestore_StartRefused(t *testing.T) {
 			// The start returns the job id with every error. A refused job is not cleaned up.
 			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, errors.New(tt.refusal))
 
-			_, err := startRestore(t.Context(), infoClient, tt.policy, []model.BackupDetails{chainBackup(fullID)})
+			_, err := startRestore(t.Context(), infoClient, tt.policy, []model.BackupDetails{chainBackup(fullID)}, discardLogger)
 			require.ErrorContains(t, err, tt.wantErr)
 			require.ErrorContains(t, err, tt.refusal)
 		})
@@ -226,7 +226,7 @@ func TestStartRestore_StartOutcomeUnknown(t *testing.T) {
 			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, startErr)
 			tt.expect(infoClient)
 
-			_, err := startRestore(t.Context(), infoClient, tt.policy, []model.BackupDetails{chainBackup(fullID)})
+			_, err := startRestore(t.Context(), infoClient, tt.policy, []model.BackupDetails{chainBackup(fullID)}, discardLogger)
 			require.ErrorIs(t, err, asinfo.ErrOutcomeUnknown)
 		})
 	}
@@ -242,7 +242,7 @@ func TestStartRestore_InvalidBackupKey(t *testing.T) {
 	backup.Key = fullID // a bare backup id names no routine.
 
 	_, err := startRestore(t.Context(), aerospike.NewMockInfoGetter(ctrl), strictPolicy,
-		[]model.BackupDetails{backup})
+		[]model.BackupDetails{backup}, discardLogger)
 	require.EqualError(t, err, `invalid server backup key "`+fullID+`": want <routine>/<job id>`)
 }
 
@@ -255,13 +255,13 @@ func TestStartRestore_ChainTooLong(t *testing.T) {
 		backups[i] = chainBackup(fmt.Sprintf("261020T09%04d-aaaa", i))
 	}
 
-	_, err := startRestore(t.Context(), aerospike.NewMockInfoGetter(ctrl), strictPolicy, backups)
+	_, err := startRestore(t.Context(), aerospike.NewMockInfoGetter(ctrl), strictPolicy, backups, discardLogger)
 	require.EqualError(t, err, "restore chain has 33 backups, the server restores at most 32 in one job")
 }
 
 // newTestRestoreJob returns the restore job "job" of namespace bar.
 func newTestRestoreJob(infoClient *aerospike.MockInfoGetter, mode model.RestoreMode) *restoreJob {
-	return &restoreJob{infoClient: infoClient, namespace: "bar", serverJobID: "job", mode: mode}
+	return &restoreJob{infoClient: infoClient, namespace: "bar", serverJobID: "job", mode: mode, logger: discardLogger}
 }
 
 func TestRestoreJob_Wait_UntilNamespaceOpen(t *testing.T) {
@@ -542,7 +542,7 @@ func startAndWait(
 ) {
 	t.Helper()
 
-	job, err := startRestore(t.Context(), infoClient, policy, backups)
+	job, err := startRestore(t.Context(), infoClient, policy, backups, discardLogger)
 	require.NoError(t, err)
 	require.NoError(t, job.Wait(t.Context()))
 }

@@ -190,7 +190,7 @@ func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, 
 		return j.infoClient.GetBackupStatus(ctx, j.jobID)
 	}
 
-	return pollJob(ctx, backupJobKind, j.jobID, fetch, func(status *infomodels.ResponseBackupState) (bool, error) {
+	settled := func(status *infomodels.ResponseBackupState) (bool, error) {
 		j.operation.record(status)
 
 		switch status.State {
@@ -199,7 +199,9 @@ func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, 
 		default:
 			return false, nil
 		}
-	})
+	}
+
+	return pollJob(ctx, j.logger, backupJobKind, j.jobID, fetch, settled)
 }
 
 // abort aborts the job on the server and waits up to cleanupTimeout for it to end, so that the

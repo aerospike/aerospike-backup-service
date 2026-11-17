@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
@@ -20,7 +22,8 @@ const (
 	// pollInterval is how often a running server job is asked for its status.
 	pollInterval = time.Second
 	// unobservedJobTimeout is how long a job may go without a status before pollJob gives up on
-	// it. Giving up aborts the job, so the bound outlasts a node restart.
+	// it. Giving up aborts the job, so the bound covers a transient loss of contact with the
+	// cluster. It is a lower bound: it is checked when a status read returns, and a read retries.
 	unobservedJobTimeout = 10 * time.Minute
 	// cleanupTimeout bounds each wait made while cleaning up after a job: for an aborted job to
 	// end, and for a namespace to open.
@@ -29,16 +32,18 @@ const (
 
 // pollJob calls fetch for the status of the server job jobID every pollInterval and passes each
 // status to settled. It returns the last status when settled returns true or an error. A failed
-// fetch ends the wait only once unobservedJobTimeout has passed since the last status. kind names
-// the job in errors.
+// fetch ends the wait only once unobservedJobTimeout has passed since the last status, or since
+// polling began. kind names the job in errors and logs.
 func pollJob[S any](
 	ctx context.Context,
+	logger *slog.Logger,
 	kind, jobID string,
 	fetch func(context.Context) (S, error),
 	settled func(S) (bool, error),
 ) (S, error) {
 	var none S
 
+	logger = logger.With(slog.String("serverJobId", jobID))
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
@@ -48,24 +53,26 @@ func pollJob[S any](
 	for {
 		select {
 		case <-ctx.Done():
-			if fetchErr != nil {
-				return none, fmt.Errorf("%w, last status read: %w", ctx.Err(), fetchErr)
-			}
-
-			return none, ctx.Err()
+			return none, waitEnded(ctx, fetchErr)
 		case <-ticker.C:
 		}
 
 		status, err := fetch(ctx)
 		if err != nil && ctx.Err() != nil {
-			continue // the select reports the ended wait.
+			return none, waitEnded(ctx, err)
 		}
 		if err != nil {
 			if time.Since(lastSeen) > unobservedJobTimeout {
 				return none, fmt.Errorf("%s %s not observed for %s: %w", kind, jobID, unobservedJobTimeout, err)
 			}
+			if fetchErr == nil {
+				logger.Warn("No status of "+kind, attr.Error(err))
+			}
 			fetchErr = err
 			continue
+		}
+		if fetchErr != nil {
+			logger.Info("Status of " + kind + " is back")
 		}
 		lastSeen, fetchErr = time.Now(), nil
 
@@ -73,6 +80,19 @@ func pollJob[S any](
 		if err != nil || done {
 			return status, err
 		}
+	}
+}
+
+// waitEnded returns the error of a wait that ctx ended, with the last failed status read as its
+// cause.
+func waitEnded(ctx context.Context, fetchErr error) error {
+	switch {
+	case fetchErr == nil:
+		return ctx.Err()
+	case errors.Is(fetchErr, ctx.Err()):
+		return fetchErr // a read that ctx cut short already names both.
+	default:
+		return fmt.Errorf("%w, last status read: %w", ctx.Err(), fetchErr)
 	}
 }
 
