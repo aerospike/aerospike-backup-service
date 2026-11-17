@@ -276,27 +276,6 @@ backup-routines:
 	require.Len(t, keys, 1)
 }
 
-// Stopping the service leaves a running restore alone: a server restore completes on the server
-// without the service, and canceling it would abort it halfway.
-func TestComponents_StoppingDoesNotCancelRestores(t *testing.T) {
-	configPath := filepath.Join(t.TempDir(), "config.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte("service:\n"), 0o600))
-
-	components, err := InitComponents(t.Context(), configPath, false)
-	require.NoError(t, err)
-
-	restoreJobs := service.NewRestoreJobsHolder()
-	components.restoreJobs = restoreJobs
-
-	ctx, cancel := context.WithCancel(t.Context())
-	components.Start(ctx)
-	_, jobCtx := restoreJobs.NewJob("running")
-
-	cancel()
-
-	require.NoError(t, jobCtx.Err())
-}
-
 // TestNewComponentsForMode checks that the configured backup mode decides which package the
 // mode's components come from, and that no component of a mode is left unset.
 func TestNewComponentsForMode(t *testing.T) {

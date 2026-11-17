@@ -34,7 +34,6 @@ func newRestoreManagerEnv(t *testing.T) *restoreManagerEnv {
 	client.EXPECT().InfoClient().Return(infoClient).AnyTimes()
 
 	jobs := service.NewRestoreJobsHolder()
-	jobs.Start(t.Context())
 
 	clientManager := aerospike.NewMockClientManager(ctrl)
 	catalog := NewMockCatalog(ctrl)
@@ -132,7 +131,7 @@ func TestRestoreManager_Restore(t *testing.T) {
 	env.expectClient()
 	env.expectRestore(t, "bar", fullID)
 
-	jobID := env.manager.Restore(restoreRequestOf(backup))
+	jobID := env.manager.Restore(t.Context(), restoreRequestOf(backup))
 
 	assert.Equal(t, model.RestoreSuccess, env.waitForJob(t, jobID).Status)
 }
@@ -183,7 +182,7 @@ func TestRestoreManager_Restore_Fails(t *testing.T) {
 			env := newRestoreManagerEnv(t)
 			tt.expect(t, env)
 
-			jobID := env.manager.Restore(restoreRequestOf(backup))
+			jobID := env.manager.Restore(t.Context(), restoreRequestOf(backup))
 
 			status := env.waitForJob(t, jobID)
 			assert.Equal(t, model.RestoreFailure, status.Status)
@@ -206,7 +205,7 @@ func TestRestoreManager_RestoreByTime(t *testing.T) {
 	env.expectClient()
 	env.expectRestore(t, "bar", fullID+","+incr1ID)
 
-	jobID := env.manager.RestoreByTime(restoreAfter(incremental))
+	jobID := env.manager.RestoreByTime(t.Context(), restoreAfter(incremental))
 
 	assert.Equal(t, model.RestoreSuccess, env.waitForJob(t, jobID).Status)
 }
@@ -229,7 +228,7 @@ func TestRestoreManager_RestoreByTime_NamespaceFails(t *testing.T) {
 	env.expectStart(t, "bar", fullID+","+incr1ID, "", errors.New("refused"))
 	env.expectRestore(t, "baz", fullID+","+incr1ID)
 
-	jobID := env.manager.RestoreByTime(restoreAfter(barIncremental))
+	jobID := env.manager.RestoreByTime(t.Context(), restoreAfter(barIncremental))
 
 	status := env.waitForJob(t, jobID)
 	assert.Equal(t, model.RestoreFailure, status.Status)
@@ -258,7 +257,7 @@ func TestRestoreManager_CancelRestore(t *testing.T) {
 		&infomodels.ResponseRestoreState{State: infomodels.RestoreStateActive}, nil).AnyTimes()
 	env.infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", restoreJobID).Return(nil)
 
-	jobID := env.manager.Restore(restoreRequestOf(backup))
+	jobID := env.manager.Restore(t.Context(), restoreRequestOf(backup))
 	<-started
 	require.NoError(t, env.manager.CancelRestore(jobID))
 

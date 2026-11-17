@@ -53,7 +53,7 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpAcceptedWithJobID(w, s.restoreManager.Restore(restoreRequest))
+	httpAcceptedWithJobID(w, s.restoreManager.Restore(r.Context(), restoreRequest))
 }
 
 // RestoreByTimeHandler
@@ -79,7 +79,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpAcceptedWithJobID(w, s.restoreManager.RestoreByTime(restoreRequest))
+	httpAcceptedWithJobID(w, s.restoreManager.RestoreByTime(r.Context(), restoreRequest))
 }
 
 // RestoreStatusHandler

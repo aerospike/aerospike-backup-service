@@ -88,31 +88,31 @@ func (mr *MockRestoreManagerMockRecorder) JobStatus(jobID any) *gomock.Call {
 }
 
 // Restore mocks base method.
-func (m *MockRestoreManager) Restore(request *model.RestoreRequest) model.RestoreJobID {
+func (m *MockRestoreManager) Restore(ctx context.Context, request *model.RestoreRequest) model.RestoreJobID {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Restore", request)
+	ret := m.ctrl.Call(m, "Restore", ctx, request)
 	ret0, _ := ret[0].(model.RestoreJobID)
 	return ret0
 }
 
 // Restore indicates an expected call of Restore.
-func (mr *MockRestoreManagerMockRecorder) Restore(request any) *gomock.Call {
+func (mr *MockRestoreManagerMockRecorder) Restore(ctx, request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockRestoreManager)(nil).Restore), request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockRestoreManager)(nil).Restore), ctx, request)
 }
 
 // RestoreByTime mocks base method.
-func (m *MockRestoreManager) RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID {
+func (m *MockRestoreManager) RestoreByTime(ctx context.Context, request *model.RestoreTimestampRequest) model.RestoreJobID {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestoreByTime", request)
+	ret := m.ctrl.Call(m, "RestoreByTime", ctx, request)
 	ret0, _ := ret[0].(model.RestoreJobID)
 	return ret0
 }
 
 // RestoreByTime indicates an expected call of RestoreByTime.
-func (mr *MockRestoreManagerMockRecorder) RestoreByTime(request any) *gomock.Call {
+func (mr *MockRestoreManagerMockRecorder) RestoreByTime(ctx, request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreByTime", reflect.TypeOf((*MockRestoreManager)(nil).RestoreByTime), request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreByTime", reflect.TypeOf((*MockRestoreManager)(nil).RestoreByTime), ctx, request)
 }
 
 // MockBackupReader is a mock of BackupReader interface.

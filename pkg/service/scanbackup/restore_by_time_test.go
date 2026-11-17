@@ -71,7 +71,7 @@ func TestRestoreByTime_UsesLastFullBackupAsBase(t *testing.T) {
 		restoreRequestPathMatcher{expectedPath: fullBackup.Key},
 		restoreRequestPathMatcher{expectedPath: incrBackup.Key})
 
-	jobID := env.restoreManager.RestoreByTime(request)
+	jobID := env.restoreManager.RestoreByTime(t.Context(), request)
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 	require.NoError(t, err)
 	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
@@ -122,7 +122,7 @@ func TestRestoreByTime_SkipsEmptyBackups(t *testing.T) {
 				env.expectRestores(client, chain...)
 			}
 
-			jobStatus, err := waitForRestore(t, env.restoreManager, env.restoreManager.RestoreByTime(request))
+			jobStatus, err := waitForRestore(t, env.restoreManager, env.restoreManager.RestoreByTime(t.Context(), request))
 			require.NoError(t, err)
 			assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
 		})
@@ -144,7 +144,7 @@ func TestRestoreByTime_CompressionPerBackup(t *testing.T) {
 		restoreRequestCompressionMatcher{full.Key, model.CompressionModeZSTD},
 		restoreRequestCompressionMatcher{incr.Key, model.CompressionModeNone})
 
-	jobStatus, err := waitForRestore(t, env.restoreManager, env.restoreManager.RestoreByTime(request))
+	jobStatus, err := waitForRestore(t, env.restoreManager, env.restoreManager.RestoreByTime(t.Context(), request))
 	require.NoError(t, err)
 	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
 }
@@ -207,7 +207,7 @@ func TestRestoreByTime_ChainFailure(t *testing.T) {
 			jobIDs := make(chan model.RestoreJobID, 1)
 			tt.expect(env, jobIDs)
 
-			jobID := env.restoreManager.RestoreByTime(request)
+			jobID := env.restoreManager.RestoreByTime(t.Context(), request)
 			jobIDs <- jobID
 
 			jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -319,7 +319,7 @@ func TestRestoreByTime_SelectsLatestFullPerNamespace(t *testing.T) {
 		Return(env.expectDefaultRestoreHandler(), nil).
 		Times(1)
 
-	jobID := env.restoreManager.RestoreByTime(request)
+	jobID := env.restoreManager.RestoreByTime(t.Context(), request)
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 	require.NoError(t, err)
 	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
@@ -421,7 +421,7 @@ func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
 					AnyTimes()
 			}
 
-			jobID := env.restoreManager.RestoreByTime(request)
+			jobID := env.restoreManager.RestoreByTime(t.Context(), request)
 
 			jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 			require.NoError(t, err)
@@ -502,7 +502,7 @@ func TestRestoreByTime_CumulativeIncrementals(t *testing.T) {
 		restoreRequestPathMatcher{expectedPath: fullBackup.Key},
 		restoreRequestPathMatcher{expectedPath: incr2Backup.Key})
 
-	jobID := env.restoreManager.RestoreByTime(request)
+	jobID := env.restoreManager.RestoreByTime(t.Context(), request)
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 	require.NoError(t, err)
 	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
@@ -608,7 +608,7 @@ func TestRestoreByTime_ChainOrder(t *testing.T) {
 			}
 			env.expectRestores(client, chain...)
 
-			jobID := env.restoreManager.RestoreByTime(request)
+			jobID := env.restoreManager.RestoreByTime(t.Context(), request)
 			jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 			require.NoError(t, err)
 			assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
