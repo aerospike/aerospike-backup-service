@@ -162,8 +162,8 @@ type backupJob struct {
 	logger    *slog.Logger
 }
 
-// Wait waits for the job to end. If the wait fails, or ctx is canceled, Wait aborts the job
-// before it returns.
+// Wait waits for the job to end. If the job had no status for unobservedJobTimeout, or ctx is
+// canceled, Wait aborts the job before it returns.
 func (j *backupJob) Wait(ctx context.Context) error {
 	status, err := j.poll(ctx)
 	if err != nil {
@@ -190,7 +190,7 @@ func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, 
 		return j.infoClient.GetBackupStatus(ctx, j.jobID)
 	}
 
-	return pollJob(ctx, backupJobKind, j.jobID, fetch, func(status *infomodels.ResponseBackupState) (bool, error) {
+	settled := func(status *infomodels.ResponseBackupState) (bool, error) {
 		j.operation.record(status)
 
 		switch status.State {
@@ -199,7 +199,9 @@ func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, 
 		default:
 			return false, nil
 		}
-	})
+	}
+
+	return pollJob(ctx, j.logger, backupJobKind, j.jobID, fetch, settled)
 }
 
 // abort aborts the job on the server and waits up to cleanupTimeout for it to end, so that the
