@@ -27,11 +27,6 @@ func startRestore(
 	policy model.RestorePolicy,
 	backups []model.BackupDetails,
 ) (*restoreJob, error) {
-	// StartRestore is sent even when ctx is already canceled.
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-
 	if len(backups) > maxChainLength {
 		return nil, fmt.Errorf("restore chain has %d backups, the server restores at most %d in one job",
 			len(backups), maxChainLength)

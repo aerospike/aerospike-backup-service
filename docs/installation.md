@@ -116,7 +116,7 @@ privileged ports each need a look, and each fails at runtime rather than at star
 
 ### Prerequisites
 
-- Go <!-- tag GoVersion -->1.26.10<!-- /tag -->
+- Go <!-- tag GoVersion -->1.26.11<!-- /tag -->
 
 ### Build the service
 

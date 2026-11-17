@@ -101,18 +101,18 @@ func (mr *MockInfoGetterMockRecorder) GetBackupStatus(ctx, jobID any) *gomock.Ca
 }
 
 // GetClusterStable mocks base method.
-func (m *MockInfoGetter) GetClusterStable(ctx context.Context, namespace string) (bool, error) {
+func (m *MockInfoGetter) GetClusterStable(ctx context.Context, namespace string, ignoreMigrations bool) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClusterStable", ctx, namespace)
+	ret := m.ctrl.Call(m, "GetClusterStable", ctx, namespace, ignoreMigrations)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetClusterStable indicates an expected call of GetClusterStable.
-func (mr *MockInfoGetterMockRecorder) GetClusterStable(ctx, namespace any) *gomock.Call {
+func (mr *MockInfoGetterMockRecorder) GetClusterStable(ctx, namespace, ignoreMigrations any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterStable", reflect.TypeOf((*MockInfoGetter)(nil).GetClusterStable), ctx, namespace)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterStable", reflect.TypeOf((*MockInfoGetter)(nil).GetClusterStable), ctx, namespace, ignoreMigrations)
 }
 
 // GetNamespacesList mocks base method.

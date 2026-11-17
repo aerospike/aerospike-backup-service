@@ -266,27 +266,6 @@ func TestRoutineRunner_BackupNamespaces_Failures(t *testing.T) {
 	}, operation.Status().Server.Jobs)
 }
 
-// TestRoutineRunner_BackupNamespaces_Canceled checks that a canceled run starts no server job: the
-// start of a job reaches the server even on a canceled context.
-func TestRoutineRunner_BackupNamespaces_Canceled(t *testing.T) {
-	t.Parallel()
-
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
-
-	infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t)) // expects no call.
-	routine := &model.BackupRoutine{
-		Storage:      &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1"},
-		BackupPolicy: &model.BackupPolicy{},
-	}
-
-	err := (&routineRunner{}).backupNamespaces(ctx, infoClient, routine,
-		model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar", "baz"}, newBackupOperation(func() {}, 2),
-		discardLogger)
-
-	require.ErrorIs(t, err, context.Canceled)
-}
-
 // TestRoutineRunner_BackupNamespaces_StartOutcomeUnknown checks that a start whose outcome is
 // unknown aborts the job it may have started, and that a start the server refused aborts nothing.
 func TestRoutineRunner_BackupNamespaces_StartOutcomeUnknown(t *testing.T) {

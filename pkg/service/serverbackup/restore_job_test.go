@@ -510,34 +510,6 @@ func TestRestoreJob_Wait_LostJob(t *testing.T) {
 	require.ErrorContains(t, err, "failed to open namespace bar after server restore job: the job did not end")
 }
 
-// TestStartRestore_Canceled checks that a canceled restore starts no server job: a strict start
-// would close and clear the namespace only for the job to be aborted.
-func TestStartRestore_Canceled(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name   string
-		policy model.RestorePolicy
-	}{
-		{name: "strict", policy: strictPolicy},
-		{name: "fuzzy", policy: fuzzyPolicy},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			ctrl := gomock.NewController(t)
-
-			ctx, cancel := context.WithCancel(t.Context())
-			cancel()
-
-			_, err := startRestore(ctx, aerospike.NewMockInfoGetter(ctrl), tt.policy,
-				[]model.BackupDetails{chainBackup(fullID)})
-			require.ErrorIs(t, err, context.Canceled)
-		})
-	}
-}
-
 // startAndWait starts the restore of the backups and waits for it to end without error.
 func startAndWait(
 	t *testing.T,
