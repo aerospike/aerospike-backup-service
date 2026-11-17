@@ -19,6 +19,9 @@ const (
 	unsupportedInStrictMode = `mode "strict" does not support`
 )
 
+// setListField is the name of the set list of a routine and of a restore policy.
+const setListField = "set-list"
+
 // option is an option of a routine or a policy, and whether it is set.
 type option struct {
 	name string

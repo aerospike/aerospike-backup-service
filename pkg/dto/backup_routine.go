@@ -153,7 +153,7 @@ func (r *BackupRoutine) Validate() error {
 	if err := validateNamespaces(*r.Namespaces); err != nil {
 		return err
 	}
-	if err := validateUniqueNonEmpty("set-list", r.SetList); err != nil {
+	if err := validateUniqueNonEmpty(setListField, r.SetList); err != nil {
 		return err
 	}
 	if err := validateUniqueNonEmpty("bin-list", r.BinList); err != nil {

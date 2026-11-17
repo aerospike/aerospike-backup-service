@@ -133,8 +133,9 @@ func (s *ServerBackupSuite) TestServerBackupLimits() {
 // option, and checks its effect: tps and parallel become the server job's restore-rps and number
 // of worker threads, extra-ttl moves a restored record's expiry out by that much, and set-list
 // restores only the sets it names: two of the backup's three. Each strict restore clears the
-// destination namespace first. Last, it restores into a truncated namespace, which the server
-// refuses until the truncate is undone with the command the error names.
+// destination namespace first. A strict restore takes no set-list, so that one is a fuzzy restore.
+// Last, it restores into a truncated namespace, which the server refuses until the truncate is
+// undone with the command the error names.
 func (s *ServerBackupSuite) TestServerRestoreOptions() {
 	const (
 		ttl      = time.Hour
@@ -181,7 +182,18 @@ func (s *ServerBackupSuite) TestServerRestoreOptions() {
 	})
 
 	s.Run("set_list", func() {
-		s.restoreIntoDestinationWithPolicy(e, backup.Key, dto.BaseRestorePolicy{SetList: []string{"setA", setName}})
+		// The earlier restores left every set in the destination namespace, and a fuzzy restore
+		// keeps what the namespace holds.
+		for _, set := range []string{setName, "setA", "setB"} {
+			setKey, err := as.NewKey(serverNamespace, set, 0)
+			s.Require().NoError(err)
+			_, err = s.destinationClient.Delete(nil, setKey)
+			s.Require().NoError(err)
+		}
+
+		s.restoreByPathInto(e, backup.Key, destinationClusterName, &dto.RestorePolicy{
+			BaseRestorePolicy: dto.BaseRestorePolicy{Mode: dto.RestoreModeFuzzy, SetList: []string{"setA", setName}},
+		})
 
 		s.NotNil(s.recordBins(s.destinationClient, "setA", 0), "setA record not restored")
 		s.NotNil(s.recordBins(s.destinationClient, setName, 0), setName+" record not restored")

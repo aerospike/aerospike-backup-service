@@ -88,7 +88,11 @@ func validateRestorePolicy(policy *model.RestorePolicy, config *model.Config) er
 		return err
 	}
 
-	// The server retries the writes of a fuzzy restore. A strict restore writes no record through
-	// the write path, so it has nothing to retry.
-	return rejectOptions("restore policy", unsupportedInStrictMode, option{"retry-policy", policy.RetryPolicy != nil})
+	// A strict restore clears the whole namespace, so with a set list it would delete the sets
+	// the list leaves out. The server retries the writes of a fuzzy restore. A strict restore
+	// writes no record through the write path, so it has nothing to retry.
+	return rejectOptions("restore policy", unsupportedInStrictMode,
+		option{setListField, len(policy.SetList) > 0},
+		option{"retry-policy", policy.RetryPolicy != nil},
+	)
 }

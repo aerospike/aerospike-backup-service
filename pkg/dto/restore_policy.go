@@ -13,7 +13,7 @@ type BaseRestorePolicy struct {
 	// How the server restores a server-side backup. Required when the service's backup-mode is
 	// server, and not allowed otherwise.
 	// * strict: the namespace is taken from clients, cleared and loaded from the backups, so it
-	//   holds exactly the backed-up data.
+	//   holds exactly the backed-up data. Every record the namespace held is deleted.
 	// * fuzzy: the backed-up records are written into the live namespace, which clients keep
 	//   using. Records only the namespace holds stay; on a record both hold, the backup wins.
 	Mode RestoreMode `json:"mode,omitempty" enums:"strict,fuzzy" example:"strict" extensions:"x-nullable,x-backup-mode=server"`
@@ -51,6 +51,8 @@ type BaseRestorePolicy struct {
 	// routine must back up a single namespace.
 	Namespace *RestoreNamespace `json:"namespace,omitempty" extensions:"x-backup-mode=scan"`
 	// The sets to restore (optional, an empty list implies restoring all sets).
+	// Rejected when mode is strict: a strict restore clears the whole namespace, so it would
+	// delete the sets left out of the list. Use mode fuzzy to restore some sets and keep the rest.
 	SetList []string `json:"set-list,omitempty" example:"set1,set2" extensions:"x-nullable"`
 	// The bins to restore (optional, an empty list implies restoring all bins).
 	BinList []string `json:"bin-list,omitempty" example:"bin1,bin2"  extensions:"x-nullable,x-backup-mode=scan"`
@@ -76,6 +78,8 @@ type BaseRestorePolicy struct {
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty" extensions:"x-backup-mode=scan"`
 	// Configuration of retries for each restore write operation.
 	// If nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).
+	// Rejected when mode is strict: a strict restore does not write records through the write
+	// path, so it has nothing to retry.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Amount of extra time-to-live to add to records that have expirable void-times.
 	// Must be set in seconds.
@@ -140,7 +144,7 @@ func (p *BaseRestorePolicy) Validate() error {
 		}
 	}
 
-	if err := validateUniqueNonEmpty("set-list", p.SetList); err != nil {
+	if err := validateUniqueNonEmpty(setListField, p.SetList); err != nil {
 		return err
 	}
 	if err := validateUniqueNonEmpty("bin-list", p.BinList); err != nil {

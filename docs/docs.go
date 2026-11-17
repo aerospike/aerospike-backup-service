@@ -3166,7 +3166,7 @@ const docTemplate = `{
                     "example": 32
                 },
                 "mode": {
-                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
+                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data. Every record the namespace held is deleted.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
                     "enum": [
                         "strict",
                         "fuzzy"
@@ -3224,7 +3224,7 @@ const docTemplate = `{
                     "x-backup-mode": "scan"
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected when mode is strict: a strict restore does not write records through the write\npath, so it has nothing to retry.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -3232,7 +3232,7 @@ const docTemplate = `{
                     ]
                 },
                 "set-list": {
-                    "description": "The sets to restore (optional, an empty list implies restoring all sets).",
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nRejected when mode is strict: a strict restore clears the whole namespace, so it would\ndelete the sets left out of the list. Use mode fuzzy to restore some sets and keep the rest.",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -4259,7 +4259,7 @@ const docTemplate = `{
                     "example": 32
                 },
                 "mode": {
-                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
+                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data. Every record the namespace held is deleted.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
                     "enum": [
                         "strict",
                         "fuzzy"
@@ -4317,7 +4317,7 @@ const docTemplate = `{
                     "x-backup-mode": "scan"
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected when mode is strict: a strict restore does not write records through the write\npath, so it has nothing to retry.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -4325,7 +4325,7 @@ const docTemplate = `{
                     ]
                 },
                 "set-list": {
-                    "description": "The sets to restore (optional, an empty list implies restoring all sets).",
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nRejected when mode is strict: a strict restore clears the whole namespace, so it would\ndelete the sets left out of the list. Use mode fuzzy to restore some sets and keep the rest.",
                     "type": "array",
                     "items": {
                         "type": "string"
