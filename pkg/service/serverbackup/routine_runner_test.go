@@ -1,9 +1,11 @@
 package serverbackup
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"testing"
 	"time"
@@ -383,6 +385,45 @@ func TestBackupJob_Wait_RecordsServerJob(t *testing.T) {
 				require.ErrorContains(t, err, tt.wantErr)
 			}
 			assert.Equal(t, []model.ServerBackupJob{tt.wantJob}, operation.Status().Server.Jobs)
+		})
+	}
+}
+
+func TestBackupJob_Wait_WarnsOfUnreadRecords(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		recsReadFailed uint64
+		wantLog        string
+	}{
+		{name: "all records read"},
+		{
+			name:           "records not read",
+			recsReadFailed: 3,
+			wantLog:        "level=WARN.*jobId=" + fullID + " namespace=test recordsReadFailed=3",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
+			infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(&infomodels.ResponseBackupState{
+				JobID: fullID, Namespace: "test", State: infomodels.BackupStateComplete,
+				RecsReadFailed: tt.recsReadFailed,
+			}, nil)
+			var logs bytes.Buffer
+			job := newTestBackupJob(infoClient, newBackupOperation(func() {}, 1))
+			job.logger = slog.New(slog.NewTextHandler(&logs, nil))
+
+			require.NoError(t, job.Wait(t.Context()))
+
+			if tt.wantLog == "" {
+				assert.Empty(t, logs.String())
+				return
+			}
+			assert.Regexp(t, tt.wantLog, logs.String())
 		})
 	}
 }
