@@ -79,7 +79,7 @@ func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 
 	restoreStatus := s.restoreIntoDestination(e, fullBackup.Key)
 	s.Run("restore_index_count", func() {
-		s.T().Skip("BKRS-563: a server restore reports no index count")
+		s.T().Skip("SERVER-2448: a server restore reports no index count")
 		s.Equal(uint64(wantIndexes), restoreStatus.IndexCount)
 	})
 
