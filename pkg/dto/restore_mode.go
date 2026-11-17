@@ -40,23 +40,28 @@ func (m RestoreMode) ToModel() model.RestoreMode {
 }
 
 // validateRestoreStorage checks that a server-side restore reads from S3 storage, the only
-// storage the server writes backups to. A scan restore reads from any storage. A routine's storage
-// is checked when the configuration loads, but a restore may name other storage.
+// storage the server writes backups to, and that an info command can carry the storage's
+// location. A scan restore reads from any storage. A routine's storage is checked when the
+// configuration loads, but a restore may name other storage.
 func validateRestoreStorage(storage model.Storage, config *model.Config) error {
 	if !config.IsServerBackupMode() {
 		return nil
 	}
-	if _, ok := storage.(*model.S3Storage); ok {
-		return nil
+
+	s3Storage, ok := storage.(*model.S3Storage)
+	if !ok {
+		return fmt.Errorf("%w: the restore storage is not S3 storage, which backup-mode %q requires",
+			errInvalidValue, model.BackupModeServer)
 	}
 
-	return fmt.Errorf("%w: the restore storage is not S3 storage, which backup-mode %q requires",
-		errInvalidValue, model.BackupModeServer)
+	return validateS3InfoValues(s3Storage.Path, s3Storage.Bucket, s3Storage.S3Region, s3Storage.S3Profile,
+		s3Storage.S3EndpointOverride)
 }
 
 // validateRestorePolicy checks policy against the service's backup mode. A scan restore has no
 // mode. A server-side restore must choose a mode, sets no option that the server has no
-// equivalent for, and sets no option that its mode does not support.
+// equivalent for, no value that an info command cannot carry, and no option that its mode does
+// not support.
 func validateRestorePolicy(policy *model.RestorePolicy, config *model.Config) error {
 	if !config.IsServerBackupMode() {
 		return rejectOptions("restore policy", onlyInServerMode, option{"mode", policy.Mode != ""})
@@ -84,8 +89,14 @@ func validateRestorePolicy(policy *model.RestorePolicy, config *model.Config) er
 		option{"socket-timeout", policy.SocketTimeout != nil},
 		option{"total-timeout", policy.TotalTimeout != nil},
 	)
-	if err != nil || policy.Mode != model.RestoreModeStrict {
+	if err != nil {
 		return err
+	}
+	if err := validateInfoList("set-list", policy.SetList); err != nil {
+		return err
+	}
+	if policy.Mode != model.RestoreModeStrict {
+		return nil
 	}
 
 	// The server retries the writes of a fuzzy restore. A strict restore writes no record through

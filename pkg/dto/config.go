@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -141,8 +142,9 @@ func (c *Config) Validate() error {
 }
 
 // validateServerMode checks that in the server backup mode every routine backs up to S3 storage,
-// the only storage the server writes to, and that no routine, policy or S3 storage sets an option
-// the server has no equivalent for.
+// the only storage the server writes to, that no routine, policy or S3 storage sets an option
+// the server has no equivalent for, and that an info command can carry the values sent to the
+// server.
 func (c *Config) validateServerMode() error {
 	if c.ServiceConfig.Backup == nil || c.ServiceConfig.Backup.BackupMode.ToModel() != model.BackupModeServer {
 		return nil
@@ -160,6 +162,12 @@ func (c *Config) validateServerMode() error {
 		); err != nil {
 			return err
 		}
+		if err := errors.Join(
+			validateInfoList("set-list", routine.SetList),
+			validateInfoList("bin-list", routine.BinList),
+		); err != nil {
+			return fmt.Errorf("backup routine '%s' validation error: %w", name, err)
+		}
 	}
 
 	// The server writes the backups, so only the S3 options it receives apply. ABS's own S3 client
@@ -168,10 +176,7 @@ func (c *Config) validateServerMode() error {
 		if storage.S3Storage == nil {
 			continue
 		}
-		if err := rejectOptions(fmt.Sprintf("storage '%s'", name), unsupportedInServerMode,
-			option{"storage-class", storage.S3Storage.StorageClass != nil},
-			option{"min-part-size", storage.S3Storage.MinPartSize != nil},
-		); err != nil {
+		if err := validateServerS3(name, storage.S3Storage); err != nil {
 			return err
 		}
 	}
@@ -201,6 +206,24 @@ func (c *Config) validateServerMode() error {
 		if err := validateServerRate(policy); err != nil {
 			return fmt.Errorf("policy '%s' validation error: %w", name, err)
 		}
+	}
+
+	return nil
+}
+
+// validateServerS3 checks that the S3 storage sets no option the server has no equivalent for,
+// and that an info command can carry its location.
+func validateServerS3(name string, s3 *S3Storage) error {
+	if err := rejectOptions(fmt.Sprintf("storage '%s'", name), unsupportedInServerMode,
+		option{"storage-class", s3.StorageClass != nil},
+		option{"min-part-size", s3.MinPartSize != nil},
+	); err != nil {
+		return err
+	}
+
+	err := validateS3InfoValues(string(s3.Path), s3.Bucket, s3.S3Region, s3.S3Profile, s3.S3EndpointOverride)
+	if err != nil {
+		return fmt.Errorf("storage '%s' validation error: %w", name, err)
 	}
 
 	return nil

@@ -93,6 +93,16 @@ func TestValidateRestorePolicy(t *testing.T) {
 			wantErr: `restore policy sets retry-policy, which mode "strict" does not support`},
 		{name: "server mode fuzzy with a retry policy", backupMode: model.BackupModeServer,
 			policy: model.RestorePolicy{Mode: model.RestoreModeFuzzy, RetryPolicy: &model.RetryPolicy{}}},
+		{name: "server mode with a set list", backupMode: model.BackupModeServer,
+			policy: model.RestorePolicy{Mode: model.RestoreModeFuzzy, SetList: []string{"setA", "setB"}}},
+		{name: "scan mode with a comma in a set name", backupMode: model.BackupModeScan,
+			policy: model.RestorePolicy{SetList: []string{"set,B"}}},
+		{name: "server mode fuzzy with a comma in a set name", backupMode: model.BackupModeServer,
+			policy:  model.RestorePolicy{Mode: model.RestoreModeFuzzy, SetList: []string{"setA", "set,B"}},
+			wantErr: `set-list entry "set,B": must not contain ",", ";", "|" or a line break`},
+		{name: "server mode strict with a semicolon in a set name", backupMode: model.BackupModeServer,
+			policy:  model.RestorePolicy{Mode: model.RestoreModeStrict, SetList: []string{"set;B"}},
+			wantErr: `set-list entry "set;B": must not contain ",", ";", "|" or a line break`},
 	}
 
 	for _, tt := range tests {
@@ -128,6 +138,23 @@ func TestValidateRestoreStorage(t *testing.T) {
 		{name: "scan mode local", backupMode: model.BackupModeScan, storage: &model.LocalStorage{}},
 		{name: "server mode local", backupMode: model.BackupModeServer, storage: &model.LocalStorage{},
 			wantErr: `the restore storage is not S3 storage, which backup-mode "server" requires`},
+		{name: "scan mode S3 with a semicolon in the path", backupMode: model.BackupModeScan,
+			storage: &model.S3Storage{Path: "back;ups"}},
+		{name: "server mode S3 with a semicolon in the path", backupMode: model.BackupModeServer,
+			storage: &model.S3Storage{Path: "back;ups"},
+			wantErr: `path "back;ups": must not contain ";", "|" or a line break`},
+		{name: "server mode S3 with a pipe in the bucket", backupMode: model.BackupModeServer,
+			storage: &model.S3Storage{Bucket: "buc|ket"},
+			wantErr: `bucket "buc|ket": must not contain ";", "|" or a line break`},
+		{name: "server mode S3 with a line break in the region", backupMode: model.BackupModeServer,
+			storage: &model.S3Storage{S3Region: "eu-central-1\n"},
+			wantErr: `s3-region "eu-central-1\n": must not contain ";", "|" or a line break`},
+		{name: "server mode S3 with a semicolon in the profile", backupMode: model.BackupModeServer,
+			storage: &model.S3Storage{S3Profile: "back;up"},
+			wantErr: `s3-profile "back;up": must not contain ";", "|" or a line break`},
+		{name: "server mode S3 with a semicolon in the endpoint", backupMode: model.BackupModeServer,
+			storage: &model.S3Storage{S3EndpointOverride: "http://minio:9000/;a"},
+			wantErr: `s3-endpoint-override "http://minio:9000/;a": must not contain ";", "|" or a line break`},
 	}
 
 	for _, tt := range tests {
