@@ -179,6 +179,14 @@ func (j *backupJob) Wait(ctx context.Context) error {
 	case infomodels.BackupStateAborted:
 		return errJobEnded(backupJobKind, j.jobID, "was aborted", status.AbortOrigin, status.ErrorReason)
 	default:
+		// The server completes a job that could not read some records, and the backup lacks them.
+		if status.RecsReadFailed > 0 {
+			j.logger.Warn("Server backup completed without the records the server could not read",
+				slog.String("jobId", j.jobID),
+				slog.String("namespace", status.Namespace),
+				slog.Uint64("recordsReadFailed", status.RecsReadFailed))
+		}
+
 		return nil
 	}
 }
