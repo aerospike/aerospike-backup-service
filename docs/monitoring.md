@@ -5,23 +5,26 @@ following application metrics:
 
 <!-- tag Metrics -->
 
-| Name                                                        | Type      | Description                                                                                                             | Labels                 |
-|-------------------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------|------------------------|
-| `aerospike_backup_service_backup_duration_seconds`          | Histogram | Duration in seconds of finished backups by routine and type (full/incremental)                                          | routine, type          |
-| `aerospike_backup_service_backup_events_total`              | Counter   | Backup service job events by routine, type (full/incremental), and outcome (success, failure, canceled, retry, skip)    | routine, type, outcome |
-| `aerospike_backup_service_backup_in_progress`               | Gauge     | Number of backups currently running for the given routine and backup type (full/incremental)                            | routine, type          |
-| `aerospike_backup_service_backup_progress_pct`              | Gauge     | Progress of backup processes in percentage                                                                              | routine, type          |
-| `aerospike_backup_service_last_successful_backup_timestamp` | Gauge     | Unix timestamp (seconds) of the last successful backup per routine                                                      | routine, type          |
-| `aerospike_backup_service_restore_events_total`             | Counter   | Total completed restore jobs by outcome (success, failure, canceled)                                                    | outcome                |
-| `aerospike_backup_service_restore_in_progress`              | Gauge     | Number of restore processes running                                                                                     |                        |
-| `aerospike_backup_service_duration_millis`                  | Gauge     | Full backup duration in milliseconds (Deprecated: use aerospike_backup_service_backup_duration_seconds instead.)        |                        |
-| `aerospike_backup_service_failure_total`                    | Counter   | Full backup failure counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                     |                        |
-| `aerospike_backup_service_incremental_duration_millis`      | Gauge     | Incremental backup duration in milliseconds (Deprecated: use aerospike_backup_service_backup_duration_seconds instead.) |                        |
-| `aerospike_backup_service_incremental_failure_total`        | Counter   | Incremental backup failure counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)              |                        |
-| `aerospike_backup_service_incremental_runs_total`           | Counter   | Successful incremental backup runs counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)      |                        |
-| `aerospike_backup_service_incremental_skip_total`           | Counter   | Incremental backup skip counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                 |                        |
-| `aerospike_backup_service_runs_total`                       | Counter   | Successful backup runs counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                  |                        |
-| `aerospike_backup_service_skip_total`                       | Counter   | Full backup skip counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                        |                        |
+| Name                                                         | Type      | Description                                                                                                                    | Labels                   |
+|--------------------------------------------------------------|-----------|--------------------------------------------------------------------------------------------------------------------------------|--------------------------|
+| `aerospike_backup_service_backup_duration_seconds`           | Histogram | Duration in seconds of finished backups by routine and type (full/incremental)                                                 | routine, type            |
+| `aerospike_backup_service_backup_events_total`               | Counter   | Backup service job events by routine, type (full/incremental), and outcome (success, failure, canceled, retry, skip)           | routine, type, outcome   |
+| `aerospike_backup_service_backup_in_progress`                | Gauge     | Number of backups currently running for the given routine and backup type (full/incremental)                                   | routine, type            |
+| `aerospike_backup_service_backup_progress_pct`               | Gauge     | Progress of backup processes in percentage                                                                                     | routine, type            |
+| `aerospike_backup_service_last_successful_backup_timestamp`  | Gauge     | Unix timestamp (seconds) of the last successful backup per routine                                                             | routine, type            |
+| `aerospike_backup_service_restore_events_total`              | Counter   | Total completed restore jobs by outcome (success, failure, canceled)                                                           | outcome                  |
+| `aerospike_backup_service_restore_in_progress`               | Gauge     | Number of restore processes running                                                                                            |                          |
+| `aerospike_backup_service_server_backup_bytes`               | Gauge     | Bytes backed up by a namespace's server job, in the running or else the last finished backup                                   | routine, type, namespace |
+| `aerospike_backup_service_server_backup_records`             | Gauge     | Records backed up by a namespace's server job, in the running or else the last finished backup                                 | routine, type, namespace |
+| `aerospike_backup_service_server_backup_records_read_failed` | Gauge     | Records not read, and so missing from the backup, by a namespace's server job, in the running or else the last finished backup | routine, type, namespace |
+| `aerospike_backup_service_duration_millis`                   | Gauge     | Full backup duration in milliseconds (Deprecated: use aerospike_backup_service_backup_duration_seconds instead.)               |                          |
+| `aerospike_backup_service_failure_total`                     | Counter   | Full backup failure counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                            |                          |
+| `aerospike_backup_service_incremental_duration_millis`       | Gauge     | Incremental backup duration in milliseconds (Deprecated: use aerospike_backup_service_backup_duration_seconds instead.)        |                          |
+| `aerospike_backup_service_incremental_failure_total`         | Counter   | Incremental backup failure counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                     |                          |
+| `aerospike_backup_service_incremental_runs_total`            | Counter   | Successful incremental backup runs counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)             |                          |
+| `aerospike_backup_service_incremental_skip_total`            | Counter   | Incremental backup skip counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                        |                          |
+| `aerospike_backup_service_runs_total`                        | Counter   | Successful backup runs counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                         |                          |
+| `aerospike_backup_service_skip_total`                        | Counter   | Full backup skip counter (Deprecated: use aerospike_backup_service_backup_events_total instead.)                               |                          |
 <!-- /tag -->
 
 **Example PromQL Queries**
@@ -56,6 +59,16 @@ Use these queries in Grafana panels or the Prometheus expression browser to moni
 - ⏰ Time since the last successful full backup for a routine:
 
   `time() - aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1", type="full"}`
+
+- ⚠️ Records the server could not read in a routine's backups (server backup mode). A backup with a value above zero
+  lacks those records, although it counts as a success:
+
+  `aerospike_backup_service_server_backup_records_read_failed{routine="daily-ns1"} > 0`
+
+The `aerospike_backup_service_server_backup_*` gauges have one series per namespace of a routine's full and
+incremental backup. They show the running backup's server jobs, then keep the values of the finished backup until the
+next backup of that type starts. The values are kept in memory, so after a restart a series is absent until a backup
+finishes.
 
 **Example Prometheus Alert**
 

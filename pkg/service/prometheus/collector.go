@@ -12,18 +12,19 @@ import (
 const CollectInterval = 1 * time.Second
 
 type MetricsCollector struct {
-	mu            sync.Mutex
-	runningState  func() map[string]model.RoutineState
+	mu sync.Mutex
+	// routineStates returns the state of every configured routine by its name.
+	routineStates func() map[string]model.RoutineState
 	restoreCounts func() map[model.RestoreState]int
 }
 
 // NewMetricsCollector returns a MetricsCollector.
 func NewMetricsCollector(
-	runningState func() map[string]model.RoutineState,
+	routineStates func() map[string]model.RoutineState,
 	restoreCounts func() map[model.RestoreState]int,
 ) *MetricsCollector {
 	return &MetricsCollector{
-		runningState:  runningState,
+		routineStates: routineStates,
 		restoreCounts: restoreCounts,
 	}
 }
@@ -54,7 +55,7 @@ func (mc *MetricsCollector) collectMetrics() {
 }
 
 func (mc *MetricsCollector) collectBackupMetrics() {
-	runningState := mc.runningState()
+	runningState := mc.routineStates()
 
 	// set backup running gauge.
 	backupRunningGauge.Reset()
@@ -80,6 +81,41 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 			p := rs.Incremental.Progress * 100 // convert ratio to percent
 			backupProgressGauge.WithLabelValues(routineName, string(model.BackupTypeIncremental)).Set(p)
 		}
+	}
+
+	collectServerJobMetrics(runningState)
+}
+
+// collectServerJobMetrics sets the server job gauges of each routine and backup type. They are
+// reset first, so the series of a routine or a namespace that is gone disappear.
+func collectServerJobMetrics(states map[string]model.RoutineState) {
+	serverBackupRecordsGauge.Reset()
+	serverBackupBytesGauge.Reset()
+	serverBackupRecordsReadFailedGauge.Reset()
+
+	for routineName, state := range states {
+		setServerJobGauges(routineName, model.BackupTypeFull, shownServerJobs(state.Full, state.LastFullJobs))
+		setServerJobGauges(routineName, model.BackupTypeIncremental,
+			shownServerJobs(state.Incremental, state.LastIncrementalJobs))
+	}
+}
+
+// shownServerJobs returns the server jobs of the running backup, or of the last finished one
+// when none runs.
+func shownServerJobs(running *model.RunningJob, last []model.ServerBackupJob) []model.ServerBackupJob {
+	if running != nil {
+		return running.ServerJobs
+	}
+
+	return last
+}
+
+func setServerJobGauges(routineName string, backupType model.BackupType, jobs []model.ServerBackupJob) {
+	for _, job := range jobs {
+		labels := []string{routineName, string(backupType), job.Namespace}
+		serverBackupRecordsGauge.WithLabelValues(labels...).Set(float64(job.RecordsBackedUp))
+		serverBackupBytesGauge.WithLabelValues(labels...).Set(float64(job.BytesBackedUp))
+		serverBackupRecordsReadFailedGauge.WithLabelValues(labels...).Set(float64(job.RecordsReadFailed))
 	}
 }
 

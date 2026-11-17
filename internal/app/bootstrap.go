@@ -129,7 +129,7 @@ func InitComponents(
 	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
 	configApplier := service.NewConfigApplier(backupScheduler, components.registry, nsValidator, config)
 
-	metricsCollector := prometheus.NewMetricsCollector(components.registry.GetRunningState, restoreJobs.StatusCounts)
+	metricsCollector := prometheus.NewMetricsCollector(components.registry.GetRoutineStates, restoreJobs.StatusCounts)
 
 	srv := handlers.NewService(
 		config,
