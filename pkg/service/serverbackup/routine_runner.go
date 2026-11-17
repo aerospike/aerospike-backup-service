@@ -162,8 +162,8 @@ type backupJob struct {
 	logger    *slog.Logger
 }
 
-// Wait waits for the job to end. If the wait fails, or ctx is canceled, Wait aborts the job
-// before it returns.
+// Wait waits for the job to end. If the job had no status for unobservedJobTimeout, or ctx is
+// canceled, Wait aborts the job before it returns.
 func (j *backupJob) Wait(ctx context.Context) error {
 	status, err := j.poll(ctx)
 	if err != nil {

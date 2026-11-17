@@ -2,19 +2,13 @@ package serverbackup
 
 import (
 	"log/slog"
-	"testing"
 	"time"
 )
 
 var discardLogger = slog.New(slog.DiscardHandler)
 
-// shortenLostJobTimeout shortens lostJobTimeout for the test. The test must not be parallel.
-// Parallel tests start only after the sequential ones have ended, so none of them reads the
-// variable while it is shortened.
-func shortenLostJobTimeout(t *testing.T) {
-	t.Helper()
+// pollsUntilUnobserved is the number of failed polls that reaches unobservedJobTimeout.
+const pollsUntilUnobserved = int(unobservedJobTimeout / pollInterval)
 
-	previous := lostJobTimeout
-	lostJobTimeout = 1500 * time.Millisecond
-	t.Cleanup(func() { lostJobTimeout = previous })
-}
+// pollsWithinTimeout is a number of failed polls that stays within it.
+const pollsWithinTimeout = int(9 * time.Minute / pollInterval)

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aerospike/backup-go/pkg/asinfo"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
@@ -20,20 +19,18 @@ const (
 const (
 	// pollInterval is how often a running server job is asked for its status.
 	pollInterval = time.Second
+	// unobservedJobTimeout is how long a job may go without a status before pollJob gives up on
+	// it. Giving up aborts the job, so the bound outlasts a node restart.
+	unobservedJobTimeout = 10 * time.Minute
 	// cleanupTimeout bounds each wait made while cleaning up after a job: for an aborted job to
 	// end, and for a namespace to open.
 	cleanupTimeout = 30 * time.Second
 )
 
-// lostJobTimeout is how long a started server job may stay unreported before pollJob gives up on
-// it. A new job can be invisible for a poll or two, and a job the cluster lost sight of can come
-// back when the cluster settles. It is a variable so that tests can shorten it.
-var lostJobTimeout = 30 * time.Second
-
 // pollJob calls fetch for the status of the server job jobID every pollInterval and passes each
-// status to settled. It returns the last status when settled returns true or an error. When fetch
-// does not find the job, pollJob keeps polling until lostJobTimeout has passed since the job was
-// last reported. Any other error of fetch ends the wait. kind names the job in errors.
+// status to settled. It returns the last status when settled returns true or an error. A failed
+// fetch ends the wait only once unobservedJobTimeout has passed since the last status. kind names
+// the job in errors.
 func pollJob[S any](
 	ctx context.Context,
 	kind, jobID string,
@@ -46,24 +43,31 @@ func pollJob[S any](
 	defer ticker.Stop()
 
 	lastSeen := time.Now()
+	// fetchErr is nil while the job is observed.
+	var fetchErr error
 	for {
 		select {
 		case <-ctx.Done():
+			if fetchErr != nil {
+				return none, fmt.Errorf("%w, last status read: %w", ctx.Err(), fetchErr)
+			}
+
 			return none, ctx.Err()
 		case <-ticker.C:
 		}
 
 		status, err := fetch(ctx)
-		if errors.Is(err, asinfo.ErrNotFound) {
-			if time.Since(lastSeen) > lostJobTimeout {
-				return none, fmt.Errorf("%s %s not reported for %s: %w", kind, jobID, lostJobTimeout, err)
-			}
-			continue // a new job, or one the cluster lost sight of.
+		if err != nil && ctx.Err() != nil {
+			continue // the select reports the ended wait.
 		}
 		if err != nil {
-			return none, fmt.Errorf("failed to get status of %s %s: %w", kind, jobID, err)
+			if time.Since(lastSeen) > unobservedJobTimeout {
+				return none, fmt.Errorf("%s %s not observed for %s: %w", kind, jobID, unobservedJobTimeout, err)
+			}
+			fetchErr = err
+			continue
 		}
-		lastSeen = time.Now()
+		lastSeen, fetchErr = time.Now(), nil
 
 		done, err := settled(status)
 		if err != nil || done {

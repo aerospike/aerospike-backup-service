@@ -129,9 +129,9 @@ func (j *restoreJob) Status() model.RestoreRun {
 
 // Wait polls the job until it is complete and the namespace is open to clients. When the server
 // reports that the job has ended on every node, Wait only opens the namespace: there is nothing
-// to abort. When the job is still running, because it is blocked, its status is unavailable, or
-// ctx is canceled, Wait releases it. The cleanup does not use ctx, because a canceled job would
-// otherwise keep running on the server.
+// to abort. When the job is still running, because it is blocked, it had no status for
+// unobservedJobTimeout, or ctx is canceled, Wait releases it. The cleanup does not use ctx,
+// because a canceled job would otherwise keep running on the server.
 func (j *restoreJob) Wait(ctx context.Context) error {
 	status, err := j.poll(ctx, func(status *infomodels.ResponseRestoreState) (bool, error) {
 		j.readRecords.Store(status.Total)
@@ -143,7 +143,7 @@ func (j *restoreJob) Wait(ctx context.Context) error {
 		return nil
 	}
 
-	// The status is nil when the wait ended without one: a fetch error, a lost job or a canceled ctx.
+	// The status is nil when the wait ended without one: an unobserved job or a canceled ctx.
 	if status != nil && status.IsFinished() {
 		return errors.Join(err, j.releaseNamespace(context.WithoutCancel(ctx)))
 	}
