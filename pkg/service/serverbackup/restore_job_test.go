@@ -328,8 +328,76 @@ func TestRestoreJob_Wait_RecordsCounts(t *testing.T) {
 	assert.Equal(t, uint64(3), counters.SkippedRecords)
 }
 
-// TestRestoreJob_Wait_ReleasesNamespace checks that a strict restore that does not complete is
-// released, whatever stopped it.
+// TestRestoreJob_Wait_EndedJobIsNotAborted checks that a job the server failed or aborted is not
+// aborted again: a strict restore only opens its namespace, a fuzzy restore sends nothing more.
+func TestRestoreJob_Wait_EndedJobIsNotAborted(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		mode    model.RestoreMode
+		status  *infomodels.ResponseRestoreState
+		wantErr string
+	}{
+		{
+			name:    "strict failed",
+			mode:    model.RestoreModeStrict,
+			status:  &infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed, ErrorReason: "s3 GET 403"},
+			wantErr: "server restore job failed: s3 GET 403",
+		},
+		{
+			name: "strict aborted",
+			mode: model.RestoreModeStrict,
+			status: &infomodels.ResponseRestoreState{
+				State: infomodels.RestoreStateAborted, ErrorReason: "node left", AbortOrigin: infomodels.AbortOriginCluster,
+			},
+			wantErr: "server restore job was aborted (abort origin: cluster): node left",
+		},
+		{
+			// No clear is sent: the job has ended and would restore nothing into the cleared storage.
+			name: "strict failed while a node must be cleared",
+			mode: model.RestoreModeStrict,
+			status: &infomodels.ResponseRestoreState{
+				State: infomodels.RestoreStateFailed, Clear: infomodels.ClearStateRequired,
+			},
+			wantErr: "server restore job failed",
+		},
+		{
+			name:    "fuzzy failed",
+			mode:    model.RestoreModeFuzzy,
+			status:  &infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed},
+			wantErr: "server restore job failed",
+		},
+		{
+			name:    "fuzzy aborted",
+			mode:    model.RestoreModeFuzzy,
+			status:  &infomodels.ResponseRestoreState{State: infomodels.RestoreStateAborted},
+			wantErr: "server restore job was aborted",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+
+			infoClient := aerospike.NewMockInfoGetter(ctrl)
+			infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(tt.status, nil)
+			if tt.mode == model.RestoreModeStrict {
+				expectOpen(infoClient, "job")
+			}
+
+			err := newTestRestoreJob(infoClient, tt.mode).Wait(t.Context())
+
+			require.ErrorContains(t, err, tt.wantErr)
+			require.NotContains(t, err.Error(), "failed to abort")
+			require.NotContains(t, err.Error(), "failed to open namespace")
+		})
+	}
+}
+
+// TestRestoreJob_Wait_ReleasesNamespace checks that a strict restore whose job is still running is
+// released, whatever stopped the wait.
 func TestRestoreJob_Wait_ReleasesNamespace(t *testing.T) {
 	t.Parallel()
 
@@ -341,26 +409,6 @@ func TestRestoreJob_Wait_ReleasesNamespace(t *testing.T) {
 		clearErr error
 		wantErr  string
 	}{
-		{
-			name:    "failed",
-			status:  &infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed, ErrorReason: "s3 GET 403"},
-			wantErr: "server restore job failed: s3 GET 403",
-		},
-		{
-			name: "aborted",
-			status: &infomodels.ResponseRestoreState{
-				State: infomodels.RestoreStateAborted, ErrorReason: "node left", AbortOrigin: infomodels.AbortOriginCluster,
-			},
-			wantErr: "server restore job was aborted (abort origin: cluster): node left",
-		},
-		{
-			// No clear is sent: the job has ended and would restore nothing into the cleared storage.
-			name: "failed while a node must be cleared",
-			status: &infomodels.ResponseRestoreState{
-				State: infomodels.RestoreStateFailed, Clear: infomodels.ClearStateRequired,
-			},
-			wantErr: "server restore job failed",
-		},
 		{
 			name:      "status unavailable",
 			statusErr: errors.New("timeout"),
@@ -426,46 +474,18 @@ func TestRestoreJob_Wait_Canceled(t *testing.T) {
 	require.ErrorIs(t, newTestRestoreJob(infoClient, model.RestoreModeStrict).Wait(ctx), context.Canceled)
 }
 
-// TestRestoreJob_Wait_FuzzyAbortsOnly checks that a fuzzy restore that does not complete is
+// TestRestoreJob_Wait_FuzzyAbortsOnly checks that a fuzzy restore whose job is still running is
 // aborted and that its namespace, which it never closed, is not opened.
 func TestRestoreJob_Wait_FuzzyAbortsOnly(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 
 	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
-		&infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed}, nil)
+	infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(nil, errors.New("timeout"))
 	infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(nil)
 
 	err := newTestRestoreJob(infoClient, model.RestoreModeFuzzy).Wait(t.Context())
-	require.ErrorContains(t, err, "server restore job failed")
-}
-
-// TestRestoreJob_Wait_OpensAfterRefusedAbort checks that the namespace of a strict restore that
-// ended by itself is opened even though the server refuses to abort the job.
-func TestRestoreJob_Wait_OpensAfterRefusedAbort(t *testing.T) {
-	t.Parallel()
-	ctrl := gomock.NewController(t)
-
-	failed := &infomodels.ResponseRestoreState{
-		State: infomodels.RestoreStateFailed, NsState: infomodels.NamespaceStateFailed,
-	}
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	gomock.InOrder(
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(failed, nil),
-		infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(errors.New("job is not active")),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(failed, nil),
-		infoClient.EXPECT().OpenRestore(gomock.Any(), "bar").Return(nil),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(&infomodels.ResponseRestoreState{
-			State: infomodels.RestoreStateFailed, NsState: infomodels.NamespaceStateNone,
-		}, nil),
-	)
-
-	err := newTestRestoreJob(infoClient, model.RestoreModeStrict).Wait(t.Context())
-
-	require.ErrorContains(t, err, "server restore job failed")
-	require.ErrorContains(t, err, "failed to abort server restore job: job is not active")
-	require.NotContains(t, err.Error(), "failed to open namespace")
+	require.ErrorContains(t, err, "failed to get status of server restore job: timeout")
 }
 
 // TestRestoreJob_Wait_LostJob checks that a job the cluster stops reporting is given up on and
@@ -522,6 +542,22 @@ func expectRelease(infoClient *aerospike.MockInfoGetter, jobID string) {
 		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", jobID).Return(
 			&infomodels.ResponseRestoreState{
 				State: infomodels.RestoreStateAborted, NsState: infomodels.NamespaceStateNone,
+			}, nil),
+	)
+}
+
+// expectOpen expects the cleanup of a strict restore of namespace bar whose job the server ended:
+// poll until it has ended, open the namespace, poll until it is open. The job is not aborted.
+func expectOpen(infoClient *aerospike.MockInfoGetter, jobID string) {
+	gomock.InOrder(
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", jobID).Return(
+			&infomodels.ResponseRestoreState{
+				State: infomodels.RestoreStateFailed, NsState: infomodels.NamespaceStateFailed,
+			}, nil),
+		infoClient.EXPECT().OpenRestore(gomock.Any(), "bar").Return(nil),
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", jobID).Return(
+			&infomodels.ResponseRestoreState{
+				State: infomodels.RestoreStateFailed, NsState: infomodels.NamespaceStateNone,
 			}, nil),
 	)
 }

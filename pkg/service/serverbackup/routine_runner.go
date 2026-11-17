@@ -93,12 +93,6 @@ func (r *routineRunner) backupNamespaces(
 
 	var errs error
 	for i, namespace := range namespaces {
-		// StartBackup is sent even when ctx is already canceled, so stop here instead of starting
-		// another job.
-		if err := ctx.Err(); err != nil {
-			return errors.Join(errs, err)
-		}
-
 		operation.startNamespace(i)
 		modifiedAfter := lowerBound(bounds, namespace)
 		err := r.backupNamespace(ctx, infoClient, routine, runSpec, modifiedAfter, namespace, operation, logger)
