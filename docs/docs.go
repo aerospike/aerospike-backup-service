@@ -3468,7 +3468,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "last-full-jobs": {
-                    "description": "LastFullJobs: the server jobs of the last finished full backup, one per namespace, whether it\nsucceeded or not. Reported only in the server backup mode. The list is kept in memory, so it\nis empty after a restart until a full backup finishes.",
+                    "description": "LastFullJobs: the server jobs of the last finished full backup, one per namespace it started\na job for, whether it succeeded or not. Reported only in the server backup mode. The list is\nkept in memory, so it is empty after a restart until a full backup finishes.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/dto.ServerBackupJob"
@@ -3530,6 +3530,14 @@ const docTemplate = `{
                     "description": "The progress of the backup operation as a percentage.\nThis value is not guaranteed to be accurate.",
                     "type": "integer",
                     "example": 50
+                },
+                "server-jobs": {
+                    "description": "The server jobs of a running server-side backup, in the order they started: one per\nnamespace the backup has started a job for, each as the server last reported it.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ServerBackupJob"
+                    },
+                    "x-backup-mode": "server"
                 },
                 "start-time": {
                     "description": "The time when the operation started.",
@@ -3793,13 +3801,8 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "abort-origin": {
-                    "description": "What aborted the job: an operator request, a failure on a node or a cluster event.",
+                    "description": "What aborted the job, passed on as the server names it: operator for a request to abort,\nserver for a failure on a node, cluster for a cluster event.",
                     "type": "string",
-                    "enum": [
-                        "operator",
-                        "server",
-                        "cluster"
-                    ],
                     "example": "operator"
                 },
                 "bytes-backed-up": {
@@ -3843,7 +3846,7 @@ const docTemplate = `{
                     "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "state": {
-                    "description": "The server's job state, e.g. COMPLETE, FAILED or ABORTED.",
+                    "description": "The job state the server last reported, passed on as it is: an active state such as\nBASE_SCAN_ACTIVE while the job runs, then COMPLETE, FAILED or ABORTED. A job that stopped\nreporting keeps its last state.",
                     "type": "string",
                     "example": "COMPLETE"
                 }

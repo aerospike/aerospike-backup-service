@@ -20,6 +20,7 @@ func TestCurrentBackupStatus(t *testing.T) {
 		wantProgress        float64
 		wantDone, wantTotal uint64
 		wantMetrics         *models.Metrics
+		wantServerJobs      []model.ServerBackupJob
 		wantDuration        time.Duration
 	}{
 		"scan backup passes its counts through": {
@@ -30,14 +31,17 @@ func TestCurrentBackupStatus(t *testing.T) {
 			wantProgress: 0.4, wantDone: 40, wantTotal: 100, wantMetrics: metrics,
 			wantDuration: 150 * time.Second,
 		},
-		"a server backup sums the records its jobs backed up and knows no total": {
+		"a server backup lists its jobs, sums the records they backed up and knows no total": {
 			run: model.BackupRun{
 				Progress: 0.4,
 				Server: &model.ServerProgress{Jobs: []model.ServerBackupJob{
-					{RecordsBackedUp: 30}, {RecordsBackedUp: 12},
+					{JobID: "job-bar", RecordsBackedUp: 30}, {JobID: "job-baz", RecordsBackedUp: 12},
 				}},
 			},
 			wantProgress: 0.4, wantDone: 42,
+			wantServerJobs: []model.ServerBackupJob{
+				{JobID: "job-bar", RecordsBackedUp: 30}, {JobID: "job-baz", RecordsBackedUp: 12},
+			},
 			wantDuration: 150 * time.Second,
 		},
 		"a run with no scan counts no records": {
@@ -74,6 +78,7 @@ func TestCurrentBackupStatus(t *testing.T) {
 			assert.InDelta(t, tt.wantProgress, job.Progress, 1e-9)
 			assert.Equal(t, start, job.StartTime)
 			assert.Same(t, tt.wantMetrics, job.Metrics)
+			assert.Equal(t, tt.wantServerJobs, job.ServerJobs)
 			assert.Nil(t, job.FinishTime)
 			require.NotNil(t, job.EstimatedEndTime)
 			// Tolerance well under the 0.6s an uncapped estimate would add.
