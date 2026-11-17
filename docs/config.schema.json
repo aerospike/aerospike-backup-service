@@ -373,8 +373,7 @@
           "concurrent-incremental": {
             "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
             "type": "boolean",
-            "x-default": false,
-            "x-backup-mode": "scan",
+            "default": false,
             "nullable": true
           },
           "encryption": {
