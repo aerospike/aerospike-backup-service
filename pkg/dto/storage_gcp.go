@@ -28,7 +28,7 @@ type GcpStorage struct {
 	// The minimum size in bytes of individual GCP storage chunks.
 	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"52428800" minimum:"262144"`
 	// StorageClass defines the storage class for data and metadata objects.
-	StorageClass *GcpStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty" extensions:"x-nullable"`
+	StorageClass *GcpStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
 
 // gcsMinUploadChunkSize minimum size of multipart upload.
@@ -56,8 +56,7 @@ func (s *GcpStorage) Validate() error {
 		return errValidationInvalidValue("min-part-size", *s.MinPartSize, "at least 256KiB")
 	}
 
-	withAgent := s.hasSecretAgent()
-	if err := validateSecret("key-json", s.Key, withAgent); err != nil {
+	if err := validateSecretForm("key-json", s.Key); err != nil {
 		return err
 	}
 
@@ -69,6 +68,9 @@ func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 	agent, err := s.SecretAgentConfig.ToModel(config)
 	if err != nil {
+		return nil, err
+	}
+	if err := validateSecretAgent("key-json", s.Key, agent != nil); err != nil {
 		return nil, err
 	}
 

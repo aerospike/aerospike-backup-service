@@ -77,11 +77,10 @@ func (s *S3Storage) Validate() error {
 		return fmt.Errorf("invalid storage class: %w", err)
 	}
 
-	withAgent := s.hasSecretAgent()
-	if err := validateSecret("access-key-id", s.AccessKeyID, withAgent); err != nil {
+	if err := validateSecretForm("access-key-id", s.AccessKeyID); err != nil {
 		return err
 	}
-	if err := validateSecret("secret-access-key", s.SecretAccessKey, withAgent); err != nil {
+	if err := validateSecretForm("secret-access-key", s.SecretAccessKey); err != nil {
 		return err
 	}
 
@@ -93,6 +92,12 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 	agent, err := s.SecretAgentConfig.ToModel(config)
 	if err != nil {
+		return nil, err
+	}
+	if err := validateSecretAgent("access-key-id", s.AccessKeyID, agent != nil); err != nil {
+		return nil, err
+	}
+	if err := validateSecretAgent("secret-access-key", s.SecretAccessKey, agent != nil); err != nil {
 		return nil, err
 	}
 

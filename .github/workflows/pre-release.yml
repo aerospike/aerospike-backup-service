@@ -27,7 +27,7 @@ jobs:
       docker_versions_override: ${{ steps.docker-tags.outputs.VERSIONS_OVERRIDE }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
           egress-policy: audit
 
@@ -181,7 +181,9 @@ jobs:
       # 2.0.12 -- so `helm install` with no --version served the older service.
       #
       # Convention from v3.7.0 onward: the chart minor advances once per app minor line and the
-      # chart patch mirrors the app patch (v3.7.0 -> 2.1.0, v3.7.1 -> 2.1.1, v3.8.0 -> 2.2.0).
+      # chart patch mirrors the app patch. A breaking chart change bumps the chart major instead,
+      # keeping the patch rule: v3.7.0 shipped 2.1.0, v3.7.1 moved to 3.0.1 for breaking chart
+      # changes, so v3.7.2 -> 3.0.2 and v3.8.0 -> 3.1.0.
       # A hotfix on an older line then lands on that line's lower chart minor and cannot
       # overtake a newer release. Tags below the cutover predate the rule and are held only to
       # the ordering invariant.
@@ -359,12 +361,12 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
           egress-policy: audit
 
       - name: Login to JFrog
-        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        uses: step-security/setup-jfrog-cli@9d5fe0e81fc593a6c0c39bf83ad9a7b45587eed0 # v5.3.1
         env:
           JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
           JF_PROJECT: ${{ vars.JF_PROJECT }}
@@ -374,7 +376,7 @@ jobs:
 
       - name: Delete existing DEV release bundle
         id: delete-bundle
-        uses: aerospike/shared-workflows/.github/actions/delete-release-bundle@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
+        uses: aerospike/shared-workflows/.github/actions/delete-release-bundle@308f37e0cd5c7a6386a99ea7afc379d5a4ea9256 # v5.1.0
         with:
           bundle-name: aerospike-backup-service
           version: ${{ needs.prepare.outputs.package_version }}
@@ -404,7 +406,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: aerospike/shared-workflows/.github/workflows/reusable_execute-build.yaml@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
+    uses: aerospike/shared-workflows/.github/workflows/reusable_execute-build.yaml@308f37e0cd5c7a6386a99ea7afc379d5a4ea9256 # v5.1.0
     with:
       gh-workflows-ref: v5.0.0
       jf-project: ${{ vars.JF_PROJECT }}
@@ -477,7 +479,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: aerospike/shared-workflows/.github/workflows/reusable_sign-artifacts.yaml@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
+    uses: aerospike/shared-workflows/.github/workflows/reusable_sign-artifacts.yaml@308f37e0cd5c7a6386a99ea7afc379d5a4ea9256 # v5.1.0
     with:
       gh-workflows-ref: v5.0.0
       gh-unsigned-artifacts: packages-unsigned
@@ -493,7 +495,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: aerospike/shared-workflows/.github/workflows/reusable_deploy-artifacts.yaml@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
+    uses: aerospike/shared-workflows/.github/workflows/reusable_deploy-artifacts.yaml@308f37e0cd5c7a6386a99ea7afc379d5a4ea9256 # v5.1.0
     with:
       gh-workflows-ref: v5.0.0
       jf-project: ${{ vars.JF_PROJECT }}
@@ -511,7 +513,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: aerospike/shared-workflows/.github/workflows/reusable_execute-build.yaml@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
+    uses: aerospike/shared-workflows/.github/workflows/reusable_execute-build.yaml@308f37e0cd5c7a6386a99ea7afc379d5a4ea9256 # v5.1.0
     with:
       gh-workflows-ref: v5.0.0
       jf-project: ${{ vars.JF_PROJECT }}
@@ -543,7 +545,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: aerospike/shared-workflows/.github/workflows/reusable_sign-artifacts.yaml@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
+    uses: aerospike/shared-workflows/.github/workflows/reusable_sign-artifacts.yaml@308f37e0cd5c7a6386a99ea7afc379d5a4ea9256 # v5.1.0
     with:
       gh-workflows-ref: v5.0.0
       gh-unsigned-artifacts: helm-unsigned
@@ -575,18 +577,18 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
           egress-policy: audit
 
       - name: Download signed packages
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: packages-signed
           path: signed/packages
 
       - name: Download signed Helm chart
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: helm-signed
           path: signed/helm
@@ -706,7 +708,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: aerospike/shared-workflows/.github/workflows/reusable_deploy-artifacts.yaml@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
+    uses: aerospike/shared-workflows/.github/workflows/reusable_deploy-artifacts.yaml@308f37e0cd5c7a6386a99ea7afc379d5a4ea9256 # v5.1.0
     with:
       gh-workflows-ref: v5.0.0
       jf-project: ${{ vars.JF_PROJECT }}
@@ -729,15 +731,11 @@ jobs:
       id-token: write
       packages: write
       attestations: write
-    uses: aerospike/shared-workflows/.github/workflows/reusable_docker-build-deploy.yaml@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
+    uses: aerospike/shared-workflows/.github/workflows/reusable_docker-build-deploy.yaml@308f37e0cd5c7a6386a99ea7afc379d5a4ea9256 # v5.1.0
     with:
       jf-project: ${{ vars.JF_PROJECT }}
-      jf-registry: ${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}/${{ vars.JF_ARTIFACTORY_CONTAINER_DEV }}
-      # repo-scope defaults to "-docker-dev-local", but our actual repo naming convention
-      # (JF_ARTIFACTORY_CONTAINER_DEV) uses "-container-dev-local". Without this override, the
-      # image gets pushed to .../container-dev-local correctly, but the build-info creation
-      # step searches for it under .../docker-dev-local and fails with "Could not find docker
-      # image in Artifactory" since that's a different (likely nonexistent) repo.
+      # repo-scope defaults to "-docker-dev-local". Images go to JF_ARTIFACTORY_CONTAINER_DEV,
+      # which is <jf-project>-container-dev-local.
       repo-scope: -container-dev-local
       jf-build-name: aerospike-backup-service-container
       image-name: aerospike-backup-service
@@ -752,7 +750,7 @@ jobs:
         {"org.opencontainers.image.title":"Aerospike Backup Service",
         "org.opencontainers.image.description":"Aerospike Backup Service provides a set of REST APIs to schedule full and incremental backups. Additionally, these APIs can be used to restore data from a backup to a cluster",
         "org.opencontainers.image.documentation":"https://github.com/aerospike/aerospike-backup-service?tab=readme-ov-file#aerospike-backup-service",
-        "org.opencontainers.image.base.name":"registry.access.redhat.com/ubi9/ubi-minimal",
+        "org.opencontainers.image.base.name":"docker.io/alpine:3.24",
         "org.opencontainers.image.vendor":"Aerospike",
         "org.opencontainers.image.licenses":"Apache-2.0"}
 
@@ -765,7 +763,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: aerospike/shared-workflows/.github/workflows/reusable_create-release-bundle.yaml@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
+    uses: aerospike/shared-workflows/.github/workflows/reusable_create-release-bundle.yaml@308f37e0cd5c7a6386a99ea7afc379d5a4ea9256 # v5.1.0
     with:
       gh-workflows-ref: v5.0.0
       jf-project: ${{ vars.JF_PROJECT }}
@@ -802,12 +800,12 @@ jobs:
       BUNDLE_VERSION: ${{ needs.prepare.outputs.package_version }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
           egress-policy: audit
 
       - name: Login to JFrog
-        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        uses: step-security/setup-jfrog-cli@9d5fe0e81fc593a6c0c39bf83ad9a7b45587eed0 # v5.3.1
         env:
           JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
           JF_PROJECT: ${{ vars.JF_PROJECT }}
@@ -816,7 +814,7 @@ jobs:
           oidc-audience: ${{ vars.JF_OIDC_AUDIENCE }}
 
       - name: Promote release bundle to TEST
-        uses: aerospike/shared-workflows/.github/actions/promote-release-bundle@b4b1e9dc89314a2d542f9d6fe0ee150ad06f9860 # v5.0.0
+        uses: aerospike/shared-workflows/.github/actions/promote-release-bundle@308f37e0cd5c7a6386a99ea7afc379d5a4ea9256 # v5.1.0
         with:
           bundle-name: ${{ env.BUNDLE_NAME }}
           version: ${{ env.BUNDLE_VERSION }}

@@ -41,13 +41,13 @@ jobs:
       BUNDLE_VERSION: ${{ github.event.inputs.version }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
           egress-policy: audit
 
       - name: Login to JFrog
         id: jfrog-login
-        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        uses: step-security/setup-jfrog-cli@9d5fe0e81fc593a6c0c39bf83ad9a7b45587eed0 # v5.3.1
         env:
           JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
           JF_PROJECT: ${{ vars.JF_PROJECT }}
@@ -125,42 +125,15 @@ jobs:
       BUNDLE_VERSION: ${{ github.event.inputs.version }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
           egress-policy: audit
-
-      # Needed only to read the Helm chart's own version out of Chart.yaml at this tag --
-      # the chart's version is tracked independently of the package version (see prepare's
-      # HELM_VERSION vs PACKAGE_VERSION in pre-release.yml), so it can't be derived from
-      # BUNDLE_VERSION alone.
-      - name: Checkout Code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 1
-          fetch-tags: true
-          ref: ${{ env.BUNDLE_VERSION }}
-
-      - name: Resolve Helm chart version
-        id: helm-version
-        run: |
-          set -euo pipefail
-          CHART_FILE="helm/aerospike-backup-service/Chart.yaml"
-          if [ ! -f "$CHART_FILE" ]; then
-            echo "Chart file not found at $CHART_FILE" >&2
-            exit 1
-          fi
-          HELM_VERSION=$(yq '.version' "$CHART_FILE" | tr -d '\n')
-          if [ -z "$HELM_VERSION" ]; then
-            echo "Failed to extract Helm chart version." >&2
-            exit 1
-          fi
-          echo "HELM_VERSION=$HELM_VERSION" >> "$GITHUB_OUTPUT"
 
       # Only needed by the fallback paths in the download step below; the primary path is
       # anonymous. Non-fatal so a login failure doesn't block the anonymous path.
       - name: Login to JFrog
         continue-on-error: true
-        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        uses: step-security/setup-jfrog-cli@9d5fe0e81fc593a6c0c39bf83ad9a7b45587eed0 # v5.3.1
         env:
           JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
           JF_PROJECT: ${{ vars.JF_PROJECT }}
@@ -176,11 +149,9 @@ jobs:
       # only if the anonymous call fails or finds nothing.
       - name: Download signed artifacts from JFrog PROD
         env:
-          HELM_VERSION: ${{ steps.helm-version.outputs.HELM_VERSION }}
           JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
           DEB_REPO: ${{ vars.JF_ARTIFACTORY_DEB_PROD }}
           RPM_REPO: ${{ vars.JF_ARTIFACTORY_RPM_PROD }}
-          HELM_REPO: ${{ vars.JF_ARTIFACTORY_HELM_PROD }}
         run: |
           set -euxo pipefail
           # jf rt search's --bundle filter turned out not to reliably list release-bundle
@@ -220,27 +191,29 @@ jobs:
 
           search_repo "${DEB_REPO}" "${BUNDLE_VERSION}" deb-artifacts.json
           search_repo "${RPM_REPO}" "${BUNDLE_VERSION}" rpm-artifacts.json
-          search_repo "${HELM_REPO}" "${HELM_VERSION}" helm-artifacts.json
+          # The Helm chart is deliberately NOT searched for or attached: it is distributed only
+          # through the Helm repository (JFrog PROD, mirrored by artifact-publisher), never as a
+          # GitHub Release asset.
 
-          jq -s 'add' deb-artifacts.json rpm-artifacts.json helm-artifacts.json > all-artifacts.json
+          jq -s 'add' deb-artifacts.json rpm-artifacts.json > all-artifacts.json
 
           # Those repos are shared by every product in the JFrog project and the only filter
           # above is the `version` property, so another product carrying the same version
           # string comes back in the same result set -- absctl and aerospike-backup-service
           # both published v0.0.0-test-... into database-*-test-local, and a run there matched
           # 20 artifacts of each, which would have attached the other product's packages to
-          # this release. Keep only this bundle's own artifacts: nfpm and helm name them
-          # "<pkg>_<version>_<arch>.deb", "<pkg>-<version>-<release>.<arch>.rpm" and
-          # "<pkg>-<chart-version>.tgz".
+          # this release. Keep only this bundle's own packages: nfpm names them
+          # "<pkg>_<version>_<arch>.deb" and "<pkg>-<version>-<release>.<arch>.rpm".
           jq --arg pkg "${BUNDLE_NAME}" '[ .[] | select(
                (.path | split("/") | last) as $f
-               | ($f | startswith($pkg + "_")) or ($f | startswith($pkg + "-"))
+               | (($f | startswith($pkg + "_")) or ($f | startswith($pkg + "-")))
+                 and ($f | test("\\.(deb|rpm)$"))
              ) ]' all-artifacts.json > bundle-artifacts.json
           cat bundle-artifacts.json
 
           jq -r '.[].path' bundle-artifacts.json > artifact-paths.txt
           if [ ! -s artifact-paths.txt ]; then
-            echo "::error::No ${BUNDLE_NAME} package/Helm artifacts found for ${BUNDLE_NAME}:${BUNDLE_VERSION} (helm ${HELM_VERSION}) in ${DEB_REPO}, ${RPM_REPO}, or ${HELM_REPO} (searched $(jq 'length' all-artifacts.json) artifact(s) at those versions, none of them ${BUNDLE_NAME}'s)." >&2
+            echo "::error::No ${BUNDLE_NAME} packages found for ${BUNDLE_NAME}:${BUNDLE_VERSION} in ${DEB_REPO} or ${RPM_REPO} (searched $(jq 'length' all-artifacts.json) artifact(s) at those versions, none of them ${BUNDLE_NAME}'s)." >&2
             exit 1
           fi
 
@@ -259,13 +232,11 @@ jobs:
               echo "::warning::Anonymous download of ${artifact_path} failed; falling back to jf rt download."
               jf rt download "${artifact_path}" release-assets/ --flat=true
             fi
-            # GPG/prov signature files are deterministic siblings of the primary artifact and
-            # don't carry their own "version" property, so fetch them by direct sibling path
-            # instead of a second search. Packages carry a GPG .asc, the Helm chart a .prov.
-            sig=asc
-            [[ "${artifact_path}" == *.tgz ]] && sig=prov
-            anonymous_download "${artifact_path}.${sig}" ||
-              jf rt download "${artifact_path}.${sig}" release-assets/ --flat=true --fail-no-op=false || true
+            # GPG .asc signature files are deterministic siblings of the package and don't
+            # carry their own "version" property, so fetch them by direct sibling path instead
+            # of a second search.
+            anonymous_download "${artifact_path}.asc" ||
+              jf rt download "${artifact_path}.asc" release-assets/ --flat=true --fail-no-op=false || true
           done < artifact-paths.txt
 
       - name: Write checksums from JFrog metadata
@@ -285,7 +256,7 @@ jobs:
           find release-assets -type f | sort
 
       - name: Publish GitHub pre-release
-        uses: step-security/action-gh-release@d2093dbdaf0c6507874908247e14bbc4dee6a72d # v3.0.1
+        uses: step-security/action-gh-release@44319d37c8b7966bf07f89f0cbf63408141446df # v3.0.3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ env.BUNDLE_VERSION }}
@@ -300,8 +271,6 @@ jobs:
             release-assets/**/*.deb.asc
             release-assets/**/*.rpm.asc
             release-assets/**/*.sha256
-            release-assets/**/*.tgz
-            release-assets/**/*.tgz.prov
 
       - name: Summarize published release
         if: always()

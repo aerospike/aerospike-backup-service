@@ -112,7 +112,7 @@ func TestRestorePolicy_Validate_Duplicates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.policy.Validate(ValidationDefault)
+			err := tt.policy.Validate()
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.wantErr)
 		})

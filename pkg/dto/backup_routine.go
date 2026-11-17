@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/cron"
 	as "github.com/aerospike/aerospike-client-go/v8"
-	"github.com/reugn/go-quartz/quartz"
 )
 
 const maxChunks = 10_000
@@ -122,11 +122,11 @@ func (r *BackupRoutine) Validate() error {
 	if r.Storage == "" {
 		return errValidationEmptyField("storage")
 	}
-	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
+	if err := validateCron(r.IntervalCron); err != nil {
 		return fmt.Errorf("backup interval string '%s' invalid: %w", r.IntervalCron, err)
 	}
 	if r.IncrIntervalCron != "" { // incremental interval is optional
-		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
+		if err := validateCron(r.IncrIntervalCron); err != nil {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IncrIntervalCron, err)
 		}
 	}
@@ -200,6 +200,14 @@ func validateFilterExpression(filterExpression string, setList []string) error {
 	}
 
 	return nil
+}
+
+// validateCron rejects an expression that does not parse or will never fire again, such as one
+// pinned to a past year: the scheduler cannot schedule either.
+func validateCron(expression string) error {
+	_, err := cron.NewSchedule(expression, time.UTC).NextTrigger()
+
+	return err
 }
 
 func validatePartitionList(partitionList string) error {
@@ -294,6 +302,10 @@ func (r *BackupRoutine) ToModel(
 	secretAgent, err := resolveRoutineSecretAgent(r.SecretAgent, config.SecretAgents)
 	if err != nil {
 		return nil, err
+	}
+	// The policy's key-secret is resolved with this routine's agent.
+	if err := validateEncryptionKeyAgent(policy.EncryptionPolicy, secretAgent); err != nil {
+		return nil, fmt.Errorf("policy '%s': %w", r.BackupPolicy, err)
 	}
 
 	return &model.BackupRoutine{
@@ -406,7 +418,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
 	r.ScheduleTimezone = ScheduleTimezone(m.Timezone.Configured)
-	r.Namespaces = ptr.Of(newNamespaceNames(m.Namespaces))
+	r.Namespaces = new(newNamespaceNames(m.Namespaces))
 	r.SetList = m.SetList
 	r.BinList = m.BinList
 	r.RackList = m.RackList

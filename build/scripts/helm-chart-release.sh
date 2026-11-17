@@ -6,7 +6,7 @@ NEXT_HELM_CHART_VERSION="$1"
 # only surfaces much later, as an opaque failure in the release pipeline.
 if [ -z "$NEXT_HELM_CHART_VERSION" ]; then
   echo "helm-chart-release: NEXT_HELM_CHART_VERSION is required, e.g." >&2
-  echo "  NEXT_HELM_CHART_VERSION=2.1.0 make helm-chart-release" >&2
+  echo "  NEXT_HELM_CHART_VERSION=3.1.0 make helm-chart-release" >&2
   exit 1
 fi
 
@@ -18,10 +18,11 @@ fi
 WORKSPACE="$(git rev-parse --show-toplevel)"
 APP_VERSION="$(cat "$WORKSPACE"/VERSION | cut -c 2-)"
 
-# The chart minor advances once per app minor line and the chart patch mirrors the app patch,
-# so that charts sort in the same order as the app versions they ship. pre-release.yml enforces
-# this for final releases; checking here too keeps the failure local to the machine cutting the
-# release. One-off test tags (vX.Y.Z-suffix) pick their own chart version and skip this rule.
+# The chart minor advances once per app minor line (the chart major, for a breaking chart change)
+# and the chart patch mirrors the app patch, so that charts sort in the same order as the app
+# versions they ship. pre-release.yml enforces this for final releases; checking here too keeps
+# the failure local to the machine cutting the release. One-off test tags (vX.Y.Z-suffix) pick
+# their own chart version and skip this rule.
 #
 # The rule only applies from CUTOVER onward, matching pre-release.yml's own guard. Lines below it
 # predate the convention and already carry chart versions that cannot satisfy it: the 3.6 line
@@ -40,8 +41,8 @@ if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' && ! lower "$APP_VE
   CHART_PATCH="${NEXT_HELM_CHART_VERSION##*.}"
   if [ "$CHART_PATCH" != "$APP_PATCH" ]; then
     echo "helm-chart-release: app $APP_VERSION needs a chart version ending in .$APP_PATCH," >&2
-    echo "  got $NEXT_HELM_CHART_VERSION. A new minor line bumps the chart minor (3.7.0 -> 2.1.0);" >&2
-    echo "  a hotfix bumps the chart patch (3.7.1 -> 2.1.1)." >&2
+    echo "  got $NEXT_HELM_CHART_VERSION. A new minor line bumps the chart minor (3.8.0 -> 3.1.0);" >&2
+    echo "  a hotfix bumps the chart patch (3.7.2 -> 3.0.2)." >&2
     exit 1
   fi
 fi

@@ -1,0 +1,103 @@
+name: Deploy an AKO-managed Aerospike cluster
+description: >
+  Applies a two-node in-memory AerospikeCluster, running the latest release of the second-newest
+  minor line of aerospike-server-enterprise, and waits until both pods are Ready. The Aerospike
+  Kubernetes Operator, its service account and the aerospike-secret Secret (features.conf) must
+  already exist in kubectl-namespace. Dumps the server logs and the cluster status if the pods
+  never become Ready.
+
+inputs:
+  kubectl-namespace:
+    description: Kubernetes namespace to create the AerospikeCluster in
+    required: true
+  asdb-namespace:
+    description: Aerospike namespace to configure
+    required: false
+    default: test
+
+runs:
+  using: composite
+  steps:
+    - name: Deploy the Aerospike cluster
+      shell: bash
+      env:
+        K8S_NAMESPACE: ${{ inputs.kubectl-namespace }}
+        ASDB_NAMESPACE: ${{ inputs.asdb-namespace }}
+      run: |
+        set -euo pipefail
+
+        # Latest release of the second-newest minor line of the enterprise image. Enterprise tags
+        # are four-part (e.g. 8.1.2.5); there is no X.Y.0 tag to derive from the community repo.
+        ASDB_VERSION="$(curl -sf 'https://hub.docker.com/v2/repositories/aerospike/aerospike-server-enterprise/tags?page_size=100' \
+          | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$"))' | sort -V \
+          | awk -F. '{line=$1"."$2; last[line]=$0; if (!(line in seen)) {seen[line]=1; order[++n]=line}} END {if (n>1) print last[order[n-1]]}')"
+        if [ -z "$ASDB_VERSION" ]; then
+          echo "::error::Could not determine an aerospike-server-enterprise version"
+          exit 1
+        fi
+        echo "Using aerospike-server-enterprise:${ASDB_VERSION}"
+
+        cat <<EOF | kubectl apply -f -
+        apiVersion: asdb.aerospike.com/v1
+        kind: AerospikeCluster
+        metadata:
+          name: aerocluster
+          namespace: ${K8S_NAMESPACE}
+        spec:
+          aerospikeConfig:
+            namespaces:
+              - name: ${ASDB_NAMESPACE}
+                replication-factor: 2
+                storage-engine:
+                  data-size: 1073741824
+                  type: memory
+            network:
+              fabric:
+                port: 3001
+              heartbeat:
+                port: 3002
+              service:
+                port: 3000
+            service:
+              feature-key-file: /etc/aerospike/secret/features.conf
+          image: "aerospike/aerospike-server-enterprise:${ASDB_VERSION}"
+          podSpec:
+            multiPodPerHost: true
+          size: 2
+          storage:
+            volumes:
+              - aerospike:
+                  path: /etc/aerospike/secret
+                name: aerospike-config-secret
+                source:
+                  secret:
+                    secretName: aerospike-secret
+          validationPolicy:
+            skipWorkDirValidate: true
+            skipXdrDlogFileValidate: true
+        EOF
+
+        echo "Waiting for the Aerospike cluster"
+        # The operator creates the pods asynchronously, and `kubectl wait --for=create` with
+        # several names fails with NotFound instead of waiting, so poll until both exist.
+        for i in $(seq 1 60); do
+          kubectl get pod aerocluster-0-0 aerocluster-0-1 --namespace "$K8S_NAMESPACE" >/dev/null 2>&1 && break
+          if [ "$i" -eq 60 ]; then
+            echo "::error::Aerospike pods were not created within 5 minutes"
+            kubectl get aerospikecluster,statefulset,pods --namespace "$K8S_NAMESPACE"
+            exit 1
+          fi
+          sleep 5
+        done
+        if ! kubectl wait --for=condition=Ready pod/aerocluster-0-0 pod/aerocluster-0-1 --namespace "$K8S_NAMESPACE" --timeout=600s; then
+          for pod in aerocluster-0-0 aerocluster-0-1; do
+            echo "::group::${pod} aerospike-server logs (previous crash)"
+            kubectl logs "$pod" -c aerospike-server --previous --namespace "$K8S_NAMESPACE" --tail=100 || true
+            echo "::endgroup::"
+            echo "::group::${pod} aerospike-server logs (current)"
+            kubectl logs "$pod" -c aerospike-server --namespace "$K8S_NAMESPACE" --tail=100 || true
+            echo "::endgroup::"
+          done
+          kubectl get aerospikecluster aerocluster --namespace "$K8S_NAMESPACE" -o jsonpath='{.status}' || true
+          exit 1
+        fi

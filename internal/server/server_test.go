@@ -12,7 +12,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,7 +35,7 @@ func newTestServerHTTP(t *testing.T, httpCfg *model.ServerConfigHTTP) *serverHTT
 
 	svc := handlers.NewService(
 		model.NewConfig(),
-		nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
 	return NewServerHTTP(httpCfg, svc).(*serverHTTP)
@@ -99,8 +98,8 @@ func TestNewServerHTTP_ReadTimeoutClosesSilentClient(t *testing.T) {
 	srv := newTestServerHTTP(t, &model.ServerConfigHTTP{
 		ListenerConfig: model.ListenerConfig{
 			// ReadHeaderTimeout of 0 falls back to ReadTimeout in net/http.
-			Timeout:     ptr.Of(time.Duration(0)),
-			ReadTimeout: ptr.Of(readTimeout),
+			Timeout:     new(time.Duration(0)),
+			ReadTimeout: new(readTimeout),
 		},
 	})
 	require.Equal(t, time.Duration(0), srv.ReadHeaderTimeout)

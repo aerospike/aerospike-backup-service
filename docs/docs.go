@@ -535,6 +535,18 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -667,6 +679,18 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -707,8 +731,20 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "409": {
                         "description": "A cluster with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -746,8 +782,20 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "409": {
                         "description": "The cluster is still used by a backup routine",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -860,6 +908,18 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -900,8 +960,20 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "409": {
                         "description": "A policy with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -939,8 +1011,20 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "409": {
                         "description": "The policy is still used by a backup routine",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -1059,6 +1143,18 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1099,8 +1195,20 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "409": {
                         "description": "A routine with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -1137,6 +1245,18 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1166,6 +1286,18 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1192,6 +1324,18 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "The specified routine was not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -1304,6 +1448,18 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -1344,8 +1500,20 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "409": {
                         "description": "A storage with that name already exists",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -1383,8 +1551,20 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
+                    "405": {
+                        "description": "The configuration source is read-only",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "409": {
                         "description": "The storage is still used by a backup routine",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "The configuration could not be persisted",
                         "schema": {
                             "type": "string"
                         }
@@ -1913,6 +2093,7 @@ const docTemplate = `{
                 "schedule-timezone": {
                     "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or any IANA timezone name resolvable\nby Go's time.LoadLocation (for example, America/New_York or Japan).\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nPrefer canonical Area/Location names: legacy aliases such as EST resolve as\nfixed UTC-5 with no DST, which is rarely what \"Eastern Time\" is meant to be.\nChanging this service-level default requires a restart.",
                     "type": "string",
+                    "default": "UTC",
                     "x-nullable": true,
                     "example": "America/New_York"
                 },
@@ -2046,6 +2227,7 @@ const docTemplate = `{
                 "concurrent-incremental": {
                     "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
                     "type": "boolean",
+                    "default": false,
                     "x-nullable": true
                 },
                 "encryption": {
@@ -2145,6 +2327,7 @@ const docTemplate = `{
                 "use-scan-compression": {
                     "description": "Enables built-in compression during scan operation.\nValid for Aerospike Server Enterprise Edition only.",
                     "type": "boolean",
+                    "default": false,
                     "x-nullable": true
                 },
                 "with-cluster-configuration": {
@@ -2549,8 +2732,7 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.GcpStorageClass"
                         }
-                    ],
-                    "x-nullable": true
+                    ]
                 }
             }
         },
@@ -2842,7 +3024,7 @@ const docTemplate = `{
             }
         },
         "dto.RestoreNamespace": {
-            "description": "RestoreNamespace specifies an alternative namespace name for the restore operation.",
+            "description": "RestoreNamespace specifies an alternative namespace name for the restore operation. Only a single namespace can be remapped per restore.",
             "type": "object",
             "required": [
                 "destination",
@@ -2923,7 +3105,7 @@ const docTemplate = `{
                     "example": 32
                 },
                 "namespace": {
-                    "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
+                    "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to ` + "`" + `source` + "`" + `, otherwise it is rejected. For a restore by path, point\n` + "`" + `backup-data-path` + "`" + ` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RestoreNamespace"
@@ -3446,7 +3628,7 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.ConnectionType"
                         }
                     ],
-                    "example": "tcp"
+                    "example": "TCP"
                 },
                 "is-base64": {
                     "description": "Flag that shows if secret agent responses are encrypted with base64.",
@@ -3637,10 +3819,6 @@ const docTemplate = `{
                 "min-version": {
                     "description": "Minimum accepted TLS protocol version.",
                     "default": "1.2",
-                    "enum": [
-                        "1.2",
-                        "1.3"
-                    ],
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.TLSMinVersion"
@@ -3914,7 +4092,7 @@ const docTemplate = `{
                     "example": 32
                 },
                 "namespace": {
-                    "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
+                    "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to ` + "`" + `source` + "`" + `, otherwise it is rejected. For a restore by path, point\n` + "`" + `backup-data-path` + "`" + ` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RestoreNamespace"
@@ -4024,7 +4202,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "v3.7.0",
+	Version:          "v3.7.1",
 	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},

@@ -2,14 +2,19 @@
 // honest.
 //
 // The generated documentation is reproduced byte-for-byte from the code, so it
-// cannot drift. Three things outside it can, and the tests here check each one
+// cannot drift. Five things outside it can, and the tests here check each one
 // against the code, so a doc that no longer matches fails the build rather than
 // a support ticket:
 //   - a default written down in a `default:` struct tag and again in the code
 //     that applies it;
 //   - the routes docs/openapi.json describes and the ones the router registers;
 //   - a field name written in prose, against the properties docs/openapi.json
-//     declares.
+//     declares;
+//   - the Go version the Docker build defaults to, against the go.mod directive;
+//   - the Helm chart's commented configuration reference in values.yaml, which
+//     must decode strictly and match the published defaults and required fields,
+//     and the backupServiceConfig examples in the chart README, which must load
+//     the way the service loads its configuration file.
 package doccheck
 
 import (

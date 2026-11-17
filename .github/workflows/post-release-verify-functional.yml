@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
           egress-policy: audit
 
@@ -50,7 +50,7 @@ jobs:
           path: workflow-actions
 
       - name: Login to JFrog
-        uses: step-security/setup-jfrog-cli@53aeacb709fce45d0baf69a13ec3342f7e2d71a9 # v5.1.0
+        uses: step-security/setup-jfrog-cli@9d5fe0e81fc593a6c0c39bf83ad9a7b45587eed0 # v5.3.1
         env:
           JF_URL: ${{ vars.JF_ARTIFACTORY_URL }}
           JF_PROJECT: ${{ vars.JF_PROJECT }}
@@ -61,7 +61,7 @@ jobs:
       # setup-jfrog-cli configures the `jf` CLI only; `docker pull` reads Docker's own
       # credential store, so the registry needs a separate login.
       - name: Login to JFrog container registry
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ${{ vars.JF_ARTIFACTORY_REGISTRY_URL }}
           username: ${{ secrets.ARTIFACTORY_USER }}

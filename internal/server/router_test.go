@@ -15,7 +15,7 @@ func newTestServeMux(t *testing.T) *http.ServeMux {
 
 	svc := handlers.NewService(
 		model.NewConfig(),
-		nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
 	return NewServeMux("/v1", "/", svc)

@@ -4,29 +4,54 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/redact"
 )
 
-// validateSecret checks a value that may be a Secret Agent reference and reports the result
-// against the field it came from. redact.Secret is shared with pkg/model, so this cannot be
-// a method on it; it belongs here with the rest of this package's field validators.
+// validateSecretForm checks that a value that looks like a Secret Agent reference is a
+// well-formed one. It is the whole check Validate makes on a secret; whether a reference has an
+// agent is checked by validateSecretAgent in the ToModel that resolves that agent. redact.Secret
+// is shared with pkg/model, so these cannot be methods on it; they belong here with the rest of
+// this package's field validators.
 //
 // Neither message carries a literal credential. A well-formed reference is not sensitive,
 // which is exactly what DisplayString returns unchanged. A malformed one is reported without
-// its value, because a literal password that happens to start with "secrets:" lands there.
-func validateSecret(field string, secret redact.Secret, withAgent bool) error {
-	switch {
-	case secret == "":
-		return nil
-
-	case secret.IsMalformedRef():
+// its value, because a literal password that happens to start with "secrets:" lands here.
+func validateSecretForm(field string, secret redact.Secret) error {
+	if secret.IsMalformedRef() {
 		return errValidationSecret(field, errors.New("must be in the form secrets:<resource>:<key>"))
+	}
 
-	case secret.IsRef() && !withAgent:
-		return errValidationSecret(field, fmt.Errorf(
-			"%q requires secret agent configuration (secret-agent or secret-agent-name)", secret.DisplayString()))
+	return nil
+}
 
-	default:
+// validateSecretAgent checks that a reference has a Secret Agent to be resolved with.
+func validateSecretAgent(field string, secret redact.Secret, hasAgent bool) error {
+	if secret.IsRef() && !hasAgent {
+		return errValidationSecret(field, fmt.Errorf("%q requires a secret agent", secret.DisplayString()))
+	}
+
+	return nil
+}
+
+// validateEncryptionKeyAgent checks that a policy's key-secret reference has the agent it is
+// resolved with: a policy owns none, so the ToModel of the routine or request that runs it calls this.
+func validateEncryptionKeyAgent(policy *model.EncryptionPolicy, agent *model.SecretAgent) error {
+	if policy == nil {
 		return nil
 	}
+
+	return validateSecretAgent("key-secret", policy.KeySecret, agent != nil)
+}
+
+// ValidateNoRedacted rejects a "[secret]" placeholder that has no stored value behind it, by
+// merging the value against nothing. On the API paths MergeSecrets has already replaced every
+// placeholder it can, so only an unmerged one - from a file or a restore request - is left.
+func ValidateNoRedacted[T any](v *T) error {
+	if err := decoder.MergeSecrets(v, new(T)); err != nil {
+		return fmt.Errorf("%w: %w", errValidation, err)
+	}
+
+	return nil
 }

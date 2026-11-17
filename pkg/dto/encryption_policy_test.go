@@ -30,7 +30,7 @@ func TestEncryptionPolicy_Validate_Success(t *testing.T) {
 
 	for name, policy := range tests {
 		t.Run(name, func(t *testing.T) {
-			require.NoError(t, policy.Validate(ValidationDefault))
+			require.NoError(t, policy.Validate())
 		})
 	}
 }
@@ -95,7 +95,7 @@ func TestEncryptionPolicy_Validate_Invalid(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := tc.policy.Validate(ValidationDefault)
+			err := tc.policy.Validate()
 			require.ErrorIs(t, err, tc.wantIsErr)
 		})
 	}

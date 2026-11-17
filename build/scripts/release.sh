@@ -5,7 +5,7 @@ NEXT_VERSION="$1"
 # the empty string, quietly corrupting VERSION, info.go and the compose file.
 if [ -z "$NEXT_VERSION" ]; then
   echo "release: NEXT_VERSION is required, e.g." >&2
-  echo "  NEXT_VERSION=v3.7.0 NEXT_HELM_CHART_VERSION=2.1.0 make release" >&2
+  echo "  NEXT_VERSION=v3.8.0 NEXT_HELM_CHART_VERSION=3.1.0 make release" >&2
   exit 1
 fi
 

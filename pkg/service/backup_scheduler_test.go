@@ -84,9 +84,7 @@ func TestScheduleRoutines(t *testing.T) {
 				nil,
 				nil,
 			))
-			err := bs.ScheduleRoutines(routines)
-
-			require.NoError(t, err)
+			bs.ScheduleRoutines(routines)
 		})
 	}
 }
@@ -117,11 +115,11 @@ func TestScheduleRoutines_UsesRoutineTimezone(t *testing.T) {
 		scheduler,
 		NewBackupOrchestrator(nil, nil, nil, nil, nil),
 	)
-	require.NoError(t, backupScheduler.ScheduleRoutines([]*model.BackupRoutine{{
+	backupScheduler.ScheduleRoutines([]*model.BackupRoutine{{
 		Name:         "ny-timezone",
 		IntervalCron: "@daily",
 		Timezone:     testLocation,
-	}}))
+	}})
 }
 
 func TestBackupScheduler_DeleteJob(t *testing.T) {

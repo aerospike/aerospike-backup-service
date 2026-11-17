@@ -219,6 +219,15 @@ func (c *Config) AddSecretAgent(name string, agent *SecretAgent) error {
 	return nil
 }
 
+// WithBackupConfig returns a configuration that holds other as its backup configuration and
+// keeps c's service configuration. c itself is untouched.
+func (c *Config) WithBackupConfig(other *BackupConfig) *Config {
+	return &Config{
+		backupConfig:  *other,
+		ServiceConfig: c.ServiceConfig,
+	}
+}
+
 func (c *Config) SetBackupConfig(other *BackupConfig) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

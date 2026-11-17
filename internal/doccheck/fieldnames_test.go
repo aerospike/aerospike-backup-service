@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -23,7 +24,23 @@ var fieldToken = regexp.MustCompile("`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`")
 // field that does not exist.
 //
 //nolint:gochecknoglobals // a table, read by the test below.
-var nonFieldTokens = map[string]bool{}
+var nonFieldTokens = map[string]bool{
+	// The Helm chart README names its JFrog repository, the resources of its example
+	// release, and the chart's init container, none of which is a configuration field.
+	"database-helm-prod-public-local": true,
+	"abs-aerospike-backup-service":    true,
+	"config-injector":                 true,
+}
+
+// helmDocFiles are the Helm chart documents, checked alongside docFiles. The
+// chart README and the commented configuration reference in values.yaml name
+// configuration fields just as the documents under docs/ do.
+//
+//nolint:gochecknoglobals // a table, read by the test below.
+var helmDocFiles = []string{
+	"helm/aerospike-backup-service/README.md",
+	"helm/aerospike-backup-service/values.yaml",
+}
 
 const openapi = "docs/openapi.json"
 
@@ -42,7 +59,7 @@ func TestDocumentedFieldNamesExist(t *testing.T) {
 
 	root := doccheck.Root(t)
 
-	for _, file := range docFiles {
+	for _, file := range slices.Concat(docFiles, helmDocFiles) {
 		content, err := os.ReadFile(filepath.Join(root, file))
 		require.NoErrorf(t, err, "read %s", file)
 

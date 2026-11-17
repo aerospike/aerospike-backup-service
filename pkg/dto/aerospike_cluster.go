@@ -65,12 +65,7 @@ func (a *AerospikeCluster) Validate() error {
 		return fmt.Errorf("credentials validation error: %w", err)
 	}
 
-	tlsOpts := ValidationDefault
-	if a.Credentials != nil && a.Credentials.hasSecretAgent() {
-		tlsOpts = ValidationWithSecretAgent
-	}
-
-	if err := a.TLS.Validate(tlsOpts); err != nil {
+	if err := a.TLS.Validate(); err != nil {
 		return fmt.Errorf("tls validation error: %w", err)
 	}
 
@@ -149,6 +144,14 @@ func (a *AerospikeCluster) ToModel(config *model.Config) (*model.AerospikeCluste
 		return nil, fmt.Errorf("credentials error: %w", err)
 	}
 
+	// The TLS key-file password is resolved with the credentials' agent (secret.ClusterTLSResolver).
+	if a.TLS != nil {
+		err := validateSecretAgent("key-file-password", a.TLS.KeyfilePassword, clusterSecretAgent(credentials) != nil)
+		if err != nil {
+			return nil, fmt.Errorf("tls: %w", err)
+		}
+	}
+
 	return &model.AerospikeCluster{
 		ClusterLabel:         a.ClusterLabel,
 		SeedNodes:            a.seedNodesToModel(),
@@ -159,6 +162,16 @@ func (a *AerospikeCluster) ToModel(config *model.Config) (*model.AerospikeCluste
 		MaxParallelScans:     a.MaxParallelScans,
 		PreferRacks:          a.PreferRacks,
 	}, nil
+}
+
+// clusterSecretAgent returns the agent every secret of the cluster is resolved with: the
+// credentials'. A cluster without credentials has none.
+func clusterSecretAgent(credentials *model.Credentials) *model.SecretAgent {
+	if credentials == nil {
+		return nil
+	}
+
+	return credentials.SecretAgent
 }
 
 func (a *AerospikeCluster) seedNodesToModel() []model.SeedNode {
@@ -220,8 +233,7 @@ func (c *Credentials) Validate() error {
 		return err
 	}
 
-	withAgent := c.hasSecretAgent()
-	if err := validateSecret("password", c.Password, withAgent); err != nil {
+	if err := validateSecretForm("password", c.Password); err != nil {
 		return err
 	}
 
@@ -236,6 +248,9 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 	agent, err := c.SecretAgentConfig.ToModel(config)
 	if err != nil {
+		return nil, err
+	}
+	if err := validateSecretAgent("password", c.Password, agent != nil); err != nil {
 		return nil, err
 	}
 

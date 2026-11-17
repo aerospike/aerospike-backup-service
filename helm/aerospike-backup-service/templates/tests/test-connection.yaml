@@ -7,9 +7,30 @@ metadata:
   annotations:
     "helm.sh/hook": test
 spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
   containers:
     - name: wget
-      image: busybox
+      image: "{{ .Values.utilityImage.repository }}:{{ .Values.utilityImage.tag }}"
+      imagePullPolicy: {{ .Values.utilityImage.pullPolicy }}
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
       command: ['wget']
-      args: ['{{ include "aerospike-backup-service.fullname" . }}:{{ .Values.service.port }}']
+      {{- $scheme := include "aerospike-backup-service.primaryListener" . }}
+      args:
+        - '--quiet'
+        - '--output-document=/dev/null'
+        {{- if eq $scheme "https" }}
+        - '--no-check-certificate'
+        {{- end }}
+        - '{{ $scheme }}://{{ include "aerospike-backup-service.fullname" . }}:{{ include "aerospike-backup-service.primaryServicePort" . }}{{ include "aerospike-backup-service.contextPath" . }}health'
   restartPolicy: Never

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,14 +14,14 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	namespace := "testNamespace"
 	routine := &model.BackupRoutine{
 		BackupPolicy: &model.BackupPolicy{
-			Parallel:      ptr.Of(4),
-			ParallelWrite: ptr.Of(8),
-			FileLimit:     ptr.Of(100),
-			NoRecords:     ptr.Of(true),
-			NoIndexes:     ptr.Of(true),
-			NoUdfs:        ptr.Of(true),
-			Bandwidth:     ptr.Of(int64(10)),
-			SocketTimeout: ptr.Of(5 * time.Minute),
+			Parallel:      new(4),
+			ParallelWrite: new(8),
+			FileLimit:     new(100),
+			NoRecords:     new(true),
+			NoIndexes:     new(true),
+			NoUdfs:        new(true),
+			Bandwidth:     new(int64(10)),
+			SocketTimeout: new(5 * time.Minute),
 
 			CompressionPolicy: &model.CompressionPolicy{
 				Mode:  "ZSTD",
@@ -34,7 +33,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 				KeySecret: "secret-name",
 				KeyEnv:    "ENV_VAR",
 			},
-			Compact: ptr.Of(true),
+			Compact: new(true),
 		},
 
 		SetList:      []string{"testSet"},
@@ -44,10 +43,10 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 		SecretAgent: &model.SecretAgent{
 			ConnectionType: "tcp",
 			Address:        "localhost",
-			Port:           ptr.Of(model.Port(9000)),
-			Timeout:        ptr.Of(1000),
+			Port:           new(model.Port(9000)),
+			Timeout:        new(1000),
 			ClientTLS:      model.ClientTLS{CAFile: "ca-string"},
-			IsBase64:       ptr.Of(true),
+			IsBase64:       new(true),
 		},
 		SourceCluster: &model.AerospikeCluster{},
 	}
@@ -55,7 +54,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	// Full backup has FromTime == nil
 	timeBounds := model.TimeBounds{
 		FromTime: nil,
-		ToTime:   ptr.Of(time.Now()),
+		ToTime:   new(time.Now()),
 	}
 
 	config, err := makeBackupConfig(namespace, routine, timeBounds)
@@ -104,13 +103,13 @@ func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {
 	namespace := "testNamespace"
 	routine := &model.BackupRoutine{
 		BackupPolicy: &model.BackupPolicy{
-			Parallel:      ptr.Of(4),
-			ParallelWrite: ptr.Of(8),
-			FileLimit:     ptr.Of(100),
-			NoRecords:     ptr.Of(false),
-			NoIndexes:     ptr.Of(false),
-			NoUdfs:        ptr.Of(false),
-			Bandwidth:     ptr.Of(int64(10)),
+			Parallel:      new(4),
+			ParallelWrite: new(8),
+			FileLimit:     new(100),
+			NoRecords:     new(false),
+			NoIndexes:     new(false),
+			NoUdfs:        new(false),
+			Bandwidth:     new(int64(10)),
 		},
 		SetList:          []string{"testSet"},
 		BinList:          []string{"bin1", "bin2"},
@@ -124,7 +123,7 @@ func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {
 	fromTime := time.Now().Add(-1 * time.Hour)
 	timeBounds := model.TimeBounds{
 		FromTime: &fromTime,
-		ToTime:   ptr.Of(time.Now()),
+		ToTime:   new(time.Now()),
 	}
 
 	config, err := makeBackupConfig(namespace, routine, timeBounds)
@@ -169,7 +168,7 @@ func TestMakeBackupConfig_DefaultParallelWrite(t *testing.T) {
 	namespace := "testNamespace"
 	routine := &model.BackupRoutine{
 		BackupPolicy: &model.BackupPolicy{
-			Parallel: ptr.Of(4),
+			Parallel: new(4),
 		},
 		IntervalCron:  "@daily",
 		SourceCluster: &model.AerospikeCluster{},

@@ -225,6 +225,7 @@
           "schedule-timezone": {
             "description": "Timezone for evaluating backup cron expressions (optional).\nAccepted values: UTC (default), Local, or any IANA timezone name resolvable\nby Go's time.LoadLocation (for example, America/New_York or Japan).\nKeywords UTC and Local are case-insensitive; IANA names are case-sensitive.\nPrefer canonical Area/Location names: legacy aliases such as EST resolve as\nfixed UTC-5 with no DST, which is rarely what \"Eastern Time\" is meant to be.\nChanging this service-level default requires a restart.",
             "type": "string",
+            "default": "UTC",
             "example": "America/New_York",
             "nullable": true
           },
@@ -359,6 +360,7 @@
           "concurrent-incremental": {
             "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
             "type": "boolean",
+            "default": false,
             "nullable": true
           },
           "encryption": {
@@ -458,6 +460,7 @@
           "use-scan-compression": {
             "description": "Enables built-in compression during scan operation.\nValid for Aerospike Server Enterprise Edition only.",
             "type": "boolean",
+            "default": false,
             "nullable": true
           },
           "with-cluster-configuration": {
@@ -777,8 +780,7 @@
               {
                 "$ref": "#/components/schemas/dto.GcpStorageClass"
               }
-            ],
-            "nullable": true
+            ]
           }
         }
       },
@@ -1016,7 +1018,7 @@
         }
       },
       "dto.RestoreNamespace": {
-        "description": "RestoreNamespace specifies an alternative namespace name for the restore operation.",
+        "description": "RestoreNamespace specifies an alternative namespace name for the restore operation. Only a single namespace can be remapped per restore.",
         "type": "object",
         "required": [
           "destination",
@@ -1097,7 +1099,7 @@
             "example": 32
           },
           "namespace": {
-            "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
+            "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to `source`, otherwise it is rejected. For a restore by path, point\n`backup-data-path` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/dto.RestoreNamespace"
@@ -1603,7 +1605,7 @@
               "TCP",
               "UNIX"
             ],
-            "example": "tcp"
+            "example": "TCP"
           },
           "is-base64": {
             "description": "Flag that shows if secret agent responses are encrypted with base64.",
@@ -1795,10 +1797,6 @@
           "min-version": {
             "description": "Minimum accepted TLS protocol version.",
             "default": "1.2",
-            "enum": [
-              "1.2",
-              "1.3"
-            ],
             "type": "string",
             "enum": [
               "1.2",
@@ -2032,7 +2030,7 @@
             "example": 32
           },
           "namespace": {
-            "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
+            "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.\nOnly a single namespace can be remapped: the restore must contain exactly one namespace,\nequal to `source`, otherwise it is rejected. For a restore by path, point\n`backup-data-path` at a single namespace's backup. For a point-in-time restore, the\nroutine must back up a single namespace.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/dto.RestoreNamespace"

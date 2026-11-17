@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -63,7 +62,7 @@ func TestCanStartIncrementalBackup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			policy := &model.BackupPolicy{
-				ConcurrentIncremental: ptr.Of(tt.concurrent),
+				ConcurrentIncremental: new(tt.concurrent),
 			}
 
 			facts := StartFacts{

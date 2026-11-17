@@ -9,6 +9,7 @@ import (
 // the namespace name to which the backup data is to be restored.
 //
 // @Description RestoreNamespace specifies an alternative namespace name for the restore operation.
+// @Description Only a single namespace can be remapped per restore.
 type RestoreNamespace struct {
 	// Original namespace name.
 	// This field is required as a safeguard to ensure intentional namespace remapping.

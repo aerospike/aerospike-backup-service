@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -100,7 +99,7 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 		{
 			name: "invalid port",
 			config: &ServerConfigHTTPS{
-				Port:     ptr.Of(Port(99999)),
+				Port:     new(Port(99999)),
 				CertFile: Path(certs.certFile),
 				KeyFile:  Path(certs.keyFile),
 			},
@@ -251,15 +250,6 @@ func TestServerHTTPSConfigValidate(t *testing.T) {
 			},
 		},
 		{
-			name: "secret agent password reference without agent",
-			config: &ServerConfigHTTPS{
-				CertFile:        Path(certs.certFile),
-				KeyFile:         Path(certs.keyFile),
-				KeyFilePassword: "secrets:agent1:tls-key",
-			},
-			wantErr: "secret agent",
-		},
-		{
 			name: "mutually exclusive secret agent settings",
 			config: &ServerConfigHTTPS{
 				CertFile: Path(certs.certFile),
@@ -292,12 +282,12 @@ func TestServerHTTPSConfigToModelAndFromModel(t *testing.T) {
 			Disabled:     true,
 			Address:      "127.0.0.1",
 			ContextPath:  "/api",
-			Timeout:      ptr.Of(int64(1000)),
-			ReadTimeout:  ptr.Of(int64(2000)),
-			WriteTimeout: ptr.Of(int64(3000)),
-			IdleTimeout:  ptr.Of(int64(4000)),
+			Timeout:      new(int64(1000)),
+			ReadTimeout:  new(int64(2000)),
+			WriteTimeout: new(int64(3000)),
+			IdleTimeout:  new(int64(4000)),
 		},
-		Port:            ptr.Of(Port(9443)),
+		Port:            new(Port(9443)),
 		CertFile:        "/cert.pem",
 		KeyFile:         "/key.pem",
 		KeyFilePassword: "password",
@@ -325,14 +315,14 @@ func TestServerHTTPSConfigCompareReportsEveryField(t *testing.T) {
 	current := &ServerConfigHTTPS{
 		ListenerConfig: ListenerConfig{
 			Address:      "localhost",
-			Rate:         &RateLimiterConfig{Tps: ptr.Of(1)},
+			Rate:         &RateLimiterConfig{Tps: new(1)},
 			ContextPath:  "/",
-			Timeout:      ptr.Of(int64(1)),
-			ReadTimeout:  ptr.Of(int64(2)),
-			WriteTimeout: ptr.Of(int64(3)),
-			IdleTimeout:  ptr.Of(int64(4)),
+			Timeout:      new(int64(1)),
+			ReadTimeout:  new(int64(2)),
+			WriteTimeout: new(int64(3)),
+			IdleTimeout:  new(int64(4)),
 		},
-		Port:            ptr.Of(Port(8443)),
+		Port:            new(Port(8443)),
 		CertFile:        "cert",
 		KeyFile:         "key",
 		KeyFilePassword: "password",
@@ -349,14 +339,14 @@ func TestServerHTTPSConfigCompareReportsEveryField(t *testing.T) {
 		ListenerConfig: ListenerConfig{
 			Disabled:     true,
 			Address:      "0.0.0.0",
-			Rate:         &RateLimiterConfig{Tps: ptr.Of(2)},
+			Rate:         &RateLimiterConfig{Tps: new(2)},
 			ContextPath:  "/api",
-			Timeout:      ptr.Of(int64(10)),
-			ReadTimeout:  ptr.Of(int64(20)),
-			WriteTimeout: ptr.Of(int64(30)),
-			IdleTimeout:  ptr.Of(int64(40)),
+			Timeout:      new(int64(10)),
+			ReadTimeout:  new(int64(20)),
+			WriteTimeout: new(int64(30)),
+			IdleTimeout:  new(int64(40)),
 		},
-		Port:            ptr.Of(Port(9443)),
+		Port:            new(Port(9443)),
 		CertFile:        "new-cert",
 		KeyFile:         "new-key",
 		KeyFilePassword: "new-password",
@@ -388,6 +378,21 @@ func TestServerHTTPSConfigSecureCipherCatalog(t *testing.T) {
 		_, exists := secureServerCipherSuites[suite.Name]
 		assert.False(t, exists)
 	}
+}
+
+// A key-file-password reference is checked against the server's agent once Config.ToModel
+// has resolved it.
+func TestConfigToModel_HTTPSPasswordReferenceWithoutAgent(t *testing.T) {
+	config := &Config{ServiceConfig: ServiceConfig{ServerHTTPS: &ServerConfigHTTPS{
+		CertFile:        "/cert.pem",
+		KeyFile:         "/key.pem",
+		KeyFilePassword: "secrets:agent1:tls-key",
+	}}}
+
+	_, err := config.ToModel()
+	require.ErrorIs(t, err, errValidation)
+	require.ErrorContains(t, err, "key-file-password")
+	require.ErrorContains(t, err, "secret agent")
 }
 
 func TestServerHTTPSConfigToModel_ResolvesSecretAgentName(t *testing.T) {

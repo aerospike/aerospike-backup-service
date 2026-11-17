@@ -3,7 +3,6 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -12,14 +11,14 @@ func TestBackupPolicyConversionIsLossless(t *testing.T) {
 	parallelWrite := 8
 	socketTimeout := int64(5000)
 	totalTimeout := int64(10000)
-	retryPolicy := &RetryPolicy{MaxRetries: ptr.Of(3)}
+	retryPolicy := &RetryPolicy{MaxRetries: new(3)}
 	noRecords := true
 	noIndexes := false
 	noUdfs := true
 	bandwidth := int64(50)
 	recordsPerSecond := 100
 	fileLimit := 1024
-	compressionPolicy := &CompressionPolicy{Mode: CompressionModeZSTD, Level: ptr.Of[int32](5)}
+	compressionPolicy := &CompressionPolicy{Mode: CompressionModeZSTD, Level: new(int32(5))}
 	sealed := true
 	compact := true
 
@@ -30,8 +29,8 @@ func TestBackupPolicyConversionIsLossless(t *testing.T) {
 		TotalTimeout:  &totalTimeout,
 		RetryPolicy:   retryPolicy,
 		RetentionPolicy: &RetentionPolicy{
-			FullBackups: ptr.Of(10),
-			IncrBackups: ptr.Of(5),
+			FullBackups: new(10),
+			IncrBackups: new(5),
 		},
 		NoRecords:          &noRecords,
 		NoIndexes:          &noIndexes,
@@ -43,8 +42,8 @@ func TestBackupPolicyConversionIsLossless(t *testing.T) {
 		CompressionPolicy:  compressionPolicy,
 		Sealed:             &sealed,
 		Compact:            &compact,
-		MaxConcurrentNodes: ptr.Of(3),
-		UseCompression:     ptr.Of(true),
+		MaxConcurrentNodes: new(3),
+		UseCompression:     new(true),
 	}
 
 	model := original.ToModel()
@@ -66,32 +65,32 @@ func TestRetentionPolicy_Validate(t *testing.T) {
 		},
 		{
 			name:        "valid policy with both full and incremental backups",
-			policy:      &RetentionPolicy{FullBackups: ptr.Of(5), IncrBackups: ptr.Of(3)},
+			policy:      &RetentionPolicy{FullBackups: new(5), IncrBackups: new(3)},
 			expectedErr: "",
 		},
 		{
 			name:        "valid policy with only full backups",
-			policy:      &RetentionPolicy{FullBackups: ptr.Of(2), IncrBackups: nil},
+			policy:      &RetentionPolicy{FullBackups: new(2), IncrBackups: nil},
 			expectedErr: "",
 		},
 		{
 			name:        "valid policy with only incremental backups set to zero",
-			policy:      &RetentionPolicy{FullBackups: ptr.Of(3), IncrBackups: ptr.Of(0)},
+			policy:      &RetentionPolicy{FullBackups: new(3), IncrBackups: new(0)},
 			expectedErr: "",
 		},
 		{
 			name:        "invalid full backups: less than 1",
-			policy:      &RetentionPolicy{FullBackups: ptr.Of(0), IncrBackups: ptr.Of(1)},
+			policy:      &RetentionPolicy{FullBackups: new(0), IncrBackups: new(1)},
 			expectedErr: "full backups retention 0 is invalid, must be at least 1",
 		},
 		{
 			name:        "invalid incremental backups: negative value",
-			policy:      &RetentionPolicy{FullBackups: ptr.Of(3), IncrBackups: ptr.Of(-1)},
+			policy:      &RetentionPolicy{FullBackups: new(3), IncrBackups: new(-1)},
 			expectedErr: "negative value validation error: \"incremental\" -1 invalid, should not be negative number",
 		},
 		{
 			name:        "invalid incremental backups: exceeds full backups",
-			policy:      &RetentionPolicy{FullBackups: ptr.Of(3), IncrBackups: ptr.Of(5)},
+			policy:      &RetentionPolicy{FullBackups: new(3), IncrBackups: new(5)},
 			expectedErr: "incremental backups retention 5 cannot exceed full backups retention 3",
 		},
 	}
@@ -117,42 +116,42 @@ func TestBackupPolicy_Validate(t *testing.T) {
 	}{
 		{
 			name:        "valid parallel",
-			policy:      &BackupPolicy{Parallel: ptr.Of(1)},
+			policy:      &BackupPolicy{Parallel: new(1)},
 			expectedErr: "",
 		},
 		{
 			name:        "invalid parallel: zero",
-			policy:      &BackupPolicy{Parallel: ptr.Of(0)},
+			policy:      &BackupPolicy{Parallel: new(0)},
 			expectedErr: "non-positive value validation error: \"parallel\" 0 invalid, should be positive number",
 		},
 		{
 			name:        "invalid parallel: negative",
-			policy:      &BackupPolicy{Parallel: ptr.Of(-1)},
+			policy:      &BackupPolicy{Parallel: new(-1)},
 			expectedErr: "non-positive value validation error: \"parallel\" -1 invalid, should be positive number",
 		},
 		{
 			name:        "valid parallel-write",
-			policy:      &BackupPolicy{ParallelWrite: ptr.Of(1)},
+			policy:      &BackupPolicy{ParallelWrite: new(1)},
 			expectedErr: "",
 		},
 		{
 			name:        "invalid parallel-write: zero",
-			policy:      &BackupPolicy{ParallelWrite: ptr.Of(0)},
+			policy:      &BackupPolicy{ParallelWrite: new(0)},
 			expectedErr: "non-positive value validation error: \"parallel-write\" 0 invalid, should be positive number",
 		},
 		{
 			name:        "invalid parallel-write: negative",
-			policy:      &BackupPolicy{ParallelWrite: ptr.Of(-1)},
+			policy:      &BackupPolicy{ParallelWrite: new(-1)},
 			expectedErr: "non-positive value validation error: \"parallel-write\" -1 invalid, should be positive number",
 		},
 		{
 			name:        "invalid max concurrent nodes: negative",
-			policy:      &BackupPolicy{MaxConcurrentNodes: ptr.Of(-1)},
+			policy:      &BackupPolicy{MaxConcurrentNodes: new(-1)},
 			expectedErr: "negative value validation error: \"max-concurrent-nodes\" -1 invalid, should not be negative number",
 		},
 		{
 			name:        "compression without mode",
-			policy:      &BackupPolicy{CompressionPolicy: &CompressionPolicy{Level: ptr.Of[int32](5)}},
+			policy:      &BackupPolicy{CompressionPolicy: &CompressionPolicy{Level: new(int32(5))}},
 			expectedErr: "invalid compression policy: empty field validation error: \"mode\" required",
 		},
 		{
@@ -164,7 +163,7 @@ func TestBackupPolicy_Validate(t *testing.T) {
 		{
 			name: "compression NONE with level",
 			policy: &BackupPolicy{
-				CompressionPolicy: &CompressionPolicy{Mode: CompressionModeNone, Level: ptr.Of[int32](5)},
+				CompressionPolicy: &CompressionPolicy{Mode: CompressionModeNone, Level: new(int32(5))},
 			},
 			expectedErr: "invalid compression policy: mutually exclusive fields validation error: " +
 				"cannot specify both \"level\" and \"mode = NONE\"",

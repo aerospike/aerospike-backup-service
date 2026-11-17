@@ -269,8 +269,8 @@ func holdsSecret(v reflect.Value, seen visited) bool {
 }
 
 func anyFieldHoldsSecret(v reflect.Value, seen visited) bool {
-	for i := range v.NumField() {
-		if holdsSecret(v.Field(i), seen) {
+	for _, field := range v.Fields() {
+		if holdsSecret(field, seen) {
 			return true
 		}
 	}
@@ -339,8 +339,8 @@ func reachesRedactable(t reflect.Type, onPath map[reflect.Type]struct{}) bool {
 		return reachesRedactable(t.Key(), onPath) || reachesRedactable(t.Elem(), onPath)
 
 	case reflect.Struct:
-		for i := range t.NumField() {
-			if reachesRedactable(t.Field(i).Type, onPath) {
+		for field := range t.Fields() {
+			if reachesRedactable(field.Type, onPath) {
 				return true
 			}
 		}

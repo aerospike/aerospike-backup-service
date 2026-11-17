@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -79,7 +78,6 @@ func TestStorageManager_Write(t *testing.T) {
 
 		manager := newStorageManager(
 			&model.LocalStorage{Path: filepath.Join(t.TempDir(), "config.yml")},
-			newTestNamespaceValidator(ctrl),
 			ops,
 		)
 
@@ -105,11 +103,5 @@ func newTestStorageManager(t *testing.T, ctrl *gomock.Controller) (Manager, stor
 
 	configStorage := &model.LocalStorage{Path: filepath.Join(t.TempDir(), "config.yml")}
 	ops := storage.NewOperations(storage.NewLocalStorageAccessor())
-	return newStorageManager(configStorage, newTestNamespaceValidator(ctrl), ops), ops, configStorage
-}
-
-func newTestNamespaceValidator(ctrl *gomock.Controller) aerospike.NamespaceValidator {
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
-	mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Any()).AnyTimes()
-	return mockNsValidator
+	return newStorageManager(configStorage, ops), ops, configStorage
 }

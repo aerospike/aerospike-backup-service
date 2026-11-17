@@ -38,6 +38,7 @@ var targetFiles = []string{
 	"docs/migration.md",
 	"docs/security.md",
 	"docs/development.md",
+	"build/package/README.md",
 	integrationTestsDir + "/README.md",
 }
 
@@ -117,6 +118,7 @@ func newRenderers(endpoints map[string]endpoint, metricsTable string) map[string
 	}))
 	add("generator", "GoVersion", noArgs("GoVersion", renderGoVersion))
 	add("generator", "CLIHelp", noArgs("CLIHelp", renderCLIHelp))
+	add("generator", "PackageInstall", renderPackageInstall)
 	add("generator", "FilterExpressions", noArgs("FilterExpressions", renderFilterExpressions))
 	add("generator", "IntegrationTests", noArgs("IntegrationTests", renderIntegrationTests))
 	// Reserved for the security plan: a document may carry the tag before there
@@ -192,7 +194,7 @@ func renderEndpoint(operationID, args string, endpoints map[string]endpoint) str
 
 // parseEndpointArgs reads the "[link] [?query]" that may follow an operation id.
 func parseEndpointArgs(operationID, args string) (asLink bool, query string) {
-	for _, field := range strings.Fields(args) {
+	for field := range strings.FieldsSeq(args) {
 		switch {
 		case field == linkFlag:
 			asLink = true

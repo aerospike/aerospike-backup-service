@@ -101,8 +101,7 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 
 	status, err := s.restoreManager.JobStatus(jobID)
 	if err != nil {
-		var jobErr *service.JobNotFoundError
-		if errors.As(err, &jobErr) {
+		if _, ok := errors.AsType[*service.JobNotFoundError](err); ok {
 			httpError(w, model.NotFound("job", jobID))
 		} else {
 			httpError(w, err)
@@ -214,8 +213,7 @@ func (s *Service) CancelRestoreHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = s.restoreManager.CancelRestore(jobID)
 	if err != nil {
-		var jobErr *service.JobNotFoundError
-		if errors.As(err, &jobErr) {
+		if _, ok := errors.AsType[*service.JobNotFoundError](err); ok {
 			httpError(w, model.NotFound("job", jobID))
 		} else {
 			httpError(w, fmt.Errorf("failed to cancel restore: %w", err))
