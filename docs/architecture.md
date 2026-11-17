@@ -81,6 +81,14 @@ longer than an HTTP client should be expected to hold a connection open.
    [`cmd/backup/main.go`](../cmd/backup/main.go)), not the originating HTTP request's context. A job that has started
    must not be canceled just because the client that triggered it disconnected; it can only be stopped explicitly via
    <!-- tag cancelCurrentBackup -->`POST /v1/backups/cancel/{name}`<!-- /tag -->.
+6. Stopping ABS does not cancel a running restore. What happens to it depends on the backup mode:
+   - **Scan mode:** the restore runs inside ABS, so it ends with the process, partly applied. Start it again.
+   - **Server mode:** the restore runs on the Aerospike server and continues without ABS. ABS keeps restore jobs
+     in memory, so after a restart it no longer reports the job; follow it with the server's restore-status info command.
+     A strict restore keeps its namespace closed to clients until it completes. If ABS stops while the job is still
+     preparing, or the job fails later, the namespace stays closed: abort a job that is still running with
+     the restore-abort info command (ABS logs the server job id when the restore starts), then open the namespace with
+     `restore-open:namespace=<namespace>`.
 
 Scheduled (cron-triggered) backups follow the same execution path, minus the initial HTTP request — Quartz invokes
 the same orchestration code that ad-hoc triggers use.

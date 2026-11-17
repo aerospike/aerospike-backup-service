@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"sync"
 	"testing"
-	"testing/synctest"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -207,61 +206,6 @@ func TestRestoreJobsHolder_FinishReleasesJobContext(t *testing.T) {
 	job, err := holder.getJob(jobID)
 	require.NoError(t, err)
 	assert.Equal(t, model.RestoreSuccess, job.getStatus(), "releasing the context does not change the outcome")
-}
-
-func TestRestoreJobsHolder_Wait(t *testing.T) {
-	t.Run("waits for a running job until it finishes", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(t.Context())
-			holder := NewRestoreJobsHolder()
-			holder.Start(ctx)
-			jobID := newJobID(holder, "running")
-			cancel()
-
-			waited := make(chan struct{})
-			go func() {
-				holder.Wait()
-				close(waited)
-			}()
-
-			synctest.Wait()
-			require.False(t, isClosed(waited), "Wait returned while a job was running")
-
-			holder.FinishJob(jobID, context.Canceled, slog.New(slog.DiscardHandler))
-
-			synctest.Wait()
-			require.True(t, isClosed(waited), "Wait did not return after the job finished")
-		})
-	})
-
-	t.Run("returns at once with no jobs", func(t *testing.T) {
-		holder := newStartedJobsHolder(t)
-
-		holder.Wait()
-	})
-
-	t.Run("does not wait for a job started after the lifetime is canceled", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(t.Context())
-		holder := NewRestoreJobsHolder()
-		holder.Start(ctx)
-		cancel()
-
-		jobID, jobCtx := holder.NewJob("late")
-
-		require.ErrorIs(t, jobCtx.Err(), context.Canceled, "a late job must end by itself")
-		holder.Wait()
-		holder.FinishJob(jobID, context.Canceled, slog.New(slog.DiscardHandler))
-	})
-}
-
-// isClosed reports whether ch is closed, without blocking.
-func isClosed(ch <-chan struct{}) bool {
-	select {
-	case <-ch:
-		return true
-	default:
-		return false
-	}
 }
 
 func TestRestoreJobsHolder_StatusCounts(t *testing.T) {

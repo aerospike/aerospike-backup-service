@@ -37,7 +37,7 @@ type Components struct {
 	TLSProvider      servertls.TLSProvider
 
 	registry      service.BackupStateRegistry
-	restoreJobs   jobRunner
+	restoreJobs   component
 	configApplier service.ConfigApplier
 }
 
@@ -48,30 +48,13 @@ type component interface {
 	Start(ctx context.Context)
 }
 
-// jobRunner is a component whose jobs must end before the service exits. Its jobs stop when
-// the run context is canceled, and Wait blocks until they have.
-type jobRunner interface {
-	component
-	Wait()
-}
-
 // Run starts every component and serves until ctx is canceled or a listener stops. It
 // blocks for as long as the service runs: a caller that wants the service up without
 // giving up its goroutine - a test serving the handler itself - uses Start instead.
-// Once serving stops, Run cancels the components and waits for the running restores to
-// stop, so that none is cut off mid-cleanup; their cleanup overlaps the HTTP drain.
 func (c *Components) Run(ctx context.Context) error {
-	// runCtx is canceled here too, because serving also stops when a listener does.
-	runCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	c.Start(ctx)
 
-	c.Start(runCtx)
-	err := server.Run(runCtx, c.Servers)
-
-	cancel()
-	c.restoreJobs.Wait()
-
-	return err
+	return server.Run(ctx, c.Servers)
 }
 
 // Start brings up every background component, applies the loaded configuration to the
@@ -80,7 +63,9 @@ func (c *Components) Run(ctx context.Context) error {
 // context that built the graph. It is called exactly once.
 func (c *Components) Start(ctx context.Context) {
 	c.registry.Start(ctx)
-	c.restoreJobs.Start(ctx)
+	// A restore is not canceled when the service stops. A server restore runs on the server and
+	// completes without the service, while canceling it would abort it halfway.
+	c.restoreJobs.Start(context.WithoutCancel(ctx))
 	c.Scheduler.Start(ctx)
 	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	c.TLSProvider.Start(ctx)

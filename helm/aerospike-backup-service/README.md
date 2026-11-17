@@ -158,7 +158,7 @@ through the Service.
 | `resources`               | Container [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).                                                                                                                                                  | `{}`                                                        |
 | `livenessProbe`           | Liveness probe. Without a handler of your own (`httpGet`, `tcpSocket`, `exec`, `grpc`), the chart adds `httpGet` on `<context-path>health`, port `http`. | delay 15s, period 10s |
 | `readinessProbe`          | Readiness probe. Without a handler of your own, the chart adds `httpGet` on `<context-path>ready`, port `http`. | delay 15s, period 10s |
-| `terminationGracePeriodSeconds` | Time the pod gets to stop before it is killed. On shutdown ABS drains the HTTP server for up to 30 seconds and, in parallel, waits for running restores to stop; a strict server restore takes up to about 60 seconds to abort and reopen its namespace. | `75` |
+| `terminationGracePeriodSeconds` | Time the pod gets to stop before it is killed. Longer than the 30 seconds ABS spends draining the HTTP server on shutdown. | `45` |
 | `volumes`                 | Extra pod volumes (Secrets, PVCs, ConfigMaps, ...).                                                                                                                                                                                                              | `[]`                                                        |
 | `extraVolumeMounts`       | Mounts for entries in `volumes`: `name`, `mountPath`, `readOnly`. `readOnly` defaults to `true`; booleans and the strings `"true"`/`"false"` are accepted.                                                                                                     | `[]`                                                        |
 | `extraSecretVolumeMounts` | Like `extraVolumeMounts`, plus `subPath` to mount one key of a Secret as a file.                                                                                                                                                                                 | `[]`                                                        |
@@ -444,10 +444,11 @@ helm upgrade --namespace aerospike abs -f abs-values.yaml aerospike/aerospike-ba
 A change to `backupServiceConfig` changes a checksum annotation on the pod, so the pod is replaced and starts with
 the new configuration. Keep in mind:
 
-- Backups and restores running on the old pod are interrupted. On shutdown ABS drains the HTTP server for up to
-  30 seconds and, in parallel, waits for running restores to stop; a strict server restore takes up to about
-  60 seconds to abort and reopen its namespace. `terminationGracePeriodSeconds` (default 75) gives it time to finish
-  before the kubelet kills the container. Schedule upgrades outside backup windows.
+- Backups and restores running on the old pod are interrupted, except a restore in server backup mode: it runs on
+  the Aerospike server and continues without ABS, but the new pod does not report it. See
+  [what stopping ABS does to a restore](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/architecture.md#request-lifecycle). On shutdown ABS drains the
+  HTTP server for up to 30 seconds; `terminationGracePeriodSeconds` (default 45) gives it time to finish before the
+  kubelet kills the container. Schedule upgrades outside backup and restore windows.
 - Only `backupServiceConfig` is tracked. After rotating a Secret or ConfigMap used through `env`, `envFrom` or a
   `subPath` mount, restart the pod yourself:
   `kubectl -n aerospike rollout restart deployment/abs-aerospike-backup-service`.
@@ -468,7 +469,7 @@ Charts released after 2.1.0 change behavior in ways that can affect an existing 
   `service.port` is now only the Service port.
 - **Probes follow the context path.** If your values set `httpGet` on the probes only to add a context path, you can
   remove it.
-- **`terminationGracePeriodSeconds` is 75** instead of the Kubernetes default of 30.
+- **`terminationGracePeriodSeconds` is 45** instead of the Kubernetes default of 30.
 - **One pod per release.** `replicaCount` above `1` and `autoscaling.enabled: true` now fail the install, and the
   chart no longer creates a HorizontalPodAutoscaler. Remove `autoscaling` from your values file.
 - **Upgrades replace the pod.** The Deployment uses the `Recreate` strategy, so an upgrade stops the old pod before it
