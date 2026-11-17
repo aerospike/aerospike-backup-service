@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"strconv"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -428,65 +429,6 @@ func TestBackupJob_Wait_WarnsOfUnreadRecords(t *testing.T) {
 	}
 }
 
-func TestBackupJob_Wait_StatusLookup(t *testing.T) {
-	t.Parallel()
-
-	complete := &infomodels.ResponseBackupState{JobID: fullID, Namespace: "test", State: infomodels.BackupStateComplete}
-
-	tests := []struct {
-		name      string
-		statuses  []func() (*infomodels.ResponseBackupState, error)
-		wantAbort bool
-		wantErr   string
-		wantJobs  []model.ServerBackupJob
-	}{
-		{
-			name: "job not visible yet",
-			statuses: []func() (*infomodels.ResponseBackupState, error){
-				func() (*infomodels.ResponseBackupState, error) { return nil, asinfo.ErrNotFound },
-				func() (*infomodels.ResponseBackupState, error) { return complete, nil },
-			},
-			wantJobs: []model.ServerBackupJob{{JobID: fullID, Namespace: "test", State: "COMPLETE"}},
-		},
-		{
-			// The run gives up on the job, so it aborts it: the job may still hold the cluster.
-			name: "status unavailable",
-			statuses: []func() (*infomodels.ResponseBackupState, error){
-				func() (*infomodels.ResponseBackupState, error) { return nil, errors.New("timeout") },
-			},
-			wantAbort: true,
-			wantErr:   "failed to get status of server backup " + fullID + ": timeout",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
-			calls := make([]any, 0, len(tt.statuses)+1)
-			for _, status := range tt.statuses {
-				calls = append(calls, infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(status()))
-			}
-			if tt.wantAbort {
-				// A refused abort is not followed: there is nothing to wait for.
-				calls = append(calls, infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).Return(errors.New("timeout")))
-			}
-			gomock.InOrder(calls...)
-			operation := newBackupOperation(func() {}, 1)
-
-			err := newTestBackupJob(infoClient, operation).Wait(t.Context())
-
-			if tt.wantErr == "" {
-				require.NoError(t, err)
-			} else {
-				require.EqualError(t, err, tt.wantErr)
-			}
-			assert.Equal(t, tt.wantJobs, operation.Status().Server.Jobs)
-		})
-	}
-}
-
 func TestBackupJob_Wait_Canceled_AbortRefused(t *testing.T) {
 	t.Parallel()
 
@@ -581,56 +523,60 @@ func TestBackupOperation_ProgressAcrossNamespaces(t *testing.T) {
 	assert.InDelta(t, 0.7, operation.Status().Progress, 1e-9, "40% of the second namespace")
 }
 
-//nolint:paralleltest // shortens lostJobTimeout, which the parallel tests read.
-func TestBackupJob_Wait_LostJob(t *testing.T) {
-	shortenLostJobTimeout(t)
+// statusReadErrors are the ways a status read fails: a job not reported, a cluster not reached.
+var statusReadErrors = []error{asinfo.ErrNotFound, errors.New("timeout")}
 
-	tests := []struct {
-		name     string
-		statuses []*infomodels.ResponseBackupState
-		wantErr  string
-	}{
-		{
-			// Each status resets the clock: two not-found answers a status apart are within it.
-			name: "seen again in time",
-			statuses: []*infomodels.ResponseBackupState{
-				nil,
-				{JobID: fullID, State: infomodels.BackupStateBaseScanActive},
-				nil,
-				{JobID: fullID, State: infomodels.BackupStateComplete},
-			},
-		},
-		{
-			// The run aborts the job it gave up on; a lost job refuses the abort.
-			name:     "never reported",
-			statuses: []*infomodels.ResponseBackupState{nil, nil},
-			wantErr:  "server backup " + fullID + " not reported for 1.5s: " + asinfo.ErrNotFound.Error(),
-		},
-	}
+// TestBackupJob_Wait_ObservedAgain checks that a job with no status for a while is not aborted,
+// and that each status resets the clock.
+func TestBackupJob_Wait_ObservedAgain(t *testing.T) {
+	t.Parallel()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
-			calls := make([]any, 0, len(tt.statuses)+1)
-			for _, status := range tt.statuses {
-				var err error
-				if status == nil {
-					err = asinfo.ErrNotFound
+	for _, statusErr := range statusReadErrors {
+		t.Run(statusErr.Error(), func(t *testing.T) {
+			t.Parallel()
+			synctest.Test(t, func(t *testing.T) {
+				active := &infomodels.ResponseBackupState{JobID: fullID, State: infomodels.BackupStateBaseScanActive}
+				complete := &infomodels.ResponseBackupState{JobID: fullID, State: infomodels.BackupStateComplete}
+				infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
+				unread := func() *gomock.Call {
+					return infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).
+						Return(nil, statusErr).Times(pollsWithinTimeout)
 				}
-				calls = append(calls, infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(status, err))
-			}
-			if tt.wantErr != "" {
-				calls = append(calls, infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).Return(asinfo.ErrNotFound))
-			}
-			gomock.InOrder(calls...)
+				gomock.InOrder(
+					unread(),
+					infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(active, nil),
+					unread(),
+					infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(complete, nil),
+				)
+				operation := newBackupOperation(func() {}, 1)
 
-			err := newTestBackupJob(infoClient, newBackupOperation(func() {}, 1)).Wait(t.Context())
+				require.NoError(t, newTestBackupJob(infoClient, operation).Wait(t.Context()))
+				assert.Equal(t, []model.ServerBackupJob{{JobID: fullID, State: "COMPLETE"}}, operation.Status().Server.Jobs)
+			})
+		})
+	}
+}
 
-			if tt.wantErr == "" {
-				require.NoError(t, err)
-				return
-			}
-			require.EqualError(t, err, tt.wantErr)
+// TestBackupJob_Wait_UnobservedJob checks that a job with no status for unobservedJobTimeout is
+// aborted.
+func TestBackupJob_Wait_UnobservedJob(t *testing.T) {
+	t.Parallel()
+
+	for _, statusErr := range statusReadErrors {
+		t.Run(statusErr.Error(), func(t *testing.T) {
+			t.Parallel()
+			synctest.Test(t, func(t *testing.T) {
+				infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
+				gomock.InOrder(
+					infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).
+						Return(nil, statusErr).MinTimes(pollsUntilUnobserved).MaxTimes(pollsUntilUnobserved+1),
+					infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).Return(statusErr),
+				)
+
+				err := newTestBackupJob(infoClient, newBackupOperation(func() {}, 1)).Wait(t.Context())
+
+				require.EqualError(t, err, "server backup "+fullID+" not observed for 10m0s: "+statusErr.Error())
+			})
 		})
 	}
 }

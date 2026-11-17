@@ -164,7 +164,7 @@ func (m *restoreManager) restoreChain(
 	backups []model.BackupDetails,
 	logger *slog.Logger,
 ) error {
-	job, err := startRestore(ctx, infoClient, policy, backups)
+	job, err := startRestore(ctx, infoClient, policy, backups, logger)
 	if err != nil {
 		return err
 	}
