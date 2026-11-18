@@ -12,7 +12,7 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
 
 ## [3.8.0] - TBD
 
-## [3.7.1] - 2026-10-5
+## [3.7.1] - 2026-10-05
 
 Built on [backup-go v0.13.0](https://github.com/aerospike/backup-go/releases/tag/v0.13.0) and Go 1.26.
 
