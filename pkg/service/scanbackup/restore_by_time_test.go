@@ -218,6 +218,39 @@ func TestRestoreByTime_ChainFailure(t *testing.T) {
 	}
 }
 
+// TestRestoreByTime_OutlivesRequest checks that a restore by time keeps running after the request
+// that started it ends.
+func TestRestoreByTime_OutlivesRequest(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+	now := time.Now()
+	request := expectChainOfTwo(t, env,
+		testBackup("full", now.Add(-2*time.Hour), 1), testBackup("incr", now.Add(-time.Hour), 1))
+
+	// The first restore runs until the request has ended, and fails if it was canceled meanwhile.
+	requestEnded := make(chan struct{})
+	handler := service.NewMockRestoreHandler(env.ctrl)
+	handler.EXPECT().Status().Return(model.RestoreRun{}).AnyTimes()
+	handler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+		<-requestEnded
+		return ctx.Err()
+	})
+	gomock.InOrder(
+		env.mockRestore.EXPECT().Run(gomock.Any(), gomock.Any(), restoreRequestPathMatcher{"full"}).
+			Return(handler, nil),
+		env.mockRestore.EXPECT().Run(gomock.Any(), gomock.Any(), restoreRequestPathMatcher{"incr"}).
+			Return(env.expectDefaultRestoreHandler(), nil),
+	)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	jobID := env.restoreManager.RestoreByTime(ctx, request)
+	cancel()
+	close(requestEnded)
+
+	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+	require.NoError(t, err)
+	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
+}
+
 // expectChainOfTwo returns a request to restore, with reordering disabled, the chain of a full and
 // an incremental backup, and sets the expectations of finding that chain and passing validation.
 func expectChainOfTwo(
