@@ -77,18 +77,21 @@ longer than an HTTP client should be expected to hold a connection open.
 4. The client polls status separately: <!-- tag getCurrentBackup -->`GET /v1/backups/currentBackup/{name}`<!-- /tag --> for backups, or
    <!-- tag restoreStatus -->`GET /v1/restore/status/{jobId}`<!-- /tag --> for restores (see [API examples](api-examples.md)). Progress is also exported as
    Prometheus metrics.
-5. Triggered jobs run with a context tied to the process lifetime (derived from the top-level context created in
-   [`cmd/backup/main.go`](../cmd/backup/main.go)), not the originating HTTP request's context. A job that has started
-   must not be canceled just because the client that triggered it disconnected; it can only be stopped explicitly via
-   <!-- tag cancelCurrentBackup -->`POST /v1/backups/cancel/{name}`<!-- /tag -->.
-6. Stopping ABS does not cancel a running restore. What happens to it depends on the backup mode:
+5. Triggered backups run with a context tied to the process lifetime (derived from the top-level context created in
+   [`cmd/backup/main.go`](../cmd/backup/main.go)), not the originating HTTP request's context. A backup that has
+   started must not be canceled just because the client that triggered it disconnected; it can only be stopped
+   explicitly via <!-- tag cancelCurrentBackup -->`POST /v1/backups/cancel/{name}`<!-- /tag -->.
+6. A restore runs on its request's context without that context's cancellation, so neither the client disconnecting
+   nor ABS stopping cancels it; only <!-- tag cancelRestore -->`POST /v1/restore/cancel/{jobId}`<!-- /tag --> does.
+   What stopping ABS does to a running restore depends on the backup mode:
    - **Scan mode:** the restore runs inside ABS, so it ends with the process, partly applied. Start it again.
-   - **Server mode:** the restore runs on the Aerospike server and continues without ABS. ABS keeps restore jobs
-     in memory, so after a restart it no longer reports the job; follow it with the server's restore-status info command.
-     A strict restore keeps its namespace closed to clients until it completes. If ABS stops while the job is still
-     preparing, or the job fails later, the namespace stays closed: abort a job that is still running with
-     the restore-abort info command (ABS logs the server job id when the restore starts), then open the namespace with
-     `restore-open:namespace=<namespace>`.
+   - **Server mode:** the restore runs on the Aerospike server and, once under way, completes without ABS. ABS keeps
+     restore jobs in memory, so after a restart it no longer reports the job; follow it with the server's
+     restore-status info command, which also gives the job id.
+     A strict restore keeps its namespace closed to clients until it completes. If ABS stops before the restore is
+     under way (ABS has not yet sent the restore-clear-storage info command a node needs), while it is releasing a
+     canceled restore, or the job fails later, the namespace stays closed: abort a job that is still running with the
+     restore-abort info command, then open the namespace with `restore-open:namespace=<namespace>`.
 
 Scheduled (cron-triggered) backups follow the same execution path, minus the initial HTTP request — Quartz invokes
 the same orchestration code that ad-hoc triggers use.

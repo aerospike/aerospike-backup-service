@@ -26,6 +26,8 @@ Built on [backup-go v0.13.0](https://github.com/aerospike/backup-go/releases/tag
   - One pod per release: `replicaCount` above `1` and `autoscaling.enabled: true` fail the install, and the chart
     no longer creates a HorizontalPodAutoscaler.
   - The Deployment uses the `Recreate` strategy, so an upgrade stops the old pod before starting the new one.
+- Stopping ABS no longer cancels a running restore. In server backup mode the restore continues on the server and
+  is not reported after a restart; see [what stopping ABS does to a restore](docs/architecture.md#request-lifecycle).
 - The Docker image is based on Alpine 3.24 (latest 3.24.x patch release) instead of `alpine:latest`,
   and no longer installs the unused `shadow` package. It now creates `/var/log/aerospike-backup-service`
   owned by the service user, so the default `file-writer` path works without mounting a volume.

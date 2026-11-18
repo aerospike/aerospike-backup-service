@@ -236,32 +236,107 @@ func TestRestoreManager_RestoreByTime_NamespaceFails(t *testing.T) {
 		"failed to restore routine routine, namespace bar by timestamp: failed to start server restore: refused")
 }
 
-// TestRestoreManager_CancelRestore checks that canceling a restore job aborts the server job
-// that runs it.
-func TestRestoreManager_CancelRestore(t *testing.T) {
-	t.Parallel()
-	env := newRestoreManagerEnv(t)
+// restoreStarts start, through each entry point of the manager, a fuzzy restore of one backup
+// chain of namespace bar. Each sets the catalog expectations its entry point needs.
+var restoreStarts = []struct {
+	name  string
+	start func(ctx context.Context, env *restoreManagerEnv) model.RestoreJobID
+}{
+	{
+		name: "restore",
+		start: func(ctx context.Context, env *restoreManagerEnv) model.RestoreJobID {
+			backup := chainBackup(fullID)
+			env.catalog.EXPECT().GetBackup(gomock.Any(), gomock.Any(), gomock.Any()).Return(backup, nil)
 
-	backup := chainBackup(fullID)
-	env.catalog.EXPECT().GetBackup(gomock.Any(), gomock.Any(), gomock.Any()).Return(backup, nil)
-	env.expectClient()
+			return env.manager.Restore(ctx, restoreRequestOf(backup))
+		},
+	},
+	{
+		name: "restore by time",
+		start: func(ctx context.Context, env *restoreManagerEnv) model.RestoreJobID {
+			full, incremental := chainOf("bar")
+			gomock.InOrder(
+				env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{full}, nil),
+				env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
+					Return([]model.BackupDetails{incremental}, nil),
+			)
 
+			return env.manager.RestoreByTime(ctx, restoreAfter(incremental))
+		},
+	},
+}
+
+// expectStarted expects one restore job to start in namespace bar and returns a channel that is
+// closed when it has.
+func (e *restoreManagerEnv) expectStarted() <-chan struct{} {
 	started := make(chan struct{})
-	env.infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
+	e.infoClient.EXPECT().StartRestore(gomock.Any(), requestInNamespace("bar")).DoAndReturn(
 		func(context.Context, *infomodels.RequestRestore) (string, error) {
 			close(started)
 
 			return restoreJobID, nil
 		})
-	env.infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", restoreJobID).Return(
-		&infomodels.ResponseRestoreState{State: infomodels.RestoreStateActive}, nil).AnyTimes()
-	env.infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", restoreJobID).Return(nil)
 
-	jobID := env.manager.Restore(t.Context(), restoreRequestOf(backup))
-	<-started
-	require.NoError(t, env.manager.CancelRestore(jobID))
+	return started
+}
 
-	assert.Equal(t, model.RestoreCanceled, env.waitForJob(t, jobID).Status)
+var activeStatus = &infomodels.ResponseRestoreState{State: infomodels.RestoreStateActive}
+
+// TestRestoreManager_CancelRestore checks that canceling a restore job aborts the server job
+// that runs it.
+func TestRestoreManager_CancelRestore(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range restoreStarts {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			env := newRestoreManagerEnv(t)
+			env.expectClient()
+			started := env.expectStarted()
+			env.infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", restoreJobID).Return(activeStatus, nil).AnyTimes()
+			env.infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", restoreJobID).Return(nil)
+
+			jobID := tt.start(t.Context(), env)
+			<-started
+			require.NoError(t, env.manager.CancelRestore(jobID))
+
+			assert.Equal(t, model.RestoreCanceled, env.waitForJob(t, jobID).Status)
+		})
+	}
+}
+
+// TestRestoreManager_OutlivesRequest checks that a restore job keeps running after the request
+// that started it ends: the server job is not aborted and completes.
+func TestRestoreManager_OutlivesRequest(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range restoreStarts {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			env := newRestoreManagerEnv(t)
+			env.expectClient()
+			started := env.expectStarted()
+			// The job is active until the request has ended. No abort is expected.
+			requestEnded := make(chan struct{})
+			env.infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", restoreJobID).DoAndReturn(
+				func(context.Context, string, string) (*infomodels.ResponseRestoreState, error) {
+					select {
+					case <-requestEnded:
+						return completeStatus, nil
+					default:
+						return activeStatus, nil
+					}
+				}).AnyTimes()
+
+			ctx, cancel := context.WithCancel(t.Context())
+			jobID := tt.start(ctx, env)
+			<-started
+			cancel()
+			close(requestEnded)
+
+			assert.Equal(t, model.RestoreSuccess, env.waitForJob(t, jobID).Status)
+		})
+	}
 }
 
 // restoreRequestOf returns a request for a fuzzy restore of the backup.

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,16 @@ import (
 
 var validRestoreCluster = dto.AerospikeCluster{SeedNodes: []dto.SeedNode{{HostName: "localhost", Port: 3000}}}
 var validRestoreStorage = dto.Storage{LocalStorage: &dto.LocalStorage{Path: "/tmp/backup"}}
+
+// requestKey marks the context of a test request, so a mock can check it is given that context.
+type requestKey struct{}
+
+func withRequestKey(ctx context.Context) context.Context {
+	return context.WithValue(ctx, requestKey{}, true)
+}
+
+// requestContextMatcher matches the context of a request made with withRequestKey.
+var requestContextMatcher = gomock.Cond(func(ctx context.Context) bool { return ctx.Value(requestKey{}) == true })
 
 func TestService_RestoreHandlers(t *testing.T) {
 	tests := []struct {
@@ -46,7 +57,7 @@ func TestService_RestoreHandlers(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
 			mockManager := service.NewMockRestoreManager(ctrl)
-			mockManager.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(tt.jobID)
+			mockManager.EXPECT().Restore(requestContextMatcher, gomock.Any()).Return(tt.jobID)
 
 			svc := &Service{
 				config:         model.NewConfig(),
@@ -60,7 +71,7 @@ func TestService_RestoreHandlers(t *testing.T) {
 				BackupDataPath:           "test/path",
 			})
 
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, tt.path, strings.NewReader(body))
+			req := httptest.NewRequestWithContext(withRequestKey(t.Context()), http.MethodPost, tt.path, strings.NewReader(body))
 			w := httptest.NewRecorder()
 
 			tt.handler(svc, w, req)
@@ -190,7 +201,7 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 				Routine:                  "daily",
 			}),
 			setupMock: func(m *service.MockRestoreManager) {
-				m.EXPECT().RestoreByTime(gomock.Any(), gomock.Any()).Return(model.RestoreJobID(7))
+				m.EXPECT().RestoreByTime(requestContextMatcher, gomock.Any()).Return(model.RestoreJobID(7))
 			},
 			expectedStatus: http.StatusAccepted,
 		},
@@ -209,7 +220,7 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 			}
 
 			req := httptest.NewRequestWithContext(
-				t.Context(), http.MethodPost, "/v1/restore/timestamp", strings.NewReader(tt.requestBody),
+				withRequestKey(t.Context()), http.MethodPost, "/v1/restore/timestamp", strings.NewReader(tt.requestBody),
 			)
 			w := httptest.NewRecorder()
 

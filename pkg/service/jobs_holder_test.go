@@ -184,13 +184,16 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 }
 
 func TestRestoreJobsHolder_JobsOutliveTheRequestContext(t *testing.T) {
+	t.Parallel()
 	type key struct{}
-	ctx, cancel := context.WithCancel(context.WithValue(t.Context(), key{}, "value"))
+	ctx, cancel := context.WithTimeout(context.WithValue(t.Context(), key{}, "value"), time.Hour)
 
 	_, jobCtx := NewRestoreJobsHolder().NewJob(ctx, "running")
 	cancel()
 
 	require.NoError(t, jobCtx.Err(), "the end of the request must not cancel a restore")
+	_, hasDeadline := jobCtx.Deadline()
+	assert.False(t, hasDeadline, "a restore does not inherit the deadline of its request")
 	assert.Equal(t, "value", jobCtx.Value(key{}), "a restore keeps the values of its request")
 }
 

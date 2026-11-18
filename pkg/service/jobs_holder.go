@@ -147,8 +147,8 @@ func (j *restoreJob) getStatus() model.RestoreState {
 // RestoreJobsHolder is a thread-safe map of restore jobs. A backup mode's restore manager
 // registers its jobs here and embeds the holder for the status, cancel and listing methods, which
 // are the same in every mode. The holder also owns the lifetime of the jobs: a job ends when it
-// finishes or is canceled, not when the request that started it or the service ends. A server
-// restore completes on the server without the service, and canceling it would abort it halfway.
+// finishes or is canceled through the holder; neither its request ending nor shutdown cancels it.
+// A server restore completes on the server without ABS, while canceling it would abort it halfway.
 type RestoreJobsHolder struct {
 	*collections.SafeMap[model.RestoreJobID, *restoreJob]
 }

@@ -126,6 +126,38 @@ func TestCancelRestoreOK(t *testing.T) {
 	assert.Equal(t, model.RestoreCanceled, jobStatus.Status)
 }
 
+// TestRestore_OutlivesRequest checks that a restore keeps running after the request that started
+// it ends.
+func TestRestore_OutlivesRequest(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+	request := model.NewRestoreRequest(model.AerospikeCluster{}, model.RestorePolicy{}, &model.LocalStorage{}, nil,
+		"/backup/path/data")
+	client := env.expectSuccessfulClientInteraction(t)
+	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{{
+		BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "test-ns", FileCount: 1},
+	}}, nil)
+	env.restoreValidator.EXPECT().ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	// The restore runs until the request has ended, and fails if it was canceled meanwhile.
+	requestEnded := make(chan struct{})
+	handler := service.NewMockRestoreHandler(env.ctrl)
+	handler.EXPECT().Status().Return(model.RestoreRun{}).AnyTimes()
+	handler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+		<-requestEnded
+		return ctx.Err()
+	})
+	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(handler, nil)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	jobID := env.restoreManager.Restore(ctx, request)
+	cancel()
+	close(requestEnded)
+
+	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+	require.NoError(t, err)
+	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
+}
+
 func TestRestoreFailsWithClientError(t *testing.T) {
 	env := setupTestRestoreEnv(t)
 
