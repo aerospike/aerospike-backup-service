@@ -12,12 +12,11 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
 
 ## [3.8.0] - TBD
 
-### Changed
+### Fixed
 
-- **Breaking:** set and bin names in `set-list` and `bin-list` (backup routines and restore policies) must follow the
-  [Aerospike naming rules](https://aerospike.com/docs/database/reference/limitations/), as namespace names already do:
-  Latin letters, digits, `_`, `-` and `$`, at most 63 bytes for a set and 15 for a bin, and not `null`. See
-  [docs/migration.md](docs/migration.md#v37---v38).
+- Set and bin names in `set-list` and `bin-list` (backup routines and restore policies) are checked against the
+  [Aerospike naming rules](https://aerospike.com/docs/database/reference/limitations/) when the configuration loads
+  or a restore is requested, as namespace names already are, instead of failing when the job runs.
 
 ## [3.7.1] - 2026-10-05
 
