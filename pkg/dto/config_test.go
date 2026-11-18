@@ -224,29 +224,10 @@ func TestConfigValidate_ServerMode(t *testing.T) {
 			change:  func(c *Config) { c.BackupPolicies["empty"] = nil },
 		},
 		{
-			name:    "scan mode with values an info command cannot carry",
+			name:    "scan mode with an S3 path an info command cannot carry",
 			mode:    BackupModeScan,
 			storage: &Storage{S3Storage: &S3Storage{Bucket: "bucket", S3Region: "eu-central-1", Path: "a;b"}},
-			change: func(c *Config) {
-				c.BackupRoutines["routine1"].SetList = []string{"a,b"}
-				c.BackupRoutines["routine1"].BinList = []string{"a|b"}
-			},
-		},
-		{
-			name:    "server mode with a comma in a set name",
-			mode:    BackupModeServer,
-			storage: s3,
-			change:  func(c *Config) { c.BackupRoutines["routine1"].SetList = []string{"setA", "set,B"} },
-			wantErr: `backup routine 'routine1' validation error: invalid value validation error: ` +
-				`set-list entry "set,B": must not contain ",", ";", "|" or a line break`,
-		},
-		{
-			name:    "server mode with a semicolon in a bin name",
-			mode:    BackupModeServer,
-			storage: s3,
-			change:  func(c *Config) { c.BackupRoutines["routine1"].BinList = []string{"bin;1"} },
-			wantErr: `backup routine 'routine1' validation error: invalid value validation error: ` +
-				`bin-list entry "bin;1": must not contain ",", ";", "|" or a line break`,
+			change:  none,
 		},
 		{
 			name:    "server mode with a semicolon in the S3 path",

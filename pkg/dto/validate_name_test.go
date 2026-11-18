@@ -150,6 +150,66 @@ func TestNamespaceName_Validate(t *testing.T) {
 	}
 }
 
+func TestValidateAerospikeNames(t *testing.T) {
+	tests := []struct {
+		name      string
+		names     []string
+		maxLength int
+		wantErr   string
+	}{
+		{name: "valid sets", names: []string{"set-1", "set_2$"}, maxLength: maxSetNameLength},
+		{name: "longest set", names: []string{strings.Repeat("s", maxSetNameLength)}, maxLength: maxSetNameLength},
+		{name: "longest bin", names: []string{strings.Repeat("b", maxBinNameLength)}, maxLength: maxBinNameLength},
+		{name: "no names", maxLength: maxSetNameLength},
+		{
+			name: "set too long", names: []string{strings.Repeat("s", maxSetNameLength+1)}, maxLength: maxSetNameLength,
+			wantErr: `list[0] "` + strings.Repeat("s", maxSetNameLength+1) + `": must not exceed 63 bytes`,
+		},
+		{
+			name: "bin too long", names: []string{"bin_name_of_16ch"}, maxLength: maxBinNameLength,
+			wantErr: `list[0] "bin_name_of_16ch": must not exceed 15 bytes`,
+		},
+		{name: "empty", names: []string{"a", ""}, maxLength: maxSetNameLength, wantErr: `"list[1]" required`},
+		{name: "duplicate", names: []string{"a", "a"}, maxLength: maxSetNameLength, wantErr: "duplicate"},
+		{name: "reserved", names: []string{"null"}, maxLength: maxSetNameLength, wantErr: "reserved"},
+		{name: "dot", names: []string{"a.b"}, maxLength: maxSetNameLength, wantErr: `found '.'`},
+		{name: "comma", names: []string{"a,b"}, maxLength: maxSetNameLength, wantErr: `found ','`},
+		{name: "semicolon", names: []string{"a;b"}, maxLength: maxSetNameLength, wantErr: `found ';'`},
+		{name: "pipe", names: []string{"a|b"}, maxLength: maxSetNameLength, wantErr: `found '|'`},
+		{name: "line break", names: []string{"a\nb"}, maxLength: maxSetNameLength, wantErr: `found '\n'`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateAerospikeNames("list", tt.names, tt.maxLength)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+// Set and bin names are checked in the routine and the restore policy, whatever the backup mode.
+func TestValidate_SetAndBinNames(t *testing.T) {
+	routine := func(sets, bins []string) *BackupRoutine {
+		return &BackupRoutine{
+			SourceCluster: "cluster1", Storage: "storage1", IntervalCron: "0 0 * * * *",
+			Namespaces: &[]NamespaceName{"ns1"}, SetList: sets, BinList: bins,
+		}
+	}
+	require.ErrorContains(t, routine([]string{"a.b"}, nil).Validate(), `set-list[0] "a.b"`)
+	require.ErrorContains(t, routine(nil, []string{"bin_name_of_16ch"}).Validate(), `bin-list[0] "bin_name_of_16ch"`)
+
+	policy := func(sets, bins []string) *RestorePolicy {
+		return &RestorePolicy{BaseRestorePolicy: BaseRestorePolicy{SetList: sets, BinList: bins}}
+	}
+	require.ErrorContains(t, policy([]string{"a,b"}, nil).Validate(), `set-list[0] "a,b"`)
+	require.ErrorContains(t, policy(nil, []string{"a;b"}).Validate(), `bin-list[0] "a;b"`)
+}
+
 // Every entity name is checked, not just the routine's.
 func TestConfigValidate_RejectsPathSegmentsInEveryEntityName(t *testing.T) {
 	withStorage := validNameConfig("r", []NamespaceName{"ns"})

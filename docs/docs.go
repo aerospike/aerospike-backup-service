@@ -2392,7 +2392,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "bin-list": {
-                    "description": "The list of backup bin names (optional, an empty list implies backing up all bins) extensions:\"x-nullable\".",
+                    "description": "The list of backup bin names (optional, an empty list implies backing up all bins).\nA name follows the Aerospike naming rules: at most 15 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -2469,7 +2469,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "set-list": {
-                    "description": "The list of backup set names (optional, an empty list implies backing up all sets).",
+                    "description": "The list of backup set names (optional, an empty list implies backing up all sets).\nA name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -3116,7 +3116,7 @@ const docTemplate = `{
                     "example": 32
                 },
                 "bin-list": {
-                    "description": "The bins to restore (optional, an empty list implies restoring all bins).",
+                    "description": "The bins to restore (optional, an empty list implies restoring all bins).\nA name follows the Aerospike naming rules: at most 15 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -3232,7 +3232,7 @@ const docTemplate = `{
                     ]
                 },
                 "set-list": {
-                    "description": "The sets to restore (optional, an empty list implies restoring all sets).",
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nA name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -4218,7 +4218,7 @@ const docTemplate = `{
                     "example": 32
                 },
                 "bin-list": {
-                    "description": "The bins to restore (optional, an empty list implies restoring all bins).",
+                    "description": "The bins to restore (optional, an empty list implies restoring all bins).\nA name follows the Aerospike naming rules: at most 15 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -4325,7 +4325,7 @@ const docTemplate = `{
                     ]
                 },
                 "set-list": {
-                    "description": "The sets to restore (optional, an empty list implies restoring all sets).",
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nA name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
                     "type": "array",
                     "items": {
                         "type": "string"

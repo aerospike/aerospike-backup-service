@@ -60,8 +60,7 @@ func validateRestoreStorage(storage model.Storage, config *model.Config) error {
 
 // validateRestorePolicy checks policy against the service's backup mode. A scan restore has no
 // mode. A server-side restore must choose a mode, sets no option that the server has no
-// equivalent for, no value that an info command cannot carry, and no option that its mode does
-// not support.
+// equivalent for, and sets no option that its mode does not support.
 func validateRestorePolicy(policy *model.RestorePolicy, config *model.Config) error {
 	if !config.IsServerBackupMode() {
 		return rejectOptions("restore policy", onlyInServerMode, option{"mode", policy.Mode != ""})
@@ -89,14 +88,8 @@ func validateRestorePolicy(policy *model.RestorePolicy, config *model.Config) er
 		option{"socket-timeout", policy.SocketTimeout != nil},
 		option{"total-timeout", policy.TotalTimeout != nil},
 	)
-	if err != nil {
+	if err != nil || policy.Mode != model.RestoreModeStrict {
 		return err
-	}
-	if err := validateInfoList("set-list", policy.SetList); err != nil {
-		return err
-	}
-	if policy.Mode != model.RestoreModeStrict {
-		return nil
 	}
 
 	// The server retries the writes of a fuzzy restore. A strict restore writes no record through

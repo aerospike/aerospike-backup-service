@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -161,12 +160,6 @@ func (c *Config) validateServerMode() error {
 			option{"node-list", len(routine.NodeList) > 0},
 		); err != nil {
 			return err
-		}
-		if err := errors.Join(
-			validateInfoList("set-list", routine.SetList),
-			validateInfoList("bin-list", routine.BinList),
-		); err != nil {
-			return fmt.Errorf("backup routine '%s' validation error: %w", name, err)
 		}
 	}
 

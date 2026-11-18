@@ -13,14 +13,16 @@ import (
 // that outside the configured root, so names are validated here rather than where the
 // paths are built.
 
+// The Aerospike limits on names.
+// See https://aerospike.com/docs/database/reference/limitations/
 const (
-	// maxNamespaceNameLength is the Aerospike limit on a namespace name.
-	// See https://aerospike.com/docs/database/reference/limitations/#namespace
 	maxNamespaceNameLength = 31
-	// reservedNamespaceName is the one name the Aerospike server keeps for itself.
-	reservedNamespaceName = "null"
-	// namespaceNameChars is the full set of characters an Aerospike namespace name may use.
-	namespaceNameChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-$"
+	maxSetNameLength       = 63
+	maxBinNameLength       = 15
+	// reservedName is the one name the Aerospike server keeps for itself.
+	reservedName = "null"
+	// aerospikeNameChars is the full set of characters an Aerospike name may use.
+	aerospikeNameChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-$"
 )
 
 // NamespaceName represents a validated Aerospike namespace name in the DTO layer.
@@ -37,21 +39,45 @@ type NamespaceName string
 // adds the field name and the offending value, and classifies the error (errEmpty for a
 // missing name, errInvalidValue for an unusable one).
 func (n NamespaceName) Validate() error {
-	if n == "" {
+	return checkAerospikeName(string(n), maxNamespaceNameLength)
+}
+
+// validateAerospikeNames checks a list of set or bin names for duplicates and each name against
+// the Aerospike naming rules. The rules apply in both backup modes: their character set also
+// keeps out the separators of the info commands that server-side backup sends the names in.
+func validateAerospikeNames(field string, names []string, maxLength int) error {
+	if err := validateUnique(field, names); err != nil {
+		return err
+	}
+
+	for i, name := range names {
+		err := errValidationInvalidName(fmt.Sprintf("%s[%d]", field, i), name, checkAerospikeName(name, maxLength))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// checkAerospikeName reports why name breaks the Aerospike naming rules: at most maxLength bytes
+// of Latin letters, digits, '_', '-' and '$', and not the reserved name "null".
+func checkAerospikeName(name string, maxLength int) error {
+	if name == "" {
 		return errEmpty
 	}
 
-	if len(n) > maxNamespaceNameLength {
-		return fmt.Errorf("must not exceed %d bytes", maxNamespaceNameLength)
+	if len(name) > maxLength {
+		return fmt.Errorf("must not exceed %d bytes", maxLength)
 	}
 
-	if n == reservedNamespaceName {
-		return fmt.Errorf("%q is reserved by the Aerospike server", reservedNamespaceName)
+	if name == reservedName {
+		return fmt.Errorf("%q is reserved by the Aerospike server", reservedName)
 	}
 
 	// TrimLeft drops the leading run of allowed characters, so the remainder, if any,
 	// starts with the first character that is not allowed.
-	if rest := strings.TrimLeft(string(n), namespaceNameChars); rest != "" {
+	if rest := strings.TrimLeft(name, aerospikeNameChars); rest != "" {
 		r, _ := utf8.DecodeRuneInString(rest)
 
 		return fmt.Errorf(

@@ -56,10 +56,6 @@ func compresses(policy *model.CompressionPolicy) bool {
 // command.
 const infoSeparators = ";|\r\n"
 
-// infoListSeparator separates the entries of a list in an info command, so an entry that holds it
-// would reach the server as two.
-const infoListSeparator = ","
-
 // validateInfoValue fails when an info command cannot carry the value of field.
 func validateInfoValue(field, value string) error {
 	if strings.ContainsAny(value, infoSeparators) {
@@ -78,17 +74,4 @@ func validateS3InfoValues(path, bucket, region, profile, endpoint string) error 
 		validateInfoValue("s3-profile", profile),
 		validateInfoValue("s3-endpoint-override", endpoint),
 	)
-}
-
-// validateInfoList fails on the first entry of the list in field that an info command cannot
-// carry as one entry.
-func validateInfoList(field string, entries []string) error {
-	for _, entry := range entries {
-		if strings.ContainsAny(entry, infoSeparators+infoListSeparator) {
-			return errValidationInvalidName(field+" entry", entry,
-				errors.New(`must not contain ",", ";", "|" or a line break`))
-		}
-	}
-
-	return nil
 }

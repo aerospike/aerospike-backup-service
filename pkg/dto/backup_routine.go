@@ -44,8 +44,12 @@ type BackupRoutine struct {
 	// "_", "-" and "$", and not the reserved name "null".
 	Namespaces *[]NamespaceName `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"[\"source-ns1\"]" validate:"required"`
 	// The list of backup set names (optional, an empty list implies backing up all sets).
+	// A name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,
+	// "_", "-" and "$", and not the reserved name "null".
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1" extensions:"x-nullable"`
-	// The list of backup bin names (optional, an empty list implies backing up all bins) extensions:"x-nullable".
+	// The list of backup bin names (optional, an empty list implies backing up all bins).
+	// A name follows the Aerospike naming rules: at most 15 bytes of Latin letters, digits,
+	// "_", "-" and "$", and not the reserved name "null".
 	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty" example:"dataBin" extensions:"x-nullable"`
 	// RackList specifies the Aerospike Server rack IDs from which to read records
 	// during backup.
@@ -153,10 +157,10 @@ func (r *BackupRoutine) Validate() error {
 	if err := validateNamespaces(*r.Namespaces); err != nil {
 		return err
 	}
-	if err := validateUniqueNonEmpty("set-list", r.SetList); err != nil {
+	if err := validateAerospikeNames("set-list", r.SetList, maxSetNameLength); err != nil {
 		return err
 	}
-	if err := validateUniqueNonEmpty("bin-list", r.BinList); err != nil {
+	if err := validateAerospikeNames("bin-list", r.BinList, maxBinNameLength); err != nil {
 		return err
 	}
 	if err := validateUnique(rackListField, r.RackList); err != nil {

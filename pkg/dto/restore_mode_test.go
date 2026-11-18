@@ -93,16 +93,6 @@ func TestValidateRestorePolicy(t *testing.T) {
 			wantErr: `restore policy sets retry-policy, which mode "strict" does not support`},
 		{name: "server mode fuzzy with a retry policy", backupMode: model.BackupModeServer,
 			policy: model.RestorePolicy{Mode: model.RestoreModeFuzzy, RetryPolicy: &model.RetryPolicy{}}},
-		{name: "server mode with a set list", backupMode: model.BackupModeServer,
-			policy: model.RestorePolicy{Mode: model.RestoreModeFuzzy, SetList: []string{"setA", "setB"}}},
-		{name: "scan mode with a comma in a set name", backupMode: model.BackupModeScan,
-			policy: model.RestorePolicy{SetList: []string{"set,B"}}},
-		{name: "server mode fuzzy with a comma in a set name", backupMode: model.BackupModeServer,
-			policy:  model.RestorePolicy{Mode: model.RestoreModeFuzzy, SetList: []string{"setA", "set,B"}},
-			wantErr: `set-list entry "set,B": must not contain ",", ";", "|" or a line break`},
-		{name: "server mode strict with a semicolon in a set name", backupMode: model.BackupModeServer,
-			policy:  model.RestorePolicy{Mode: model.RestoreModeStrict, SetList: []string{"set;B"}},
-			wantErr: `set-list entry "set;B": must not contain ",", ";", "|" or a line break`},
 	}
 
 	for _, tt := range tests {
