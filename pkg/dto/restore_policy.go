@@ -51,8 +51,8 @@ type BaseRestorePolicy struct {
 	// routine must back up a single namespace.
 	Namespace *RestoreNamespace `json:"namespace,omitempty" extensions:"x-backup-mode=scan"`
 	// The sets to restore (optional, an empty list implies restoring all sets).
-	// Rejected when mode is strict: a strict restore clears the whole namespace, so it would
-	// delete the sets left out of the list. Use mode fuzzy to restore some sets and keep the rest.
+	// When mode is strict the namespace is cleared first, so the sets left out of the list are
+	// deleted. Use mode fuzzy to restore some sets and keep the rest.
 	SetList []string `json:"set-list,omitempty" example:"set1,set2" extensions:"x-nullable"`
 	// The bins to restore (optional, an empty list implies restoring all bins).
 	BinList []string `json:"bin-list,omitempty" example:"bin1,bin2"  extensions:"x-nullable,x-backup-mode=scan"`
@@ -144,7 +144,7 @@ func (p *BaseRestorePolicy) Validate() error {
 		}
 	}
 
-	if err := validateUniqueNonEmpty(setListField, p.SetList); err != nil {
+	if err := validateUniqueNonEmpty("set-list", p.SetList); err != nil {
 		return err
 	}
 	if err := validateUniqueNonEmpty("bin-list", p.BinList); err != nil {
