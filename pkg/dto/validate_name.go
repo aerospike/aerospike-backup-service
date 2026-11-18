@@ -42,16 +42,17 @@ func (n NamespaceName) Validate() error {
 	return checkAerospikeName(string(n), maxNamespaceNameLength)
 }
 
-// validateAerospikeNames checks a list of set or bin names for duplicates and each name against
-// the Aerospike naming rules. The rules apply in both backup modes: their character set also
-// keeps out the separators of the info commands that server-side backup sends the names in.
-func validateAerospikeNames(field string, names []string, maxLength int) error {
+// validateAerospikeNames checks a list of namespace, set or bin names for duplicates and each name
+// against the Aerospike naming rules. The rules apply in both backup modes: their character set
+// also keeps out the separators of the info commands that server-side backup sends the names in.
+func validateAerospikeNames[T ~string](field string, names []T, maxLength int) error {
 	if err := validateUnique(field, names); err != nil {
 		return err
 	}
 
 	for i, name := range names {
-		err := errValidationInvalidName(fmt.Sprintf("%s[%d]", field, i), name, checkAerospikeName(name, maxLength))
+		err := errValidationInvalidName(fmt.Sprintf("%s[%d]", field, i), string(name),
+			checkAerospikeName(string(name), maxLength))
 		if err != nil {
 			return err
 		}

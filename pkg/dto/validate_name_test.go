@@ -90,10 +90,10 @@ func TestValidateRoutineName(t *testing.T) {
 		expectError string
 	}{
 		{name: "plain", value: "daily-backup"},
-		{name: "semicolon", value: "a;b", expectError: `must not contain ";", "|" or a line break`},
-		{name: "pipe", value: "daily|eu", expectError: `must not contain ";", "|" or a line break`},
-		{name: "newline", value: "a\nb", expectError: `must not contain ";", "|" or a line break`},
-		{name: "carriage return", value: "a\rb", expectError: `must not contain ";", "|" or a line break`},
+		{name: "semicolon", value: "a;b", expectError: `must not contain ";", "|", a line break or a NUL byte`},
+		{name: "pipe", value: "daily|eu", expectError: `must not contain ";", "|", a line break or a NUL byte`},
+		{name: "newline", value: "a\nb", expectError: `must not contain ";", "|", a line break or a NUL byte`},
+		{name: "carriage return", value: "a\rb", expectError: `must not contain ";", "|", a line break or a NUL byte`},
 		{name: "path segment rules apply", value: "a/b", expectError: "path separator"},
 	}
 
@@ -194,20 +194,60 @@ func TestValidateAerospikeNames(t *testing.T) {
 
 // Set and bin names are checked in the routine and the restore policy, whatever the backup mode.
 func TestValidate_SetAndBinNames(t *testing.T) {
-	routine := func(sets, bins []string) *BackupRoutine {
+	type validatable interface{ Validate() error }
+
+	routine := func(sets, bins []string) validatable {
 		return &BackupRoutine{
 			SourceCluster: "cluster1", Storage: "storage1", IntervalCron: "0 0 * * * *",
 			Namespaces: &[]NamespaceName{"ns1"}, SetList: sets, BinList: bins,
 		}
 	}
-	require.ErrorContains(t, routine([]string{"a.b"}, nil).Validate(), `set-list[0] "a.b"`)
-	require.ErrorContains(t, routine(nil, []string{"bin_name_of_16ch"}).Validate(), `bin-list[0] "bin_name_of_16ch"`)
-
-	policy := func(sets, bins []string) *RestorePolicy {
+	policy := func(sets, bins []string) validatable {
 		return &RestorePolicy{BaseRestorePolicy: BaseRestorePolicy{SetList: sets, BinList: bins}}
 	}
-	require.ErrorContains(t, policy([]string{"a,b"}, nil).Validate(), `set-list[0] "a,b"`)
-	require.ErrorContains(t, policy(nil, []string{"a;b"}).Validate(), `bin-list[0] "a;b"`)
+
+	tests := []struct {
+		name    string
+		entity  validatable
+		wantIs  error
+		wantErr string
+	}{
+		{name: "routine with valid names", entity: routine([]string{"set-1"}, []string{"bin_1"})},
+		{name: "restore policy with valid names", entity: policy([]string{"set-1"}, []string{"bin_1"})},
+		{
+			name: "routine set with a dot", entity: routine([]string{"a.b"}, nil),
+			wantIs: errInvalidValue, wantErr: `set-list[0] "a.b"`,
+		},
+		{
+			name: "routine bin too long", entity: routine(nil, []string{"bin_name_of_16ch"}),
+			wantIs: errInvalidValue, wantErr: `bin-list[0] "bin_name_of_16ch"`,
+		},
+		{
+			name: "routine empty set", entity: routine([]string{""}, nil),
+			wantIs: errEmpty, wantErr: `"set-list[0]" required`,
+		},
+		{
+			name: "restore policy set with a comma", entity: policy([]string{"a,b"}, nil),
+			wantIs: errInvalidValue, wantErr: `set-list[0] "a,b"`,
+		},
+		{
+			name: "restore policy bin with a semicolon", entity: policy(nil, []string{"a;b"}),
+			wantIs: errInvalidValue, wantErr: `bin-list[0] "a;b"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.entity.Validate()
+			if tt.wantIs == nil {
+				require.NoError(t, err)
+				return
+			}
+
+			require.ErrorIs(t, err, tt.wantIs)
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
 }
 
 // Every entity name is checked, not just the routine's.

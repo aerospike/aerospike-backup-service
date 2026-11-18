@@ -52,14 +52,14 @@ func compresses(policy *model.CompressionPolicy) bool {
 
 // infoSeparators are the characters an Aerospike info command cannot carry in a value. Server-side
 // backup sends routine, policy and storage values in info commands, where ";" separates
-// parameters, "|" separates the values the server keeps with a job and a line break ends the
-// command.
-const infoSeparators = ";|\r\n"
+// parameters, "|" separates the values the server keeps with a job, a line break ends the
+// command and a NUL byte can cut the command short.
+const infoSeparators = ";|\r\n\x00"
 
 // validateInfoValue fails when an info command cannot carry the value of field.
 func validateInfoValue(field, value string) error {
 	if strings.ContainsAny(value, infoSeparators) {
-		return errValidationInvalidName(field, value, errors.New(`must not contain ";", "|" or a line break`))
+		return errValidationInvalidName(field, value, errors.New(`must not contain ";", "|", a line break or a NUL byte`))
 	}
 
 	return nil
