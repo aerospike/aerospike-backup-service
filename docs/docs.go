@@ -3232,7 +3232,7 @@ const docTemplate = `{
                     ]
                 },
                 "set-list": {
-                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nRejected when mode is strict: a strict restore clears the whole namespace, so it would\ndelete the sets left out of the list. Use mode fuzzy to restore some sets and keep the rest.",
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nWhen mode is strict the namespace is cleared first, so the sets left out of the list are\ndeleted. Use mode fuzzy to restore some sets and keep the rest.",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -4325,7 +4325,7 @@ const docTemplate = `{
                     ]
                 },
                 "set-list": {
-                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nRejected when mode is strict: a strict restore clears the whole namespace, so it would\ndelete the sets left out of the list. Use mode fuzzy to restore some sets and keep the rest.",
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nWhen mode is strict the namespace is cleared first, so the sets left out of the list are\ndeleted. Use mode fuzzy to restore some sets and keep the rest.",
                     "type": "array",
                     "items": {
                         "type": "string"
