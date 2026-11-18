@@ -3,6 +3,18 @@
 Upgrade notes and breaking changes between releases. For a terser, dated list of what shipped in each release, see
 [CHANGELOG.md](../CHANGELOG.md).
 
+## v3.7 -> v3.8
+
+#### Breaking changes
+
+- **Set and bin names follow the Aerospike naming rules** — every entry of `set-list` and `bin-list`, in a backup
+  routine and in a restore policy, must use only Latin letters, digits, `_`, `-` and `$`, be at most 63 bytes for a
+  set and 15 for a bin, and not be `null`. These are the
+  [Aerospike limits](https://aerospike.com/docs/database/reference/limitations/) that namespace names already
+  follow. A configuration with another name fails to load, and a restore request with one is rejected with `400`.
+  To back up such a set, leave `set-list` out of the routine and select the set with a `filter-exp` on the set name.
+  A restore cannot select such a set: restore the whole backup instead.
+
 ## v3.6 -> v3.7
 
 This release redacts secret fields in configuration API responses, changes how secrets are updated via the REST API,

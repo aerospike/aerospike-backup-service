@@ -12,6 +12,13 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
 
 ## [3.8.0] - TBD
 
+### Changed
+
+- **Breaking:** set and bin names in `set-list` and `bin-list` (backup routines and restore policies) must follow the
+  [Aerospike naming rules](https://aerospike.com/docs/database/reference/limitations/), as namespace names already do:
+  Latin letters, digits, `_`, `-` and `$`, at most 63 bytes for a set and 15 for a bin, and not `null`. See
+  [docs/migration.md](docs/migration.md#v37---v38).
+
 ## [3.7.1] - 2026-10-05
 
 Built on [backup-go v0.13.0](https://github.com/aerospike/backup-go/releases/tag/v0.13.0) and Go 1.26.
