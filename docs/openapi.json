@@ -2826,7 +2826,7 @@
                         "nullable": true
                     },
                     "bin-list": {
-                        "description": "The list of backup bin names (optional, an empty list implies backing up all bins).\nA name follows the Aerospike naming rules: at most 15 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
+                        "description": "The list of backup bin names (optional, an empty list implies backing up all bins) extensions:\"x-nullable\".",
                         "type": "array",
                         "items": {
                             "type": "string"
@@ -2903,7 +2903,7 @@
                         "nullable": true
                     },
                     "set-list": {
-                        "description": "The list of backup set names (optional, an empty list implies backing up all sets).\nA name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
+                        "description": "The list of backup set names (optional, an empty list implies backing up all sets).",
                         "type": "array",
                         "items": {
                             "type": "string"
@@ -3448,7 +3448,7 @@
                         "example": 32
                     },
                     "bin-list": {
-                        "description": "The bins to restore (optional, an empty list implies restoring all bins).\nA name follows the Aerospike naming rules: at most 15 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
+                        "description": "The bins to restore (optional, an empty list implies restoring all bins).",
                         "type": "array",
                         "items": {
                             "type": "string"
@@ -3560,7 +3560,7 @@
                         ]
                     },
                     "set-list": {
-                        "description": "The sets to restore (optional, an empty list implies restoring all sets).\nA name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".\nWhen mode is strict the namespace is cleared first, so the sets left out of the list are\ndeleted. Use mode fuzzy to restore some sets and keep the rest.",
+                        "description": "The sets to restore (optional, an empty list implies restoring all sets).\nWhen mode is strict the namespace is cleared first, so the sets left out of the list are\ndeleted. Use mode fuzzy to restore some sets and keep the rest.",
                         "type": "array",
                         "items": {
                             "type": "string"
@@ -4490,7 +4490,7 @@
                         "example": 32
                     },
                     "bin-list": {
-                        "description": "The bins to restore (optional, an empty list implies restoring all bins).\nA name follows the Aerospike naming rules: at most 15 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
+                        "description": "The bins to restore (optional, an empty list implies restoring all bins).",
                         "type": "array",
                         "items": {
                             "type": "string"
@@ -4593,7 +4593,7 @@
                         ]
                     },
                     "set-list": {
-                        "description": "The sets to restore (optional, an empty list implies restoring all sets).\nA name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".\nWhen mode is strict the namespace is cleared first, so the sets left out of the list are\ndeleted. Use mode fuzzy to restore some sets and keep the rest.",
+                        "description": "The sets to restore (optional, an empty list implies restoring all sets).\nWhen mode is strict the namespace is cleared first, so the sets left out of the list are\ndeleted. Use mode fuzzy to restore some sets and keep the rest.",
                         "type": "array",
                         "items": {
                             "type": "string"

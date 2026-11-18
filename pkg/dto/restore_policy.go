@@ -52,14 +52,10 @@ type BaseRestorePolicy struct {
 	// routine must back up a single namespace.
 	Namespace *RestoreNamespace `json:"namespace,omitempty" extensions:"x-backup-mode=scan"`
 	// The sets to restore (optional, an empty list implies restoring all sets).
-	// A name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,
-	// "_", "-" and "$", and not the reserved name "null".
 	// When mode is strict the namespace is cleared first, so the sets left out of the list are
 	// deleted. Use mode fuzzy to restore some sets and keep the rest.
 	SetList []string `json:"set-list,omitempty" example:"set1,set2" extensions:"x-nullable"`
 	// The bins to restore (optional, an empty list implies restoring all bins).
-	// A name follows the Aerospike naming rules: at most 15 bytes of Latin letters, digits,
-	// "_", "-" and "$", and not the reserved name "null".
 	BinList []string `json:"bin-list,omitempty" example:"bin1,bin2"  extensions:"x-nullable,x-backup-mode=scan"`
 	// Replace records. This controls how records from the backup overwrite existing records in
 	// the namespace. By default, restoring a record from a backup only replaces the bins
