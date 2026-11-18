@@ -10,7 +10,9 @@ Entries below `v3.0.0` predate this file; see the
 Detailed upgrade instructions (breaking changes and how to adapt existing configuration) live in
 [docs/migration.md](docs/migration.md); this file is the changelog, that one is the upgrade guide.
 
-## [3.7.1] - TBD
+## [3.8.0] - TBD
+
+## [3.7.1] - 2026-10-5
 
 Built on [backup-go v0.13.0](https://github.com/aerospike/backup-go/releases/tag/v0.13.0) and Go 1.26.
 
@@ -22,12 +24,9 @@ Built on [backup-go v0.13.0](https://github.com/aerospike/backup-go/releases/tag
   - The container and probe ports follow `backupServiceConfig.service.http.port`, the HTTPS port is added when
     HTTPS is enabled, and `service.port` is now only the Service port.
   - Probes follow the configured context path.
-  - `terminationGracePeriodSeconds` is 45 instead of 30.
   - One pod per release: `replicaCount` above `1` and `autoscaling.enabled: true` fail the install, and the chart
     no longer creates a HorizontalPodAutoscaler.
   - The Deployment uses the `Recreate` strategy, so an upgrade stops the old pod before starting the new one.
-- Stopping ABS no longer cancels a running restore. In server backup mode the restore continues on the server and
-  is not reported after a restart; see [what stopping ABS does to a restore](docs/architecture.md#request-lifecycle).
 - The Docker image is based on Alpine 3.24 (latest 3.24.x patch release) instead of `alpine:latest`,
   and no longer installs the unused `shadow` package. It now creates `/var/log/aerospike-backup-service`
   owned by the service user, so the default `file-writer` path works without mounting a volume.
