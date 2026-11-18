@@ -10,7 +10,9 @@ Entries below `v3.0.0` predate this file; see the
 Detailed upgrade instructions (breaking changes and how to adapt existing configuration) live in
 [docs/migration.md](docs/migration.md); this file is the changelog, that one is the upgrade guide.
 
-## [3.7.1] - TBD
+## [3.8.0] - TBD
+
+## [3.7.1] - 2026-10-05
 
 Built on [backup-go v0.13.0](https://github.com/aerospike/backup-go/releases/tag/v0.13.0) and Go 1.26.
 
@@ -22,7 +24,6 @@ Built on [backup-go v0.13.0](https://github.com/aerospike/backup-go/releases/tag
   - The container and probe ports follow `backupServiceConfig.service.http.port`, the HTTPS port is added when
     HTTPS is enabled, and `service.port` is now only the Service port.
   - Probes follow the configured context path.
-  - `terminationGracePeriodSeconds` is 45 instead of 30.
   - One pod per release: `replicaCount` above `1` and `autoscaling.enabled: true` fail the install, and the chart
     no longer creates a HorizontalPodAutoscaler.
   - The Deployment uses the `Recreate` strategy, so an upgrade stops the old pod before starting the new one.

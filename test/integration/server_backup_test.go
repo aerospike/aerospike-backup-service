@@ -34,7 +34,6 @@ func (s *ServerBackupSuite) TestServerRestoreByPath() {
 	status := s.restoreIntoDestination(e, fullBackup.Key)
 	s.Equal(dto.RestoreSuccess, status.Status)
 	s.Run("inserted_records", func() {
-		s.T().Skip("BKRS-563: a server restore reports no inserted-record count")
 		s.Equal(uint64(3), status.InsertedRecords)
 	})
 	s.Empty(status.Error)
@@ -80,7 +79,7 @@ func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 
 	restoreStatus := s.restoreIntoDestination(e, fullBackup.Key)
 	s.Run("restore_index_count", func() {
-		s.T().Skip("BKRS-563: a server restore reports no index count")
+		s.T().Skip("SERVER-2448: a server restore reports no index count")
 		s.Equal(uint64(wantIndexes), restoreStatus.IndexCount)
 	})
 
@@ -149,7 +148,6 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 		status := s.restoreIntoDestinationByTimestamp(e, time.Now())
 		s.Equal(dto.RestoreSuccess, status.Status)
 		s.Run("inserted_records", func() {
-			s.T().Skip("BKRS-563: a server restore reports no inserted-record count")
 			s.Equal(uint64(1), status.InsertedRecords)
 		})
 		s.Empty(status.Error)
@@ -263,7 +261,6 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampCumulativeWorkflow() {
 		s.Equal(dto.RestoreSuccess, status.Status)
 		// The chain is the full backup and the second incremental: the first incremental is skipped.
 		s.Run("inserted_records", func() {
-			s.T().Skip("BKRS-563: a server restore reports no inserted-record count")
 			s.Equal(uint64(2), status.InsertedRecords)
 		})
 		s.Empty(status.Error)
