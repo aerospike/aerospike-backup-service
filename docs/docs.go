@@ -2307,21 +2307,21 @@ const docTemplate = `{
                     "default": false
                 },
                 "parallel": {
-                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.",
+                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of scan threads on each node, and when it is not\nset the server uses its own default.",
                     "type": "integer",
                     "default": 8,
                     "minimum": 1,
                     "example": 1
                 },
                 "parallel-write": {
-                    "description": "Maximum number of threads to use for writing backup files. If not specified, same values as ` + "`" + `parallel` + "`" + ` is used.",
+                    "description": "Maximum number of threads to use for writing backup files. If not specified, same values as ` + "`" + `parallel` + "`" + ` is used.\nIn the server backup mode it is the number of upload threads on each node, and when it is\nnot set the server uses its own default, whatever ` + "`" + `parallel` + "`" + ` is.",
                     "type": "integer",
                     "default": 8,
                     "minimum": 1,
                     "example": 1
                 },
                 "records-per-second": {
-                    "description": "Limits the number of records returned per second (RPS).\nDefault is no limit.",
+                    "description": "Limits the number of records returned per second (RPS).\nDefault is no limit.\nIn the server backup mode the limit applies to each node, not to the cluster.",
                     "type": "integer",
                     "x-nullable": true,
                     "example": 1000
@@ -3212,7 +3212,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "parallel": {
-                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.",
+                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of restore threads on each node, and when it is\nnot set the server uses its own default.",
                     "type": "integer",
                     "default": 8,
                     "example": 8
@@ -3224,7 +3224,7 @@ const docTemplate = `{
                     "x-backup-mode": "scan"
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected when mode is strict: a strict restore does not write records through the write\npath, so it has nothing to retry.",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected when mode is strict: a strict restore does not write records through the write\npath, so it has nothing to retry. When mode is fuzzy the server retries the writes, and if\nnil it uses its own default policy.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -3258,7 +3258,7 @@ const docTemplate = `{
                     "example": 2000
                 },
                 "tps": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.\nDefault: no limit.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.\nDefault: no limit.\nIn the server backup mode the limit applies to each node, not to the cluster.",
                     "type": "integer",
                     "x-nullable": true,
                     "example": 4000
@@ -4305,7 +4305,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "parallel": {
-                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.",
+                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of restore threads on each node, and when it is\nnot set the server uses its own default.",
                     "type": "integer",
                     "default": 8,
                     "example": 8
@@ -4317,7 +4317,7 @@ const docTemplate = `{
                     "x-backup-mode": "scan"
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected when mode is strict: a strict restore does not write records through the write\npath, so it has nothing to retry.",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected when mode is strict: a strict restore does not write records through the write\npath, so it has nothing to retry. When mode is fuzzy the server retries the writes, and if\nnil it uses its own default policy.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -4351,7 +4351,7 @@ const docTemplate = `{
                     "example": 2000
                 },
                 "tps": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.\nDefault: no limit.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.\nDefault: no limit.\nIn the server backup mode the limit applies to each node, not to the cluster.",
                     "type": "integer",
                     "x-nullable": true,
                     "example": 4000

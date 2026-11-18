@@ -21,6 +21,8 @@ type BaseRestorePolicy struct {
 	// This value controls the level of parallelism used by the backup service when
 	// reading backup files.
 	// The optimal value depends on hardware and network configuration.
+	// In the server backup mode it is the number of restore threads on each node, and when it is
+	// not set the server uses its own default.
 	Parallel *int `json:"parallel,omitempty" example:"8" default:"8"`
 	// Do not restore any record data (metadata or bin data).
 	// By default, record data, secondary index definitions, and UDF modules will be restored.
@@ -73,13 +75,15 @@ type BaseRestorePolicy struct {
 	Bandwidth *int64 `json:"bandwidth,omitempty" example:"50000" extensions:"x-nullable,x-backup-mode=scan"`
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.
 	// Default: no limit.
+	// In the server backup mode the limit applies to each node, not to the cluster.
 	Tps *int `json:"tps,omitempty" example:"4000" extensions:"x-nullable"`
 	// Encryption details (algorithm and key). Default is no encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty" extensions:"x-backup-mode=scan"`
 	// Configuration of retries for each restore write operation.
 	// If nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).
 	// Rejected when mode is strict: a strict restore does not write records through the write
-	// path, so it has nothing to retry.
+	// path, so it has nothing to retry. When mode is fuzzy the server retries the writes, and if
+	// nil it uses its own default policy.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Amount of extra time-to-live to add to records that have expirable void-times.
 	// Must be set in seconds.
