@@ -444,7 +444,8 @@ helm upgrade --namespace aerospike abs -f abs-values.yaml aerospike/aerospike-ba
 A change to `backupServiceConfig` changes a checksum annotation on the pod, so the pod is replaced and starts with
 the new configuration. Keep in mind:
 
-- Backups and restores running on the old pod are interrupted. On shutdown ABS drains the HTTP server for up to
+- Backups and restores running on the old pod are interrupted, except a restore in server backup mode that is
+  under way (see [what stopping ABS does to a restore](https://github.com/aerospike/aerospike-backup-service/blob/main/docs/architecture.md#request-lifecycle)). On shutdown ABS drains the HTTP server for up to
   30 seconds; `terminationGracePeriodSeconds` (default 45) gives it time to finish before the kubelet kills the
   container. Schedule upgrades outside backup windows.
 - Only `backupServiceConfig` is tracked. After rotating a Secret or ConfigMap used through `env`, `envFrom` or a

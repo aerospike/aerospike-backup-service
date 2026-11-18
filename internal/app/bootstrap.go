@@ -37,15 +37,7 @@ type Components struct {
 	TLSProvider      servertls.TLSProvider
 
 	registry      service.BackupStateRegistry
-	restoreJobs   component
 	configApplier service.ConfigApplier
-}
-
-// component is anything whose work outlives a single request: it takes the run context
-// from Components.Start and ends when that context is canceled.
-// Start should be called exactly once, by Components.Start.
-type component interface {
-	Start(ctx context.Context)
 }
 
 // Run starts every component and serves until ctx is canceled or a listener stops. It
@@ -63,7 +55,6 @@ func (c *Components) Run(ctx context.Context) error {
 // context that built the graph. It is called exactly once.
 func (c *Components) Start(ctx context.Context) {
 	c.registry.Start(ctx)
-	c.restoreJobs.Start(ctx)
 	c.Scheduler.Start(ctx)
 	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	c.TLSProvider.Start(ctx)
@@ -166,7 +157,6 @@ func InitComponents(
 		MetricsCollector: metricsCollector,
 		TLSProvider:      tlsProvider,
 		registry:         components.registry,
-		restoreJobs:      restoreJobs,
 		configApplier:    configApplier,
 	}, nil
 }
