@@ -182,15 +182,15 @@ func NewRestoreJobsHolder() *RestoreJobsHolder {
 }
 
 // NewJob registers a new restore job and returns its id together with the context the job
-// must run in: ctx, the context of the request that starts the job, with its values but without
-// its cancellation. The job is finished, and its context released, by FinishJob.
-func (h *RestoreJobsHolder) NewJob(ctx context.Context, label string) (model.RestoreJobID, context.Context) {
-	jobCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+// must run in. The job is finished, and its context released, by FinishJob.
+func (h *RestoreJobsHolder) NewJob(label string) (model.RestoreJobID, context.Context) {
+	//nolint:forbidigo // a job is detached on purpose: neither its request nor shutdown may cancel it.
+	ctx, cancel := context.WithCancel(context.Background())
 	// #nosec G404
 	id := model.RestoreJobID(rand.Int64N(maxJSONSafeJobID) + 1)
 	h.Store(id, newRestoreJob(label, cancel))
 
-	return id, jobCtx
+	return id, ctx
 }
 
 // AddHandler adds the handler of a restore the job has started, so that the job's status includes it.

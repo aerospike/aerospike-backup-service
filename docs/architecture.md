@@ -81,8 +81,8 @@ longer than an HTTP client should be expected to hold a connection open.
    [`cmd/backup/main.go`](../cmd/backup/main.go)), not the originating HTTP request's context. A backup that has
    started must not be canceled just because the client that triggered it disconnected; it can only be stopped
    explicitly via <!-- tag cancelCurrentBackup -->`POST /v1/backups/cancel/{name}`<!-- /tag -->.
-6. A restore runs on its request's context without that context's cancellation, so neither the client disconnecting
-   nor ABS stopping cancels it; only <!-- tag cancelRestore -->`POST /v1/restore/cancel/{jobId}`<!-- /tag --> does.
+6. A restore runs on a context of its own, so neither the client disconnecting nor ABS stopping cancels it; only
+   <!-- tag cancelRestore -->`POST /v1/restore/cancel/{jobId}`<!-- /tag --> does.
    What stopping ABS does to a running restore depends on the backup mode:
    - **Scan mode:** the restore runs inside ABS, so it ends with the process, partly applied. Start it again.
    - **Server mode:** the restore runs on the Aerospike server and, once under way, completes without ABS. ABS keeps

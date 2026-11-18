@@ -46,7 +46,7 @@ func TestRestoreOK(t *testing.T) {
 		AnyTimes()
 
 	// Execute the restore
-	jobID := env.restoreManager.Restore(t.Context(), request)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -96,7 +96,7 @@ func TestCancelRestoreOK(t *testing.T) {
 		Return(nil).
 		AnyTimes()
 
-	jobID := env.restoreManager.Restore(t.Context(), request)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	// A job that is canceled before its restore starts does not start it, so wait for the start.
@@ -126,38 +126,6 @@ func TestCancelRestoreOK(t *testing.T) {
 	assert.Equal(t, model.RestoreCanceled, jobStatus.Status)
 }
 
-// TestRestore_OutlivesRequest checks that a restore keeps running after the request that started
-// it ends.
-func TestRestore_OutlivesRequest(t *testing.T) {
-	env := setupTestRestoreEnv(t)
-	request := model.NewRestoreRequest(model.AerospikeCluster{}, model.RestorePolicy{}, &model.LocalStorage{}, nil,
-		"/backup/path/data")
-	client := env.expectSuccessfulClientInteraction(t)
-	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{{
-		BackupMetadata: model.BackupMetadata{Created: time.Now(), Namespace: "test-ns", FileCount: 1},
-	}}, nil)
-	env.restoreValidator.EXPECT().ValidatePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-
-	// The restore runs until the request has ended, and fails if it was canceled meanwhile.
-	requestEnded := make(chan struct{})
-	handler := service.NewMockRestoreHandler(env.ctrl)
-	handler.EXPECT().Status().Return(model.RestoreRun{}).AnyTimes()
-	handler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
-		<-requestEnded
-		return ctx.Err()
-	})
-	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(handler, nil)
-
-	ctx, cancel := context.WithCancel(t.Context())
-	jobID := env.restoreManager.Restore(ctx, request)
-	cancel()
-	close(requestEnded)
-
-	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
-	require.NoError(t, err)
-	assert.Equal(t, model.RestoreSuccess, jobStatus.Status)
-}
-
 func TestRestoreFailsWithClientError(t *testing.T) {
 	env := setupTestRestoreEnv(t)
 
@@ -171,7 +139,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 		Return(nil, clientErr)
 
 	// Execute the restore
-	jobID := env.restoreManager.Restore(t.Context(), request)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -205,7 +173,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 		Return(errors.New("destination cluster does not have required namespace: test-ns"))
 
 	// Execute the restore
-	jobID := env.restoreManager.Restore(t.Context(), request)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -241,7 +209,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 		Return(errors.New("backups from different times were found"))
 
 	// Execute the restore
-	jobID := env.restoreManager.Restore(t.Context(), request)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -278,7 +246,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Execute the restore
-	jobID := env.restoreManager.Restore(t.Context(), request)
+	jobID := env.restoreManager.Restore(request)
 	require.NotZero(t, jobID)
 
 	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
@@ -303,7 +271,7 @@ func TestRestoreFailsToStart(t *testing.T) {
 		[]model.BackupDetails{testBackup("data", time.Now(), 1)}, nil)
 	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(nil, errors.New("no such folder"))
 
-	jobStatus, err := waitForRestore(t, env.restoreManager, env.restoreManager.Restore(t.Context(), request))
+	jobStatus, err := waitForRestore(t, env.restoreManager, env.restoreManager.Restore(request))
 
 	require.NoError(t, err)
 	assert.Equal(t, model.RestoreFailure, jobStatus.Status)
@@ -356,7 +324,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 		})
 
 	// 1. Start the restore. This will run in a goroutine.
-	jobID := env.restoreManager.Restore(t.Context(), request)
+	jobID := env.restoreManager.Restore(request)
 
 	// 2. Wait for the signal that the restore goroutine has called Run().
 	// Use a channel with a timeout to avoid hanging the test.
