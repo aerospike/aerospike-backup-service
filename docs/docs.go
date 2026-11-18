@@ -2307,7 +2307,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "parallel": {
-                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of scan threads on each node, and when it is not\nset the server uses its own default.",
+                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of scan threads on each node.",
                     "type": "integer",
                     "default": 8,
                     "minimum": 1,
@@ -3212,7 +3212,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "parallel": {
-                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of restore threads on each node, and when it is\nnot set the server uses its own default.",
+                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of restore threads on each node.",
                     "type": "integer",
                     "default": 8,
                     "example": 8
@@ -4305,7 +4305,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "parallel": {
-                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of restore threads on each node, and when it is\nnot set the server uses its own default.",
+                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of restore threads on each node.",
                     "type": "integer",
                     "default": 8,
                     "example": 8
