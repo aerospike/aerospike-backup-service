@@ -35,7 +35,7 @@ var _ RestoreHandler = (*mockRestoreHandler)(nil)
 
 func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	t.Run("concurrently modify job and succeed", func(t *testing.T) {
-		holder := newStartedJobsHolder(t)
+		holder := NewRestoreJobsHolder()
 		jobID := newJobID(holder, "test-label")
 
 		recordsPerGoroutine := uint64(10)
@@ -89,7 +89,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	})
 
 	t.Run("job is canceled", func(t *testing.T) {
-		holder := newStartedJobsHolder(t)
+		holder := NewRestoreJobsHolder()
 		jobID := newJobID(holder, "test-label")
 		recordsPerGoroutine := uint64(10)
 
@@ -126,7 +126,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	})
 
 	t.Run("job is failed", func(t *testing.T) {
-		holder := newStartedJobsHolder(t)
+		holder := NewRestoreJobsHolder()
 		jobID := newJobID(holder, "test-label")
 		failErr := errors.New("something went wrong")
 		recordsPerGoroutine := uint64(10)
@@ -164,7 +164,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	})
 
 	t.Run("job failed due to restore pre-requisites", func(t *testing.T) {
-		holder := newStartedJobsHolder(t)
+		holder := NewRestoreJobsHolder()
 		jobID := newJobID(holder, "test-label")
 		failErr := errors.Join(
 			ErrRestorePrerequisitesFailed,
@@ -183,21 +183,8 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 	})
 }
 
-func TestRestoreJobsHolder_JobsEndWithTheServiceContext(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context())
-	holder := NewRestoreJobsHolder()
-	holder.Start(ctx)
-
-	_, jobCtx := holder.NewJob("running")
-	require.NoError(t, jobCtx.Err())
-
-	cancel()
-
-	require.ErrorIs(t, jobCtx.Err(), context.Canceled, "a job must not outlive the service")
-}
-
 func TestRestoreJobsHolder_FinishReleasesJobContext(t *testing.T) {
-	holder := newStartedJobsHolder(t)
+	holder := NewRestoreJobsHolder()
 	jobID, ctx := holder.NewJob("done")
 
 	holder.FinishJob(jobID, nil, slog.New(slog.DiscardHandler))
@@ -209,7 +196,7 @@ func TestRestoreJobsHolder_FinishReleasesJobContext(t *testing.T) {
 }
 
 func TestRestoreJobsHolder_StatusCounts(t *testing.T) {
-	holder := newStartedJobsHolder(t)
+	holder := NewRestoreJobsHolder()
 	jobRunning := newJobID(holder, "running")
 	jobDone := newJobID(holder, "done")
 	jobCanceled := newJobID(holder, "canceled")
@@ -231,16 +218,6 @@ func TestRestoreJobsHolder_StatusCounts(t *testing.T) {
 	assert.Equal(t, 2, counts[model.RestoreSuccess])
 	assert.Equal(t, 1, counts[model.RestoreCanceled])
 	assert.Equal(t, 1, counts[model.RestoreFailure])
-}
-
-// newStartedJobsHolder returns a holder that accepts jobs for the duration of the test.
-func newStartedJobsHolder(t *testing.T) *RestoreJobsHolder {
-	t.Helper()
-
-	holder := NewRestoreJobsHolder()
-	holder.Start(t.Context())
-
-	return holder
 }
 
 // newJobID starts a job and drops the context the caller under test does not need.
@@ -299,7 +276,7 @@ func TestRestoreJobsHolder_GetFilteredJobs(t *testing.T) {
 // answers with 404.
 func TestRestoreJobsHolder_UnknownJob(t *testing.T) {
 	t.Parallel()
-	holder := newStartedJobsHolder(t)
+	holder := NewRestoreJobsHolder()
 
 	var notFound *JobNotFoundError
 
