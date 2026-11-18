@@ -15,8 +15,7 @@ import (
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total
 	// data partitions. The optimal value depends on hardware and network configuration.
-	// In the server backup mode it is the number of scan threads on each node, and when it is not
-	// set the server uses its own default.
+	// In the server backup mode it is the number of scan threads on each node.
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1" default:"8" minimum:"1"`
 	// Maximum number of threads to use for writing backup files. If not specified, same values as `parallel` is used.
 	// In the server backup mode it is the number of upload threads on each node, and when it is

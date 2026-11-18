@@ -21,8 +21,7 @@ type BaseRestorePolicy struct {
 	// This value controls the level of parallelism used by the backup service when
 	// reading backup files.
 	// The optimal value depends on hardware and network configuration.
-	// In the server backup mode it is the number of restore threads on each node, and when it is
-	// not set the server uses its own default.
+	// In the server backup mode it is the number of restore threads on each node.
 	Parallel *int `json:"parallel,omitempty" example:"8" default:"8"`
 	// Do not restore any record data (metadata or bin data).
 	// By default, record data, secondary index definitions, and UDF modules will be restored.
