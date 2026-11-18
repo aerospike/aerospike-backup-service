@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 	"github.com/aerospike/backup-go/pkg/server/lister"
 	listermodels "github.com/aerospike/backup-go/pkg/server/lister/models"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
@@ -23,27 +25,47 @@ type S3ClientProvider interface {
 	GetClient(ctx context.Context, storage *model.S3Storage) (*awsS3.Client, error)
 }
 
-// Catalog reads server backups from the metadata the server writes next to each of them.
+// Catalog reads server backups from the metadata the server writes next to each of them, and
+// their counts from the manifests, index and UDF files it writes with them. Like scan mode, it
+// lists no empty incremental backup: there is nothing to restore from one.
 type Catalog interface {
 	service.BackupReader
 
-	// GetBackup returns the backup with the key in the storage. A key names one backup, because
-	// a server job backs up one namespace.
+	// GetBackup returns the backup with the key in the storage, without its counts, which restore
+	// does not need. A key names one backup, because a server job backs up one namespace.
 	GetBackup(ctx context.Context, storage model.Storage, key string) (model.BackupDetails, error)
+
+	// LastBackupTimes returns, per namespace, the creation time of the routine's newest listed
+	// backup of any of backupTypes. A namespace with no such backup has no entry.
+	LastBackupTimes(
+		ctx context.Context, routine *model.BackupRoutine, backupTypes ...model.BackupType,
+	) (map[string]time.Time, error)
+}
+
+// backupSource reads a routine's server backups. *lister.Lister is one.
+type backupSource interface {
+	FetchAllMetadata(ctx context.Context) ([]listermodels.Metadata, error)
+	GetMetadata(ctx context.Context, backupID string) (listermodels.Metadata, error)
+	GetStatistics(ctx context.Context, backupID string) (listermodels.Statistics, error)
+}
+
+// sourceOpener opens the source of a routine's backups in storage.
+type sourceOpener interface {
+	open(ctx context.Context, storage model.Storage, routineName string) (backupSource, error)
 }
 
 type catalog struct {
-	s3Clients S3ClientProvider
+	sources sourceOpener
 }
 
 var _ Catalog = (*catalog)(nil)
 
 // NewCatalog returns a Catalog over the server backups in S3 storage.
 func NewCatalog(s3Clients S3ClientProvider) Catalog {
-	return &catalog{s3Clients: s3Clients}
+	return &catalog{sources: newListerOpener(s3Clients)}
 }
 
-// GetBackups returns the routine's completed server backups that match the filter, oldest first.
+// GetBackups returns the routine's listed server backups that match the filter, oldest first.
 func (c *catalog) GetBackups(ctx context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
 	routineFilter, ok := filter.(*service.RoutineFilter)
 	if !ok {
@@ -53,22 +75,44 @@ func (c *catalog) GetBackups(ctx context.Context, filter service.BackupFilter) (
 	return c.getRoutineBackups(ctx, routineFilter)
 }
 
+// getRoutineBackups reads the counts of only the backups the filter selects: they take a read of
+// every manifest of the backup.
 func (c *catalog) getRoutineBackups(ctx context.Context, filter *service.RoutineFilter) ([]model.BackupDetails, error) {
-	backups, err := c.listBackups(ctx, filter.Storage(), filter.RoutineName())
+	source, backups, err := c.listBackups(ctx, filter.Storage(), filter.RoutineName())
 	if err != nil {
 		return nil, err
 	}
 
 	bounds := filter.TimeBounds()
-	matching := make([]model.BackupDetails, 0, len(backups))
-	for _, backup := range backups {
-		if backup.BackupType() == filter.BackupType() && bounds.Contains(backup.Created) {
-			matching = append(matching, backup)
+	backups = slices.DeleteFunc(backups, func(b model.BackupDetails) bool {
+		return b.BackupType() != filter.BackupType() || !bounds.Contains(b.Created)
+	})
+
+	if filter.OnlyLast() {
+		for _, backup := range slices.Backward(backups) {
+			listed, err := withStatistics(ctx, source, &backup)
+			if err != nil {
+				return nil, err
+			}
+
+			if listed {
+				return []model.BackupDetails{backup}, nil
+			}
 		}
+
+		return nil, nil
 	}
 
-	if filter.OnlyLast() && len(matching) > 0 {
-		return matching[len(matching)-1:], nil
+	matching := make([]model.BackupDetails, 0, len(backups))
+	for _, backup := range backups {
+		listed, err := withStatistics(ctx, source, &backup)
+		if err != nil {
+			return nil, err
+		}
+
+		if listed {
+			matching = append(matching, backup)
+		}
 	}
 
 	return matching, nil
@@ -80,12 +124,12 @@ func (c *catalog) GetBackup(ctx context.Context, storage model.Storage, key stri
 		return model.BackupDetails{}, err
 	}
 
-	backupLister, err := c.newLister(ctx, storage, routineName)
+	source, err := c.sources.open(ctx, storage, routineName)
 	if err != nil {
 		return model.BackupDetails{}, err
 	}
 
-	metadata, err := backupLister.GetMetadata(ctx, jobID)
+	metadata, err := source.GetMetadata(ctx, jobID)
 	if err != nil {
 		return model.BackupDetails{}, fmt.Errorf("failed to read server backup metadata: %w", err)
 	}
@@ -93,20 +137,59 @@ func (c *catalog) GetBackup(ctx context.Context, storage model.Storage, key stri
 	return toBackupDetails(metadata, storage, routineName), nil
 }
 
-// listBackups returns the routine's completed server backups in storage, oldest first.
-func (c *catalog) listBackups(
+// LastBackupTimes reads the counts of only the incremental backups newer than their namespace's
+// last listed backup, to tell whether they are empty.
+func (c *catalog) LastBackupTimes(
 	ctx context.Context,
-	storage model.Storage,
-	routineName string,
-) ([]model.BackupDetails, error) {
-	backupLister, err := c.newLister(ctx, storage, routineName)
+	routine *model.BackupRoutine,
+	backupTypes ...model.BackupType,
+) (map[string]time.Time, error) {
+	source, backups, err := c.listBackups(ctx, routine.Storage, routine.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	all, err := backupLister.FetchAllMetadata(ctx)
+	// Newest first, so that the first listed backup of a namespace is its last.
+	slices.SortStableFunc(backups, func(a, b model.BackupDetails) int { return b.Created.Compare(a.Created) })
+
+	last := make(map[string]time.Time)
+	for _, backup := range backups {
+		if _, found := last[backup.Namespace]; found || !slices.Contains(backupTypes, backup.BackupType()) {
+			continue
+		}
+
+		if backup.BackupType() == model.BackupTypeIncremental {
+			listed, err := withStatistics(ctx, source, &backup)
+			if err != nil {
+				return nil, err
+			}
+
+			if !listed {
+				continue
+			}
+		}
+
+		last[backup.Namespace] = backup.Created
+	}
+
+	return last, nil
+}
+
+// listBackups returns the routine's committed server backups in storage, oldest first, without
+// their counts, and the source to read the counts from.
+func (c *catalog) listBackups(
+	ctx context.Context,
+	storage model.Storage,
+	routineName string,
+) (backupSource, []model.BackupDetails, error) {
+	source, err := c.sources.open(ctx, storage, routineName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list server backup metadata: %w", err)
+		return nil, nil, err
+	}
+
+	all, err := source.FetchAllMetadata(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to list server backup metadata: %w", err)
 	}
 
 	backups := make([]model.BackupDetails, 0, len(all))
@@ -116,17 +199,25 @@ func (c *catalog) listBackups(
 		}
 	}
 
-	return backups, nil
+	return source, backups, nil
 }
 
-// newLister returns a lister of the routine's server backups in storage.
-func (c *catalog) newLister(ctx context.Context, storage model.Storage, routineName string) (*lister.Lister, error) {
+// listerOpener opens a lister of a routine's server backups in S3 storage.
+type listerOpener struct {
+	s3Clients S3ClientProvider
+}
+
+func newListerOpener(s3Clients S3ClientProvider) sourceOpener {
+	return listerOpener{s3Clients: s3Clients}
+}
+
+func (o listerOpener) open(ctx context.Context, storage model.Storage, routineName string) (backupSource, error) {
 	s3Storage, err := toS3Storage(storage)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := c.s3Clients.GetClient(ctx, s3Storage)
+	client, err := o.s3Clients.GetClient(ctx, s3Storage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 client: %w", err)
 	}
@@ -137,9 +228,8 @@ func (c *catalog) newLister(ctx context.Context, storage model.Storage, routineN
 }
 
 // toBackupDetails converts server metadata to the details of a backup of the routine, keyed by
-// its routine and job id. Its lower time bound, From, is what makes it incremental. The metadata
-// records no finish time and no record, byte, file, secondary index or UDF counts, so those
-// fields stay zero.
+// its routine and job id, without its counts. Its lower time bound, From, is what makes it
+// incremental.
 func toBackupDetails(metadata listermodels.Metadata, storage model.Storage, routineName string) model.BackupDetails {
 	var from time.Time
 	if metadata.ModifiedAfterUnixS != 0 {
@@ -149,6 +239,7 @@ func toBackupDetails(metadata listermodels.Metadata, storage model.Storage, rout
 	return model.NewBackupDetails(
 		model.BackupMetadata{
 			Created:     createdTime(metadata),
+			Finished:    finishedTime(metadata),
 			From:        from,
 			Namespace:   metadata.Namespace,
 			Compression: model.CompressionModeNone,
@@ -157,6 +248,50 @@ func toBackupDetails(metadata listermodels.Metadata, storage model.Storage, rout
 		backupKey(routineName, metadata.BackupID),
 		storage,
 	)
+}
+
+// withStatistics sets the counts of the backup from source. It reports whether the backup is
+// listed: an empty incremental backup is not.
+func withStatistics(ctx context.Context, source backupSource, backup *model.BackupDetails) (bool, error) {
+	_, jobID, err := parseBackupKey(backup.Key)
+	if err != nil {
+		return false, err
+	}
+
+	stats, err := source.GetStatistics(ctx, jobID)
+	if err != nil {
+		return false, fmt.Errorf("failed to read the counts of server backup %s: %w", jobID, err)
+	}
+
+	backup.RecordCount = stats.RecordCount
+	backup.ByteCount = stats.ByteCount
+	backup.FileCount = stats.FileCount
+	backup.SecondaryIndexCount = stats.IndexCount
+	backup.UDFCount = stats.UDFCount
+
+	return backup.BackupType() == model.BackupTypeFull || !isEmpty(stats), nil
+}
+
+// isEmpty reports whether a server backup holds no records: it has no segment files. A zero
+// record count alone does not tell, since it counts only the base round.
+func isEmpty(stats listermodels.Statistics) bool {
+	return stats.FileCount == 0
+}
+
+// finishedTime returns the time the backup's data is consistent to: the checkpoint of a strict
+// backup or the end of the base scan of a fuzzy one, whichever is set, in Citrusleaf epoch ms.
+// A backup from a server build that records neither has no finish time.
+func finishedTime(metadata listermodels.Metadata) time.Time {
+	ms := metadata.CheckpointMs
+	if ms == 0 {
+		ms = metadata.BaseScanEndMs
+	}
+
+	if ms == 0 {
+		return time.Time{}
+	}
+
+	return time.UnixMilli(ms + types.CITRUSLEAF_EPOCH*1000).UTC()
 }
 
 // createdTime returns the time the backup's data is as of. A sealed backup holds the records

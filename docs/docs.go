@@ -2127,7 +2127,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "byte-count": {
-                    "description": "The size of the backup in bytes.\nUnknown for server-side backups.",
+                    "description": "The size of the backup in bytes.",
                     "type": "integer",
                     "format": "int64",
                     "example": 2000
@@ -2142,7 +2142,7 @@ const docTemplate = `{
                     "example": "2023-03-20T14:50:00Z"
                 },
                 "duration": {
-                    "description": "Duration represents the elapsed time taken by the backup process in seconds.\nUnknown for server-side backups.",
+                    "description": "Duration represents the elapsed time taken by the backup process in seconds.",
                     "type": "integer"
                 },
                 "encryption": {
@@ -2150,18 +2150,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "file-count": {
-                    "description": "The number of backup files created.\nUnknown for server-side backups.",
+                    "description": "The number of backup files created.",
                     "type": "integer",
                     "format": "int64",
                     "example": 1
                 },
                 "finished": {
-                    "description": "The time the backup operation completed.\nUnknown for server-side backups.",
+                    "description": "The time the backup operation completed.\nFor server-side backups, the time the data is consistent to.",
                     "type": "string",
                     "example": "2023-03-20T14:50:00Z"
                 },
                 "finished-timestamp": {
-                    "description": "The backup finish time in epoch millis.\nUnknown for server-side backups.",
+                    "description": "The backup finish time in epoch millis.",
                     "type": "integer",
                     "format": "int64",
                     "example": 1685458200000
@@ -2182,7 +2182,7 @@ const docTemplate = `{
                     "example": "testNamespace"
                 },
                 "record-count": {
-                    "description": "The total number of records backed up.\nUnknown for server-side backups.",
+                    "description": "The total number of records backed up.\nAn estimate for server-side backups.",
                     "type": "integer",
                     "format": "int64",
                     "example": 100
