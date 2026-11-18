@@ -88,6 +88,12 @@ func TestValidateRestorePolicy(t *testing.T) {
 				"compression, namespace, no-records, disable-batch-writes, batch-size, " +
 				"max-async-batches, socket-timeout, total-timeout, " +
 				`which backup-mode "server" does not support`},
+		{name: "server mode strict without indexes and UDFs", backupMode: model.BackupModeServer,
+			policy: model.RestorePolicy{Mode: model.RestoreModeStrict, NoIndexes: new(true), NoUdfs: new(true)}},
+		{name: "server mode strict with a set list", backupMode: model.BackupModeServer,
+			policy: model.RestorePolicy{Mode: model.RestoreModeStrict, SetList: []string{"setA"}}},
+		{name: "server mode fuzzy with a set list", backupMode: model.BackupModeServer,
+			policy: model.RestorePolicy{Mode: model.RestoreModeFuzzy, SetList: []string{"setA"}}},
 		{name: "server mode strict with a retry policy", backupMode: model.BackupModeServer,
 			policy:  model.RestorePolicy{Mode: model.RestoreModeStrict, RetryPolicy: &model.RetryPolicy{}},
 			wantErr: `restore policy sets retry-policy, which mode "strict" does not support`},

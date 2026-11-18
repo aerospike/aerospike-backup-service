@@ -13,7 +13,7 @@ type BaseRestorePolicy struct {
 	// How the server restores a server-side backup. Required when the service's backup-mode is
 	// server, and not allowed otherwise.
 	// * strict: the namespace is taken from clients, cleared and loaded from the backups, so it
-	//   holds exactly the backed-up data.
+	//   holds exactly the backed-up data. Every record the namespace held is deleted.
 	// * fuzzy: the backed-up records are written into the live namespace, which clients keep
 	//   using. Records only the namespace holds stay; on a record both hold, the backup wins.
 	Mode RestoreMode `json:"mode,omitempty" enums:"strict,fuzzy" example:"strict" extensions:"x-nullable,x-backup-mode=server"`
@@ -21,6 +21,7 @@ type BaseRestorePolicy struct {
 	// This value controls the level of parallelism used by the backup service when
 	// reading backup files.
 	// The optimal value depends on hardware and network configuration.
+	// In the server backup mode it is the number of restore threads on each node.
 	Parallel *int `json:"parallel,omitempty" example:"8" default:"8"`
 	// Do not restore any record data (metadata or bin data).
 	// By default, record data, secondary index definitions, and UDF modules will be restored.
@@ -53,6 +54,8 @@ type BaseRestorePolicy struct {
 	// The sets to restore (optional, an empty list implies restoring all sets).
 	// A name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,
 	// "_", "-" and "$", and not the reserved name "null".
+	// When mode is strict the namespace is cleared first, so the sets left out of the list are
+	// deleted. Use mode fuzzy to restore some sets and keep the rest.
 	SetList []string `json:"set-list,omitempty" example:"set1,set2" extensions:"x-nullable"`
 	// The bins to restore (optional, an empty list implies restoring all bins).
 	// A name follows the Aerospike naming rules: at most 15 bytes of Latin letters, digits,
@@ -75,11 +78,13 @@ type BaseRestorePolicy struct {
 	Bandwidth *int64 `json:"bandwidth,omitempty" example:"50000" extensions:"x-nullable,x-backup-mode=scan"`
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.
 	// Default: no limit.
+	// In the server backup mode the limit applies to each node, not to the cluster.
 	Tps *int `json:"tps,omitempty" example:"4000" extensions:"x-nullable"`
 	// Encryption details (algorithm and key). Default is no encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty" extensions:"x-backup-mode=scan"`
 	// Configuration of retries for each restore write operation.
 	// If nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).
+	// Rejected for server-side backup in strict mode.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Amount of extra time-to-live to add to records that have expirable void-times.
 	// Must be set in seconds.

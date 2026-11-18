@@ -2307,21 +2307,21 @@ const docTemplate = `{
                     "default": false
                 },
                 "parallel": {
-                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.",
+                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of scan threads on each node.",
                     "type": "integer",
                     "default": 8,
                     "minimum": 1,
                     "example": 1
                 },
                 "parallel-write": {
-                    "description": "Maximum number of threads to use for writing backup files. If not specified, same values as ` + "`" + `parallel` + "`" + ` is used.",
+                    "description": "Maximum number of threads to use for writing backup files. If not specified, same values as ` + "`" + `parallel` + "`" + ` is used.\nIn the server backup mode it is the number of upload threads on each node, and when it is\nnot set the server uses its own default, whatever ` + "`" + `parallel` + "`" + ` is.",
                     "type": "integer",
                     "default": 8,
                     "minimum": 1,
                     "example": 1
                 },
                 "records-per-second": {
-                    "description": "Limits the number of records returned per second (RPS).\nDefault is no limit.",
+                    "description": "Limits the number of records returned per second (RPS).\nDefault is no limit.\nIn the server backup mode the limit applies to each node, not to the cluster.",
                     "type": "integer",
                     "x-nullable": true,
                     "example": 1000
@@ -3166,7 +3166,7 @@ const docTemplate = `{
                     "example": 32
                 },
                 "mode": {
-                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
+                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data. Every record the namespace held is deleted.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
                     "enum": [
                         "strict",
                         "fuzzy"
@@ -3212,7 +3212,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "parallel": {
-                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.",
+                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of restore threads on each node.",
                     "type": "integer",
                     "default": 8,
                     "example": 8
@@ -3224,7 +3224,7 @@ const docTemplate = `{
                     "x-backup-mode": "scan"
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected for server-side backup in strict mode.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -3232,7 +3232,7 @@ const docTemplate = `{
                     ]
                 },
                 "set-list": {
-                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nA name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nA name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".\nWhen mode is strict the namespace is cleared first, so the sets left out of the list are\ndeleted. Use mode fuzzy to restore some sets and keep the rest.",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -3258,7 +3258,7 @@ const docTemplate = `{
                     "example": 2000
                 },
                 "tps": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.\nDefault: no limit.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.\nDefault: no limit.\nIn the server backup mode the limit applies to each node, not to the cluster.",
                     "type": "integer",
                     "x-nullable": true,
                     "example": 4000
@@ -4259,7 +4259,7 @@ const docTemplate = `{
                     "example": 32
                 },
                 "mode": {
-                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
+                    "description": "How the server restores a server-side backup. Required when the service's backup-mode is\nserver, and not allowed otherwise.\n* strict: the namespace is taken from clients, cleared and loaded from the backups, so it\n  holds exactly the backed-up data. Every record the namespace held is deleted.\n* fuzzy: the backed-up records are written into the live namespace, which clients keep\n  using. Records only the namespace holds stay; on a record both hold, the backup wins.",
                     "enum": [
                         "strict",
                         "fuzzy"
@@ -4305,7 +4305,7 @@ const docTemplate = `{
                     "default": false
                 },
                 "parallel": {
-                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.",
+                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of restore threads on each node.",
                     "type": "integer",
                     "default": 8,
                     "example": 8
@@ -4317,7 +4317,7 @@ const docTemplate = `{
                     "x-backup-mode": "scan"
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected for server-side backup in strict mode.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -4325,7 +4325,7 @@ const docTemplate = `{
                     ]
                 },
                 "set-list": {
-                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nA name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".",
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).\nA name follows the Aerospike naming rules: at most 63 bytes of Latin letters, digits,\n\"_\", \"-\" and \"$\", and not the reserved name \"null\".\nWhen mode is strict the namespace is cleared first, so the sets left out of the list are\ndeleted. Use mode fuzzy to restore some sets and keep the rest.",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -4351,7 +4351,7 @@ const docTemplate = `{
                     "example": 2000
                 },
                 "tps": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.\nDefault: no limit.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.\nDefault: no limit.\nIn the server backup mode the limit applies to each node, not to the cluster.",
                     "type": "integer",
                     "x-nullable": true,
                     "example": 4000
