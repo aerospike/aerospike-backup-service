@@ -80,9 +80,7 @@ type BaseRestorePolicy struct {
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty" extensions:"x-backup-mode=scan"`
 	// Configuration of retries for each restore write operation.
 	// If nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).
-	// Rejected when mode is strict: a strict restore does not write records through the write
-	// path, so it has nothing to retry. When mode is fuzzy the server retries the writes, and if
-	// nil it uses its own default policy.
+	// Rejected for server-side backup in strict mode.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Amount of extra time-to-live to add to records that have expirable void-times.
 	// Must be set in seconds.

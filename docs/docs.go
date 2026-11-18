@@ -3224,7 +3224,7 @@ const docTemplate = `{
                     "x-backup-mode": "scan"
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected when mode is strict: a strict restore does not write records through the write\npath, so it has nothing to retry. When mode is fuzzy the server retries the writes, and if\nnil it uses its own default policy.",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected for server-side backup in strict mode.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -4317,7 +4317,7 @@ const docTemplate = `{
                     "x-backup-mode": "scan"
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected when mode is strict: a strict restore does not write records through the write\npath, so it has nothing to retry. When mode is fuzzy the server retries the writes, and if\nnil it uses its own default policy.",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries, starting with a two-second delay that doubles between attempts).\nRejected for server-side backup in strict mode.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
