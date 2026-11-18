@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync/atomic"
 
@@ -26,6 +27,7 @@ func startRestore(
 	infoClient backup.ServerBackupInfo,
 	policy model.RestorePolicy,
 	backups []model.BackupDetails,
+	logger *slog.Logger,
 ) (*restoreJob, error) {
 	if len(backups) > maxChainLength {
 		return nil, fmt.Errorf("restore chain has %d backups, the server restores at most %d in one job",
@@ -67,7 +69,9 @@ func startRestore(
 		RetryMaxAttempts:    retry.MaxRetriesOrNil(),
 	})
 
-	job := &restoreJob{infoClient: infoClient, namespace: namespace, serverJobID: jobID, mode: policy.Mode}
+	job := &restoreJob{
+		infoClient: infoClient, namespace: namespace, serverJobID: jobID, mode: policy.Mode, logger: logger,
+	}
 	if err != nil {
 		startErr := fmt.Errorf("failed to start server restore: %w", explainRefusal(err, namespace))
 		if !errors.Is(err, asinfo.ErrOutcomeUnknown) {
@@ -109,6 +113,7 @@ type restoreJob struct {
 	namespace   string
 	serverJobID string
 	mode        model.RestoreMode
+	logger      *slog.Logger
 	// readRecords and skippedRecords are the record counts of the last status the server
 	// reported. Status reads them while Wait polls.
 	readRecords    atomic.Uint64
@@ -127,21 +132,28 @@ func (j *restoreJob) Status() model.RestoreRun {
 	}}
 }
 
-// Wait polls the job until it is complete and the namespace is open to clients. If the job does
-// not complete, or ctx is canceled, Wait releases the job before it returns. The release does not
-// use ctx, because a canceled job would otherwise keep running on the server.
+// Wait polls the job until it is complete and the namespace is open to clients. When the server
+// reports that the job has ended on every node, Wait only opens the namespace: there is nothing
+// to abort. When the job is still running, because it is blocked, it had no status for
+// unobservedJobTimeout, or ctx is canceled, Wait releases it. The cleanup does not use ctx,
+// because a canceled job would otherwise keep running on the server.
 func (j *restoreJob) Wait(ctx context.Context) error {
-	err := j.poll(ctx, func(status *infomodels.ResponseRestoreState) (bool, error) {
+	status, err := j.poll(ctx, func(status *infomodels.ResponseRestoreState) (bool, error) {
 		j.readRecords.Store(status.Total)
 		j.skippedRecords.Store(status.Filtered)
 
 		return j.advance(ctx, status)
 	})
-	if err != nil {
-		return errors.Join(err, j.release(context.WithoutCancel(ctx)))
+	if err == nil {
+		return nil
 	}
 
-	return nil
+	// The status is nil when the wait ended without one: an unobserved job or a canceled ctx.
+	if status != nil && status.IsFinished() {
+		return errors.Join(err, j.releaseNamespace(context.WithoutCancel(ctx)))
+	}
+
+	return errors.Join(err, j.release(context.WithoutCancel(ctx)))
 }
 
 // advance handles one status of the job. It returns true once the job is complete and the server
@@ -175,23 +187,26 @@ func (j *restoreJob) advance(ctx context.Context, status *infomodels.ResponseRes
 	}
 }
 
-// release cleans up after a job that did not complete: it aborts the job. A strict restore keeps
-// the namespace closed to clients after an abort, so release then opens the namespace, with
-// whatever the restore wrote. A fuzzy restore never closes the namespace.
+// release cleans up after a job that is still running: it aborts the job and then releases the
+// namespace. The namespace is released even when the abort fails, because a lost job, or one that
+// ends by itself while the abort is sent, may refuse the abort and still keep the namespace closed.
 func (j *restoreJob) release(ctx context.Context) error {
-	abortErr := j.abort(ctx)
+	return errors.Join(j.abort(ctx), j.releaseNamespace(ctx))
+}
+
+// releaseNamespace opens the namespace of a strict restore whose job has ended or is ending, with
+// whatever the restore wrote, because a strict restore keeps it closed to clients. A fuzzy restore
+// never closes the namespace, so there is nothing to open.
+func (j *restoreJob) releaseNamespace(ctx context.Context) error {
 	if j.mode == model.RestoreModeFuzzy {
-		return abortErr
+		return nil
 	}
 
-	// Continue when the abort fails. A job that ended by itself may refuse the abort, and it
-	// still keeps the namespace closed.
 	if err := j.openNamespace(ctx); err != nil {
-		return errors.Join(abortErr,
-			fmt.Errorf("failed to open namespace %s after server restore %s: %w", j.namespace, j.serverJobID, err))
+		return fmt.Errorf("failed to open namespace %s after server restore %s: %w", j.namespace, j.serverJobID, err)
 	}
 
-	return abortErr
+	return nil
 }
 
 func (j *restoreJob) abort(ctx context.Context) error {
@@ -231,7 +246,7 @@ func (j *restoreJob) pollUntil(
 	ctx, cancel := context.WithTimeout(ctx, cleanupTimeout)
 	defer cancel()
 
-	err := j.poll(ctx, func(status *infomodels.ResponseRestoreState) (bool, error) { return done(status), nil })
+	_, err := j.poll(ctx, func(status *infomodels.ResponseRestoreState) (bool, error) { return done(status), nil })
 	if err != nil {
 		return fmt.Errorf("the job did not %s: %w", step, err)
 	}
@@ -239,14 +254,17 @@ func (j *restoreJob) pollUntil(
 	return nil
 }
 
-// poll polls the job until settled reports that the wait is over.
-func (j *restoreJob) poll(ctx context.Context, settled func(*infomodels.ResponseRestoreState) (bool, error)) error {
+// poll polls the job until settled reports that the wait is over, and returns the last status, as
+// pollJob does.
+func (j *restoreJob) poll(
+	ctx context.Context,
+	settled func(*infomodels.ResponseRestoreState) (bool, error),
+) (*infomodels.ResponseRestoreState, error) {
 	fetch := func(ctx context.Context) (*infomodels.ResponseRestoreState, error) {
 		return j.infoClient.GetRestoreStatus(ctx, j.namespace, j.serverJobID)
 	}
-	_, err := pollJob(ctx, restoreJobKind, j.serverJobID, fetch, settled)
 
-	return err
+	return pollJob(ctx, j.logger, restoreJobKind, j.serverJobID, fetch, settled)
 }
 
 // truncateStateRefusal is the text in the server's error when it refuses a strict restore because

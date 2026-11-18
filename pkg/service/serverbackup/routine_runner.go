@@ -93,12 +93,6 @@ func (r *routineRunner) backupNamespaces(
 
 	var errs error
 	for i, namespace := range namespaces {
-		// StartBackup is sent even when ctx is already canceled, so stop here instead of starting
-		// another job.
-		if err := ctx.Err(); err != nil {
-			return errors.Join(errs, err)
-		}
-
 		operation.startNamespace(i)
 		modifiedAfter := lowerBound(bounds, namespace)
 		err := r.backupNamespace(ctx, infoClient, routine, runSpec, modifiedAfter, namespace, operation, logger)
@@ -168,8 +162,8 @@ type backupJob struct {
 	logger    *slog.Logger
 }
 
-// Wait waits for the job to end. If the wait fails, or ctx is canceled, Wait aborts the job
-// before it returns.
+// Wait waits for the job to end. If the job had no status for unobservedJobTimeout, or ctx is
+// canceled, Wait aborts the job before it returns.
 func (j *backupJob) Wait(ctx context.Context) error {
 	status, err := j.poll(ctx)
 	if err != nil {
@@ -185,6 +179,14 @@ func (j *backupJob) Wait(ctx context.Context) error {
 	case infomodels.BackupStateAborted:
 		return errJobEnded(backupJobKind, j.jobID, "was aborted", status.AbortOrigin, status.ErrorReason)
 	default:
+		// The server completes a job that could not read some records, and the backup lacks them.
+		if status.RecsReadFailed > 0 {
+			j.logger.Warn("Server backup completed without the records the server could not read",
+				slog.String("jobId", j.jobID),
+				slog.String("namespace", status.Namespace),
+				slog.Uint64("recordsReadFailed", status.RecsReadFailed))
+		}
+
 		return nil
 	}
 }
@@ -196,7 +198,7 @@ func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, 
 		return j.infoClient.GetBackupStatus(ctx, j.jobID)
 	}
 
-	return pollJob(ctx, backupJobKind, j.jobID, fetch, func(status *infomodels.ResponseBackupState) (bool, error) {
+	settled := func(status *infomodels.ResponseBackupState) (bool, error) {
 		j.operation.record(status)
 
 		switch status.State {
@@ -205,7 +207,9 @@ func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, 
 		default:
 			return false, nil
 		}
-	})
+	}
+
+	return pollJob(ctx, j.logger, backupJobKind, j.jobID, fetch, settled)
 }
 
 // abort aborts the job on the server and waits up to cleanupTimeout for it to end, so that the

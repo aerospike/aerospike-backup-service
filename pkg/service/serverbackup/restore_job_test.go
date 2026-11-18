@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -188,7 +189,7 @@ func TestStartRestore_StartRefused(t *testing.T) {
 			// The start returns the job id with every error. A refused job is not cleaned up.
 			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, errors.New(tt.refusal))
 
-			_, err := startRestore(t.Context(), infoClient, tt.policy, []model.BackupDetails{chainBackup(fullID)})
+			_, err := startRestore(t.Context(), infoClient, tt.policy, []model.BackupDetails{chainBackup(fullID)}, discardLogger)
 			require.ErrorContains(t, err, tt.wantErr)
 			require.ErrorContains(t, err, tt.refusal)
 		})
@@ -225,7 +226,7 @@ func TestStartRestore_StartOutcomeUnknown(t *testing.T) {
 			infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, startErr)
 			tt.expect(infoClient)
 
-			_, err := startRestore(t.Context(), infoClient, tt.policy, []model.BackupDetails{chainBackup(fullID)})
+			_, err := startRestore(t.Context(), infoClient, tt.policy, []model.BackupDetails{chainBackup(fullID)}, discardLogger)
 			require.ErrorIs(t, err, asinfo.ErrOutcomeUnknown)
 		})
 	}
@@ -241,7 +242,7 @@ func TestStartRestore_InvalidBackupKey(t *testing.T) {
 	backup.Key = fullID // a bare backup id names no routine.
 
 	_, err := startRestore(t.Context(), aerospike.NewMockInfoGetter(ctrl), strictPolicy,
-		[]model.BackupDetails{backup})
+		[]model.BackupDetails{backup}, discardLogger)
 	require.EqualError(t, err, `invalid server backup key "`+fullID+`": want <routine>/<job id>`)
 }
 
@@ -254,13 +255,13 @@ func TestStartRestore_ChainTooLong(t *testing.T) {
 		backups[i] = chainBackup(fmt.Sprintf("261020T09%04d-aaaa", i))
 	}
 
-	_, err := startRestore(t.Context(), aerospike.NewMockInfoGetter(ctrl), strictPolicy, backups)
+	_, err := startRestore(t.Context(), aerospike.NewMockInfoGetter(ctrl), strictPolicy, backups, discardLogger)
 	require.EqualError(t, err, "restore chain has 33 backups, the server restores at most 32 in one job")
 }
 
 // newTestRestoreJob returns the restore job "job" of namespace bar.
 func newTestRestoreJob(infoClient *aerospike.MockInfoGetter, mode model.RestoreMode) *restoreJob {
-	return &restoreJob{infoClient: infoClient, namespace: "bar", serverJobID: "job", mode: mode}
+	return &restoreJob{infoClient: infoClient, namespace: "bar", serverJobID: "job", mode: mode, logger: discardLogger}
 }
 
 func TestRestoreJob_Wait_UntilNamespaceOpen(t *testing.T) {
@@ -328,26 +329,26 @@ func TestRestoreJob_Wait_RecordsCounts(t *testing.T) {
 	assert.Equal(t, uint64(3), counters.SkippedRecords)
 }
 
-// TestRestoreJob_Wait_ReleasesNamespace checks that a strict restore that does not complete is
-// released, whatever stopped it.
-func TestRestoreJob_Wait_ReleasesNamespace(t *testing.T) {
+// TestRestoreJob_Wait_EndedJobIsNotAborted checks that a job the server failed or aborted is not
+// aborted again: a strict restore only opens its namespace, a fuzzy restore sends nothing more.
+func TestRestoreJob_Wait_EndedJobIsNotAborted(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		status    *infomodels.ResponseRestoreState
-		statusErr error
-		// clearErr is the answer to the clear that the status asks for.
-		clearErr error
-		wantErr  string
+		name    string
+		mode    model.RestoreMode
+		status  *infomodels.ResponseRestoreState
+		wantErr string
 	}{
 		{
-			name:    "failed",
+			name:    "strict failed",
+			mode:    model.RestoreModeStrict,
 			status:  &infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed, ErrorReason: "s3 GET 403"},
 			wantErr: "server restore job failed: s3 GET 403",
 		},
 		{
-			name: "aborted",
+			name: "strict aborted",
+			mode: model.RestoreModeStrict,
 			status: &infomodels.ResponseRestoreState{
 				State: infomodels.RestoreStateAborted, ErrorReason: "node left", AbortOrigin: infomodels.AbortOriginCluster,
 			},
@@ -355,17 +356,59 @@ func TestRestoreJob_Wait_ReleasesNamespace(t *testing.T) {
 		},
 		{
 			// No clear is sent: the job has ended and would restore nothing into the cleared storage.
-			name: "failed while a node must be cleared",
+			name: "strict failed while a node must be cleared",
+			mode: model.RestoreModeStrict,
 			status: &infomodels.ResponseRestoreState{
 				State: infomodels.RestoreStateFailed, Clear: infomodels.ClearStateRequired,
 			},
 			wantErr: "server restore job failed",
 		},
 		{
-			name:      "status unavailable",
-			statusErr: errors.New("timeout"),
-			wantErr:   "failed to get status of server restore job: timeout",
+			name:    "fuzzy failed",
+			mode:    model.RestoreModeFuzzy,
+			status:  &infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed},
+			wantErr: "server restore job failed",
 		},
+		{
+			name:    "fuzzy aborted",
+			mode:    model.RestoreModeFuzzy,
+			status:  &infomodels.ResponseRestoreState{State: infomodels.RestoreStateAborted},
+			wantErr: "server restore job was aborted",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+
+			infoClient := aerospike.NewMockInfoGetter(ctrl)
+			infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(tt.status, nil)
+			if tt.mode == model.RestoreModeStrict {
+				expectOpen(infoClient, "job")
+			}
+
+			err := newTestRestoreJob(infoClient, tt.mode).Wait(t.Context())
+
+			require.ErrorContains(t, err, tt.wantErr)
+			require.NotContains(t, err.Error(), "failed to abort")
+			require.NotContains(t, err.Error(), "failed to open namespace")
+		})
+	}
+}
+
+// TestRestoreJob_Wait_ReleasesNamespace checks that a strict restore whose job is still running is
+// released, whatever stopped the wait.
+func TestRestoreJob_Wait_ReleasesNamespace(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		status *infomodels.ResponseRestoreState
+		// clearErr is the answer to the clear that the status asks for.
+		clearErr error
+		wantErr  string
+	}{
 		{
 			name: "clear refused",
 			status: &infomodels.ResponseRestoreState{
@@ -399,7 +442,7 @@ func TestRestoreJob_Wait_ReleasesNamespace(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
 			infoClient := aerospike.NewMockInfoGetter(ctrl)
-			infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(tt.status, tt.statusErr)
+			infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(tt.status, nil)
 			if tt.clearErr != nil {
 				infoClient.EXPECT().ClearRestoreStorage(gomock.Any(), "bar", "job").Return(tt.clearErr)
 			}
@@ -426,68 +469,68 @@ func TestRestoreJob_Wait_Canceled(t *testing.T) {
 	require.ErrorIs(t, newTestRestoreJob(infoClient, model.RestoreModeStrict).Wait(ctx), context.Canceled)
 }
 
-// TestRestoreJob_Wait_FuzzyAbortsOnly checks that a fuzzy restore that does not complete is
+// TestRestoreJob_Wait_FuzzyAbortsOnly checks that a fuzzy restore whose job is still running is
 // aborted and that its namespace, which it never closed, is not opened.
 func TestRestoreJob_Wait_FuzzyAbortsOnly(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
 	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
-		&infomodels.ResponseRestoreState{State: infomodels.RestoreStateFailed}, nil)
 	infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(nil)
 
-	err := newTestRestoreJob(infoClient, model.RestoreModeFuzzy).Wait(t.Context())
-	require.ErrorContains(t, err, "server restore job failed")
+	require.ErrorIs(t, newTestRestoreJob(infoClient, model.RestoreModeFuzzy).Wait(ctx), context.Canceled)
 }
 
-// TestRestoreJob_Wait_OpensAfterRefusedAbort checks that the namespace of a strict restore that
-// ended by itself is opened even though the server refuses to abort the job.
-func TestRestoreJob_Wait_OpensAfterRefusedAbort(t *testing.T) {
+// TestRestoreJob_Wait_ObservedAgain checks that a job with no status for a while is not released.
+func TestRestoreJob_Wait_ObservedAgain(t *testing.T) {
 	t.Parallel()
-	ctrl := gomock.NewController(t)
 
-	failed := &infomodels.ResponseRestoreState{
-		State: infomodels.RestoreStateFailed, NsState: infomodels.NamespaceStateFailed,
+	for _, statusErr := range statusReadErrors {
+		t.Run(statusErr.Error(), func(t *testing.T) {
+			t.Parallel()
+			synctest.Test(t, func(t *testing.T) {
+				infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
+				gomock.InOrder(
+					infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").
+						Return(nil, statusErr).Times(pollsWithinTimeout),
+					infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(completeStatus, nil),
+				)
+
+				require.NoError(t, newTestRestoreJob(infoClient, model.RestoreModeStrict).Wait(t.Context()))
+			})
+		})
 	}
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	gomock.InOrder(
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(failed, nil),
-		infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(errors.New("job is not active")),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(failed, nil),
-		infoClient.EXPECT().OpenRestore(gomock.Any(), "bar").Return(nil),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(&infomodels.ResponseRestoreState{
-			State: infomodels.RestoreStateFailed, NsState: infomodels.NamespaceStateNone,
-		}, nil),
-	)
-
-	err := newTestRestoreJob(infoClient, model.RestoreModeStrict).Wait(t.Context())
-
-	require.ErrorContains(t, err, "server restore job failed")
-	require.ErrorContains(t, err, "failed to abort server restore job: job is not active")
-	require.NotContains(t, err.Error(), "failed to open namespace")
 }
 
-// TestRestoreJob_Wait_LostJob checks that a job the cluster stops reporting is given up on and
-// released. A lost job refuses the abort and is never seen to end, so its namespace is not opened.
-//
-//nolint:paralleltest // shortens lostJobTimeout, which the parallel tests read.
-func TestRestoreJob_Wait_LostJob(t *testing.T) {
-	shortenLostJobTimeout(t)
-	ctrl := gomock.NewController(t)
+// TestRestoreJob_Wait_UnobservedJob checks that a job with no status for unobservedJobTimeout is
+// released. It is never seen to end, so its namespace is not opened.
+func TestRestoreJob_Wait_UnobservedJob(t *testing.T) {
+	t.Parallel()
 
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	gomock.InOrder(
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(nil, asinfo.ErrNotFound).Times(2),
-		infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(asinfo.ErrNotFound),
-		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(nil, asinfo.ErrNotFound).Times(2),
-	)
+	for _, statusErr := range statusReadErrors {
+		t.Run(statusErr.Error(), func(t *testing.T) {
+			t.Parallel()
+			synctest.Test(t, func(t *testing.T) {
+				infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
+				gomock.InOrder(
+					infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").
+						Return(nil, statusErr).MinTimes(pollsUntilUnobserved).MaxTimes(pollsUntilUnobserved+1),
+					infoClient.EXPECT().AbortRestore(gomock.Any(), "bar", "job").Return(statusErr),
+					infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(nil, statusErr).MinTimes(1),
+				)
 
-	err := newTestRestoreJob(infoClient, model.RestoreModeStrict).Wait(t.Context())
+				err := newTestRestoreJob(infoClient, model.RestoreModeStrict).Wait(t.Context())
 
-	require.ErrorContains(t, err, "server restore job not reported for 1.5s")
-	require.ErrorContains(t, err, "failed to abort server restore job")
-	require.ErrorContains(t, err, "failed to open namespace bar after server restore job: the job did not end")
+				require.ErrorContains(t, err, "server restore job not observed for 10m0s: "+statusErr.Error())
+				require.ErrorContains(t, err, "failed to abort server restore job")
+				require.ErrorContains(t, err, "failed to open namespace bar after server restore job: "+
+					"the job did not end: context deadline exceeded, last status read: "+statusErr.Error())
+			})
+		})
+	}
 }
 
 // startAndWait starts the restore of the backups and waits for it to end without error.
@@ -499,7 +542,7 @@ func startAndWait(
 ) {
 	t.Helper()
 
-	job, err := startRestore(t.Context(), infoClient, policy, backups)
+	job, err := startRestore(t.Context(), infoClient, policy, backups, discardLogger)
 	require.NoError(t, err)
 	require.NoError(t, job.Wait(t.Context()))
 }
@@ -522,6 +565,22 @@ func expectRelease(infoClient *aerospike.MockInfoGetter, jobID string) {
 		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", jobID).Return(
 			&infomodels.ResponseRestoreState{
 				State: infomodels.RestoreStateAborted, NsState: infomodels.NamespaceStateNone,
+			}, nil),
+	)
+}
+
+// expectOpen expects the cleanup of a strict restore of namespace bar whose job the server ended:
+// poll until it has ended, open the namespace, poll until it is open. The job is not aborted.
+func expectOpen(infoClient *aerospike.MockInfoGetter, jobID string) {
+	gomock.InOrder(
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", jobID).Return(
+			&infomodels.ResponseRestoreState{
+				State: infomodels.RestoreStateFailed, NsState: infomodels.NamespaceStateFailed,
+			}, nil),
+		infoClient.EXPECT().OpenRestore(gomock.Any(), "bar").Return(nil),
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", jobID).Return(
+			&infomodels.ResponseRestoreState{
+				State: infomodels.RestoreStateFailed, NsState: infomodels.NamespaceStateNone,
 			}, nil),
 	)
 }

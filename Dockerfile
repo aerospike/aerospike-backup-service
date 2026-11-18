@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.12.0
-ARG GO_VERSION=1.26.10
+ARG GO_VERSION=1.26.11
 ARG REGISTRY="docker.io"
 
 # Build-time only (never shipped), so pin exactly; bump tag and digest together.
