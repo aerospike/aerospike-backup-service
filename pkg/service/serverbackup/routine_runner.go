@@ -312,8 +312,8 @@ func (o *backupOperation) finish(err error) {
 	close(o.done)
 }
 
-// startNamespace counts the namespaces before index i as finished and drops the previous job's
-// progress and throughput, which would otherwise count namespace i as done until its job reports.
+// startNamespace counts the namespaces before index i as finished. It drops the previous job's
+// progress, which would count namespace i as done until its job reports, and its throughput.
 func (o *backupOperation) startNamespace(i int) {
 	o.mu.Lock()
 	defer o.mu.Unlock()

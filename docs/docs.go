@@ -3469,7 +3469,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "last-full-jobs": {
-                    "description": "LastFullJobs: the server jobs of the last finished full backup, one per namespace it started\na job for, whether it succeeded or not. Reported only in the server backup mode. The list is\nkept in memory, so it is empty after a restart until a full backup finishes.",
+                    "description": "LastFullJobs: the server jobs of the last finished full backup, one per namespace whose job\nreported its status, whether it succeeded or not. Reported only in the server backup mode.\nThe list is kept in memory, so it is empty after a restart until a full backup finishes.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/dto.ServerBackupJob"
@@ -3520,7 +3520,7 @@ const docTemplate = `{
                     "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "metrics": {
-                    "description": "Metrics provides real-time information about data flow performance.",
+                    "description": "Metrics provides real-time information about data flow performance.\nA server-side backup shows the rates the server last reported.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.Metrics"
@@ -3533,7 +3533,7 @@ const docTemplate = `{
                     "example": 50
                 },
                 "server-jobs": {
-                    "description": "The server jobs of a running server-side backup, in the order they started: one per\nnamespace the backup has started a job for, each as the server last reported it.",
+                    "description": "The server jobs of a running server-side backup, in the order they started: one per\nnamespace whose job has reported its status, each as the server last reported it.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/dto.ServerBackupJob"
@@ -3847,7 +3847,7 @@ const docTemplate = `{
                     "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "state": {
-                    "description": "The job state the server last reported, passed on as it is: an active state such as\nBASE_SCAN_ACTIVE while the job runs, then COMPLETE, FAILED or ABORTED. A job that stopped\nreporting keeps its last state.",
+                    "description": "The job state across the cluster's nodes, as last reported. While the job runs it is the\nstate of the node furthest behind, such as BASE_SCAN_ACTIVE, ABORTING while a failure or an\nabort settles on every node, or UNKNOWN for a state the service does not know. It ends as\nCOMPLETE, FAILED or ABORTED. A job that stopped reporting keeps its last state.",
                     "type": "string",
                     "example": "COMPLETE"
                 }

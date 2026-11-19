@@ -13,9 +13,10 @@ type ServerBackupJob struct {
 	JobID string `json:"job-id" example:"261103T101500-0a1b"`
 	// The namespace the job backed up.
 	Namespace string `json:"namespace" example:"test"`
-	// The job state the server last reported, passed on as it is: an active state such as
-	// BASE_SCAN_ACTIVE while the job runs, then COMPLETE, FAILED or ABORTED. A job that stopped
-	// reporting keeps its last state.
+	// The job state across the cluster's nodes, as last reported. While the job runs it is the
+	// state of the node furthest behind, such as BASE_SCAN_ACTIVE, ABORTING while a failure or an
+	// abort settles on every node, or UNKNOWN for a state the service does not know. It ends as
+	// COMPLETE, FAILED or ABORTED. A job that stopped reporting keeps its last state.
 	State string `json:"state" example:"COMPLETE"`
 	// Why the job failed or was aborted, as the server reports it.
 	ErrorReason string `json:"error-reason,omitempty" example:"S3 PUT failed: 403 Forbidden"`

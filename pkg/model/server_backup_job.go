@@ -6,8 +6,9 @@ import "time"
 type ServerBackupJob struct {
 	JobID     string
 	Namespace string
-	// State is the job state the server last reported: an active one while the job runs, then
-	// COMPLETE, FAILED or ABORTED. A job that stopped reporting keeps its last state.
+	// State is the job state last reported, merged across the cluster's nodes: an active one while
+	// the job runs, then COMPLETE, FAILED or ABORTED. A job that stopped reporting keeps its last
+	// state.
 	State string
 	// ErrorReason is set by the server when the job failed or was aborted.
 	ErrorReason string

@@ -17,7 +17,7 @@ type RoutineState struct {
 	// NextRunTime specifies the scheduled next execution time for the routine's backup operations.
 	NextRunTime *BackupTime
 	// LastFullJobs are the server jobs of the last finished full backup, whatever its outcome: one
-	// per namespace it started a job for. Empty in the scan backup mode.
+	// per namespace whose job reported its status. Empty in the scan backup mode.
 	LastFullJobs []ServerBackupJob
 	// LastIncrementalJobs are the server jobs of the last finished incremental backup.
 	// Empty in the scan backup mode.
@@ -53,7 +53,7 @@ type RunningJob struct {
 	// Metrics contains performance metrics for the current operation.
 	Metrics *models.Metrics
 	// ServerJobs are the server jobs of a running server-side backup in the order they started:
-	// one per namespace it has started a job for, each as last reported. Empty for a scan backup
-	// and for a restore.
+	// one per namespace whose job has reported its status, each as last reported. Empty for a scan
+	// backup and for a restore.
 	ServerJobs []ServerBackupJob
 }

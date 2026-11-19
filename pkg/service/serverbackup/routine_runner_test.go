@@ -500,17 +500,19 @@ func TestBackupOperation_ProgressAcrossNamespaces(t *testing.T) {
 }
 
 // TestBackupOperation_ReportsThroughput checks that the operation reports the running job's
-// record and upload rates, and drops them when the next namespace starts.
+// record and upload rates in a snapshot of its own, and drops them when the next namespace starts.
 func TestBackupOperation_ReportsThroughput(t *testing.T) {
 	t.Parallel()
 	operation := newBackupOperation(func() {}, 2)
 
 	operation.startNamespace(0)
-	assert.Equal(t, &models.Metrics{}, operation.Status().Server.Metrics, "no job has reported")
+	before := operation.Status().Server.Metrics
+	assert.Equal(t, &models.Metrics{}, before, "no job has reported")
 
 	operation.record(&infomodels.ResponseBackupState{JobID: fullID, RecsPerSec: 1200, BytesOutPerSec: 2048 * 1024})
 	assert.Equal(t, &models.Metrics{RecordsPerSecond: 1200, KilobytesPerSecond: 2048},
 		operation.Status().Server.Metrics)
+	assert.Equal(t, &models.Metrics{}, before, "a snapshot does not change")
 
 	operation.startNamespace(1)
 	assert.Equal(t, &models.Metrics{}, operation.Status().Server.Metrics, "the second job has not reported")
