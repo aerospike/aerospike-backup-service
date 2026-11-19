@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -13,10 +14,12 @@ import (
 // that outside the configured root, so names are validated here rather than where the
 // paths are built.
 
+// The Aerospike limits on names.
+// See https://aerospike.com/docs/database/reference/limitations/
 const (
-	// maxNamespaceNameLength is the Aerospike limit on a namespace name.
-	// See https://aerospike.com/docs/database/reference/limitations/#namespace
 	maxNamespaceNameLength = 31
+	maxSetNameLength       = 63
+	maxBinNameLength       = 15
 	// reservedNamespaceName is the one name the Aerospike server keeps for itself.
 	reservedNamespaceName = "null"
 	// namespaceNameChars is the full set of characters an Aerospike namespace name may use.
@@ -61,6 +64,58 @@ func (n NamespaceName) Validate() error {
 	return nil
 }
 
+// validateNames checks a list of names for duplicates and each name with check.
+func validateNames[T ~string](field string, names []T, check func(T) error) error {
+	if err := validateUnique(field, names); err != nil {
+		return err
+	}
+
+	for i, name := range names {
+		if err := errValidationInvalidName(fmt.Sprintf("%s[%d]", field, i), string(name), check(name)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// checkSetName reports why name cannot be a set name: more than the 63 bytes the server allows,
+// or anything checkSetOrBinName rejects.
+func checkSetName(name string) error {
+	if len(name) > maxSetNameLength {
+		return fmt.Errorf("must not exceed %d bytes", maxSetNameLength)
+	}
+
+	return checkSetOrBinName(name)
+}
+
+// checkBinName reports why name cannot be a bin name: more than the 15 bytes the server allows,
+// or anything checkSetOrBinName rejects.
+func checkBinName(name string) error {
+	if len(name) > maxBinNameLength {
+		return fmt.Errorf("must not exceed %d bytes", maxBinNameLength)
+	}
+
+	return checkSetOrBinName(name)
+}
+
+// checkSetOrBinName reports why name cannot be a set or bin name in either backup mode: it is
+// empty, or server-side backup cannot send it in its info commands. There "," separates the
+// entries of a list, backup-go refuses ";" and "|", and the server refuses control characters
+// and invalid UTF-8.
+func checkSetOrBinName(name string) error {
+	switch {
+	case name == "":
+		return errEmpty
+	case !utf8.ValidString(name):
+		return errors.New("must be valid UTF-8")
+	case strings.ContainsAny(name, ",;|") || strings.IndexFunc(name, unicode.IsControl) >= 0:
+		return errors.New(`must not contain ",", ";", "|" or a control character`)
+	}
+
+	return nil
+}
+
 // newNamespaceNames adopts the model's plain strings as namespace names.
 func newNamespaceNames(values []string) []NamespaceName {
 	names := make([]NamespaceName, len(values))
@@ -88,14 +143,26 @@ func validateEntityName(field, name string) error {
 }
 
 // validateRoutineName checks that a routine's name is a single path segment that an Aerospike
-// info command can carry: server-side backup sends the routine's folder in its commands, where
-// ";" separates parameters, "|" separates values and a line break ends the command.
+// info command can carry: server-side backup sends the routine's folder in its commands.
 func validateRoutineName(name string) error {
 	if err := validateEntityName("routine name", name); err != nil {
 		return err
 	}
-	if strings.ContainsAny(name, ";|\r\n") {
-		return errValidationInvalidName("routine name", name, errors.New(`must not contain ";", "|" or a line break`))
+
+	return validateInfoValue("routine name", name)
+}
+
+// infoSeparators are the characters an Aerospike info command cannot carry in a value. Server-side
+// backup sends the routine name and the S3 location in info commands, where ";" separates
+// parameters, "|" separates the values the server keeps with a job, a line break ends the
+// command and a NUL byte can cut the command short.
+const infoSeparators = ";|\r\n\x00"
+
+// validateInfoValue fails when an info command cannot carry the value of field. It applies in
+// both backup modes, so a configuration stays valid when it moves to server mode.
+func validateInfoValue(field, value string) error {
+	if strings.ContainsAny(value, infoSeparators) {
+		return errValidationInvalidName(field, value, errors.New(`must not contain ";", "|", a line break or a NUL byte`))
 	}
 
 	return nil
