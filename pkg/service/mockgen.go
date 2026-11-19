@@ -240,18 +240,18 @@ func (mr *MockBackupStateRegistryMockRecorder) GetRoutineState(routine any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRoutineState", reflect.TypeOf((*MockBackupStateRegistry)(nil).GetRoutineState), routine)
 }
 
-// GetRunningState mocks base method.
-func (m *MockBackupStateRegistry) GetRunningState() map[string]model.RoutineState {
+// GetRoutineStates mocks base method.
+func (m *MockBackupStateRegistry) GetRoutineStates() map[string]model.RoutineState {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRunningState")
+	ret := m.ctrl.Call(m, "GetRoutineStates")
 	ret0, _ := ret[0].(map[string]model.RoutineState)
 	return ret0
 }
 
-// GetRunningState indicates an expected call of GetRunningState.
-func (mr *MockBackupStateRegistryMockRecorder) GetRunningState() *gomock.Call {
+// GetRoutineStates indicates an expected call of GetRoutineStates.
+func (mr *MockBackupStateRegistryMockRecorder) GetRoutineStates() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRunningState", reflect.TypeOf((*MockBackupStateRegistry)(nil).GetRunningState))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRoutineStates", reflect.TypeOf((*MockBackupStateRegistry)(nil).GetRoutineStates))
 }
 
 // RequestHistorySync mocks base method.

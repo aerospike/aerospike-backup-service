@@ -24,6 +24,7 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	"github.com/moby/moby/api/types/container"
+	prommodel "github.com/prometheus/common/model"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -299,6 +300,32 @@ func (s *ServerBuildSuite) listsActiveServerJob(running *dto.RunningJob) bool {
 	s.Equal(running.DoneRecords, job.RecordsBackedUp, "records done are the job's")
 
 	return !slices.Contains([]string{"COMPLETE", "FAILED", "ABORTED"}, job.State)
+}
+
+// assertServerJobMetrics polls until the server job gauges of the finished backupType backup of
+// serverNamespace hold what its job reported: at least minRecords records, some bytes, and no
+// record that could not be read.
+func (s *ServerBuildSuite) assertServerJobMetrics(e *env, backupType model.BackupType, minRecords uint64) {
+	s.T().Helper()
+
+	labels := prommodel.LabelSet{
+		labelRoutine:   routineName,
+		labelType:      prommodel.LabelValue(backupType),
+		labelNamespace: serverNamespace,
+	}
+
+	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
+		records, found := s.metricValue(e, serverBackupRecordsMetric, labels)
+
+		return found && records >= float64(minRecords)
+	})
+	s.Require().True(ok, "%s did not reach %d for the %s backup", serverBackupRecordsMetric, minRecords, backupType)
+
+	bytesBackedUp, _ := s.metricValue(e, serverBackupBytesMetric, labels)
+	s.Positive(bytesBackedUp)
+	readFailed, found := s.metricValue(e, serverBackupRecordsReadFailedMetric, labels)
+	s.True(found, "%s has no series for the %s backup", serverBackupRecordsReadFailedMetric, backupType)
+	s.Zero(readFailed)
 }
 
 func getRunningJob(state dto.RoutineState, backupType model.BackupType) *dto.RunningJob {

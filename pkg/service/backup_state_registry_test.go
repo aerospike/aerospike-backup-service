@@ -221,11 +221,14 @@ func TestCanceledHistoryScanKeepsPreviousLastRun(t *testing.T) {
 	assert.Equal(t, previous, stat.LastRunTime)
 }
 
-func TestGetAllCurrentStats(t *testing.T) {
+// TestGetRoutineStates checks that the state of every configured routine is returned, whether a
+// backup of it runs or not.
+func TestGetRoutineStates(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine1 := "routine1"
 	routine2 := "routine2"
+	idleRoutine := "idle"
 
 	mockReader := NewmockRoutineProvider(ctrl)
 	mockReader.EXPECT().Routines().Return(map[string]*model.BackupRoutine{
@@ -239,6 +242,11 @@ func TestGetAllCurrentStats(t *testing.T) {
 			IntervalCron: "@daily",
 			Timezone:     model.NewServiceLocation("", nil),
 		},
+		idleRoutine: {
+			Name:         idleRoutine,
+			IntervalCron: "@daily",
+			Timezone:     model.NewServiceLocation("", nil),
+		},
 	}).AnyTimes()
 
 	registry := newTestBackupStateRegistry(nil, mockReader)
@@ -249,10 +257,11 @@ func TestGetAllCurrentStats(t *testing.T) {
 	registry.getTracker(routine1).markScanDone() // no need to scan history
 	registry.BackupStarted(routine2, model.BackupTypeIncremental, handler)
 	registry.getTracker(routine2).markScanDone() // no need to scan history
+	registry.getTracker(idleRoutine).markScanDone()
 
-	// Get all current stats
-	stats := registry.GetRunningState()
-	assert.Len(t, stats, 2)
+	stats := registry.GetRoutineStates()
+	assert.Len(t, stats, 3)
+	assert.False(t, stats[idleRoutine].IsRunning())
 
 	// Check stats for routine1
 	assert.NotNil(t, stats[routine1].Full)

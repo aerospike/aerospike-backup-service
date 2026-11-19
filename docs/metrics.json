@@ -67,6 +67,39 @@
     "deprecated": false
   },
   {
+    "name": "aerospike_backup_service_server_backup_bytes",
+    "type": "Gauge",
+    "description": "Bytes backed up by a namespace's server job, in the running or else the last finished backup",
+    "labels": [
+      "routine",
+      "type",
+      "namespace"
+    ],
+    "deprecated": false
+  },
+  {
+    "name": "aerospike_backup_service_server_backup_records",
+    "type": "Gauge",
+    "description": "Records backed up by a namespace's server job, in the running or else the last finished backup",
+    "labels": [
+      "routine",
+      "type",
+      "namespace"
+    ],
+    "deprecated": false
+  },
+  {
+    "name": "aerospike_backup_service_server_backup_records_read_failed",
+    "type": "Gauge",
+    "description": "Records not read, and so missing from the backup, by a namespace's server job, in the running or else the last finished backup",
+    "labels": [
+      "routine",
+      "type",
+      "namespace"
+    ],
+    "deprecated": false
+  },
+  {
     "name": "aerospike_backup_service_duration_millis",
     "type": "Gauge",
     "description": "Full backup duration in milliseconds (Deprecated: use aerospike_backup_service_backup_duration_seconds instead.)",

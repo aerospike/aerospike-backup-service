@@ -14,9 +14,13 @@ const (
 	OutcomeRetry    Outcome = "retry"
 	OutcomeSkip     Outcome = "skip"
 
-	labelRoutine = "routine"
-	labelType    = "type"
-	labelOutcome = "outcome"
+	labelRoutine   = "routine"
+	labelType      = "type"
+	labelOutcome   = "outcome"
+	labelNamespace = "namespace"
+
+	// serverJobScope completes the help of a server job gauge.
+	serverJobScope = " by a namespace's server job, in the running or else the last finished backup"
 )
 
 var (
@@ -76,6 +80,30 @@ var (
 			Help: "Unix timestamp (seconds) of the last successful backup per routine",
 		},
 		[]string{labelRoutine, labelType},
+	)
+
+	serverBackupRecordsGauge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_server_backup_records",
+			Help: "Records backed up" + serverJobScope,
+		},
+		[]string{labelRoutine, labelType, labelNamespace},
+	)
+
+	serverBackupBytesGauge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_server_backup_bytes",
+			Help: "Bytes backed up" + serverJobScope,
+		},
+		[]string{labelRoutine, labelType, labelNamespace},
+	)
+
+	serverBackupRecordsReadFailedGauge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_server_backup_records_read_failed",
+			Help: "Records not read, and so missing from the backup," + serverJobScope,
+		},
+		[]string{labelRoutine, labelType, labelNamespace},
 	)
 
 	// Deprecated metrics (for backwards compatibility).
@@ -164,6 +192,9 @@ func init() {
 		restoreCounter,
 		backupDurationHist,
 		lastBackupTimestampGauge,
+		serverBackupRecordsGauge,
+		serverBackupBytesGauge,
+		serverBackupRecordsReadFailedGauge,
 
 		// Deprecated metrics
 		backupRunsTotalDeprecated,

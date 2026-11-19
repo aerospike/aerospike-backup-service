@@ -313,7 +313,8 @@ func (s *ServerBackupSuite) TestServerNonS3Storage() {
 // progress through GET /v1/backups/currentBackup: the percentage never falls and climbs into the
 // incremental scan's range, the number of records done grows with it, the backup lists its
 // namespace's server job while that job runs, and no total is reported because the server counts
-// no records to back up. The records done end between the records the
+// no records to back up. Once the full backup has ended, the Prometheus gauges of its server job
+// hold the job's counts. The records done end between the records the
 // backup must hold and twice the records it may hold: a record modified within the server's
 // clock-skew margin of the backup is backed up by both its scans, and the test writes the records
 // just before each backup. A backup that ends no longer shows as running.
@@ -335,6 +336,7 @@ func (s *ServerBackupSuite) TestServerProgress() {
 	s.assertProgressClimbs(e, model.BackupTypeFull, uint64(len(ages)), 2*uint64(len(ages)))
 
 	s.waitForLastBackup(e, model.BackupTypeFull, s.getBackups(e, model.BackupTypeFull)[0].Created)
+	s.assertServerJobMetrics(e, model.BackupTypeFull, uint64(len(ages)))
 	newAges := []int{21, 22, 23, 24, 25, 26, 27, 28, 29, 30}
 	s.seedRecordsIn(s.client, serverNamespace, newAges)
 

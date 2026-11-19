@@ -16,10 +16,14 @@ const (
 	lastSuccessfulBackupTimestampMetric = "aerospike_backup_service_last_successful_backup_timestamp"
 	backupEventsTotalMetric             = "aerospike_backup_service_backup_events_total"
 	restoreEventsTotalMetric            = "aerospike_backup_service_restore_events_total"
+	serverBackupRecordsMetric           = "aerospike_backup_service_server_backup_records"
+	serverBackupBytesMetric             = "aerospike_backup_service_server_backup_bytes"
+	serverBackupRecordsReadFailedMetric = "aerospike_backup_service_server_backup_records_read_failed"
 
-	labelRoutine = "routine"
-	labelType    = "type"
-	labelOutcome = "outcome"
+	labelRoutine   = "routine"
+	labelType      = "type"
+	labelOutcome   = "outcome"
+	labelNamespace = "namespace"
 
 	outcomeSuccess = "success"
 	outcomeFailure = "failure"
