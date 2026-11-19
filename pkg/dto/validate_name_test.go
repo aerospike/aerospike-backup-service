@@ -150,54 +150,54 @@ func TestNamespaceName_Validate(t *testing.T) {
 	}
 }
 
-func TestValidateNames_SetOrBinName(t *testing.T) {
+func TestValidateNames_SetAndBinNames(t *testing.T) {
 	tests := []struct {
-		name      string
-		names     []string
-		maxLength int
-		wantIs    error
-		wantErr   string
+		name    string
+		names   []string
+		check   func(string) error
+		wantIs  error
+		wantErr string
 	}{
-		{name: "plain", names: []string{"set-1", "set_2$"}, maxLength: maxSetNameLength},
-		{name: "longest set", names: []string{strings.Repeat("s", maxSetNameLength)}, maxLength: maxSetNameLength},
-		{name: "longest bin", names: []string{strings.Repeat("b", maxBinNameLength)}, maxLength: maxBinNameLength},
-		{name: "no names", maxLength: maxSetNameLength},
+		{name: "plain", names: []string{"set-1", "set_2$"}, check: checkSetName},
+		{name: "longest set", names: []string{strings.Repeat("s", maxSetNameLength)}, check: checkSetName},
+		{name: "longest bin", names: []string{strings.Repeat("b", maxBinNameLength)}, check: checkBinName},
+		{name: "no names", check: checkSetName},
 		{
 			name:  "characters both backup modes carry",
-			names: []string{"a.b", "a:b", "a=b", "a b", "a/b", "\u00e9", "\u65e5\u672c", "null"}, maxLength: maxSetNameLength,
+			names: []string{"a.b", "a:b", "a=b", "a b", "a/b", "\u00e9", "\u65e5\u672c", "null"}, check: checkSetName,
 		},
 		{
-			name: "set too long", names: []string{strings.Repeat("s", maxSetNameLength+1)}, maxLength: maxSetNameLength,
+			name: "set too long", names: []string{strings.Repeat("s", maxSetNameLength+1)}, check: checkSetName,
 			wantIs: errInvalidValue, wantErr: `": must not exceed 63 bytes`,
 		},
 		{
-			name: "bin too long in bytes", names: []string{strings.Repeat("\u00e9", 8)}, maxLength: maxBinNameLength,
+			name: "bin too long in bytes", names: []string{strings.Repeat("\u00e9", 8)}, check: checkBinName,
 			wantIs: errInvalidValue, wantErr: `must not exceed 15 bytes`,
 		},
 		{
-			name: "comma", names: []string{"a,b"}, maxLength: maxSetNameLength,
+			name: "comma", names: []string{"a,b"}, check: checkSetName,
 			wantIs: errInvalidValue, wantErr: `list[0] "a,b": must not contain ",", ";", "|" or a control character`,
 		},
-		{name: "semicolon", names: []string{"a;b"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "a;b"},
-		{name: "pipe", names: []string{"a|b"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "a|b"},
-		{name: "LF", names: []string{"a\nb"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "control"},
-		{name: "tab", names: []string{"a\tb"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "control"},
-		{name: "NUL", names: []string{"a\x00b"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "control"},
-		{name: "DEL", names: []string{"a\x7fb"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "control"},
+		{name: "semicolon", names: []string{"a;b"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "a;b"},
+		{name: "pipe", names: []string{"a|b"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "a|b"},
+		{name: "LF", names: []string{"a\nb"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "control"},
+		{name: "tab", names: []string{"a\tb"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "control"},
+		{name: "NUL", names: []string{"a\x00b"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "control"},
+		{name: "DEL", names: []string{"a\x7fb"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "control"},
 		{
-			name: "invalid UTF-8", names: []string{"a\xffb"}, maxLength: maxSetNameLength,
+			name: "invalid UTF-8", names: []string{"a\xffb"}, check: checkSetName,
 			wantIs: errInvalidValue, wantErr: "must be valid UTF-8",
 		},
 		{
-			name: "empty", names: []string{"a", ""}, maxLength: maxSetNameLength,
+			name: "empty", names: []string{"a", ""}, check: checkSetName,
 			wantIs: errEmpty, wantErr: `"list[1]" required`,
 		},
-		{name: "duplicate", names: []string{"a", "a"}, maxLength: maxSetNameLength, wantErr: "duplicate"},
+		{name: "duplicate", names: []string{"a", "a"}, check: checkSetName, wantErr: "duplicate"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateNames("list", tt.names, setOrBinName(tt.maxLength))
+			err := validateNames("list", tt.names, tt.check)
 			if tt.wantErr == "" {
 				require.NoError(t, err)
 				return

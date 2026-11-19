@@ -79,25 +79,41 @@ func validateNames[T ~string](field string, names []T, check func(T) error) erro
 	return nil
 }
 
-// setOrBinName returns the check for a set or bin name: at most maxLength bytes, which the
-// Aerospike server enforces, and nothing server-side backup cannot send in its info commands.
-// There "," separates the entries of a list, backup-go refuses ";" and "|", and the server
-// refuses control characters and invalid UTF-8. The rule applies in both backup modes.
-func setOrBinName(maxLength int) func(string) error {
-	return func(name string) error {
-		switch {
-		case name == "":
-			return errEmpty
-		case len(name) > maxLength:
-			return fmt.Errorf("must not exceed %d bytes", maxLength)
-		case !utf8.ValidString(name):
-			return errors.New("must be valid UTF-8")
-		case strings.ContainsAny(name, ",;|") || strings.IndexFunc(name, unicode.IsControl) >= 0:
-			return errors.New(`must not contain ",", ";", "|" or a control character`)
-		}
-
-		return nil
+// checkSetName reports why name cannot be a set name: more than the 63 bytes the server allows,
+// or anything checkSetOrBinName rejects.
+func checkSetName(name string) error {
+	if len(name) > maxSetNameLength {
+		return fmt.Errorf("must not exceed %d bytes", maxSetNameLength)
 	}
+
+	return checkSetOrBinName(name)
+}
+
+// checkBinName reports why name cannot be a bin name: more than the 15 bytes the server allows,
+// or anything checkSetOrBinName rejects.
+func checkBinName(name string) error {
+	if len(name) > maxBinNameLength {
+		return fmt.Errorf("must not exceed %d bytes", maxBinNameLength)
+	}
+
+	return checkSetOrBinName(name)
+}
+
+// checkSetOrBinName reports why name cannot be a set or bin name in either backup mode: it is
+// empty, or server-side backup cannot send it in its info commands. There "," separates the
+// entries of a list, backup-go refuses ";" and "|", and the server refuses control characters
+// and invalid UTF-8.
+func checkSetOrBinName(name string) error {
+	switch {
+	case name == "":
+		return errEmpty
+	case !utf8.ValidString(name):
+		return errors.New("must be valid UTF-8")
+	case strings.ContainsAny(name, ",;|") || strings.IndexFunc(name, unicode.IsControl) >= 0:
+		return errors.New(`must not contain ",", ";", "|" or a control character`)
+	}
+
+	return nil
 }
 
 // newNamespaceNames adopts the model's plain strings as namespace names.

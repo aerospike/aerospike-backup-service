@@ -136,10 +136,10 @@ func (r *BackupRoutine) Validate() error {
 	if err := validateNames("namespaces", *r.Namespaces, NamespaceName.Validate); err != nil {
 		return err
 	}
-	if err := validateNames("set-list", r.SetList, setOrBinName(maxSetNameLength)); err != nil {
+	if err := validateNames("set-list", r.SetList, checkSetName); err != nil {
 		return err
 	}
-	if err := validateNames("bin-list", r.BinList, setOrBinName(maxBinNameLength)); err != nil {
+	if err := validateNames("bin-list", r.BinList, checkBinName); err != nil {
 		return err
 	}
 	if err := validateUnique(rackListField, r.RackList); err != nil {
