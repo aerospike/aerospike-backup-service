@@ -90,10 +90,10 @@ func TestValidateRoutineName(t *testing.T) {
 		expectError string
 	}{
 		{name: "plain", value: "daily-backup"},
-		{name: "semicolon", value: "a;b", expectError: `must not contain ";", "|" or a line break`},
-		{name: "pipe", value: "daily|eu", expectError: `must not contain ";", "|" or a line break`},
-		{name: "newline", value: "a\nb", expectError: `must not contain ";", "|" or a line break`},
-		{name: "carriage return", value: "a\rb", expectError: `must not contain ";", "|" or a line break`},
+		{name: "semicolon", value: "a;b", expectError: `must not contain ";", "|", a line break or a NUL byte`},
+		{name: "pipe", value: "daily|eu", expectError: `must not contain ";", "|", a line break or a NUL byte`},
+		{name: "newline", value: "a\nb", expectError: `must not contain ";", "|", a line break or a NUL byte`},
+		{name: "carriage return", value: "a\rb", expectError: `must not contain ";", "|", a line break or a NUL byte`},
 		{name: "path segment rules apply", value: "a/b", expectError: "path separator"},
 	}
 
@@ -146,6 +146,133 @@ func TestNamespaceName_Validate(t *testing.T) {
 
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tt.expectError)
+		})
+	}
+}
+
+func TestValidateNames_SetAndBinNames(t *testing.T) {
+	tests := []struct {
+		name    string
+		names   []string
+		check   func(string) error
+		wantIs  error
+		wantErr string
+	}{
+		{name: "plain", names: []string{"set-1", "set_2$"}, check: checkSetName},
+		{name: "longest set", names: []string{strings.Repeat("s", maxSetNameLength)}, check: checkSetName},
+		{name: "longest bin", names: []string{strings.Repeat("b", maxBinNameLength)}, check: checkBinName},
+		{name: "no names", check: checkSetName},
+		{
+			name:  "characters both backup modes carry",
+			names: []string{"a.b", "a:b", "a=b", "a b", "a/b", "\u00e9", "\u65e5\u672c", "null"}, check: checkSetName,
+		},
+		{
+			name: "set too long", names: []string{strings.Repeat("s", maxSetNameLength+1)}, check: checkSetName,
+			wantIs: errInvalidValue, wantErr: `": must not exceed 63 bytes`,
+		},
+		{
+			name: "bin too long in bytes", names: []string{strings.Repeat("\u00e9", 8)}, check: checkBinName,
+			wantIs: errInvalidValue, wantErr: `must not exceed 15 bytes`,
+		},
+		{
+			name: "comma", names: []string{"a,b"}, check: checkSetName,
+			wantIs: errInvalidValue, wantErr: `list[0] "a,b": must not contain ",", ";", "|" or a control character`,
+		},
+		{name: "semicolon", names: []string{"a;b"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "a;b"},
+		{name: "pipe", names: []string{"a|b"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "a|b"},
+		{name: "LF", names: []string{"a\nb"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "control"},
+		{name: "tab", names: []string{"a\tb"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "control"},
+		{name: "NUL", names: []string{"a\x00b"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "control"},
+		{name: "DEL", names: []string{"a\x7fb"}, check: checkSetName, wantIs: errInvalidValue, wantErr: "control"},
+		{
+			name: "invalid UTF-8", names: []string{"a\xffb"}, check: checkSetName,
+			wantIs: errInvalidValue, wantErr: "must be valid UTF-8",
+		},
+		{
+			name: "empty", names: []string{"a", ""}, check: checkSetName,
+			wantIs: errEmpty, wantErr: `"list[1]" required`,
+		},
+		{name: "duplicate", names: []string{"a", "a"}, check: checkSetName, wantErr: "duplicate"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateNames("list", tt.names, tt.check)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+
+			if tt.wantIs != nil {
+				require.ErrorIs(t, err, tt.wantIs)
+			}
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+// Set and bin names are checked in the routine and the restore policy, whatever the backup mode.
+func TestValidate_SetAndBinNames(t *testing.T) {
+	type validatable interface{ Validate() error }
+
+	routine := func(sets, bins []string) validatable {
+		return &BackupRoutine{
+			SourceCluster: "cluster1", Storage: "storage1", IntervalCron: "0 0 * * * *",
+			Namespaces: &[]NamespaceName{"ns1"}, SetList: sets, BinList: bins,
+		}
+	}
+	policy := func(sets, bins []string) validatable {
+		return &RestorePolicy{BaseRestorePolicy: BaseRestorePolicy{SetList: sets, BinList: bins}}
+	}
+
+	tests := []struct {
+		name    string
+		entity  validatable
+		wantIs  error
+		wantErr string
+	}{
+		{name: "routine", entity: routine([]string{"a.b"}, []string{"bin 1"})},
+		{name: "restore policy", entity: policy([]string{"a.b"}, []string{"bin 1"})},
+		{
+			name: "routine set with a comma", entity: routine([]string{"a,b"}, nil),
+			wantIs: errInvalidValue, wantErr: `set-list[0] "a,b"`,
+		},
+		{
+			name: "restore policy bin with a semicolon", entity: policy(nil, []string{"a;b"}),
+			wantIs: errInvalidValue, wantErr: `bin-list[0] "a;b"`,
+		},
+		{
+			name: "routine set too long", entity: routine([]string{strings.Repeat("s", maxSetNameLength+1)}, nil),
+			wantIs: errInvalidValue, wantErr: `set-list[0]`,
+		},
+		{
+			name: "routine bin too long", entity: routine(nil, []string{"bin_name_of_16ch"}),
+			wantIs: errInvalidValue, wantErr: `bin-list[0] "bin_name_of_16ch"`,
+		},
+		{
+			name: "routine empty set", entity: routine([]string{""}, nil),
+			wantIs: errEmpty, wantErr: `"set-list[0]" required`,
+		},
+		{
+			name: "restore policy set with NUL", entity: policy([]string{"a\x00b"}, nil),
+			wantIs: errInvalidValue, wantErr: `set-list[0] "a\x00b"`,
+		},
+		{
+			name: "restore policy bin too long", entity: policy(nil, []string{"bin_name_of_16ch"}),
+			wantIs: errInvalidValue, wantErr: `bin-list[0] "bin_name_of_16ch"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.entity.Validate()
+			if tt.wantIs == nil {
+				require.NoError(t, err)
+				return
+			}
+
+			require.ErrorIs(t, err, tt.wantIs)
+			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
 }

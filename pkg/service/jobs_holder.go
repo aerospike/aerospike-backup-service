@@ -146,18 +146,11 @@ func (j *restoreJob) getStatus() model.RestoreState {
 
 // RestoreJobsHolder is a thread-safe map of restore jobs. A backup mode's restore manager
 // registers its jobs here and embeds the holder for the status, cancel and listing methods, which
-// are the same in every mode. The holder also owns the lifetime of the jobs. Start hands it the
-// service context and every job runs in a child of that context, so canceling the service cancels
-// the jobs with it.
+// are the same in every mode. The holder also owns the lifetime of the jobs: a job ends when it
+// finishes or is canceled through the holder; neither its request ending nor shutdown cancels it.
+// A server restore completes on the server without ABS, while canceling it would abort it halfway.
 type RestoreJobsHolder struct {
 	*collections.SafeMap[model.RestoreJobID, *restoreJob]
-
-	mu sync.Mutex
-	// lifetime is the parent of every job context. A restore outlives the HTTP request that
-	// starts it, so its parent must be the service lifetime rather than the request's, and
-	// this holder is the one owner of that lifetime. The mutex is here because Start writes
-	// it while requests read it, not because a request could arrive first.
-	lifetime context.Context //nolint:containedctx // the holder's purpose is job lifetimes; see above.
 }
 
 type JobNotFoundError struct {
@@ -181,31 +174,18 @@ var ErrRestorePrerequisitesFailed = errors.New("restore pre-requisites failed")
 // doubles (JavaScript, Swagger UI) would round anything larger into an id that does not exist.
 const maxJSONSafeJobID = 1<<53 - 1
 
-// NewRestoreJobsHolder returns a new RestoreJobsHolder. It is usable once Start has given
-// it a lifetime, which Components.Start does before anything can reach it.
+// NewRestoreJobsHolder returns a new RestoreJobsHolder.
 func NewRestoreJobsHolder() *RestoreJobsHolder {
 	return &RestoreJobsHolder{
 		SafeMap: collections.NewSafeMap[model.RestoreJobID, *restoreJob](),
 	}
 }
 
-// Start makes ctx the parent of every restore job started from now on. Nothing is
-// launched here: Start is the call every component gets the moment the service begins
-// running, and this one needs that moment only to learn the run context.
-func (h *RestoreJobsHolder) Start(ctx context.Context) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	h.lifetime = ctx
-}
-
 // NewJob registers a new restore job and returns its id together with the context the job
 // must run in. The job is finished, and its context released, by FinishJob.
 func (h *RestoreJobsHolder) NewJob(label string) (model.RestoreJobID, context.Context) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	ctx, cancel := context.WithCancel(h.lifetime)
+	//nolint:forbidigo // a job is detached on purpose: neither its request nor shutdown may cancel it.
+	ctx, cancel := context.WithCancel(context.Background())
 	// #nosec G404
 	id := model.RestoreJobID(rand.Int64N(maxJSONSafeJobID) + 1)
 	h.Store(id, newRestoreJob(label, cancel))

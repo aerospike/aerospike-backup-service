@@ -306,7 +306,7 @@ func TestRestoreJob_Wait_ClearsNamespace(t *testing.T) {
 }
 
 // TestRestoreJob_Wait_RecordsCounts checks that the job's status holds the record counts of the
-// last status the server reported.
+// last status the server reported, without the records of partitions other nodes own.
 func TestRestoreJob_Wait_RecordsCounts(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
@@ -314,19 +314,19 @@ func TestRestoreJob_Wait_RecordsCounts(t *testing.T) {
 	infoClient := aerospike.NewMockInfoGetter(ctrl)
 	gomock.InOrder(
 		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(&infomodels.ResponseRestoreState{
-			State: infomodels.RestoreStateActive, Total: 4, Filtered: 1,
+			State: infomodels.RestoreStateActive, Total: 4, Applied: 3, Filtered: 1,
 		}, nil),
 		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(&infomodels.ResponseRestoreState{
-			State: infomodels.RestoreStateComplete, NsState: infomodels.NamespaceStateNone, Total: 10, Filtered: 3,
+			State: infomodels.RestoreStateComplete, NsState: infomodels.NamespaceStateNone,
+			Total: 20, Applied: 6, Filtered: 13, FilteredNotOurs: 10, Failed: 1,
 		}, nil),
 	)
 
 	job := newTestRestoreJob(infoClient, model.RestoreModeFuzzy)
 	require.NoError(t, job.Wait(t.Context()))
 
-	counters := job.Status().Counters
-	assert.Equal(t, uint64(10), counters.ReadRecords)
-	assert.Equal(t, uint64(3), counters.SkippedRecords)
+	assert.Equal(t, model.RestoreCounters{ReadRecords: 10, InsertedRecords: 6, SkippedRecords: 3},
+		job.Status().Counters)
 }
 
 // TestRestoreJob_Wait_EndedJobIsNotAborted checks that a job the server failed or aborted is not

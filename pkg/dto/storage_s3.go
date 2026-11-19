@@ -76,6 +76,15 @@ func (s *S3Storage) Validate() error {
 	if err := s.StorageClass.Validate(); err != nil {
 		return fmt.Errorf("invalid storage class: %w", err)
 	}
+	if err := errors.Join(
+		validateInfoValue("path", string(s.Path)),
+		validateInfoValue("bucket", s.Bucket),
+		validateInfoValue("s3-region", s.S3Region),
+		validateInfoValue("s3-profile", s.S3Profile),
+		validateInfoValue("s3-endpoint-override", s.S3EndpointOverride),
+	); err != nil {
+		return err
+	}
 
 	if err := validateSecretForm("access-key-id", s.AccessKeyID); err != nil {
 		return err
