@@ -101,7 +101,7 @@ func TestRoutineRunner_LowerBounds_ReadFails(t *testing.T) {
 }
 
 // expectCompleteJobs records each backup request, names its job job-<namespace> and reports the
-// job complete.
+// job complete at 100%.
 func expectCompleteJobs(infoClient *aerospike.MockInfoGetter, requests *[]infomodels.RequestBackup) {
 	infoClient.EXPECT().StartBackup(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, request *infomodels.RequestBackup) (string, error) {
@@ -111,8 +111,54 @@ func expectCompleteJobs(infoClient *aerospike.MockInfoGetter, requests *[]infomo
 		}).AnyTimes()
 	infoClient.EXPECT().GetBackupStatus(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, jobID string) (*infomodels.ResponseBackupState, error) {
-			return &infomodels.ResponseBackupState{JobID: jobID, State: infomodels.BackupStateComplete}, nil
+			return &infomodels.ResponseBackupState{
+				JobID: jobID, State: infomodels.BackupStateComplete, ProgressPct: 100,
+			}, nil
 		}).AnyTimes()
+}
+
+// TestRoutineRunner_Run_ProgressCountsNamespaces checks that a run weighs its progress by the
+// number of namespaces it resolved, and counts each one as it ends.
+func TestRoutineRunner_Run_ProgressCountsNamespaces(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		routine := &model.BackupRoutine{
+			Name:          "routine",
+			SourceCluster: &model.AerospikeCluster{},
+			Storage:       &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1"},
+			BackupPolicy:  &model.BackupPolicy{},
+		}
+
+		var requests []infomodels.RequestBackup
+		infoClient := aerospike.NewMockInfoGetter(ctrl)
+		expectCompleteJobs(infoClient, &requests)
+		client := aerospike.NewMockClient(ctrl)
+		client.EXPECT().InfoClient().Return(infoClient)
+		clientManager := aerospike.NewMockClientManager(ctrl)
+		clientManager.EXPECT().GetClient(gomock.Any(), routine.SourceCluster, gomock.Any(), gomock.Any()).
+			Return(client, nil)
+		clientManager.EXPECT().Close(client)
+		namespaceResolver := aerospike.NewMockNamespaceResolver(ctrl)
+		namespaceResolver.EXPECT().ResolveNamespaces(gomock.Any(), routine, gomock.Any()).
+			Return([]string{"bar", "baz"}, nil)
+		runner := &routineRunner{clientManager: clientManager, namespaceResolver: namespaceResolver}
+
+		handler, err := runner.Run(t.Context(), routine, model.BackupRunSpec{Type: model.BackupTypeFull}, discardLogger)
+		require.NoError(t, err)
+
+		// The first namespace's job reports at the first poll, the second one's at the next.
+		time.Sleep(pollInterval)
+		synctest.Wait()
+		assert.InDelta(t, 0.5, handler.Status().Progress, 1e-9, "one namespace of two is done")
+
+		require.NoError(t, handler.Wait(t.Context()))
+		assert.InDelta(t, 1, handler.Status().Progress, 1e-9, "both namespaces are done")
+		assert.Len(t, requests, 2)
+
+		synctest.Wait() // the run releases its client after it reports its outcome.
+	})
 }
 
 func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
@@ -214,7 +260,7 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 			var requests []infomodels.RequestBackup
 			infoClient := aerospike.NewMockInfoGetter(ctrl)
 			expectCompleteJobs(infoClient, &requests)
-			operation := newBackupOperation(func() {}, 1)
+			operation := newBackupOperation(func() {}, len(tt.namespaces))
 
 			err := (&routineRunner{backupReader: backupReader}).backupNamespaces(t.Context(), infoClient,
 				tt.routine, tt.runSpec, tt.namespaces, operation, discardLogger)
@@ -229,6 +275,7 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 			for i, namespace := range tt.namespaces {
 				assert.Equal(t, "job-"+namespace, jobIDs[i], "the jobs run in the namespaces' order")
 			}
+			assert.InDelta(t, 1, operation.Status().Progress, 1e-9, "every namespace counts as done")
 		})
 	}
 }
@@ -248,14 +295,14 @@ func TestRoutineRunner_BackupNamespaces_Failures(t *testing.T) {
 		}, nil),
 		infoClient.EXPECT().StartBackup(gomock.Any(), gomock.Any()).Return("job-qux", nil),
 		infoClient.EXPECT().GetBackupStatus(gomock.Any(), "job-qux").Return(&infomodels.ResponseBackupState{
-			JobID: "job-qux", Namespace: "qux", State: infomodels.BackupStateComplete,
+			JobID: "job-qux", Namespace: "qux", State: infomodels.BackupStateComplete, ProgressPct: 100,
 		}, nil),
 	)
 	routine := &model.BackupRoutine{
 		Storage:      &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1"},
 		BackupPolicy: &model.BackupPolicy{},
 	}
-	operation := newBackupOperation(func() {}, 1)
+	operation := newBackupOperation(func() {}, 3)
 
 	err := (&routineRunner{}).backupNamespaces(t.Context(), infoClient, routine,
 		model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar", "baz", "qux"}, operation,
@@ -267,6 +314,7 @@ func TestRoutineRunner_BackupNamespaces_Failures(t *testing.T) {
 		{JobID: "job-baz", Namespace: "baz", State: "FAILED", ErrorReason: "disk full"},
 		{JobID: "job-qux", Namespace: "qux", State: "COMPLETE"},
 	}, operation.Status().Server.Jobs)
+	assert.InDelta(t, 1, operation.Status().Progress, 1e-9, "a failed namespace counts as done")
 }
 
 // TestRoutineRunner_BackupNamespaces_StartOutcomeUnknown checks that a start whose outcome is
