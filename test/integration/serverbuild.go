@@ -296,7 +296,7 @@ func (s *ServerBuildSuite) listsActiveServerJob(running *dto.RunningJob) bool {
 	job := running.ServerJobs[0]
 	s.NotEmpty(job.JobID)
 	s.Equal(serverNamespace, job.Namespace)
-	s.LessOrEqual(job.RecordsBackedUp, running.DoneRecords)
+	s.Equal(running.DoneRecords, job.RecordsBackedUp, "records done are the job's")
 
 	return !slices.Contains([]string{"COMPLETE", "FAILED", "ABORTED"}, job.State)
 }

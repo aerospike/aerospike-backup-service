@@ -31,14 +31,17 @@ func TestCurrentBackupStatus(t *testing.T) {
 			wantProgress: 0.4, wantDone: 40, wantTotal: 100, wantMetrics: metrics,
 			wantDuration: 150 * time.Second,
 		},
-		"a server backup lists its jobs, sums the records they backed up and knows no total": {
+		"a server backup lists its jobs and throughput, sums the records they backed up and knows no total": {
 			run: model.BackupRun{
 				Progress: 0.4,
-				Server: &model.ServerProgress{Jobs: []model.ServerBackupJob{
-					{JobID: "job-bar", RecordsBackedUp: 30}, {JobID: "job-baz", RecordsBackedUp: 12},
-				}},
+				Server: &model.ServerProgress{
+					Jobs: []model.ServerBackupJob{
+						{JobID: "job-bar", RecordsBackedUp: 30}, {JobID: "job-baz", RecordsBackedUp: 12},
+					},
+					Metrics: metrics,
+				},
 			},
-			wantProgress: 0.4, wantDone: 42,
+			wantProgress: 0.4, wantDone: 42, wantMetrics: metrics,
 			wantServerJobs: []model.ServerBackupJob{
 				{JobID: "job-bar", RecordsBackedUp: 30}, {JobID: "job-baz", RecordsBackedUp: 12},
 			},

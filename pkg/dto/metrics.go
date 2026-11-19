@@ -19,6 +19,7 @@ type Metrics struct {
 	//   faster than the source can read.
 	// - If Pipeline grows large, it indicates that the source is producing data faster
 	//   than the destination can consume.
+	// A server-side backup has no such gauge and always reports 0.
 	Pipeline int `json:"pipeline"`
 }
 

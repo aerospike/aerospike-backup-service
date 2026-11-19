@@ -13,6 +13,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 	"github.com/stretchr/testify/assert"
@@ -496,6 +497,23 @@ func TestBackupOperation_ProgressAcrossNamespaces(t *testing.T) {
 
 	operation.record(&infomodels.ResponseBackupState{JobID: incr1ID, ProgressPct: 40})
 	assert.InDelta(t, 0.7, operation.Status().Progress, 1e-9, "40% of the second namespace")
+}
+
+// TestBackupOperation_ReportsThroughput checks that the operation reports the running job's
+// record and upload rates, and drops them when the next namespace starts.
+func TestBackupOperation_ReportsThroughput(t *testing.T) {
+	t.Parallel()
+	operation := newBackupOperation(func() {}, 2)
+
+	operation.startNamespace(0)
+	assert.Equal(t, &models.Metrics{}, operation.Status().Server.Metrics, "no job has reported")
+
+	operation.record(&infomodels.ResponseBackupState{JobID: fullID, RecsPerSec: 1200, BytesOutPerSec: 2048 * 1024})
+	assert.Equal(t, &models.Metrics{RecordsPerSecond: 1200, KilobytesPerSecond: 2048},
+		operation.Status().Server.Metrics)
+
+	operation.startNamespace(1)
+	assert.Equal(t, &models.Metrics{}, operation.Status().Server.Metrics, "the second job has not reported")
 }
 
 // statusReadErrors are the ways a status read fails: a job not reported, a cluster not reached.
