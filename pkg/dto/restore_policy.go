@@ -145,10 +145,10 @@ func (p *BaseRestorePolicy) Validate() error {
 		}
 	}
 
-	if err := validateUniqueNonEmpty("set-list", p.SetList); err != nil {
+	if err := validateNames("set-list", p.SetList, checkSetName); err != nil {
 		return err
 	}
-	if err := validateUniqueNonEmpty("bin-list", p.BinList); err != nil {
+	if err := validateNames("bin-list", p.BinList, checkBinName); err != nil {
 		return err
 	}
 
