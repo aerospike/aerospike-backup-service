@@ -501,6 +501,8 @@ func (s *ServerBuildSuite) assertServerBackupDetails(backup dto.BackupDetails, c
 	s.False(backup.Created.Before(createdAfter.Truncate(time.Second)),
 		"created %s before the backup was triggered at %s", backup.Created, createdAfter)
 	s.Equal(backup.Created.UnixMilli(), backup.Timestamp)
+	s.True(backup.Finished.After(backup.Created), "finished %s, created %s", backup.Finished, backup.Created)
+	s.Equal(backup.Finished.UnixMilli(), backup.FinishedTimestamp)
 	s.True(backup.From.IsZero(), "a full backup has no lower bound, got %s", backup.From)
 
 	s.Require().NotNil(backup.Storage)

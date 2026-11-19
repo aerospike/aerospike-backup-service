@@ -12,6 +12,7 @@ package serverbackup
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	service "github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -70,4 +71,24 @@ func (m *MockCatalog) GetBackups(ctx context.Context, filter service.BackupFilte
 func (mr *MockCatalogMockRecorder) GetBackups(ctx, filter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackups", reflect.TypeOf((*MockCatalog)(nil).GetBackups), ctx, filter)
+}
+
+// LastBackupTimes mocks base method.
+func (m *MockCatalog) LastBackupTimes(ctx context.Context, routine *model.BackupRoutine, backupTypes ...model.BackupType) (map[string]time.Time, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, routine}
+	for _, a := range backupTypes {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "LastBackupTimes", varargs...)
+	ret0, _ := ret[0].(map[string]time.Time)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LastBackupTimes indicates an expected call of LastBackupTimes.
+func (mr *MockCatalogMockRecorder) LastBackupTimes(ctx, routine any, backupTypes ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, routine}, backupTypes...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastBackupTimes", reflect.TypeOf((*MockCatalog)(nil).LastBackupTimes), varargs...)
 }

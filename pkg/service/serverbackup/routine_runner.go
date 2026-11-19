@@ -27,22 +27,22 @@ import (
 type routineRunner struct {
 	clientManager     aerospike.ClientManager
 	namespaceResolver aerospike.NamespaceResolver
-	backupReader      service.BackupReader
+	catalog           Catalog
 }
 
 var _ service.RoutineBackupRunner = (*routineRunner)(nil)
 
-// NewRoutineRunner returns a RoutineBackupRunner that runs server-side backups. backupReader
-// lists the server backups an incremental backup of a namespace builds on.
+// NewRoutineRunner returns a RoutineBackupRunner that runs server-side backups. catalog lists the
+// server backups an incremental backup of a namespace builds on.
 func NewRoutineRunner(
 	clientManager aerospike.ClientManager,
 	namespaceResolver aerospike.NamespaceResolver,
-	backupReader service.BackupReader,
+	catalog Catalog,
 ) service.RoutineBackupRunner {
 	return &routineRunner{
 		clientManager:     clientManager,
 		namespaceResolver: namespaceResolver,
-		backupReader:      backupReader,
+		catalog:           catalog,
 	}
 }
 
@@ -241,23 +241,14 @@ func (r *routineRunner) lowerBounds(
 		return nil, nil
 	}
 
-	filters := []service.BackupFilter{service.NewFullBackupFilter(routine)}
+	backupTypes := []model.BackupType{model.BackupTypeFull}
 	if routine.BackupPolicy.GetIncrModeOrDefault() != model.IncrModeCumulative {
-		filters = append(filters, service.NewIncrementalBackupFilter(routine))
+		backupTypes = append(backupTypes, model.BackupTypeIncremental)
 	}
 
-	bounds := make(map[string]time.Time)
-	for _, filter := range filters {
-		backups, err := r.backupReader.GetBackups(ctx, filter)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read the last backups of routine %s: %w", routine.Name, err)
-		}
-
-		for _, b := range backups {
-			if last, ok := bounds[b.Namespace]; !ok || b.Created.After(last) {
-				bounds[b.Namespace] = b.Created
-			}
-		}
+	bounds, err := r.catalog.LastBackupTimes(ctx, routine, backupTypes...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the last backups of routine %s: %w", routine.Name, err)
 	}
 
 	return bounds, nil

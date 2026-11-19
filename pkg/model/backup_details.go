@@ -40,18 +40,19 @@ func (m BackupMetadata) BackupType() BackupType {
 type BackupMetadata struct {
 	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created" json:"created"`
-	// The time the backup operation completed. Unknown for server-side backups.
+	// The time the backup operation completed. For server-side backups, the time the data is
+	// consistent to.
 	Finished time.Time `yaml:"finished" json:"finished"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups).
 	// It's 0 for full backups.
 	From time.Time `yaml:"from" json:"from"`
 	// The namespace of a backup.
 	Namespace string `yaml:"namespace" json:"namespace"`
-	// The total number of records backed up. Unknown for server-side backups.
+	// The total number of records backed up. An estimate for server-side backups.
 	RecordCount uint64 `yaml:"record-count" json:"record-count"`
-	// The size of the backup in bytes. Unknown for server-side backups.
+	// The size of the backup in bytes.
 	ByteCount uint64 `yaml:"byte-count" json:"byte-count"`
-	// The number of backup files created. Unknown for server-side backups.
+	// The number of backup files created.
 	FileCount uint64 `yaml:"file-count" json:"file-count"`
 	// The number of secondary indexes backed up.
 	SecondaryIndexCount uint64 `yaml:"secondary-index-count" json:"secondary-index-count"`
