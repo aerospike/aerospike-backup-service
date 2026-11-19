@@ -546,6 +546,59 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 	}
 }
 
+// TestRestoreRequests_ToModel_StorageByBackupMode checks that both restore requests refuse
+// storage other than S3 in the server backup mode, and take it in the scan mode.
+func TestRestoreRequests_ToModel_StorageByBackupMode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		backupMode model.BackupMode
+		policy     BaseRestorePolicy
+		wantErr    string
+	}{
+		{name: "scan mode local storage", backupMode: model.BackupModeScan},
+		{name: "server mode local storage", backupMode: model.BackupModeServer,
+			policy:  BaseRestorePolicy{Mode: RestoreModeStrict},
+			wantErr: `the restore storage is not S3 storage, which backup-mode "server" requires`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			config := model.NewConfig()
+			config.ServiceConfig.Backup = &model.BackupCommonConfig{BackupMode: tt.backupMode}
+			require.NoError(t, config.AddCluster("cluster", &model.AerospikeCluster{}))
+			require.NoError(t, config.AddStorage("local", &model.LocalStorage{Path: "path"}))
+
+			_, pathErr := (&RestoreRequest{
+				DestinationClusterConfig: DestinationClusterConfig{Name: "cluster"},
+				StorageConfig:            StorageConfig{Name: "local"},
+				BackupDataPath:           "routine/backup",
+				Policy:                   &RestorePolicy{BaseRestorePolicy: tt.policy},
+			}).ToModel(config)
+			_, timestampErr := (&RestoreTimestampRequest{
+				DestinationClusterConfig: DestinationClusterConfig{Name: "cluster"},
+				StorageConfig:            StorageConfig{Name: "local"},
+				Time:                     1739538000000,
+				Routine:                  "routine",
+				Policy:                   &TimestampRestorePolicy{BaseRestorePolicy: tt.policy},
+			}).ToModel(config)
+
+			for request, err := range map[string]error{"by path": pathErr, "by timestamp": timestampErr} {
+				if tt.wantErr == "" {
+					require.NoError(t, err, request)
+					continue
+				}
+
+				require.ErrorIs(t, err, errInvalidValue, request)
+				require.ErrorContains(t, err, tt.wantErr, request)
+			}
+		})
+	}
+}
+
 func TestNewRestoreRequestFromReader(t *testing.T) {
 	t.Parallel()
 
