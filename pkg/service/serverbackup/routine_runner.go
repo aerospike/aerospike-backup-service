@@ -17,6 +17,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
@@ -290,6 +291,8 @@ type backupOperation struct {
 	finished int
 	// progressPct is the progress of the running job in percent, as the server reports it.
 	progressPct float64
+	// metrics is the throughput of the running job, summed across the cluster's nodes.
+	metrics models.Metrics
 }
 
 var _ service.RoutineBackupHandler = (*backupOperation)(nil)
@@ -309,17 +312,18 @@ func (o *backupOperation) finish(err error) {
 	close(o.done)
 }
 
-// startNamespace counts the namespaces before index i as finished and drops the previous job's
-// progress, which would otherwise count namespace i as done until its job reports.
+// startNamespace counts the namespaces before index i as finished. It drops the previous job's
+// progress, which would count namespace i as done until its job reports, and its throughput.
 func (o *backupOperation) startNamespace(i int) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
 	o.finished = i
 	o.progressPct = 0
+	o.metrics = models.Metrics{}
 }
 
-// record stores the latest status of a job and its progress.
+// record stores the latest status of a job, its progress and throughput.
 func (o *backupOperation) record(status *infomodels.ResponseBackupState) {
 	job := newServerBackupJob(status)
 
@@ -327,6 +331,10 @@ func (o *backupOperation) record(status *infomodels.ResponseBackupState) {
 	defer o.mu.Unlock()
 
 	o.progressPct = status.ProgressPct
+	o.metrics = models.Metrics{
+		RecordsPerSecond:   status.RecsPerSec,
+		KilobytesPerSecond: status.BytesOutPerSec / 1024,
+	}
 
 	if last := len(o.jobs) - 1; last >= 0 && o.jobs[last].JobID == job.JobID {
 		o.jobs[last] = job
@@ -335,19 +343,21 @@ func (o *backupOperation) record(status *infomodels.ResponseBackupState) {
 	o.jobs = append(o.jobs, job)
 }
 
-// Status returns a snapshot of the run: its progress and its server jobs. The server reports each
-// namespace job's progress on its own, and the jobs run one after another, so each finished
-// namespace counts whole and the running one by its job's progress. Progress that fell back to 0
-// at each namespace would make the estimated end time swing. Every namespace weighs the same: the
-// server counts no records to back up, so Scan stays nil.
+// Status returns a snapshot of the run: its progress, throughput and server jobs. The server
+// reports each namespace job's progress on its own, and the jobs run one after another, so each
+// finished namespace counts whole and the running one by its job's progress. Progress that fell
+// back to 0 at each namespace would make the estimated end time swing. Every namespace weighs the
+// same: the server counts no records to back up, so Scan stays nil.
 func (o *backupOperation) Status() *model.BackupRun {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
+	metrics := o.metrics
+
 	return &model.BackupRun{
 		StartTime: o.startTime,
 		Progress:  (float64(o.finished) + o.progressPct/100) / float64(o.namespaces),
-		Server:    &model.ServerProgress{Jobs: slices.Clone(o.jobs)},
+		Server:    &model.ServerProgress{Jobs: slices.Clone(o.jobs), Metrics: &metrics},
 	}
 }
 

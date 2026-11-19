@@ -23,9 +23,9 @@ type RoutineState struct {
 	NextFull *time.Time `json:"next-full,omitempty"`
 	// NextIncremental: the time of the next scheduled incremental backup.
 	NextIncremental *time.Time `json:"next-incremental,omitempty"`
-	// LastFullJobs: the server jobs of the last finished full backup, one per namespace, whether it
-	// succeeded or not. Reported only in the server backup mode. The list is kept in memory, so it
-	// is empty after a restart until a full backup finishes.
+	// LastFullJobs: the server jobs of the last finished full backup, one per namespace whose job
+	// reported its status, whether it succeeded or not. Reported only in the server backup mode.
+	// The list is kept in memory, so it is empty after a restart until a full backup finishes.
 	LastFullJobs []ServerBackupJob `json:"last-full-jobs,omitempty"`
 	// LastIncrementalJobs: the same for the last finished incremental backup.
 	LastIncrementalJobs []ServerBackupJob `json:"last-incremental-jobs,omitempty"`
@@ -67,9 +67,13 @@ type RunningJob struct {
 	// This value is not guaranteed to be accurate.
 	EstimatedEndTime *time.Time `json:"estimated-end-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
 	// Metrics provides real-time information about data flow performance.
+	// A server-side backup shows the rates the server last reported.
 	Metrics *Metrics `json:"metrics,omitempty"`
 	// Duration represents the elapsed time taken by the job in seconds.
 	Duration uint `yaml:"duration" json:"duration"`
+	// The server jobs of a running server-side backup, in the order they started: one per
+	// namespace whose job has reported its status, each as the server last reported it.
+	ServerJobs []ServerBackupJob `json:"server-jobs,omitempty" extensions:"x-backup-mode=server"`
 }
 
 func NewRunningJobFromModel(m *model.RunningJob) *RunningJob {
@@ -90,6 +94,7 @@ func (r *RunningJob) fromModel(m *model.RunningJob) {
 	r.PercentageDone = uint(m.Progress * 100)
 	r.EstimatedEndTime = m.EstimatedEndTime
 	r.Metrics = NewMetricsFromModel(m.Metrics)
+	r.ServerJobs = newServerBackupJobsFromModel(m.ServerJobs)
 	if r.FinishTime != nil {
 		r.Duration = uint(r.FinishTime.Sub(r.StartTime).Seconds())
 	} else {
