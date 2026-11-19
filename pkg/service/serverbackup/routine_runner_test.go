@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"strconv"
 	"testing"
-	"testing/synctest"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -18,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"testing/synctest"
 )
 
 func TestRoutineRunner_LowerBounds(t *testing.T) {

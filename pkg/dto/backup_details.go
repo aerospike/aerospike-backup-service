@@ -14,7 +14,6 @@ type BackupDetails struct {
 	// The backup time in epoch millis.
 	Timestamp int64 `yaml:"timestamp" json:"timestamp" example:"1685458200000" format:"int64"`
 	// The time the backup operation completed.
-	// For server-side backups, the time the data is consistent to.
 	Finished time.Time `yaml:"finished" json:"finished" example:"2023-03-20T14:50:00Z"`
 	// The backup finish time in epoch millis.
 	FinishedTimestamp int64 `yaml:"finished-timestamp" json:"finished-timestamp" example:"1685458200000" format:"int64"`

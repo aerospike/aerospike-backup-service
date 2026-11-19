@@ -9,7 +9,7 @@ BackupDetails contains information about a finished backup.
 | `duration`              | Duration represents the elapsed time taken by the backup process in seconds.                                                                       |
 | `encryption`            | Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256).                                                               |
 | `file-count`            | The number of backup files created.                                                                                                                |
-| `finished`              | The time the backup operation completed.<br>For server-side backups, the time the data is consistent to.                                           |
+| `finished`              | The time the backup operation completed.                                                                                                           |
 | `finished-timestamp`    | The backup finish time in epoch millis.                                                                                                            |
 | `from`                  | The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).                                                     |
 | `key`                   | Key is the path to the backup files within the configured storage location.<br>This value can be used as `backup-data-path` in dto.RestoreRequest. |

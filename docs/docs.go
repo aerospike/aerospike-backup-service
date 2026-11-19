@@ -2156,7 +2156,7 @@ const docTemplate = `{
                     "example": 1
                 },
                 "finished": {
-                    "description": "The time the backup operation completed.\nFor server-side backups, the time the data is consistent to.",
+                    "description": "The time the backup operation completed.",
                     "type": "string",
                     "example": "2023-03-20T14:50:00Z"
                 },
