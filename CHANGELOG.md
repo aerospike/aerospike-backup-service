@@ -14,9 +14,11 @@ Detailed upgrade instructions (breaking changes and how to adapt existing config
 
 ### Fixed
 
-- Set and bin names in `set-list` and `bin-list` (backup routines and restore policies) are checked against the
-  [Aerospike naming rules](https://aerospike.com/docs/database/reference/limitations/) when the configuration loads
-  or a restore is requested, as namespace names already are, instead of failing when the job runs.
+- A `set-list` or `bin-list` entry that the server or server-side backup refuses is rejected when the configuration
+  loads or a restore is requested, instead of failing when the job runs: a set name over 63 bytes, a bin name over
+  15 bytes, invalid UTF-8, or a `,`, `;`, `|` or control character. The rule applies in both backup modes.
+- An S3 `path`, `bucket`, `s3-region`, `s3-profile` or `s3-endpoint-override` with `;`, `|`, a line break or a NUL
+  byte is rejected, in both backup modes: server-side backup cannot send it to the server.
 
 ## [3.7.1] - 2026-10-05
 

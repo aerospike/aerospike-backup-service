@@ -40,22 +40,18 @@ func (m RestoreMode) ToModel() model.RestoreMode {
 }
 
 // validateRestoreStorage checks that a server-side restore reads from S3 storage, the only
-// storage the server writes backups to, and that an info command can carry the storage's
-// location. A scan restore reads from any storage. A routine's storage is checked when the
-// configuration loads, but a restore may name other storage.
+// storage the server writes backups to. A scan restore reads from any storage. A routine's storage
+// is checked when the configuration loads, but a restore may name other storage.
 func validateRestoreStorage(storage model.Storage, config *model.Config) error {
 	if !config.IsServerBackupMode() {
 		return nil
 	}
-
-	s3Storage, ok := storage.(*model.S3Storage)
-	if !ok {
-		return fmt.Errorf("%w: the restore storage is not S3 storage, which backup-mode %q requires",
-			errInvalidValue, model.BackupModeServer)
+	if _, ok := storage.(*model.S3Storage); ok {
+		return nil
 	}
 
-	return validateS3InfoValues(s3Storage.Path, s3Storage.Bucket, s3Storage.S3Region, s3Storage.S3Profile,
-		s3Storage.S3EndpointOverride)
+	return fmt.Errorf("%w: the restore storage is not S3 storage, which backup-mode %q requires",
+		errInvalidValue, model.BackupModeServer)
 }
 
 // validateRestorePolicy checks policy against the service's backup mode. A scan restore has no

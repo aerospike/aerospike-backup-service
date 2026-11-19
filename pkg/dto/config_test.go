@@ -223,66 +223,6 @@ func TestConfigValidate_ServerMode(t *testing.T) {
 			storage: s3,
 			change:  func(c *Config) { c.BackupPolicies["empty"] = nil },
 		},
-		{
-			name:    "scan mode with an S3 path an info command cannot carry",
-			mode:    BackupModeScan,
-			storage: &Storage{S3Storage: &S3Storage{Bucket: "bucket", S3Region: "eu-central-1", Path: "a;b"}},
-			change:  none,
-		},
-		{
-			name:    "server mode with a semicolon in the S3 path",
-			mode:    BackupModeServer,
-			storage: &Storage{S3Storage: &S3Storage{Bucket: "bucket", S3Region: "eu-central-1", Path: "back;ups"}},
-			change:  none,
-			wantErr: `storage 'storage1' validation error: invalid value validation error: ` +
-				`path "back;ups": must not contain ";", "|", a line break or a NUL byte`,
-		},
-		{
-			name:    "server mode with a pipe in the S3 bucket",
-			mode:    BackupModeServer,
-			storage: &Storage{S3Storage: &S3Storage{Bucket: "buc|ket", S3Region: "eu-central-1"}},
-			change:  none,
-			wantErr: `storage 'storage1' validation error: invalid value validation error: ` +
-				`bucket "buc|ket": must not contain ";", "|", a line break or a NUL byte`,
-		},
-		{
-			name:    "server mode with a line break in the S3 region",
-			mode:    BackupModeServer,
-			storage: &Storage{S3Storage: &S3Storage{Bucket: "bucket", S3Region: "eu-central-1\n"}},
-			change:  none,
-			wantErr: `storage 'storage1' validation error: invalid value validation error: ` +
-				`s3-region "eu-central-1\n": must not contain ";", "|", a line break or a NUL byte`,
-		},
-		{
-			name: "server mode with a semicolon in the S3 profile",
-			mode: BackupModeServer,
-			storage: &Storage{S3Storage: &S3Storage{
-				Bucket: "bucket", S3Region: "eu-central-1", S3Profile: "back;up",
-			}},
-			change: none,
-			wantErr: `storage 'storage1' validation error: invalid value validation error: ` +
-				`s3-profile "back;up": must not contain ";", "|", a line break or a NUL byte`,
-		},
-		{
-			name: "server mode with a semicolon in the S3 endpoint",
-			mode: BackupModeServer,
-			storage: &Storage{S3Storage: &S3Storage{
-				Bucket: "bucket", S3Region: "eu-central-1", S3EndpointOverride: "http://minio:9000/;a",
-			}},
-			change: none,
-			wantErr: `storage 'storage1' validation error: invalid value validation error: ` +
-				`s3-endpoint-override "http://minio:9000/;a": must not contain ";", "|", a line break or a NUL byte`,
-		},
-		{
-			name: "server mode with a NUL byte in the S3 endpoint",
-			mode: BackupModeServer,
-			storage: &Storage{S3Storage: &S3Storage{
-				Bucket: "bucket", S3Region: "eu-central-1", S3EndpointOverride: "http://minio:9000\x00",
-			}},
-			change: none,
-			wantErr: `storage 'storage1' validation error: invalid value validation error: ` +
-				`s3-endpoint-override "http://minio:9000\x00": must not contain ";", "|", a line break or a NUL byte`,
-		},
 	}
 
 	for _, tt := range tests {

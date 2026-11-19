@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -19,10 +20,10 @@ const (
 	maxNamespaceNameLength = 31
 	maxSetNameLength       = 63
 	maxBinNameLength       = 15
-	// reservedName is the one name the Aerospike server keeps for itself.
-	reservedName = "null"
-	// aerospikeNameChars is the full set of characters an Aerospike name may use.
-	aerospikeNameChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-$"
+	// reservedNamespaceName is the one name the Aerospike server keeps for itself.
+	reservedNamespaceName = "null"
+	// namespaceNameChars is the full set of characters an Aerospike namespace name may use.
+	namespaceNameChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-$"
 )
 
 // NamespaceName represents a validated Aerospike namespace name in the DTO layer.
@@ -39,46 +40,21 @@ type NamespaceName string
 // adds the field name and the offending value, and classifies the error (errEmpty for a
 // missing name, errInvalidValue for an unusable one).
 func (n NamespaceName) Validate() error {
-	return checkAerospikeName(string(n), maxNamespaceNameLength)
-}
-
-// validateAerospikeNames checks a list of namespace, set or bin names for duplicates and each name
-// against the Aerospike naming rules. The rules apply in both backup modes: their character set
-// also keeps out the separators of the info commands that server-side backup sends the names in.
-func validateAerospikeNames[T ~string](field string, names []T, maxLength int) error {
-	if err := validateUnique(field, names); err != nil {
-		return err
-	}
-
-	for i, name := range names {
-		err := errValidationInvalidName(fmt.Sprintf("%s[%d]", field, i), string(name),
-			checkAerospikeName(string(name), maxLength))
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// checkAerospikeName reports why name breaks the Aerospike naming rules: at most maxLength bytes
-// of Latin letters, digits, '_', '-' and '$', and not the reserved name "null".
-func checkAerospikeName(name string, maxLength int) error {
-	if name == "" {
+	if n == "" {
 		return errEmpty
 	}
 
-	if len(name) > maxLength {
-		return fmt.Errorf("must not exceed %d bytes", maxLength)
+	if len(n) > maxNamespaceNameLength {
+		return fmt.Errorf("must not exceed %d bytes", maxNamespaceNameLength)
 	}
 
-	if name == reservedName {
-		return fmt.Errorf("%q is reserved by the Aerospike server", reservedName)
+	if n == reservedNamespaceName {
+		return fmt.Errorf("%q is reserved by the Aerospike server", reservedNamespaceName)
 	}
 
 	// TrimLeft drops the leading run of allowed characters, so the remainder, if any,
 	// starts with the first character that is not allowed.
-	if rest := strings.TrimLeft(name, aerospikeNameChars); rest != "" {
+	if rest := strings.TrimLeft(string(n), namespaceNameChars); rest != "" {
 		r, _ := utf8.DecodeRuneInString(rest)
 
 		return fmt.Errorf(
@@ -86,6 +62,42 @@ func checkAerospikeName(name string, maxLength int) error {
 	}
 
 	return nil
+}
+
+// validateNames checks a list of names for duplicates and each name with check.
+func validateNames[T ~string](field string, names []T, check func(T) error) error {
+	if err := validateUnique(field, names); err != nil {
+		return err
+	}
+
+	for i, name := range names {
+		if err := errValidationInvalidName(fmt.Sprintf("%s[%d]", field, i), string(name), check(name)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// setOrBinName returns the check for a set or bin name: at most maxLength bytes, which the
+// Aerospike server enforces, and nothing server-side backup cannot send in its info commands.
+// There "," separates the entries of a list, backup-go refuses ";" and "|", and the server
+// refuses control characters and invalid UTF-8. The rule applies in both backup modes.
+func setOrBinName(maxLength int) func(string) error {
+	return func(name string) error {
+		switch {
+		case name == "":
+			return errEmpty
+		case len(name) > maxLength:
+			return fmt.Errorf("must not exceed %d bytes", maxLength)
+		case !utf8.ValidString(name):
+			return errors.New("must be valid UTF-8")
+		case strings.ContainsAny(name, ",;|") || strings.IndexFunc(name, unicode.IsControl) >= 0:
+			return errors.New(`must not contain ",", ";", "|" or a control character`)
+		}
+
+		return nil
+	}
 }
 
 // newNamespaceNames adopts the model's plain strings as namespace names.
@@ -122,6 +134,22 @@ func validateRoutineName(name string) error {
 	}
 
 	return validateInfoValue("routine name", name)
+}
+
+// infoSeparators are the characters an Aerospike info command cannot carry in a value. Server-side
+// backup sends the routine name and the S3 location in info commands, where ";" separates
+// parameters, "|" separates the values the server keeps with a job, a line break ends the
+// command and a NUL byte can cut the command short.
+const infoSeparators = ";|\r\n\x00"
+
+// validateInfoValue fails when an info command cannot carry the value of field. It applies in
+// both backup modes, so a configuration stays valid when it moves to server mode.
+func validateInfoValue(field, value string) error {
+	if strings.ContainsAny(value, infoSeparators) {
+		return errValidationInvalidName(field, value, errors.New(`must not contain ";", "|", a line break or a NUL byte`))
+	}
+
+	return nil
 }
 
 // checkPathSegment reports why name cannot be used as one element of a path.

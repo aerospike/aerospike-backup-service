@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -48,30 +47,4 @@ func encrypts(policy *model.EncryptionPolicy) bool {
 
 func compresses(policy *model.CompressionPolicy) bool {
 	return policy != nil && policy.Mode != model.CompressionModeNone
-}
-
-// infoSeparators are the characters an Aerospike info command cannot carry in a value. Server-side
-// backup sends routine, policy and storage values in info commands, where ";" separates
-// parameters, "|" separates the values the server keeps with a job, a line break ends the
-// command and a NUL byte can cut the command short.
-const infoSeparators = ";|\r\n\x00"
-
-// validateInfoValue fails when an info command cannot carry the value of field.
-func validateInfoValue(field, value string) error {
-	if strings.ContainsAny(value, infoSeparators) {
-		return errValidationInvalidName(field, value, errors.New(`must not contain ";", "|", a line break or a NUL byte`))
-	}
-
-	return nil
-}
-
-// validateS3InfoValues fails when an info command cannot carry a part of an S3 location.
-func validateS3InfoValues(path, bucket, region, profile, endpoint string) error {
-	return errors.Join(
-		validateInfoValue("path", path),
-		validateInfoValue("bucket", bucket),
-		validateInfoValue("s3-region", region),
-		validateInfoValue("s3-profile", profile),
-		validateInfoValue("s3-endpoint-override", endpoint),
-	)
 }

@@ -150,43 +150,62 @@ func TestNamespaceName_Validate(t *testing.T) {
 	}
 }
 
-func TestValidateAerospikeNames(t *testing.T) {
+func TestValidateNames_SetOrBinName(t *testing.T) {
 	tests := []struct {
 		name      string
 		names     []string
 		maxLength int
+		wantIs    error
 		wantErr   string
 	}{
-		{name: "valid sets", names: []string{"set-1", "set_2$"}, maxLength: maxSetNameLength},
+		{name: "plain", names: []string{"set-1", "set_2$"}, maxLength: maxSetNameLength},
 		{name: "longest set", names: []string{strings.Repeat("s", maxSetNameLength)}, maxLength: maxSetNameLength},
 		{name: "longest bin", names: []string{strings.Repeat("b", maxBinNameLength)}, maxLength: maxBinNameLength},
 		{name: "no names", maxLength: maxSetNameLength},
 		{
-			name: "set too long", names: []string{strings.Repeat("s", maxSetNameLength+1)}, maxLength: maxSetNameLength,
-			wantErr: `list[0] "` + strings.Repeat("s", maxSetNameLength+1) + `": must not exceed 63 bytes`,
+			name:  "characters both backup modes carry",
+			names: []string{"a.b", "a:b", "a=b", "a b", "a/b", "\u00e9", "\u65e5\u672c", "null"}, maxLength: maxSetNameLength,
 		},
 		{
-			name: "bin too long", names: []string{"bin_name_of_16ch"}, maxLength: maxBinNameLength,
-			wantErr: `list[0] "bin_name_of_16ch": must not exceed 15 bytes`,
+			name: "set too long", names: []string{strings.Repeat("s", maxSetNameLength+1)}, maxLength: maxSetNameLength,
+			wantIs: errInvalidValue, wantErr: `": must not exceed 63 bytes`,
 		},
-		{name: "empty", names: []string{"a", ""}, maxLength: maxSetNameLength, wantErr: `"list[1]" required`},
+		{
+			name: "bin too long in bytes", names: []string{strings.Repeat("\u00e9", 8)}, maxLength: maxBinNameLength,
+			wantIs: errInvalidValue, wantErr: `must not exceed 15 bytes`,
+		},
+		{
+			name: "comma", names: []string{"a,b"}, maxLength: maxSetNameLength,
+			wantIs: errInvalidValue, wantErr: `list[0] "a,b": must not contain ",", ";", "|" or a control character`,
+		},
+		{name: "semicolon", names: []string{"a;b"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "a;b"},
+		{name: "pipe", names: []string{"a|b"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "a|b"},
+		{name: "LF", names: []string{"a\nb"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "control"},
+		{name: "tab", names: []string{"a\tb"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "control"},
+		{name: "NUL", names: []string{"a\x00b"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "control"},
+		{name: "DEL", names: []string{"a\x7fb"}, maxLength: maxSetNameLength, wantIs: errInvalidValue, wantErr: "control"},
+		{
+			name: "invalid UTF-8", names: []string{"a\xffb"}, maxLength: maxSetNameLength,
+			wantIs: errInvalidValue, wantErr: "must be valid UTF-8",
+		},
+		{
+			name: "empty", names: []string{"a", ""}, maxLength: maxSetNameLength,
+			wantIs: errEmpty, wantErr: `"list[1]" required`,
+		},
 		{name: "duplicate", names: []string{"a", "a"}, maxLength: maxSetNameLength, wantErr: "duplicate"},
-		{name: "reserved", names: []string{"null"}, maxLength: maxSetNameLength, wantErr: "reserved"},
-		{name: "dot", names: []string{"a.b"}, maxLength: maxSetNameLength, wantErr: `found '.'`},
-		{name: "comma", names: []string{"a,b"}, maxLength: maxSetNameLength, wantErr: `found ','`},
-		{name: "semicolon", names: []string{"a;b"}, maxLength: maxSetNameLength, wantErr: `found ';'`},
-		{name: "pipe", names: []string{"a|b"}, maxLength: maxSetNameLength, wantErr: `found '|'`},
-		{name: "line break", names: []string{"a\nb"}, maxLength: maxSetNameLength, wantErr: `found '\n'`},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateAerospikeNames("list", tt.names, tt.maxLength)
+			err := validateNames("list", tt.names, setOrBinName(tt.maxLength))
 			if tt.wantErr == "" {
 				require.NoError(t, err)
 				return
 			}
 
+			if tt.wantIs != nil {
+				require.ErrorIs(t, err, tt.wantIs)
+			}
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
@@ -212,11 +231,19 @@ func TestValidate_SetAndBinNames(t *testing.T) {
 		wantIs  error
 		wantErr string
 	}{
-		{name: "routine with valid names", entity: routine([]string{"set-1"}, []string{"bin_1"})},
-		{name: "restore policy with valid names", entity: policy([]string{"set-1"}, []string{"bin_1"})},
+		{name: "routine", entity: routine([]string{"a.b"}, []string{"bin 1"})},
+		{name: "restore policy", entity: policy([]string{"a.b"}, []string{"bin 1"})},
 		{
-			name: "routine set with a dot", entity: routine([]string{"a.b"}, nil),
-			wantIs: errInvalidValue, wantErr: `set-list[0] "a.b"`,
+			name: "routine set with a comma", entity: routine([]string{"a,b"}, nil),
+			wantIs: errInvalidValue, wantErr: `set-list[0] "a,b"`,
+		},
+		{
+			name: "restore policy bin with a semicolon", entity: policy(nil, []string{"a;b"}),
+			wantIs: errInvalidValue, wantErr: `bin-list[0] "a;b"`,
+		},
+		{
+			name: "routine set too long", entity: routine([]string{strings.Repeat("s", maxSetNameLength+1)}, nil),
+			wantIs: errInvalidValue, wantErr: `set-list[0]`,
 		},
 		{
 			name: "routine bin too long", entity: routine(nil, []string{"bin_name_of_16ch"}),
@@ -227,12 +254,12 @@ func TestValidate_SetAndBinNames(t *testing.T) {
 			wantIs: errEmpty, wantErr: `"set-list[0]" required`,
 		},
 		{
-			name: "restore policy set with a comma", entity: policy([]string{"a,b"}, nil),
-			wantIs: errInvalidValue, wantErr: `set-list[0] "a,b"`,
+			name: "restore policy set with NUL", entity: policy([]string{"a\x00b"}, nil),
+			wantIs: errInvalidValue, wantErr: `set-list[0] "a\x00b"`,
 		},
 		{
-			name: "restore policy bin with a semicolon", entity: policy(nil, []string{"a;b"}),
-			wantIs: errInvalidValue, wantErr: `bin-list[0] "a;b"`,
+			name: "restore policy bin too long", entity: policy(nil, []string{"bin_name_of_16ch"}),
+			wantIs: errInvalidValue, wantErr: `bin-list[0] "bin_name_of_16ch"`,
 		},
 	}
 

@@ -133,13 +133,13 @@ func (r *BackupRoutine) Validate() error {
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
 	}
-	if err := validateAerospikeNames("namespaces", *r.Namespaces, maxNamespaceNameLength); err != nil {
+	if err := validateNames("namespaces", *r.Namespaces, NamespaceName.Validate); err != nil {
 		return err
 	}
-	if err := validateAerospikeNames("set-list", r.SetList, maxSetNameLength); err != nil {
+	if err := validateNames("set-list", r.SetList, setOrBinName(maxSetNameLength)); err != nil {
 		return err
 	}
-	if err := validateAerospikeNames("bin-list", r.BinList, maxBinNameLength); err != nil {
+	if err := validateNames("bin-list", r.BinList, setOrBinName(maxBinNameLength)); err != nil {
 		return err
 	}
 	if err := validateUnique(rackListField, r.RackList); err != nil {

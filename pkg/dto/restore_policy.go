@@ -145,10 +145,10 @@ func (p *BaseRestorePolicy) Validate() error {
 		}
 	}
 
-	if err := validateAerospikeNames("set-list", p.SetList, maxSetNameLength); err != nil {
+	if err := validateNames("set-list", p.SetList, setOrBinName(maxSetNameLength)); err != nil {
 		return err
 	}
-	if err := validateAerospikeNames("bin-list", p.BinList, maxBinNameLength); err != nil {
+	if err := validateNames("bin-list", p.BinList, setOrBinName(maxBinNameLength)); err != nil {
 		return err
 	}
 
