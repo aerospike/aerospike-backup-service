@@ -2921,8 +2921,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "pipeline": {
-                    "description": "The number of records that have been read from the source, but not yet written to the destination.\nThis metric helps identify bottlenecks:\n- If Pipeline is zero or fluctuates near zero, it means the destination is consuming data\n  faster than the source can read.\n- If Pipeline grows large, it indicates that the source is producing data faster\n  than the destination can consume.\nA server-side backup has no such gauge and always reports 0.",
-                    "type": "integer"
+                    "description": "The number of records that have been read from the source, but not yet written to the destination.\nThis metric helps identify bottlenecks:\n- If Pipeline is zero or fluctuates near zero, it means the destination is consuming data\n  faster than the source can read.\n- If Pipeline grows large, it indicates that the source is producing data faster\n  than the destination can consume.",
+                    "type": "integer",
+                    "x-backup-mode": "scan"
                 },
                 "records-per-second": {
                     "description": "Current speed as the number of records processed by Aerospike per second.",
