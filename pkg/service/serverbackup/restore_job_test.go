@@ -246,17 +246,45 @@ func TestStartRestore_InvalidBackupKey(t *testing.T) {
 	require.EqualError(t, err, `invalid server backup key "`+fullID+`": want <routine>/<job id>`)
 }
 
-func TestStartRestore_ChainTooLong(t *testing.T) {
+// TestStartRestore_ChainLength checks that the longest chain the server restores in one job is
+// started, and that a chain one backup longer is refused before anything is sent to the server.
+func TestStartRestore_ChainLength(t *testing.T) {
 	t.Parallel()
-	ctrl := gomock.NewController(t)
 
-	backups := make([]model.BackupDetails, maxChainLength+1)
-	for i := range backups {
-		backups[i] = chainBackup(fmt.Sprintf("261020T09%04d-aaaa", i))
+	tests := []struct {
+		name    string
+		length  int
+		wantErr string
+	}{
+		{name: "longest chain", length: maxChainLength},
+		{name: "one backup too many", length: maxChainLength + 1,
+			wantErr: "restore chain has 33 backups, the server restores at most 32 in one job"},
 	}
 
-	_, err := startRestore(t.Context(), aerospike.NewMockInfoGetter(ctrl), strictPolicy, backups, discardLogger)
-	require.EqualError(t, err, "restore chain has 33 backups, the server restores at most 32 in one job")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+
+			backups := make([]model.BackupDetails, tt.length)
+			for i := range backups {
+				backups[i] = chainBackup(fmt.Sprintf("261020T09%04d-aaaa", i))
+			}
+
+			infoClient := aerospike.NewMockInfoGetter(ctrl)
+			if tt.wantErr == "" {
+				infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, nil)
+			}
+
+			_, err := startRestore(t.Context(), infoClient, strictPolicy, backups, discardLogger)
+			if tt.wantErr != "" {
+				require.EqualError(t, err, tt.wantErr)
+				return
+			}
+
+			require.NoError(t, err)
+		})
+	}
 }
 
 // newTestRestoreJob returns the restore job "job" of namespace bar.
@@ -303,6 +331,30 @@ func TestRestoreJob_Wait_ClearsNamespace(t *testing.T) {
 	)
 
 	require.NoError(t, newTestRestoreJob(infoClient, model.RestoreModeStrict).Wait(t.Context()))
+}
+
+// TestRestoreJob_Wait_AbortingJobIsNotCleared checks that a strict restore sends no clear for a
+// node that asks for one while the job is aborting: the job would restore nothing into the
+// cleared storage.
+func TestRestoreJob_Wait_AbortingJobIsNotCleared(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+
+	infoClient := aerospike.NewMockInfoGetter(ctrl)
+	gomock.InOrder(
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(&infomodels.ResponseRestoreState{
+			State:   infomodels.RestoreStateAborting,
+			NsState: infomodels.NamespaceStatePreparing,
+			Clear:   infomodels.ClearStateRequired,
+		}, nil),
+		infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", "job").Return(
+			&infomodels.ResponseRestoreState{State: infomodels.RestoreStateAborted}, nil),
+	)
+	expectOpen(infoClient, "job")
+
+	err := newTestRestoreJob(infoClient, model.RestoreModeStrict).Wait(t.Context())
+
+	require.EqualError(t, err, "server restore job was aborted")
 }
 
 // TestRestoreJob_Wait_RecordsCounts checks that the job's status holds the record counts of the
