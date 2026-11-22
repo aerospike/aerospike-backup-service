@@ -118,20 +118,29 @@ func (s *ServerBuildSuite) SetupTest() {
 // end. A server backup outlives the ABS that started it, so a test that ends while one runs would
 // leave it running into the next test.
 func (s *ServerBuildSuite) abortRunningBackups() {
+	aborted := make(map[string]bool)
 	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
 		running := false
 		for id, job := range statusRows(s.info(s.client, "backup-status")) {
-			if slices.Contains([]string{"COMPLETE", "FAILED", "ABORTED"}, job["state"]) {
+			if serverJobEnded(job["state"]) {
 				continue
 			}
 
 			running = true
-			s.info(s.client, "backup-abort:job-id="+id)
+			if !aborted[id] {
+				s.info(s.client, "backup-abort:job-id="+id)
+				aborted[id] = true
+			}
 		}
 
 		return !running
 	})
 	s.Require().True(ok, "backup jobs still running %s after they were aborted", serverJobTimeout)
+}
+
+// serverJobEnded reports whether state is one a server job ends in.
+func serverJobEnded(state string) bool {
+	return slices.Contains([]string{"COMPLETE", "FAILED", "ABORTED"}, state)
 }
 
 // serverBuildFile returns the path in env, or else defaultPath under the home directory. It
@@ -324,7 +333,7 @@ func (s *ServerBuildSuite) listsActiveServerJob(running *dto.RunningJob) bool {
 	s.Equal(serverNamespace, job.Namespace)
 	s.Equal(running.DoneRecords, job.RecordsBackedUp, "records done are the job's")
 
-	return !slices.Contains([]string{"COMPLETE", "FAILED", "ABORTED"}, job.State)
+	return !serverJobEnded(job.State)
 }
 
 func getRunningJob(state dto.RoutineState, backupType model.BackupType) *dto.RunningJob {

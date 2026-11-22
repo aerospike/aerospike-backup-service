@@ -21,7 +21,9 @@ type BackupReader interface {
 
 // RoutineBackupRunner resolves the namespaces of a routine and starts a backup for each of them.
 type RoutineBackupRunner interface {
-	// Run resolves target namespaces and starts one cancelable backup per namespace.
+	// Run resolves target namespaces and starts one cancelable backup per namespace. A scan run
+	// ends with ctx; a server run does not, because its jobs complete on the server without ABS.
+	// The handler's Cancel ends either.
 	Run(
 		ctx context.Context,
 		routine *model.BackupRoutine,

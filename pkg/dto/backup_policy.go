@@ -16,8 +16,10 @@ type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total
 	// data partitions. The optimal value depends on hardware and network configuration.
 	// In the server backup mode it is the number of scan threads on each node for each namespace. A
-	// routine's namespaces are backed up at once, and the server refuses a namespace whose scan and
-	// upload threads do not fit in its `max-backup-threads` beside the backups already running.
+	// routine's namespaces are backed up at once, so a run takes `parallel` + `parallel-write`
+	// threads on each node for every namespace. The server refuses a namespace whose threads do not
+	// fit in its `max-backup-threads` setting beside the backups already running, and that
+	// namespace's backup fails.
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1" default:"8" minimum:"1"`
 	// Maximum number of threads to use for writing backup files. If not specified, same values as `parallel` is used.
 	// In the server backup mode it is the number of upload threads on each node for each namespace,

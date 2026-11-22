@@ -46,8 +46,8 @@ func NewRoutineRunner(
 }
 
 // Run resolves the namespaces of the routine and starts backing them up in the background. The
-// run does not end with ctx, only with its jobs or the handler's Cancel: a job completes on the
-// server without ABS, while canceling the run would abort it.
+// run is detached from ctx: only the handler's Cancel aborts its jobs. When ABS exits, the run
+// ends with the process without aborting them, and they complete on the server.
 func (r *routineRunner) Run(
 	ctx context.Context,
 	routine *model.BackupRoutine,
@@ -201,8 +201,7 @@ func (j *backupJob) Wait(ctx context.Context) error {
 	}
 }
 
-// poll polls the job until it ends and returns its final status. Each status is recorded in the
-// operation.
+// poll polls the job until it ends and returns its final status. Each status is passed to record.
 func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, error) {
 	fetch := func(ctx context.Context) (*infomodels.ResponseBackupState, error) {
 		return j.infoClient.GetBackupStatus(ctx, j.jobID)
@@ -222,8 +221,8 @@ func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, 
 	return pollJob(ctx, j.logger, backupJobKind, j.jobID, fetch, settled)
 }
 
-// abort aborts the job on the server and waits up to cleanupTimeout for it to end, so that the
-// operation holds the job's final status and abort origin.
+// abort aborts the job on the server and waits up to cleanupTimeout for it to end, so that record
+// receives the job's final status and abort origin.
 func (j *backupJob) abort(ctx context.Context) {
 	if err := j.infoClient.AbortBackup(ctx, j.jobID); err != nil {
 		j.logger.Warn("Failed to abort server backup", slog.String("jobId", j.jobID), attr.Error(err))
@@ -304,7 +303,8 @@ type namespaceProgress struct {
 	progressPct float64
 	// metrics is the job's throughput, summed across the cluster's nodes.
 	metrics models.Metrics
-	// finished is set once the namespace's backup has ended, whatever its outcome.
+	// finished is set once the namespace's backup has ended, whatever its outcome. The job's state
+	// cannot tell: a namespace whose start failed, or whose job went unobserved, has no final status.
 	finished bool
 }
 

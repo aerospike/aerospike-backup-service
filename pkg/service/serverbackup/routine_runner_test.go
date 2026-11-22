@@ -121,13 +121,12 @@ func TestRoutineRunner_Run_NamespacesTogether(t *testing.T) {
 				return "job-" + request.Namespace, nil
 			}).Times(2)
 		// job-baz completes at its first poll; job-bar is half way at its first and completes at
-		// its second. Only bar's job reads barPolls.
-		barPolls := 0
+		// its second.
+		var barPolls atomic.Int32
 		infoClient.EXPECT().GetBackupStatus(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(_ context.Context, jobID string) (*infomodels.ResponseBackupState, error) {
 				if jobID == "job-bar" {
-					barPolls++
-					if barPolls == 1 {
+					if barPolls.Add(1) == 1 {
 						return &infomodels.ResponseBackupState{
 							JobID: jobID, State: infomodels.BackupStateBaseScanActive, ProgressPct: 50,
 						}, nil
@@ -186,32 +185,52 @@ func TestRoutineRunner_Run_OutlivesContext(t *testing.T) {
 	})
 }
 
-// TestRoutineRunner_Run_CancelAborts checks that canceling a run through its handler aborts the
-// running job.
+// TestRoutineRunner_Run_CancelAborts checks that canceling a run through its handler aborts every
+// job of the run that is running.
 func TestRoutineRunner_Run_CancelAborts(t *testing.T) {
 	t.Parallel()
 
 	synctest.Test(t, func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		infoClient := aerospike.NewMockInfoGetter(ctrl)
-		state := infomodels.BackupStateBaseScanActive
-		infoClient.EXPECT().StartBackup(gomock.Any(), gomock.Any()).Return(fullID, nil)
-		infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).DoAndReturn(
-			func(context.Context, string) (*infomodels.ResponseBackupState, error) {
-				return &infomodels.ResponseBackupState{JobID: fullID, State: state}, nil
-			}).AnyTimes()
-		infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).DoAndReturn(func(context.Context, string) error {
-			state = infomodels.BackupStateAborted
+		var mu sync.Mutex
+		aborted := make(map[string]bool)
+		infoClient.EXPECT().StartBackup(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, request *infomodels.RequestBackup) (string, error) {
+				return "job-" + request.Namespace, nil
+			}).Times(2)
+		infoClient.EXPECT().GetBackupStatus(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, jobID string) (*infomodels.ResponseBackupState, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				state := infomodels.BackupStateBaseScanActive
+				if aborted[jobID] {
+					state = infomodels.BackupStateAborted
+				}
 
-			return nil
-		})
-		runner, routine := newTestRunner(ctrl, infoClient, "bar")
+				return &infomodels.ResponseBackupState{JobID: jobID, State: state}, nil
+			}).AnyTimes()
+		infoClient.EXPECT().AbortBackup(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, jobID string) error {
+				mu.Lock()
+				defer mu.Unlock()
+				aborted[jobID] = true
+
+				return nil
+			}).Times(2)
+		runner, routine := newTestRunner(ctrl, infoClient, "bar", "baz")
 
 		handler, err := runner.Run(t.Context(), routine, model.BackupRunSpec{Type: model.BackupTypeFull}, discardLogger)
 		require.NoError(t, err)
+		time.Sleep(pollInterval)
+		synctest.Wait()
+		require.Len(t, handler.Status().Server.Jobs, 2, "both jobs have reported")
 		handler.Cancel()
 
 		require.ErrorIs(t, handler.Wait(t.Context()), context.Canceled)
+		mu.Lock()
+		defer mu.Unlock()
+		assert.Equal(t, map[string]bool{"job-bar": true, "job-baz": true}, aborted)
 
 		synctest.Wait() // the run releases its client after it reports its outcome.
 	})

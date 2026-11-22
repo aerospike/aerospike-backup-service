@@ -233,7 +233,7 @@ func (s *ServerBackupSuite) TestServerRestoreCancel() {
 
 	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
 		for id, fields := range statusRows(s.info(s.destinationClient, "restore-status")) {
-			if !before[id] && fields["ns-state"] == "RESTORING" {
+			if !before[id] && fields["ns_state"] == "RESTORING" {
 				return true
 			}
 		}
@@ -276,6 +276,8 @@ func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 	fullJobs := s.routineState(e).LastFullJobs
 	namespaces := []string{serverNamespace, otherNamespace}
 	s.assertCompleteJobs(fullJobs, fullBackups, namespaces, map[string]uint64{serverNamespace: 1, otherNamespace: 2})
+	s.True(fullJobs[0].StartTime.Before(*fullJobs[1].FinishTime) && fullJobs[1].StartTime.Before(*fullJobs[0].FinishTime),
+		"the namespaces' jobs did not run at the same time")
 
 	s.seedRecordsIn(s.client, serverNamespace, []int{3})
 	s.seedRecordsIn(s.client, otherNamespace, []int{4})
