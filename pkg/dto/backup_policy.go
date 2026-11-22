@@ -39,8 +39,10 @@ type BackupPolicy struct {
 	NoIndexes *bool `yaml:"no-indexes,omitempty" json:"no-indexes,omitempty" default:"false"`
 	// Do not back up any UDF modules.
 	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty" default:"false"`
-	// Back up Aerospike cluster configuration.
-	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty" default:"false" extensions:"x-backup-mode=scan"`
+	// Back up Aerospike cluster configuration with each full backup.
+	// In the server backup mode every node uploads its own configuration file, as it is on disk,
+	// into the backup's config folder. The retrieve configuration endpoint does not return it.
+	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty" default:"false"`
 	// Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.
 	// Default is no limit.
 	Bandwidth *int64 `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" extensions:"x-nullable,x-backup-mode=scan"`

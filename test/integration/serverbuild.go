@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -142,12 +143,22 @@ func (s *ServerBuildSuite) serverBackupConfig(c *dto.Config) {
 		S3Region:           s3Region,
 		S3EndpointOverride: s.s3Endpoint,
 		S3Profile:          s3Profile,
-		// The tests share the bucket: each lists only the backups it made.
-		Path: dto.Path(strings.ReplaceAll(s.T().Name(), "/", "-")),
+		Path:               dto.Path(s.storagePath()),
 	}}
 	c.BackupRoutines[routineName].Namespaces = new([]dto.NamespaceName{serverNamespace})
 	// The server keeps every backup: server mode rejects a retention policy.
 	c.BackupPolicies[policyName].RetentionPolicy = nil
+}
+
+// storagePath is the path of the running test in the bucket. The tests share the bucket: each
+// lists only the backups it made.
+func (s *ServerBuildSuite) storagePath() string {
+	return strings.ReplaceAll(s.T().Name(), "/", "-")
+}
+
+// backupObjects returns the objects in folder of the server backup at key, by object key.
+func (s *ServerBuildSuite) backupObjects(key, folder string) map[string][]byte {
+	return s.s3Objects(s.s3Endpoint, path.Join(s.storagePath(), key, folder)+"/")
 }
 
 // startServerBuild starts a single-node cluster from the asd binary and feature key file on

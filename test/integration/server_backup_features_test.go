@@ -107,6 +107,55 @@ func (s *ServerBackupSuite) TestServerNoIndexes() {
 	s.NotContains(s.destinationIndexes(), "age_sidx", "index backed up despite no-indexes")
 }
 
+// TestServerClusterConfiguration backs up with and without the policy's
+// with-cluster-configuration, and checks that the node uploads its configuration file only with a
+// full backup of a policy that asks for it.
+func (s *ServerBackupSuite) TestServerClusterConfiguration() {
+	// A record keeps the backups from being empty.
+	s.seedRecordsIn(s.client, serverNamespace, []int{1})
+
+	// The node writes udf.json and then its configuration file once the backup is listed.
+	waitForUpload := func(key string) {
+		ok := s.eventually(serverJobTimeout, pollInterval, func() bool { return len(s.backupObjects(key, "udf")) > 0 })
+		s.Require().True(ok, "backup %s has no udf.json", key)
+	}
+	assertNoConfiguration := func(key string) {
+		waitForUpload(key)
+		uploaded := s.eventually(3*time.Second, pollInterval, func() bool { return len(s.backupObjects(key, "config")) > 0 })
+		s.False(uploaded, "backup %s holds a configuration file", key)
+	}
+
+	s.Run("with cluster configuration", func() {
+		e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
+			c.BackupPolicies[policyName].WithClusterConfig = new(true)
+		})
+		s.triggerFullBackup(e)
+		full := s.waitForFinishedBackup(e, model.BackupTypeFull)
+
+		var files map[string][]byte
+		ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
+			files = s.backupObjects(full.Key, "config")
+			return len(files) > 0
+		})
+		s.Require().True(ok, "full backup %s holds no configuration file", full.Key)
+		s.Require().Len(files, 1, "one configuration file per node")
+		for key, content := range files {
+			s.Equal(serverConf, string(content), "%s differs from the node's configuration file", key)
+		}
+
+		s.putRecordIn(s.client, serverNamespace, 1, 2)
+		s.triggerIncrementalBackup(e)
+		assertNoConfiguration(s.waitForFinishedBackup(e, model.BackupTypeIncremental).Key)
+	})
+
+	s.Run("without cluster configuration", func() {
+		e := s.setupEnv(s.serverBackupConfig)
+		s.triggerFullBackup(e)
+
+		assertNoConfiguration(s.waitForFinishedBackup(e, model.BackupTypeFull).Key)
+	})
+}
+
 // TestServerBackupLimits backs up with the policy's records-per-second, parallel and
 // parallel-write, and checks that the server job ran with them as its backup-rps and its numbers
 // of scan and upload threads.
