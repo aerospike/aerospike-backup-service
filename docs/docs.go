@@ -2369,7 +2369,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "with-cluster-configuration": {
-                    "description": "Back up Aerospike cluster configuration with each full backup.\nIn the server backup mode every node uploads its own configuration file, as it is on disk,\ninto the backup's config folder. The retrieve configuration endpoint does not return it.",
+                    "description": "Back up Aerospike cluster configuration.",
                     "type": "boolean",
                     "default": false
                 }

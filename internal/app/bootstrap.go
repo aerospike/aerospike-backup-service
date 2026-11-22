@@ -211,7 +211,7 @@ func newComponentsForMode(
 	restoreJobs *service.RestoreJobsHolder,
 ) backupMode {
 	if config.IsServerBackupMode() {
-		return newServerBackupMode(config, s3Clients, clientManager, restoreJobs)
+		return newServerBackupMode(config, operations, s3Clients, clientManager, restoreJobs)
 	}
 
 	return newScanBackupMode(config, operations, clientManager, restoreJobs)
@@ -262,10 +262,11 @@ func newScanBackupMode(
 }
 
 // newServerBackupMode wires backups that the Aerospike server writes to S3 itself.
-// Its retention manager, config retriever and restore validator are placeholders for now, so
-// server backups are not cleaned up and their cluster configuration cannot be retrieved.
+// Its retention manager and restore validator are placeholders for now, so server backups are
+// not cleaned up.
 func newServerBackupMode(
 	config *model.Config,
+	operations storage.Operations,
 	s3Clients serverbackup.S3ClientProvider,
 	clientManager aerospike.ClientManager,
 	restoreJobs *service.RestoreJobsHolder,
@@ -290,7 +291,7 @@ func newServerBackupMode(
 			catalog,
 			serverbackup.NewRestoreValidator(),
 		),
-		configRetriever: serverbackup.NewConfigRetriever(),
+		configRetriever: serverbackup.NewConfigRetriever(catalog, operations),
 	}
 }
 
