@@ -15,11 +15,13 @@ import (
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total
 	// data partitions. The optimal value depends on hardware and network configuration.
-	// In the server backup mode it is the number of scan threads on each node.
+	// In the server backup mode it is the number of scan threads on each node for each namespace. A
+	// routine's namespaces are backed up at once, and the server refuses a namespace whose scan and
+	// upload threads do not fit in its `max-backup-threads` beside the backups already running.
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1" default:"8" minimum:"1"`
 	// Maximum number of threads to use for writing backup files. If not specified, same values as `parallel` is used.
-	// In the server backup mode it is the number of upload threads on each node, and when it is
-	// not set the server uses its own default, whatever `parallel` is.
+	// In the server backup mode it is the number of upload threads on each node for each namespace,
+	// and when it is not set the server uses its own default, whatever `parallel` is.
 	ParallelWrite *int `yaml:"parallel-write,omitempty" json:"parallel-write,omitempty" example:"1" default:"8" minimum:"1"`
 	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
@@ -46,7 +48,7 @@ type BackupPolicy struct {
 	Bandwidth *int64 `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" extensions:"x-nullable,x-backup-mode=scan"`
 	// Limits the number of records returned per second (RPS).
 	// Default is no limit.
-	// In the server backup mode the limit applies to each node, not to the cluster.
+	// In the server backup mode the limit applies to each node and each namespace, not to the cluster.
 	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000" extensions:"x-nullable"`
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created.

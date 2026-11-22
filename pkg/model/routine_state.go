@@ -52,8 +52,7 @@ type RunningJob struct {
 	EstimatedEndTime *time.Time
 	// Metrics contains performance metrics for the current operation.
 	Metrics *models.Metrics
-	// ServerJobs are the server jobs of a running server-side backup in the order they started:
-	// one per namespace whose job has reported its status, each as last reported. Empty for a scan
-	// backup and for a restore.
+	// ServerJobs are the server jobs of a running server-side backup: one per namespace whose job
+	// has reported its status, each as last reported. Empty for a scan backup and for a restore.
 	ServerJobs []ServerBackupJob
 }

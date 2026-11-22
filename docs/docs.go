@@ -2307,21 +2307,21 @@ const docTemplate = `{
                     "default": false
                 },
                 "parallel": {
-                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of scan threads on each node.",
+                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.\nIn the server backup mode it is the number of scan threads on each node for each namespace. A\nroutine's namespaces are backed up at once, and the server refuses a namespace whose scan and\nupload threads do not fit in its ` + "`" + `max-backup-threads` + "`" + ` beside the backups already running.",
                     "type": "integer",
                     "default": 8,
                     "minimum": 1,
                     "example": 1
                 },
                 "parallel-write": {
-                    "description": "Maximum number of threads to use for writing backup files. If not specified, same values as ` + "`" + `parallel` + "`" + ` is used.\nIn the server backup mode it is the number of upload threads on each node, and when it is\nnot set the server uses its own default, whatever ` + "`" + `parallel` + "`" + ` is.",
+                    "description": "Maximum number of threads to use for writing backup files. If not specified, same values as ` + "`" + `parallel` + "`" + ` is used.\nIn the server backup mode it is the number of upload threads on each node for each namespace,\nand when it is not set the server uses its own default, whatever ` + "`" + `parallel` + "`" + ` is.",
                     "type": "integer",
                     "default": 8,
                     "minimum": 1,
                     "example": 1
                 },
                 "records-per-second": {
-                    "description": "Limits the number of records returned per second (RPS).\nDefault is no limit.\nIn the server backup mode the limit applies to each node, not to the cluster.",
+                    "description": "Limits the number of records returned per second (RPS).\nDefault is no limit.\nIn the server backup mode the limit applies to each node and each namespace, not to the cluster.",
                     "type": "integer",
                     "x-nullable": true,
                     "example": 1000
@@ -3533,7 +3533,7 @@ const docTemplate = `{
                     "example": 50
                 },
                 "server-jobs": {
-                    "description": "The server jobs of a running server-side backup, in the order they started: one per\nnamespace whose job has reported its status, each as the server last reported it.",
+                    "description": "The server jobs of a running server-side backup: one per namespace whose job has reported\nits status, each as the server last reported it.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/dto.ServerBackupJob"
