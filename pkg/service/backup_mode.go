@@ -79,11 +79,11 @@ type RestoreHandler interface {
 // own RestoreManager, built on a [RestoreJobsHolder].
 type RestoreManager interface {
 	// Restore starts a restore process using the given request and returns the job id.
-	// The job runs in the background for the lifetime of the service.
+	// The job runs in the background until it finishes or CancelRestore cancels it.
 	Restore(request *model.RestoreRequest) model.RestoreJobID
 
 	// RestoreByTime starts a restore by time process using the given request and returns
-	// the job id. The job runs in the background for the lifetime of the service.
+	// the job id. The job runs in the background as in Restore.
 	RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID
 
 	// JobStatus returns status for the given job id.

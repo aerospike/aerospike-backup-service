@@ -95,23 +95,6 @@ const (
 )
 
 // Validate validates the backup routine configuration.
-// validateNamespaces checks the routine's namespace list for duplicates and each name against
-// the Aerospike naming rules.
-func validateNamespaces(namespaces []NamespaceName) error {
-	if err := validateUnique("namespaces", namespaces); err != nil {
-		return err
-	}
-
-	for i, namespace := range namespaces {
-		field := fmt.Sprintf("namespaces[%d]", i)
-		if err := errValidationInvalidName(field, string(namespace), namespace.Validate()); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (r *BackupRoutine) Validate() error {
 	if r == nil {
 		return errors.New("backup routine is not specified")
@@ -150,13 +133,13 @@ func (r *BackupRoutine) Validate() error {
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
 	}
-	if err := validateNamespaces(*r.Namespaces); err != nil {
+	if err := validateNames("namespaces", *r.Namespaces, NamespaceName.Validate); err != nil {
 		return err
 	}
-	if err := validateUniqueNonEmpty("set-list", r.SetList); err != nil {
+	if err := validateNames("set-list", r.SetList, checkSetName); err != nil {
 		return err
 	}
-	if err := validateUniqueNonEmpty("bin-list", r.BinList); err != nil {
+	if err := validateNames("bin-list", r.BinList, checkBinName); err != nil {
 		return err
 	}
 	if err := validateUnique(rackListField, r.RackList); err != nil {

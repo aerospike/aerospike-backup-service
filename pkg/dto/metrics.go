@@ -19,7 +19,7 @@ type Metrics struct {
 	//   faster than the source can read.
 	// - If Pipeline grows large, it indicates that the source is producing data faster
 	//   than the destination can consume.
-	Pipeline int `json:"pipeline"`
+	Pipeline int `json:"pipeline" extensions:"x-backup-mode=scan"`
 }
 
 // NewMetricsFromModel creates a new Metrics DTO from a model.Metrics object.

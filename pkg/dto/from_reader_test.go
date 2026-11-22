@@ -218,3 +218,14 @@ func routineLocation(t *testing.T, configured string, service model.Location) mo
 
 	return model.NewRoutineLocation(configured, loc, service)
 }
+
+// A finish time before the creation time, from two clocks, gives no duration.
+func TestFinishTimestampAndDuration_FinishedBeforeCreated(t *testing.T) {
+	created := time.Date(2026, 11, 18, 12, 0, 1, 0, time.UTC)
+	finished := created.Add(-200 * time.Millisecond)
+
+	timestamp, duration := finishTimestampAndDuration(created, finished)
+
+	assert.Equal(t, finished.UnixMilli(), timestamp)
+	assert.Zero(t, duration)
+}

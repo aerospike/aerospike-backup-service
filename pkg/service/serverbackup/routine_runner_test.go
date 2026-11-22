@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 	"github.com/stretchr/testify/assert"
@@ -24,77 +24,63 @@ import (
 func TestRoutineRunner_LowerBounds(t *testing.T) {
 	t.Parallel()
 
-	start := time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
-	at := func(minutes int) time.Time { return start.Add(time.Duration(minutes) * time.Minute) }
-
-	// The namespaces are backed up one after another: baz's backups are newer than bar's.
-	backups := map[model.BackupType][]model.BackupDetails{
-		model.BackupTypeFull: {
-			{BackupMetadata: model.BackupMetadata{Namespace: "bar", Created: at(0)}},
-			{BackupMetadata: model.BackupMetadata{Namespace: "baz", Created: at(1)}},
-			{BackupMetadata: model.BackupMetadata{Namespace: "qux", Created: at(20)}},
-		},
-		model.BackupTypeIncremental: {
-			{BackupMetadata: model.BackupMetadata{Namespace: "qux", Created: at(5)}},
-			{BackupMetadata: model.BackupMetadata{Namespace: "bar", Created: at(10)}},
-			{BackupMetadata: model.BackupMetadata{Namespace: "baz", Created: at(11)}},
-		},
-	}
+	last := map[string]time.Time{"bar": time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)}
 
 	tests := []struct {
 		name       string
 		backupType model.BackupType
 		incrMode   model.IncrMode
-		namespace  string
-		want       *time.Time
+		wantTypes  []model.BackupType
 	}{
-		{name: "incremental from the namespace's last backup", backupType: model.BackupTypeIncremental,
-			namespace: "bar", want: new(at(10))},
+		{name: "incremental from the namespace's last backup of either type",
+			backupType: model.BackupTypeIncremental,
+			wantTypes:  []model.BackupType{model.BackupTypeFull, model.BackupTypeIncremental}},
 		{name: "cumulative from the namespace's last full backup", backupType: model.BackupTypeIncremental,
-			incrMode: model.IncrModeCumulative, namespace: "bar", want: new(at(0))},
-		{name: "incremental after a newer full backup starts from the full", backupType: model.BackupTypeIncremental,
-			namespace: "qux", want: new(at(20))},
-		{name: "cumulative after a newer full backup", backupType: model.BackupTypeIncremental,
-			incrMode: model.IncrModeCumulative, namespace: "qux", want: new(at(20))},
-		{name: "incremental of a namespace with no backup", backupType: model.BackupTypeIncremental,
-			namespace: "foo"},
-		{name: "full has no lower bound", backupType: model.BackupTypeFull, namespace: "bar"},
+			incrMode: model.IncrModeCumulative, wantTypes: []model.BackupType{model.BackupTypeFull}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ctrl := gomock.NewController(t)
-
-			backupReader := service.NewMockBackupReader(ctrl)
-			backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).DoAndReturn(
-				func(_ context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
-					return backups[filter.(*service.RoutineFilter).BackupType()], nil
-				}).AnyTimes()
 
 			routine := &model.BackupRoutine{
 				Name:         "routine",
 				BackupPolicy: &model.BackupPolicy{IncrMode: tt.incrMode},
 			}
+			catalog := NewMockCatalog(gomock.NewController(t))
+			catalog.EXPECT().LastBackupTimes(gomock.Any(), routine, tt.wantTypes).Return(last, nil)
 
-			bounds, err := (&routineRunner{backupReader: backupReader}).
-				lowerBounds(t.Context(), routine, tt.backupType)
+			bounds, err := (&routineRunner{catalog: catalog}).lowerBounds(t.Context(), routine, tt.backupType)
+
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, lowerBound(bounds, tt.namespace))
+			assert.Equal(t, last, bounds)
 		})
 	}
 }
 
-func TestRoutineRunner_LowerBounds_ReadFails(t *testing.T) {
+func TestRoutineRunner_LowerBounds_Full(t *testing.T) {
 	t.Parallel()
-	ctrl := gomock.NewController(t)
 
-	backupReader := service.NewMockBackupReader(ctrl)
-	backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(nil, errors.New("storage down"))
 	routine := &model.BackupRoutine{Name: "routine", BackupPolicy: &model.BackupPolicy{}}
 
-	got, err := (&routineRunner{backupReader: backupReader}).
-		lowerBounds(t.Context(), routine, model.BackupTypeIncremental)
+	// The mock fails the test on any call: a full backup reads no storage.
+	bounds, err := (&routineRunner{catalog: NewMockCatalog(gomock.NewController(t))}).
+		lowerBounds(t.Context(), routine, model.BackupTypeFull)
+
+	require.NoError(t, err)
+	assert.Nil(t, bounds)
+	assert.Nil(t, lowerBound(bounds, "bar"))
+}
+
+func TestRoutineRunner_LowerBounds_ReadFails(t *testing.T) {
+	t.Parallel()
+
+	catalog := NewMockCatalog(gomock.NewController(t))
+	catalog.EXPECT().LastBackupTimes(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("storage down"))
+	routine := &model.BackupRoutine{Name: "routine", BackupPolicy: &model.BackupPolicy{}}
+
+	got, err := (&routineRunner{catalog: catalog}).lowerBounds(t.Context(), routine, model.BackupTypeIncremental)
 
 	require.EqualError(t, err, "failed to read the last backups of routine routine: storage down")
 	assert.Nil(t, got)
@@ -176,15 +162,7 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 		}
 	}
 
-	backups := map[model.BackupType][]model.BackupDetails{
-		model.BackupTypeFull: {
-			{BackupMetadata: model.BackupMetadata{Namespace: "bar", Created: at(0)}},
-			{BackupMetadata: model.BackupMetadata{Namespace: "baz", Created: at(1)}},
-		},
-		model.BackupTypeIncremental: {
-			{BackupMetadata: model.BackupMetadata{Namespace: "bar", Created: at(10)}},
-		},
-	}
+	lastBackups := map[string]time.Time{"bar": at(10), "baz": at(1)}
 
 	tests := []struct {
 		name       string
@@ -251,18 +229,16 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)
 
-			backupReader := service.NewMockBackupReader(ctrl)
-			backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).DoAndReturn(
-				func(_ context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
-					return backups[filter.(*service.RoutineFilter).BackupType()], nil
-				}).MaxTimes(2) // once per backup type in the run, not once per namespace.
+			catalog := NewMockCatalog(ctrl)
+			catalog.EXPECT().LastBackupTimes(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(lastBackups, nil).MaxTimes(1) // once per run, not once per namespace.
 
 			var requests []infomodels.RequestBackup
 			infoClient := aerospike.NewMockInfoGetter(ctrl)
 			expectCompleteJobs(infoClient, &requests)
 			operation := newBackupOperation(func() {}, len(tt.namespaces))
 
-			err := (&routineRunner{backupReader: backupReader}).backupNamespaces(t.Context(), infoClient,
+			err := (&routineRunner{catalog: catalog}).backupNamespaces(t.Context(), infoClient,
 				tt.routine, tt.runSpec, tt.namespaces, operation, discardLogger)
 
 			require.NoError(t, err)
@@ -569,6 +545,25 @@ func TestBackupOperation_ProgressAcrossNamespaces(t *testing.T) {
 
 	operation.record(&infomodels.ResponseBackupState{JobID: incr1ID, ProgressPct: 40})
 	assert.InDelta(t, 0.7, operation.Status().Progress, 1e-9, "40% of the second namespace")
+}
+
+// TestBackupOperation_ReportsThroughput checks that the operation reports the running job's
+// record and upload rates in a snapshot of its own, and drops them when the next namespace starts.
+func TestBackupOperation_ReportsThroughput(t *testing.T) {
+	t.Parallel()
+	operation := newBackupOperation(func() {}, 2)
+
+	operation.startNamespace(0)
+	before := operation.Status().Server.Metrics
+	assert.Equal(t, &models.Metrics{}, before, "no job has reported")
+
+	operation.record(&infomodels.ResponseBackupState{JobID: fullID, RecsPerSec: 1200, BytesOutPerSec: 2048 * 1024})
+	assert.Equal(t, &models.Metrics{RecordsPerSecond: 1200, KilobytesPerSecond: 2048},
+		operation.Status().Server.Metrics)
+	assert.Equal(t, &models.Metrics{}, before, "a snapshot does not change")
+
+	operation.startNamespace(1)
+	assert.Equal(t, &models.Metrics{}, operation.Status().Server.Metrics, "the second job has not reported")
 }
 
 // statusReadErrors are the ways a status read fails: a job not reported, a cluster not reached.

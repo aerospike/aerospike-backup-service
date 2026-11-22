@@ -34,7 +34,6 @@ func newRestoreManagerEnv(t *testing.T) *restoreManagerEnv {
 	client.EXPECT().InfoClient().Return(infoClient).AnyTimes()
 
 	jobs := service.NewRestoreJobsHolder()
-	jobs.Start(t.Context())
 
 	clientManager := aerospike.NewMockClientManager(ctrl)
 	catalog := NewMockCatalog(ctrl)

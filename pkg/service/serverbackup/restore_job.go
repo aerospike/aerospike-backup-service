@@ -114,22 +114,34 @@ type restoreJob struct {
 	serverJobID string
 	mode        model.RestoreMode
 	logger      *slog.Logger
-	// readRecords and skippedRecords are the record counts of the last status the server
-	// reported. Status reads them while Wait polls.
-	readRecords    atomic.Uint64
-	skippedRecords atomic.Uint64
+	// The record counts of the last status the server reported. Status reads them while Wait
+	// polls.
+	readRecords     atomic.Uint64
+	insertedRecords atomic.Uint64
+	skippedRecords  atomic.Uint64
 }
 
 var _ service.RestoreHandler = (*restoreJob)(nil)
 
 // Status returns the record counts the server last reported for the job. ReadRecords is the
-// number of records the job has finished with: written, filtered or failed. SkippedRecords is the
-// number it read but did not write.
+// number of records the job has finished with: written, filtered or failed. InsertedRecords is
+// the number it wrote, durable deletes included. SkippedRecords is the number it read but did not
+// write.
 func (j *restoreJob) Status() model.RestoreRun {
 	return model.RestoreRun{Counters: model.RestoreCounters{
-		ReadRecords:    j.readRecords.Load(),
-		SkippedRecords: j.skippedRecords.Load(),
+		ReadRecords:     j.readRecords.Load(),
+		InsertedRecords: j.insertedRecords.Load(),
+		SkippedRecords:  j.skippedRecords.Load(),
 	}}
+}
+
+// storeCounts keeps the record counts of status. Every node reads every change segment and
+// filters out the records of the partitions it does not own, so those are left out: each record
+// counts once, on the node that owns it.
+func (j *restoreJob) storeCounts(status *infomodels.ResponseRestoreState) {
+	j.readRecords.Store(status.Total - status.FilteredNotOurs)
+	j.insertedRecords.Store(status.Applied)
+	j.skippedRecords.Store(status.Filtered - status.FilteredNotOurs)
 }
 
 // Wait polls the job until it is complete and the namespace is open to clients. When the server
@@ -139,8 +151,7 @@ func (j *restoreJob) Status() model.RestoreRun {
 // because a canceled job would otherwise keep running on the server.
 func (j *restoreJob) Wait(ctx context.Context) error {
 	status, err := j.poll(ctx, func(status *infomodels.ResponseRestoreState) (bool, error) {
-		j.readRecords.Store(status.Total)
-		j.skippedRecords.Store(status.Filtered)
+		j.storeCounts(status)
 
 		return j.advance(ctx, status)
 	})

@@ -311,8 +311,9 @@ func (s *ServerBackupSuite) TestServerNonS3Storage() {
 
 // TestServerProgress checks that a running full and a running incremental backup report their
 // progress through GET /v1/backups/currentBackup: the percentage never falls and climbs into the
-// incremental scan's range, the number of records done grows with it, and no total is reported
-// because the server counts no records to back up. The records done end between the records the
+// incremental scan's range, the number of records done grows with it, the backup lists its
+// namespace's server job while that job runs, and no total is reported because the server counts
+// no records to back up. The records done end between the records the
 // backup must hold and twice the records it may hold: a record modified within the server's
 // clock-skew margin of the backup is backed up by both its scans, and the test writes the records
 // just before each backup. A backup that ends no longer shows as running.

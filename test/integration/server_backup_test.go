@@ -27,14 +27,12 @@ func (s *ServerBackupSuite) TestServerRestoreByPath() {
 	fullBackup := s.waitForFinishedBackup(e, model.BackupTypeFull)
 	s.assertServerBackupDetails(fullBackup, triggered)
 	s.Run("record_count", func() {
-		s.T().Skip("BKRS-561: a server backup lists no record count")
 		s.Equal(uint64(3), fullBackup.RecordCount)
 	})
 
 	status := s.restoreIntoDestination(e, fullBackup.Key)
 	s.Equal(dto.RestoreSuccess, status.Status)
 	s.Run("inserted_records", func() {
-		s.T().Skip("BKRS-563: a server restore reports no inserted-record count")
 		s.Equal(uint64(3), status.InsertedRecords)
 	})
 	s.Empty(status.Error)
@@ -74,13 +72,12 @@ func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 	s.triggerFullBackup(e)
 	fullBackup := s.waitForFinishedBackup(e, model.BackupTypeFull)
 	s.Run("backup_index_count", func() {
-		s.T().Skip("BKRS-562: a server backup lists no index count")
 		s.Equal(uint64(wantIndexes), fullBackup.SecondaryIndexCount)
 	})
 
 	restoreStatus := s.restoreIntoDestination(e, fullBackup.Key)
 	s.Run("restore_index_count", func() {
-		s.T().Skip("BKRS-563: a server restore reports no index count")
+		s.T().Skip("SERVER-2448: a server restore reports no index count")
 		s.Equal(uint64(wantIndexes), restoreStatus.IndexCount)
 	})
 
@@ -120,10 +117,12 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 
 	s.Run("incremental", func() {
 		s.seedRecordsIn(s.client, serverNamespace, []int{incrementalAge})
+		// The next incremental starts at this one's start, in whole seconds: a record written in
+		// that second would be in both, and the next one would not be empty.
+		time.Sleep(time.Second)
 		s.triggerIncrementalBackup(e)
 		incrBackup = s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 		s.Run("record_count", func() {
-			s.T().Skip("BKRS-561: a server backup lists no record count")
 			s.Equal(uint64(1), incrBackup.RecordCount)
 		})
 		s.assertServerBackupListed(e, model.BackupTypeIncremental, incrBackup)
@@ -138,7 +137,6 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 		s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 		s.assertMetricBackupSuccessEventCount(e, model.BackupTypeIncremental, successCount+1)
 		s.Run("not_listed", func() {
-			s.T().Skip("BKRS-561: an empty server incremental is listed and counted as the last one")
 			s.assertIncrementalBackupCount(e, 1)
 			s.assertMetricLastSuccessfulBackup(e, model.BackupTypeIncremental, incrBackup.Created)
 		})
@@ -149,7 +147,6 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 		status := s.restoreIntoDestinationByTimestamp(e, time.Now())
 		s.Equal(dto.RestoreSuccess, status.Status)
 		s.Run("inserted_records", func() {
-			s.T().Skip("BKRS-563: a server restore reports no inserted-record count")
 			s.Equal(uint64(1), status.InsertedRecords)
 		})
 		s.Empty(status.Error)
@@ -232,7 +229,6 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampCumulativeWorkflow() {
 		s.triggerIncrementalBackup(e)
 		incrBackup1 = s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 		s.Run("record_count", func() {
-			s.T().Skip("BKRS-561: a server backup lists no record count")
 			s.Equal(uint64(1), incrBackup1.RecordCount)
 		})
 		s.assertServerBackupListed(e, model.BackupTypeIncremental, incrBackup1)
@@ -247,7 +243,6 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampCumulativeWorkflow() {
 		// its From time shows that it is cumulative.
 		incrBackup2 = s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 		s.Run("record_count", func() {
-			s.T().Skip("BKRS-561: a server backup lists no record count")
 			s.Equal(uint64(2), incrBackup2.RecordCount)
 		})
 		s.assertServerBackupListed(e, model.BackupTypeIncremental, incrBackup2)
@@ -263,7 +258,6 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampCumulativeWorkflow() {
 		s.Equal(dto.RestoreSuccess, status.Status)
 		// The chain is the full backup and the second incremental: the first incremental is skipped.
 		s.Run("inserted_records", func() {
-			s.T().Skip("BKRS-563: a server restore reports no inserted-record count")
 			s.Equal(uint64(2), status.InsertedRecords)
 		})
 		s.Empty(status.Error)

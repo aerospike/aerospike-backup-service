@@ -4,10 +4,12 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -156,6 +158,7 @@ func (s *Suite) restoreWithin(e *env, url string, request any, timeout time.Dura
 }
 
 // startRestore posts request to the restore endpoint url and returns the id of the job it starts.
+// A job still running when the test ends is canceled, so it does not run into the next test.
 func (s *Suite) startRestore(e *env, url string, request any) int64 {
 	requestBody, err := decoder.Marshal(request, decoder.JSON, false)
 	s.Require().NoError(err)
@@ -166,7 +169,52 @@ func (s *Suite) startRestore(e *env, url string, request any) int64 {
 	jobID, err := strconv.ParseInt(string(body), 10, 64)
 	s.Require().NoError(err)
 
+	t := s.T()
+	t.Cleanup(func() { cancelRestore(t, e, jobID) })
+
 	return jobID
+}
+
+// cancelRestore cancels the restore job and waits up to serverJobTimeout for it to end. Canceling a
+// job that already ended does nothing. It runs after the test, whose context is already canceled.
+func cancelRestore(t *testing.T, e *env, jobID int64) {
+	t.Helper()
+
+	ctx := context.WithoutCancel(t.Context())
+	send := func(method, url string) []byte {
+		req, err := http.NewRequestWithContext(ctx, method, url, nil)
+		if err != nil {
+			t.Errorf("restore job %d: %v", jobID, err)
+			return nil
+		}
+		resp, err := e.client.Do(req)
+		if err != nil {
+			t.Errorf("restore job %d: %v", jobID, err)
+			return nil
+		}
+		defer resp.Body.Close()
+		body, _ := io.ReadAll(resp.Body)
+
+		return body
+	}
+
+	send(http.MethodPost, fmt.Sprintf("%s/v1/restore/cancel/%d", e.baseURL, jobID))
+	statusURL := fmt.Sprintf("%s/v1/restore/status/%d", e.baseURL, jobID)
+	deadline := time.After(serverJobTimeout)
+	for {
+		var job dto.RestoreJobStatus
+		if decoder.Deserialize(&job, bytes.NewReader(send(http.MethodGet, statusURL)), decoder.JSON) == nil &&
+			job.Status != dto.RestoreRunning {
+			return
+		}
+
+		select {
+		case <-deadline:
+			t.Errorf("restore job %d was still running %s after it was canceled", jobID, serverJobTimeout)
+			return
+		case <-time.After(pollInterval):
+		}
+	}
 }
 
 // waitForRestore polls the job for up to timeout until it stops running, and fails unless it succeeded.

@@ -47,9 +47,10 @@ func TestNewRoutineStateFromModel_ServerJobs(t *testing.T) {
 	t.Parallel()
 
 	start := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	finish := start.Add(time.Minute)
 	job := model.ServerBackupJob{
 		JobID: "job", Namespace: "test", State: "ABORTED", ErrorReason: "node left", AbortOrigin: "cluster",
-		StartTime: &start, RecordsBackedUp: 10, BytesBackedUp: 100, RecordsReadFailed: 1,
+		StartTime: &start, FinishTime: &finish, RecordsBackedUp: 10, BytesBackedUp: 100, RecordsReadFailed: 1,
 	}
 
 	state := NewRoutineStateFromModel(model.RoutineState{
@@ -60,9 +61,31 @@ func TestNewRoutineStateFromModel_ServerJobs(t *testing.T) {
 
 	assert.Equal(t, []ServerBackupJob{{
 		JobID: "job", Namespace: "test", State: "ABORTED", ErrorReason: "node left", AbortOrigin: "cluster",
-		StartTime: &start, RecordsBackedUp: 10, BytesBackedUp: 100, RecordsReadFailed: 1,
+		StartTime: &start, FinishTime: &finish, RecordsBackedUp: 10, BytesBackedUp: 100, RecordsReadFailed: 1,
 	}}, state.LastFullJobs)
 	assert.Empty(t, state.LastIncrementalJobs)
+}
+
+// TestNewRunningJobFromModel_ServerJobs checks that a running server-side backup lists its server
+// jobs, and that a scan backup lists none.
+func TestNewRunningJobFromModel_ServerJobs(t *testing.T) {
+	t.Parallel()
+
+	start := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	running := NewRunningJobFromModel(&model.RunningJob{
+		StartTime: start,
+		ServerJobs: []model.ServerBackupJob{
+			{JobID: "job-bar", Namespace: "bar", State: "COMPLETE", RecordsBackedUp: 10},
+			{JobID: "job-baz", Namespace: "baz", State: "BASE_SCAN_ACTIVE", StartTime: &start, RecordsBackedUp: 3},
+		},
+	})
+
+	assert.Equal(t, []ServerBackupJob{
+		{JobID: "job-bar", Namespace: "bar", State: "COMPLETE", RecordsBackedUp: 10},
+		{JobID: "job-baz", Namespace: "baz", State: "BASE_SCAN_ACTIVE", StartTime: &start, RecordsBackedUp: 3},
+	}, running.ServerJobs)
+	assert.Empty(t, NewRunningJobFromModel(&model.RunningJob{StartTime: start}).ServerJobs)
 }
 
 func TestNewRunningJobFromModel_Nil(t *testing.T) {
