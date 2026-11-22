@@ -13,12 +13,16 @@ type ServerBackupJob struct {
 	JobID string `json:"job-id" example:"261103T101500-0a1b"`
 	// The namespace the job backed up.
 	Namespace string `json:"namespace" example:"test"`
-	// The server's job state, e.g. COMPLETE, FAILED or ABORTED.
+	// The job state across the cluster's nodes, as last reported. While the job runs it is the
+	// state of the node furthest behind, such as BASE_SCAN_ACTIVE, ABORTING while a failure or an
+	// abort settles on every node, or UNKNOWN for a state the service does not know. It ends as
+	// COMPLETE, FAILED or ABORTED. A job that stopped reporting keeps its last state.
 	State string `json:"state" example:"COMPLETE"`
 	// Why the job failed or was aborted, as the server reports it.
 	ErrorReason string `json:"error-reason,omitempty" example:"S3 PUT failed: 403 Forbidden"`
-	// What aborted the job: an operator request, a failure on a node or a cluster event.
-	AbortOrigin string `json:"abort-origin,omitempty" enums:"operator,server,cluster" example:"operator"`
+	// What aborted the job, passed on as the server names it: operator for a request to abort,
+	// server for a failure on a node, cluster for a cluster event.
+	AbortOrigin string `json:"abort-origin,omitempty" example:"operator"`
 	// The time the job started.
 	StartTime *time.Time `json:"start-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
 	// The time the job finished.
@@ -35,7 +39,18 @@ type ServerBackupJob struct {
 func newServerBackupJobsFromModel(jobs []model.ServerBackupJob) []ServerBackupJob {
 	result := make([]ServerBackupJob, 0, len(jobs))
 	for _, job := range jobs {
-		result = append(result, ServerBackupJob(job))
+		result = append(result, ServerBackupJob{
+			JobID:             job.JobID,
+			Namespace:         job.Namespace,
+			State:             job.State,
+			ErrorReason:       job.ErrorReason,
+			AbortOrigin:       job.AbortOrigin,
+			StartTime:         job.StartTime,
+			FinishTime:        job.FinishTime,
+			RecordsBackedUp:   job.RecordsBackedUp,
+			BytesBackedUp:     job.BytesBackedUp,
+			RecordsReadFailed: job.RecordsReadFailed,
+		})
 	}
 
 	return result

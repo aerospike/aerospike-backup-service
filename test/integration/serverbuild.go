@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -251,7 +252,8 @@ func (s *ServerBuildSuite) routineState(e *env) dto.RoutineState {
 
 // assertProgressClimbs polls the running backup of backupType until it ends, and checks what the
 // polls saw: a percentage that never fell and passed the server's base scan range (the first
-// half), records done that never fell, and no total. The server holds a job at 95%
+// half), records done that never fell, the namespace's server job listed while it ran, a record
+// rate, and no total. The server holds a job at 95%
 // while it drains, so that is as far as a running backup shows. The records done stay at most
 // maxDone and, once the polls saw the backup past 90%, are at least minDone.
 func (s *ServerBuildSuite) assertProgressClimbs(e *env, backupType model.BackupType, minDone, maxDone uint64) {
@@ -259,6 +261,7 @@ func (s *ServerBuildSuite) assertProgressClimbs(e *env, backupType model.BackupT
 
 	var percentage uint
 	var done uint64
+	var sawActiveJob, sawRate bool
 
 	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
 		running := getRunningJob(s.routineState(e), backupType)
@@ -272,12 +275,33 @@ func (s *ServerBuildSuite) assertProgressClimbs(e *env, backupType model.BackupT
 		s.LessOrEqual(running.DoneRecords, maxDone, "%s records done", backupType)
 		s.Zero(running.TotalRecords, "a server backup reports a total record count")
 		percentage, done = running.PercentageDone, running.DoneRecords
+		sawActiveJob = sawActiveJob || s.listsActiveServerJob(running)
+		s.Require().NotNil(running.Metrics, "a running server backup reports its throughput")
+		sawRate = sawRate || running.Metrics.RecordsPerSecond > 0
 
 		return false
 	})
 	s.Require().True(ok, "%s backup did not finish within %s", backupType, serverJobTimeout)
 	s.Greater(percentage, uint(90), "%s progress stopped short of the end", backupType)
 	s.GreaterOrEqual(done, minDone, "%s records done", backupType)
+	s.True(sawActiveJob, "the running %s backup listed no server job that was still running", backupType)
+	s.True(sawRate, "the running %s backup reported no record rate", backupType)
+}
+
+// listsActiveServerJob checks the server jobs a running backup of serverNamespace lists, and
+// reports whether its one job has not ended yet. The list is empty until the job first reports.
+func (s *ServerBuildSuite) listsActiveServerJob(running *dto.RunningJob) bool {
+	if len(running.ServerJobs) == 0 {
+		return false
+	}
+
+	s.Require().Len(running.ServerJobs, 1, "one server job per namespace")
+	job := running.ServerJobs[0]
+	s.NotEmpty(job.JobID)
+	s.Equal(serverNamespace, job.Namespace)
+	s.Equal(running.DoneRecords, job.RecordsBackedUp, "records done are the job's")
+
+	return !slices.Contains([]string{"COMPLETE", "FAILED", "ABORTED"}, job.State)
 }
 
 func getRunningJob(state dto.RoutineState, backupType model.BackupType) *dto.RunningJob {
@@ -501,6 +525,8 @@ func (s *ServerBuildSuite) assertServerBackupDetails(backup dto.BackupDetails, c
 	s.False(backup.Created.Before(createdAfter.Truncate(time.Second)),
 		"created %s before the backup was triggered at %s", backup.Created, createdAfter)
 	s.Equal(backup.Created.UnixMilli(), backup.Timestamp)
+	s.True(backup.Finished.After(backup.Created), "finished %s, created %s", backup.Finished, backup.Created)
+	s.Equal(backup.Finished.UnixMilli(), backup.FinishedTimestamp)
 	s.True(backup.From.IsZero(), "a full backup has no lower bound, got %s", backup.From)
 
 	s.Require().NotNil(backup.Storage)

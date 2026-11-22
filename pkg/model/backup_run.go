@@ -20,10 +20,14 @@ type BackupRun struct {
 	Server *ServerProgress
 }
 
-// ServerProgress is what a server backup knows about its run: the server jobs it asked for.
+// ServerProgress is what a server backup knows about its run: the server jobs it asked for and
+// the running job's throughput.
 type ServerProgress struct {
 	// Jobs are the server jobs of the run in the order they started, each as last reported.
 	Jobs []ServerBackupJob
+	// Metrics is the running job's throughput as the server last reported it: records read and
+	// bytes uploaded per second. Zero-valued until the job reports. The server has no pipeline gauge.
+	Metrics *models.Metrics
 }
 
 // RecordsBackedUp is the number of records the server's jobs report as backed up so far, as the

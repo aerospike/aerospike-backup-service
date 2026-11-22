@@ -256,7 +256,7 @@
         "type": "object",
         "properties": {
           "byte-count": {
-            "description": "The size of the backup in bytes.\nUnknown for server-side backups.",
+            "description": "The size of the backup in bytes.",
             "type": "integer",
             "format": "int64",
             "example": 2000
@@ -271,7 +271,7 @@
             "example": "2023-03-20T14:50:00Z"
           },
           "duration": {
-            "description": "Duration represents the elapsed time taken by the backup process in seconds.\nUnknown for server-side backups.",
+            "description": "Duration represents the elapsed time taken by the backup process in seconds.",
             "type": "integer"
           },
           "encryption": {
@@ -279,18 +279,18 @@
             "type": "string"
           },
           "file-count": {
-            "description": "The number of backup files created.\nUnknown for server-side backups.",
+            "description": "The number of backup files created.",
             "type": "integer",
             "format": "int64",
             "example": 1
           },
           "finished": {
-            "description": "The time the backup operation completed.\nUnknown for server-side backups.",
+            "description": "The time the backup operation completed.",
             "type": "string",
             "example": "2023-03-20T14:50:00Z"
           },
           "finished-timestamp": {
-            "description": "The backup finish time in epoch millis.\nUnknown for server-side backups.",
+            "description": "The backup finish time in epoch millis.",
             "type": "integer",
             "format": "int64",
             "example": 1685458200000
@@ -311,7 +311,7 @@
             "example": "testNamespace"
           },
           "record-count": {
-            "description": "The total number of records backed up.\nUnknown for server-side backups.",
+            "description": "The total number of records backed up.\nAn estimate for server-side backups.",
             "type": "integer",
             "format": "int64",
             "example": 100
@@ -898,7 +898,8 @@
           },
           "pipeline": {
             "description": "The number of records that have been read from the source, but not yet written to the destination.\nThis metric helps identify bottlenecks:\n- If Pipeline is zero or fluctuates near zero, it means the destination is consuming data\n  faster than the source can read.\n- If Pipeline grows large, it indicates that the source is producing data faster\n  than the destination can consume.",
-            "type": "integer"
+            "type": "integer",
+            "x-backup-mode": "scan"
           },
           "records-per-second": {
             "description": "Current speed as the number of records processed by Aerospike per second.",
@@ -1430,7 +1431,7 @@
             "type": "string"
           },
           "last-full-jobs": {
-            "description": "LastFullJobs: the server jobs of the last finished full backup, one per namespace, whether it\nsucceeded or not. Reported only in the server backup mode. The list is kept in memory, so it\nis empty after a restart until a full backup finishes.",
+            "description": "LastFullJobs: the server jobs of the last finished full backup, one per namespace whose job\nreported its status, whether it succeeded or not. Reported only in the server backup mode.\nThe list is kept in memory, so it is empty after a restart until a full backup finishes.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/dto.ServerBackupJob"
@@ -1481,7 +1482,7 @@
             "example": "2006-01-02T15:04:05Z07:00"
           },
           "metrics": {
-            "description": "Metrics provides real-time information about data flow performance.",
+            "description": "Metrics provides real-time information about data flow performance.\nA server-side backup shows the rates the server last reported.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/dto.Metrics"
@@ -1492,6 +1493,14 @@
             "description": "The progress of the backup operation as a percentage.\nThis value is not guaranteed to be accurate.",
             "type": "integer",
             "example": 50
+          },
+          "server-jobs": {
+            "description": "The server jobs of a running server-side backup, in the order they started: one per\nnamespace whose job has reported its status, each as the server last reported it.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/dto.ServerBackupJob"
+            },
+            "x-backup-mode": "server"
           },
           "start-time": {
             "description": "The time when the operation started.",
@@ -1738,13 +1747,8 @@
         "type": "object",
         "properties": {
           "abort-origin": {
-            "description": "What aborted the job: an operator request, a failure on a node or a cluster event.",
+            "description": "What aborted the job, passed on as the server names it: operator for a request to abort,\nserver for a failure on a node, cluster for a cluster event.",
             "type": "string",
-            "enum": [
-              "operator",
-              "server",
-              "cluster"
-            ],
             "example": "operator"
           },
           "bytes-backed-up": {
@@ -1788,7 +1792,7 @@
             "example": "2006-01-02T15:04:05Z07:00"
           },
           "state": {
-            "description": "The server's job state, e.g. COMPLETE, FAILED or ABORTED.",
+            "description": "The job state across the cluster's nodes, as last reported. While the job runs it is the\nstate of the node furthest behind, such as BASE_SCAN_ACTIVE, ABORTING while a failure or an\nabort settles on every node, or UNKNOWN for a state the service does not know. It ends as\nCOMPLETE, FAILED or ABORTED. A job that stopped reporting keeps its last state.",
             "type": "string",
             "example": "COMPLETE"
           }
