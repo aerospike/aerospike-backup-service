@@ -71,7 +71,7 @@ type RunningJob struct {
 	Metrics *Metrics `json:"metrics,omitempty"`
 	// Duration represents the elapsed time taken by the job in seconds.
 	Duration uint `yaml:"duration" json:"duration"`
-	// The server jobs of a running server-side backup, in the order they started: one per
+	// The server jobs of a running server-side backup, in the order of their namespaces: one per
 	// namespace whose job has reported its status, each as the server last reported it.
 	ServerJobs []ServerBackupJob `json:"server-jobs,omitempty" extensions:"x-backup-mode=server"`
 }

@@ -101,17 +101,49 @@ func (s *ServerBuildSuite) SetupSuite() {
 	s.s3Endpoint = s.startSharedMinIO()
 }
 
-// SetupTest empties the namespaces of the source cluster and gives ABS the s3Profile credentials.
-// The destination is left as it is: a cold restore clears the namespace itself, and refuses one
-// that holds truncate state, which would filter out the restored records.
+// SetupTest ends the backups left running on the source cluster, empties its namespaces and gives
+// ABS the s3Profile credentials. The destination is left as it is: a cold restore clears the
+// namespace itself, and refuses one that holds truncate state, which would filter out the
+// restored records.
 func (s *ServerBuildSuite) SetupTest() {
 	credentialsFile := filepath.Join(s.T().TempDir(), "credentials")
 	s.Require().NoError(os.WriteFile(credentialsFile, []byte(awsCredentials()), 0o600))
 	s.T().Setenv("AWS_SHARED_CREDENTIALS_FILE", credentialsFile)
 
+	s.abortRunningBackups()
+
 	for _, ns := range []string{serverNamespace, otherNamespace} {
 		s.Require().NoError(s.client.Truncate(nil, ns, "", nil))
 	}
+}
+
+// abortRunningBackups aborts the backup jobs running on the source cluster and waits for them to
+// end. A server backup outlives the ABS that started it, so a test that ends while one runs would
+// leave it running into the next test.
+func (s *ServerBuildSuite) abortRunningBackups() {
+	aborted := make(map[string]bool)
+	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
+		running := false
+		for id, job := range statusRows(s.info(s.client, "backup-status")) {
+			if serverJobEnded(job["state"]) {
+				continue
+			}
+
+			running = true
+			if !aborted[id] {
+				s.info(s.client, "backup-abort:job-id="+id)
+				aborted[id] = true
+			}
+		}
+
+		return !running
+	})
+	s.Require().True(ok, "backup jobs still running %s after they were aborted", serverJobTimeout)
+}
+
+// serverJobEnded reports whether state is one a server job ends in.
+func serverJobEnded(state string) bool {
+	return slices.Contains([]string{"COMPLETE", "FAILED", "ABORTED"}, state)
 }
 
 // serverBuildFile returns the path in env, or else defaultPath under the home directory. It
@@ -353,7 +385,7 @@ func (s *ServerBuildSuite) listsActiveServerJob(running *dto.RunningJob) bool {
 	s.Equal(serverNamespace, job.Namespace)
 	s.Equal(running.DoneRecords, job.RecordsBackedUp, "records done are the job's")
 
-	return !slices.Contains([]string{"COMPLETE", "FAILED", "ABORTED"}, job.State)
+	return !serverJobEnded(job.State)
 }
 
 func getRunningJob(state dto.RoutineState, backupType model.BackupType) *dto.RunningJob {

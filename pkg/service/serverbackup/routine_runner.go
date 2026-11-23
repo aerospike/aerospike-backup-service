@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,9 +21,8 @@ import (
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
-// routineRunner backs a routine up by asking the server to run one backup job per namespace.
-// Within one run the jobs run one after another. Runs of the routine may overlap under
-// concurrent-incremental, each with its own job.
+// routineRunner backs a routine up by asking the server to run one backup job per namespace, all
+// at once. Runs of the routine may overlap under concurrent-incremental, each with its own jobs.
 type routineRunner struct {
 	clientManager     aerospike.ClientManager
 	namespaceResolver aerospike.NamespaceResolver
@@ -47,7 +45,9 @@ func NewRoutineRunner(
 	}
 }
 
-// Run resolves the namespaces of the routine and starts backing them up in the background.
+// Run resolves the namespaces of the routine and starts backing them up in the background. The
+// run is detached from ctx: only the handler's Cancel aborts its jobs. When ABS exits, the run
+// ends with the process without aborting them, and they complete on the server.
 func (r *routineRunner) Run(
 	ctx context.Context,
 	routine *model.BackupRoutine,
@@ -64,7 +64,7 @@ func (r *routineRunner) Run(
 		return nil, fmt.Errorf("failed to get backup client: %w", err)
 	}
 
-	runCtx, cancel := context.WithCancel(ctx)
+	runCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 	operation := newBackupOperation(cancel, len(namespaces))
 
 	go func() {
@@ -77,7 +77,8 @@ func (r *routineRunner) Run(
 	return operation, nil
 }
 
-// backupNamespaces runs one server backup job per namespace, in order, and joins their errors.
+// backupNamespaces runs one server backup job per namespace, all at once, and joins their errors
+// in the namespaces' order.
 func (r *routineRunner) backupNamespaces(
 	ctx context.Context,
 	infoClient backup.ServerBackupInfo,
@@ -92,19 +93,27 @@ func (r *routineRunner) backupNamespaces(
 		return err
 	}
 
-	var errs error
+	var wg sync.WaitGroup
+	errs := make([]error, len(namespaces))
 	for i, namespace := range namespaces {
-		operation.startNamespace(i)
-		modifiedAfter := lowerBound(bounds, namespace)
-		err := r.backupNamespace(ctx, infoClient, routine, runSpec, modifiedAfter, namespace, operation, logger)
-		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("namespace %s: %w", namespace, err))
-		}
-	}
+		wg.Go(func() {
+			defer operation.finishNamespace(i)
 
-	return errs
+			modifiedAfter := lowerBound(bounds, namespace)
+			record := func(status *infomodels.ResponseBackupState) { operation.record(i, status) }
+			err := r.backupNamespace(ctx, infoClient, routine, runSpec, modifiedAfter, namespace, record, logger)
+			if err != nil {
+				errs[i] = fmt.Errorf("namespace %s: %w", namespace, err)
+			}
+		})
+	}
+	wg.Wait()
+
+	return errors.Join(errs...)
 }
 
+// backupNamespace runs the server backup job of namespace and passes each status of the job to
+// record.
 func (r *routineRunner) backupNamespace(
 	ctx context.Context,
 	infoClient backup.ServerBackupInfo,
@@ -112,7 +121,7 @@ func (r *routineRunner) backupNamespace(
 	runSpec model.BackupRunSpec,
 	modifiedAfter *time.Time,
 	namespace string,
-	operation *backupOperation,
+	record func(*infomodels.ResponseBackupState),
 	logger *slog.Logger,
 ) error {
 	common, err := withStorage(infomodels.RequestCommon{
@@ -142,7 +151,7 @@ func (r *routineRunner) backupNamespace(
 		BackupUploadThreads: ptr.ValueOrZero(policy.ParallelWrite),
 	})
 
-	job := &backupJob{infoClient: infoClient, jobID: jobID, operation: operation, logger: logger}
+	job := &backupJob{infoClient: infoClient, jobID: jobID, record: record, logger: logger}
 	if err != nil {
 		if errors.Is(err, asinfo.ErrOutcomeUnknown) {
 			// The server may have started the job even though the start failed.
@@ -161,9 +170,9 @@ func (r *routineRunner) backupNamespace(
 type backupJob struct {
 	infoClient backup.ServerBackupInfo
 	jobID      string
-	// operation receives each status of the job.
-	operation *backupOperation
-	logger    *slog.Logger
+	// record receives each status of the job.
+	record func(*infomodels.ResponseBackupState)
+	logger *slog.Logger
 }
 
 // Wait waits for the job to end. If the job had no status for unobservedJobTimeout, or ctx is
@@ -195,15 +204,14 @@ func (j *backupJob) Wait(ctx context.Context) error {
 	}
 }
 
-// poll polls the job until it ends and returns its final status. Each status is recorded in the
-// operation.
+// poll polls the job until it ends and returns its final status. Each status is passed to record.
 func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, error) {
 	fetch := func(ctx context.Context) (*infomodels.ResponseBackupState, error) {
 		return j.infoClient.GetBackupStatus(ctx, j.jobID)
 	}
 
 	settled := func(status *infomodels.ResponseBackupState) (bool, error) {
-		j.operation.record(status)
+		j.record(status)
 
 		switch status.State {
 		case infomodels.BackupStateComplete, infomodels.BackupStateFailed, infomodels.BackupStateAborted:
@@ -216,8 +224,8 @@ func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, 
 	return pollJob(ctx, j.logger, backupJobKind, j.jobID, fetch, settled)
 }
 
-// abort aborts the job on the server and waits up to cleanupTimeout for it to end, so that the
-// operation holds the job's final status and abort origin.
+// abort aborts the job on the server and waits up to cleanupTimeout for it to end, so that record
+// receives the job's final status and abort origin.
 func (j *backupJob) abort(ctx context.Context) {
 	if err := j.infoClient.AbortBackup(ctx, j.jobID); err != nil {
 		j.logger.Warn("Failed to abort server backup", slog.String("jobId", j.jobID), attr.Error(err))
@@ -284,18 +292,23 @@ type backupOperation struct {
 	done      chan struct{}
 	err       error
 
-	// namespaces is the number of namespaces the run backs up, one server job each.
-	namespaces int
-
 	mu sync.Mutex
-	// jobs are the server jobs of the run in the order they started, each as last reported.
-	jobs []model.ServerBackupJob
-	// finished is the number of namespaces before the running one, whatever their outcome.
-	finished int
-	// progressPct is the progress of the running job in percent, as the server reports it.
+	// namespaces holds the progress of the run's namespaces, one server job each, in the order the
+	// run resolved them.
+	namespaces []namespaceProgress
+}
+
+// namespaceProgress is the progress of the server job of one namespace.
+type namespaceProgress struct {
+	// job is the job as last reported, nil until it first reports.
+	job *model.ServerBackupJob
+	// progressPct is the job's progress in percent, as the server reports it.
 	progressPct float64
-	// metrics is the throughput of the running job, summed across the cluster's nodes.
+	// metrics is the job's throughput, summed across the cluster's nodes.
 	metrics models.Metrics
+	// finished is set once the namespace's backup has ended, whatever its outcome. The job's state
+	// cannot tell: a namespace whose start failed, or whose job went unobserved, has no final status.
+	finished bool
 }
 
 var _ service.RoutineBackupHandler = (*backupOperation)(nil)
@@ -305,7 +318,7 @@ func newBackupOperation(cancel context.CancelFunc, namespaces int) *backupOperat
 		cancel:     cancel,
 		startTime:  time.Now(),
 		done:       make(chan struct{}),
-		namespaces: namespaces,
+		namespaces: make([]namespaceProgress, namespaces),
 	}
 }
 
@@ -315,52 +328,61 @@ func (o *backupOperation) finish(err error) {
 	close(o.done)
 }
 
-// startNamespace counts the namespaces before index i as finished. It drops the previous job's
-// progress, which would count namespace i as done until its job reports, and its throughput.
-func (o *backupOperation) startNamespace(i int) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-
-	o.finished = i
-	o.progressPct = 0
-	o.metrics = models.Metrics{}
-}
-
-// record stores the latest status of a job, its progress and throughput.
-func (o *backupOperation) record(status *infomodels.ResponseBackupState) {
+// record stores the latest status of the job of namespace index i: the job, its progress and
+// throughput.
+func (o *backupOperation) record(i int, status *infomodels.ResponseBackupState) {
 	job := newServerBackupJob(status)
 
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
-	o.progressPct = status.ProgressPct
-	o.metrics = models.Metrics{
+	ns := &o.namespaces[i]
+	ns.job = &job
+	ns.progressPct = status.ProgressPct
+	ns.metrics = models.Metrics{
 		RecordsPerSecond:   status.RecsPerSec,
 		KilobytesPerSecond: status.BytesOutPerSec / 1024,
 	}
+}
 
-	if last := len(o.jobs) - 1; last >= 0 && o.jobs[last].JobID == job.JobID {
-		o.jobs[last] = job
-		return
-	}
-	o.jobs = append(o.jobs, job)
+// finishNamespace counts namespace index i as done, whatever the outcome of its backup.
+func (o *backupOperation) finishNamespace(i int) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	o.namespaces[i].finished = true
 }
 
 // Status returns a snapshot of the run: its progress, throughput and server jobs. The server
-// reports each namespace job's progress on its own, and the jobs run one after another, so each
-// finished namespace counts whole and the running one by its job's progress. Progress that fell
-// back to 0 at each namespace would make the estimated end time swing. Every namespace weighs the
-// same: the server counts no records to back up, so Scan stays nil.
+// reports each namespace job's progress on its own, so every namespace weighs the same: a finished
+// one counts whole and a running one by its job's progress. The throughput is the running jobs'
+// sum. The server counts no records to back up, so Scan stays nil.
 func (o *backupOperation) Status() *model.BackupRun {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
-	metrics := o.metrics
+	var done float64
+	var metrics models.Metrics
+	jobs := make([]model.ServerBackupJob, 0, len(o.namespaces))
+	for _, ns := range o.namespaces {
+		if ns.job != nil {
+			jobs = append(jobs, *ns.job)
+		}
+
+		if ns.finished {
+			done++
+			continue
+		}
+
+		done += ns.progressPct / 100
+		metrics.RecordsPerSecond += ns.metrics.RecordsPerSecond
+		metrics.KilobytesPerSecond += ns.metrics.KilobytesPerSecond
+	}
 
 	return &model.BackupRun{
 		StartTime: o.startTime,
-		Progress:  (float64(o.finished) + o.progressPct/100) / float64(o.namespaces),
-		Server:    &model.ServerProgress{Jobs: slices.Clone(o.jobs), Metrics: &metrics},
+		Progress:  done / float64(len(o.namespaces)),
+		Server:    &model.ServerProgress{Jobs: jobs, Metrics: &metrics},
 	}
 }
 
@@ -374,7 +396,7 @@ func (o *backupOperation) Wait(ctx context.Context) error {
 	}
 }
 
-// Cancel aborts the running namespace job and skips the remaining ones.
+// Cancel aborts the run's jobs that are still running.
 func (o *backupOperation) Cancel() {
 	o.cancel()
 }

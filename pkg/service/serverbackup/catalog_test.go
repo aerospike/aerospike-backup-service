@@ -232,7 +232,7 @@ func TestCatalog_GetBackup(t *testing.T) {
 func TestCatalog_LastBackupTimes(t *testing.T) {
 	t.Parallel()
 
-	// The namespaces are backed up one after another: baz's backups are newer than bar's.
+	// Each namespace has backup times of its own: baz's are newer than bar's.
 	metadata := []listermodels.Metadata{
 		fullMetadata("bar-full", "bar", catalogAt(0)),
 		fullMetadata("baz-full", "baz", catalogAt(1)),
