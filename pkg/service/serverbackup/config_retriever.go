@@ -54,15 +54,17 @@ func (r *configRetriever) RetrieveConfiguration(
 
 	archive := new(bytes.Buffer)
 	writer := zip.NewWriter(archive)
+	// The listed keys start with the storage path, which ReadFile adds itself.
+	listed := path.Join(routine.Storage.GetPath(), folder) + "/"
 	for _, key := range keys {
-		// A key starts with the storage path, which ReadFile adds itself.
-		file := strings.Trim(strings.TrimPrefix(key, path.Clean(routine.Storage.GetPath())), "/")
+		name := strings.TrimPrefix(key, listed) // <node id>/<file name>
+		file := path.Join(folder, name)
 		content, err := r.operations.ReadFile(ctx, routine.Storage, file)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read configuration file %s: %w", file, err)
 		}
 
-		entry, err := writer.Create(strings.TrimPrefix(file, folder+"/"))
+		entry, err := writer.Create(name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to add %s to the archive: %w", file, err)
 		}
