@@ -2805,8 +2805,7 @@
                     "with-cluster-configuration": {
                         "description": "Back up Aerospike cluster configuration.",
                         "type": "boolean",
-                        "x-default": false,
-                        "x-backup-mode": "scan"
+                        "default": false
                     }
                 }
             },

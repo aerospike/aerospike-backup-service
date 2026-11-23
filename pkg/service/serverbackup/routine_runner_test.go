@@ -292,11 +292,12 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 				BinList:          []string{"bin1", "bin2"},
 				FilterExpression: "kxkCkwECAA==",
 				BackupPolicy: &model.BackupPolicy{
-					RecordsPerSecond: new(100),
-					Parallel:         new(2),
-					ParallelWrite:    new(3),
-					NoIndexes:        new(true),
-					NoUdfs:           new(false),
+					RecordsPerSecond:  new(100),
+					Parallel:          new(2),
+					ParallelWrite:     new(3),
+					NoIndexes:         new(true),
+					NoUdfs:            new(false),
+					WithClusterConfig: new(true),
 				},
 			},
 			// A sealed backup is bounded by the time it started.
@@ -312,6 +313,7 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 
 					return c
 				}(),
+				NoConfig:            new(false),
 				BinList:             "bin1,bin2",
 				ModifiedBefore:      unix(at(30)),
 				BackupRPS:           100,
@@ -330,8 +332,28 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 			},
 			namespaces: []string{"bar", "baz"},
 			want: []infomodels.RequestBackup{
-				{RequestCommon: common("bar"), ModifiedAfter: unix(at(10))},
-				{RequestCommon: common("baz"), ModifiedAfter: unix(at(1))},
+				{RequestCommon: common("bar"), NoConfig: new(true), ModifiedAfter: unix(at(10))},
+				{RequestCommon: common("baz"), NoConfig: new(true), ModifiedAfter: unix(at(1))},
+			},
+		},
+		{
+			name:       "full without the cluster configuration",
+			routine:    &model.BackupRoutine{Name: "routine", Storage: storage, BackupPolicy: &model.BackupPolicy{}},
+			runSpec:    model.BackupRunSpec{Type: model.BackupTypeFull},
+			namespaces: []string{"bar"},
+			want:       []infomodels.RequestBackup{{RequestCommon: common("bar"), NoConfig: new(true)}},
+		},
+		{
+			// Only a full backup stores the cluster configuration.
+			name: "incremental with the cluster configuration",
+			routine: &model.BackupRoutine{
+				Name: "routine", Storage: storage,
+				BackupPolicy: &model.BackupPolicy{WithClusterConfig: new(true)},
+			},
+			runSpec:    model.BackupRunSpec{Type: model.BackupTypeIncremental},
+			namespaces: []string{"bar"},
+			want: []infomodels.RequestBackup{
+				{RequestCommon: common("bar"), NoConfig: new(true), ModifiedAfter: unix(at(10))},
 			},
 		},
 	}

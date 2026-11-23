@@ -8,8 +8,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 )
 
-// clusterConfigWriter is a placeholder. It writes nothing, so a server backup holds no cluster
-// configuration.
+// clusterConfigWriter writes nothing: in server mode each node uploads its own configuration
+// file with the backup.
 type clusterConfigWriter struct{}
 
 var _ service.ClusterConfigWriter = clusterConfigWriter{}

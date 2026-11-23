@@ -2371,8 +2371,7 @@ const docTemplate = `{
                 "with-cluster-configuration": {
                     "description": "Back up Aerospike cluster configuration.",
                     "type": "boolean",
-                    "default": false,
-                    "x-backup-mode": "scan"
+                    "default": false
                 }
             }
         },
