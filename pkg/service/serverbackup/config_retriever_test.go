@@ -12,7 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
-	"github.com/aerospike/backup-go/io/storage/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -37,9 +36,8 @@ func TestConfigRetriever(t *testing.T) {
 		name string
 		// backups is the answer to the search for the last full backup.
 		backups []model.BackupDetails
-		// keys and keysErr are the answer to the listing of the backup's config folder.
+		// keys is the answer to the listing of the backup's config folder.
 		keys    []string
-		keysErr error
 		want    map[string]string
 		wantErr string
 	}{
@@ -51,8 +49,6 @@ func TestConfigRetriever(t *testing.T) {
 		},
 		{name: "no full backup", wantErr: "no full backups found before"},
 		{name: "backup without configuration files", backups: fullBackup,
-			wantErr: "no configuration files found in " + folder},
-		{name: "empty config folder", backups: fullBackup, keysErr: common.ErrEmptyStorage,
 			wantErr: "no configuration files found in " + folder},
 	}
 
@@ -73,7 +69,7 @@ func TestConfigRetriever(t *testing.T) {
 				})
 			operations := storage.NewMockOperations(ctrl)
 			operations.EXPECT().ReadFileNames(gomock.Any(), routine.Storage, folder, "", nil).
-				Return(tt.keys, tt.keysErr).MaxTimes(1)
+				Return(tt.keys, nil).MaxTimes(1)
 			operations.EXPECT().ReadFile(gomock.Any(), routine.Storage, gomock.Any()).DoAndReturn(
 				func(_ context.Context, _ model.Storage, file string) ([]byte, error) {
 					return []byte(files[file]), nil

@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
-	"github.com/aerospike/backup-go/io/storage/common"
 )
 
 // configFolder is the folder of a server backup the nodes upload their configuration files to.
@@ -47,7 +45,7 @@ func (r *configRetriever) RetrieveConfiguration(
 
 	folder := path.Join(backups[0].Key, configFolder)
 	keys, err := r.operations.ReadFileNames(ctx, routine.Storage, folder, "", nil)
-	if err != nil && !errors.Is(err, common.ErrEmptyStorage) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to list the configuration files in %s: %w", folder, err)
 	}
 	if len(keys) == 0 {

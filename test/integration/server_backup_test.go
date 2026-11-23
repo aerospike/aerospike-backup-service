@@ -93,14 +93,20 @@ func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 // Unlike the scan test, the full backup holds a record, which the incremental backup holds
 // updated: the server cannot restore an empty backup, and the restore must end with the newest
 // value. A point in time between the two backups restores the full backup alone, and one before
-// the full backup restores nothing. Subtests share env, backup storage, and Aerospike state.
+// the full backup restores nothing. The policy sets with-cluster-configuration, so only the full
+// backup holds the node's configuration file. Subtests share env, backup storage, and Aerospike
+// state.
 func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 	const (
 		fullAge        = 10
 		incrementalAge = 11
 	)
 
-	e := s.setupEnv(s.serverBackupConfig)
+	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
+		c.BackupPolicies[policyName].WithClusterConfig = new(true)
+	})
+	// Subtests have their own names, which storagePath derives the path from.
+	storagePath := s.storagePath()
 
 	var fullBackup, incrBackup dto.BackupDetails
 
@@ -113,6 +119,9 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 		s.assertMetricBackupSuccessEventCount(e, model.BackupTypeFull, successCount+1)
 		s.assertMetricLastSuccessfulBackup(e, model.BackupTypeFull, fullBackup.Created)
 		s.waitForLastBackup(e, model.BackupTypeFull, fullBackup.Created)
+		s.Run("cluster_configuration", func() {
+			s.assertClusterConfiguration(e)
+		})
 	})
 
 	s.Run("incremental", func() {
@@ -124,6 +133,9 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 		incrBackup = s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 		s.Run("record_count", func() {
 			s.Equal(uint64(1), incrBackup.RecordCount)
+		})
+		s.Run("no_cluster_configuration", func() {
+			s.assertNoClusterConfiguration(storagePath, incrBackup.Key)
 		})
 		s.assertServerBackupListed(e, model.BackupTypeIncremental, incrBackup)
 		s.GreaterOrEqual(incrBackup.Created.Unix(), fullBackup.Created.Unix())

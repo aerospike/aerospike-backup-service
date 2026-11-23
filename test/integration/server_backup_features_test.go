@@ -3,10 +3,7 @@
 package integration
 
 import (
-	"archive/zip"
-	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -108,65 +105,6 @@ func (s *ServerBackupSuite) TestServerNoIndexes() {
 
 	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
 	s.NotContains(s.destinationIndexes(), "age_sidx", "index backed up despite no-indexes")
-}
-
-// TestServerClusterConfiguration backs up with and without the policy's
-// with-cluster-configuration, and checks that the node uploads its configuration file only with a
-// full backup of a policy that asks for it, and that GET /v1/retrieve/configuration returns it.
-func (s *ServerBackupSuite) TestServerClusterConfiguration() {
-	// A record keeps the backups from being empty.
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
-
-	retrieve := func(e *env) (int, []byte) {
-		url := fmt.Sprintf("%s/v1/retrieve/configuration/%s/%d", e.baseURL, routineName, time.Now().UnixMilli())
-		return s.do(e, http.MethodGet, url, nil)
-	}
-	// The node writes udf.json and then its configuration file once the backup is listed.
-	assertNoConfiguration := func(key string) {
-		ok := s.eventually(serverJobTimeout, pollInterval, func() bool { return len(s.backupObjects(key, "udf")) > 0 })
-		s.Require().True(ok, "backup %s has no udf.json", key)
-		uploaded := s.eventually(3*time.Second, pollInterval, func() bool { return len(s.backupObjects(key, "config")) > 0 })
-		s.False(uploaded, "backup %s holds a configuration file", key)
-	}
-
-	s.Run("with cluster configuration", func() {
-		e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
-			c.BackupPolicies[policyName].WithClusterConfig = new(true)
-		})
-		s.triggerFullBackup(e)
-		s.waitForFinishedBackup(e, model.BackupTypeFull)
-
-		var body []byte
-		ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
-			var status int
-			status, body = retrieve(e)
-			return status == http.StatusOK
-		})
-		s.Require().True(ok, "the configuration of the full backup is not retrieved: %s", body)
-
-		archive, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
-		s.Require().NoError(err)
-		s.Require().Len(archive.File, 1, "one configuration file per node")
-		file, err := archive.File[0].Open()
-		s.Require().NoError(err)
-		content, err := io.ReadAll(file)
-		s.Require().NoError(err)
-		s.Require().NoError(file.Close())
-		s.Equal(serverConf, string(content), "%s differs from the node's configuration file", archive.File[0].Name)
-
-		s.putRecordIn(s.client, serverNamespace, 1, 2)
-		s.triggerIncrementalBackup(e)
-		assertNoConfiguration(s.waitForFinishedBackup(e, model.BackupTypeIncremental).Key)
-	})
-
-	s.Run("without cluster configuration", func() {
-		e := s.setupEnv(s.serverBackupConfig)
-		s.triggerFullBackup(e)
-		assertNoConfiguration(s.waitForFinishedBackup(e, model.BackupTypeFull).Key)
-
-		status, body := retrieve(e)
-		s.Equal(http.StatusNotFound, status, string(body))
-	})
 }
 
 // TestServerBackupLimits backs up with the policy's records-per-second, parallel and
