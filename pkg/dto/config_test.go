@@ -163,13 +163,12 @@ func TestConfigValidate_ServerMode(t *testing.T) {
 				policy.FileLimit = new(1)
 				policy.MaxConcurrentNodes = new(1)
 				policy.RetryPolicy = &RetryPolicy{}
-				policy.RetentionPolicy = &RetentionPolicy{FullBackups: new(1)}
 				policy.SocketTimeout = new(int64(1))
 				policy.TotalTimeout = new(int64(1))
 				policy.UseCompression = new(true)
 			},
 			wantErr: `invalid value validation error: policy 'policy1' sets bandwidth, encryption, compression, ` +
-				`no-records, compact, file-limit, max-concurrent-nodes, retry-policy, retention, socket-timeout, ` +
+				`no-records, compact, file-limit, max-concurrent-nodes, retry-policy, socket-timeout, ` +
 				`total-timeout, use-scan-compression, ` +
 				`which backup-mode "server" does not support`,
 		},
@@ -178,6 +177,14 @@ func TestConfigValidate_ServerMode(t *testing.T) {
 			mode:    BackupModeServer,
 			storage: s3,
 			change:  func(c *Config) { c.BackupPolicies["policy1"].WithClusterConfig = new(true) },
+		},
+		{
+			name:    "server mode with a retention policy",
+			mode:    BackupModeServer,
+			storage: s3,
+			change: func(c *Config) {
+				c.BackupPolicies["policy1"].RetentionPolicy = &RetentionPolicy{FullBackups: new(1)}
+			},
 		},
 		{
 			name:    "server mode with concurrent incremental backups",

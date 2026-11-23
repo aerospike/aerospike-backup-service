@@ -8,9 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-client-go/v8/types"
+	"github.com/aerospike/backup-go/pkg/asinfo"
 	"github.com/aerospike/backup-go/pkg/server/lister"
 	listermodels "github.com/aerospike/backup-go/pkg/server/lister/models"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
@@ -25,15 +28,28 @@ type S3ClientProvider interface {
 	GetClient(ctx context.Context, storage *model.S3Storage) (*awsS3.Client, error)
 }
 
+// FolderDeleter deletes a folder of a storage with everything in it. storage.Operations is one.
+type FolderDeleter interface {
+	// DeleteFolder deletes the folder at path, which is relative to the storage's own path.
+	DeleteFolder(ctx context.Context, storage model.Storage, path string) error
+}
+
 // Catalog reads server backups from the metadata the server writes next to each of them, and
-// their counts from the manifests, index and UDF files it writes with them. Like scan mode, it
-// lists no empty incremental backup: there is nothing to restore from one.
+// their counts from the manifests, index and UDF files it writes with them, and deletes them.
+// Like scan mode, it lists no empty incremental backup: there is nothing to restore from one.
 type Catalog interface {
 	service.BackupReader
 
 	// GetBackup returns the backup with the key in the storage, without its counts, which restore
 	// does not need. A key names one backup, because a server job backs up one namespace.
 	GetBackup(ctx context.Context, storage model.Storage, key string) (model.BackupDetails, error)
+
+	// AllBackups returns every committed backup of the routine, oldest first, without its counts.
+	// Unlike GetBackups, it returns the empty incremental backups too: they take storage as well.
+	AllBackups(ctx context.Context, routine *model.BackupRoutine) ([]model.BackupDetails, error)
+
+	// Delete removes the routine's backup with the key from the storage.
+	Delete(ctx context.Context, routine *model.BackupRoutine, key string) error
 
 	// LastBackupTimes returns, per namespace, the creation time of the routine's newest listed
 	// backup of any of backupTypes. A namespace with no such backup has no entry.
@@ -54,15 +70,19 @@ type sourceOpener interface {
 	open(ctx context.Context, storage model.Storage, routineName string) (backupSource, error)
 }
 
+// catalog takes a lock per routine, so that no listing of a routine's backups overlaps the
+// deletion of one of them.
 type catalog struct {
+	locks   collections.LockMap // lock per routine
 	sources sourceOpener
+	deleter FolderDeleter
 }
 
 var _ Catalog = (*catalog)(nil)
 
-// NewCatalog returns a Catalog over the server backups in S3 storage.
-func NewCatalog(s3Clients S3ClientProvider) Catalog {
-	return &catalog{sources: newListerOpener(s3Clients)}
+// NewCatalog returns a Catalog over the server backups in S3 storage. deleter deletes them.
+func NewCatalog(s3Clients S3ClientProvider, deleter FolderDeleter) Catalog {
+	return &catalog{sources: newListerOpener(s3Clients), deleter: deleter}
 }
 
 // GetBackups returns the routine's listed server backups that match the filter, oldest first.
@@ -71,6 +91,10 @@ func (c *catalog) GetBackups(ctx context.Context, filter service.BackupFilter) (
 	if !ok {
 		return nil, fmt.Errorf("unsupported backup filter type %T", filter)
 	}
+
+	lock := c.locks.Get(routineFilter.RoutineName())
+	lock.RLock()
+	defer lock.RUnlock()
 
 	return c.getRoutineBackups(ctx, routineFilter)
 }
@@ -124,6 +148,10 @@ func (c *catalog) GetBackup(ctx context.Context, storage model.Storage, key stri
 		return model.BackupDetails{}, err
 	}
 
+	lock := c.locks.Get(routineName)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	source, err := c.sources.open(ctx, storage, routineName)
 	if err != nil {
 		return model.BackupDetails{}, err
@@ -137,6 +165,42 @@ func (c *catalog) GetBackup(ctx context.Context, storage model.Storage, key stri
 	return toBackupDetails(metadata, storage, routineName), nil
 }
 
+func (c *catalog) AllBackups(ctx context.Context, routine *model.BackupRoutine) ([]model.BackupDetails, error) {
+	lock := c.locks.Get(routine.Name)
+	lock.RLock()
+	defer lock.RUnlock()
+
+	_, backups, err := c.listBackups(ctx, routine.Storage, routine.Name)
+
+	return backups, err
+}
+
+// Delete removes the folder of the backup, which its key is the path of. The job id in a listed
+// key was read from the backup's metadata file: anything else there, such as an empty id, would
+// name a folder that holds other backups.
+func (c *catalog) Delete(ctx context.Context, routine *model.BackupRoutine, key string) error {
+	_, jobID, err := parseBackupKey(key)
+	if err != nil {
+		return err
+	}
+
+	if !asinfo.IsJobID(jobID) {
+		return fmt.Errorf("%q is not a job id", jobID)
+	}
+
+	lock := c.locks.Get(routine.Name)
+	lock.Lock()
+	defer lock.Unlock()
+
+	if err := c.deleter.DeleteFolder(ctx, routine.Storage, key); err != nil {
+		return err
+	}
+
+	slog.Info("Deleted server backup", slog.String("key", key), attr.Routine(routine.Name))
+
+	return nil
+}
+
 // LastBackupTimes reads the counts of only the incremental backups newer than their namespace's
 // last listed backup, to tell whether they are empty.
 func (c *catalog) LastBackupTimes(
@@ -144,6 +208,10 @@ func (c *catalog) LastBackupTimes(
 	routine *model.BackupRoutine,
 	backupTypes ...model.BackupType,
 ) (map[string]time.Time, error) {
+	lock := c.locks.Get(routine.Name)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	source, backups, err := c.listBackups(ctx, routine.Storage, routine.Name)
 	if err != nil {
 		return nil, err

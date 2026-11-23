@@ -163,7 +163,7 @@ func (c *Config) validateServerMode() error {
 	}
 
 	// The server writes the backups, so only the S3 options it receives apply. ABS's own S3 client
-	// still uses the credentials and max-async-connections to list and read backup metadata.
+	// still uses the credentials and max-async-connections to list, read and delete backups.
 	for name, storage := range c.Storage {
 		if storage.S3Storage == nil {
 			continue
@@ -189,7 +189,6 @@ func (c *Config) validateServerMode() error {
 			option{"file-limit", policy.FileLimit != nil},
 			option{"max-concurrent-nodes", policy.MaxConcurrentNodes != nil},
 			option{"retry-policy", policy.RetryPolicy != nil},
-			option{"retention", policy.RetentionPolicy != nil},
 			option{"socket-timeout", policy.SocketTimeout != nil},
 			option{"total-timeout", policy.TotalTimeout != nil},
 			option{"use-scan-compression", ptr.ValueOrZero(policy.UseCompression)},

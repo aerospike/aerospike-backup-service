@@ -14,6 +14,7 @@ import (
 	listermodels "github.com/aerospike/backup-go/pkg/server/lister/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 // fakeSource serves fixed metadata and counts, and records which backups' counts were read.
@@ -189,6 +190,88 @@ func TestCatalog_GetBackups(t *testing.T) {
 			assert.Equal(t, tt.wantStatsRead, source.statsRead)
 		})
 	}
+}
+
+// TestCatalog_AllBackups checks that every committed backup is listed, the empty incremental
+// ones too, and that no counts are read for it.
+func TestCatalog_AllBackups(t *testing.T) {
+	t.Parallel()
+
+	source := &fakeSource{metadata: []listermodels.Metadata{
+		fullMetadata("full", "bar", catalogAt(0)),
+		incrMetadata("incr-empty", "bar", catalogAt(0), catalogAt(10)),
+		{BackupID: "aborted", Namespace: "bar", Status: listermodels.BackupStatusAborted},
+		fullMetadata("full-baz", "baz", catalogAt(20)),
+	}}
+	routine := &model.BackupRoutine{Name: "routine", Storage: &model.S3Storage{}}
+
+	backups, err := source.catalog().AllBackups(t.Context(), routine)
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"routine/full", "routine/incr-empty", "routine/full-baz"}, keys(backups))
+	assert.Empty(t, source.statsRead)
+}
+
+func TestCatalog_Delete(t *testing.T) {
+	t.Parallel()
+
+	routine := &model.BackupRoutine{Name: "routine", Storage: &model.S3Storage{}}
+	failure := errors.New("denied")
+
+	tests := []struct {
+		name string
+		key  string
+		// deleteErr is what deleting the folder returns; wantDelete is whether it is asked for.
+		wantDelete bool
+		deleteErr  error
+		wantErr    string
+	}{
+		{name: "the folder of the backup", key: "routine/" + fullID, wantDelete: true},
+		{
+			name: "the storage refuses", key: "routine/" + fullID, wantDelete: true, deleteErr: failure,
+			wantErr: "denied",
+		},
+		// Without a job id the key is the folder of all the routine's backups.
+		{name: "no job id", key: "routine/", wantErr: `"" is not a job id`},
+		{name: "a path for a job id", key: "routine/../other", wantErr: `"../other" is not a job id`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			deleter := NewMockFolderDeleter(gomock.NewController(t))
+			if tt.wantDelete {
+				deleter.EXPECT().DeleteFolder(t.Context(), routine.Storage, tt.key).Return(tt.deleteErr)
+			}
+
+			err := (&catalog{deleter: deleter}).Delete(t.Context(), routine, tt.key)
+
+			if tt.wantErr != "" {
+				require.EqualError(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+// TestCatalog_Delete_LocksListings checks that the routine's backups cannot be listed while one
+// of them is being deleted.
+func TestCatalog_Delete_LocksListings(t *testing.T) {
+	t.Parallel()
+
+	deleter := NewMockFolderDeleter(gomock.NewController(t))
+	c := &catalog{deleter: deleter}
+	routine := &model.BackupRoutine{Name: "routine", Storage: &model.S3Storage{}}
+
+	deleter.EXPECT().DeleteFolder(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(context.Context, model.Storage, string) error {
+			assert.False(t, c.locks.Get("routine").TryRLock(), "a listing could start during the delete")
+
+			return nil
+		})
+
+	require.NoError(t, c.Delete(t.Context(), routine, "routine/"+fullID))
 }
 
 // A backup whose counts cannot be read fails the listing rather than pass for empty.

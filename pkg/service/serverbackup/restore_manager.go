@@ -10,6 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/backup-go"
 )
 
@@ -21,6 +22,10 @@ type restoreManager struct {
 	clientManager aerospike.ClientManager
 	catalog       Catalog
 	validator     RestoreValidator
+
+	// Lock per routine. A restore read-locks it, so that retention deletes none of the routine's
+	// backups while the server reads them.
+	routineStorage *collections.LockMap
 }
 
 var _ service.RestoreManager = (*restoreManager)(nil)
@@ -31,12 +36,14 @@ func NewRestoreManager(
 	clientManager aerospike.ClientManager,
 	restoreJobs *service.RestoreJobsHolder,
 	catalog Catalog,
+	routineStorage *collections.LockMap,
 	validator RestoreValidator,
 ) service.RestoreManager {
 	return &restoreManager{
 		RestoreJobsHolder: restoreJobs,
 		clientManager:     clientManager,
 		catalog:           catalog,
+		routineStorage:    routineStorage,
 		validator:         validator,
 	}
 }
@@ -62,6 +69,15 @@ func (m *restoreManager) restoreBackup(
 	logger *slog.Logger,
 ) error {
 	key := request.BackupDataPath
+	routineName, _, err := parseBackupKey(key)
+	if err != nil {
+		return err
+	}
+
+	routineStorageLock := m.routineStorage.Get(routineName)
+	routineStorageLock.RLock()
+	defer routineStorageLock.RUnlock()
+
 	details, err := m.catalog.GetBackup(ctx, request.SourceStorage, key)
 	if err != nil {
 		return fmt.Errorf("failed to read server backup %s: %w", key, err)
@@ -107,6 +123,10 @@ func (m *restoreManager) restoreToTime(
 	jobID model.RestoreJobID,
 	logger *slog.Logger,
 ) error {
+	routineStorageLock := m.routineStorage.Get(request.RoutineName)
+	routineStorageLock.RLock()
+	defer routineStorageLock.RUnlock()
+
 	chains, err := service.FindRestoreChains(ctx, m.catalog, request)
 	if err != nil {
 		return err
