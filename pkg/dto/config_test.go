@@ -167,12 +167,17 @@ func TestConfigValidate_ServerMode(t *testing.T) {
 				policy.SocketTimeout = new(int64(1))
 				policy.TotalTimeout = new(int64(1))
 				policy.UseCompression = new(true)
-				policy.WithClusterConfig = new(true)
 			},
 			wantErr: `invalid value validation error: policy 'policy1' sets bandwidth, encryption, compression, ` +
 				`no-records, compact, file-limit, max-concurrent-nodes, retry-policy, retention, socket-timeout, ` +
-				`total-timeout, use-scan-compression, with-cluster-configuration, ` +
+				`total-timeout, use-scan-compression, ` +
 				`which backup-mode "server" does not support`,
+		},
+		{
+			name:    "server mode with the cluster configuration",
+			mode:    BackupModeServer,
+			storage: s3,
+			change:  func(c *Config) { c.BackupPolicies["policy1"].WithClusterConfig = new(true) },
 		},
 		{
 			name:    "server mode with concurrent incremental backups",

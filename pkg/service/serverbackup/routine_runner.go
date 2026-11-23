@@ -129,8 +129,11 @@ func (r *routineRunner) backupNamespace(
 	// An unset limit is sent as zero. The info client leaves zero fields out of the command, so
 	// the server uses its own default.
 	policy := routine.BackupPolicy
+	// As in scan mode, only a full backup stores the cluster configuration, and only when asked.
+	withClusterConfig := runSpec.Type == model.BackupTypeFull && policy.WithClusterConfigOrDefault()
 	jobID, err := infoClient.StartBackup(ctx, &infomodels.RequestBackup{
 		RequestCommon:       common,
+		NoConfig:            new(!withClusterConfig),
 		BinList:             strings.Join(routine.BinList, ","),
 		ModifiedAfter:       unixSeconds(modifiedAfter),
 		ModifiedBefore:      unixSeconds(runSpec.TimeBounds.ToTime),

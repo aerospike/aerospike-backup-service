@@ -3,15 +3,18 @@
 package integration
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	_ "embed"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -114,18 +117,18 @@ func (s *ServerBuildSuite) SetupTest() {
 // serverBuildFile returns the path in env, or else defaultPath under the home directory. It
 // skips the suite when the file does not exist.
 func (s *ServerBuildSuite) serverBuildFile(env, defaultPath string) string {
-	path := os.Getenv(env)
-	if path == "" {
+	file := os.Getenv(env)
+	if file == "" {
 		home, err := os.UserHomeDir()
 		s.Require().NoError(err)
-		path = filepath.Join(home, defaultPath)
+		file = filepath.Join(home, defaultPath)
 	}
 
-	if _, err := os.Stat(path); err != nil { //nolint:gosec // the developer names the file to run
-		s.T().Skipf("server build file %s not found (set %s to its path): %v", path, env, err)
+	if _, err := os.Stat(file); err != nil { //nolint:gosec // the developer names the file to run
+		s.T().Skipf("server build file %s not found (set %s to its path): %v", file, env, err)
 	}
 
-	return path
+	return file
 }
 
 // serverBackupConfig switches ABS to server backup mode, from the source cluster's
@@ -142,12 +145,61 @@ func (s *ServerBuildSuite) serverBackupConfig(c *dto.Config) {
 		S3Region:           s3Region,
 		S3EndpointOverride: s.s3Endpoint,
 		S3Profile:          s3Profile,
-		// The tests share the bucket: each lists only the backups it made.
-		Path: dto.Path(strings.ReplaceAll(s.T().Name(), "/", "-")),
+		Path:               dto.Path(s.storagePath()),
 	}}
 	c.BackupRoutines[routineName].Namespaces = new([]dto.NamespaceName{serverNamespace})
 	// The server keeps every backup: server mode rejects a retention policy.
 	c.BackupPolicies[policyName].RetentionPolicy = nil
+}
+
+// storagePath is the path of the running test in the bucket. The tests share the bucket: each
+// lists only the backups it made.
+func (s *ServerBuildSuite) storagePath() string {
+	return strings.ReplaceAll(s.T().Name(), "/", "-")
+}
+
+// backupObjects returns the objects in folder of the server backup at key under storagePath, by
+// object key.
+func (s *ServerBuildSuite) backupObjects(storagePath, key, folder string) map[string][]byte {
+	return s.s3Objects(s.s3Endpoint, path.Join(storagePath, key, folder)+"/")
+}
+
+// assertClusterConfiguration checks that GET /v1/retrieve/configuration returns the node's
+// configuration file.
+func (s *ServerBuildSuite) assertClusterConfiguration(e *env) {
+	retrieveURL := fmt.Sprintf("%s/v1/retrieve/configuration/%s/%d", e.baseURL, routineName, time.Now().UnixMilli())
+	var body []byte
+	// The node uploads its configuration file after the backup is listed.
+	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
+		var status int
+		status, body = s.do(e, http.MethodGet, retrieveURL, nil)
+		return status == http.StatusOK
+	})
+	s.Require().True(ok, "the cluster configuration is not retrieved: %s", body)
+
+	archive, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
+	s.Require().NoError(err)
+	s.Require().Len(archive.File, 1, "one configuration file per node")
+	file, err := archive.File[0].Open()
+	s.Require().NoError(err)
+	content, err := io.ReadAll(file)
+	s.Require().NoError(err)
+	s.Require().NoError(file.Close())
+	s.Equal(serverConf, string(content), "%s differs from the node's configuration file", archive.File[0].Name)
+}
+
+// assertNoClusterConfiguration checks that the server backup at key under storagePath holds no
+// configuration file.
+func (s *ServerBuildSuite) assertNoClusterConfiguration(storagePath, key string) {
+	// The node writes udf.json and then its configuration file once the backup is listed.
+	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
+		return len(s.backupObjects(storagePath, key, "udf")) > 0
+	})
+	s.Require().True(ok, "backup %s has no udf.json", key)
+	uploaded := s.eventually(3*time.Second, pollInterval, func() bool {
+		return len(s.backupObjects(storagePath, key, "config")) > 0
+	})
+	s.False(uploaded, "backup %s holds a configuration file", key)
 }
 
 // startServerBuild starts a single-node cluster from the asd binary and feature key file on
