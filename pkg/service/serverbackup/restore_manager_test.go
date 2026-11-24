@@ -149,18 +149,27 @@ func TestRestoreManager_Restore_Fails(t *testing.T) {
 
 	tests := []struct {
 		name    string
+		key     string
 		expect  func(t *testing.T, env *restoreManagerEnv)
 		wantErr string
 	}{
 		{
 			name: "backup cannot be read",
+			key:  backup.Key,
 			expect: func(_ *testing.T, env *restoreManagerEnv) {
 				env.catalog.EXPECT().GetBackup(gomock.Any(), gomock.Any(), gomock.Any()).Return(model.BackupDetails{}, failure)
 			},
 			wantErr: fmt.Sprintf("failed to read server backup %s: refused", backup.Key),
 		},
 		{
+			name:    "key names no routine",
+			key:     "no-slash",
+			expect:  func(*testing.T, *restoreManagerEnv) {},
+			wantErr: `invalid server backup key "no-slash": want <routine>/<job id>`,
+		},
+		{
 			name: "cluster cannot be connected to",
+			key:  backup.Key,
 			expect: func(_ *testing.T, env *restoreManagerEnv) {
 				env.catalog.EXPECT().GetBackup(gomock.Any(), gomock.Any(), gomock.Any()).Return(backup, nil)
 				env.clientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -170,6 +179,7 @@ func TestRestoreManager_Restore_Fails(t *testing.T) {
 		},
 		{
 			name: "server refuses the restore",
+			key:  backup.Key,
 			expect: func(t *testing.T, env *restoreManagerEnv) {
 				t.Helper()
 
@@ -186,8 +196,10 @@ func TestRestoreManager_Restore_Fails(t *testing.T) {
 			t.Parallel()
 			env := newRestoreManagerEnv(t)
 			tt.expect(t, env)
+			request := restoreRequestOf(backup)
+			request.BackupDataPath = tt.key
 
-			jobID := env.manager.Restore(restoreRequestOf(backup))
+			jobID := env.manager.Restore(request)
 
 			status := env.waitForJob(t, jobID)
 			assert.Equal(t, model.RestoreFailure, status.Status)
@@ -241,8 +253,8 @@ func TestRestoreManager_RestoreByTime_NamespaceFails(t *testing.T) {
 		"failed to restore routine routine, namespace bar by timestamp: failed to start server restore: refused")
 }
 
-// TestRestoreManager_HoldsRoutineStorage checks that a restore keeps retention from locking its
-// routine until it ends.
+// TestRestoreManager_HoldsRoutineStorage checks that a restore read-locks its routine from its
+// first catalog read until the server job ends, and releases it afterwards.
 func TestRestoreManager_HoldsRoutineStorage(t *testing.T) {
 	t.Parallel()
 
@@ -250,21 +262,31 @@ func TestRestoreManager_HoldsRoutineStorage(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		start func(env *restoreManagerEnv) model.RestoreJobID
+		start func(env *restoreManagerEnv, locked func()) model.RestoreJobID
 	}{
 		{
 			name: "by path",
-			start: func(env *restoreManagerEnv) model.RestoreJobID {
-				env.catalog.EXPECT().GetBackup(gomock.Any(), gomock.Any(), gomock.Any()).Return(full, nil)
+			start: func(env *restoreManagerEnv, locked func()) model.RestoreJobID {
+				env.catalog.EXPECT().GetBackup(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(context.Context, model.Storage, string) (model.BackupDetails, error) {
+						locked()
+
+						return full, nil
+					})
 
 				return env.manager.Restore(restoreRequestOf(full))
 			},
 		},
 		{
 			name: "by time",
-			start: func(env *restoreManagerEnv) model.RestoreJobID {
+			start: func(env *restoreManagerEnv, locked func()) model.RestoreJobID {
 				gomock.InOrder(
-					env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{full}, nil),
+					env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).DoAndReturn(
+						func(context.Context, service.BackupFilter) ([]model.BackupDetails, error) {
+							locked()
+
+							return []model.BackupDetails{full}, nil
+						}),
 					env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return([]model.BackupDetails{incremental}, nil),
 				)
 
@@ -278,17 +300,20 @@ func TestRestoreManager_HoldsRoutineStorage(t *testing.T) {
 			t.Parallel()
 			env := newRestoreManagerEnv(t)
 			retention := env.routineStorage.Get("routine")
+			locked := func() {
+				assert.False(t, retention.TryLock(), "the routine was not locked during the restore")
+			}
 
 			env.expectClient()
-			env.infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).DoAndReturn(
-				func(context.Context, *infomodels.RequestRestore) (string, error) {
-					assert.False(t, retention.TryLock(), "the routine was not locked during the restore")
+			env.infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, nil)
+			env.infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", restoreJobID).DoAndReturn(
+				func(context.Context, string, string) (*infomodels.ResponseRestoreState, error) {
+					locked()
 
-					return restoreJobID, nil
+					return completeStatus, nil
 				})
-			env.infoClient.EXPECT().GetRestoreStatus(gomock.Any(), "bar", restoreJobID).Return(completeStatus, nil)
 
-			env.waitForJob(t, tt.start(env))
+			env.waitForJob(t, tt.start(env, locked))
 
 			assert.True(t, retention.TryLock(), "the routine stayed locked after the restore")
 		})

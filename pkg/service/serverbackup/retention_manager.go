@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
@@ -38,7 +40,10 @@ func (m *retentionManager) ApplyRetention(ctx context.Context, routine *model.Ba
 
 	mu := m.routineStorage.Get(routine.Name)
 	if !mu.TryLock() {
-		return nil // A restore or another cleanup holds the routine: the next full backup retries.
+		slog.Info("Skipped retention: a restore or another cleanup holds the routine",
+			attr.Routine(routine.Name))
+
+		return nil // The next full backup retries.
 	}
 	defer mu.Unlock()
 
@@ -49,7 +54,7 @@ func (m *retentionManager) ApplyRetention(ctx context.Context, routine *model.Ba
 
 	var errs error
 	for _, backup := range expiredBackups(policy, backups) {
-		if err := m.catalog.Delete(ctx, routine, backup.Key); err != nil {
+		if err := m.catalog.Delete(ctx, routine.Storage, backup.Key); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to delete server backup %s: %w", backup.Key, err))
 		}
 	}
@@ -57,29 +62,31 @@ func (m *retentionManager) ApplyRetention(ctx context.Context, routine *model.Ba
 	return errs
 }
 
-// expiredBackups returns the backups the policy no longer keeps. It filters backups in place.
+// expiredBackups returns the backups the policy no longer keeps.
 func expiredBackups(policy *model.RetentionPolicy, backups []model.BackupDetails) []model.BackupDetails {
-	fulls := make(map[string][]time.Time) // the creation times of each namespace's full backups
+	fullTimes := make(map[string][]time.Time) // the creation times of each namespace's full backups
 	for _, backup := range backups {
 		if backup.BackupType() == model.BackupTypeFull {
-			fulls[backup.Namespace] = append(fulls[backup.Namespace], backup.Created)
+			fullTimes[backup.Namespace] = append(fullTimes[backup.Namespace], backup.Created)
 		}
 	}
 
-	for _, created := range fulls {
-		slices.SortFunc(created, time.Time.Compare)
+	// As in scan mode, full backups created at the same time count once.
+	for namespace, times := range fullTimes {
+		slices.SortFunc(times, time.Time.Compare)
+		fullTimes[namespace] = slices.CompactFunc(times, time.Time.Equal)
 	}
 
-	return slices.DeleteFunc(backups, func(backup model.BackupDetails) bool {
-		return !isExpired(policy, backup, fulls[backup.Namespace])
+	return slices.DeleteFunc(slices.Clone(backups), func(backup model.BackupDetails) bool {
+		return !isExpired(policy, backup, fullTimes[backup.Namespace])
 	})
 }
 
-// isExpired reports whether the policy no longer keeps a backup of a namespace whose full
-// backups were created at fulls, oldest first.
-func isExpired(policy *model.RetentionPolicy, backup model.BackupDetails, fulls []time.Time) bool {
+// isExpired reports whether the policy no longer keeps the backup. fullTimes holds the creation
+// times of the full backups of the backup's namespace, oldest first.
+func isExpired(policy *model.RetentionPolicy, backup model.BackupDetails, fullTimes []time.Time) bool {
 	if backup.BackupType() == model.BackupTypeFull {
-		oldest, exceeded := oldestKept(fulls, policy.FullBackups)
+		oldest, exceeded := oldestKept(fullTimes, policy.FullBackups)
 
 		return exceeded && backup.Created.Before(oldest)
 	}
@@ -91,17 +98,17 @@ func isExpired(policy *model.RetentionPolicy, backup model.BackupDetails, fulls 
 		return true
 	}
 
-	oldest, exceeded := oldestKept(fulls, count)
+	oldest, exceeded := oldestKept(fullTimes, count)
 
 	return exceeded && !backup.Created.After(oldest)
 }
 
-// oldestKept returns the creation time of the oldest of the last count full backups, created at
-// fulls, oldest first. It reports false when the count keeps every full backup.
-func oldestKept(fulls []time.Time, count optional.Optional[int]) (time.Time, bool) {
-	if !count.Present || len(fulls) <= count.Value {
+// oldestKept returns the earliest of the last count times in fullTimes, which is sorted oldest
+// first. It reports false when the count keeps every full backup.
+func oldestKept(fullTimes []time.Time, count optional.Optional[int]) (time.Time, bool) {
+	if !count.Present || len(fullTimes) <= count.Value {
 		return time.Time{}, false
 	}
 
-	return fulls[len(fulls)-count.Value], true
+	return fullTimes[len(fullTimes)-count.Value], true
 }

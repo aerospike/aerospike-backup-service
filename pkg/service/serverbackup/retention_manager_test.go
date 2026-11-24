@@ -8,27 +8,25 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
+	listermodels "github.com/aerospike/backup-go/pkg/server/lister/models"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
-// retainedKey returns the key of the routine's backup whose job id ends with salt, four base36
-// digits that name the backup in a test.
-func retainedKey(salt string) string {
-	return backupKey("routine", "261028T120000-"+salt)
-}
-
-// retainedFull returns a full backup of the namespace, created minutes after catalogStart.
-func retainedFull(salt, namespace string, minutes int) model.BackupDetails {
+// retentionFull returns a full backup of the namespace with the key, created minutes after
+// catalogStart.
+func retentionFull(key, namespace string, minutes int) model.BackupDetails {
 	return model.BackupDetails{
 		BackupMetadata: model.BackupMetadata{Namespace: namespace, Created: catalogAt(minutes)},
-		Key:            retainedKey(salt),
+		Key:            key,
 	}
 }
 
-// retainedIncr returns an incremental backup of the namespace, created minutes after catalogStart.
-func retainedIncr(salt, namespace string, minutes int) model.BackupDetails {
-	backup := retainedFull(salt, namespace, minutes)
+// retentionIncr returns an incremental backup of the namespace with the key, created minutes after
+// catalogStart.
+func retentionIncr(key, namespace string, minutes int) model.BackupDetails {
+	backup := retentionFull(key, namespace, minutes)
 	backup.From = catalogAt(minutes - 5)
 
 	return backup
@@ -47,17 +45,18 @@ func TestRetentionManager_ApplyRetention(t *testing.T) {
 
 	// Three full backups of bar, each followed by an incremental one.
 	chain := []model.BackupDetails{
-		retainedFull("ful1", "bar", 0),
-		retainedIncr("inc1", "bar", 10),
-		retainedFull("ful2", "bar", 20),
-		retainedIncr("inc2", "bar", 30),
-		retainedFull("ful3", "bar", 40),
-		retainedIncr("inc3", "bar", 50),
+		retentionFull("ful1", "bar", 0),
+		retentionIncr("inc1", "bar", 10),
+		retentionFull("ful2", "bar", 20),
+		retentionIncr("inc2", "bar", 30),
+		retentionFull("ful3", "bar", 40),
+		retentionIncr("inc3", "bar", 50),
 	}
 
 	tests := []struct {
 		name        string
 		policy      *model.RetentionPolicy
+		namespaces  []string
 		backups     []model.BackupDetails
 		wantDeleted []string
 	}{
@@ -94,21 +93,34 @@ func TestRetentionManager_ApplyRetention(t *testing.T) {
 			name:   "each namespace on its own",
 			policy: &model.RetentionPolicy{FullBackups: optional.Of(1)},
 			backups: []model.BackupDetails{
-				retainedFull("bar1", "bar", 0),
-				retainedFull("baz1", "baz", 1), // the same run, started later
-				retainedIncr("bazi", "baz", 10),
-				retainedFull("bar2", "bar", 20),
+				retentionFull("bar1", "bar", 0),
+				retentionFull("baz1", "baz", 1), // the same run, started later
+				retentionIncr("bazi", "baz", 10),
+				retentionFull("bar2", "bar", 20),
 				// baz failed in the second run.
 			},
 			wantDeleted: []string{"bar1"},
 		},
 		{
+			name:       "a namespace the routine no longer backs up keeps its own last full backups",
+			policy:     &model.RetentionPolicy{FullBackups: optional.Of(1)},
+			namespaces: []string{"bar"},
+			backups: []model.BackupDetails{
+				retentionFull("baz1", "baz", 0),
+				retentionIncr("bazi", "baz", 2),
+				retentionFull("baz2", "baz", 5),
+				retentionFull("bar1", "bar", 10),
+				retentionFull("bar2", "bar", 20),
+			},
+			wantDeleted: []string{"baz1", "bazi", "bar1"},
+		},
+		{
 			name:   "an incremental backup as old as the oldest kept full one",
 			policy: &model.RetentionPolicy{FullBackups: optional.Of(1)},
 			backups: []model.BackupDetails{
-				retainedFull("ful1", "bar", 0),
-				retainedIncr("inc1", "bar", 20),
-				retainedFull("ful2", "bar", 20),
+				retentionFull("ful1", "bar", 0),
+				retentionIncr("inc1", "bar", 20),
+				retentionFull("ful2", "bar", 20),
 			},
 			wantDeleted: []string{"ful1", "inc1"},
 		},
@@ -119,18 +131,52 @@ func TestRetentionManager_ApplyRetention(t *testing.T) {
 			t.Parallel()
 			catalog := NewMockCatalog(gomock.NewController(t))
 			routine := retentionRoutine(tt.policy)
+			routine.Namespaces = tt.namespaces
+			routineStorage := &collections.LockMap{}
 
-			// The manager filters the listing in place, and the cases share one.
-			catalog.EXPECT().AllBackups(t.Context(), routine).Return(slices.Clone(tt.backups), nil)
-			for _, salt := range tt.wantDeleted {
-				catalog.EXPECT().Delete(t.Context(), routine, retainedKey(salt)).Return(nil)
+			catalog.EXPECT().AllBackups(t.Context(), routine).Return(tt.backups, nil)
+			for _, key := range tt.wantDeleted {
+				catalog.EXPECT().Delete(t.Context(), routine.Storage, key).Return(nil)
 			}
 
-			err := NewRetentionManager(catalog, &collections.LockMap{}).ApplyRetention(t.Context(), routine)
+			err := NewRetentionManager(catalog, routineStorage).ApplyRetention(t.Context(), routine)
 
 			require.NoError(t, err)
+			assert.True(t, routineStorage.Get("routine").TryLock(), "the routine stayed locked after the cleanup")
 		})
 	}
+}
+
+// TestRetentionManager_OverTheCatalog runs retention over the real catalog: from the listed
+// metadata to the folders handed to the storage.
+func TestRetentionManager_OverTheCatalog(t *testing.T) {
+	t.Parallel()
+
+	const (
+		oldFull = "261028T120000-ful1"
+		oldIncr = "261028T121000-inc1"
+		aborted = "261028T121500-abrt"
+		newFull = "261028T122000-ful2"
+		bazFull = "261028T120000-baz1"
+	)
+
+	source := &fakeSource{metadata: []listermodels.Metadata{
+		fullMetadata(oldFull, "bar", catalogAt(0)),
+		incrMetadata(oldIncr, "bar", catalogAt(0), catalogAt(10)),
+		{BackupID: aborted, Namespace: "bar", Status: listermodels.BackupStatusAborted},
+		fullMetadata(newFull, "bar", catalogAt(20)),
+		fullMetadata(bazFull, "baz", catalogAt(0)),
+	}}
+	deleter := NewMockFolderDeleter(gomock.NewController(t))
+	routine := retentionRoutine(&model.RetentionPolicy{FullBackups: optional.Of(1)})
+
+	deleter.EXPECT().DeleteFolder(t.Context(), routine.Storage, "routine/"+oldFull).Return(nil)
+	deleter.EXPECT().DeleteFolder(t.Context(), routine.Storage, "routine/"+oldIncr).Return(nil)
+
+	manager := NewRetentionManager(&catalog{sources: source, deleter: deleter}, &collections.LockMap{})
+
+	require.NoError(t, manager.ApplyRetention(t.Context(), routine))
+	assert.Empty(t, source.statsRead)
 }
 
 // TestRetentionManager_NoPolicy checks that a routine without a retention count is not even listed.
@@ -166,18 +212,20 @@ func TestRetentionManager_DeleteFails(t *testing.T) {
 	t.Parallel()
 	catalog := NewMockCatalog(gomock.NewController(t))
 	routine := retentionRoutine(&model.RetentionPolicy{FullBackups: optional.Of(1)})
+	routineStorage := &collections.LockMap{}
 
 	catalog.EXPECT().AllBackups(t.Context(), routine).Return([]model.BackupDetails{
-		retainedFull("ful1", "bar", 0),
-		retainedFull("ful2", "bar", 20),
-		retainedFull("ful3", "bar", 40),
+		retentionFull("ful1", "bar", 0),
+		retentionFull("ful2", "bar", 20),
+		retentionFull("ful3", "bar", 40),
 	}, nil)
-	catalog.EXPECT().Delete(t.Context(), routine, retainedKey("ful1")).Return(errors.New("denied"))
-	catalog.EXPECT().Delete(t.Context(), routine, retainedKey("ful2")).Return(nil)
+	catalog.EXPECT().Delete(t.Context(), routine.Storage, "ful1").Return(errors.New("denied"))
+	catalog.EXPECT().Delete(t.Context(), routine.Storage, "ful2").Return(nil)
 
-	err := NewRetentionManager(catalog, &collections.LockMap{}).ApplyRetention(t.Context(), routine)
+	err := NewRetentionManager(catalog, routineStorage).ApplyRetention(t.Context(), routine)
 
-	require.EqualError(t, err, "failed to delete server backup "+retainedKey("ful1")+": denied")
+	require.EqualError(t, err, "failed to delete server backup ful1: denied")
+	assert.True(t, routineStorage.Get("routine").TryLock(), "the routine stayed locked after the cleanup")
 }
 
 // TestRetentionManager_ListFails checks that a listing that fails deletes nothing.
@@ -185,24 +233,82 @@ func TestRetentionManager_ListFails(t *testing.T) {
 	t.Parallel()
 	catalog := NewMockCatalog(gomock.NewController(t))
 	routine := retentionRoutine(&model.RetentionPolicy{FullBackups: optional.Of(1)})
+	routineStorage := &collections.LockMap{}
 
 	catalog.EXPECT().AllBackups(t.Context(), routine).Return(nil, errors.New("unreachable"))
 
-	err := NewRetentionManager(catalog, &collections.LockMap{}).ApplyRetention(t.Context(), routine)
+	err := NewRetentionManager(catalog, routineStorage).ApplyRetention(t.Context(), routine)
 
 	require.EqualError(t, err, "failed to list the backups of routine routine: unreachable")
+	assert.True(t, routineStorage.Get("routine").TryLock(), "the routine stayed locked after the cleanup")
 }
 
-// TestExpiredBackups_SameCreationTime checks that full backups created in the same second are
-// kept together.
-func TestExpiredBackups_SameCreationTime(t *testing.T) {
+func TestExpiredBackups(t *testing.T) {
 	t.Parallel()
 
-	expired := expiredBackups(&model.RetentionPolicy{FullBackups: optional.Of(1)}, []model.BackupDetails{
-		retainedFull("ful1", "bar", 0),
-		retainedFull("ful2", "bar", 20),
-		retainedFull("ful3", "bar", 20),
-	})
+	chain := []model.BackupDetails{
+		retentionFull("ful1", "bar", 0),
+		retentionIncr("inc1", "bar", 10),
+		retentionFull("ful2", "bar", 20),
+		retentionIncr("inc2", "bar", 30),
+		retentionFull("ful3", "bar", 40),
+		retentionIncr("inc3", "bar", 50),
+	}
+	newestFirst := slices.Clone(chain)
+	slices.Reverse(newestFirst)
 
-	require.Equal(t, []string{retainedKey("ful1")}, keys(expired))
+	tests := []struct {
+		name    string
+		policy  *model.RetentionPolicy
+		backups []model.BackupDetails
+		want    []string
+	}{
+		{
+			name:    "a listing that is not oldest first",
+			policy:  &model.RetentionPolicy{FullBackups: optional.Of(1)},
+			backups: newestFirst,
+			want:    []string{"inc2", "ful2", "inc1", "ful1"},
+		},
+		{
+			name:   "as many full backups as the count, and an incremental as old as the oldest",
+			policy: &model.RetentionPolicy{FullBackups: optional.Of(2)},
+			backups: []model.BackupDetails{
+				retentionFull("ful1", "bar", 0),
+				retentionIncr("inc0", "bar", 0),
+				retentionFull("ful2", "bar", 20),
+			},
+			want: []string{},
+		},
+		{
+			name:   "full backups created at the same time are kept together",
+			policy: &model.RetentionPolicy{FullBackups: optional.Of(1)},
+			backups: []model.BackupDetails{
+				retentionFull("ful1", "bar", 0),
+				retentionFull("ful2", "bar", 20),
+				retentionFull("ful3", "bar", 20),
+			},
+			want: []string{"ful1"},
+		},
+		{
+			name:   "full backups created at the same time count once",
+			policy: &model.RetentionPolicy{FullBackups: optional.Of(2)},
+			backups: []model.BackupDetails{
+				retentionFull("ful1", "bar", 0),
+				retentionFull("ful2", "bar", 20),
+				retentionFull("ful3", "bar", 20),
+			},
+			want: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			before := slices.Clone(tt.backups)
+
+			assert.Equal(t, tt.want, keys(expiredBackups(tt.policy, tt.backups)))
+			assert.Equal(t, before, tt.backups, "the listing was changed")
+		})
+	}
 }

@@ -59,17 +59,17 @@ func (mr *MockCatalogMockRecorder) AllBackups(ctx, routine any) *gomock.Call {
 }
 
 // Delete mocks base method.
-func (m *MockCatalog) Delete(ctx context.Context, routine *model.BackupRoutine, key string) error {
+func (m *MockCatalog) Delete(ctx context.Context, storage model.Storage, key string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, routine, key)
+	ret := m.ctrl.Call(m, "Delete", ctx, storage, key)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockCatalogMockRecorder) Delete(ctx, routine, key any) *gomock.Call {
+func (mr *MockCatalogMockRecorder) Delete(ctx, storage, key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCatalog)(nil).Delete), ctx, routine, key)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCatalog)(nil).Delete), ctx, storage, key)
 }
 
 // GetBackup mocks base method.

@@ -64,7 +64,8 @@ func (h *backupCompletionHandler) OnSuccess(
 	go func() {
 		if err := h.retentionManager.ApplyRetention(ctx, routine); err != nil {
 			if errors.Is(err, context.Canceled) {
-				logger.Info("Old backups cleanup context canceled")
+				// The error names any backup the cancellation left partly deleted.
+				logger.Info("Old backups cleanup context canceled", attr.Error(err))
 				return
 			}
 			logger.Error("Failed to clean up old backups", attr.Error(err))

@@ -297,11 +297,12 @@ func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 }
 
 // TestServerRetention keeps one full backup. The bucket already holds an older full backup of
-// the routine's namespace with an incremental one, and a full backup of a namespace the routine
-// does not back up. Once a new full backup succeeds, the older backups of the routine's
-// namespace are gone from the bucket and the listing, and the other namespace keeps its own.
-// The older backups are written to the bucket directly: retention reads only their metadata, and
-// the server takes most of a minute for a backup.
+// the routine's namespace with an incremental one, a full backup of a namespace the routine does
+// not back up, an aborted backup and a folder without metadata, which is what an unfinished job
+// leaves. Once a new full backup succeeds, the older backups of the routine's namespace are gone
+// from the bucket and the listing, and the rest is left alone. The older backups are written to
+// the bucket directly: retention reads only their metadata, and the server takes most of a minute
+// for a backup.
 func (s *ServerBackupSuite) TestServerRetention() {
 	storagePath := s.storagePath()
 	oldFull := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -318,6 +319,12 @@ func (s *ServerBackupSuite) TestServerRetention() {
 	otherNamespaceFull := s.seedServerBackup(storagePath, listermodels.Metadata{
 		BackupID: "250101T000000-baz1", Namespace: otherNamespace, Status: listermodels.BackupStatusComplete,
 	})
+	unlisted := []string{
+		s.seedUnfinishedBackup(storagePath, "250101T020000-unfn", serverNamespace),
+		s.seedServerBackup(storagePath, listermodels.Metadata{
+			BackupID: "250101T030000-abrt", Namespace: serverNamespace, Status: listermodels.BackupStatusAborted,
+		}),
+	}
 
 	s.seedRecordsIn(s.client, serverNamespace, []int{1})
 
@@ -343,8 +350,8 @@ func (s *ServerBackupSuite) TestServerRetention() {
 	}
 	s.Equal(kept, listed, "full backups listed after retention")
 
-	for _, key := range kept {
-		s.NotEmpty(s.backupObjects(storagePath, key, ""), "kept backup %s is gone from the bucket", key)
+	for _, key := range slices.Concat(kept, unlisted) {
+		s.NotEmpty(s.backupObjects(storagePath, key, ""), "%s is gone from the bucket", key)
 	}
 }
 

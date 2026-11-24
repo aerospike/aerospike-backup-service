@@ -215,21 +215,20 @@ func TestCatalog_AllBackups(t *testing.T) {
 func TestCatalog_Delete(t *testing.T) {
 	t.Parallel()
 
-	routine := &model.BackupRoutine{Name: "routine", Storage: &model.S3Storage{}}
-	failure := errors.New("denied")
+	backupStorage := &model.S3Storage{}
+	key := "routine/" + fullID
 
 	tests := []struct {
-		name string
-		key  string
-		// deleteErr is what deleting the folder returns; wantDelete is whether it is asked for.
+		name       string
+		key        string
 		wantDelete bool
 		deleteErr  error
 		wantErr    string
 	}{
-		{name: "the folder of the backup", key: "routine/" + fullID, wantDelete: true},
+		{name: "the folder of the backup", key: key, wantDelete: true},
 		{
-			name: "the storage refuses", key: "routine/" + fullID, wantDelete: true, deleteErr: failure,
-			wantErr: "denied",
+			name: "the storage refuses", key: key, wantDelete: true, deleteErr: errors.New("denied"),
+			wantErr: "the folder may be partly deleted and no longer listed: denied",
 		},
 		// Without a job id the key is the folder of all the routine's backups.
 		{name: "no job id", key: "routine/", wantErr: `"" is not a job id`},
@@ -241,10 +240,10 @@ func TestCatalog_Delete(t *testing.T) {
 			t.Parallel()
 			deleter := NewMockFolderDeleter(gomock.NewController(t))
 			if tt.wantDelete {
-				deleter.EXPECT().DeleteFolder(t.Context(), routine.Storage, tt.key).Return(tt.deleteErr)
+				deleter.EXPECT().DeleteFolder(t.Context(), backupStorage, tt.key).Return(tt.deleteErr)
 			}
 
-			err := (&catalog{deleter: deleter}).Delete(t.Context(), routine, tt.key)
+			err := (&catalog{deleter: deleter}).Delete(t.Context(), backupStorage, tt.key)
 
 			if tt.wantErr != "" {
 				require.EqualError(t, err, tt.wantErr)
@@ -253,25 +252,6 @@ func TestCatalog_Delete(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-}
-
-// TestCatalog_Delete_LocksListings checks that the routine's backups cannot be listed while one
-// of them is being deleted.
-func TestCatalog_Delete_LocksListings(t *testing.T) {
-	t.Parallel()
-
-	deleter := NewMockFolderDeleter(gomock.NewController(t))
-	c := &catalog{deleter: deleter}
-	routine := &model.BackupRoutine{Name: "routine", Storage: &model.S3Storage{}}
-
-	deleter.EXPECT().DeleteFolder(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-		func(context.Context, model.Storage, string) error {
-			assert.False(t, c.locks.Get("routine").TryRLock(), "a listing could start during the delete")
-
-			return nil
-		})
-
-	require.NoError(t, c.Delete(t.Context(), routine, "routine/"+fullID))
 }
 
 // A backup whose counts cannot be read fails the listing rather than pass for empty.

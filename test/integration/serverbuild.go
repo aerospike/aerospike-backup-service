@@ -202,27 +202,33 @@ func (s *ServerBuildSuite) backupObjects(storagePath, key, folder string) map[st
 // seedServerBackup writes a server backup of the routine to the bucket under storagePath: its
 // metadata and one data file, without the server taking it. It returns the backup's key.
 func (s *ServerBuildSuite) seedServerBackup(storagePath string, metadata listermodels.Metadata) string {
-	ctx := s.T().Context()
-	client := s.s3RootClient(ctx, s.s3Endpoint)
-	key := path.Join(routineName, metadata.BackupID)
-
 	content, err := decoder.Marshal(metadata, decoder.JSON, false)
 	s.Require().NoError(err)
 
-	objects := map[string][]byte{
-		"metadata.json": content,
-		path.Join("ns", metadata.Namespace, "query-stream/data/p0/0.seg"): []byte("records"),
-	}
-	for name, body := range objects {
-		_, err := client.PutObject(ctx, &awsS3.PutObjectInput{
-			Bucket: aws.String(s3Bucket),
-			Key:    aws.String(path.Join(storagePath, key, name)),
-			Body:   bytes.NewReader(body),
-		})
-		s.Require().NoError(err)
-	}
+	key := s.seedUnfinishedBackup(storagePath, metadata.BackupID, metadata.Namespace)
+	s.putObject(path.Join(storagePath, key, "metadata.json"), content)
 
 	return key
+}
+
+// seedUnfinishedBackup writes one data file of a server backup of the routine to the bucket under
+// storagePath, without the metadata a finished backup has. It returns the backup's key.
+func (s *ServerBuildSuite) seedUnfinishedBackup(storagePath, jobID, namespace string) string {
+	key := path.Join(routineName, jobID)
+	s.putObject(path.Join(storagePath, key, "ns", namespace, "query-stream/data/p0/0.seg"), []byte("records"))
+
+	return key
+}
+
+// putObject writes an object of s3Bucket.
+func (s *ServerBuildSuite) putObject(key string, body []byte) {
+	ctx := s.T().Context()
+	_, err := s.s3RootClient(ctx, s.s3Endpoint).PutObject(ctx, &awsS3.PutObjectInput{
+		Bucket: aws.String(s3Bucket),
+		Key:    aws.String(key),
+		Body:   bytes.NewReader(body),
+	})
+	s.Require().NoError(err)
 }
 
 // assertClusterConfiguration checks that GET /v1/retrieve/configuration returns the node's
