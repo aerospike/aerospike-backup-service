@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 	listermodels "github.com/aerospike/backup-go/pkg/server/lister/models"
@@ -103,13 +104,13 @@ func TestRetentionManager_OverTheCatalog(t *testing.T) {
 		fullMetadata(newFull, "bar", catalogAt(20)),
 		fullMetadata(bazFull, "baz", catalogAt(0)),
 	}}
-	deleter := NewMockFolderDeleter(gomock.NewController(t))
+	operations := storage.NewMockOperations(gomock.NewController(t))
 	routine := retentionRoutine(&model.RetentionPolicy{FullBackups: optional.Of(1)})
 
-	deleter.EXPECT().DeleteFolder(t.Context(), routine.Storage, "routine/"+oldFull).Return(nil)
-	deleter.EXPECT().DeleteFolder(t.Context(), routine.Storage, "routine/"+oldIncr).Return(nil)
+	operations.EXPECT().DeleteFolder(t.Context(), routine.Storage, "routine/"+oldFull).Return(nil)
+	operations.EXPECT().DeleteFolder(t.Context(), routine.Storage, "routine/"+oldIncr).Return(nil)
 
-	manager := NewRetentionManager(&catalog{sources: source, deleter: deleter}, &collections.LockMap{})
+	manager := NewRetentionManager(&catalog{sources: source, operations: operations}, &collections.LockMap{})
 
 	require.NoError(t, manager.ApplyRetention(t.Context(), routine))
 	assert.Empty(t, source.statsRead)

@@ -195,7 +195,7 @@ generate_mocks \
 
 generate_mocks \
     "pkg/service/serverbackup" \
-    "Catalog,FolderDeleter"
+    "Catalog"
 
 generate_mocks \
     "pkg/service/scanbackup/backupexecutor" \

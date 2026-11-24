@@ -10,6 +10,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go/pkg/server/lister"
 	listermodels "github.com/aerospike/backup-go/pkg/server/lister/models"
 	"github.com/stretchr/testify/assert"
@@ -97,8 +98,8 @@ func TestCatalog_GetBackups_Counts(t *testing.T) {
 		metadata: []listermodels.Metadata{fullMetadata("full", "bar", catalogAt(0))},
 		stats:    map[string]listermodels.Statistics{"full": nonEmpty},
 	}
-	storage := &model.S3Storage{Bucket: "bucket"}
-	routine := &model.BackupRoutine{Name: "routine", Storage: storage}
+	st := &model.S3Storage{Bucket: "bucket"}
+	routine := &model.BackupRoutine{Name: "routine", Storage: st}
 
 	backups, err := source.catalog().GetBackups(t.Context(), service.NewFullBackupFilter(routine))
 
@@ -238,12 +239,12 @@ func TestCatalog_Delete(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			deleter := NewMockFolderDeleter(gomock.NewController(t))
+			operations := storage.NewMockOperations(gomock.NewController(t))
 			if tt.wantDelete {
-				deleter.EXPECT().DeleteFolder(t.Context(), backupStorage, tt.key).Return(tt.deleteErr)
+				operations.EXPECT().DeleteFolder(t.Context(), backupStorage, tt.key).Return(tt.deleteErr)
 			}
 
-			c := &catalog{deleter: deleter}
+			c := &catalog{operations: operations}
 
 			err := c.Delete(t.Context(), backupStorage, tt.key)
 
@@ -262,10 +263,10 @@ func TestCatalog_Delete(t *testing.T) {
 func TestCatalog_Delete_LocksReads(t *testing.T) {
 	t.Parallel()
 
-	deleter := NewMockFolderDeleter(gomock.NewController(t))
-	c := &catalog{deleter: deleter}
+	operations := storage.NewMockOperations(gomock.NewController(t))
+	c := &catalog{operations: operations}
 
-	deleter.EXPECT().DeleteFolder(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+	operations.EXPECT().DeleteFolder(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 		func(context.Context, model.Storage, string) error {
 			assert.False(t, c.locks.Get("routine").TryRLock(), "a read could start during the delete")
 
