@@ -43,19 +43,48 @@ func (m *MockCatalog) EXPECT() *MockCatalogMockRecorder {
 	return m.recorder
 }
 
-// GetBackup mocks base method.
-func (m *MockCatalog) GetBackup(ctx context.Context, storage model.Storage, key string) (model.BackupDetails, error) {
+// AllBackups mocks base method.
+func (m *MockCatalog) AllBackups(ctx context.Context, routine *model.BackupRoutine) ([]model.BackupDetails, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBackup", ctx, storage, key)
+	ret := m.ctrl.Call(m, "AllBackups", ctx, routine)
+	ret0, _ := ret[0].([]model.BackupDetails)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AllBackups indicates an expected call of AllBackups.
+func (mr *MockCatalogMockRecorder) AllBackups(ctx, routine any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllBackups", reflect.TypeOf((*MockCatalog)(nil).AllBackups), ctx, routine)
+}
+
+// Delete mocks base method.
+func (m *MockCatalog) Delete(ctx context.Context, st model.Storage, key string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, st, key)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockCatalogMockRecorder) Delete(ctx, st, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCatalog)(nil).Delete), ctx, st, key)
+}
+
+// GetBackup mocks base method.
+func (m *MockCatalog) GetBackup(ctx context.Context, st model.Storage, key string) (model.BackupDetails, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBackup", ctx, st, key)
 	ret0, _ := ret[0].(model.BackupDetails)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetBackup indicates an expected call of GetBackup.
-func (mr *MockCatalogMockRecorder) GetBackup(ctx, storage, key any) *gomock.Call {
+func (mr *MockCatalogMockRecorder) GetBackup(ctx, st, key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackup", reflect.TypeOf((*MockCatalog)(nil).GetBackup), ctx, storage, key)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackup", reflect.TypeOf((*MockCatalog)(nil).GetBackup), ctx, st, key)
 }
 
 // GetBackups mocks base method.

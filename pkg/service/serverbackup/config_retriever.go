@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"path"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 // configFolder is the folder of a server backup the nodes upload their configuration files to.
@@ -21,13 +23,21 @@ const configFolder = "config"
 type configRetriever struct {
 	backupReader service.BackupReader
 	operations   storage.Operations
+
+	// Lock per routine. A retrieval read-locks it while it reads a backup's files, so that
+	// retention deletes none of them meanwhile.
+	routineStorage *collections.LockMap
 }
 
 var _ service.ConfigRetriever = (*configRetriever)(nil)
 
 // NewConfigRetriever returns the ConfigRetriever of the server backup mode.
-func NewConfigRetriever(backupReader service.BackupReader, operations storage.Operations) service.ConfigRetriever {
-	return &configRetriever{backupReader: backupReader, operations: operations}
+func NewConfigRetriever(
+	backupReader service.BackupReader,
+	operations storage.Operations,
+	routineStorage *collections.LockMap,
+) service.ConfigRetriever {
+	return &configRetriever{backupReader: backupReader, operations: operations, routineStorage: routineStorage}
 }
 
 // RetrieveConfiguration returns the configuration files of the routine's last full backup at or
@@ -35,6 +45,10 @@ func NewConfigRetriever(backupReader service.BackupReader, operations storage.Op
 func (r *configRetriever) RetrieveConfiguration(
 	ctx context.Context, routine *model.BackupRoutine, toTime time.Time,
 ) ([]byte, error) {
+	logger := slog.With(slog.String("label", "configuration retrieval"))
+	unlock := readLockRoutine(r.routineStorage, routine.Name, logger)
+	defer unlock()
+
 	backups, err := r.backupReader.GetBackups(ctx, service.NewFullBackupFilter(routine).WithToTime(toTime).Last())
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve backups for routine %s: %w", routine.Name, err)

@@ -10,10 +10,12 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go/pkg/server/lister"
 	listermodels "github.com/aerospike/backup-go/pkg/server/lister/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 // fakeSource serves fixed metadata and counts, and records which backups' counts were read.
@@ -96,8 +98,8 @@ func TestCatalog_GetBackups_Counts(t *testing.T) {
 		metadata: []listermodels.Metadata{fullMetadata("full", "bar", catalogAt(0))},
 		stats:    map[string]listermodels.Statistics{"full": nonEmpty},
 	}
-	storage := &model.S3Storage{Bucket: "bucket"}
-	routine := &model.BackupRoutine{Name: "routine", Storage: storage}
+	st := &model.S3Storage{Bucket: "bucket"}
+	routine := &model.BackupRoutine{Name: "routine", Storage: st}
 
 	backups, err := source.catalog().GetBackups(t.Context(), service.NewFullBackupFilter(routine))
 
@@ -187,6 +189,162 @@ func TestCatalog_GetBackups(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, keys(backups))
 			assert.Equal(t, tt.wantStatsRead, source.statsRead)
+		})
+	}
+}
+
+// TestCatalog_AllBackups checks that every committed backup is listed, the empty incremental
+// ones too, and that no counts are read for it.
+func TestCatalog_AllBackups(t *testing.T) {
+	t.Parallel()
+
+	source := &fakeSource{metadata: []listermodels.Metadata{
+		fullMetadata("full", "bar", catalogAt(0)),
+		incrMetadata("incr-empty", "bar", catalogAt(0), catalogAt(10)),
+		{BackupID: "aborted", Namespace: "bar", Status: listermodels.BackupStatusAborted},
+		fullMetadata("full-baz", "baz", catalogAt(20)),
+	}}
+	routine := &model.BackupRoutine{Name: "routine", Storage: &model.S3Storage{}}
+
+	backups, err := source.catalog().AllBackups(t.Context(), routine)
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"routine/full", "routine/incr-empty", "routine/full-baz"}, keys(backups))
+	assert.Empty(t, source.statsRead)
+}
+
+func TestCatalog_Delete(t *testing.T) {
+	t.Parallel()
+
+	backupStorage := &model.S3Storage{}
+	key := "routine/" + fullID
+
+	tests := []struct {
+		name       string
+		key        string
+		wantDelete bool
+		deleteErr  error
+		wantErr    string
+	}{
+		{name: "the folder of the backup", key: key, wantDelete: true},
+		{
+			name: "the storage refuses", key: key, wantDelete: true, deleteErr: errors.New("denied"),
+			wantErr: "denied",
+		},
+		// Without a job id the key is the folder of all the routine's backups.
+		{name: "no job id", key: "routine/", wantErr: `"" is not a job id`},
+		{name: "a path for a job id", key: "routine/../other", wantErr: `"../other" is not a job id`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			operations := storage.NewMockOperations(gomock.NewController(t))
+			if tt.wantDelete {
+				operations.EXPECT().DeleteFolder(t.Context(), backupStorage, tt.key).Return(tt.deleteErr)
+			}
+
+			c := &catalog{operations: operations}
+
+			err := c.Delete(t.Context(), backupStorage, tt.key)
+
+			assert.True(t, c.locks.Get("routine").TryLock(), "the routine stayed locked after the delete")
+			if tt.wantErr != "" {
+				require.EqualError(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+// TestCatalog_Delete_LocksReads checks that no read of the routine's backups runs while one of
+// them is deleted.
+func TestCatalog_Delete_LocksReads(t *testing.T) {
+	t.Parallel()
+
+	operations := storage.NewMockOperations(gomock.NewController(t))
+	c := &catalog{operations: operations}
+
+	operations.EXPECT().DeleteFolder(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(context.Context, model.Storage, string) error {
+			assert.False(t, c.locks.Get("routine").TryRLock(), "a read could start during the delete")
+
+			return nil
+		})
+
+	require.NoError(t, c.Delete(t.Context(), &model.S3Storage{}, "routine/"+fullID))
+}
+
+// probedSource calls onRead whenever the catalog reads metadata from it.
+type probedSource struct {
+	*fakeSource
+	onRead func()
+}
+
+func (p *probedSource) FetchAllMetadata(ctx context.Context) ([]listermodels.Metadata, error) {
+	p.onRead()
+
+	return p.fakeSource.FetchAllMetadata(ctx)
+}
+
+func (p *probedSource) GetMetadata(ctx context.Context, backupID string) (listermodels.Metadata, error) {
+	p.onRead()
+
+	return p.fakeSource.GetMetadata(ctx, backupID)
+}
+
+func (p *probedSource) open(context.Context, model.Storage, string) (backupSource, error) {
+	return p, nil
+}
+
+// TestCatalog_Reads_LockTheRoutine checks that no backup of the routine can be deleted while its
+// backups are read, and that a read leaves the routine unlocked.
+func TestCatalog_Reads_LockTheRoutine(t *testing.T) {
+	t.Parallel()
+
+	routine := &model.BackupRoutine{Name: "routine", Storage: &model.S3Storage{}}
+
+	tests := []struct {
+		name string
+		read func(ctx context.Context, c *catalog) error
+	}{
+		{name: "GetBackups", read: func(ctx context.Context, c *catalog) error {
+			_, err := c.GetBackups(ctx, service.NewFullBackupFilter(routine))
+			return err
+		}},
+		{name: "GetBackup", read: func(ctx context.Context, c *catalog) error {
+			_, err := c.GetBackup(ctx, routine.Storage, "routine/"+fullID)
+			return err
+		}},
+		{name: "AllBackups", read: func(ctx context.Context, c *catalog) error {
+			_, err := c.AllBackups(ctx, routine)
+			return err
+		}},
+		{name: "LastBackupTimes", read: func(ctx context.Context, c *catalog) error {
+			_, err := c.LastBackupTimes(ctx, routine, model.BackupTypeFull)
+			return err
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			source := &probedSource{fakeSource: &fakeSource{
+				metadata: []listermodels.Metadata{fullMetadata(fullID, "bar", catalogAt(0))},
+			}}
+			c := &catalog{sources: source}
+			lock := c.locks.Get("routine")
+			reads := 0
+			source.onRead = func() {
+				reads++
+				assert.False(t, lock.TryLock(), "a backup could be deleted during the read")
+			}
+
+			require.NoError(t, tt.read(t.Context(), c))
+
+			assert.Positive(t, reads)
+			assert.True(t, lock.TryLock(), "the routine stayed locked after the read")
 		})
 	}
 }

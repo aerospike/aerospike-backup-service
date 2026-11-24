@@ -15,7 +15,8 @@ import (
 type BackupCompletionHandler interface {
 	// OnSuccess is called after a backup completes successfully. It returns immediately:
 	// the registry update, and for full backups the retention cleanup and cluster
-	// configuration backup, continue in the background.
+	// configuration backup, continue in the background. Retention starts once the registry
+	// update returns, so that the update's history scan waits for no backup to be deleted.
 	OnSuccess(
 		ctx context.Context,
 		routine *model.BackupRoutine,
@@ -55,20 +56,14 @@ func (h *backupCompletionHandler) OnSuccess(
 	timestamp time.Time,
 	logger *slog.Logger,
 ) {
-	go h.registry.BackupSucceeded(ctx, routine, backupType)
-
 	if backupType != model.BackupTypeFull {
+		go h.registry.BackupSucceeded(ctx, routine, backupType)
 		return
 	}
 
 	go func() {
-		if err := h.retentionManager.ApplyRetention(ctx, routine); err != nil {
-			if errors.Is(err, context.Canceled) {
-				logger.Info("Old backups cleanup context canceled")
-				return
-			}
-			logger.Error("Failed to clean up old backups", attr.Error(err))
-		}
+		h.registry.BackupSucceeded(ctx, routine, backupType)
+		h.applyRetention(ctx, routine, logger)
 	}()
 
 	go func() {
@@ -83,6 +78,20 @@ func (h *backupCompletionHandler) OnSuccess(
 			}
 		}
 	}()
+}
+
+func (h *backupCompletionHandler) applyRetention(
+	ctx context.Context,
+	routine *model.BackupRoutine,
+	logger *slog.Logger,
+) {
+	if err := h.retentionManager.ApplyRetention(ctx, routine); err != nil {
+		if errors.Is(err, context.Canceled) {
+			logger.Info("Old backups cleanup context canceled")
+			return
+		}
+		logger.Error("Failed to clean up old backups", attr.Error(err))
+	}
 }
 
 func (h *backupCompletionHandler) OnFailure(

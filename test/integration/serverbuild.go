@@ -26,6 +26,9 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go/pkg/asinfo"
+	listermodels "github.com/aerospike/backup-go/pkg/server/lister/models"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/moby/moby/api/types/container"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -180,7 +183,7 @@ func (s *ServerBuildSuite) serverBackupConfig(c *dto.Config) {
 		Path:               dto.Path(s.storagePath()),
 	}}
 	c.BackupRoutines[routineName].Namespaces = new([]dto.NamespaceName{serverNamespace})
-	// The server keeps every backup: server mode rejects a retention policy.
+	// The base configuration's retention deletes the incremental backups after every full one.
 	c.BackupPolicies[policyName].RetentionPolicy = nil
 }
 
@@ -194,6 +197,38 @@ func (s *ServerBuildSuite) storagePath() string {
 // object key.
 func (s *ServerBuildSuite) backupObjects(storagePath, key, folder string) map[string][]byte {
 	return s.s3Objects(s.s3Endpoint, path.Join(storagePath, key, folder)+"/")
+}
+
+// seedServerBackup writes a server backup of the routine to the bucket under storagePath: its
+// metadata and one data file, without the server taking it. It returns the backup's key.
+func (s *ServerBuildSuite) seedServerBackup(storagePath string, metadata listermodels.Metadata) string {
+	content, err := decoder.Marshal(metadata, decoder.JSON, false)
+	s.Require().NoError(err)
+
+	key := s.seedUnfinishedBackup(storagePath, metadata.BackupID, metadata.Namespace)
+	s.putObject(path.Join(storagePath, key, "metadata.json"), content)
+
+	return key
+}
+
+// seedUnfinishedBackup writes one data file of a server backup of the routine to the bucket under
+// storagePath, without the metadata a finished backup has. It returns the backup's key.
+func (s *ServerBuildSuite) seedUnfinishedBackup(storagePath, jobID, namespace string) string {
+	key := path.Join(routineName, jobID)
+	s.putObject(path.Join(storagePath, key, "ns", namespace, "query-stream/data/p0/0.seg"), []byte("records"))
+
+	return key
+}
+
+// putObject writes an object of s3Bucket.
+func (s *ServerBuildSuite) putObject(key string, body []byte) {
+	ctx := s.T().Context()
+	_, err := s.s3RootClient(ctx, s.s3Endpoint).PutObject(ctx, &awsS3.PutObjectInput{
+		Bucket: aws.String(s3Bucket),
+		Key:    aws.String(key),
+		Body:   bytes.NewReader(body),
+	})
+	s.Require().NoError(err)
 }
 
 // assertClusterConfiguration checks that GET /v1/retrieve/configuration returns the node's

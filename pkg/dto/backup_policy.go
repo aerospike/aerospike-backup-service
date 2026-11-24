@@ -36,7 +36,7 @@ type BackupPolicy struct {
 	// Specifies how long to retain full and incremental backups.
 	// Cleanup runs asynchronously after each successful full backup, never deleting backups preemptively.
 	// Ensure storage capacity for at least one extra full backup beyond the retention configuration.
-	RetentionPolicy *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty" extensions:"x-backup-mode=scan"`
+	RetentionPolicy *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty"`
 	// Do not back up any record data (metadata or bin data).
 	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty" default:"false" extensions:"x-backup-mode=scan"`
 	// Do not back up any secondary index definitions.

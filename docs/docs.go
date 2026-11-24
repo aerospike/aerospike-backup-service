@@ -2332,8 +2332,7 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.RetentionPolicy"
                         }
-                    ],
-                    "x-backup-mode": "scan"
+                    ]
                 },
                 "retry-policy": {
                     "description": "RetryPolicy defines the configuration for database scan retry attempts in case of failures.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
