@@ -38,6 +38,7 @@ type Components struct {
 
 	registry      service.BackupStateRegistry
 	configApplier service.ConfigApplier
+	jobPoller     service.ServerJobPoller
 }
 
 // Run starts every component and serves until ctx is canceled or a listener stops. It
@@ -55,6 +56,7 @@ func (c *Components) Run(ctx context.Context) error {
 // context that built the graph. It is called exactly once.
 func (c *Components) Start(ctx context.Context) {
 	c.registry.Start(ctx)
+	c.jobPoller.Start(ctx)
 	c.Scheduler.Start(ctx)
 	c.MetricsCollector.Start(ctx, prometheus.CollectInterval)
 	c.TLSProvider.Start(ctx)
@@ -158,6 +160,7 @@ func InitComponents(
 		TLSProvider:      tlsProvider,
 		registry:         components.registry,
 		configApplier:    configApplier,
+		jobPoller:        components.jobPoller,
 	}, nil
 }
 
@@ -201,6 +204,7 @@ type backupMode struct {
 	routineRunner       service.RoutineBackupRunner
 	restoreManager      service.RestoreManager
 	configRetriever     service.ConfigRetriever
+	jobPoller           service.ServerJobPoller
 }
 
 func newComponentsForMode(
@@ -258,6 +262,7 @@ func newScanBackupMode(
 			scanbackup.NewRestoreValidator(startController, config),
 		),
 		configRetriever: scanbackup.NewConfigRetriever(catalog, pathService, operations),
+		jobPoller:       service.NoServerJobPoller(),
 	}
 }
 
@@ -273,6 +278,7 @@ func newServerBackupMode(
 ) backupMode {
 	catalog := serverbackup.NewCatalog(s3Clients)
 	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config)
+	jobPoller := serverbackup.NewJobPoller(config, clientManager)
 
 	return backupMode{
 		backupReader:        catalog,
@@ -284,6 +290,7 @@ func newServerBackupMode(
 			clientManager,
 			aerospike.NewNamespaceResolver(clientManager),
 			catalog,
+			jobPoller,
 		),
 		restoreManager: serverbackup.NewRestoreManager(
 			clientManager,
@@ -292,6 +299,7 @@ func newServerBackupMode(
 			serverbackup.NewRestoreValidator(),
 		),
 		configRetriever: serverbackup.NewConfigRetriever(catalog, operations),
+		jobPoller:       jobPoller,
 	}
 }
 

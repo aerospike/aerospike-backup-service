@@ -27,21 +27,24 @@ type routineRunner struct {
 	clientManager     aerospike.ClientManager
 	namespaceResolver aerospike.NamespaceResolver
 	catalog           Catalog
+	jobs              JobPoller
 }
 
 var _ service.RoutineBackupRunner = (*routineRunner)(nil)
 
 // NewRoutineRunner returns a RoutineBackupRunner that runs server-side backups. catalog lists the
-// server backups an incremental backup of a namespace builds on.
+// server backups an incremental backup of a namespace builds on, and jobs follows the jobs it starts.
 func NewRoutineRunner(
 	clientManager aerospike.ClientManager,
 	namespaceResolver aerospike.NamespaceResolver,
 	catalog Catalog,
+	jobs JobPoller,
 ) service.RoutineBackupRunner {
 	return &routineRunner{
 		clientManager:     clientManager,
 		namespaceResolver: namespaceResolver,
 		catalog:           catalog,
+		jobs:              jobs,
 	}
 }
 
@@ -151,11 +154,18 @@ func (r *routineRunner) backupNamespace(
 		BackupUploadThreads: ptr.ValueOrZero(policy.ParallelWrite),
 	})
 
-	job := &backupJob{infoClient: infoClient, jobID: jobID, record: record, logger: logger}
+	job := &backupJob{
+		infoClient: infoClient,
+		cluster:    routine.SourceCluster,
+		jobID:      jobID,
+		startedAt:  time.Now(),
+		record:     record,
+		logger:     logger,
+	}
 	if err != nil {
 		if errors.Is(err, asinfo.ErrOutcomeUnknown) {
 			// The server may have started the job even though the start failed.
-			job.abort(context.WithoutCancel(ctx))
+			job.abort(context.WithoutCancel(ctx), r.jobs)
 		}
 
 		return fmt.Errorf("failed to start server backup: %w", err)
@@ -163,26 +173,37 @@ func (r *routineRunner) backupNamespace(
 
 	logger.Info("Server backup started", slog.String("namespace", namespace), slog.String("jobId", jobID))
 
-	return job.Wait(ctx)
+	return job.Wait(ctx, r.jobs)
 }
 
-// backupJob follows one server backup job from its start to its end.
+// lostAfterPolls is how many polls in a row may leave a job out before it counts as lost.
+const lostAfterPolls = 2
+
+// backupJob follows one server backup job from its start to its end, through the polls of its
+// cluster.
 type backupJob struct {
 	infoClient backup.ServerBackupInfo
+	cluster    *model.AerospikeCluster
 	jobID      string
+	// startedAt is when the start answered. A node installs the job shortly after, so only a poll
+	// that began later counts when the job is missing.
+	startedAt time.Time
 	// record receives each status of the job.
 	record func(*infomodels.ResponseBackupState)
 	logger *slog.Logger
 }
 
-// Wait waits for the job to end. If the job had no status for unobservedJobTimeout, or ctx is
-// canceled, Wait aborts the job before it returns.
-func (j *backupJob) Wait(ctx context.Context) error {
-	status, err := j.poll(ctx)
+// Wait waits for the job to end, following it through jobs. If ctx is canceled, Wait aborts the job
+// before it returns. A job that is lost is not aborted: the server does not list it.
+func (j *backupJob) Wait(ctx context.Context, jobs JobPoller) error {
+	status, err := j.poll(ctx, jobs)
 	if err != nil {
-		// The job may still be running on the server. The abort does not use ctx, because an
-		// abort sent on a canceled ctx would fail and leave the job running.
-		j.abort(context.WithoutCancel(ctx))
+		if ctx.Err() != nil {
+			// The abort does not use ctx, because an abort sent on a canceled ctx would fail and
+			// leave the job running.
+			j.abort(context.WithoutCancel(ctx), jobs)
+		}
+
 		return err
 	}
 
@@ -204,29 +225,38 @@ func (j *backupJob) Wait(ctx context.Context) error {
 	}
 }
 
-// poll polls the job until it ends and returns its final status. Each status is passed to record.
-func (j *backupJob) poll(ctx context.Context) (*infomodels.ResponseBackupState, error) {
-	fetch := func(ctx context.Context) (*infomodels.ResponseBackupState, error) {
-		return j.infoClient.GetBackupStatus(ctx, j.jobID)
-	}
+// poll follows the job through its cluster's polls until it ends, and returns its final status.
+// Each status is passed to record. A job that lostAfterPolls polls in a row leave out is lost.
+func (j *backupJob) poll(ctx context.Context, jobs JobPoller) (*infomodels.ResponseBackupState, error) {
+	missed := 0
+	for after := j.startedAt; ; {
+		listing, err := jobs.Next(ctx, j.cluster, after)
+		if err != nil {
+			return nil, err
+		}
+		after = listing.At
 
-	settled := func(status *infomodels.ResponseBackupState) (bool, error) {
+		status, ok := listing.Jobs[j.jobID]
+		if !ok {
+			missed++
+			if missed == lostAfterPolls {
+				return nil, fmt.Errorf("%s %s is lost: the server does not list it", backupJobKind, j.jobID)
+			}
+
+			continue
+		}
+
+		missed = 0
 		j.record(status)
-
-		switch status.State {
-		case infomodels.BackupStateComplete, infomodels.BackupStateFailed, infomodels.BackupStateAborted:
-			return true, nil
-		default:
-			return false, nil
+		if jobEnded(status.State) {
+			return status, nil
 		}
 	}
-
-	return pollJob(ctx, j.logger, backupJobKind, j.jobID, fetch, settled)
 }
 
 // abort aborts the job on the server and waits up to cleanupTimeout for it to end, so that record
 // receives the job's final status and abort origin.
-func (j *backupJob) abort(ctx context.Context) {
+func (j *backupJob) abort(ctx context.Context, jobs JobPoller) {
 	if err := j.infoClient.AbortBackup(ctx, j.jobID); err != nil {
 		j.logger.Warn("Failed to abort server backup", slog.String("jobId", j.jobID), attr.Error(err))
 		return
@@ -235,7 +265,7 @@ func (j *backupJob) abort(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, cleanupTimeout)
 	defer cancel()
 
-	if _, err := j.poll(ctx); err != nil {
+	if _, err := j.poll(ctx, jobs); err != nil {
 		j.logger.Warn("Aborted server backup did not end", slog.String("jobId", j.jobID), attr.Error(err))
 	}
 }
@@ -307,7 +337,7 @@ type namespaceProgress struct {
 	// metrics is the job's throughput, summed across the cluster's nodes.
 	metrics models.Metrics
 	// finished is set once the namespace's backup has ended, whatever its outcome. The job's state
-	// cannot tell: a namespace whose start failed, or whose job went unobserved, has no final status.
+	// cannot tell: a namespace whose start failed, or whose job was lost, has no final status.
 	finished bool
 }
 
