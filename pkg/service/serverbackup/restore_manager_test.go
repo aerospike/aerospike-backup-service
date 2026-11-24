@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -254,7 +255,8 @@ func TestRestoreManager_RestoreByTime_NamespaceFails(t *testing.T) {
 }
 
 // TestRestoreManager_HoldsRoutineStorage checks that a restore read-locks its routine from its
-// first catalog read until the server job ends, and releases it afterwards.
+// first catalog read until the server job ends, and releases it afterwards. A read lock lets
+// restores of one routine run side by side.
 func TestRestoreManager_HoldsRoutineStorage(t *testing.T) {
 	t.Parallel()
 
@@ -302,6 +304,9 @@ func TestRestoreManager_HoldsRoutineStorage(t *testing.T) {
 			retention := env.routineStorage.Get("routine")
 			locked := func() {
 				assert.False(t, retention.TryLock(), "the routine was not locked during the restore")
+				if assert.True(t, retention.TryRLock(), "the restore write-locked the routine") {
+					retention.RUnlock()
+				}
 			}
 
 			env.expectClient()
@@ -318,6 +323,33 @@ func TestRestoreManager_HoldsRoutineStorage(t *testing.T) {
 			assert.True(t, retention.TryLock(), "the routine stayed locked after the restore")
 		})
 	}
+}
+
+// TestRestoreManager_WaitsForRetention checks that a restore that finds retention holding its
+// routine reads the catalog only once retention lets go.
+func TestRestoreManager_WaitsForRetention(t *testing.T) {
+	t.Parallel()
+	env := newRestoreManagerEnv(t)
+	backup := chainBackup(fullID)
+
+	var read atomic.Bool
+	env.catalog.EXPECT().GetBackup(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(context.Context, model.Storage, string) (model.BackupDetails, error) {
+			read.Store(true)
+
+			return backup, nil
+		})
+	env.expectClient()
+	env.expectRestore(t, "bar", fullID)
+
+	retention := env.routineStorage.Get("routine")
+	retention.Lock()
+	jobID := env.manager.Restore(restoreRequestOf(backup))
+
+	assert.Never(t, read.Load, 200*time.Millisecond, 10*time.Millisecond, "the restore read during retention")
+	retention.Unlock()
+
+	assert.Equal(t, model.RestoreSuccess, env.waitForJob(t, jobID).Status)
 }
 
 // TestRestoreManager_CancelRestore checks that canceling a restore job aborts the server job

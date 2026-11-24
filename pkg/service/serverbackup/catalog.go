@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-client-go/v8/types"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 	"github.com/aerospike/backup-go/pkg/server/lister"
@@ -69,7 +70,10 @@ type sourceOpener interface {
 	open(ctx context.Context, storage model.Storage, routineName string) (backupSource, error)
 }
 
+// catalog takes a lock per routine, so that no read of a routine's backups overlaps the deletion
+// of one of them.
 type catalog struct {
+	locks   collections.LockMap // lock per routine
 	sources sourceOpener
 	deleter FolderDeleter
 }
@@ -87,6 +91,10 @@ func (c *catalog) GetBackups(ctx context.Context, filter service.BackupFilter) (
 	if !ok {
 		return nil, fmt.Errorf("unsupported backup filter type %T", filter)
 	}
+
+	lock := c.locks.Get(routineFilter.RoutineName())
+	lock.RLock()
+	defer lock.RUnlock()
 
 	return c.getRoutineBackups(ctx, routineFilter)
 }
@@ -140,6 +148,10 @@ func (c *catalog) GetBackup(ctx context.Context, storage model.Storage, key stri
 		return model.BackupDetails{}, err
 	}
 
+	lock := c.locks.Get(routineName)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	source, err := c.sources.open(ctx, storage, routineName)
 	if err != nil {
 		return model.BackupDetails{}, err
@@ -154,6 +166,10 @@ func (c *catalog) GetBackup(ctx context.Context, storage model.Storage, key stri
 }
 
 func (c *catalog) AllBackups(ctx context.Context, routine *model.BackupRoutine) ([]model.BackupDetails, error) {
+	lock := c.locks.Get(routine.Name)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	_, backups, err := c.listBackups(ctx, routine.Storage, routine.Name)
 
 	return backups, err
@@ -172,10 +188,12 @@ func (c *catalog) Delete(ctx context.Context, storage model.Storage, key string)
 		return fmt.Errorf("%q is not a job id", jobID)
 	}
 
-	// S3 lists metadata.json before the data, so it goes in the first batch: a delete cut short
-	// leaves a folder that is no longer listed, and no later pass finds it.
+	lock := c.locks.Get(routineName)
+	lock.Lock()
+	defer lock.Unlock()
+
 	if err := c.deleter.DeleteFolder(ctx, storage, key); err != nil {
-		return fmt.Errorf("the folder may be partly deleted and no longer listed: %w", err)
+		return err
 	}
 
 	slog.Info("Deleted server backup", slog.String("key", key), attr.Routine(routineName))
@@ -190,6 +208,10 @@ func (c *catalog) LastBackupTimes(
 	routine *model.BackupRoutine,
 	backupTypes ...model.BackupType,
 ) (map[string]time.Time, error) {
+	lock := c.locks.Get(routine.Name)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	source, backups, err := c.listBackups(ctx, routine.Storage, routine.Name)
 	if err != nil {
 		return nil, err

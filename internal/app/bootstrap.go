@@ -294,7 +294,7 @@ func newServerBackupMode(
 			&routineStorage,
 			serverbackup.NewRestoreValidator(),
 		),
-		configRetriever: serverbackup.NewConfigRetriever(catalog, operations),
+		configRetriever: serverbackup.NewConfigRetriever(catalog, operations, &routineStorage),
 	}
 }
 

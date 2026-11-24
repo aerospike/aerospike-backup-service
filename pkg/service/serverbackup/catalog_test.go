@@ -228,7 +228,7 @@ func TestCatalog_Delete(t *testing.T) {
 		{name: "the folder of the backup", key: key, wantDelete: true},
 		{
 			name: "the storage refuses", key: key, wantDelete: true, deleteErr: errors.New("denied"),
-			wantErr: "the folder may be partly deleted and no longer listed: denied",
+			wantErr: "denied",
 		},
 		// Without a job id the key is the folder of all the routine's backups.
 		{name: "no job id", key: "routine/", wantErr: `"" is not a job id`},
@@ -243,13 +243,107 @@ func TestCatalog_Delete(t *testing.T) {
 				deleter.EXPECT().DeleteFolder(t.Context(), backupStorage, tt.key).Return(tt.deleteErr)
 			}
 
-			err := (&catalog{deleter: deleter}).Delete(t.Context(), backupStorage, tt.key)
+			c := &catalog{deleter: deleter}
 
+			err := c.Delete(t.Context(), backupStorage, tt.key)
+
+			assert.True(t, c.locks.Get("routine").TryLock(), "the routine stayed locked after the delete")
 			if tt.wantErr != "" {
 				require.EqualError(t, err, tt.wantErr)
 				return
 			}
 			require.NoError(t, err)
+		})
+	}
+}
+
+// TestCatalog_Delete_LocksReads checks that no read of the routine's backups runs while one of
+// them is deleted.
+func TestCatalog_Delete_LocksReads(t *testing.T) {
+	t.Parallel()
+
+	deleter := NewMockFolderDeleter(gomock.NewController(t))
+	c := &catalog{deleter: deleter}
+
+	deleter.EXPECT().DeleteFolder(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(context.Context, model.Storage, string) error {
+			assert.False(t, c.locks.Get("routine").TryRLock(), "a read could start during the delete")
+
+			return nil
+		})
+
+	require.NoError(t, c.Delete(t.Context(), &model.S3Storage{}, "routine/"+fullID))
+}
+
+// probedSource calls onRead whenever the catalog reads metadata from it.
+type probedSource struct {
+	*fakeSource
+	onRead func()
+}
+
+func (p *probedSource) FetchAllMetadata(ctx context.Context) ([]listermodels.Metadata, error) {
+	p.onRead()
+
+	return p.fakeSource.FetchAllMetadata(ctx)
+}
+
+func (p *probedSource) GetMetadata(ctx context.Context, backupID string) (listermodels.Metadata, error) {
+	p.onRead()
+
+	return p.fakeSource.GetMetadata(ctx, backupID)
+}
+
+func (p *probedSource) open(context.Context, model.Storage, string) (backupSource, error) {
+	return p, nil
+}
+
+// TestCatalog_Reads_LockTheRoutine checks that no backup of the routine can be deleted while its
+// backups are read, and that a read leaves the routine unlocked.
+func TestCatalog_Reads_LockTheRoutine(t *testing.T) {
+	t.Parallel()
+
+	routine := &model.BackupRoutine{Name: "routine", Storage: &model.S3Storage{}}
+
+	tests := []struct {
+		name string
+		read func(ctx context.Context, c *catalog) error
+	}{
+		{name: "GetBackups", read: func(ctx context.Context, c *catalog) error {
+			_, err := c.GetBackups(ctx, service.NewFullBackupFilter(routine))
+			return err
+		}},
+		{name: "GetBackup", read: func(ctx context.Context, c *catalog) error {
+			_, err := c.GetBackup(ctx, routine.Storage, "routine/"+fullID)
+			return err
+		}},
+		{name: "AllBackups", read: func(ctx context.Context, c *catalog) error {
+			_, err := c.AllBackups(ctx, routine)
+			return err
+		}},
+		{name: "LastBackupTimes", read: func(ctx context.Context, c *catalog) error {
+			_, err := c.LastBackupTimes(ctx, routine, model.BackupTypeFull)
+			return err
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			source := &probedSource{fakeSource: &fakeSource{
+				metadata: []listermodels.Metadata{fullMetadata(fullID, "bar", catalogAt(0))},
+			}}
+			c := &catalog{sources: source}
+			lock := c.locks.Get("routine")
+			reads := 0
+			source.onRead = func() {
+				reads++
+				assert.False(t, lock.TryLock(), "a backup could be deleted during the read")
+			}
+
+			require.NoError(t, tt.read(t.Context(), c))
+
+			assert.Positive(t, reads)
+			assert.True(t, lock.TryLock(), "the routine stayed locked after the read")
 		})
 	}
 }

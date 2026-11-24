@@ -296,13 +296,10 @@ func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 	s.assertRecordsIn(s.destinationClient, otherNamespace, []int{4, 5})
 }
 
-// TestServerRetention keeps one full backup. The bucket already holds an older full backup of
-// the routine's namespace with an incremental one, a full backup of a namespace the routine does
-// not back up, an aborted backup and a folder without metadata, which is what an unfinished job
-// leaves. Once a new full backup succeeds, the older backups of the routine's namespace are gone
-// from the bucket and the listing, and the rest is left alone. The older backups are written to
-// the bucket directly: retention reads only their metadata, and the server takes most of a minute
-// for a backup.
+// TestServerRetention keeps one full backup. After a new full backup, the expired backups are gone
+// from the bucket and the listing, and the other seeded folders stay. The older backups are seeded
+// directly, since retention reads only their metadata and the server takes most of a minute for a
+// backup.
 func (s *ServerBackupSuite) TestServerRetention() {
 	storagePath := s.storagePath()
 	oldFull := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -319,10 +316,12 @@ func (s *ServerBackupSuite) TestServerRetention() {
 	otherNamespaceFull := s.seedServerBackup(storagePath, listermodels.Metadata{
 		BackupID: "250101T000000-baz1", Namespace: otherNamespace, Status: listermodels.BackupStatusComplete,
 	})
+	// Retention deletes in job-id order. These ids sort first, so a delete of them would come
+	// before the expired backups are gone, which the check below waits for.
 	unlisted := []string{
-		s.seedUnfinishedBackup(storagePath, "250101T020000-unfn", serverNamespace),
+		s.seedUnfinishedBackup(storagePath, "241231T220000-unfn", serverNamespace),
 		s.seedServerBackup(storagePath, listermodels.Metadata{
-			BackupID: "250101T030000-abrt", Namespace: serverNamespace, Status: listermodels.BackupStatusAborted,
+			BackupID: "241231T230000-abrt", Namespace: serverNamespace, Status: listermodels.BackupStatusAborted,
 		}),
 	}
 

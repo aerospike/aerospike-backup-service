@@ -12,6 +12,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -67,16 +68,22 @@ func TestConfigRetriever(t *testing.T) {
 
 					return tt.backups, nil
 				})
+			routineStorage := &collections.LockMap{}
+			retention := routineStorage.Get("routine")
 			operations := storage.NewMockOperations(ctrl)
 			operations.EXPECT().ReadFileNames(gomock.Any(), routine.Storage, folder, "", nil).
 				Return(tt.keys, nil).MaxTimes(1)
 			operations.EXPECT().ReadFile(gomock.Any(), routine.Storage, gomock.Any()).DoAndReturn(
 				func(_ context.Context, _ model.Storage, file string) ([]byte, error) {
+					assert.False(t, retention.TryLock(), "retention could delete the files being read")
+
 					return []byte(files[file]), nil
 				}).Times(len(tt.keys))
 
-			archive, err := NewConfigRetriever(backupReader, operations).
+			archive, err := NewConfigRetriever(backupReader, operations, routineStorage).
 				RetrieveConfiguration(t.Context(), routine, toTime)
+
+			assert.True(t, retention.TryLock(), "the routine stayed locked after the retrieval")
 
 			if tt.wantErr != "" {
 				require.ErrorIs(t, err, model.ErrNotFound)
@@ -105,7 +112,8 @@ func TestConfigRetriever_ReadFails(t *testing.T) {
 	operations.EXPECT().ReadFileNames(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("storage down"))
 
-	_, err := NewConfigRetriever(backupReader, operations).RetrieveConfiguration(t.Context(), routine, time.Now())
+	_, err := NewConfigRetriever(backupReader, operations, &collections.LockMap{}).
+		RetrieveConfiguration(t.Context(), routine, time.Now())
 
 	require.EqualError(t, err,
 		"failed to list the configuration files in routine/"+fullID+"/config: storage down")
