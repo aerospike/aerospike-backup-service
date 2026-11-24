@@ -16,7 +16,7 @@ type BackupCompletionHandler interface {
 	// OnSuccess is called after a backup completes successfully. It returns immediately:
 	// the registry update, and for full backups the retention cleanup and cluster
 	// configuration backup, continue in the background. Retention starts once the registry
-	// update is done, so that its history scan never waits for a backup to be deleted.
+	// update returns, so that the update's history scan waits for no backup to be deleted.
 	OnSuccess(
 		ctx context.Context,
 		routine *model.BackupRoutine,

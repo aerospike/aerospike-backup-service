@@ -270,7 +270,8 @@ func newServerBackupMode(
 	clientManager aerospike.ClientManager,
 	restoreJobs *service.RestoreJobsHolder,
 ) backupMode {
-	// routineStorage keeps retention from deleting the backups of a routine while a restore reads them.
+	// routineStorage keeps retention from deleting the backups of a routine while a restore or a
+	// configuration retrieval reads them.
 	var routineStorage u.LockMap
 
 	catalog := serverbackup.NewCatalog(s3Clients, operations)

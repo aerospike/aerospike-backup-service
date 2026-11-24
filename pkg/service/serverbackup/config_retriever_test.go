@@ -57,10 +57,23 @@ func TestConfigRetriever(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)
+			routineStorage := &collections.LockMap{}
+			retention := routineStorage.Get("routine")
+			// held checks that the retrieval holds a read lock on the routine.
+			held := func() {
+				if retention.TryLock() {
+					retention.Unlock() // else a retrieval that locks later blocks on it
+					assert.Fail(t, "retention could delete the backup being read")
+				}
+				if assert.True(t, retention.TryRLock(), "the retrieval write-locked the routine") {
+					retention.RUnlock()
+				}
+			}
 
 			backupReader := service.NewMockBackupReader(ctrl)
 			backupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).DoAndReturn(
 				func(_ context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
+					held()
 					routineFilter := filter.(*service.RoutineFilter)
 					assert.Equal(t, model.BackupTypeFull, routineFilter.BackupType())
 					assert.True(t, routineFilter.OnlyLast())
@@ -68,14 +81,12 @@ func TestConfigRetriever(t *testing.T) {
 
 					return tt.backups, nil
 				})
-			routineStorage := &collections.LockMap{}
-			retention := routineStorage.Get("routine")
 			operations := storage.NewMockOperations(ctrl)
 			operations.EXPECT().ReadFileNames(gomock.Any(), routine.Storage, folder, "", nil).
 				Return(tt.keys, nil).MaxTimes(1)
 			operations.EXPECT().ReadFile(gomock.Any(), routine.Storage, gomock.Any()).DoAndReturn(
 				func(_ context.Context, _ model.Storage, file string) ([]byte, error) {
-					assert.False(t, retention.TryLock(), "retention could delete the files being read")
+					held()
 
 					return []byte(files[file]), nil
 				}).Times(len(tt.keys))

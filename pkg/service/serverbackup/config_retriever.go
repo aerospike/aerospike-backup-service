@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"path"
 	"strings"
 	"time"
@@ -44,9 +45,8 @@ func NewConfigRetriever(
 func (r *configRetriever) RetrieveConfiguration(
 	ctx context.Context, routine *model.BackupRoutine, toTime time.Time,
 ) ([]byte, error) {
-	lock := r.routineStorage.Get(routine.Name)
-	lock.RLock()
-	defer lock.RUnlock()
+	unlock := readLockRoutine(r.routineStorage, routine.Name, slog.Default())
+	defer unlock()
 
 	backups, err := r.backupReader.GetBackups(ctx, service.NewFullBackupFilter(routine).WithToTime(toTime).Last())
 	if err != nil {

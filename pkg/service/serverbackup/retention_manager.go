@@ -21,7 +21,8 @@ import (
 type retentionManager struct {
 	catalog Catalog
 
-	// Lock per routine. A restore holds it while the server reads the routine's backups.
+	// Lock per routine. A restore holds it while the server reads the routine's backups, and a
+	// configuration retrieval while it reads a backup's files.
 	routineStorage *collections.LockMap
 }
 
@@ -40,7 +41,7 @@ func (m *retentionManager) ApplyRetention(ctx context.Context, routine *model.Ba
 
 	mu := m.routineStorage.Get(routine.Name)
 	if !mu.TryLock() {
-		slog.Info("Skipped retention: a restore or another cleanup holds the routine",
+		slog.Info("Skipped retention: a restore, a configuration retrieval or another cleanup holds the routine",
 			attr.Routine(routine.Name))
 
 		return nil // The next full backup retries.
@@ -60,6 +61,18 @@ func (m *retentionManager) ApplyRetention(ctx context.Context, routine *model.Ba
 	}
 
 	return errs
+}
+
+// readLockRoutine read-locks the routine, so that retention deletes none of its backups, and
+// returns the unlock. It logs when the caller has to wait for retention to finish.
+func readLockRoutine(routineStorage *collections.LockMap, routineName string, logger *slog.Logger) func() {
+	lock := routineStorage.Get(routineName)
+	if !lock.TryRLock() {
+		logger.Info("Waiting for retention of the routine to finish", attr.Routine(routineName))
+		lock.RLock()
+	}
+
+	return lock.RUnlock
 }
 
 // expiredBackups returns the backups the policy no longer keeps.

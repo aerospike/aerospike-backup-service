@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -75,7 +74,7 @@ func (m *restoreManager) restoreBackup(
 		return err
 	}
 
-	unlock := m.lockRoutine(routineName, logger)
+	unlock := readLockRoutine(m.routineStorage, routineName, logger)
 	defer unlock()
 
 	details, err := m.catalog.GetBackup(ctx, request.SourceStorage, key)
@@ -123,7 +122,7 @@ func (m *restoreManager) restoreToTime(
 	jobID model.RestoreJobID,
 	logger *slog.Logger,
 ) error {
-	unlock := m.lockRoutine(request.RoutineName, logger)
+	unlock := readLockRoutine(m.routineStorage, request.RoutineName, logger)
 	defer unlock()
 
 	chains, err := service.FindRestoreChains(ctx, m.catalog, request)
@@ -171,18 +170,6 @@ func (m *restoreManager) restoreToTime(
 	wg.Wait()
 
 	return errs
-}
-
-// lockRoutine read-locks the routine for a restore and returns the unlock. It logs when the restore
-// has to wait for retention to finish with the routine's backups.
-func (m *restoreManager) lockRoutine(routineName string, logger *slog.Logger) func() {
-	lock := m.routineStorage.Get(routineName)
-	if !lock.TryRLock() {
-		logger.Info("Restore waits for retention of the routine to finish", attr.Routine(routineName))
-		lock.RLock()
-	}
-
-	return lock.RUnlock
 }
 
 // restoreChain runs one server restore job that applies backups, the backups of one namespace
