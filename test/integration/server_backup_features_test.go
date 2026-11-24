@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	as "github.com/aerospike/aerospike-client-go/v8"
+	listermodels "github.com/aerospike/backup-go/pkg/server/lister/models"
 )
 
 // TestServerSetList backs up with a routine set-list of two of three sets and checks that only
@@ -292,6 +294,64 @@ func (s *ServerBackupSuite) TestServerMultipleNamespaces() {
 	s.restoreIntoDestinationByTimestamp(e, time.Now())
 	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{3})
 	s.assertRecordsIn(s.destinationClient, otherNamespace, []int{4, 5})
+}
+
+// TestServerRetention keeps one full backup. After a new full backup, the expired backups are gone
+// from the bucket and the listing, and the other seeded folders stay. The older backups are seeded
+// directly, since retention reads only their metadata and the server takes most of a minute for a
+// backup.
+func (s *ServerBackupSuite) TestServerRetention() {
+	storagePath := s.storagePath()
+	oldFull := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	expired := []string{
+		s.seedServerBackup(storagePath, listermodels.Metadata{
+			BackupID: "250101T000000-ful1", Namespace: serverNamespace, Status: listermodels.BackupStatusComplete,
+		}),
+		s.seedServerBackup(storagePath, listermodels.Metadata{
+			BackupID: "250101T010000-inc1", Namespace: serverNamespace, Status: listermodels.BackupStatusComplete,
+			ModifiedAfterUnixS: oldFull.Unix(),
+		}),
+	}
+	otherNamespaceFull := s.seedServerBackup(storagePath, listermodels.Metadata{
+		BackupID: "250101T000000-baz1", Namespace: otherNamespace, Status: listermodels.BackupStatusComplete,
+	})
+	// Retention deletes in job-id order. These ids sort first, so a delete of them would come
+	// before the expired backups are gone, which the check below waits for.
+	unlisted := []string{
+		s.seedUnfinishedBackup(storagePath, "241231T220000-unfn", serverNamespace),
+		s.seedServerBackup(storagePath, listermodels.Metadata{
+			BackupID: "241231T230000-abrt", Namespace: serverNamespace, Status: listermodels.BackupStatusAborted,
+		}),
+	}
+
+	s.seedRecordsIn(s.client, serverNamespace, []int{1})
+
+	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
+		c.BackupPolicies[policyName].RetentionPolicy = &dto.RetentionPolicy{FullBackups: new(1)}
+	})
+
+	s.triggerFullBackup(e)
+	newFull := s.waitForFinishedBackup(e, model.BackupTypeFull)
+
+	// Retention runs in the background after the backup succeeds.
+	ok := s.eventually(serverJobTimeout, pollInterval, func() bool {
+		return !slices.ContainsFunc(expired, func(key string) bool {
+			return len(s.backupObjects(storagePath, key, "")) > 0
+		})
+	})
+	s.Require().True(ok, "the expired backups are still in the bucket")
+
+	kept := []string{otherNamespaceFull, newFull.Key}
+	var listed []string
+	for _, backup := range s.getBackups(e, model.BackupTypeFull) {
+		listed = append(listed, backup.Key)
+	}
+	s.Equal(kept, listed, "full backups listed after retention")
+
+	for _, key := range slices.Concat(kept, unlisted) {
+		s.NotEmpty(s.backupObjects(storagePath, key, ""), "%s is gone from the bucket", key)
+	}
 }
 
 // TestServerNonS3Storage configures server backup mode with local storage, which the server
