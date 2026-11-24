@@ -303,7 +303,10 @@ func TestRestoreManager_HoldsRoutineStorage(t *testing.T) {
 			env := newRestoreManagerEnv(t)
 			retention := env.routineStorage.Get("routine")
 			locked := func() {
-				assert.False(t, retention.TryLock(), "the routine was not locked during the restore")
+				if retention.TryLock() {
+					retention.Unlock() // else a restore that locks later blocks on it
+					assert.Fail(t, "the routine was not locked during the restore")
+				}
 				if assert.True(t, retention.TryRLock(), "the restore write-locked the routine") {
 					retention.RUnlock()
 				}

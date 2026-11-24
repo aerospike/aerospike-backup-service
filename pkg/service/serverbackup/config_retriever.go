@@ -45,7 +45,8 @@ func NewConfigRetriever(
 func (r *configRetriever) RetrieveConfiguration(
 	ctx context.Context, routine *model.BackupRoutine, toTime time.Time,
 ) ([]byte, error) {
-	unlock := readLockRoutine(r.routineStorage, routine.Name, slog.Default())
+	logger := slog.With(slog.String("label", "configuration retrieval"))
+	unlock := readLockRoutine(r.routineStorage, routine.Name, logger)
 	defer unlock()
 
 	backups, err := r.backupReader.GetBackups(ctx, service.NewFullBackupFilter(routine).WithToTime(toTime).Last())
