@@ -2,8 +2,10 @@ package dto
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/cron"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
@@ -160,6 +162,9 @@ func (c *Config) validateServerMode() error {
 		); err != nil {
 			return err
 		}
+		if err := validateServerChain(routine, c.BackupPolicies[routine.BackupPolicy]); err != nil {
+			return fmt.Errorf("backup routine '%s' validation error: %w", name, err)
+		}
 	}
 
 	// The server writes the backups, so only the S3 options it receives apply. ABS's own S3 client
@@ -198,6 +203,43 @@ func (c *Config) validateServerMode() error {
 		if err := validateServerRate(policy); err != nil {
 			return fmt.Errorf("policy '%s' validation error: %w", name, err)
 		}
+	}
+
+	return nil
+}
+
+// chainCheckCycles is how many full backup intervals validateServerChain checks, so that a
+// schedule whose intervals differ in length, such as a monthly one, is checked at its longest.
+const chainCheckCycles = 12
+
+// validateServerChain checks that a server restore can apply every backup made between two full
+// backups: the server restores at most model.MaxServerRestoreChain backups in one job. A
+// cumulative incremental backup builds on the full backup alone, so only one is ever restored.
+func validateServerChain(routine *BackupRoutine, policy *BackupPolicy) error {
+	if routine.IncrIntervalCron == "" || policy != nil && policy.IncrMode == IncrModeCumulative {
+		return nil
+	}
+
+	// Only the lengths of the intervals matter, so UTC will do.
+	full := cron.NewSchedule(routine.IntervalCron, time.UTC)
+	incr := cron.NewSchedule(routine.IncrIntervalCron, time.UTC)
+
+	start := time.Now()
+	for range chainCheckCycles {
+		end, err := full.NextFireTime(start)
+		if err != nil { // the full backups stop: no interval is left to check.
+			return nil //nolint:nilerr // the schedule was validated; it only ends.
+		}
+
+		if incr.FireCount(start, end, model.MaxServerRestoreChain) == model.MaxServerRestoreChain {
+			return fmt.Errorf("%w: incr-interval-cron %q runs more than %d incremental backups between "+
+				"two full backups of interval-cron %q, while a server restore applies at most %d backups; "+
+				"run full backups more often, incremental ones less often, or set incr-mode %q",
+				errInvalidValue, routine.IncrIntervalCron, model.MaxServerRestoreChain-1,
+				routine.IntervalCron, model.MaxServerRestoreChain, IncrModeCumulative)
+		}
+
+		start = end
 	}
 
 	return nil

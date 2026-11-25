@@ -31,6 +31,8 @@ type BackupRoutine struct {
 	// Cron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron" example:"0 0 * * * *" validate:"required"`
 	// The interval for incremental backup as a cron expression string (optional).
+	// In server backup mode with differential incremental backups, it may fire at most 31 times
+	// between two full backups: a server restore applies at most 32 backups.
 	IncrIntervalCron string `yaml:"incr-interval-cron,omitempty" json:"incr-interval-cron,omitempty" example:"*/10 * * * * *" extensions:"x-nullable"`
 	// Timezone for evaluating this routine's cron expressions (optional).
 	// Accepted values: UTC (default), Local, or an IANA timezone name such as America/New_York.

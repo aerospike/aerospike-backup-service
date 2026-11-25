@@ -117,3 +117,12 @@ func TestNextTrigger_IANAZone(t *testing.T) {
 	assert.Equal(t, 0, inLoc.Minute())
 	assert.Equal(t, 0, inLoc.Second())
 }
+
+func TestFireCount(t *testing.T) {
+	hourly := Schedule{Cron: "0 0 * * * *", Location: time.UTC}
+	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	// Neither bound counts: 01:00 to 23:00.
+	assert.Equal(t, 23, hourly.FireCount(from, from.Add(24*time.Hour), 100))
+	assert.Equal(t, 5, hourly.FireCount(from, from.Add(24*time.Hour), 5))
+}

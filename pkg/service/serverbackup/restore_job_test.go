@@ -246,47 +246,6 @@ func TestStartRestore_InvalidBackupKey(t *testing.T) {
 	require.EqualError(t, err, `invalid server backup key "`+fullID+`": want <routine>/<job id>`)
 }
 
-// TestStartRestore_ChainLength checks that the longest chain the server restores in one job is
-// started, and that a chain one backup longer is refused before anything is sent to the server.
-func TestStartRestore_ChainLength(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		length  int
-		wantErr string
-	}{
-		{name: "longest chain", length: maxChainLength},
-		{name: "one backup too many", length: maxChainLength + 1,
-			wantErr: "restore chain has 33 backups, the server restores at most 32 in one job"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			ctrl := gomock.NewController(t)
-
-			backups := make([]model.BackupDetails, tt.length)
-			for i := range backups {
-				backups[i] = chainBackup(fmt.Sprintf("261020T09%04d-aaaa", i))
-			}
-
-			infoClient := aerospike.NewMockInfoGetter(ctrl)
-			if tt.wantErr == "" {
-				infoClient.EXPECT().StartRestore(gomock.Any(), gomock.Any()).Return(restoreJobID, nil)
-			}
-
-			_, err := startRestore(t.Context(), infoClient, strictPolicy, backups, discardLogger)
-			if tt.wantErr != "" {
-				require.EqualError(t, err, tt.wantErr)
-				return
-			}
-
-			require.NoError(t, err)
-		})
-	}
-}
-
 // newTestRestoreJob returns the restore job "job" of namespace bar.
 func newTestRestoreJob(infoClient *aerospike.MockInfoGetter, mode model.RestoreMode) *restoreJob {
 	return &restoreJob{infoClient: infoClient, namespace: "bar", serverJobID: "job", mode: mode, logger: discardLogger}

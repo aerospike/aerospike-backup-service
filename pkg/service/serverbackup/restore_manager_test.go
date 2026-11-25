@@ -254,6 +254,42 @@ func TestRestoreManager_RestoreByTime_NamespaceFails(t *testing.T) {
 		"failed to restore routine routine, namespace bar by timestamp: failed to start server restore: refused")
 }
 
+// TestRestoreManager_RestoreByTime_ChainTooLong checks that a restore is refused before any job
+// starts, and before the destination is connected to, when one namespace's chain is longer than
+// the server restores in one job, even though the other namespace's chain is short.
+func TestRestoreManager_RestoreByTime_ChainTooLong(t *testing.T) {
+	t.Parallel()
+	env := newRestoreManagerEnv(t)
+
+	barFull, barIncremental := chainOf("bar")
+	bazFull, _ := chainOf("baz")
+	// Each incremental starts where the previous one ended, so none covers another.
+	bazIncrementals := make([]model.BackupDetails, model.MaxServerRestoreChain)
+	from := bazFull.Created
+	for i := range bazIncrementals {
+		incremental := chainBackup(fmt.Sprintf("261020T09%04d-aaaa", i))
+		incremental.Namespace = "baz"
+		incremental.From = from
+		incremental.Created = from.Add(time.Second)
+		bazIncrementals[i] = incremental
+		from = incremental.Created
+	}
+
+	gomock.InOrder(
+		env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
+			Return([]model.BackupDetails{barFull, bazFull}, nil),
+		env.catalog.EXPECT().GetBackups(gomock.Any(), gomock.Any()).
+			Return(append([]model.BackupDetails{barIncremental}, bazIncrementals...), nil),
+	)
+
+	jobID := env.manager.RestoreByTime(restoreAfter(barIncremental))
+
+	status := env.waitForJob(t, jobID)
+	assert.Equal(t, model.RestoreFailure, status.Status)
+	require.EqualError(t, status.Error,
+		"restore chain of namespace baz has 33 backups, the server restores at most 32 in one job")
+}
+
 // TestRestoreManager_HoldsRoutineStorage checks that a restore read-locks its routine from its
 // first catalog read until the server job ends, and releases it afterwards. A read lock lets
 // restores of one routine run side by side.
