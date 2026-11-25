@@ -31,7 +31,7 @@ type S3ClientProvider interface {
 
 // Catalog reads and deletes server backups. It reads them from the metadata the server writes
 // next to each of them, and their counts from the manifests, index and UDF files it writes with
-// them. Like scan mode, it lists no empty incremental backup: there is nothing to restore from one.
+// them.
 type Catalog interface {
 	service.BackupReader
 
@@ -40,17 +40,10 @@ type Catalog interface {
 	GetBackup(ctx context.Context, st model.Storage, key string) (model.BackupDetails, error)
 
 	// AllBackups returns every committed backup of the routine, oldest first, without its counts.
-	// Unlike GetBackups, it returns the empty incremental backups too: they take storage as well.
 	AllBackups(ctx context.Context, routine *model.BackupRoutine) ([]model.BackupDetails, error)
 
 	// Delete deletes the folder of the backup with the key, with everything in it.
 	Delete(ctx context.Context, st model.Storage, key string) error
-
-	// LastBackupTimes returns, per namespace, the creation time of the routine's newest listed
-	// backup of any of backupTypes. A namespace with no such backup has no entry.
-	LastBackupTimes(
-		ctx context.Context, routine *model.BackupRoutine, backupTypes ...model.BackupType,
-	) (map[string]time.Time, error)
 }
 
 // backupSource reads a routine's server backups. *lister.Lister is one.
@@ -80,7 +73,7 @@ func NewCatalog(s3Clients S3ClientProvider, operations storage.Operations) Catal
 	return &catalog{sources: newListerOpener(s3Clients), operations: operations}
 }
 
-// GetBackups returns the routine's listed server backups that match the filter, oldest first.
+// GetBackups returns the routine's committed server backups that match the filter, oldest first.
 func (c *catalog) GetBackups(ctx context.Context, filter service.BackupFilter) ([]model.BackupDetails, error) {
 	routineFilter, ok := filter.(*service.RoutineFilter)
 	if !ok {
@@ -107,34 +100,17 @@ func (c *catalog) getRoutineBackups(ctx context.Context, filter *service.Routine
 		return b.BackupType() != filter.BackupType() || !bounds.Contains(b.Created)
 	})
 
-	if filter.OnlyLast() {
-		for _, backup := range slices.Backward(backups) {
-			listed, err := withStatistics(ctx, source, &backup)
-			if err != nil {
-				return nil, err
-			}
-
-			if listed {
-				return []model.BackupDetails{backup}, nil
-			}
-		}
-
-		return nil, nil
+	if filter.OnlyLast() && len(backups) > 0 {
+		backups = backups[len(backups)-1:]
 	}
 
-	matching := make([]model.BackupDetails, 0, len(backups))
-	for _, backup := range backups {
-		listed, err := withStatistics(ctx, source, &backup)
-		if err != nil {
+	for i := range backups {
+		if err := withStatistics(ctx, source, &backups[i]); err != nil {
 			return nil, err
 		}
-
-		if listed {
-			matching = append(matching, backup)
-		}
 	}
 
-	return matching, nil
+	return backups, nil
 }
 
 func (c *catalog) GetBackup(ctx context.Context, st model.Storage, key string) (model.BackupDetails, error) {
@@ -194,48 +170,6 @@ func (c *catalog) Delete(ctx context.Context, st model.Storage, key string) erro
 	slog.Info("Deleted server backup", slog.String("key", key), attr.Routine(routineName))
 
 	return nil
-}
-
-// LastBackupTimes reads the counts of only the incremental backups newer than their namespace's
-// last listed backup, to tell whether they are empty.
-func (c *catalog) LastBackupTimes(
-	ctx context.Context,
-	routine *model.BackupRoutine,
-	backupTypes ...model.BackupType,
-) (map[string]time.Time, error) {
-	lock := c.locks.Get(routine.Name)
-	lock.RLock()
-	defer lock.RUnlock()
-
-	source, backups, err := c.listBackups(ctx, routine.Storage, routine.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// Newest first, so that the first listed backup of a namespace is its last.
-	slices.SortStableFunc(backups, func(a, b model.BackupDetails) int { return b.Created.Compare(a.Created) })
-
-	last := make(map[string]time.Time)
-	for _, backup := range backups {
-		if _, found := last[backup.Namespace]; found || !slices.Contains(backupTypes, backup.BackupType()) {
-			continue
-		}
-
-		if backup.BackupType() == model.BackupTypeIncremental {
-			listed, err := withStatistics(ctx, source, &backup)
-			if err != nil {
-				return nil, err
-			}
-
-			if !listed {
-				continue
-			}
-		}
-
-		last[backup.Namespace] = backup.Created
-	}
-
-	return last, nil
 }
 
 // listBackups returns the routine's committed server backups in storage, oldest first, without
@@ -313,17 +247,16 @@ func toBackupDetails(metadata listermodels.Metadata, st model.Storage, routineNa
 	)
 }
 
-// withStatistics sets the counts of the backup from source. It reports whether the backup is
-// listed: an empty incremental backup is not.
-func withStatistics(ctx context.Context, source backupSource, backup *model.BackupDetails) (bool, error) {
+// withStatistics sets the counts of the backup from source.
+func withStatistics(ctx context.Context, source backupSource, backup *model.BackupDetails) error {
 	_, jobID, err := parseBackupKey(backup.Key)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	stats, err := source.GetStatistics(ctx, jobID)
 	if err != nil {
-		return false, fmt.Errorf("failed to read the counts of server backup %s: %w", jobID, err)
+		return fmt.Errorf("failed to read the counts of server backup %s: %w", jobID, err)
 	}
 
 	backup.RecordCount = stats.RecordCount
@@ -332,13 +265,7 @@ func withStatistics(ctx context.Context, source backupSource, backup *model.Back
 	backup.SecondaryIndexCount = stats.IndexCount
 	backup.UDFCount = stats.UDFCount
 
-	return backup.BackupType() == model.BackupTypeFull || !isEmpty(stats), nil
-}
-
-// isEmpty reports whether a server backup holds no records: it has no segment files. A zero
-// record count alone does not tell, since it counts only the base round.
-func isEmpty(stats listermodels.Statistics) bool {
-	return stats.FileCount == 0
+	return nil
 }
 
 // finishedTime returns the time the backup's data is consistent to: the checkpoint of a strict
