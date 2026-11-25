@@ -9,8 +9,8 @@ const (
 	BackupModeScan BackupMode = "scan"
 	// BackupModeServer delegates backup and restore to the Aerospike server, which writes to S3 directly.
 	BackupModeServer BackupMode = "server"
-)
 
-// MaxServerRestoreChain is the most backups a server restore job applies: a full backup and the
-// incremental backups after it (AS_RESTORE_CHAIN_MAX_LINKS).
-const MaxServerRestoreChain = 32
+	// MaxServerRestoreChain is the most backups a server restore job applies: a full backup and the
+	// incremental backups after it (AS_RESTORE_CHAIN_MAX_LINKS).
+	MaxServerRestoreChain = 32
+)
