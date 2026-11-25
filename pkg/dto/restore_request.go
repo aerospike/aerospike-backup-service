@@ -38,7 +38,7 @@ type RestoreTimestampRequest struct {
 	// The backup routine name.
 	Routine string `json:"routine" example:"daily" validate:"required"`
 	// Disable reverse order of incremental backups optimisation.
-	DisableReordering bool `json:"disable-reordering,omitempty" default:"false"`
+	DisableReordering bool `json:"disable-reordering,omitempty" default:"false" extensions:"x-backup-mode=scan"`
 }
 
 // Validate validates the restore operation request.
@@ -155,6 +155,9 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 	if err := validateRestorePolicy(policy, config); err != nil {
 		return nil, err
 	}
+	if err := r.validateBackupMode(config); err != nil {
+		return nil, err
+	}
 
 	return &model.RestoreTimestampRequest{
 		DestinationCluster: *cluster,
@@ -165,6 +168,17 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 		Storage:            storage,
 		DisableReordering:  r.DisableReordering,
 	}, nil
+}
+
+// validateBackupMode rejects disable-reordering in the server backup mode: the server applies a
+// chain in its own order.
+func (r *RestoreTimestampRequest) validateBackupMode(config *model.Config) error {
+	if !config.IsServerBackupMode() {
+		return nil
+	}
+
+	return rejectOptions("restore request", unsupportedInServerMode,
+		option{"disable-reordering", r.DisableReordering})
 }
 
 func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, error) {
@@ -178,6 +192,9 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 		return nil, fmt.Errorf("invalid storage: %w", err)
 	}
 	if err := validateRestoreStorage(storage, config); err != nil {
+		return nil, err
+	}
+	if err := validateBackupKey(string(r.BackupDataPath), config); err != nil {
 		return nil, err
 	}
 

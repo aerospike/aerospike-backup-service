@@ -599,6 +599,49 @@ func TestRestoreRequests_ToModel_StorageByBackupMode(t *testing.T) {
 	}
 }
 
+func TestRestoreTimestampRequest_ToModel_DisableReordering(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		backupMode model.BackupMode
+		policy     BaseRestorePolicy
+		wantErr    string
+	}{
+		{name: "scan mode", backupMode: model.BackupModeScan},
+		{name: "server mode", backupMode: model.BackupModeServer,
+			policy:  BaseRestorePolicy{Mode: RestoreModeStrict},
+			wantErr: `restore request sets disable-reordering, which backup-mode "server" does not support`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			config := model.NewConfig()
+			config.ServiceConfig.Backup = &model.BackupCommonConfig{BackupMode: tt.backupMode}
+			require.NoError(t, config.AddCluster("cluster", &model.AerospikeCluster{}))
+			require.NoError(t, config.AddStorage("s3", &model.S3Storage{Bucket: "bucket"}))
+
+			_, err := (&RestoreTimestampRequest{
+				DestinationClusterConfig: DestinationClusterConfig{Name: "cluster"},
+				StorageConfig:            StorageConfig{Name: "s3"},
+				Time:                     1739538000000,
+				Routine:                  "routine",
+				Policy:                   &TimestampRestorePolicy{BaseRestorePolicy: tt.policy},
+				DisableReordering:        true,
+			}).ToModel(config)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+
+			require.ErrorIs(t, err, errInvalidValue)
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
 func TestNewRestoreRequestFromReader(t *testing.T) {
 	t.Parallel()
 

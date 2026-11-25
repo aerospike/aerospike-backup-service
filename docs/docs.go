@@ -3354,7 +3354,8 @@ const docTemplate = `{
                 "disable-reordering": {
                     "description": "Disable reverse order of incremental backups optimisation.",
                     "type": "boolean",
-                    "default": false
+                    "default": false,
+                    "x-backup-mode": "scan"
                 },
                 "policy": {
                     "description": "Restore policy to use in the operation.",

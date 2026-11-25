@@ -155,3 +155,43 @@ func TestValidateRestoreStorage(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateBackupKey(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		backupMode model.BackupMode
+		key        string
+		wantErr    bool
+	}{
+		{name: "server mode key", backupMode: model.BackupModeServer, key: "daily/260316T142035-k3f9"},
+		{name: "scan mode path", backupMode: model.BackupModeScan, key: "daily/backup/1739538000000/data"},
+		{name: "server mode routine only", backupMode: model.BackupModeServer, key: "daily", wantErr: true},
+		{name: "server mode no routine", backupMode: model.BackupModeServer, key: "/260316T142035-k3f9",
+			wantErr: true},
+		{name: "server mode malformed job id", backupMode: model.BackupModeServer, key: "daily/backup",
+			wantErr: true},
+		{name: "server mode nested path", backupMode: model.BackupModeServer,
+			key: "daily/260316T142035-k3f9/bar", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			config := &model.Config{ServiceConfig: model.ServiceConfig{
+				Backup: &model.BackupCommonConfig{BackupMode: tt.backupMode},
+			}}
+
+			err := validateBackupKey(tt.key, config)
+			if tt.wantErr {
+				require.ErrorIs(t, err, errInvalidValue)
+				require.ErrorContains(t, err, "is not a server backup key")
+				return
+			}
+
+			require.NoError(t, err)
+		})
+	}
+}

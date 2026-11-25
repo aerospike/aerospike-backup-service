@@ -2,9 +2,11 @@ package dto
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/aerospike/backup-go/pkg/asinfo"
 )
 
 // RestoreMode selects how the server restores a server-side backup.
@@ -52,6 +54,22 @@ func validateRestoreStorage(storage model.Storage, config *model.Config) error {
 
 	return fmt.Errorf("%w: the restore storage is not S3 storage, which backup-mode %q requires",
 		errInvalidValue, model.BackupModeServer)
+}
+
+// validateBackupKey checks that a server-side restore names its backup by the key the backup
+// listing returns, <routine>/<job id>. A scan restore names a path in storage.
+func validateBackupKey(key string, config *model.Config) error {
+	if !config.IsServerBackupMode() {
+		return nil
+	}
+
+	routineName, jobID, _ := strings.Cut(key, "/")
+	if routineName != "" && asinfo.IsJobID(jobID) {
+		return nil
+	}
+
+	return fmt.Errorf("%w: backup-data-path %q is not a server backup key: want <routine>/<job id>",
+		errInvalidValue, key)
 }
 
 // validateRestorePolicy checks policy against the service's backup mode. A scan restore has no
