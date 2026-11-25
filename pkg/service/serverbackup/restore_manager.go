@@ -50,7 +50,7 @@ func NewRestoreManager(
 
 // Restore starts, in the background, the restore of the one backup the request names by its key.
 func (m *restoreManager) Restore(request *model.RestoreRequest) model.RestoreJobID {
-	jobID, ctx := m.NewJob(request.BackupDataPath)
+	jobID, ctx := m.NewJob()
 
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore job", slog.Any("path", request.BackupDataPath))
@@ -102,7 +102,7 @@ func (m *restoreManager) restoreBackup(
 // RestoreByTime starts, in the background, the restore of the routine's namespaces to the
 // request's time. The chain of each namespace is restored by one server restore job.
 func (m *restoreManager) RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID {
-	jobID, ctx := m.NewJob(request.RoutineName)
+	jobID, ctx := m.NewJob()
 
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore by time job",

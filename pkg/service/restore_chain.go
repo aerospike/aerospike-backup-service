@@ -129,10 +129,11 @@ func AllBackups(chains map[string]RestoreChain) []model.BackupDetails {
 	return backups
 }
 
+// filterIncrementals returns the incremental backups to apply after full, oldest first: those
+// newer than full, but for any that newer ones cover, since a backup holds every change from its From.
 func filterIncrementals(
 	full model.BackupDetails, incrementals []model.BackupDetails,
 ) []model.BackupDetails {
-	// Sort incrementals descending by Created
 	slices.SortFunc(incrementals, func(a, b model.BackupDetails) int {
 		return b.Created.Compare(a.Created)
 	})
@@ -141,34 +142,23 @@ func filterIncrementals(
 	var coveredUntil time.Time
 
 	for _, incr := range incrementals {
-		// Apply only incrementals strictly newer than the selected full backup.
 		if !incr.Created.After(full.Created) {
 			continue
 		}
 
-		// If this incremental is fully covered by newer ones, skip it.
 		if !coveredUntil.IsZero() && !incr.From.Before(coveredUntil) {
 			continue
 		}
 
 		filteredIncr = append(filteredIncr, incr)
-		coveredUntil = updateCoveredUntil(coveredUntil, incr.From)
+		if !incr.From.IsZero() {
+			coveredUntil = incr.From
+		}
 	}
 
-	// Append filtered incrementals in chronological order
 	slices.Reverse(filteredIncr)
 
 	return filteredIncr
-}
-
-func updateCoveredUntil(current, incrFrom time.Time) time.Time {
-	if incrFrom.IsZero() {
-		return current
-	}
-	if current.IsZero() || incrFrom.Before(current) {
-		return incrFrom
-	}
-	return current
 }
 
 func splitByNamespace(backups []model.BackupDetails) map[string][]model.BackupDetails {

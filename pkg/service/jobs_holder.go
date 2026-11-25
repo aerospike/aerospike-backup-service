@@ -46,19 +46,15 @@ type restoreJob struct {
 	// started is the timestamp marking the initiation of the restore job.
 	started time.Time
 
-	// label provides a user-friendly name for the restore job, used for metrics.
-	label string
-
 	// cancel is a function that cancels the context of the restore job,
 	// effectively stopping the operation.
 	cancel context.CancelFunc
 }
 
-func newRestoreJob(label string, cancel context.CancelFunc) *restoreJob {
+func newRestoreJob(cancel context.CancelFunc) *restoreJob {
 	return &restoreJob{
 		status:  model.RestoreRunning,
 		started: time.Now().Truncate(time.Millisecond),
-		label:   label,
 		cancel:  cancel,
 	}
 }
@@ -183,12 +179,12 @@ func NewRestoreJobsHolder() *RestoreJobsHolder {
 
 // NewJob registers a new restore job and returns its id together with the context the job
 // must run in. The job is finished, and its context released, by FinishJob.
-func (h *RestoreJobsHolder) NewJob(label string) (model.RestoreJobID, context.Context) {
+func (h *RestoreJobsHolder) NewJob() (model.RestoreJobID, context.Context) {
 	//nolint:forbidigo // a job is detached on purpose: neither its request nor shutdown may cancel it.
 	ctx, cancel := context.WithCancel(context.Background())
 	// #nosec G404
 	id := model.RestoreJobID(rand.Int64N(maxJSONSafeJobID) + 1)
-	h.Store(id, newRestoreJob(label, cancel))
+	h.Store(id, newRestoreJob(cancel))
 
 	return id, ctx
 }
