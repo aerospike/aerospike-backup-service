@@ -125,7 +125,13 @@ func (m *restoreManager) restoreToTime(
 	unlock := readLockRoutine(m.routineStorage, request.RoutineName, logger)
 	defer unlock()
 
-	chains, err := service.FindRestoreChains(ctx, m.catalog, request)
+	// Restore reads no counts, so the chains are built from one listing of the routine's backups.
+	backups, err := m.catalog.AllBackups(ctx, request.Storage, request.RoutineName)
+	if err != nil {
+		return fmt.Errorf("failed to read the backups of routine %s: %w", request.RoutineName, err)
+	}
+
+	chains, err := service.RestoreChains(backups, request.Time)
 	if err != nil {
 		return err
 	}

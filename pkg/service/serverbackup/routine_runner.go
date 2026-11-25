@@ -253,20 +253,20 @@ func (r *routineRunner) lowerBounds(
 		return nil, nil
 	}
 
-	backups, err := r.catalog.AllBackups(ctx, routine)
+	backups, err := r.catalog.AllBackups(ctx, routine.Storage, routine.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read the backups of routine %s: %w", routine.Name, err)
 	}
 
 	cumulative := routine.BackupPolicy.GetIncrModeOrDefault() == model.IncrModeCumulative
 	bounds := make(map[string]time.Time)
-	for _, backup := range backups {
-		if cumulative && backup.BackupType() == model.BackupTypeIncremental {
+	for _, details := range backups {
+		if cumulative && details.BackupType() == model.BackupTypeIncremental {
 			continue
 		}
 
-		if bound, found := bounds[backup.Namespace]; !found || backup.Created.After(bound) {
-			bounds[backup.Namespace] = backup.Created
+		if bound, found := bounds[details.Namespace]; !found || details.Created.After(bound) {
+			bounds[details.Namespace] = details.Created
 		}
 	}
 

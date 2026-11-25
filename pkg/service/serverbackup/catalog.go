@@ -39,8 +39,9 @@ type Catalog interface {
 	// does not need. A key names one backup, because a server job backs up one namespace.
 	GetBackup(ctx context.Context, st model.Storage, key string) (model.BackupDetails, error)
 
-	// AllBackups returns every committed backup of the routine, oldest first, without its counts.
-	AllBackups(ctx context.Context, routine *model.BackupRoutine) ([]model.BackupDetails, error)
+	// AllBackups returns every committed backup of the routine in the storage, oldest first,
+	// without its counts.
+	AllBackups(ctx context.Context, st model.Storage, routineName string) ([]model.BackupDetails, error)
 
 	// Delete deletes the folder of the backup with the key, with everything in it.
 	Delete(ctx context.Context, st model.Storage, key string) error
@@ -136,12 +137,12 @@ func (c *catalog) GetBackup(ctx context.Context, st model.Storage, key string) (
 	return toBackupDetails(metadata, st, routineName), nil
 }
 
-func (c *catalog) AllBackups(ctx context.Context, routine *model.BackupRoutine) ([]model.BackupDetails, error) {
-	lock := c.locks.Get(routine.Name)
+func (c *catalog) AllBackups(ctx context.Context, st model.Storage, routineName string) ([]model.BackupDetails, error) {
+	lock := c.locks.Get(routineName)
 	lock.RLock()
 	defer lock.RUnlock()
 
-	_, backups, err := c.listBackups(ctx, routine.Storage, routine.Name)
+	_, backups, err := c.listBackups(ctx, st, routineName)
 
 	return backups, err
 }

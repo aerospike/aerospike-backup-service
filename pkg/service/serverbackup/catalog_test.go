@@ -207,7 +207,7 @@ func TestCatalog_AllBackups(t *testing.T) {
 	}}
 	routine := &model.BackupRoutine{Name: "routine", Storage: &model.S3Storage{}}
 
-	backups, err := source.catalog().AllBackups(t.Context(), routine)
+	backups, err := source.catalog().AllBackups(t.Context(), routine.Storage, routine.Name)
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"routine/full", "routine/incr-empty", "routine/full-baz"}, keys(backups))
@@ -319,7 +319,7 @@ func TestCatalog_Reads_LockTheRoutine(t *testing.T) {
 			return err
 		}},
 		{name: "AllBackups", read: func(ctx context.Context, c *catalog) error {
-			_, err := c.AllBackups(ctx, routine)
+			_, err := c.AllBackups(ctx, routine.Storage, routine.Name)
 			return err
 		}},
 	}

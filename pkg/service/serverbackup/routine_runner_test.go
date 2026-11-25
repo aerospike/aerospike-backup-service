@@ -63,7 +63,7 @@ func TestRoutineRunner_LowerBounds(t *testing.T) {
 				BackupPolicy: &model.BackupPolicy{IncrMode: tt.incrMode},
 			}
 			catalog := NewMockCatalog(gomock.NewController(t))
-			catalog.EXPECT().AllBackups(gomock.Any(), routine).Return(backups, nil)
+			catalog.EXPECT().AllBackups(gomock.Any(), routine.Storage, routine.Name).Return(backups, nil)
 
 			bounds, err := (&routineRunner{catalog: catalog}).
 				lowerBounds(t.Context(), routine, model.BackupTypeIncremental)
@@ -92,7 +92,7 @@ func TestRoutineRunner_LowerBounds_ReadFails(t *testing.T) {
 	t.Parallel()
 
 	catalog := NewMockCatalog(gomock.NewController(t))
-	catalog.EXPECT().AllBackups(gomock.Any(), gomock.Any()).Return(nil, errors.New("storage down"))
+	catalog.EXPECT().AllBackups(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("storage down"))
 	routine := &model.BackupRoutine{Name: "routine", BackupPolicy: &model.BackupPolicy{}}
 
 	got, err := (&routineRunner{catalog: catalog}).lowerBounds(t.Context(), routine, model.BackupTypeIncremental)
@@ -382,7 +382,7 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
 			catalog := NewMockCatalog(ctrl)
-			catalog.EXPECT().AllBackups(gomock.Any(), gomock.Any()).
+			catalog.EXPECT().AllBackups(gomock.Any(), gomock.Any(), gomock.Any()).
 				Return(lastBackups, nil).MaxTimes(1) // once per run, not once per namespace.
 
 			var requests []infomodels.RequestBackup

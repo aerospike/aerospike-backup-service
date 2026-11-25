@@ -43,18 +43,18 @@ func (m *MockCatalog) EXPECT() *MockCatalogMockRecorder {
 }
 
 // AllBackups mocks base method.
-func (m *MockCatalog) AllBackups(ctx context.Context, routine *model.BackupRoutine) ([]model.BackupDetails, error) {
+func (m *MockCatalog) AllBackups(ctx context.Context, st model.Storage, routineName string) ([]model.BackupDetails, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AllBackups", ctx, routine)
+	ret := m.ctrl.Call(m, "AllBackups", ctx, st, routineName)
 	ret0, _ := ret[0].([]model.BackupDetails)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AllBackups indicates an expected call of AllBackups.
-func (mr *MockCatalogMockRecorder) AllBackups(ctx, routine any) *gomock.Call {
+func (mr *MockCatalogMockRecorder) AllBackups(ctx, st, routineName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllBackups", reflect.TypeOf((*MockCatalog)(nil).AllBackups), ctx, routine)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllBackups", reflect.TypeOf((*MockCatalog)(nil).AllBackups), ctx, st, routineName)
 }
 
 // Delete mocks base method.

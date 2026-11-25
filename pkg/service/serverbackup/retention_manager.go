@@ -48,7 +48,7 @@ func (m *retentionManager) ApplyRetention(ctx context.Context, routine *model.Ba
 	}
 	defer mu.Unlock()
 
-	backups, err := m.catalog.AllBackups(ctx, routine)
+	backups, err := m.catalog.AllBackups(ctx, routine.Storage, routine.Name)
 	if err != nil {
 		return fmt.Errorf("failed to list the backups of routine %s: %w", routine.Name, err)
 	}
