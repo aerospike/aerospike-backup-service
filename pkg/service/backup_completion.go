@@ -13,10 +13,10 @@ import (
 // BackupCompletionHandler updates the registry when a backup run ends. After a full backup it
 // also starts retention cleanup, and a cluster configuration backup if the routine asks for it.
 type BackupCompletionHandler interface {
-	// OnSuccess is called after a backup completes successfully. It returns immediately:
-	// the registry update, and for full backups the retention cleanup and cluster
-	// configuration backup, continue in the background. Retention starts once the registry
-	// update returns, so that the update's history scan waits for no backup to be deleted.
+	// OnSuccess is called after a backup completes successfully. It drops the backup from the
+	// registry before it returns: the history rescan, and for full backups the retention cleanup
+	// and cluster configuration backup, continue in the background. Retention starts once the
+	// rescan returns, so that the rescan waits for no backup to be deleted.
 	OnSuccess(
 		ctx context.Context,
 		routine *model.BackupRoutine,
@@ -24,7 +24,7 @@ type BackupCompletionHandler interface {
 		timestamp time.Time,
 		logger *slog.Logger,
 	)
-	// OnFailure is called when a backup fails (clears failed state in registry).
+	// OnFailure is called when a backup fails: it drops the backup from the registry.
 	OnFailure(routine *model.BackupRoutine, backupType model.BackupType)
 }
 
@@ -56,13 +56,14 @@ func (h *backupCompletionHandler) OnSuccess(
 	timestamp time.Time,
 	logger *slog.Logger,
 ) {
+	h.registry.BackupEnded(routine.Name, backupType)
 	if backupType != model.BackupTypeFull {
-		go h.registry.BackupSucceeded(ctx, routine, backupType)
+		go h.registry.BackupSucceeded(ctx, routine)
 		return
 	}
 
 	go func() {
-		h.registry.BackupSucceeded(ctx, routine, backupType)
+		h.registry.BackupSucceeded(ctx, routine)
 		h.applyRetention(ctx, routine, logger)
 	}()
 
@@ -98,5 +99,5 @@ func (h *backupCompletionHandler) OnFailure(
 	routine *model.BackupRoutine,
 	backupType model.BackupType,
 ) {
-	h.registry.BackupFailed(routine.Name, backupType)
+	h.registry.BackupEnded(routine.Name, backupType)
 }

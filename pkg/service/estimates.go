@@ -8,9 +8,7 @@ import (
 )
 
 // currentBackupStatus is the state of the backup the handler runs, or nil when none is running or
-// it has not started. Progress is capped at 99% while the backup runs.
-// A server backup reports its server jobs, the running jobs' throughput and the records the jobs
-// have backed up so far. It reports no total: the server counts no records to back up.
+// it has not started.
 func currentBackupStatus(handler RoutineBackupHandler) *model.RunningJob {
 	if handler == nil {
 		return nil
@@ -22,6 +20,13 @@ func currentBackupStatus(handler RoutineBackupHandler) *model.RunningJob {
 		return nil
 	}
 
+	return NewBackupRunningJob(*run)
+}
+
+// NewBackupRunningJob is the state of a running backup. Progress is capped at 99% while the backup
+// runs. A server backup reports its server jobs, the running jobs' throughput and the records the
+// jobs have backed up so far. It reports no total: the server counts no records to back up.
+func NewBackupRunningJob(run model.BackupRun) *model.RunningJob {
 	progress := min(run.Progress, 0.99)
 	job := &model.RunningJob{
 		StartTime:        run.StartTime,

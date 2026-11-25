@@ -33,10 +33,10 @@ type BackupStateRegistry interface {
 
 	// BackupStarted stores the handler of a started backup, so it can be tracked and canceled.
 	BackupStarted(routineName string, backupType model.BackupType, handler RoutineBackupHandler)
-	// BackupSucceeded drops the handler and rescans storage to refresh the last backup time.
-	BackupSucceeded(ctx context.Context, routine *model.BackupRoutine, backupType model.BackupType)
-	// BackupFailed drops the handler of a failed backup.
-	BackupFailed(routineName string, backupType model.BackupType)
+	// BackupEnded drops the handler of a backup that ended, whatever its outcome.
+	BackupEnded(routineName string, backupType model.BackupType)
+	// BackupSucceeded rescans storage to refresh the routine's last backup time.
+	BackupSucceeded(ctx context.Context, routine *model.BackupRoutine)
 }
 
 // routineProvider supplies the configured backup routines. It is the part of *model.Config
@@ -57,6 +57,9 @@ type backupStateRegistry struct {
 	// config is needed to calculate next run times
 	config routineProvider
 
+	// running sets the running backups the mode follows outside the handlers.
+	running RunningBackups
+
 	// pending holds the names of routines waiting for a history sync; the definition to
 	// scan is resolved from config when the queue is drained, so a scan always runs
 	// against the current configuration. signal has a buffer of one, so a request never
@@ -70,15 +73,18 @@ var _ BackupStateRegistry = (*backupStateRegistry)(nil)
 
 const getStateTimeout = 15 * time.Second
 
-// NewBackupStateRegistry returns a BackupStateRegistry.
+// NewBackupStateRegistry returns a BackupStateRegistry. running sets the backups the mode follows
+// outside the handlers.
 func NewBackupStateRegistry(
 	history HistoryManager,
 	config routineProvider,
+	running RunningBackups,
 ) BackupStateRegistry {
 	return &backupStateRegistry{
 		trackers: collections.NewSafeMap[string, *routineTracker](),
 		history:  history,
 		config:   config,
+		running:  running,
 		pending:  make(map[string]struct{}),
 		signal:   make(chan struct{}, 1),
 	}
@@ -261,24 +267,28 @@ func (r *backupStateRegistry) BackupStarted(
 	r.getTracker(routineName).register(backupType, handler)
 }
 
-// BackupSucceeded removes a backup from the registry and triggers a storage scan
-// to update the last backup timestamp. Storage is the single source of truth for history.
-func (r *backupStateRegistry) BackupSucceeded(
-	ctx context.Context,
-	routine *model.BackupRoutine,
-	backupType model.BackupType,
-) {
-	r.getTracker(routine.Name).clearBackup(backupType)
-	_ = r.scanSingleRoutineHistory(ctx, routine)
+// BackupEnded deletes a backup from the registry.
+func (r *backupStateRegistry) BackupEnded(routineName string, backupType model.BackupType) {
+	r.getTracker(routineName).clearBackup(backupType)
 }
 
-// BackupFailed deletes a backup from the registry.
-func (r *backupStateRegistry) BackupFailed(routineName string, backupType model.BackupType) {
-	r.getTracker(routineName).clearBackup(backupType)
+// BackupSucceeded rescans storage to update the last backup timestamp. Storage is the single
+// source of truth for history.
+func (r *backupStateRegistry) BackupSucceeded(ctx context.Context, routine *model.BackupRoutine) {
+	_ = r.scanSingleRoutineHistory(ctx, routine)
 }
 
 // GetRoutineState returns the current backup statistics for a routine.
 func (r *backupStateRegistry) GetRoutineState(routine *model.BackupRoutine) model.RoutineState {
+	state := r.trackedState(routine)
+	r.running.Describe(routine.Name, &state)
+
+	return state
+}
+
+// trackedState returns the routine's state as its tracker has it: the backups its handlers run and
+// its history.
+func (r *backupStateRegistry) trackedState(routine *model.BackupRoutine) model.RoutineState {
 	tracker := r.getTracker(routine.Name)
 
 	snapshot, err := tracker.getState(getStateTimeout)
@@ -299,12 +309,10 @@ func (r *backupStateRegistry) GetRoutineState(routine *model.BackupRoutine) mode
 	}
 
 	return model.RoutineState{
-		Full:                snapshot.full,
-		Incremental:         snapshot.incr,
-		LastRunTime:         snapshot.lastRun,
-		NextRunTime:         nextRunTime,
-		LastFullJobs:        snapshot.lastFullJobs,
-		LastIncrementalJobs: snapshot.lastIncrJobs,
+		Full:        snapshot.full,
+		Incremental: snapshot.incr,
+		LastRunTime: snapshot.lastRun,
+		NextRunTime: nextRunTime,
 	}
 }
 
@@ -327,4 +335,5 @@ func (r *backupStateRegistry) Cancel(routineName string) {
 	if tracker, ok := r.trackers.Load(routineName); ok {
 		tracker.cancel()
 	}
+	r.running.Cancel(routineName)
 }

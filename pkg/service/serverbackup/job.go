@@ -20,7 +20,7 @@ const (
 
 const (
 	// pollInterval is how often a running server restore job is asked for its status. Backup
-	// jobs follow the JobPoller instead.
+	// jobs follow the job poller's listings instead.
 	pollInterval = time.Second
 	// unobservedJobTimeout is how long a job may go without a status before pollJob gives up on
 	// it. Giving up aborts the job, so the bound covers a transient loss of contact with the

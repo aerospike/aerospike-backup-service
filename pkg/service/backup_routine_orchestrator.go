@@ -11,14 +11,15 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 )
 
-// BackupOrchestrator runs one full or incremental backup of a routine, from admission
-// through execution to completion handling and reporting.
+// BackupOrchestrator backs a routine up when its schedule or a request asks for a full or
+// incremental backup. Each backup mode has its own.
 type BackupOrchestrator interface {
 	// Backup executes a full or incremental backup for the given routine snapshot.
 	Backup(ctx context.Context, routine *model.BackupRoutine, now time.Time, backupType model.BackupType)
 }
 
-// backupOrchestrator runs backup operations for a routine.
+// backupOrchestrator runs a scan backup of a routine, from admission through execution to
+// completion handling and reporting.
 type backupOrchestrator struct {
 	registry          BackupStateRegistry
 	completionHandler BackupCompletionHandler
@@ -76,22 +77,14 @@ func (p *backupOrchestrator) runBackupInternal(
 	backupType model.BackupType,
 	logger *slog.Logger,
 ) error {
-	if backupType == model.BackupTypeIncremental {
-		logger.Info(
-			"incremental backup started",
-			slog.Time("now", now),
-			slog.String("incrMode", string(routine.BackupPolicy.GetIncrModeOrDefault())),
-		)
-	} else {
-		logger.Info("full backup started", slog.Time("now", now))
-	}
+	LogBackupStarted(logger, routine, now, backupType)
 
 	runSpec := model.BackupRunSpec{
 		Type:      backupType,
 		StartTime: now,
 		TimeBounds: model.TimeBounds{
 			FromTime: p.backupFromTime(routine, backupType),
-			ToTime:   p.backupToTime(routine, now),
+			ToTime:   routine.BackupPolicy.UpperBound(now),
 		},
 	}
 	backupHandler, err := p.routineRunner.Run(ctx, routine, runSpec, logger)
@@ -110,12 +103,19 @@ func (p *backupOrchestrator) runBackupInternal(
 	return nil
 }
 
-func (p *backupOrchestrator) backupToTime(routine *model.BackupRoutine, now time.Time) *time.Time {
-	if routine.BackupPolicy.IsSealedOrDefault() {
-		return &now
+// LogBackupStarted logs that a backup of the routine started at now.
+func LogBackupStarted(logger *slog.Logger, routine *model.BackupRoutine, now time.Time, backupType model.BackupType) {
+	if backupType == model.BackupTypeIncremental {
+		logger.Info(
+			"incremental backup started",
+			slog.Time("now", now),
+			slog.String("incrMode", string(routine.BackupPolicy.GetIncrModeOrDefault())),
+		)
+
+		return
 	}
 
-	return nil
+	logger.Info("full backup started", slog.Time("now", now))
 }
 
 func (p *backupOrchestrator) backupFromTime(routine *model.BackupRoutine, backupType model.BackupType) *time.Time {

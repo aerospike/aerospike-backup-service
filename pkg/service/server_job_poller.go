@@ -2,7 +2,8 @@ package service
 
 import "context"
 
-// ServerJobPoller follows the backup jobs that run on the Aerospike servers, whoever started them.
+// ServerJobPoller follows the backup jobs that run on the Aerospike servers, whoever started them,
+// and reports each routine's backup when its jobs end.
 type ServerJobPoller interface {
 	// Start polls in the background until ctx is canceled.
 	Start(ctx context.Context)

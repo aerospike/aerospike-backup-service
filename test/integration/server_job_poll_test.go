@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,10 +20,18 @@ import (
 
 // TestServerJobPoll starts an incremental backup by hand into the routine's path, as a person
 // would from a CLI, and checks that backup-status reports where the job writes and its time range,
-// and that ABS's poll ties the job to the routine.
+// that ABS's poll ties the job to the routine and follows it as the routine's incremental backup,
+// and that canceling the routine aborts it.
 func (s *ServerBackupSuite) TestServerJobPoll() {
+	// 50 records at the server's lowest rate keep the job running for several polls.
+	ages := make([]int, 50)
+	for i := range ages {
+		ages[i] = i + 1
+	}
+	s.seedRecordsIn(s.client, serverNamespace, ages)
+
 	logFile := filepath.Join(s.T().TempDir(), "abs.log")
-	s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
+	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
 		c.ServiceConfig.Logger = &dto.LoggerConfig{
 			Level:        "INFO",
 			Format:       "JSON",
@@ -34,11 +43,14 @@ func (s *ServerBackupSuite) TestServerJobPoll() {
 	// Job ids are single-use for the cluster's uptime, and the suite's cluster outlives one run.
 	jobID := fmt.Sprintf("manual-%d", time.Now().UnixNano()%1e9)
 	routinePath := path.Join(s.storagePath(), routineName)
-	before := strconv.FormatInt(time.Now().Add(-time.Minute).Unix(), 10)
+	// The bounds cover the records seeded above, a second or more before the upper one.
+	before := strconv.FormatInt(time.Now().Add(time.Second).Unix(), 10)
 	after := strconv.FormatInt(time.Now().Add(-time.Hour).Unix(), 10)
+	time.Sleep(2 * time.Second)
 	answer := s.info(s.client, fmt.Sprintf(
 		"backup:namespace=%s;job-id=%s;object-storage-type=aws-s3;s3-bucket=%s;s3-region=%s;"+
-			"s3-profile=%s;s3-endpoint=%s;path=%s;modified-after=%s;modified-before=%s",
+			"s3-profile=%s;s3-endpoint=%s;path=%s;modified-after=%s;modified-before=%s;"+
+			"backup-rps=5;backup-worker-threads=1",
 		serverNamespace, jobID, s3Bucket, s3Region, s3Profile, s.s3Endpoint, routinePath, after, before))
 	s.Require().False(strings.HasPrefix(answer, "ERROR"), "backup start: %s", answer)
 
@@ -63,6 +75,23 @@ func (s *ServerBackupSuite) TestServerJobPoll() {
 	s.Equal(s3Bucket, logged["bucket"])
 	s.Equal(routinePath+"/", logged["path"])
 	s.Equal("incremental", logged["type"])
+
+	var jobs []dto.ServerBackupJob
+	s.Require().True(s.eventually(time.Minute, pollInterval, func() bool {
+		incremental := s.routineState(e).Incremental
+		if incremental == nil {
+			return false
+		}
+		jobs = incremental.ServerJobs
+		return len(jobs) == 1
+	}), "ABS does not report job %s as the routine's incremental backup", jobID)
+	s.Equal(jobID, jobs[0].JobID)
+
+	status, body := s.do(e, http.MethodPost, fmt.Sprintf("%s/v1/backups/cancel/%s", e.baseURL, routineName), nil)
+	s.Require().Equal(http.StatusAccepted, status, "cancel: %s", body)
+	s.True(s.eventually(serverJobTimeout, pollInterval, func() bool {
+		return s.backupJobFields(jobID)["state"] == "ABORTED"
+	}), "canceling the routine did not abort job %s", jobID)
 }
 
 // loggedJob returns the attributes of the first "Server backup job" record of jobID in the JSON

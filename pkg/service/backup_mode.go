@@ -10,7 +10,8 @@ import (
 
 // This file holds the interfaces a backup mode implements. The scan mode implements them in
 // pkg/service/scanbackup and the server mode in pkg/service/serverbackup. The rest of this
-// package uses a mode only through these interfaces.
+// package uses a mode only through these interfaces. RoutineBackupRunner and RoutineBackupHandler
+// are the scan mode's: a server backup runs on the servers, which ABS polls instead.
 
 // BackupReader lists the backups in a storage.
 type BackupReader interface {
@@ -21,9 +22,8 @@ type BackupReader interface {
 
 // RoutineBackupRunner resolves the namespaces of a routine and starts a backup for each of them.
 type RoutineBackupRunner interface {
-	// Run resolves target namespaces and starts one cancelable backup per namespace. A scan run
-	// ends with ctx; a server run does not, because its jobs complete on the server without ABS.
-	// The handler's Cancel ends either.
+	// Run resolves target namespaces and starts one cancelable backup per namespace. The run
+	// ends with ctx or the handler's Cancel.
 	Run(
 		ctx context.Context,
 		routine *model.BackupRoutine,
@@ -44,6 +44,28 @@ type RoutineBackupHandler interface {
 	// Status is a snapshot of the run, or nil before it has started.
 	Status() *model.BackupRun
 }
+
+// RunningBackups is what a backup mode knows of its routines' running backups besides the handlers
+// the registry holds: the server mode follows the jobs on the servers.
+type RunningBackups interface {
+	// Describe sets in state the routine's running backups and the server jobs of its last ended
+	// ones.
+	Describe(routineName string, state *model.RoutineState)
+	// Cancel stops the routine's running backups.
+	Cancel(routineName string)
+}
+
+// NoRunningBackups returns the RunningBackups of the scan mode, whose registry holds every running
+// backup.
+func NoRunningBackups() RunningBackups {
+	return noRunningBackups{}
+}
+
+type noRunningBackups struct{}
+
+func (noRunningBackups) Describe(string, *model.RoutineState) {}
+
+func (noRunningBackups) Cancel(string) {}
 
 // BackupRetentionManager deletes the backups that fall outside a routine's retention policy.
 type BackupRetentionManager interface {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
+	"maps"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
@@ -22,61 +22,46 @@ type routineProvider interface {
 	Routines() map[string]*model.BackupRoutine
 }
 
-// JobPoller lists the backup jobs of every cluster a routine backs up, every jobPollInterval,
-// whoever started them, and hands each listing to the runs that follow jobs on that cluster.
-type JobPoller interface {
-	service.ServerJobPoller
-	// Next waits for the first successful poll of cluster that began after after, and returns
-	// its listing. It ends only with ctx. A cluster is polled while a run waits on it, even
-	// when no routine backs it up any more.
-	Next(ctx context.Context, cluster *model.AerospikeCluster, after time.Time) (JobListing, error)
-}
-
-// JobListing is what one poll of a cluster listed.
-type JobListing struct {
-	// Jobs holds every backup job the cluster's nodes know, by id.
-	Jobs map[string]*infomodels.ResponseBackupState
-	// At is when the poll began: a job started later may be missing from it.
-	At time.Time
-}
-
-// jobPoller polls the clusters in turn. It logs each job that appears or changes state, with the
-// routine whose path it writes to.
+// jobPoller lists the backup jobs of each cluster a routine backs up or a run is on, every
+// jobPollInterval, whoever started them. It hands each listing to the runs, aborts the jobs of the
+// canceled ones, and reports each run that ended. It logs each job that appears or changes state,
+// with the routine whose path it writes to.
 type jobPoller struct {
 	routines      routineProvider
 	clientManager aerospike.ClientManager
+	runs          *Runs
+	completion    service.BackupCompletionHandler
+	reporter      service.BackupReporter
 	logger        *slog.Logger
-
-	mu sync.Mutex
-	// clusters holds what the poller knows of each cluster, by the cluster's hash.
-	clusters map[uint64]*clusterPolls
+	// listings holds the last successful listing of each cluster polled, by the cluster's hash. Only
+	// the poll uses it.
+	listings map[uint64]map[string]*infomodels.ResponseBackupState
 }
 
-// clusterPolls is what the poller knows of one cluster.
-type clusterPolls struct {
-	cluster *model.AerospikeCluster
-	// latest is the last successful poll, zero before the first. A published listing is never
-	// changed, so a run may read it without the lock.
-	latest JobListing
-	// polled is closed by the next successful poll, which then replaces it.
-	polled chan struct{}
-	// waiters counts the runs waiting in Next.
-	waiters int
-}
+var _ service.ServerJobPoller = (*jobPoller)(nil)
 
-var _ JobPoller = (*jobPoller)(nil)
-
-// NewJobPoller returns a JobPoller of the clusters of routines.
-func NewJobPoller(routines routineProvider, clientManager aerospike.ClientManager) JobPoller {
+// NewJobPoller returns the ServerJobPoller of the clusters of routines and of runs. It reports
+// each run that ends through reporter, and completes it through completion.
+func NewJobPoller(
+	routines routineProvider,
+	clientManager aerospike.ClientManager,
+	runs *Runs,
+	completion service.BackupCompletionHandler,
+	reporter service.BackupReporter,
+) service.ServerJobPoller {
 	return &jobPoller{
 		routines:      routines,
 		clientManager: clientManager,
+		runs:          runs,
+		completion:    completion,
+		reporter:      reporter,
 		logger:        slog.Default(),
-		clusters:      make(map[uint64]*clusterPolls),
+		listings:      make(map[uint64]map[string]*infomodels.ResponseBackupState),
 	}
 }
 
-// Start polls at once and then every jobPollInterval until ctx is canceled.
+// Start polls at once, then every jobPollInterval and whenever a routine is canceled, until ctx
+// is canceled.
 func (p *jobPoller) Start(ctx context.Context) {
 	go p.run(ctx)
 }
@@ -94,150 +79,105 @@ func (p *jobPoller) run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+		case <-p.runs.cancels():
 		}
 	}
 }
 
-// Next waits for the first successful poll of cluster that began after after.
-func (p *jobPoller) Next(ctx context.Context, cluster *model.AerospikeCluster, after time.Time) (JobListing, error) {
-	p.mu.Lock()
-	c := p.clusterLocked(cluster)
-	c.waiters++
-	p.mu.Unlock()
-
-	defer func() {
-		p.mu.Lock()
-		c.waiters--
-		p.mu.Unlock()
-	}()
-
-	for {
-		p.mu.Lock()
-		latest, polled := c.latest, c.polled
-		p.mu.Unlock()
-
-		if latest.At.After(after) {
-			return latest, nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return JobListing{}, ctx.Err()
-		case <-polled:
-		}
-	}
-}
-
-// poll lists the jobs of each cluster to poll. A cluster whose listing fails keeps its last
-// successful poll, and its waiters wait for the next one.
+// poll lists the jobs of each cluster to poll, and forgets the listings of the others.
 func (p *jobPoller) poll(ctx context.Context) {
 	routines := p.routines.Routines()
 
-	for _, c := range p.clustersToPoll(routines) {
-		at := time.Now()
-
-		jobs, err := p.listJobs(ctx, c.cluster)
-		if err != nil {
-			p.logger.Warn("Failed to list server backup jobs",
-				slog.String("cluster", c.cluster.ClusterLabel), attr.Error(err))
-
-			continue
-		}
-
-		p.publish(c, JobListing{Jobs: jobsByID(jobs), At: at}, jobs, routines)
-	}
-}
-
-// clustersToPoll returns the clusters routines back up and those a run waits on, and forgets the
-// others.
-func (p *jobPoller) clustersToPoll(routines map[string]*model.BackupRoutine) []*clusterPolls {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	used := make(map[*clusterPolls]bool)
+	clusters := make(map[uint64]*model.AerospikeCluster)
 	for _, routine := range routines {
-		used[p.clusterLocked(routine.SourceCluster)] = true
+		clusters[routine.SourceCluster.Hash()] = routine.SourceCluster
+	}
+	for _, cluster := range p.runs.clusters(routines) {
+		clusters[cluster.Hash()] = cluster
 	}
 
-	clusters := make([]*clusterPolls, 0, len(p.clusters))
-	for key, c := range p.clusters {
-		if !used[c] && c.waiters == 0 {
-			delete(p.clusters, key)
-			continue
-		}
-
-		clusters = append(clusters, c)
+	for _, cluster := range clusters {
+		p.pollCluster(ctx, cluster, routines)
 	}
 
-	return clusters
+	maps.DeleteFunc(p.listings, func(hash uint64, _ map[string]*infomodels.ResponseBackupState) bool {
+		_, polled := clusters[hash]
+		return !polled
+	})
 }
 
-// clusterLocked returns what the poller knows of cluster, adding it if it is new. The caller must
-// hold mu.
-func (p *jobPoller) clusterLocked(cluster *model.AerospikeCluster) *clusterPolls {
-	key := cluster.Hash()
-	c, ok := p.clusters[key]
-	if !ok {
-		c = &clusterPolls{cluster: cluster, polled: make(chan struct{})}
-		p.clusters[key] = c
-	}
-
-	return c
-}
-
-// publish logs what changed since the cluster's last successful poll, makes listing its latest
-// and wakes its waiters.
-func (p *jobPoller) publish(
-	c *clusterPolls,
-	listing JobListing,
-	jobs []*infomodels.ResponseBackupState,
-	routines map[string]*model.BackupRoutine,
-) {
-	p.report(c.cluster, jobs, routines, c.latest.Jobs)
-
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	c.latest = listing
-	close(c.polled)
-	c.polled = make(chan struct{})
-}
-
-func jobsByID(jobs []*infomodels.ResponseBackupState) map[string]*infomodels.ResponseBackupState {
-	byID := make(map[string]*infomodels.ResponseBackupState, len(jobs))
-	for _, job := range jobs {
-		byID[job.JobID] = job
-	}
-
-	return byID
-}
-
-// listJobs lists the backup jobs of cluster, bounded by jobPollInterval.
-func (p *jobPoller) listJobs(
+// pollCluster lists the jobs of cluster, bounded by jobPollInterval, and hands the listing to the
+// runs. It aborts the jobs of the canceled runs on cluster and reports the runs that ended. A
+// failed listing changes nothing.
+func (p *jobPoller) pollCluster(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
-) ([]*infomodels.ResponseBackupState, error) {
-	ctx, cancel := context.WithTimeout(ctx, jobPollInterval)
+	routines map[string]*model.BackupRoutine,
+) {
+	at := time.Now()
+	listCtx, cancel := context.WithTimeout(ctx, jobPollInterval)
 	defer cancel()
 
-	client, err := p.clientManager.GetClient(ctx, cluster, nil, p.logger)
+	client, err := p.clientManager.GetClient(listCtx, cluster, nil, p.logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get client: %w", err)
+		p.logger.Warn("Failed to list server backup jobs",
+			slog.String("cluster", cluster.ClusterLabel), attr.Error(err))
+		return
 	}
 	defer p.clientManager.Close(client)
 
-	return client.InfoClient().ListBackupJobs(ctx)
+	jobs, err := client.InfoClient().ListBackupJobs(listCtx)
+	if err != nil {
+		p.logger.Warn("Failed to list server backup jobs",
+			slog.String("cluster", cluster.ClusterLabel), attr.Error(err))
+		return
+	}
+
+	p.report(cluster, jobs, routines)
+	ended, aborts := p.runs.update(cluster, jobs, at, routines)
+
+	for _, jobID := range aborts {
+		if err := client.InfoClient().AbortBackup(listCtx, jobID); err != nil {
+			p.logger.Warn("Failed to abort server backup", slog.String("jobId", jobID), attr.Error(err))
+		}
+	}
+
+	for _, run := range ended {
+		p.finish(ctx, run)
+	}
 }
 
-// report logs each job of cluster that is new since the previous poll or changed its state. On a
-// cluster's first poll, when previous is nil, the jobs that already ended are not logged: each
-// node keeps up to 100 of them.
+// finish reports a run that ended, after the completion hooks of its outcome: on success the
+// history rescan and, after a full backup, retention.
+func (p *jobPoller) finish(ctx context.Context, ended *run) {
+	logger := p.logger.With(attr.Routine(ended.routine.Name))
+	ended.warnUnread(logger)
+
+	err := ended.outcome()
+	if err == nil {
+		p.completion.OnSuccess(ctx, ended.routine, ended.backupType, ended.start, logger)
+		p.reporter.Report(ended.routine.Name, ended.backupType, time.Since(ended.start), nil, logger)
+
+		return
+	}
+
+	p.completion.OnFailure(ended.routine, ended.backupType)
+	p.reporter.Report(ended.routine.Name, ended.backupType, time.Since(ended.start),
+		fmt.Errorf("%s backup failed: %w", ended.backupType, err), logger)
+}
+
+// report logs each job of cluster that is new since the cluster's previous listing or changed its
+// state. On a cluster's first listing the jobs that already ended are not logged: each node keeps
+// up to 100 of them.
 func (p *jobPoller) report(
 	cluster *model.AerospikeCluster,
 	jobs []*infomodels.ResponseBackupState,
 	routines map[string]*model.BackupRoutine,
-	previous map[string]*infomodels.ResponseBackupState,
 ) {
+	hash := cluster.Hash()
+	previous := p.listings[hash]
+	p.listings[hash] = jobsByID(jobs)
+
 	for _, job := range jobs {
 		before, known := previous[job.JobID]
 		if (known && before.State == job.State) || (previous == nil && jobEnded(job.State)) {
@@ -252,26 +192,44 @@ func (p *jobPoller) report(
 			slog.String("type", string(jobType(job))),
 			slog.String("bucket", job.S3Bucket),
 			slog.String("path", job.Path),
-			attr.Routine(routineOf(job, cluster, routines)))
+			attr.Routine(nameOf(routineOf(job, cluster, routines))))
 	}
 }
 
-// routineOf returns the name of the routine of cluster whose bucket and path job writes to, or ""
-// if job writes outside every routine's path. The server ends the path it reports with "/".
+func jobsByID(jobs []*infomodels.ResponseBackupState) map[string]*infomodels.ResponseBackupState {
+	byID := make(map[string]*infomodels.ResponseBackupState, len(jobs))
+	for _, job := range jobs {
+		byID[job.JobID] = job
+	}
+
+	return byID
+}
+
+// routineOf returns the routine of cluster whose bucket and path job writes to, or nil if job
+// writes outside every routine's path. The server ends the path it reports with "/".
 func routineOf(
 	job *infomodels.ResponseBackupState,
 	cluster *model.AerospikeCluster,
 	routines map[string]*model.BackupRoutine,
-) string {
+) *model.BackupRoutine {
 	for _, routine := range routines {
 		storage, ok := routine.Storage.(*model.S3Storage)
 		if ok && routine.SourceCluster.Hash() == cluster.Hash() && storage.Bucket == job.S3Bucket &&
 			routinePath(storage, routine.Name)+"/" == job.Path {
-			return routine.Name
+			return routine
 		}
 	}
 
-	return ""
+	return nil
+}
+
+// nameOf returns the routine's name, or "" for none.
+func nameOf(routine *model.BackupRoutine) string {
+	if routine == nil {
+		return ""
+	}
+
+	return routine.Name
 }
 
 // jobType returns the type of backup job: one with a lower time bound is incremental.

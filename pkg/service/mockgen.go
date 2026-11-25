@@ -178,16 +178,16 @@ func (m *MockBackupStateRegistry) EXPECT() *MockBackupStateRegistryMockRecorder 
 	return m.recorder
 }
 
-// BackupFailed mocks base method.
-func (m *MockBackupStateRegistry) BackupFailed(routineName string, backupType model.BackupType) {
+// BackupEnded mocks base method.
+func (m *MockBackupStateRegistry) BackupEnded(routineName string, backupType model.BackupType) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "BackupFailed", routineName, backupType)
+	m.ctrl.Call(m, "BackupEnded", routineName, backupType)
 }
 
-// BackupFailed indicates an expected call of BackupFailed.
-func (mr *MockBackupStateRegistryMockRecorder) BackupFailed(routineName, backupType any) *gomock.Call {
+// BackupEnded indicates an expected call of BackupEnded.
+func (mr *MockBackupStateRegistryMockRecorder) BackupEnded(routineName, backupType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackupFailed", reflect.TypeOf((*MockBackupStateRegistry)(nil).BackupFailed), routineName, backupType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackupEnded", reflect.TypeOf((*MockBackupStateRegistry)(nil).BackupEnded), routineName, backupType)
 }
 
 // BackupStarted mocks base method.
@@ -203,15 +203,15 @@ func (mr *MockBackupStateRegistryMockRecorder) BackupStarted(routineName, backup
 }
 
 // BackupSucceeded mocks base method.
-func (m *MockBackupStateRegistry) BackupSucceeded(ctx context.Context, routine *model.BackupRoutine, backupType model.BackupType) {
+func (m *MockBackupStateRegistry) BackupSucceeded(ctx context.Context, routine *model.BackupRoutine) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "BackupSucceeded", ctx, routine, backupType)
+	m.ctrl.Call(m, "BackupSucceeded", ctx, routine)
 }
 
 // BackupSucceeded indicates an expected call of BackupSucceeded.
-func (mr *MockBackupStateRegistryMockRecorder) BackupSucceeded(ctx, routine, backupType any) *gomock.Call {
+func (mr *MockBackupStateRegistryMockRecorder) BackupSucceeded(ctx, routine any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackupSucceeded", reflect.TypeOf((*MockBackupStateRegistry)(nil).BackupSucceeded), ctx, routine, backupType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackupSucceeded", reflect.TypeOf((*MockBackupStateRegistry)(nil).BackupSucceeded), ctx, routine)
 }
 
 // Cancel mocks base method.

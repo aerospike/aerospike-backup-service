@@ -84,10 +84,15 @@ longer than an HTTP client should be expected to hold a connection open.
    What stopping ABS does to a running backup depends on the backup mode:
    - **Scan mode:** the backup runs inside ABS, so it ends with the process.
    - **Server mode:** the backup runs on the Aerospike server, one job per namespace, and the jobs complete
-     without ABS. ABS reports the run as canceled when it stops. After a restart it no longer knows the jobs:
-     canceling or disabling the routine does not reach them, and the routine's next backup can start while they
-     run. List them with the server's backup-status info command and stop one with
-     `backup-abort:job-id=<id>`. Each namespace's backup is listed once its job completes.
+     without ABS. Every 5 seconds ABS lists the backup jobs of each cluster a routine backs up. A running job
+     written into a routine's path is that routine's backup, whoever started it: a backup started before a
+     restart, or one started with the server's backup info command. The routine's state, its cancel and its start
+     rules follow those jobs. A cancel aborts them once ABS can list their cluster; until then the routine shows
+     the backup running. A routine moved to another cluster during a backup loses it, and ABS reports it failed.
+     When a backup's jobs have ended, ABS reports it, rescans the routine's backups and, after a full backup,
+     applies the retention policy; a backup whose jobs end while ABS is stopped is not reported, and after a
+     restart the report of a backup covers only its jobs that still ran. A job written elsewhere is only logged.
+     Each namespace's backup is listed once its job completes.
 6. A restore runs on a context of its own, so neither the client disconnecting nor ABS stopping cancels it; only
    <!-- tag cancelRestore -->`POST /v1/restore/cancel/{jobId}`<!-- /tag --> does.
    What stopping ABS does to a running restore depends on the backup mode:

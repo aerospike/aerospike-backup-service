@@ -145,6 +145,28 @@ func TestStartControllerRelease_TracksReservationCountByToken(t *testing.T) {
 	require.Empty(t, impl.tokenToReservation)
 }
 
+// TestStartControllerAcquire_DeniesWhileTheRegistryReportsABackup checks that a backup the registry
+// reports as running counts as running with no reservation: a server backup outlives its start, and
+// may have been started elsewhere.
+func TestStartControllerAcquire_DeniesWhileTheRegistryReportsABackup(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 3, 17, 10, 0, 0, 0, time.UTC)
+	routine := testRoutine()
+	registry := NewMockBackupStateRegistry(gomock.NewController(t))
+	registry.EXPECT().GetRoutineState(gomock.Any()).Return(model.RoutineState{
+		Full:        &model.RunningJob{},
+		LastRunTime: model.NewFullBackupTime(now.Add(-24 * time.Hour)),
+	}).AnyTimes()
+	controller := NewStartController(registry, NewStartDecider())
+
+	_, err := controller.TryStart(routine, now, model.BackupTypeFull)
+	require.ErrorIs(t, err, errFullAlreadyRunning)
+
+	_, err = controller.TryStart(routine, now, model.BackupTypeIncremental)
+	require.ErrorIs(t, err, errIncrementalFullRunning)
+}
+
 func TestStartController_HasBackupRunning(t *testing.T) {
 	ctrl := gomock.NewController(t)
 

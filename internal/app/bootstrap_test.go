@@ -313,7 +313,6 @@ func TestNewComponentsForMode(t *testing.T) {
 
 			wantPrefix := "*" + tt.wantPackage + "."
 			assert.Contains(t, fmt.Sprintf("%T", mode.backupReader), wantPrefix)
-			assert.Contains(t, fmt.Sprintf("%T", mode.routineRunner), wantPrefix)
 			assert.Contains(t, fmt.Sprintf("%T", mode.restoreManager), wantPrefix)
 		})
 	}

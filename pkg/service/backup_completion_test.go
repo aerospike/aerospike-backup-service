@@ -19,10 +19,37 @@ func TestBackupCompletionHandler_OnFailure(t *testing.T) {
 
 	routine := &model.BackupRoutine{Name: "routine-1"}
 	registry := NewMockBackupStateRegistry(ctrl)
-	registry.EXPECT().BackupFailed("routine-1", model.BackupTypeFull)
+	registry.EXPECT().BackupEnded("routine-1", model.BackupTypeFull)
 
 	handler := NewBackupCompletionHandler(registry, nil, nil)
 	handler.OnFailure(routine, model.BackupTypeFull)
+}
+
+// TestBackupCompletionHandler_OnSuccess_DropsTheBackupFirst checks that the backup is gone from the
+// registry when OnSuccess returns, before its rescan: the orchestrator then releases the start's
+// reservation, and the start rules must not see the backup as running.
+func TestBackupCompletionHandler_OnSuccess_DropsTheBackupFirst(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	routine := &model.BackupRoutine{Name: "routine-1"}
+	registry := NewMockBackupStateRegistry(ctrl)
+	var dropped atomic.Bool
+	release := make(chan struct{})
+	rescanned := make(chan struct{})
+	registry.EXPECT().BackupEnded("routine-1", model.BackupTypeIncremental).Do(func(string, model.BackupType) {
+		dropped.Store(true)
+	})
+	registry.EXPECT().BackupSucceeded(gomock.Any(), routine).Do(func(context.Context, *model.BackupRoutine) {
+		<-release
+		close(rescanned)
+	})
+
+	NewBackupCompletionHandler(registry, nil, nil).
+		OnSuccess(t.Context(), routine, model.BackupTypeIncremental, time.Now(), slog.New(slog.DiscardHandler))
+
+	require.True(t, dropped.Load(), "the backup is still in the registry")
+	close(release)
+	waitAsyncDone(t, rescanned, "history rescan")
 }
 
 func TestBackupCompletionHandler_OnSuccess_Incremental(t *testing.T) {
@@ -31,8 +58,9 @@ func TestBackupCompletionHandler_OnSuccess_Incremental(t *testing.T) {
 	routine := &model.BackupRoutine{Name: "routine-1"}
 	registry := NewMockBackupStateRegistry(ctrl)
 	recorded := make(chan struct{})
-	registry.EXPECT().BackupSucceeded(gomock.Any(), routine, model.BackupTypeIncremental).
-		Do(func(context.Context, *model.BackupRoutine, model.BackupType) { close(recorded) })
+	registry.EXPECT().BackupEnded("routine-1", model.BackupTypeIncremental)
+	registry.EXPECT().BackupSucceeded(gomock.Any(), routine).
+		Do(func(context.Context, *model.BackupRoutine) { close(recorded) })
 
 	handler := NewBackupCompletionHandler(
 		registry,
@@ -70,8 +98,9 @@ func TestBackupCompletionHandler_OnSuccess_FullRunsRetentionAndClusterConfig(t *
 	retentionDone := make(chan struct{})
 	clusterConfigDone := make(chan struct{})
 
-	registry.EXPECT().BackupSucceeded(gomock.Any(), routine, model.BackupTypeFull).
-		Do(func(context.Context, *model.BackupRoutine, model.BackupType) { close(recorded) })
+	registry.EXPECT().BackupEnded("routine-1", model.BackupTypeFull)
+	registry.EXPECT().BackupSucceeded(gomock.Any(), routine).
+		Do(func(context.Context, *model.BackupRoutine) { close(recorded) })
 	retention.EXPECT().ApplyRetention(ctx, routine).
 		DoAndReturn(func(context.Context, *model.BackupRoutine) error {
 			close(retentionDone)
@@ -106,8 +135,9 @@ func TestBackupCompletionHandler_OnSuccess_FullSkipsClusterConfigWhenDisabled(t 
 	recorded := make(chan struct{})
 	retentionDone := make(chan struct{})
 
-	registry.EXPECT().BackupSucceeded(gomock.Any(), routine, model.BackupTypeFull).
-		Do(func(context.Context, *model.BackupRoutine, model.BackupType) { close(recorded) })
+	registry.EXPECT().BackupEnded("routine-1", model.BackupTypeFull)
+	registry.EXPECT().BackupSucceeded(gomock.Any(), routine).
+		Do(func(context.Context, *model.BackupRoutine) { close(recorded) })
 	retention.EXPECT().ApplyRetention(ctx, routine).
 		DoAndReturn(func(context.Context, *model.BackupRoutine) error {
 			close(retentionDone)
@@ -121,9 +151,9 @@ func TestBackupCompletionHandler_OnSuccess_FullSkipsClusterConfigWhenDisabled(t 
 	waitAsyncDone(t, retentionDone, "retention cleanup")
 }
 
-// TestBackupCompletionHandler_OnSuccess_RetentionAfterRegistry checks that retention starts only
-// once the registry update is done, so that its history scan never waits for a delete.
-func TestBackupCompletionHandler_OnSuccess_RetentionAfterRegistry(t *testing.T) {
+// TestBackupCompletionHandler_OnSuccess_RetentionAfterRescan checks that retention starts only once
+// the history rescan is done, so that the rescan never waits for a delete.
+func TestBackupCompletionHandler_OnSuccess_RetentionAfterRescan(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	routine := &model.BackupRoutine{Name: "routine-1", BackupPolicy: &model.BackupPolicy{}}
@@ -135,8 +165,9 @@ func TestBackupCompletionHandler_OnSuccess_RetentionAfterRegistry(t *testing.T) 
 	release := make(chan struct{})
 	var started atomic.Bool
 	retentionDone := make(chan struct{})
-	registry.EXPECT().BackupSucceeded(gomock.Any(), routine, model.BackupTypeFull).
-		Do(func(context.Context, *model.BackupRoutine, model.BackupType) { <-release })
+	registry.EXPECT().BackupEnded("routine-1", model.BackupTypeFull)
+	registry.EXPECT().BackupSucceeded(gomock.Any(), routine).
+		Do(func(context.Context, *model.BackupRoutine) { <-release })
 	retention.EXPECT().ApplyRetention(ctx, routine).
 		DoAndReturn(func(context.Context, *model.BackupRoutine) error {
 			started.Store(true)
@@ -148,7 +179,7 @@ func TestBackupCompletionHandler_OnSuccess_RetentionAfterRegistry(t *testing.T) 
 		OnSuccess(ctx, routine, model.BackupTypeFull, time.Now(), slog.New(slog.DiscardHandler))
 
 	require.Never(t, started.Load, 100*time.Millisecond, 10*time.Millisecond,
-		"retention started during the registry update")
+		"retention started during the history rescan")
 	close(release)
 	waitAsyncDone(t, retentionDone, "retention cleanup")
 }
@@ -167,7 +198,8 @@ func TestBackupCompletionHandler_OnSuccess_LogsRetentionFailure(t *testing.T) {
 	retention := NewMockBackupRetentionManager(ctrl)
 
 	retentionErr := errors.New("retention failed")
-	registry.EXPECT().BackupSucceeded(gomock.Any(), routine, model.BackupTypeFull).AnyTimes()
+	registry.EXPECT().BackupEnded("routine-1", model.BackupTypeFull)
+	registry.EXPECT().BackupSucceeded(gomock.Any(), routine).AnyTimes()
 	retention.EXPECT().ApplyRetention(ctx, routine).Return(retentionErr)
 
 	handler := NewBackupCompletionHandler(registry, retention, nil)

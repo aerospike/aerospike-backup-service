@@ -13,7 +13,8 @@ import (
 // ErrBackupSkipped is wrapped by every StartController denial: the backup was not started.
 var ErrBackupSkipped = errors.New("backup skipped")
 
-// StartController decides whether a backup may start and holds the reservation until the run ends.
+// StartController decides whether a backup may start, and holds its reservation until the caller
+// releases it.
 type StartController interface {
 	// TryStart asks permission to start a backup of the given type for the routine.
 	//
@@ -149,9 +150,10 @@ func (s *startController) buildStartFacts(routine *model.BackupRoutine, now time
 	})
 
 	return StartFacts{
-		// Reservation is treated as running for admission checks.
-		FullRunningNow:        fullRunning,
-		IncrementalRunningNow: incrRunning,
+		// A reservation counts as running, and so does a backup the registry reports: a server
+		// backup outlives its reservation, and may have been started elsewhere.
+		FullRunningNow:        fullRunning || state.Full != nil,
+		IncrementalRunningNow: incrRunning || state.Incremental != nil,
 		// History still comes from registry.
 		HasCompletedFull: !state.LastRunTime.NoFullBackup(),
 		FullScheduledNow: routine.FullSchedule().IsFireTime(now),

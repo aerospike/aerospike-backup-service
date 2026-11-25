@@ -107,19 +107,7 @@ func InitComponents(
 	restoreJobs := service.NewRestoreJobsHolder()
 	components := newComponentsForMode(config, operations, s3Accessor, clientManager, restoreJobs)
 
-	completionHandler := service.NewBackupCompletionHandler(
-		components.registry,
-		components.retentionManager,
-		components.clusterConfigWriter,
-	)
-	backupOrchestrator := service.NewBackupOrchestrator(
-		components.registry,
-		completionHandler,
-		service.NewBackupReporter(),
-		components.startController,
-		components.routineRunner,
-	)
-	backupScheduler := service.NewBackupScheduler(scheduler, backupOrchestrator)
+	backupScheduler := service.NewBackupScheduler(scheduler, components.orchestrator)
 	configApplier := service.NewConfigApplier(backupScheduler, components.registry, nsValidator, config)
 
 	metricsCollector := prometheus.NewMetricsCollector(components.registry.GetRunningState, restoreJobs.StatusCounts)
@@ -196,15 +184,12 @@ func newStorageOperations(resolver secrets.Resolver, s3Accessor storage.Accessor
 // Each mode wires its own implementations behind the same interfaces, so no component
 // checks the mode itself.
 type backupMode struct {
-	backupReader        service.BackupReader
-	registry            service.BackupStateRegistry
-	startController     service.StartController
-	retentionManager    service.BackupRetentionManager
-	clusterConfigWriter service.ClusterConfigWriter
-	routineRunner       service.RoutineBackupRunner
-	restoreManager      service.RestoreManager
-	configRetriever     service.ConfigRetriever
-	jobPoller           service.ServerJobPoller
+	backupReader    service.BackupReader
+	registry        service.BackupStateRegistry
+	orchestrator    service.BackupOrchestrator
+	restoreManager  service.RestoreManager
+	configRetriever service.ConfigRetriever
+	jobPoller       service.ServerJobPoller
 }
 
 func newComponentsForMode(
@@ -233,7 +218,7 @@ func newScanBackupMode(
 
 	pathService := scanbackup.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
 	catalog := scanbackup.NewBackupCatalog(pathService, operations)
-	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config)
+	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config, service.NoRunningBackups())
 	namespaceRunner := scanbackup.NewNamespaceBackupRunner(
 		backupexecutor.NewBackupExecutor(clientManager, operations),
 		catalog,
@@ -241,18 +226,22 @@ func newScanBackupMode(
 	)
 
 	startController := service.NewStartController(registry, service.NewStartDecider())
+	completionHandler := service.NewBackupCompletionHandler(
+		registry,
+		scanbackup.NewBackupRetentionManager(catalog, &routineStorage),
+		scanbackup.NewClusterConfigWriter(pathService, operations, aerospike.NewClusterConfigSource(clientManager)),
+	)
 
 	return backupMode{
-		backupReader:     catalog,
-		registry:         registry,
-		startController:  startController,
-		retentionManager: scanbackup.NewBackupRetentionManager(catalog, &routineStorage),
-		clusterConfigWriter: scanbackup.NewClusterConfigWriter(
-			pathService,
-			operations,
-			aerospike.NewClusterConfigSource(clientManager),
+		backupReader: catalog,
+		registry:     registry,
+		orchestrator: service.NewBackupOrchestrator(
+			registry,
+			completionHandler,
+			service.NewBackupReporter(),
+			startController,
+			scanbackup.NewRoutineBackupRunner(namespaceRunner, aerospike.NewNamespaceResolver(clientManager)),
 		),
-		routineRunner: scanbackup.NewRoutineBackupRunner(namespaceRunner, aerospike.NewNamespaceResolver(clientManager)),
 		restoreManager: scanbackup.NewRestoreManager(
 			restoreexecutor.NewRestoreExecutor(operations),
 			clientManager,
@@ -280,20 +269,26 @@ func newServerBackupMode(
 	var routineStorage u.LockMap
 
 	catalog := serverbackup.NewCatalog(s3Clients, operations)
-	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config)
-	jobPoller := serverbackup.NewJobPoller(config, clientManager)
+	// runs holds the routines' backups that run on the servers, which the job poller lists.
+	runs := serverbackup.NewRuns()
+	registry := service.NewBackupStateRegistry(service.NewHistoryManager(catalog), config, runs)
+	reporter := service.NewBackupReporter()
+	completionHandler := service.NewBackupCompletionHandler(
+		registry,
+		serverbackup.NewRetentionManager(catalog, &routineStorage),
+		serverbackup.NewClusterConfigWriter(),
+	)
 
 	return backupMode{
-		backupReader:        catalog,
-		registry:            registry,
-		startController:     service.NewStartController(registry, service.NewStartDecider()),
-		retentionManager:    serverbackup.NewRetentionManager(catalog, &routineStorage),
-		clusterConfigWriter: serverbackup.NewClusterConfigWriter(),
-		routineRunner: serverbackup.NewRoutineRunner(
+		backupReader: catalog,
+		registry:     registry,
+		orchestrator: serverbackup.NewBackupStarter(
+			service.NewStartController(registry, service.NewStartDecider()),
+			reporter,
+			runs,
 			clientManager,
 			aerospike.NewNamespaceResolver(clientManager),
 			catalog,
-			jobPoller,
 		),
 		restoreManager: serverbackup.NewRestoreManager(
 			clientManager,
@@ -303,7 +298,7 @@ func newServerBackupMode(
 			serverbackup.NewRestoreValidator(),
 		),
 		configRetriever: serverbackup.NewConfigRetriever(catalog, operations, &routineStorage),
-		jobPoller:       jobPoller,
+		jobPoller:       serverbackup.NewJobPoller(config, clientManager, runs, completionHandler, reporter),
 	}
 }
 

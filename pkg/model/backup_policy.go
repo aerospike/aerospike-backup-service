@@ -70,6 +70,16 @@ func (p *BackupPolicy) IsSealedOrDefault() bool {
 	return *defaultConfig.backupPolicy.Sealed
 }
 
+// UpperBound returns the time a backup that starts at start takes records modified before: start
+// itself for a sealed backup, none otherwise.
+func (p *BackupPolicy) UpperBound(start time.Time) *time.Time {
+	if p.IsSealedOrDefault() {
+		return &start
+	}
+
+	return nil
+}
+
 func (p *BackupPolicy) AllowConcurrentIncremental() bool {
 	if p != nil && p.ConcurrentIncremental != nil {
 		return *p.ConcurrentIncremental

@@ -12,7 +12,7 @@ import (
 )
 
 func newTestBackupStateRegistry(history HistoryManager, config routineProvider) *backupStateRegistry {
-	return NewBackupStateRegistry(history, config).(*backupStateRegistry)
+	return NewBackupStateRegistry(history, config, NoRunningBackups()).(*backupStateRegistry)
 }
 
 func TestRegisterAndCurrentStat(t *testing.T) {
@@ -149,7 +149,7 @@ func TestFinishFull(t *testing.T) {
 
 	registry := newTestBackupStateRegistry(historyMgr, nil)
 	handler := NewMockRoutineBackupHandler(ctrl)
-	handler.EXPECT().Status().Return(nil).AnyTimes() // finished: nothing runs
+	handler.EXPECT().Status().Return(&model.BackupRun{StartTime: now}).AnyTimes()
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,
@@ -160,7 +160,8 @@ func TestFinishFull(t *testing.T) {
 	registry.BackupStarted(routineName, model.BackupTypeFull, handler)
 	registry.getTracker(routineName).markScanDone()
 
-	registry.BackupSucceeded(t.Context(), routine, model.BackupTypeFull)
+	registry.BackupEnded(routineName, model.BackupTypeFull)
+	registry.BackupSucceeded(t.Context(), routine)
 
 	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)
@@ -179,7 +180,7 @@ func TestFinishIncremental(t *testing.T) {
 
 	registry := newTestBackupStateRegistry(historyMgr, nil)
 	handler := NewMockRoutineBackupHandler(ctrl)
-	handler.EXPECT().Status().Return(nil).AnyTimes() // finished: nothing runs
+	handler.EXPECT().Status().Return(&model.BackupRun{StartTime: now}).AnyTimes()
 
 	routine := &model.BackupRoutine{
 		Name:         routineName,
@@ -190,7 +191,8 @@ func TestFinishIncremental(t *testing.T) {
 	registry.BackupStarted(routineName, model.BackupTypeIncremental, handler)
 	registry.getTracker(routineName).markScanDone()
 
-	registry.BackupSucceeded(t.Context(), routine, model.BackupTypeIncremental)
+	registry.BackupEnded(routineName, model.BackupTypeIncremental)
+	registry.BackupSucceeded(t.Context(), routine)
 
 	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)
@@ -338,4 +340,42 @@ func TestCancel(t *testing.T) {
 	registry.BackupStarted(routineName, model.BackupTypeIncremental, handlerIncr)
 
 	registry.Cancel(routineName)
+}
+
+// TestRunningBackups checks that the registry reports the running backups its mode follows outside
+// the handlers, counts them as running, and cancels them with the routine.
+func TestRunningBackups(t *testing.T) {
+	t.Parallel()
+
+	running := &fakeRunningBackups{full: &model.RunningJob{Progress: 0.5}}
+	routine := &model.BackupRoutine{
+		Name:         routineName,
+		IntervalCron: "@daily",
+		Timezone:     model.NewServiceLocation("", nil),
+	}
+	ctrl := gomock.NewController(t)
+	config := NewmockRoutineProvider(ctrl)
+	config.EXPECT().Routines().Return(map[string]*model.BackupRoutine{routineName: routine}).AnyTimes()
+	registry := NewBackupStateRegistry(nil, config, running).(*backupStateRegistry)
+	registry.getTracker(routineName).markScanDone()
+
+	assert.Same(t, running.full, registry.GetRoutineState(routine).Full)
+	assert.Contains(t, registry.GetRunningState(), routineName)
+
+	registry.Cancel(routineName)
+	assert.Equal(t, []string{routineName}, running.canceled)
+}
+
+// fakeRunningBackups reports full as every routine's running full backup, and records cancels.
+type fakeRunningBackups struct {
+	full     *model.RunningJob
+	canceled []string
+}
+
+func (f *fakeRunningBackups) Describe(_ string, state *model.RoutineState) {
+	state.Full = f.full
+}
+
+func (f *fakeRunningBackups) Cancel(routineName string) {
+	f.canceled = append(f.canceled, routineName)
 }
