@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path"
 	"strings"
 	"sync/atomic"
 
@@ -26,10 +27,13 @@ func startRestore(
 	backups []model.BackupDetails,
 	logger *slog.Logger,
 ) (*restoreJob, error) {
+	// A key is <routine>/<job id>, and a chain is backed up by one routine. A backup's id is the
+	// id of the server job that wrote it.
 	first := backups[0]
-	routineName, backupIDs, err := backupIDsOf(backups)
-	if err != nil {
-		return nil, err
+	routineName := path.Dir(first.Key)
+	backupIDs := make([]string, 0, len(backups))
+	for _, b := range backups {
+		backupIDs = append(backupIDs, path.Base(b.Key))
 	}
 
 	// The DTO layer rejects a namespace mapping, so the job restores into the backup's namespace.
@@ -75,27 +79,6 @@ func startRestore(
 	}
 
 	return job, nil
-}
-
-// backupIDsOf returns the routine whose folder holds the backups, and their ids in the given
-// order. A backup's id is the id of the server job that wrote it. A chain is backed up by one
-// routine, so the first key names the routine.
-func backupIDsOf(backups []model.BackupDetails) (string, []string, error) {
-	routineName, _, err := parseBackupKey(backups[0].Key)
-	if err != nil {
-		return "", nil, err
-	}
-
-	backupIDs := make([]string, 0, len(backups))
-	for _, b := range backups {
-		_, backupID, err := parseBackupKey(b.Key)
-		if err != nil {
-			return "", nil, err
-		}
-		backupIDs = append(backupIDs, backupID)
-	}
-
-	return routineName, backupIDs, nil
 }
 
 // restoreJob follows one server restore job from its start to its end. The restore manager

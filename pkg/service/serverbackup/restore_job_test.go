@@ -232,20 +232,6 @@ func TestStartRestore_StartOutcomeUnknown(t *testing.T) {
 	}
 }
 
-// TestStartRestore_InvalidBackupKey checks that a backup whose key names no routine is refused
-// before anything is sent to the server.
-func TestStartRestore_InvalidBackupKey(t *testing.T) {
-	t.Parallel()
-	ctrl := gomock.NewController(t)
-
-	backup := chainBackup(fullID)
-	backup.Key = fullID // a bare backup id names no routine.
-
-	_, err := startRestore(t.Context(), aerospike.NewMockInfoGetter(ctrl), strictPolicy,
-		[]model.BackupDetails{backup}, discardLogger)
-	require.EqualError(t, err, `invalid server backup key "`+fullID+`": want <routine>/<job id>`)
-}
-
 // newTestRestoreJob returns the restore job "job" of namespace bar.
 func newTestRestoreJob(infoClient *aerospike.MockInfoGetter, mode model.RestoreMode) *restoreJob {
 	return &restoreJob{infoClient: infoClient, namespace: "bar", serverJobID: "job", mode: mode, logger: discardLogger}

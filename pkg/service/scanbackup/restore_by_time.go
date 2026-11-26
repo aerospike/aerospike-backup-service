@@ -17,7 +17,7 @@ import (
 // request's time. The namespaces are restored concurrently, the backups of one namespace one
 // after another.
 func (m *restoreManager) RestoreByTime(request *model.RestoreTimestampRequest) model.RestoreJobID {
-	jobID, ctx := m.NewJob(request.RoutineName)
+	jobID, ctx := m.NewJob()
 
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore by time job",
