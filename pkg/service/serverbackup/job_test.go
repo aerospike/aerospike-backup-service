@@ -10,6 +10,7 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/aerospike/backup-go/pkg/asinfo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,6 +22,9 @@ const pollsUntilUnobserved = int(unobservedJobTimeout / pollInterval)
 
 // pollsWithinTimeout is a number of failed polls that stays within it.
 const pollsWithinTimeout = int(9 * time.Minute / pollInterval)
+
+// statusReadErrors are the ways a status read fails: a job not reported, a cluster not reached.
+var statusReadErrors = []error{asinfo.ErrNotFound, errors.New("timeout")}
 
 // TestPollJob_ReadCutShort checks that a wait ended while a status read retries names the read's
 // error, and the end of the wait once.

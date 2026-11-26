@@ -310,6 +310,21 @@ func (mr *MockInfoGetterMockRecorder) GetVersion(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersion", reflect.TypeOf((*MockInfoGetter)(nil).GetVersion), ctx)
 }
 
+// ListBackupJobs mocks base method.
+func (m *MockInfoGetter) ListBackupJobs(ctx context.Context) ([]*models0.ResponseBackupState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBackupJobs", ctx)
+	ret0, _ := ret[0].([]*models0.ResponseBackupState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListBackupJobs indicates an expected call of ListBackupJobs.
+func (mr *MockInfoGetterMockRecorder) ListBackupJobs(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBackupJobs", reflect.TypeOf((*MockInfoGetter)(nil).ListBackupJobs), ctx)
+}
+
 // OpenRestore mocks base method.
 func (m *MockInfoGetter) OpenRestore(ctx context.Context, namespace string) error {
 	m.ctrl.T.Helper()

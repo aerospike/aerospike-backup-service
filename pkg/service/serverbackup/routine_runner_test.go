@@ -88,9 +88,8 @@ func TestRoutineRunner_LowerBounds_ReadFails(t *testing.T) {
 	assert.Nil(t, got)
 }
 
-// expectCompleteJobs records each backup request, names its job job-<namespace> and reports the
-// job complete at 100%.
-func expectCompleteJobs(infoClient *aerospike.MockInfoGetter, requests *[]infomodels.RequestBackup) {
+// expectStartedJobs records each backup request and names its job job-<namespace>.
+func expectStartedJobs(infoClient *aerospike.MockInfoGetter, requests *[]infomodels.RequestBackup) {
 	var mu sync.Mutex // the namespaces' jobs start at once.
 	infoClient.EXPECT().StartBackup(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, request *infomodels.RequestBackup) (string, error) {
@@ -99,12 +98,6 @@ func expectCompleteJobs(infoClient *aerospike.MockInfoGetter, requests *[]infomo
 			*requests = append(*requests, *request)
 
 			return "job-" + request.Namespace, nil
-		}).AnyTimes()
-	infoClient.EXPECT().GetBackupStatus(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, jobID string) (*infomodels.ResponseBackupState, error) {
-			return &infomodels.ResponseBackupState{
-				JobID: jobID, State: infomodels.BackupStateComplete, ProgressPct: 100,
-			}, nil
 		}).AnyTimes()
 }
 
@@ -120,29 +113,24 @@ func TestRoutineRunner_Run_NamespacesTogether(t *testing.T) {
 			func(_ context.Context, request *infomodels.RequestBackup) (string, error) {
 				return "job-" + request.Namespace, nil
 			}).Times(2)
-		// job-baz completes at its first poll; job-bar is half way at its first and completes at
-		// its second.
-		var barPolls atomic.Int32
-		infoClient.EXPECT().GetBackupStatus(gomock.Any(), gomock.Any()).DoAndReturn(
-			func(_ context.Context, jobID string) (*infomodels.ResponseBackupState, error) {
-				if jobID == "job-bar" {
-					if barPolls.Add(1) == 1 {
-						return &infomodels.ResponseBackupState{
-							JobID: jobID, State: infomodels.BackupStateBaseScanActive, ProgressPct: 50,
-						}, nil
-					}
+		// job-baz completes at the first poll; job-bar is half way at the first and completes at
+		// the second.
+		jobs := newFakePoller(func(poll int) map[string]*infomodels.ResponseBackupState {
+			bar := complete("job-bar")
+			if poll == 1 {
+				bar = &infomodels.ResponseBackupState{
+					JobID: "job-bar", State: infomodels.BackupStateBaseScanActive, ProgressPct: 50,
 				}
+			}
 
-				return &infomodels.ResponseBackupState{
-					JobID: jobID, State: infomodels.BackupStateComplete, ProgressPct: 100,
-				}, nil
-			}).AnyTimes()
-		runner, routine := newTestRunner(ctrl, infoClient, "bar", "baz")
+			return listed(bar, complete("job-baz"))
+		})
+		runner, routine := newTestRunner(ctrl, infoClient, jobs, "bar", "baz")
 
 		handler, err := runner.Run(t.Context(), routine, model.BackupRunSpec{Type: model.BackupTypeFull}, discardLogger)
 		require.NoError(t, err)
 
-		time.Sleep(pollInterval)
+		time.Sleep(jobPollInterval)
 		synctest.Wait()
 		assert.InDelta(t, 0.75, handler.Status().Progress, 1e-9, "baz is done and bar half way")
 
@@ -162,7 +150,7 @@ func TestRoutineRunner_Run_OutlivesContext(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		var requests []infomodels.RequestBackup
 		infoClient := aerospike.NewMockInfoGetter(ctrl)
-		expectCompleteJobs(infoClient, &requests)
+		expectStartedJobs(infoClient, &requests)
 		var aborts atomic.Int32
 		infoClient.EXPECT().AbortBackup(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(context.Context, string) error {
@@ -170,7 +158,7 @@ func TestRoutineRunner_Run_OutlivesContext(t *testing.T) {
 
 				return nil
 			}).AnyTimes()
-		runner, routine := newTestRunner(ctrl, infoClient, "bar", "baz")
+		runner, routine := newTestRunner(ctrl, infoClient, newFakePoller(completeJobs("bar", "baz")), "bar", "baz")
 		ctx, cancel := context.WithCancel(t.Context())
 
 		handler, err := runner.Run(ctx, routine, model.BackupRunSpec{Type: model.BackupTypeFull}, discardLogger)
@@ -199,17 +187,20 @@ func TestRoutineRunner_Run_CancelAborts(t *testing.T) {
 			func(_ context.Context, request *infomodels.RequestBackup) (string, error) {
 				return "job-" + request.Namespace, nil
 			}).Times(2)
-		infoClient.EXPECT().GetBackupStatus(gomock.Any(), gomock.Any()).DoAndReturn(
-			func(_ context.Context, jobID string) (*infomodels.ResponseBackupState, error) {
-				mu.Lock()
-				defer mu.Unlock()
+		jobs := newFakePoller(func(int) map[string]*infomodels.ResponseBackupState {
+			mu.Lock()
+			defer mu.Unlock()
+			listing := make(map[string]*infomodels.ResponseBackupState)
+			for _, jobID := range []string{"job-bar", "job-baz"} {
 				state := infomodels.BackupStateBaseScanActive
 				if aborted[jobID] {
 					state = infomodels.BackupStateAborted
 				}
+				listing[jobID] = &infomodels.ResponseBackupState{JobID: jobID, State: state}
+			}
 
-				return &infomodels.ResponseBackupState{JobID: jobID, State: state}, nil
-			}).AnyTimes()
+			return listing
+		})
 		infoClient.EXPECT().AbortBackup(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(_ context.Context, jobID string) error {
 				mu.Lock()
@@ -218,11 +209,11 @@ func TestRoutineRunner_Run_CancelAborts(t *testing.T) {
 
 				return nil
 			}).Times(2)
-		runner, routine := newTestRunner(ctrl, infoClient, "bar", "baz")
+		runner, routine := newTestRunner(ctrl, infoClient, jobs, "bar", "baz")
 
 		handler, err := runner.Run(t.Context(), routine, model.BackupRunSpec{Type: model.BackupTypeFull}, discardLogger)
 		require.NoError(t, err)
-		time.Sleep(pollInterval)
+		time.Sleep(jobPollInterval)
 		synctest.Wait()
 		require.Len(t, handler.Status().Server.Jobs, 2, "both jobs have reported")
 		handler.Cancel()
@@ -236,10 +227,10 @@ func TestRoutineRunner_Run_CancelAborts(t *testing.T) {
 	})
 }
 
-// newTestRunner returns a runner that backs namespaces up through infoClient, and its routine.
-// It expects one run: the client is taken once and released once.
+// newTestRunner returns a runner that backs namespaces up through infoClient and follows its jobs
+// through jobs, and its routine. It expects one run: the client is taken once and released once.
 func newTestRunner(
-	ctrl *gomock.Controller, infoClient *aerospike.MockInfoGetter, namespaces ...string,
+	ctrl *gomock.Controller, infoClient *aerospike.MockInfoGetter, jobs JobPoller, namespaces ...string,
 ) (*routineRunner, *model.BackupRoutine) {
 	routine := &model.BackupRoutine{
 		Name:          "routine",
@@ -256,7 +247,7 @@ func newTestRunner(
 	namespaceResolver := aerospike.NewMockNamespaceResolver(ctrl)
 	namespaceResolver.EXPECT().ResolveNamespaces(gomock.Any(), routine, gomock.Any()).Return(namespaces, nil)
 
-	return &routineRunner{clientManager: clientManager, namespaceResolver: namespaceResolver}, routine
+	return &routineRunner{clientManager: clientManager, namespaceResolver: namespaceResolver, jobs: jobs}, routine
 }
 
 func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
@@ -361,31 +352,34 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ctrl := gomock.NewController(t)
+			synctest.Test(t, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
 
-			catalog := NewMockCatalog(ctrl)
-			catalog.EXPECT().LastBackupTimes(gomock.Any(), gomock.Any(), gomock.Any()).
-				Return(lastBackups, nil).MaxTimes(1) // once per run, not once per namespace.
+				catalog := NewMockCatalog(ctrl)
+				catalog.EXPECT().LastBackupTimes(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(lastBackups, nil).MaxTimes(1) // once per run, not once per namespace.
 
-			var requests []infomodels.RequestBackup
-			infoClient := aerospike.NewMockInfoGetter(ctrl)
-			expectCompleteJobs(infoClient, &requests)
-			operation := newBackupOperation(func() {}, len(tt.namespaces))
+				var requests []infomodels.RequestBackup
+				infoClient := aerospike.NewMockInfoGetter(ctrl)
+				expectStartedJobs(infoClient, &requests)
+				operation := newBackupOperation(func() {}, len(tt.namespaces))
+				runner := &routineRunner{catalog: catalog, jobs: newFakePoller(completeJobs(tt.namespaces...))}
 
-			err := (&routineRunner{catalog: catalog}).backupNamespaces(t.Context(), infoClient,
-				tt.routine, tt.runSpec, tt.namespaces, operation, discardLogger)
+				err := runner.backupNamespaces(t.Context(), infoClient,
+					tt.routine, tt.runSpec, tt.namespaces, operation, discardLogger)
 
-			require.NoError(t, err)
-			assert.ElementsMatch(t, tt.want, requests)
-			jobIDs := make([]string, 0, len(tt.namespaces))
-			for _, job := range operation.Status().Server.Jobs {
-				jobIDs = append(jobIDs, job.JobID)
-			}
-			assert.Len(t, jobIDs, len(tt.namespaces), "one server job per namespace")
-			for i, namespace := range tt.namespaces {
-				assert.Equal(t, "job-"+namespace, jobIDs[i], "the jobs are listed in the namespaces' order")
-			}
-			assert.InDelta(t, 1, operation.Status().Progress, 1e-9, "every namespace counts as done")
+				require.NoError(t, err)
+				assert.ElementsMatch(t, tt.want, requests)
+				jobIDs := make([]string, 0, len(tt.namespaces))
+				for _, job := range operation.Status().Server.Jobs {
+					jobIDs = append(jobIDs, job.JobID)
+				}
+				assert.Len(t, jobIDs, len(tt.namespaces), "one server job per namespace")
+				for i, namespace := range tt.namespaces {
+					assert.Equal(t, "job-"+namespace, jobIDs[i], "the jobs are listed in the namespaces' order")
+				}
+				assert.InDelta(t, 1, operation.Status().Progress, 1e-9, "every namespace counts as done")
+			})
 		})
 	}
 }
@@ -394,40 +388,46 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 // others, and that the run fails with the error of each namespace that failed.
 func TestRoutineRunner_BackupNamespaces_Failures(t *testing.T) {
 	t.Parallel()
-	ctrl := gomock.NewController(t)
+	synctest.Test(t, func(t *testing.T) {
+		ctrl := gomock.NewController(t)
 
-	infoClient := aerospike.NewMockInfoGetter(ctrl)
-	infoClient.EXPECT().StartBackup(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *infomodels.RequestBackup) (string, error) {
-			if request.Namespace == "bar" {
-				return "", errors.New("refused")
-			}
+		infoClient := aerospike.NewMockInfoGetter(ctrl)
+		infoClient.EXPECT().StartBackup(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, request *infomodels.RequestBackup) (string, error) {
+				if request.Namespace == "bar" {
+					return "", errors.New("refused")
+				}
 
-			return "job-" + request.Namespace, nil
-		}).Times(3)
-	infoClient.EXPECT().GetBackupStatus(gomock.Any(), "job-baz").Return(&infomodels.ResponseBackupState{
-		JobID: "job-baz", Namespace: "baz", State: infomodels.BackupStateFailed, ErrorReason: "disk full",
-	}, nil)
-	infoClient.EXPECT().GetBackupStatus(gomock.Any(), "job-qux").Return(&infomodels.ResponseBackupState{
-		JobID: "job-qux", Namespace: "qux", State: infomodels.BackupStateComplete, ProgressPct: 100,
-	}, nil)
-	routine := &model.BackupRoutine{
-		Storage:      &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1"},
-		BackupPolicy: &model.BackupPolicy{},
-	}
-	operation := newBackupOperation(func() {}, 3)
+				return "job-" + request.Namespace, nil
+			}).Times(3)
+		jobs := newFakePoller(func(int) map[string]*infomodels.ResponseBackupState {
+			return listed(
+				&infomodels.ResponseBackupState{
+					JobID: "job-baz", Namespace: "baz", State: infomodels.BackupStateFailed, ErrorReason: "disk full",
+				},
+				&infomodels.ResponseBackupState{
+					JobID: "job-qux", Namespace: "qux", State: infomodels.BackupStateComplete, ProgressPct: 100,
+				},
+			)
+		})
+		routine := &model.BackupRoutine{
+			Storage:      &model.S3Storage{Bucket: "bucket", S3Region: "us-east-1"},
+			BackupPolicy: &model.BackupPolicy{},
+		}
+		operation := newBackupOperation(func() {}, 3)
 
-	err := (&routineRunner{}).backupNamespaces(t.Context(), infoClient, routine,
-		model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar", "baz", "qux"}, operation,
-		discardLogger)
+		err := (&routineRunner{jobs: jobs}).backupNamespaces(t.Context(), infoClient, routine,
+			model.BackupRunSpec{Type: model.BackupTypeFull}, []string{"bar", "baz", "qux"}, operation,
+			discardLogger)
 
-	require.EqualError(t, err, "namespace bar: failed to start server backup: refused\n"+
-		"namespace baz: server backup job-baz failed: disk full")
-	assert.Equal(t, []model.ServerBackupJob{
-		{JobID: "job-baz", Namespace: "baz", State: "FAILED", ErrorReason: "disk full"},
-		{JobID: "job-qux", Namespace: "qux", State: "COMPLETE"},
-	}, operation.Status().Server.Jobs)
-	assert.InDelta(t, 1, operation.Status().Progress, 1e-9, "a failed namespace counts as done")
+		require.EqualError(t, err, "namespace bar: failed to start server backup: refused\n"+
+			"namespace baz: server backup job-baz failed: disk full")
+		assert.Equal(t, []model.ServerBackupJob{
+			{JobID: "job-baz", Namespace: "baz", State: "FAILED", ErrorReason: "disk full"},
+			{JobID: "job-qux", Namespace: "qux", State: "COMPLETE"},
+		}, operation.Status().Server.Jobs)
+		assert.InDelta(t, 1, operation.Status().Progress, 1e-9, "a failed namespace counts as done")
+	})
 }
 
 // TestRoutineRunner_BackupNamespaces_StartOutcomeUnknown checks that a start whose outcome is
@@ -532,21 +532,25 @@ func TestBackupJob_Wait_RecordsServerJob(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
-			gomock.InOrder(
-				infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(running, nil),
-				infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(tt.final, nil),
-			)
-			operation := newBackupOperation(func() {}, 1)
+			synctest.Test(t, func(t *testing.T) {
+				jobs := newFakePoller(func(poll int) map[string]*infomodels.ResponseBackupState {
+					if poll == 1 {
+						return listed(running)
+					}
 
-			err := newTestBackupJob(infoClient, operation).Wait(t.Context())
+					return listed(tt.final)
+				})
+				operation := newBackupOperation(func() {}, 1)
 
-			if tt.wantErr == "" {
-				require.NoError(t, err)
-			} else {
-				require.ErrorContains(t, err, tt.wantErr)
-			}
-			assert.Equal(t, []model.ServerBackupJob{tt.wantJob}, operation.Status().Server.Jobs)
+				err := newTestBackupJob(nil, operation).Wait(t.Context(), jobs)
+
+				if tt.wantErr == "" {
+					require.NoError(t, err)
+				} else {
+					require.ErrorContains(t, err, tt.wantErr)
+				}
+				assert.Equal(t, []model.ServerBackupJob{tt.wantJob}, operation.Status().Server.Jobs)
+			})
 		})
 	}
 }
@@ -570,22 +574,25 @@ func TestBackupJob_Wait_WarnsOfUnreadRecords(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
-			infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(&infomodels.ResponseBackupState{
-				JobID: fullID, Namespace: "test", State: infomodels.BackupStateComplete,
-				RecsReadFailed: tt.recsReadFailed,
-			}, nil)
-			var logs bytes.Buffer
-			job := newTestBackupJob(infoClient, newBackupOperation(func() {}, 1))
-			job.logger = slog.New(slog.NewTextHandler(&logs, nil))
+			synctest.Test(t, func(t *testing.T) {
+				jobs := newFakePoller(func(int) map[string]*infomodels.ResponseBackupState {
+					return listed(&infomodels.ResponseBackupState{
+						JobID: fullID, Namespace: "test", State: infomodels.BackupStateComplete,
+						RecsReadFailed: tt.recsReadFailed,
+					})
+				})
+				var logs bytes.Buffer
+				job := newTestBackupJob(nil, newBackupOperation(func() {}, 1))
+				job.logger = slog.New(slog.NewTextHandler(&logs, nil))
 
-			require.NoError(t, job.Wait(t.Context()))
+				require.NoError(t, job.Wait(t.Context(), jobs))
 
-			if tt.wantLog == "" {
-				assert.Empty(t, logs.String())
-				return
-			}
-			assert.Regexp(t, tt.wantLog, logs.String())
+				if tt.wantLog == "" {
+					assert.Empty(t, logs.String())
+					return
+				}
+				assert.Regexp(t, tt.wantLog, logs.String())
+			})
 		})
 	}
 }
@@ -600,7 +607,7 @@ func TestBackupJob_Wait_Canceled_AbortRefused(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	err := newTestBackupJob(infoClient, operation).Wait(ctx)
+	err := newTestBackupJob(infoClient, operation).Wait(ctx, newFakePoller(completeJobs()))
 
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Empty(t, operation.Status().Server.Jobs)
@@ -608,27 +615,33 @@ func TestBackupJob_Wait_Canceled_AbortRefused(t *testing.T) {
 
 func TestBackupJob_Wait_Canceled_RecordsAbortedJob(t *testing.T) {
 	t.Parallel()
-	infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
-	// The server reports the abort origin once the abort has ended the job.
-	gomock.InOrder(
-		infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).Return(nil),
-		infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(&infomodels.ResponseBackupState{
-			JobID: fullID, Namespace: "test", State: infomodels.BackupStateAborting,
-		}, nil),
-		infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(&infomodels.ResponseBackupState{
-			JobID: fullID, Namespace: "test", State: infomodels.BackupStateAborted, AbortOrigin: infomodels.AbortOriginOperator,
-		}, nil),
-	)
-	operation := newBackupOperation(func() {}, 1)
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
+	synctest.Test(t, func(t *testing.T) {
+		infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
+		infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).Return(nil)
+		// The server reports the abort origin once the abort has ended the job.
+		jobs := newFakePoller(func(poll int) map[string]*infomodels.ResponseBackupState {
+			if poll == 1 {
+				return listed(&infomodels.ResponseBackupState{
+					JobID: fullID, Namespace: "test", State: infomodels.BackupStateAborting,
+				})
+			}
 
-	err := newTestBackupJob(infoClient, operation).Wait(ctx)
+			return listed(&infomodels.ResponseBackupState{
+				JobID: fullID, Namespace: "test", State: infomodels.BackupStateAborted,
+				AbortOrigin: infomodels.AbortOriginOperator,
+			})
+		})
+		operation := newBackupOperation(func() {}, 1)
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
 
-	require.ErrorIs(t, err, context.Canceled)
-	assert.Equal(t, []model.ServerBackupJob{
-		{JobID: fullID, Namespace: "test", State: "ABORTED", AbortOrigin: "operator"},
-	}, operation.Status().Server.Jobs)
+		err := newTestBackupJob(infoClient, operation).Wait(ctx, jobs)
+
+		require.ErrorIs(t, err, context.Canceled)
+		assert.Equal(t, []model.ServerBackupJob{
+			{JobID: fullID, Namespace: "test", State: "ABORTED", AbortOrigin: "operator"},
+		}, operation.Status().Server.Jobs)
+	})
 }
 
 // TestBackupOperation_ServerJobs_OnePerJob checks that the operation lists each namespace's job
@@ -703,59 +716,50 @@ func TestBackupOperation_ReportsThroughput(t *testing.T) {
 		operation.Status().Server.Metrics, "the first namespace is done")
 }
 
-// statusReadErrors are the ways a status read fails: a job not reported, a cluster not reached.
-var statusReadErrors = []error{asinfo.ErrNotFound, errors.New("timeout")}
-
-// TestBackupJob_Wait_ObservedAgain checks that a job with no status for a while is not aborted,
-// and that each status resets the clock.
-func TestBackupJob_Wait_ObservedAgain(t *testing.T) {
+// TestBackupJob_Wait_MissingFromPolls checks that a job one poll leaves out is followed on, that
+// two polls in a row leaving it out lose it without an abort, and that a listing resets the count.
+func TestBackupJob_Wait_MissingFromPolls(t *testing.T) {
 	t.Parallel()
 
-	for _, statusErr := range statusReadErrors {
-		t.Run(statusErr.Error(), func(t *testing.T) {
-			t.Parallel()
-			synctest.Test(t, func(t *testing.T) {
-				active := &infomodels.ResponseBackupState{JobID: fullID, State: infomodels.BackupStateBaseScanActive}
-				complete := &infomodels.ResponseBackupState{JobID: fullID, State: infomodels.BackupStateComplete}
-				infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
-				unread := func() *gomock.Call {
-					return infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).
-						Return(nil, statusErr).Times(pollsWithinTimeout)
-				}
-				gomock.InOrder(
-					unread(),
-					infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(active, nil),
-					unread(),
-					infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).Return(complete, nil),
-				)
-				operation := newBackupOperation(func() {}, 1)
-
-				require.NoError(t, newTestBackupJob(infoClient, operation).Wait(t.Context()))
-				assert.Equal(t, []model.ServerBackupJob{{JobID: fullID, State: "COMPLETE"}}, operation.Status().Server.Jobs)
-			})
-		})
+	running := &infomodels.ResponseBackupState{JobID: fullID, State: infomodels.BackupStateBaseScanActive}
+	tests := []struct {
+		name string
+		// polls lists the job at each poll, nil for a poll that leaves it out.
+		polls   []*infomodels.ResponseBackupState
+		wantErr string
+	}{
+		{
+			name:  "missed once, then complete",
+			polls: []*infomodels.ResponseBackupState{nil, running, nil, complete(fullID)},
+		},
+		{
+			name:    "missed twice in a row",
+			polls:   []*infomodels.ResponseBackupState{running, nil, nil},
+			wantErr: "server backup " + fullID + " is lost: the server does not list it",
+		},
 	}
-}
 
-// TestBackupJob_Wait_UnobservedJob checks that a job with no status for unobservedJobTimeout is
-// aborted.
-func TestBackupJob_Wait_UnobservedJob(t *testing.T) {
-	t.Parallel()
-
-	for _, statusErr := range statusReadErrors {
-		t.Run(statusErr.Error(), func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			synctest.Test(t, func(t *testing.T) {
+				// A lost job is not aborted: no abort is expected.
 				infoClient := aerospike.NewMockInfoGetter(gomock.NewController(t))
-				gomock.InOrder(
-					infoClient.EXPECT().GetBackupStatus(gomock.Any(), fullID).
-						Return(nil, statusErr).MinTimes(pollsUntilUnobserved).MaxTimes(pollsUntilUnobserved+1),
-					infoClient.EXPECT().AbortBackup(gomock.Any(), fullID).Return(statusErr),
-				)
+				jobs := newFakePoller(func(poll int) map[string]*infomodels.ResponseBackupState {
+					if job := tt.polls[poll-1]; job != nil {
+						return listed(job)
+					}
 
-				err := newTestBackupJob(infoClient, newBackupOperation(func() {}, 1)).Wait(t.Context())
+					return listed()
+				})
 
-				require.EqualError(t, err, "server backup "+fullID+" not observed for 10m0s: "+statusErr.Error())
+				err := newTestBackupJob(infoClient, newBackupOperation(func() {}, 1)).Wait(t.Context(), jobs)
+
+				if tt.wantErr == "" {
+					require.NoError(t, err)
+					return
+				}
+				require.EqualError(t, err, tt.wantErr)
 			})
 		})
 	}
@@ -767,4 +771,55 @@ func newTestBackupJob(infoClient *aerospike.MockInfoGetter, operation *backupOpe
 	record := func(status *infomodels.ResponseBackupState) { operation.record(0, status) }
 
 	return &backupJob{infoClient: infoClient, jobID: fullID, record: record, logger: discardLogger}
+}
+
+// fakePoller polls every jobPollInterval from when it is made: poll n begins and lands n
+// intervals later, and lists jobs(n).
+type fakePoller struct {
+	start time.Time
+	jobs  func(poll int) map[string]*infomodels.ResponseBackupState
+}
+
+func newFakePoller(jobs func(poll int) map[string]*infomodels.ResponseBackupState) *fakePoller {
+	return &fakePoller{start: time.Now(), jobs: jobs}
+}
+
+func (f *fakePoller) Start(context.Context) {}
+
+func (f *fakePoller) Next(ctx context.Context, _ *model.AerospikeCluster, after time.Time) (JobListing, error) {
+	poll := 1
+	if after.After(f.start) {
+		poll = int(after.Sub(f.start)/jobPollInterval) + 1
+	}
+	at := f.start.Add(time.Duration(poll) * jobPollInterval)
+
+	select {
+	case <-ctx.Done():
+		return JobListing{}, ctx.Err()
+	case <-time.After(time.Until(at)):
+	}
+
+	return JobListing{Jobs: f.jobs(poll), At: at}, nil
+}
+
+// completeJobs lists job-<namespace> of each namespace complete at every poll.
+func completeJobs(namespaces ...string) func(int) map[string]*infomodels.ResponseBackupState {
+	return func(int) map[string]*infomodels.ResponseBackupState {
+		listing := make(map[string]*infomodels.ResponseBackupState, len(namespaces))
+		for _, namespace := range namespaces {
+			listing["job-"+namespace] = complete("job-" + namespace)
+		}
+
+		return listing
+	}
+}
+
+// complete returns the status of jobID complete at 100%.
+func complete(jobID string) *infomodels.ResponseBackupState {
+	return &infomodels.ResponseBackupState{JobID: jobID, State: infomodels.BackupStateComplete, ProgressPct: 100}
+}
+
+// listed returns a poll's listing of jobs.
+func listed(jobs ...*infomodels.ResponseBackupState) map[string]*infomodels.ResponseBackupState {
+	return jobsByID(jobs)
 }
