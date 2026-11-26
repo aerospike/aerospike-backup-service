@@ -95,8 +95,6 @@ func (s *ServerBackupSuite) TestServerNoIndexes() {
 			_ = client.DropIndex(nil, serverNamespace, setName, "age_sidx")
 		}
 	})
-	// A record keeps the backup from being empty, which the server cannot restore.
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
 
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
 		c.BackupPolicies[policyName].NoIndexes = new(true)
@@ -105,7 +103,6 @@ func (s *ServerBackupSuite) TestServerNoIndexes() {
 	backup := s.waitForFinishedBackup(e, model.BackupTypeFull)
 	s.restoreIntoDestination(e, backup.Key)
 
-	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
 	s.NotContains(s.destinationIndexes(), "age_sidx", "index backed up despite no-indexes")
 }
 

@@ -148,15 +148,17 @@ func TestCatalog_GetBackups(t *testing.T) {
 			wantStatsRead: []string{"full-empty", "full"},
 		},
 		{
-			name:          "incremental backups but the empty ones",
-			filter:        service.NewIncrementalBackupFilter(routine),
-			want:          []string{"routine/incr-1", "routine/incr-3"},
+			name:   "incremental backups, the empty ones too",
+			filter: service.NewIncrementalBackupFilter(routine),
+			want: []string{
+				"routine/incr-1", "routine/incr-2-empty", "routine/incr-3", "routine/incr-4-empty",
+			},
 			wantStatsRead: []string{"incr-1", "incr-2-empty", "incr-3", "incr-4-empty"},
 		},
 		{
 			name:          "counts read only within the time bounds",
 			filter:        service.NewIncrementalBackupFilter(routine).WithFromTime(catalogAt(15)),
-			want:          []string{"routine/incr-3"},
+			want:          []string{"routine/incr-2-empty", "routine/incr-3", "routine/incr-4-empty"},
 			wantStatsRead: []string{"incr-2-empty", "incr-3", "incr-4-empty"},
 		},
 		{
@@ -166,16 +168,15 @@ func TestCatalog_GetBackups(t *testing.T) {
 			wantStatsRead: []string{"full"},
 		},
 		{
-			name:          "last incremental backup skips a newer empty one",
+			name:          "last incremental backup, an empty one too",
 			filter:        service.NewIncrementalBackupFilter(routine).Last(),
-			want:          []string{"routine/incr-3"},
-			wantStatsRead: []string{"incr-4-empty", "incr-3"},
+			want:          []string{"routine/incr-4-empty"},
+			wantStatsRead: []string{"incr-4-empty"},
 		},
 		{
-			name:          "no last incremental backup when all are empty",
-			filter:        service.NewIncrementalBackupFilter(routine).WithFromTime(catalogAt(45)).Last(),
-			want:          []string{},
-			wantStatsRead: []string{"incr-4-empty"},
+			name:   "no last incremental backup out of the time bounds",
+			filter: service.NewIncrementalBackupFilter(routine).WithFromTime(catalogAt(55)).Last(),
+			want:   []string{},
 		},
 	}
 
@@ -193,8 +194,8 @@ func TestCatalog_GetBackups(t *testing.T) {
 	}
 }
 
-// TestCatalog_AllBackups checks that every committed backup is listed, the empty incremental
-// ones too, and that no counts are read for it.
+// TestCatalog_AllBackups checks that every committed backup is listed and that no counts are read
+// for it.
 func TestCatalog_AllBackups(t *testing.T) {
 	t.Parallel()
 
@@ -206,7 +207,7 @@ func TestCatalog_AllBackups(t *testing.T) {
 	}}
 	routine := &model.BackupRoutine{Name: "routine", Storage: &model.S3Storage{}}
 
-	backups, err := source.catalog().AllBackups(t.Context(), routine)
+	backups, err := source.catalog().AllBackups(t.Context(), routine.Storage, routine.Name)
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"routine/full", "routine/incr-empty", "routine/full-baz"}, keys(backups))
@@ -318,11 +319,7 @@ func TestCatalog_Reads_LockTheRoutine(t *testing.T) {
 			return err
 		}},
 		{name: "AllBackups", read: func(ctx context.Context, c *catalog) error {
-			_, err := c.AllBackups(ctx, routine)
-			return err
-		}},
-		{name: "LastBackupTimes", read: func(ctx context.Context, c *catalog) error {
-			_, err := c.LastBackupTimes(ctx, routine, model.BackupTypeFull)
+			_, err := c.AllBackups(ctx, routine.Storage, routine.Name)
 			return err
 		}},
 	}
@@ -385,56 +382,6 @@ func TestCatalog_GetBackup(t *testing.T) {
 	assert.Equal(t, catalogAt(0), backup.From)
 	assert.Equal(t, catalogAt(10), backup.Created)
 	assert.Empty(t, source.statsRead, "restore reads no counts")
-}
-
-func TestCatalog_LastBackupTimes(t *testing.T) {
-	t.Parallel()
-
-	// Each namespace has backup times of its own: baz's are newer than bar's.
-	metadata := []listermodels.Metadata{
-		fullMetadata("bar-full", "bar", catalogAt(0)),
-		fullMetadata("baz-full", "baz", catalogAt(1)),
-		incrMetadata("qux-incr", "qux", catalogAt(-10), catalogAt(5)),
-		incrMetadata("bar-incr", "bar", catalogAt(0), catalogAt(10)),
-		incrMetadata("baz-incr", "baz", catalogAt(1), catalogAt(11)),
-		incrMetadata("baz-incr-empty", "baz", catalogAt(11), catalogAt(15)),
-		fullMetadata("qux-full", "qux", catalogAt(20)),
-	}
-	stats := map[string]listermodels.Statistics{"qux-incr": nonEmpty, "bar-incr": nonEmpty, "baz-incr": nonEmpty}
-	routine := &model.BackupRoutine{Name: "routine", Storage: &model.S3Storage{}}
-
-	tests := []struct {
-		name          string
-		backupTypes   []model.BackupType
-		want          map[string]time.Time
-		wantStatsRead []string
-	}{
-		{
-			name:        "last backup of either type, but an empty incremental",
-			backupTypes: []model.BackupType{model.BackupTypeFull, model.BackupTypeIncremental},
-			want:        map[string]time.Time{"bar": catalogAt(10), "baz": catalogAt(11), "qux": catalogAt(20)},
-			// Only incremental backups newer than their namespace's last listed backup.
-			wantStatsRead: []string{"baz-incr-empty", "baz-incr", "bar-incr"},
-		},
-		{
-			name:        "last full backup reads no counts",
-			backupTypes: []model.BackupType{model.BackupTypeFull},
-			want:        map[string]time.Time{"bar": catalogAt(0), "baz": catalogAt(1), "qux": catalogAt(20)},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			source := &fakeSource{metadata: metadata, stats: stats}
-
-			got, err := source.catalog().LastBackupTimes(t.Context(), routine, tt.backupTypes...)
-
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-			assert.Equal(t, tt.wantStatsRead, source.statsRead)
-		})
-	}
 }
 
 func TestFinishedTime(t *testing.T) {

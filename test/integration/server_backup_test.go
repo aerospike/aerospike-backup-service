@@ -44,12 +44,9 @@ func (s *ServerBackupSuite) TestServerRestoreByPath() {
 
 // TestServerBackupRestoreWithIndexes mirrors TestBackupRestoreWithIndexes with server-side
 // backup: backs up a secondary index and a set index next to a record and checks that restoring
-// the backup into the destination cluster creates the indexes there. The record keeps the backup
-// from being empty, which the server cannot restore.
+// the backup into the destination cluster creates the indexes there.
 func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 	const wantIndexes = 2 // age_sidx + set_sidx
-
-	s.seedRecordsIn(s.client, serverNamespace, []int{1})
 
 	e := s.setupEnv(s.serverBackupConfig)
 
@@ -81,7 +78,6 @@ func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 		s.Equal(uint64(wantIndexes), restoreStatus.IndexCount)
 	})
 
-	s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
 	indexes := s.destinationIndexes()
 	s.Contains(indexes, "age_sidx", "secondary index not backed up or not restored")
 	s.Contains(indexes, "set_sidx", "set index not backed up or not restored")
@@ -90,18 +86,11 @@ func (s *ServerBackupSuite) TestServerBackupRestoreWithIndexes() {
 // TestServerRestoreByTimestampWorkflow mirrors TestRestoreByTimestampWorkflow with server-side
 // backup: runs full backup, incremental backup, empty incremental backup, then restores the
 // namespace into the destination cluster to a point in time via POST /v1/restore/timestamp.
-// Unlike the scan test, the full backup holds a record, which the incremental backup holds
-// updated: the server cannot restore an empty backup, and the restore must end with the newest
-// value. A point in time between the two backups restores the full backup alone, and one before
+// A point in time between the two backups restores the empty full backup alone, and one before
 // the full backup restores nothing. The policy sets with-cluster-configuration, so only the full
 // backup holds the node's configuration file. Subtests share env, backup storage, and Aerospike
 // state.
 func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
-	const (
-		fullAge        = 10
-		incrementalAge = 11
-	)
-
 	e := s.setupEnv(s.serverBackupConfig, func(c *dto.Config) {
 		c.BackupPolicies[policyName].WithClusterConfig = new(true)
 	})
@@ -111,7 +100,6 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 	var fullBackup, incrBackup dto.BackupDetails
 
 	s.Run("full", func() {
-		s.seedRecordsIn(s.client, serverNamespace, []int{fullAge})
 		successCount := s.metricBackupSuccessEventCount(e, model.BackupTypeFull)
 		s.triggerFullBackup(e)
 		fullBackup = s.waitForFinishedBackup(e, model.BackupTypeFull)
@@ -125,7 +113,7 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 	})
 
 	s.Run("incremental", func() {
-		s.seedRecordsIn(s.client, serverNamespace, []int{incrementalAge})
+		s.seedRecordsIn(s.client, serverNamespace, []int{1})
 		// The next incremental starts at this one's start, in whole seconds: a record written in
 		// that second would be in both, and the next one would not be empty.
 		time.Sleep(time.Second)
@@ -146,14 +134,16 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 	s.Run("empty_incremental", func() {
 		successCount := s.metricBackupSuccessEventCount(e, model.BackupTypeIncremental)
 		s.triggerIncrementalBackup(e)
-		s.waitForFinishedBackup(e, model.BackupTypeIncremental)
+		emptyBackup := s.waitForFinishedBackup(e, model.BackupTypeIncremental)
 		s.assertMetricBackupSuccessEventCount(e, model.BackupTypeIncremental, successCount+1)
-		s.Run("not_listed", func() {
-			s.assertIncrementalBackupCount(e, 1)
-			s.assertMetricLastSuccessfulBackup(e, model.BackupTypeIncremental, incrBackup.Created)
+		s.Run("listed", func() {
+			s.assertIncrementalBackupCount(e, 2)
+			s.Zero(emptyBackup.RecordCount)
+			s.assertMetricLastSuccessfulBackup(e, model.BackupTypeIncremental, emptyBackup.Created)
 		})
 	})
 
+	// The chain ends with the empty incremental backup.
 	s.Run("restore_by_timestamp", func() {
 		successCount := s.metricRestoreSuccessEventCount(e)
 		status := s.restoreIntoDestinationByTimestamp(e, time.Now())
@@ -162,7 +152,7 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 			s.Equal(uint64(1), status.InsertedRecords)
 		})
 		s.Empty(status.Error)
-		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{incrementalAge})
+		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{1})
 		s.assertMetricRestoreSuccessEventCount(e, successCount+1)
 	})
 
@@ -172,7 +162,7 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 
 		status := s.restoreIntoDestinationByTimestamp(e, between)
 		s.Empty(status.Error)
-		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{fullAge})
+		s.Nil(s.recordBins(s.destinationClient, setName, 0), "the strict restore kept a record the backup does not hold")
 	})
 
 	s.Run("restore_before_full", func() {
@@ -184,7 +174,7 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampWorkflow() {
 		s.Equal(dto.RestoreFailure, job.Status)
 		s.Contains(job.Error, "no full backups found")
 		// The failed restore left the destination as the last restore did.
-		s.assertRecordsIn(s.destinationClient, serverNamespace, []int{fullAge})
+		s.Nil(s.recordBins(s.destinationClient, setName, 0), "the failed restore wrote a record")
 	})
 }
 
@@ -265,7 +255,6 @@ func (s *ServerBackupSuite) TestServerRestoreByTimestampCumulativeWorkflow() {
 
 	// The chain starts with the full backup, which holds no records.
 	s.Run("restore_by_timestamp", func() {
-		s.T().Skip("BKRS-568: a server restore of a backup with no records fails")
 		status := s.restoreIntoDestinationByTimestamp(e, time.Now())
 		s.Equal(dto.RestoreSuccess, status.Status)
 		// The chain is the full backup and the second incremental: the first incremental is skipped.

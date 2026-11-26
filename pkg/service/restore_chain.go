@@ -24,13 +24,16 @@ func (c RestoreChain) Backups() []model.BackupDetails {
 	return append([]model.BackupDetails{c.Full}, c.Incrementals...)
 }
 
-// FindRestoreChains returns the restore chain of each namespace of the request's routine, keyed
-// by namespace, from the backups reader lists. A namespace with no full backup up to the request's
-// time has no chain, and it is an error when no namespace has one.
+// errNoFullBackups is returned when no namespace has a full backup to restore from.
+var errNoFullBackups = errors.New("no full backups found")
+
+// FindRestoreChains returns the restore chains of the request's routine, as RestoreChains does,
+// from the backups reader lists. It reads the incremental backups once, from the earliest of the
+// namespaces' latest full backups, so that it reads none older than every chain.
 func FindRestoreChains(
 	ctx context.Context, reader BackupReader, request *model.RestoreTimestampRequest,
 ) (map[string]RestoreChain, error) {
-	fullBackups, err := reader.GetBackups(ctx, // find all full backups completed by given restore request time.
+	fullBackups, err := reader.GetBackups(ctx,
 		newRoutineBackupFilter(request.RoutineName, request.Storage, model.BackupTypeFull).
 			WithToTime(request.Time),
 	)
@@ -39,30 +42,43 @@ func FindRestoreChains(
 	}
 
 	if len(fullBackups) == 0 {
-		return nil, errors.New("no full backups found")
+		return nil, errNoFullBackups
 	}
 
-	// map namespace -> latest full backup for this ns
 	latestFullByNamespace := latestBackupsByNamespace(fullBackups)
-	// earliest full backup among all
-	earliestSelectedFull := earliestSelectedFullBackup(latestFullByNamespace)
-
-	// Strategy:
-	// 1) choose the latest full backup per namespace,
-	// 2) read incrementals once from the earliest of those selected full backups,
-	// 3) then filter incrementals per namespace against that namespace's selected full.
-	// This keeps storage reads batched while still producing correct per-namespace chains.
 	incrementalBackups, err := reader.GetBackups(ctx,
 		newRoutineBackupFilter(request.RoutineName, request.Storage, model.BackupTypeIncremental).
-			WithFromTime(earliestSelectedFull.Created). // lower bound for a single batched incremental scan
+			WithFromTime(earliestSelectedFullBackup(latestFullByNamespace).Created).
 			WithToTime(request.Time))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find incremental backups: %w", err)
 	}
 
-	incrementalsByNamespace := splitByNamespace(incrementalBackups)
+	return buildRestoreChainsByNamespace(latestFullByNamespace, splitByNamespace(incrementalBackups)), nil
+}
 
-	return buildRestoreChainsByNamespace(latestFullByNamespace, incrementalsByNamespace), nil
+// RestoreChains returns the chain of each namespace that restores it to time t, keyed by
+// namespace, from a routine's backups. A namespace with no full backup up to t has no chain, and
+// it is an error when no namespace has one.
+func RestoreChains(backups []model.BackupDetails, t time.Time) (map[string]RestoreChain, error) {
+	var fullBackups, incrementalBackups []model.BackupDetails
+	for _, backup := range backups {
+		if backup.Created.After(t) {
+			continue
+		}
+
+		if backup.BackupType() == model.BackupTypeFull {
+			fullBackups = append(fullBackups, backup)
+		} else {
+			incrementalBackups = append(incrementalBackups, backup)
+		}
+	}
+
+	if len(fullBackups) == 0 {
+		return nil, errNoFullBackups
+	}
+
+	return buildRestoreChainsByNamespace(latestBackupsByNamespace(fullBackups), splitByNamespace(incrementalBackups)), nil
 }
 
 // latestBackupsByNamespace picks the newest backup per namespace from the provided list.

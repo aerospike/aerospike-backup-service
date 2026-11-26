@@ -59,8 +59,8 @@ func TestRetentionManager_ApplyRetention(t *testing.T) {
 		}
 	}
 
-	catalog.EXPECT().AllBackups(t.Context(), routine).DoAndReturn(
-		func(context.Context, *model.BackupRoutine) ([]model.BackupDetails, error) {
+	catalog.EXPECT().AllBackups(t.Context(), routine.Storage, routine.Name).DoAndReturn(
+		func(context.Context, model.Storage, string) ([]model.BackupDetails, error) {
 			held()
 
 			return []model.BackupDetails{
@@ -151,7 +151,7 @@ func TestRetentionManager_DeleteFails(t *testing.T) {
 	routine := retentionRoutine(&model.RetentionPolicy{FullBackups: optional.Of(1)})
 	routineStorage := &collections.LockMap{}
 
-	catalog.EXPECT().AllBackups(t.Context(), routine).Return([]model.BackupDetails{
+	catalog.EXPECT().AllBackups(t.Context(), routine.Storage, routine.Name).Return([]model.BackupDetails{
 		retentionFull("ful1", "bar", 0),
 		retentionFull("ful2", "bar", 20),
 		retentionFull("ful3", "bar", 40),
@@ -172,7 +172,7 @@ func TestRetentionManager_ListFails(t *testing.T) {
 	routine := retentionRoutine(&model.RetentionPolicy{FullBackups: optional.Of(1)})
 	routineStorage := &collections.LockMap{}
 
-	catalog.EXPECT().AllBackups(t.Context(), routine).Return(nil, errors.New("unreachable"))
+	catalog.EXPECT().AllBackups(t.Context(), routine.Storage, routine.Name).Return(nil, errors.New("unreachable"))
 
 	err := NewRetentionManager(catalog, routineStorage).ApplyRetention(t.Context(), routine)
 

@@ -26,19 +26,32 @@ import (
 func TestRoutineRunner_LowerBounds(t *testing.T) {
 	t.Parallel()
 
-	last := map[string]time.Time{"bar": time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)}
+	// Each namespace has backup times of its own: baz's are newer than bar's.
+	storage := &model.S3Storage{}
+	backups := []model.BackupDetails{
+		toBackupDetails(fullMetadata("bar-full", "bar", catalogAt(0)), storage, "routine"),
+		toBackupDetails(fullMetadata("baz-full", "baz", catalogAt(1)), storage, "routine"),
+		toBackupDetails(incrMetadata("qux-incr", "qux", catalogAt(-10), catalogAt(5)), storage, "routine"),
+		toBackupDetails(incrMetadata("bar-incr", "bar", catalogAt(0), catalogAt(10)), storage, "routine"),
+		toBackupDetails(incrMetadata("baz-incr", "baz", catalogAt(1), catalogAt(11)), storage, "routine"),
+		toBackupDetails(incrMetadata("baz-incr-empty", "baz", catalogAt(11), catalogAt(15)), storage, "routine"),
+		toBackupDetails(fullMetadata("qux-full", "qux", catalogAt(20)), storage, "routine"),
+	}
 
 	tests := []struct {
-		name       string
-		backupType model.BackupType
-		incrMode   model.IncrMode
-		wantTypes  []model.BackupType
+		name     string
+		incrMode model.IncrMode
+		want     map[string]time.Time
 	}{
-		{name: "incremental from the namespace's last backup of either type",
-			backupType: model.BackupTypeIncremental,
-			wantTypes:  []model.BackupType{model.BackupTypeFull, model.BackupTypeIncremental}},
-		{name: "cumulative from the namespace's last full backup", backupType: model.BackupTypeIncremental,
-			incrMode: model.IncrModeCumulative, wantTypes: []model.BackupType{model.BackupTypeFull}},
+		{
+			name: "incremental from the namespace's last backup of either type, an empty one too",
+			want: map[string]time.Time{"bar": catalogAt(10), "baz": catalogAt(15), "qux": catalogAt(20)},
+		},
+		{
+			name:     "cumulative from the namespace's last full backup",
+			incrMode: model.IncrModeCumulative,
+			want:     map[string]time.Time{"bar": catalogAt(0), "baz": catalogAt(1), "qux": catalogAt(20)},
+		},
 	}
 
 	for _, tt := range tests {
@@ -50,12 +63,13 @@ func TestRoutineRunner_LowerBounds(t *testing.T) {
 				BackupPolicy: &model.BackupPolicy{IncrMode: tt.incrMode},
 			}
 			catalog := NewMockCatalog(gomock.NewController(t))
-			catalog.EXPECT().LastBackupTimes(gomock.Any(), routine, tt.wantTypes).Return(last, nil)
+			catalog.EXPECT().AllBackups(gomock.Any(), routine.Storage, routine.Name).Return(backups, nil)
 
-			bounds, err := (&routineRunner{catalog: catalog}).lowerBounds(t.Context(), routine, tt.backupType)
+			bounds, err := (&routineRunner{catalog: catalog}).
+				lowerBounds(t.Context(), routine, model.BackupTypeIncremental)
 
 			require.NoError(t, err)
-			assert.Equal(t, last, bounds)
+			assert.Equal(t, tt.want, bounds)
 		})
 	}
 }
@@ -78,13 +92,12 @@ func TestRoutineRunner_LowerBounds_ReadFails(t *testing.T) {
 	t.Parallel()
 
 	catalog := NewMockCatalog(gomock.NewController(t))
-	catalog.EXPECT().LastBackupTimes(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil, errors.New("storage down"))
+	catalog.EXPECT().AllBackups(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("storage down"))
 	routine := &model.BackupRoutine{Name: "routine", BackupPolicy: &model.BackupPolicy{}}
 
 	got, err := (&routineRunner{catalog: catalog}).lowerBounds(t.Context(), routine, model.BackupTypeIncremental)
 
-	require.EqualError(t, err, "failed to read the last backups of routine routine: storage down")
+	require.EqualError(t, err, "failed to read the backups of routine routine: storage down")
 	assert.Nil(t, got)
 }
 
@@ -274,7 +287,12 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 		}
 	}
 
-	lastBackups := map[string]time.Time{"bar": at(10), "baz": at(1)}
+	// bar's last backup is incremental, baz's is full.
+	lastBackups := []model.BackupDetails{
+		toBackupDetails(fullMetadata("bar-full", "bar", at(0)), storage, "routine"),
+		toBackupDetails(incrMetadata("bar-incr", "bar", at(0), at(10)), storage, "routine"),
+		toBackupDetails(fullMetadata("baz-full", "baz", at(1)), storage, "routine"),
+	}
 
 	tests := []struct {
 		name       string
@@ -364,7 +382,7 @@ func TestRoutineRunner_BackupNamespaces_Requests(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
 			catalog := NewMockCatalog(ctrl)
-			catalog.EXPECT().LastBackupTimes(gomock.Any(), gomock.Any(), gomock.Any()).
+			catalog.EXPECT().AllBackups(gomock.Any(), gomock.Any(), gomock.Any()).
 				Return(lastBackups, nil).MaxTimes(1) // once per run, not once per namespace.
 
 			var requests []infomodels.RequestBackup

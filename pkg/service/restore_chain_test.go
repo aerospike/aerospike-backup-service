@@ -73,6 +73,43 @@ func TestFindRestoreChains(t *testing.T) {
 	assert.ElementsMatch(t, []model.BackupDetails{full1, incr1, full2, incr2a, incr2b}, AllBackups(chains))
 }
 
+// TestRestoreChains checks that backups created after the time are left out, and that every
+// namespace gets its own latest full backup and only the incremental backups after it.
+func TestRestoreChains(t *testing.T) {
+	t.Parallel()
+
+	oldFull1 := backupAt("ns1", 1000, 0)
+	full1 := backupAt("ns1", 3000, 0)
+	full2 := backupAt("ns2", 1000, 0)
+	staleIncr1 := backupAt("ns1", 2000, 1000) // older than the full backup ns1 restores from
+	incr1 := backupAt("ns1", 4000, 3000)
+	incr2 := backupAt("ns2", 4000, 1000)
+	laterFull2 := backupAt("ns2", 6000, 0)
+	laterIncr1 := backupAt("ns1", 6000, 4000)
+
+	chains, err := RestoreChains([]model.BackupDetails{
+		oldFull1, full1, full2, staleIncr1, incr1, incr2, laterFull2, laterIncr1,
+	}, time.UnixMilli(5000))
+
+	require.NoError(t, err)
+	assert.Equal(t, map[string]RestoreChain{
+		"ns1": {Full: full1, Incrementals: []model.BackupDetails{incr1}},
+		"ns2": {Full: full2, Incrementals: []model.BackupDetails{incr2}},
+	}, chains)
+}
+
+func TestRestoreChains_NoFullBackup(t *testing.T) {
+	t.Parallel()
+
+	chains, err := RestoreChains([]model.BackupDetails{
+		backupAt("ns1", 2000, 1000),
+		backupAt("ns1", 6000, 0),
+	}, time.UnixMilli(5000))
+
+	require.EqualError(t, err, "no full backups found")
+	assert.Nil(t, chains)
+}
+
 func TestFindRestoreChains_Fails(t *testing.T) {
 	t.Parallel()
 
@@ -148,7 +185,7 @@ func TestFilterIncrementals(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			created := []int64{}
+			created := make([]int64, 0, len(tt.incrementals))
 			for _, incremental := range filterIncrementals(full, tt.incrementals) {
 				created = append(created, incremental.Created.UnixMilli())
 			}
