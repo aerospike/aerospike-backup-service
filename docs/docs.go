@@ -2411,7 +2411,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "incr-interval-cron": {
-                    "description": "The interval for incremental backup as a cron expression string (optional).\nIn server backup mode with differential incremental backups, it may fire at most 31 times\nbetween two full backups: a server restore applies at most 32 backups.",
+                    "description": "The interval for incremental backup as a cron expression string (optional).",
                     "type": "string",
                     "x-nullable": true,
                     "example": "*/10 * * * * *"
