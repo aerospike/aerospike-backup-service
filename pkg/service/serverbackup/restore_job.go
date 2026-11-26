@@ -16,9 +16,6 @@ import (
 	infomodels "github.com/aerospike/backup-go/pkg/asinfo/models"
 )
 
-// maxChainLength is the most backups the server restores in one job (AS_RESTORE_CHAIN_MAX_LINKS).
-const maxChainLength = 32
-
 // startRestore starts one server restore job that applies backups, the backups of one namespace
 // oldest first, and returns the job to follow. The policy's mode selects a strict or a fuzzy
 // restore.
@@ -29,11 +26,6 @@ func startRestore(
 	backups []model.BackupDetails,
 	logger *slog.Logger,
 ) (*restoreJob, error) {
-	if len(backups) > maxChainLength {
-		return nil, fmt.Errorf("restore chain has %d backups, the server restores at most %d in one job",
-			len(backups), maxChainLength)
-	}
-
 	first := backups[0]
 	routineName, backupIDs, err := backupIDsOf(backups)
 	if err != nil {

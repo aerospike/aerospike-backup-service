@@ -439,3 +439,44 @@ func TestConfig_ScheduleTimezoneRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateServerChain(t *testing.T) {
+	t.Parallel()
+
+	const daily = "0 0 0 * * *"
+
+	tests := []struct {
+		name     string
+		fullCron string
+		incrCron string
+		incrMode IncrMode
+		wantErr  bool
+	}{
+		{name: "hourly incremental backups between daily full ones", fullCron: daily, incrCron: "0 0 * * * *"},
+		{name: "no incremental backups", fullCron: daily},
+		// Minutes 1 to 31 of hour 0: the one at minute 0 coincides with the full backup.
+		{name: "31 incremental backups, the longest chain", fullCron: daily, incrCron: "0 0-31 0 * * *"},
+		{name: "32 incremental backups", fullCron: daily, incrCron: "0 0-32 0 * * *", wantErr: true},
+		{name: "daily incremental backups between monthly full ones", fullCron: "0 0 0 1 * *", incrCron: daily},
+		{name: "hourly incremental backups between weekly full ones", fullCron: "0 0 0 * * SUN",
+			incrCron: "0 0 * * * *", wantErr: true},
+		{name: "cumulative incremental backups restore one at a time", fullCron: "0 0 0 * * SUN",
+			incrCron: "0 0 * * * *", incrMode: IncrModeCumulative},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			routine := &BackupRoutine{IntervalCron: tt.fullCron, IncrIntervalCron: tt.incrCron}
+
+			err := validateServerChain(routine, &BackupPolicy{IncrMode: tt.incrMode})
+
+			if !tt.wantErr {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, errInvalidValue)
+			require.ErrorContains(t, err, "a server restore applies at most 32 backups")
+		})
+	}
+}

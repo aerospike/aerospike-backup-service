@@ -32,17 +32,33 @@ func NewSchedule(cron string, location *time.Location) Schedule {
 
 // NextTrigger returns the next instant at which the schedule fires.
 func (s Schedule) NextTrigger() (time.Time, error) {
+	return s.NextFireTime(time.Now())
+}
+
+// NextFireTime returns the first instant after t at which the schedule fires.
+func (s Schedule) NextFireTime(t time.Time) (time.Time, error) {
 	trigger, err := s.trigger()
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	fireTime, err := trigger.NextFireTime(time.Now().UnixNano())
+	fireTime, err := trigger.NextFireTime(t.UnixNano())
 	if err != nil {
 		return time.Time{}, err
 	}
 
 	return time.Unix(0, fireTime), nil
+}
+
+// FireCount returns how many times the schedule fires after from and before to, counting up to
+// limit, so that a frequent schedule over a long span stays cheap.
+func (s Schedule) FireCount(from, to time.Time, limit int) int {
+	count := 0
+	for t, err := s.NextFireTime(from); err == nil && t.Before(to) && count < limit; t, err = s.NextFireTime(t) {
+		count++
+	}
+
+	return count
 }
 
 // IsFireTime reports whether t is exactly a fire time of this schedule.

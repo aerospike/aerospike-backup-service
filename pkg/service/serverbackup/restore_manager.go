@@ -130,6 +130,10 @@ func (m *restoreManager) restoreToTime(
 		return err
 	}
 
+	if err := checkChainLengths(chains); err != nil {
+		return err
+	}
+
 	service.LogChainGaps(chains, logger)
 
 	client, err := m.clientManager.GetClient(ctx, &request.DestinationCluster, nil, logger)
@@ -149,8 +153,8 @@ func (m *restoreManager) restoreToTime(
 		errs error
 	)
 
-	// Every namespace is restored, even when another one fails, so that a retry needs to cover
-	// only the failed ones.
+	// Every namespace is restored, even when another one fails: stopping the others would leave
+	// them partly restored.
 	for namespace, chain := range chains {
 		wg.Go(func() {
 			nsLogger := logger.With(slog.String("namespace", namespace))
@@ -170,6 +174,19 @@ func (m *restoreManager) restoreToTime(
 	wg.Wait()
 
 	return errs
+}
+
+// checkChainLengths refuses a restore whose chain is longer than the server restores in one job,
+// before any job starts, so that no namespace is restored while another is refused.
+func checkChainLengths(chains map[string]service.RestoreChain) error {
+	for namespace, chain := range chains {
+		if length := len(chain.Backups()); length > model.MaxServerRestoreChain {
+			return fmt.Errorf("restore chain of namespace %s has %d backups, the server restores at most %d in one job",
+				namespace, length, model.MaxServerRestoreChain)
+		}
+	}
+
+	return nil
 }
 
 // restoreChain runs one server restore job that applies backups, the backups of one namespace
